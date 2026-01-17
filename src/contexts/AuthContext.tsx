@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+const GERAL_SECTOR_ID = '00000000-0000-0000-0000-000000000001';
+
 interface Profile {
   id: string;
   user_id: string;
@@ -23,14 +25,20 @@ interface Sector {
   icon: string | null;
 }
 
+interface UserRole {
+  role: 'admin' | 'gerente' | 'supervisor' | 'colaborador';
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   sector: Sector | null;
+  roles: UserRole[];
+  isAdmin: boolean;
+  geralSectorId: string;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -42,10 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [sector, setSector] = useState<Sector | null>(null);
+  const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const isAdmin = roles.some(r => r.role === 'admin');
 
   const fetchProfile = async (userId: string) => {
     try {
+      // Fetch profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -71,6 +83,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setSector(sectorData as Sector);
           }
         }
+      }
+
+      // Fetch user roles
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+
+      if (rolesError) {
+        console.error('Error fetching roles:', rolesError);
+      } else if (rolesData) {
+        setRoles(rolesData as UserRole[]);
       }
     } catch (error) {
       console.error('Error in fetchProfile:', error);
@@ -125,27 +149,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
-  const signUp = async (email: string, password: string, name: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          name,
-          display_name: name.split(' ')[0],
-        },
-      },
-    });
-    return { error: error as Error | null };
-  };
+  // signUp is now handled by the edge function - removed from context
 
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
     setSector(null);
+    setRoles([]);
   };
 
   return (
@@ -155,9 +165,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         sector,
+        roles,
+        isAdmin,
+        geralSectorId: GERAL_SECTOR_ID,
         loading,
         signIn,
-        signUp,
         signOut,
         refreshProfile,
       }}
