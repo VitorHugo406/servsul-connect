@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Cake, Gift, PartyPopper, Calendar } from 'lucide-react';
+import { Cake, Gift, PartyPopper, Calendar, CheckCircle2 } from 'lucide-react';
 import { useBirthdays } from '@/hooks/useData';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,8 +8,23 @@ import { Badge } from '@/components/ui/badge';
 export function BirthdaysSection() {
   const { birthdayPeople, loading } = useBirthdays();
 
+  const today = new Date();
+  const currentDay = today.getDate();
+
+  // Split birthdays: today, upcoming (not yet happened), and past (already happened this month)
   const todayBirthdays = birthdayPeople.filter((p) => p.isToday);
-  const upcomingBirthdays = birthdayPeople.filter((p) => !p.isToday);
+  
+  const upcomingBirthdays = birthdayPeople.filter((p) => {
+    if (p.isToday) return false;
+    const birthDay = new Date(p.birthDate).getDate();
+    return birthDay > currentDay;
+  });
+
+  const pastBirthdays = birthdayPeople.filter((p) => {
+    if (p.isToday) return false;
+    const birthDay = new Date(p.birthDate).getDate();
+    return birthDay < currentDay;
+  });
 
   const getInitials = (name: string) => {
     return name
@@ -104,32 +119,20 @@ export function BirthdaysSection() {
       )}
 
       {/* Upcoming Birthdays */}
-      <div>
-        <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-            <Calendar className="h-5 w-5 text-muted-foreground" />
-          </div>
-          <div>
-            <h3 className="font-display text-xl font-semibold text-foreground">
-              Próximos Aniversariantes
-            </h3>
-            <p className="text-sm text-muted-foreground">Este mês</p>
-          </div>
-        </div>
-
-        {upcomingBirthdays.length === 0 && todayBirthdays.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="mb-4 rounded-full bg-muted p-4">
-              <span className="text-4xl">🎂</span>
+      {upcomingBirthdays.length > 0 && (
+        <div className="mb-8">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
+              <Calendar className="h-5 w-5 text-muted-foreground" />
             </div>
-            <h4 className="font-display text-lg font-semibold text-foreground">
-              Nenhum aniversariante
-            </h4>
-            <p className="text-sm text-muted-foreground">
-              Não há aniversariantes neste mês com data de nascimento cadastrada
-            </p>
+            <div>
+              <h3 className="font-display text-xl font-semibold text-foreground">
+                Próximos Aniversariantes
+              </h3>
+              <p className="text-sm text-muted-foreground">Este mês</p>
+            </div>
           </div>
-        ) : (
+
           <div className="space-y-3">
             {upcomingBirthdays.map((person, index) => (
               <motion.div
@@ -161,8 +164,72 @@ export function BirthdaysSection() {
               </motion.div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Past Birthdays this month */}
+      {pastBirthdays.length > 0 && (
+        <div>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted/50">
+              <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div>
+              <h3 className="font-display text-xl font-semibold text-foreground">
+                Aniversários já realizados neste mês
+              </h3>
+              <p className="text-sm text-muted-foreground">Já celebramos!</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {pastBirthdays.map((person, index) => (
+              <motion.div
+                key={person.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card className="transition-all opacity-70 hover:opacity-100">
+                  <CardContent className="flex items-center gap-4 p-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={person.avatar} />
+                      <AvatarFallback className="bg-muted text-muted-foreground">
+                        {getInitials(person.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div className="flex-1">
+                      <h4 className="font-medium text-foreground">{person.name}</h4>
+                      <p className="text-sm text-muted-foreground">{person.sector}</p>
+                    </div>
+                    
+                    <Badge variant="secondary" className="text-muted-foreground">
+                      <CheckCircle2 className="mr-1 h-3 w-3" />
+                      {formatBirthday(person.birthDate)}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* No birthdays at all */}
+      {birthdayPeople.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="mb-4 rounded-full bg-muted p-4">
+            <span className="text-4xl">🎂</span>
+          </div>
+          <h4 className="font-display text-lg font-semibold text-foreground">
+            Nenhum aniversariante
+          </h4>
+          <p className="text-sm text-muted-foreground">
+            Não há aniversariantes neste mês com data de nascimento cadastrada
+          </p>
+        </div>
+      )}
     </motion.div>
   );
 }

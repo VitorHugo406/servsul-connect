@@ -41,6 +41,7 @@ const Index = () => {
   };
 
   const currentSection = sectionTitles[activeSection] || sectionTitles.home;
+  const isHomePage = activeSection === 'home';
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -56,8 +57,8 @@ const Index = () => {
         </main>
       </div>
 
-      {/* Chatbot Widget */}
-      <ChatbotWidget />
+      {/* Chatbot Widget - only on home page */}
+      <ChatbotWidget isHomePage={isHomePage} />
     </div>
   );
 };

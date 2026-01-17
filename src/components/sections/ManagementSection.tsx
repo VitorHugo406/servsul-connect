@@ -640,7 +640,37 @@ function EditUserDialog({ open, onOpenChange, user, sectors, currentRole, onSucc
   const [registrationNumber, setRegistrationNumber] = useState(user.registration_number || '');
   const [sectorId, setSectorId] = useState(user.sector_id || '');
   const [role, setRole] = useState(currentRole || 'colaborador');
+  const [additionalSectorIds, setAdditionalSectorIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingAdditional, setLoadingAdditional] = useState(true);
+
+  // Fetch additional sectors when dialog opens
+  useEffect(() => {
+    if (open && user.user_id) {
+      fetchAdditionalSectors();
+    }
+  }, [open, user.user_id]);
+
+  const fetchAdditionalSectors = async () => {
+    setLoadingAdditional(true);
+    const { data, error } = await supabase
+      .from('user_additional_sectors')
+      .select('sector_id')
+      .eq('user_id', user.user_id);
+
+    if (!error && data) {
+      setAdditionalSectorIds(data.map(s => s.sector_id));
+    }
+    setLoadingAdditional(false);
+  };
+
+  const toggleAdditionalSector = (sectorId: string) => {
+    setAdditionalSectorIds(prev => 
+      prev.includes(sectorId)
+        ? prev.filter(id => id !== sectorId)
+        : [...prev, sectorId]
+    );
+  };
 
   const handleSave = async () => {
     setLoading(true);
@@ -678,6 +708,27 @@ function EditUserDialog({ open, onOpenChange, user, sectors, currentRole, onSucc
         if (roleError) throw roleError;
       }
 
+      // Update additional sectors
+      // First delete all existing
+      await supabase
+        .from('user_additional_sectors')
+        .delete()
+        .eq('user_id', user.user_id);
+
+      // Then insert new ones
+      if (additionalSectorIds.length > 0) {
+        const { error: sectorsError } = await supabase
+          .from('user_additional_sectors')
+          .insert(
+            additionalSectorIds.map(sectorId => ({
+              user_id: user.user_id,
+              sector_id: sectorId,
+            }))
+          );
+
+        if (sectorsError) throw sectorsError;
+      }
+
       toast.success('Usuário atualizado com sucesso');
       onSuccess();
     } catch (error) {
@@ -688,9 +739,14 @@ function EditUserDialog({ open, onOpenChange, user, sectors, currentRole, onSucc
     }
   };
 
+  // Filter out Geral sector and the user's primary sector from additional sectors options
+  const availableAdditionalSectors = sectors.filter(
+    s => s.id !== '00000000-0000-0000-0000-000000000001' && s.id !== sectorId
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Usuário</DialogTitle>
           <DialogDescription>
@@ -715,7 +771,7 @@ function EditUserDialog({ open, onOpenChange, user, sectors, currentRole, onSucc
             <Input value={registrationNumber} onChange={(e) => setRegistrationNumber(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Setor</Label>
+            <Label>Setor Principal</Label>
             <Select value={sectorId} onValueChange={setSectorId}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o setor" />
@@ -729,6 +785,47 @@ function EditUserDialog({ open, onOpenChange, user, sectors, currentRole, onSucc
               </SelectContent>
             </Select>
           </div>
+
+          {/* Additional Sectors */}
+          <div className="space-y-2">
+            <Label>Setores Adicionais</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Selecione os setores extras que este usuário terá acesso
+            </p>
+            {loadingAdditional ? (
+              <div className="flex items-center gap-2 py-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <span className="text-sm text-muted-foreground">Carregando...</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto p-2 border rounded-md">
+                {availableAdditionalSectors.map((sector) => (
+                  <label
+                    key={sector.id}
+                    className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-muted transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={additionalSectorIds.includes(sector.id)}
+                      onChange={() => toggleAdditionalSector(sector.id)}
+                      className="rounded border-gray-300"
+                    />
+                    <div
+                      className="h-3 w-3 rounded-full"
+                      style={{ backgroundColor: sector.color }}
+                    />
+                    <span className="text-sm">{sector.name}</span>
+                  </label>
+                ))}
+                {availableAdditionalSectors.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2 text-center py-2">
+                    Selecione um setor principal primeiro
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label>Tipo de Perfil</Label>
             <Select value={role} onValueChange={setRole}>

@@ -58,9 +58,11 @@ export type Database = {
           author_id: string
           content: string
           created_at: string
+          expire_at: string | null
           id: string
           is_pinned: boolean
           priority: string
+          start_at: string | null
           title: string
           updated_at: string
         }
@@ -68,9 +70,11 @@ export type Database = {
           author_id: string
           content: string
           created_at?: string
+          expire_at?: string | null
           id?: string
           is_pinned?: boolean
           priority?: string
+          start_at?: string | null
           title: string
           updated_at?: string
         }
@@ -78,9 +82,11 @@ export type Database = {
           author_id?: string
           content?: string
           created_at?: string
+          expire_at?: string | null
           id?: string
           is_pinned?: boolean
           priority?: string
+          start_at?: string | null
           title?: string
           updated_at?: string
         }
@@ -187,6 +193,7 @@ export type Database = {
           email: string
           id: string
           is_active: boolean
+          last_seen_at: string | null
           name: string
           phone: string | null
           profile_type: string
@@ -206,6 +213,7 @@ export type Database = {
           email: string
           id?: string
           is_active?: boolean
+          last_seen_at?: string | null
           name: string
           phone?: string | null
           profile_type?: string
@@ -225,6 +233,7 @@ export type Database = {
           email?: string
           id?: string
           is_active?: boolean
+          last_seen_at?: string | null
           name?: string
           phone?: string | null
           profile_type?: string
