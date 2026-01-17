@@ -135,40 +135,58 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           autonomy_level: string
           avatar_url: string | null
           birth_date: string | null
+          company: string | null
           created_at: string
           display_name: string | null
           email: string
           id: string
+          is_active: boolean
           name: string
+          phone: string | null
+          profile_type: string
+          registration_number: string | null
           sector_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          address?: string | null
           autonomy_level?: string
           avatar_url?: string | null
           birth_date?: string | null
+          company?: string | null
           created_at?: string
           display_name?: string | null
           email: string
           id?: string
+          is_active?: boolean
           name: string
+          phone?: string | null
+          profile_type?: string
+          registration_number?: string | null
           sector_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          address?: string | null
           autonomy_level?: string
           avatar_url?: string | null
           birth_date?: string | null
+          company?: string | null
           created_at?: string
           display_name?: string | null
           email?: string
           id?: string
+          is_active?: boolean
           name?: string
+          phone?: string | null
+          profile_type?: string
+          registration_number?: string | null
           sector_id?: string | null
           updated_at?: string
           user_id?: string
@@ -231,6 +249,68 @@ export type Database = {
         }
         Relationships: []
       }
+      user_additional_sectors: {
+        Row: {
+          created_at: string
+          id: string
+          sector_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          sector_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sector_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_additional_sectors_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_permissions: {
+        Row: {
+          can_access_management: boolean
+          can_access_password_change: boolean
+          can_delete_messages: boolean
+          can_post_announcements: boolean
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_access_management?: boolean
+          can_access_password_change?: boolean
+          can_delete_messages?: boolean
+          can_post_announcements?: boolean
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_access_management?: boolean
+          can_access_password_change?: boolean
+          can_delete_messages?: boolean
+          can_post_announcements?: boolean
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -269,6 +349,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      user_has_sector_access: {
+        Args: { check_sector_id: string; check_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "gerente" | "supervisor" | "colaborador"

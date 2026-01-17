@@ -22,12 +22,28 @@ Deno.serve(async (req) => {
       },
     });
 
-    const { email, password, name, birthDate, sectorId, registrationPassword } = await req.json();
+    const { 
+      email, 
+      password, 
+      name, 
+      birthDate, 
+      sectorId, 
+      registrationPassword,
+      // New fields
+      phone,
+      address,
+      company,
+      registrationNumber,
+      profileType,
+      isActive,
+      additionalSectors,
+      permissions,
+    } = await req.json();
 
     // Validate required fields
     if (!email || !password || !name || !birthDate || !sectorId || !registrationPassword) {
       return new Response(
-        JSON.stringify({ error: "Todos os campos são obrigatórios" }),
+        JSON.stringify({ error: "Todos os campos obrigatórios devem ser preenchidos" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -86,31 +102,69 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Update the profile with birth_date and sector_id
-    // The profile is created by the trigger, so we just need to update it
+    // Update the profile with all fields
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
       .update({
         birth_date: birthDate,
         sector_id: sectorId,
+        phone: phone || null,
+        address: address || null,
+        company: company || null,
+        registration_number: registrationNumber || null,
+        profile_type: profileType || 'user',
+        is_active: isActive !== undefined ? isActive : true,
       })
       .eq("user_id", authData.user.id);
 
     if (profileError) {
       console.error("Error updating profile:", profileError);
-      // Don't fail the registration, the profile can be updated later
     }
 
-    // Add colaborador role by default
+    // Add role based on profile type
+    const role = profileType === 'admin' ? 'admin' : 'colaborador';
     const { error: roleError } = await supabaseAdmin
       .from("user_roles")
       .insert({
         user_id: authData.user.id,
-        role: "colaborador",
+        role: role,
       });
 
     if (roleError) {
       console.error("Error adding role:", roleError);
+    }
+
+    // Add additional sectors if provided
+    if (additionalSectors && additionalSectors.length > 0) {
+      const sectorInserts = additionalSectors.map((sId: string) => ({
+        user_id: authData.user.id,
+        sector_id: sId,
+      }));
+
+      const { error: sectorsError } = await supabaseAdmin
+        .from("user_additional_sectors")
+        .insert(sectorInserts);
+
+      if (sectorsError) {
+        console.error("Error adding additional sectors:", sectorsError);
+      }
+    }
+
+    // Add permissions if provided
+    if (permissions) {
+      const { error: permError } = await supabaseAdmin
+        .from("user_permissions")
+        .insert({
+          user_id: authData.user.id,
+          can_post_announcements: permissions.canPostAnnouncements || false,
+          can_delete_messages: permissions.canDeleteMessages || false,
+          can_access_management: permissions.canAccessManagement || false,
+          can_access_password_change: permissions.canAccessPasswordChange || false,
+        });
+
+      if (permError) {
+        console.error("Error adding permissions:", permError);
+      }
     }
 
     return new Response(

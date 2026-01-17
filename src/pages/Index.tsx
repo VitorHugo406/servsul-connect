@@ -6,6 +6,7 @@ import { ChatSection } from '@/components/sections/ChatSection';
 import { AnnouncementsSection } from '@/components/sections/AnnouncementsSection';
 import { BirthdaysSection } from '@/components/sections/BirthdaysSection';
 import { ChartsSection } from '@/components/sections/ChartsSection';
+import { ManagementSection } from '@/components/sections/ManagementSection';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
@@ -13,6 +14,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   announcements: { title: 'Avisos Gerais', subtitle: 'Comunicados oficiais' },
   birthdays: { title: 'Aniversariantes', subtitle: 'Mural de celebrações' },
   charts: { title: 'Gráficos', subtitle: 'Visualização de dados' },
+  management: { title: 'Gerenciamento', subtitle: 'Administração do sistema' },
 };
 
 const Index = () => {
@@ -30,7 +32,8 @@ const Index = () => {
         return <BirthdaysSection />;
       case 'charts':
         return <ChartsSection />;
-      default:
+      case 'management':
+        return <ManagementSection />;
         return <HomeSection onNavigate={setActiveSection} />;
     }
   };
