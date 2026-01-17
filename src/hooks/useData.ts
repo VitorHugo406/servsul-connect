@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+const GERAL_SECTOR_ID = '00000000-0000-0000-0000-000000000001';
+
 interface Sector {
   id: string;
   name: string;
@@ -33,7 +35,7 @@ interface Message {
 export function useMessages(sectorId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
-  const { profile } = useAuth();
+  const { profile, isAdmin } = useAuth();
 
   const fetchMessages = useCallback(async () => {
     if (!sectorId) return;
@@ -84,6 +86,15 @@ export function useMessages(sectorId: string | null) {
   const sendMessage = async (content: string) => {
     if (!profile || !sectorId) return { error: new Error('Not authenticated') };
 
+    // Check if user can send to this sector (their sector, Geral, or admin)
+    const canSend = isAdmin || 
+                    sectorId === profile.sector_id || 
+                    sectorId === GERAL_SECTOR_ID;
+    
+    if (!canSend) {
+      return { error: new Error('You cannot send messages to this sector') };
+    }
+
     const { error } = await supabase.from('messages').insert({
       content,
       author_id: profile.id,
@@ -93,7 +104,12 @@ export function useMessages(sectorId: string | null) {
     return { error };
   };
 
-  return { messages, loading, sendMessage, refetch: fetchMessages };
+  // Check if user can send messages to this sector
+  const canSendMessages = isAdmin || 
+                          sectorId === profile?.sector_id || 
+                          sectorId === GERAL_SECTOR_ID;
+
+  return { messages, loading, sendMessage, refetch: fetchMessages, canSendMessages };
 }
 
 export function useSectors() {

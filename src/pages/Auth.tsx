@@ -1,13 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MessageSquare, Mail, Lock, User, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
+import { MessageSquare, Mail, Lock, User, Eye, EyeOff, ArrowRight, AlertCircle, Calendar, Building2, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
+
+const GERAL_SECTOR_ID = '00000000-0000-0000-0000-000000000001';
+
+interface Sector {
+  id: string;
+  name: string;
+  color: string;
+}
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -19,6 +29,9 @@ const signupSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres'),
   confirmPassword: z.string(),
+  birthDate: z.string().min(1, 'Data de nascimento é obrigatória'),
+  sectorId: z.string().min(1, 'Setor é obrigatório'),
+  registrationPassword: z.string().min(1, 'Senha de autorização é obrigatória'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'As senhas não coincidem',
   path: ['confirmPassword'],
@@ -29,14 +42,35 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sectors, setSectors] = useState<Sector[]>([]);
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [sectorId, setSectorId] = useState('');
+  const [registrationPassword, setRegistrationPassword] = useState('');
   
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
+
+  // Fetch sectors for the signup form
+  useEffect(() => {
+    const fetchSectors = async () => {
+      const { data, error } = await supabase
+        .from('sectors')
+        .select('id, name, color')
+        .neq('id', GERAL_SECTOR_ID) // Exclude Geral from selection
+        .order('name');
+
+      if (!error && data) {
+        setSectors(data);
+      }
+    };
+
+    fetchSectors();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,29 +98,72 @@ const Auth = () => {
         }
         navigate('/');
       } else {
-        const validation = signupSchema.safeParse({ name, email, password, confirmPassword });
+        const validation = signupSchema.safeParse({ 
+          name, 
+          email, 
+          password, 
+          confirmPassword,
+          birthDate,
+          sectorId,
+          registrationPassword,
+        });
         if (!validation.success) {
           setError(validation.error.errors[0].message);
           setLoading(false);
           return;
         }
 
-        const { error } = await signUp(email, password, name);
-        if (error) {
-          if (error.message.includes('User already registered')) {
-            setError('Este email já está cadastrado');
-          } else {
-            setError(error.message);
-          }
+        // Call the edge function to register the user
+        const response = await supabase.functions.invoke('register-user', {
+          body: {
+            email,
+            password,
+            name,
+            birthDate,
+            sectorId,
+            registrationPassword,
+          },
+        });
+
+        if (response.error) {
+          setError(response.error.message || 'Erro ao criar conta');
           setLoading(false);
           return;
         }
+
+        if (response.data?.error) {
+          setError(response.data.error);
+          setLoading(false);
+          return;
+        }
+
+        // Auto-login after successful registration
+        const { error: signInError } = await signIn(email, password);
+        if (signInError) {
+          setError('Conta criada! Faça login para continuar.');
+          setIsLogin(true);
+          setLoading(false);
+          return;
+        }
+        
         navigate('/');
       }
     } catch (err) {
+      console.error('Auth error:', err);
       setError('Ocorreu um erro. Tente novamente.');
       setLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setName('');
+    setBirthDate('');
+    setSectorId('');
+    setRegistrationPassword('');
+    setError(null);
   };
 
   return (
@@ -181,9 +258,34 @@ const Auth = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive"
                   >
-                    <AlertCircle className="h-4 w-4" />
-                    {error}
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    <span>{error}</span>
                   </motion.div>
+                )}
+
+                {/* Registration Password for signup - FIRST FIELD */}
+                {!isLogin && (
+                  <div className="space-y-2">
+                    <Label htmlFor="registrationPassword" className="flex items-center gap-1">
+                      <KeyRound className="h-3 w-3" />
+                      Senha de autorização
+                    </Label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="registrationPassword"
+                        type="password"
+                        placeholder="Digite a senha de cadastro"
+                        value={registrationPassword}
+                        onChange={(e) => setRegistrationPassword(e.target.value)}
+                        className="pl-10"
+                        required={!isLogin}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Solicite a senha de autorização ao administrador do sistema
+                    </p>
+                  </div>
                 )}
 
                 {/* Name field for signup */}
@@ -265,6 +367,55 @@ const Auth = () => {
                   </div>
                 )}
 
+                {/* Birth Date for signup */}
+                {!isLogin && (
+                  <div className="space-y-2">
+                    <Label htmlFor="birthDate">Data de nascimento</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="birthDate"
+                        type="date"
+                        value={birthDate}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                        className="pl-10"
+                        required={!isLogin}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Sector for signup */}
+                {!isLogin && (
+                  <div className="space-y-2">
+                    <Label htmlFor="sector">Setor responsável</Label>
+                    <Select value={sectorId} onValueChange={setSectorId}>
+                      <SelectTrigger className="w-full">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder="Selecione seu setor" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sectors.map((sector) => (
+                          <SelectItem key={sector.id} value={sector.id}>
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="h-3 w-3 rounded-full" 
+                                style={{ backgroundColor: sector.color }}
+                              />
+                              {sector.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Você também terá acesso ao setor Geral automaticamente
+                    </p>
+                  </div>
+                )}
+
                 {/* Submit Button */}
                 <Button
                   type="submit"
@@ -294,7 +445,7 @@ const Auth = () => {
                   type="button"
                   onClick={() => {
                     setIsLogin(!isLogin);
-                    setError(null);
+                    resetForm();
                   }}
                   className="ml-1 font-medium text-primary hover:underline"
                 >

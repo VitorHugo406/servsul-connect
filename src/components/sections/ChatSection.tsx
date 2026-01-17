@@ -9,14 +9,19 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertCircle } from 'lucide-react';
 
 export function ChatSection() {
-  const { profile, sector } = useAuth();
+  const { profile, isAdmin, geralSectorId } = useAuth();
   const { sectors, loading: sectorsLoading } = useSectors();
   const [activeSector, setActiveSector] = useState<string | null>(null);
 
+  // Filter sectors user can access: their sector + Geral (or all if admin)
+  const accessibleSectors = isAdmin 
+    ? sectors 
+    : sectors.filter(s => s.id === profile?.sector_id || s.id === geralSectorId);
+
   // Set initial sector based on user's sector or first available
-  const effectiveSector = activeSector || sector?.id || (sectors.length > 0 ? sectors[0].id : null);
+  const effectiveSector = activeSector || profile?.sector_id || geralSectorId;
   
-  const { messages, loading: messagesLoading, sendMessage } = useMessages(effectiveSector);
+  const { messages, loading: messagesLoading, sendMessage, canSendMessages } = useMessages(effectiveSector);
 
   const handleSendMessage = async (content: string) => {
     const { error } = await sendMessage(content);
@@ -26,7 +31,6 @@ export function ChatSection() {
   };
 
   const currentSector = sectors.find((s) => s.id === effectiveSector);
-  const canSendMessages = profile?.sector_id === effectiveSector || profile?.autonomy_level === 'admin';
 
   if (sectorsLoading) {
     return (
@@ -36,7 +40,7 @@ export function ChatSection() {
     );
   }
 
-  if (!profile?.sector_id && profile?.autonomy_level !== 'admin') {
+  if (!profile?.sector_id && !isAdmin) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-8 text-center">
         <AlertCircle className="mb-4 h-12 w-12 text-warning" />
@@ -56,7 +60,7 @@ export function ChatSection() {
     >
       {/* Sector Tabs */}
       <SectorTabs 
-        sectors={sectors}
+        sectors={accessibleSectors}
         activeSector={effectiveSector || ''} 
         onSectorChange={setActiveSector} 
       />
