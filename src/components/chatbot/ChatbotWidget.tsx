@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, X, Bell, HelpCircle, Sparkles, ChevronRight, Check, Building2 } from 'lucide-react';
+import { Bot, X, Bell, HelpCircle, Sparkles, ChevronRight, Check, Building2, MessageSquare, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,6 +14,11 @@ interface Notification {
   message: string;
   is_read: boolean;
   created_at: string;
+}
+
+interface UnreadCounts {
+  announcements: number;
+  messages: number;
 }
 
 type TabType = 'notifications' | 'help' | 'sectors';
@@ -41,37 +46,103 @@ const helpItems = [
   },
 ];
 
-export function ChatbotWidget() {
+interface ChatbotWidgetProps {
+  isHomePage?: boolean;
+}
+
+export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('notifications');
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCounts, setUnreadCounts] = useState<UnreadCounts>({ announcements: 0, messages: 0 });
   const [loading, setLoading] = useState(false);
   const { user, profile, sector, additionalSectors, isAdmin } = useAuth();
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadNotifications = notifications.filter(n => !n.is_read).length;
+  const totalUnread = unreadNotifications + unreadCounts.announcements + unreadCounts.messages;
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !profile || !isHomePage) return;
 
-    const fetchNotifications = async () => {
+    const fetchData = async () => {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Fetch notifications
+      const { data: notifData, error: notifError } = await supabase
         .from('user_notifications')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(20);
 
-      if (error) {
-        console.error('Error fetching notifications:', error);
-      } else {
-        setNotifications(data || []);
+      if (!notifError) {
+        setNotifications(notifData || []);
       }
+
+      // Get last seen timestamp from profile
+      const lastSeenStr = (profile as any).last_seen_at;
+      const lastSeen = lastSeenStr ? new Date(lastSeenStr) : new Date(0);
+
+      // Count new announcements since last seen
+      const { count: announcementCount } = await supabase
+        .from('announcements')
+        .select('*', { count: 'exact', head: true })
+        .gt('created_at', lastSeen.toISOString());
+
+      // Count unread direct messages
+      const { count: messageCount } = await supabase
+        .from('direct_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', profile.id)
+        .eq('is_read', false);
+
+      setUnreadCounts({
+        announcements: announcementCount || 0,
+        messages: messageCount || 0,
+      });
+
+      // Update last seen
+      await supabase
+        .from('profiles')
+        .update({ last_seen_at: new Date().toISOString() })
+        .eq('user_id', user.id);
+
       setLoading(false);
     };
 
-    fetchNotifications();
-  }, [user]);
+    fetchData();
+
+    // Set up realtime subscription for new announcements
+    const announcementChannel = supabase
+      .channel('new-announcements')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'announcements' }, () => {
+        setUnreadCounts(prev => ({ ...prev, announcements: prev.announcements + 1 }));
+      })
+      .subscribe();
+
+    // Set up realtime subscription for new direct messages
+    const messageChannel = supabase
+      .channel('new-direct-messages')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'direct_messages',
+        filter: `receiver_id=eq.${profile.id}`
+      }, () => {
+        setUnreadCounts(prev => ({ ...prev, messages: prev.messages + 1 }));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(announcementChannel);
+      supabase.removeChannel(messageChannel);
+    };
+  }, [user, profile, isHomePage]);
+
+  // Only render on home page
+  if (!isHomePage) {
+    return null;
+  }
 
   const markAsRead = async (notificationId: string) => {
     await supabase
@@ -97,20 +168,37 @@ export function ChatbotWidget() {
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Button with bubble animation */}
       <motion.button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full gradient-primary shadow-lg hover:shadow-xl transition-shadow"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ 
+          type: 'spring', 
+          stiffness: 260, 
+          damping: 20,
+          delay: 0.5 
+        }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
       >
-        <Bot className="h-7 w-7 text-white" />
-        {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1 text-xs font-bold text-white">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.7, type: 'spring', stiffness: 300 }}
+        >
+          <Bot className="h-7 w-7 text-white" />
+        </motion.div>
+        {totalUnread > 0 && (
+          <motion.span 
+            className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1 text-xs font-bold text-white"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.8, type: 'spring' }}
+          >
+            {totalUnread > 9 ? '9+' : totalUnread}
+          </motion.span>
         )}
       </motion.button>
 
@@ -129,9 +217,9 @@ export function ChatbotWidget() {
 
             {/* Panel */}
             <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              initial={{ opacity: 0, y: 20, scale: 0.8 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              exit={{ opacity: 0, y: 20, scale: 0.8 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="fixed bottom-6 right-6 z-50 w-[360px] max-w-[calc(100vw-48px)] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
             >
@@ -156,6 +244,28 @@ export function ChatbotWidget() {
                 </Button>
               </div>
 
+              {/* Quick Stats */}
+              <div className="grid grid-cols-2 gap-2 p-3 border-b border-border bg-muted/30">
+                <div className="flex items-center gap-2 rounded-lg bg-background p-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                    <Megaphone className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Novos Avisos</p>
+                    <p className="font-semibold text-foreground">{unreadCounts.announcements}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg bg-background p-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/10">
+                    <MessageSquare className="h-4 w-4 text-secondary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Mensagens</p>
+                    <p className="font-semibold text-foreground">{unreadCounts.messages}</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Tabs */}
               <div className="flex border-b border-border">
                 <button
@@ -167,10 +277,10 @@ export function ChatbotWidget() {
                   }`}
                 >
                   <Bell className="h-4 w-4" />
-                  <span>Notificações</span>
-                  {unreadCount > 0 && (
+                  <span>Novidades</span>
+                  {unreadNotifications > 0 && (
                     <Badge variant="destructive" className="h-5 min-w-[20px] px-1 text-xs">
-                      {unreadCount}
+                      {unreadNotifications}
                     </Badge>
                   )}
                 </button>
@@ -199,23 +309,61 @@ export function ChatbotWidget() {
               </div>
 
               {/* Content */}
-              <ScrollArea className="h-[350px]">
+              <ScrollArea className="h-[300px]">
                 {activeTab === 'notifications' && (
                   <div className="p-3">
                     {loading ? (
                       <div className="flex items-center justify-center py-8">
                         <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                       </div>
-                    ) : notifications.length === 0 ? (
+                    ) : notifications.length === 0 && unreadCounts.announcements === 0 && unreadCounts.messages === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
                         <Bell className="mb-2 h-10 w-10 text-muted-foreground" />
-                        <p className="font-medium text-foreground">Nenhuma notificação</p>
+                        <p className="font-medium text-foreground">Nenhuma novidade</p>
                         <p className="text-sm text-muted-foreground">
                           Você está em dia!
                         </p>
                       </div>
                     ) : (
                       <div className="space-y-2">
+                        {/* Summary cards for new items */}
+                        {unreadCounts.announcements > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="rounded-lg border border-primary/30 bg-primary/5 p-3"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Megaphone className="h-4 w-4 text-primary" />
+                              <span className="font-medium text-foreground">
+                                {unreadCounts.announcements} novo(s) aviso(s)
+                              </span>
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Acesse a aba "Avisos" para ver
+                            </p>
+                          </motion.div>
+                        )}
+
+                        {unreadCounts.messages > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.1 }}
+                            className="rounded-lg border border-secondary/30 bg-secondary/5 p-3"
+                          >
+                            <div className="flex items-center gap-2">
+                              <MessageSquare className="h-4 w-4 text-secondary" />
+                              <span className="font-medium text-foreground">
+                                {unreadCounts.messages} mensagem(ns) não lida(s)
+                              </span>
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Acesse o chat para responder
+                            </p>
+                          </motion.div>
+                        )}
+
                         {notifications.map((notification) => (
                           <motion.div
                             key={notification.id}

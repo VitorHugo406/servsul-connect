@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pin, AlertTriangle, Clock, Trash2, Plus, X, Send } from 'lucide-react';
+import { Pin, AlertTriangle, Clock, Trash2, Plus, X, Send, CalendarClock } from 'lucide-react';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,6 +48,8 @@ export function AnnouncementsSection() {
   const [content, setContent] = useState('');
   const [priority, setPriority] = useState<'normal' | 'important' | 'urgent'>('normal');
   const [isPinned, setIsPinned] = useState(false);
+  const [startAt, setStartAt] = useState('');
+  const [expireAt, setExpireAt] = useState('');
 
   // Check if user can post announcements
   const canPost = isAdmin || canAccess('can_post_announcements');

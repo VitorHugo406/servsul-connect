@@ -29,12 +29,16 @@ export function useAnnouncements() {
 
   const fetchAnnouncements = useCallback(async () => {
     setLoading(true);
+    const now = new Date().toISOString();
+    
     const { data, error } = await supabase
       .from('announcements')
       .select(`
         *,
         author:profiles!announcements_author_id_fkey(id, name, display_name, avatar_url, sector_id)
       `)
+      .lte('start_at', now)
+      .or(`expire_at.is.null,expire_at.gt.${now}`)
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false });
 
