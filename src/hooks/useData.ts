@@ -104,11 +104,9 @@ export function useMessages(sectorId: string | null) {
     return { error };
   };
 
-  // Check if user can send messages to this sector
-  const canSendMessages = isAdmin || 
-                          sectorId === profile?.sector_id || 
-                          sectorId === GERAL_SECTOR_ID;
-
+  // Check if user can send messages to this sector (including additional sectors)
+  const { allAccessibleSectorIds } = useAuth();
+  const canSendMessages = isAdmin || allAccessibleSectorIds.includes(sectorId || '');
   return { messages, loading, sendMessage, refetch: fetchMessages, canSendMessages };
 }
 
