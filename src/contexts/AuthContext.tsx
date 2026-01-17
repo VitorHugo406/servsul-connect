@@ -43,6 +43,8 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   sector: Sector | null;
+  additionalSectors: Sector[];
+  allAccessibleSectorIds: string[];
   roles: UserRole[];
   permissions: UserPermissions | null;
   isAdmin: boolean;
@@ -53,6 +55,7 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
   refreshPermissions: () => Promise<void>;
   canAccess: (permission: keyof UserPermissions) => boolean;
+  hasSectorAccess: (sectorId: string) => boolean;
 }
 
 const defaultPermissions: UserPermissions = {
@@ -69,11 +72,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [sector, setSector] = useState<Sector | null>(null);
+  const [additionalSectors, setAdditionalSectors] = useState<Sector[]>([]);
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [permissions, setPermissions] = useState<UserPermissions | null>(null);
   const [loading, setLoading] = useState(true);
 
   const isAdmin = roles.some(r => r.role === 'admin');
+
+  // Calculate all accessible sector IDs
+  const allAccessibleSectorIds = [
+    GERAL_SECTOR_ID, // Everyone has access to Geral
+    ...(profile?.sector_id ? [profile.sector_id] : []), // Primary sector
+    ...additionalSectors.map(s => s.id), // Additional sectors
+  ];
 
   const fetchPermissions = async (userId: string) => {
     try {
@@ -101,6 +112,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error in fetchPermissions:', error);
       setPermissions(defaultPermissions);
+    }
+  };
+
+  const fetchAdditionalSectors = async (userId: string) => {
+    try {
+      // Fetch additional sector IDs
+      const { data: additionalData, error: additionalError } = await supabase
+        .from('user_additional_sectors')
+        .select('sector_id')
+        .eq('user_id', userId);
+
+      if (additionalError) {
+        console.error('Error fetching additional sectors:', additionalError);
+        return;
+      }
+
+      if (additionalData && additionalData.length > 0) {
+        const sectorIds = additionalData.map(d => d.sector_id);
+        
+        // Fetch full sector details
+        const { data: sectorsData, error: sectorsError } = await supabase
+          .from('sectors')
+          .select('*')
+          .in('id', sectorIds);
+
+        if (sectorsError) {
+          console.error('Error fetching sector details:', sectorsError);
+          return;
+        }
+
+        if (sectorsData) {
+          setAdditionalSectors(sectorsData as Sector[]);
+        }
+      } else {
+        setAdditionalSectors([]);
+      }
+    } catch (error) {
+      console.error('Error in fetchAdditionalSectors:', error);
+      setAdditionalSectors([]);
     }
   };
 
@@ -146,6 +196,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRoles(rolesData as UserRole[]);
       }
 
+      // Fetch additional sectors
+      await fetchAdditionalSectors(userId);
+
       // Fetch permissions
       await fetchPermissions(userId);
     } catch (error) {
@@ -171,6 +224,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return permissions[permission];
   };
 
+  const hasSectorAccess = (sectorId: string): boolean => {
+    if (isAdmin) return true;
+    return allAccessibleSectorIds.includes(sectorId);
+  };
+
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -186,6 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setProfile(null);
           setSector(null);
+          setAdditionalSectors([]);
           setRoles([]);
           setPermissions(null);
         }
@@ -219,6 +278,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setProfile(null);
     setSector(null);
+    setAdditionalSectors([]);
     setRoles([]);
     setPermissions(null);
   };
@@ -230,6 +290,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         sector,
+        additionalSectors,
+        allAccessibleSectorIds,
         roles,
         permissions,
         isAdmin,
@@ -240,6 +302,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refreshProfile,
         refreshPermissions,
         canAccess,
+        hasSectorAccess,
       }}
     >
       {children}
