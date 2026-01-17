@@ -1,8 +1,25 @@
 import { motion } from 'framer-motion';
-import { Message } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { currentUser } from '@/data/mockData';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSectors } from '@/hooks/useData';
+
+interface Author {
+  id: string;
+  name: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  sector_id: string | null;
+}
+
+interface Message {
+  id: string;
+  content: string;
+  author_id: string;
+  sector_id: string;
+  created_at: string;
+  author?: Author;
+}
 
 interface ChatMessageProps {
   message: Message;
@@ -10,7 +27,12 @@ interface ChatMessageProps {
 }
 
 export function ChatMessage({ message, index }: ChatMessageProps) {
-  const isOwn = message.sender.id === currentUser.id;
+  const { profile } = useAuth();
+  const { sectors } = useSectors();
+  
+  const isOwn = message.author_id === profile?.id;
+  const author = message.author;
+  const authorSector = sectors.find((s) => s.id === author?.sector_id);
   
   const getInitials = (name: string) => {
     return name
@@ -21,44 +43,49 @@ export function ChatMessage({ message, index }: ChatMessageProps) {
       .toUpperCase();
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
     return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
+
+  const displayName = author?.display_name || author?.name || 'Usuário';
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1, duration: 0.3 }}
+      transition={{ delay: index * 0.05, duration: 0.3 }}
       className={cn('flex gap-3', isOwn && 'flex-row-reverse')}
     >
       <Avatar className="h-10 w-10 flex-shrink-0 ring-2 ring-border">
-        <AvatarImage src={message.sender.avatar} alt={message.sender.displayName} />
+        <AvatarImage src={author?.avatar_url || ''} alt={displayName} />
         <AvatarFallback 
-          className="text-sm font-semibold"
-          style={{ backgroundColor: message.sender.sector.color, color: 'white' }}
+          className="text-sm font-semibold text-white"
+          style={{ backgroundColor: authorSector?.color || '#6366f1' }}
         >
-          {getInitials(message.sender.displayName)}
+          {getInitials(displayName)}
         </AvatarFallback>
       </Avatar>
       
       <div className={cn('max-w-[70%]', isOwn && 'items-end')}>
         <div className={cn('mb-1 flex items-center gap-2', isOwn && 'flex-row-reverse')}>
-          <span className="text-sm font-medium text-foreground">{message.sender.displayName}</span>
-          <span 
-            className="rounded-full px-2 py-0.5 text-xs font-medium"
-            style={{ backgroundColor: `${message.sender.sector.color}20`, color: message.sender.sector.color }}
-          >
-            {message.sender.sector.name}
-          </span>
-          <span className="text-xs text-muted-foreground">{formatTime(message.timestamp)}</span>
+          <span className="text-sm font-medium text-foreground">{displayName}</span>
+          {authorSector && (
+            <span 
+              className="rounded-full px-2 py-0.5 text-xs font-medium"
+              style={{ backgroundColor: `${authorSector.color}20`, color: authorSector.color }}
+            >
+              {authorSector.name}
+            </span>
+          )}
+          <span className="text-xs text-muted-foreground">{formatTime(message.created_at)}</span>
         </div>
         
         <div
           className={cn(
             'rounded-2xl px-4 py-3 shadow-sm',
             isOwn
-              ? 'gradient-primary text-primary-foreground rounded-tr-md'
+              ? 'gradient-primary text-white rounded-tr-md'
               : 'bg-card text-card-foreground rounded-tl-md border border-border'
           )}
         >

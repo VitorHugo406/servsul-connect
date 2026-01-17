@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, TrendingUp, Upload, FileSpreadsheet } from 'lucide-react';
+import { BarChart3, TrendingUp, Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { chartData } from '@/data/mockData';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   BarChart,
   Bar,
@@ -12,14 +12,46 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
-  Area,
   AreaChart,
+  Area,
 } from 'recharts';
 
+// Sample chart data - in production this would come from the database
+const sampleChartData = [
+  {
+    id: '1',
+    name: 'Vendas por Mês',
+    type: 'bar' as const,
+    data: [
+      { label: 'Jan', value: 450000 },
+      { label: 'Fev', value: 380000 },
+      { label: 'Mar', value: 520000 },
+      { label: 'Abr', value: 490000 },
+      { label: 'Mai', value: 610000 },
+      { label: 'Jun', value: 580000 },
+    ],
+  },
+  {
+    id: '2',
+    name: 'Produtividade Semanal',
+    type: 'line' as const,
+    data: [
+      { label: 'Seg', value: 85 },
+      { label: 'Ter', value: 92 },
+      { label: 'Qua', value: 88 },
+      { label: 'Qui', value: 95 },
+      { label: 'Sex', value: 78 },
+    ],
+  },
+];
+
 export function ChartsSection() {
-  const [selectedChart, setSelectedChart] = useState(chartData[0]);
+  const { profile } = useAuth();
+  const [selectedChart, setSelectedChart] = useState(sampleChartData[0]);
+
+  const canViewCharts = profile?.autonomy_level === 'admin' || 
+                        profile?.autonomy_level === 'gerente' ||
+                        profile?.autonomy_level === 'supervisor';
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -28,6 +60,18 @@ export function ChartsSection() {
       notation: 'compact',
     }).format(value);
   };
+
+  if (!canViewCharts) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+        <AlertCircle className="mb-4 h-12 w-12 text-warning" />
+        <h3 className="font-display text-xl font-semibold text-foreground">Acesso Restrito</h3>
+        <p className="mt-2 text-muted-foreground">
+          Apenas supervisores, gerentes e administradores podem visualizar gráficos.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -54,7 +98,7 @@ export function ChartsSection() {
 
       {/* Chart Selector */}
       <div className="mb-6 flex gap-3">
-        {chartData.map((chart) => (
+        {sampleChartData.map((chart) => (
           <motion.button
             key={chart.id}
             onClick={() => setSelectedChart(chart)}
