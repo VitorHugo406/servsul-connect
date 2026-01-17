@@ -179,39 +179,56 @@ export function ManagementSection() {
     permission: keyof Omit<UserPermission, 'id' | 'user_id' | 'created_at' | 'updated_at'>,
     value: boolean
   ) => {
+    // Optimistically update the UI
+    const previousPermissions = { ...permissions };
+    setPermissions({
+      ...permissions,
+      [userId]: {
+        ...permissions[userId],
+        user_id: userId,
+        [permission]: value,
+      } as UserPermission,
+    });
+
     try {
-      const existingPermission = permissions[userId];
-      
-      if (existingPermission) {
-        const { error } = await supabase
-          .from('user_permissions')
-          .update({ [permission]: value })
-          .eq('user_id', userId);
+      // Map frontend permission names to backend format
+      const permissionMap: Record<string, string> = {
+        can_post_announcements: 'canPostAnnouncements',
+        can_delete_messages: 'canDeleteMessages',
+        can_access_management: 'canAccessManagement',
+        can_access_password_change: 'canAccessPasswordChange',
+      };
 
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('user_permissions')
-          .insert({
-            user_id: userId,
-            [permission]: value,
-          });
+      // Build the full permissions object
+      const currentPerm = permissions[userId] as Partial<UserPermission> || {};
+      const updatedPermissions = {
+        canPostAnnouncements: permission === 'can_post_announcements' ? value : (currentPerm.can_post_announcements ?? false),
+        canDeleteMessages: permission === 'can_delete_messages' ? value : (currentPerm.can_delete_messages ?? false),
+        canAccessManagement: permission === 'can_access_management' ? value : (currentPerm.can_access_management ?? false),
+        canAccessPasswordChange: permission === 'can_access_password_change' ? value : (currentPerm.can_access_password_change ?? false),
+      };
 
-        if (error) throw error;
+      // Call the edge function to update permissions
+      const response = await supabase.functions.invoke('update-user-permissions', {
+        body: {
+          userId,
+          permissions: updatedPermissions,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
       }
 
-      setPermissions({
-        ...permissions,
-        [userId]: {
-          ...permissions[userId],
-          user_id: userId,
-          [permission]: value,
-        } as UserPermission,
-      });
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
       
-      toast.success('Permissão atualizada');
+      toast.success('Permissão salva com sucesso');
     } catch (error) {
       console.error('Error updating permission:', error);
+      // Rollback on error
+      setPermissions(previousPermissions);
       toast.error('Erro ao atualizar permissão');
     }
   };

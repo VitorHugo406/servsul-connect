@@ -14,6 +14,8 @@ interface Profile {
   sector_id: string | null;
   autonomy_level: string;
   birth_date: string | null;
+  is_active: boolean;
+  profile_type: string;
   created_at: string;
   updated_at: string;
 }
@@ -29,19 +31,36 @@ interface UserRole {
   role: 'admin' | 'gerente' | 'supervisor' | 'colaborador';
 }
 
+interface UserPermissions {
+  can_post_announcements: boolean;
+  can_delete_messages: boolean;
+  can_access_management: boolean;
+  can_access_password_change: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   sector: Sector | null;
   roles: UserRole[];
+  permissions: UserPermissions | null;
   isAdmin: boolean;
   geralSectorId: string;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  refreshPermissions: () => Promise<void>;
+  canAccess: (permission: keyof UserPermissions) => boolean;
 }
+
+const defaultPermissions: UserPermissions = {
+  can_post_announcements: false,
+  can_delete_messages: false,
+  can_access_management: false,
+  can_access_password_change: false,
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -51,9 +70,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [sector, setSector] = useState<Sector | null>(null);
   const [roles, setRoles] = useState<UserRole[]>([]);
+  const [permissions, setPermissions] = useState<UserPermissions | null>(null);
   const [loading, setLoading] = useState(true);
 
   const isAdmin = roles.some(r => r.role === 'admin');
+
+  const fetchPermissions = async (userId: string) => {
+    try {
+      const { data: permData, error: permError } = await supabase
+        .from('user_permissions')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (permError) {
+        console.error('Error fetching permissions:', permError);
+        return;
+      }
+
+      if (permData) {
+        setPermissions({
+          can_post_announcements: permData.can_post_announcements,
+          can_delete_messages: permData.can_delete_messages,
+          can_access_management: permData.can_access_management,
+          can_access_password_change: permData.can_access_password_change,
+        });
+      } else {
+        setPermissions(defaultPermissions);
+      }
+    } catch (error) {
+      console.error('Error in fetchPermissions:', error);
+      setPermissions(defaultPermissions);
+    }
+  };
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -96,6 +145,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (rolesData) {
         setRoles(rolesData as UserRole[]);
       }
+
+      // Fetch permissions
+      await fetchPermissions(userId);
     } catch (error) {
       console.error('Error in fetchProfile:', error);
     }
@@ -105,6 +157,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) {
       await fetchProfile(user.id);
     }
+  };
+
+  const refreshPermissions = async () => {
+    if (user) {
+      await fetchPermissions(user.id);
+    }
+  };
+
+  const canAccess = (permission: keyof UserPermissions): boolean => {
+    if (isAdmin) return true;
+    if (!permissions) return false;
+    return permissions[permission];
   };
 
   useEffect(() => {
@@ -122,6 +186,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setProfile(null);
           setSector(null);
+          setRoles([]);
+          setPermissions(null);
         }
       }
     );
@@ -149,13 +215,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
-  // signUp is now handled by the edge function - removed from context
-
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
     setSector(null);
     setRoles([]);
+    setPermissions(null);
   };
 
   return (
@@ -166,12 +231,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         sector,
         roles,
+        permissions,
         isAdmin,
         geralSectorId: GERAL_SECTOR_ID,
         loading,
         signIn,
         signOut,
         refreshProfile,
+        refreshPermissions,
+        canAccess,
       }}
     >
       {children}
