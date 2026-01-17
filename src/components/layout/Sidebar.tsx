@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface SidebarProps {
@@ -27,7 +26,7 @@ const menuItems = [
   { id: 'announcements', icon: Bell, label: 'Avisos' },
   { id: 'birthdays', icon: Cake, label: 'Aniversariantes' },
   { id: 'charts', icon: BarChart3, label: 'Gráficos' },
-  { id: 'management', icon: Settings, label: 'Gerenciamento', adminOnly: true },
+  { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
 ];
 
 const autonomyLevelLabels: Record<string, string> = {
@@ -39,7 +38,7 @@ const autonomyLevelLabels: Record<string, string> = {
 
 export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { profile, sector, signOut, isAdmin } = useAuth();
+  const { profile, signOut, isAdmin, canAccess } = useAuth();
 
   const getInitials = (name: string) => {
     return name
@@ -52,6 +51,15 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
   const displayName = profile?.display_name || profile?.name || 'Usuário';
   const autonomyLevel = profile?.autonomy_level || 'colaborador';
+
+  // Filter menu items based on permissions
+  const visibleMenuItems = menuItems.filter((item) => {
+    if (!('permission' in item)) return true;
+    // Admin always has access
+    if (isAdmin) return true;
+    // Check permission
+    return canAccess(item.permission);
+  });
 
   return (
     <motion.aside
@@ -86,9 +94,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-3">
-        {menuItems
-          .filter((item) => !('adminOnly' in item) || (item.adminOnly && isAdmin))
-          .map((item) => {
+        {visibleMenuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeSection === item.id;
           
