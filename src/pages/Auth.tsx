@@ -15,13 +15,15 @@ import {
   KeyRound,
   ChevronRight,
   ChevronLeft,
-  Check
+  Check,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -78,6 +80,7 @@ const Auth = () => {
   
   // Step 2 fields
   const [sectorId, setSectorId] = useState('');
+  const [additionalSectors, setAdditionalSectors] = useState<string[]>([]);
   const [birthDate, setBirthDate] = useState('');
   
   const { signIn } = useAuth();
@@ -217,6 +220,7 @@ const Auth = () => {
           birthDate,
           sectorId,
           registrationPassword,
+          additionalSectors: additionalSectors.length > 0 ? additionalSectors : undefined,
           // Public registration defaults
           profileType: 'user',
           isActive: true,
@@ -263,6 +267,7 @@ const Auth = () => {
     setPassword('');
     setConfirmPassword('');
     setSectorId('');
+    setAdditionalSectors([]);
     setBirthDate('');
     setFieldErrors({});
     setError(null);
@@ -640,6 +645,46 @@ const Auth = () => {
                           Você também terá acesso ao setor Geral automaticamente
                         </p>
                       </div>
+
+                      {/* Additional Sectors */}
+                      {sectors.filter(s => s.id !== sectorId && s.name !== 'Geral').length > 0 && (
+                        <div className="space-y-2">
+                          <Label>Setores adicionais (opcional)</Label>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Selecione outros setores que você precisa acessar
+                          </p>
+                          <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
+                            {sectors
+                              .filter(s => s.id !== sectorId && s.name !== 'Geral')
+                              .map((sector) => (
+                                <label
+                                  key={sector.id}
+                                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
+                                    additionalSectors.includes(sector.id)
+                                      ? 'border-primary bg-primary/5'
+                                      : 'border-border hover:border-primary/50'
+                                  }`}
+                                >
+                                  <Checkbox
+                                    checked={additionalSectors.includes(sector.id)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setAdditionalSectors([...additionalSectors, sector.id]);
+                                      } else {
+                                        setAdditionalSectors(additionalSectors.filter(id => id !== sector.id));
+                                      }
+                                    }}
+                                  />
+                                  <div 
+                                    className="h-3 w-3 rounded-full" 
+                                    style={{ backgroundColor: sector.color }}
+                                  />
+                                  <span className="text-sm">{sector.name}</span>
+                                </label>
+                              ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Birth Date */}
                       <div className="space-y-2">

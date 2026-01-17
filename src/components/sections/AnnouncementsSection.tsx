@@ -1,5 +1,6 @@
-import { motion } from 'framer-motion';
-import { Pin, AlertTriangle, Clock, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Pin, AlertTriangle, Clock, Trash2, Plus, X, Send } from 'lucide-react';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,7 +8,13 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const priorityStyles = {
   normal: {
@@ -31,12 +38,22 @@ const priorityLabels: Record<string, string> = {
 };
 
 export function AnnouncementsSection() {
-  const { announcements, loading, deleteAnnouncement } = useAnnouncements();
+  const { announcements, loading, createAnnouncement, deleteAnnouncement } = useAnnouncements();
   const { sectors } = useSectors();
-  const { profile } = useAuth();
+  const { profile, isAdmin, canAccess } = useAuth();
+  
+  const [showForm, setShowForm] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [priority, setPriority] = useState<'normal' | 'important' | 'urgent'>('normal');
+  const [isPinned, setIsPinned] = useState(false);
+
+  // Check if user can post announcements
+  const canPost = isAdmin || canAccess('can_post_announcements');
 
   const canDelete = (authorId: string) => {
-    return profile?.id === authorId || profile?.autonomy_level === 'admin';
+    return profile?.id === authorId || isAdmin;
   };
 
   const getInitials = (name: string) => {
@@ -60,8 +77,38 @@ export function AnnouncementsSection() {
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este aviso?')) {
-      await deleteAnnouncement(id);
+      const { error } = await deleteAnnouncement(id);
+      if (error) {
+        toast.error('Erro ao excluir aviso');
+      } else {
+        toast.success('Aviso excluído com sucesso');
+      }
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!title.trim() || !content.trim()) {
+      toast.error('Preencha o título e o conteúdo');
+      return;
+    }
+
+    setFormLoading(true);
+    const { error } = await createAnnouncement(title, content, priority, isPinned);
+    
+    if (error) {
+      console.error('Error creating announcement:', error);
+      toast.error('Erro ao criar aviso. Verifique suas permissões.');
+    } else {
+      toast.success('Aviso publicado com sucesso!');
+      setTitle('');
+      setContent('');
+      setPriority('normal');
+      setIsPinned(false);
+      setShowForm(false);
+    }
+    setFormLoading(false);
   };
 
   if (loading) {
@@ -78,10 +125,117 @@ export function AnnouncementsSection() {
       animate={{ opacity: 1 }}
       className="p-6"
     >
-      <div className="mb-6">
-        <h3 className="font-display text-2xl font-bold text-foreground">Avisos Gerais</h3>
-        <p className="text-muted-foreground">Comunicados oficiais do Grupo Servsul</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h3 className="font-display text-2xl font-bold text-foreground">Avisos Gerais</h3>
+          <p className="text-muted-foreground">Comunicados oficiais do Grupo Servsul</p>
+        </div>
+        
+        {canPost && (
+          <Button
+            onClick={() => setShowForm(!showForm)}
+            className="gap-2"
+            variant={showForm ? 'outline' : 'default'}
+          >
+            {showForm ? (
+              <>
+                <X className="h-4 w-4" />
+                Cancelar
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                Novo Aviso
+              </>
+            )}
+          </Button>
+        )}
       </div>
+
+      {/* Create Announcement Form */}
+      <AnimatePresence>
+        {showForm && canPost && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 overflow-hidden"
+          >
+            <Card className="border-2 border-primary/20">
+              <CardHeader className="pb-3">
+                <h4 className="font-display text-lg font-semibold text-foreground">
+                  Criar Novo Aviso
+                </h4>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Título *</Label>
+                    <Input
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Título do aviso"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="content">Conteúdo *</Label>
+                    <Textarea
+                      id="content"
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      placeholder="Escreva o conteúdo do aviso..."
+                      rows={4}
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Prioridade</Label>
+                      <Select value={priority} onValueChange={(v) => setPriority(v as typeof priority)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="normal">Normal</SelectItem>
+                          <SelectItem value="important">Importante</SelectItem>
+                          <SelectItem value="urgent">Urgente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-6">
+                      <Switch
+                        id="pinned"
+                        checked={isPinned}
+                        onCheckedChange={setIsPinned}
+                      />
+                      <Label htmlFor="pinned" className="cursor-pointer">
+                        <Pin className="inline h-4 w-4 mr-1" />
+                        Fixar no topo
+                      </Label>
+                    </div>
+                  </div>
+
+                  <Button type="submit" disabled={formLoading} className="w-full gap-2">
+                    {formLoading ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        Publicar Aviso
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {announcements.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -90,7 +244,9 @@ export function AnnouncementsSection() {
           </div>
           <h4 className="font-display text-lg font-semibold text-foreground">Nenhum aviso</h4>
           <p className="text-sm text-muted-foreground">
-            Não há avisos publicados ainda
+            {canPost 
+              ? 'Clique em "Novo Aviso" para criar o primeiro comunicado'
+              : 'Não há avisos publicados ainda'}
           </p>
         </div>
       ) : (
@@ -98,7 +254,7 @@ export function AnnouncementsSection() {
           {announcements.map((announcement, index) => {
             const author = announcement.author;
             const authorSector = sectors.find((s) => s.id === author?.sector_id);
-            const priority = announcement.priority as keyof typeof priorityStyles;
+            const priorityKey = announcement.priority as keyof typeof priorityStyles;
             
             return (
               <motion.div
@@ -110,7 +266,7 @@ export function AnnouncementsSection() {
                 <Card
                   className={cn(
                     'overflow-hidden border-2 transition-all hover:shadow-lg',
-                    priorityStyles[priority]?.border || priorityStyles.normal.border,
+                    priorityStyles[priorityKey]?.border || priorityStyles.normal.border,
                     announcement.is_pinned && 'ring-2 ring-secondary/50'
                   )}
                 >
@@ -127,12 +283,12 @@ export function AnnouncementsSection() {
                       <div className="flex items-center gap-2">
                         <Badge
                           variant="outline"
-                          className={cn(priorityStyles[priority]?.badge || priorityStyles.normal.badge)}
+                          className={cn(priorityStyles[priorityKey]?.badge || priorityStyles.normal.badge)}
                         >
-                          {priority === 'urgent' && (
+                          {priorityKey === 'urgent' && (
                             <AlertTriangle className="mr-1 h-3 w-3" />
                           )}
-                          {priorityLabels[priority] || 'Normal'}
+                          {priorityLabels[priorityKey] || 'Normal'}
                         </Badge>
                         {canDelete(announcement.author_id) && (
                           <Button
