@@ -3,19 +3,18 @@ import { motion } from 'framer-motion';
 import { 
   MessageSquare, 
   Bell, 
-  Users, 
-  BarChart3, 
-  Settings, 
-  LogOut,
-  Cake,
   ChevronLeft,
   ChevronRight,
-  Home
+  Home,
+  Cake,
+  BarChart3,
+  Settings,
+  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { currentUser, autonomyLevelLabels } from '@/data/mockData';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SidebarProps {
   activeSection: string;
@@ -23,15 +22,23 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { id: 'home', icon: Home, label: 'Início', badge: null },
-  { id: 'chat', icon: MessageSquare, label: 'Chat', badge: 3 },
-  { id: 'announcements', icon: Bell, label: 'Avisos', badge: 2 },
-  { id: 'birthdays', icon: Cake, label: 'Aniversariantes', badge: null },
-  { id: 'charts', icon: BarChart3, label: 'Gráficos', badge: null },
+  { id: 'home', icon: Home, label: 'Início' },
+  { id: 'chat', icon: MessageSquare, label: 'Chat' },
+  { id: 'announcements', icon: Bell, label: 'Avisos' },
+  { id: 'birthdays', icon: Cake, label: 'Aniversariantes' },
+  { id: 'charts', icon: BarChart3, label: 'Gráficos' },
 ];
+
+const autonomyLevelLabels: Record<string, string> = {
+  admin: 'Administrador',
+  gerente: 'Gerente',
+  supervisor: 'Supervisor',
+  colaborador: 'Colaborador',
+};
 
 export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { profile, sector, signOut } = useAuth();
 
   const getInitials = (name: string) => {
     return name
@@ -41,6 +48,9 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
       .join('')
       .toUpperCase();
   };
+
+  const displayName = profile?.display_name || profile?.name || 'Usuário';
+  const autonomyLevel = profile?.autonomy_level || 'colaborador';
 
   return (
     <motion.aside
@@ -101,18 +111,6 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               >
                 {item.label}
               </motion.span>
-              
-              {item.badge && !isCollapsed && (
-                <Badge className="ml-auto bg-secondary text-secondary-foreground">
-                  {item.badge}
-                </Badge>
-              )}
-              
-              {item.badge && isCollapsed && (
-                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground">
-                  {item.badge}
-                </span>
-              )}
             </motion.button>
           );
         })}
@@ -128,9 +126,9 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
         >
           <div className="relative">
             <Avatar className="h-10 w-10 ring-2 ring-sidebar-primary ring-offset-2 ring-offset-sidebar">
-              <AvatarImage src={currentUser.avatar} alt={currentUser.displayName} />
+              <AvatarImage src={profile?.avatar_url || ''} alt={displayName} />
               <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-sm font-semibold">
-                {getInitials(currentUser.displayName)}
+                {getInitials(displayName)}
               </AvatarFallback>
             </Avatar>
             <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-sidebar bg-success" />
@@ -141,15 +139,19 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
             animate={{ opacity: isCollapsed ? 0 : 1, width: isCollapsed ? 0 : 'auto' }}
             className="flex-1 overflow-hidden"
           >
-            <p className="truncate font-medium text-sidebar-foreground">{currentUser.displayName}</p>
+            <p className="truncate font-medium text-sidebar-foreground">{displayName}</p>
             <p className="truncate text-xs text-sidebar-foreground/60">
-              {autonomyLevelLabels[currentUser.autonomyLevel]}
+              {autonomyLevelLabels[autonomyLevel]}
             </p>
           </motion.div>
           
           {!isCollapsed && (
-            <button className="rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground">
-              <Settings className="h-4 w-4" />
+            <button 
+              onClick={signOut}
+              className="rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              title="Sair"
+            >
+              <LogOut className="h-4 w-4" />
             </button>
           )}
         </motion.div>

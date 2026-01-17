@@ -1,29 +1,52 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { messages as initialMessages, currentUser, sectors } from '@/data/mockData';
+import { useMessages, useSectors } from '@/hooks/useData';
+import { useAuth } from '@/contexts/AuthContext';
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { SectorTabs } from '@/components/chat/SectorTabs';
-import { Message } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AlertCircle } from 'lucide-react';
 
 export function ChatSection() {
-  const [activeSector, setActiveSector] = useState('5');
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const { profile, sector } = useAuth();
+  const { sectors, loading: sectorsLoading } = useSectors();
+  const [activeSector, setActiveSector] = useState<string | null>(null);
 
-  const handleSendMessage = (content: string) => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      sender: currentUser,
-      sectorId: activeSector,
-      timestamp: new Date(),
-    };
-    setMessages([...messages, newMessage]);
+  // Set initial sector based on user's sector or first available
+  const effectiveSector = activeSector || sector?.id || (sectors.length > 0 ? sectors[0].id : null);
+  
+  const { messages, loading: messagesLoading, sendMessage } = useMessages(effectiveSector);
+
+  const handleSendMessage = async (content: string) => {
+    const { error } = await sendMessage(content);
+    if (error) {
+      console.error('Error sending message:', error);
+    }
   };
 
-  const sectorMessages = messages.filter((m) => m.sectorId === activeSector);
-  const currentSector = sectors.find((s) => s.id === activeSector);
+  const currentSector = sectors.find((s) => s.id === effectiveSector);
+  const canSendMessages = profile?.sector_id === effectiveSector || profile?.autonomy_level === 'admin';
+
+  if (sectorsLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!profile?.sector_id && profile?.autonomy_level !== 'admin') {
+    return (
+      <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+        <AlertCircle className="mb-4 h-12 w-12 text-warning" />
+        <h3 className="font-display text-xl font-semibold text-foreground">Setor não definido</h3>
+        <p className="mt-2 text-muted-foreground">
+          Você ainda não foi associado a um setor. Entre em contato com o administrador.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -32,7 +55,11 @@ export function ChatSection() {
       className="flex h-full flex-col"
     >
       {/* Sector Tabs */}
-      <SectorTabs activeSector={activeSector} onSectorChange={setActiveSector} />
+      <SectorTabs 
+        sectors={sectors}
+        activeSector={effectiveSector || ''} 
+        onSectorChange={setActiveSector} 
+      />
       
       {/* Chat Header */}
       <div className="flex items-center gap-3 border-b border-border bg-card px-4 py-3">
@@ -45,7 +72,7 @@ export function ChatSection() {
         <div>
           <h3 className="font-display font-semibold text-foreground">{currentSector?.name}</h3>
           <p className="text-xs text-muted-foreground">
-            {sectorMessages.length} mensagens • {Math.floor(Math.random() * 5) + 2} online
+            {messages.length} mensagens
           </p>
         </div>
       </div>
@@ -53,18 +80,24 @@ export function ChatSection() {
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
-          {sectorMessages.length === 0 ? (
+          {messagesLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+          ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="mb-4 rounded-full bg-muted p-4">
                 <span className="text-4xl">💬</span>
               </div>
               <h4 className="font-display text-lg font-semibold text-foreground">Nenhuma mensagem ainda</h4>
               <p className="text-sm text-muted-foreground">
-                Seja o primeiro a enviar uma mensagem neste setor!
+                {canSendMessages 
+                  ? 'Seja o primeiro a enviar uma mensagem neste setor!'
+                  : 'Aguarde mensagens da sua equipe'}
               </p>
             </div>
           ) : (
-            sectorMessages.map((message, index) => (
+            messages.map((message, index) => (
               <ChatMessage key={message.id} message={message} index={index} />
             ))
           )}
@@ -72,7 +105,13 @@ export function ChatSection() {
       </ScrollArea>
 
       {/* Input */}
-      <ChatInput onSendMessage={handleSendMessage} />
+      {canSendMessages ? (
+        <ChatInput onSendMessage={handleSendMessage} />
+      ) : (
+        <div className="border-t border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">
+          Você só pode enviar mensagens no seu próprio setor
+        </div>
+      )}
     </motion.div>
   );
 }

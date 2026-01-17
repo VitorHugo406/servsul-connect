@@ -2,24 +2,36 @@ import { motion } from 'framer-motion';
 import { 
   MessageSquare, 
   Bell, 
-  Users, 
   BarChart3, 
   Cake, 
   ArrowRight,
-  TrendingUp,
-  Calendar
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { currentUser, announcements, birthdayPeople, messages, autonomyLevelLabels } from '@/data/mockData';
+import { useAuth } from '@/contexts/AuthContext';
+import { useMessages, useBirthdays, useSectors } from '@/hooks/useData';
+import { useAnnouncements } from '@/hooks/useAnnouncements';
 
 interface HomeSectionProps {
   onNavigate: (section: string) => void;
 }
 
+const autonomyLevelLabels: Record<string, string> = {
+  admin: 'Administrador',
+  gerente: 'Gerente',
+  supervisor: 'Supervisor',
+  colaborador: 'Colaborador',
+};
+
 export function HomeSection({ onNavigate }: HomeSectionProps) {
+  const { profile, sector } = useAuth();
+  const { sectors } = useSectors();
+  const { messages } = useMessages(sector?.id || null);
+  const { announcements } = useAnnouncements();
+  const { birthdayPeople } = useBirthdays();
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -31,6 +43,8 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
 
   const todayBirthdays = birthdayPeople.filter((p) => p.isToday);
   const latestAnnouncement = announcements[0];
+  const displayName = profile?.display_name || profile?.name || 'Usuário';
+  const autonomyLevel = profile?.autonomy_level || 'colaborador';
 
   return (
     <motion.div
@@ -47,20 +61,25 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20 ring-4 ring-white/20">
-              <AvatarImage src={currentUser.avatar} />
+              <AvatarImage src={profile?.avatar_url || ''} />
               <AvatarFallback className="bg-secondary text-secondary-foreground text-2xl font-bold">
-                {getInitials(currentUser.displayName)}
+                {getInitials(displayName)}
               </AvatarFallback>
             </Avatar>
             <div>
               <p className="text-sm text-white/70">Bem-vindo de volta,</p>
-              <h2 className="font-display text-3xl font-bold">{currentUser.displayName}</h2>
+              <h2 className="font-display text-3xl font-bold">{displayName}</h2>
               <div className="mt-2 flex items-center gap-2">
-                <Badge className="bg-white/20 text-white hover:bg-white/30">
-                  {currentUser.sector.name}
-                </Badge>
+                {sector && (
+                  <Badge 
+                    className="text-white hover:bg-white/30"
+                    style={{ backgroundColor: `${sector.color}80` }}
+                  >
+                    {sector.name}
+                  </Badge>
+                )}
                 <Badge variant="outline" className="border-secondary text-secondary">
-                  {autonomyLevelLabels[currentUser.autonomyLevel]}
+                  {autonomyLevelLabels[autonomyLevel]}
                 </Badge>
               </div>
             </div>
@@ -72,7 +91,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
               <p className="font-display text-3xl font-bold">{messages.length}</p>
             </div>
             <div className="rounded-xl bg-white/10 px-6 py-4 backdrop-blur-sm">
-              <p className="text-sm text-white/70">Avisos Pendentes</p>
+              <p className="text-sm text-white/70">Avisos</p>
               <p className="font-display text-3xl font-bold">{announcements.length}</p>
             </div>
           </div>
@@ -82,8 +101,8 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
       {/* Quick Actions */}
       <div className="mb-8 grid gap-4 md:grid-cols-4">
         {[
-          { id: 'chat', icon: MessageSquare, label: 'Chat', color: 'bg-primary', count: 3 },
-          { id: 'announcements', icon: Bell, label: 'Avisos', color: 'bg-secondary', count: 2 },
+          { id: 'chat', icon: MessageSquare, label: 'Chat', color: 'bg-primary', count: messages.length },
+          { id: 'announcements', icon: Bell, label: 'Avisos', color: 'bg-secondary', count: announcements.length },
           { id: 'birthdays', icon: Cake, label: 'Aniversariantes', color: 'bg-success', count: todayBirthdays.length },
           { id: 'charts', icon: BarChart3, label: 'Gráficos', color: 'bg-purple-500', count: null },
         ].map((action, index) => (
@@ -107,7 +126,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
                   <p className="font-medium text-foreground">{action.label}</p>
                   {action.count !== null && (
                     <p className="text-sm text-muted-foreground">
-                      {action.count} {action.count === 1 ? 'novo' : 'novos'}
+                      {action.count} {action.count === 1 ? 'item' : 'itens'}
                     </p>
                   )}
                 </div>
@@ -137,20 +156,26 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
               </Button>
             </CardHeader>
             <CardContent>
-              <h4 className="mb-2 font-semibold text-foreground">{latestAnnouncement.title}</h4>
-              <p className="mb-4 text-sm text-muted-foreground line-clamp-2">
-                {latestAnnouncement.content}
-              </p>
-              <div className="flex items-center gap-2">
-                <Avatar className="h-6 w-6">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                    {getInitials(latestAnnouncement.author.displayName)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-sm text-muted-foreground">
-                  {latestAnnouncement.author.displayName}
-                </span>
-              </div>
+              {latestAnnouncement ? (
+                <>
+                  <h4 className="mb-2 font-semibold text-foreground">{latestAnnouncement.title}</h4>
+                  <p className="mb-4 text-sm text-muted-foreground line-clamp-2">
+                    {latestAnnouncement.content}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                        {getInitials(latestAnnouncement.author?.display_name || latestAnnouncement.author?.name || 'U')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm text-muted-foreground">
+                      {latestAnnouncement.author?.display_name || latestAnnouncement.author?.name}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-center text-muted-foreground">Nenhum aviso publicado</p>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -175,9 +200,10 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
             <CardContent>
               {todayBirthdays.length > 0 ? (
                 <div className="space-y-3">
-                  {todayBirthdays.map((person) => (
+                  {todayBirthdays.slice(0, 3).map((person) => (
                     <div key={person.id} className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 ring-2 ring-secondary">
+                        <AvatarImage src={person.avatar} />
                         <AvatarFallback className="bg-secondary text-secondary-foreground">
                           {getInitials(person.name)}
                         </AvatarFallback>

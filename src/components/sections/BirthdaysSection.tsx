@@ -1,11 +1,13 @@
 import { motion } from 'framer-motion';
 import { Cake, Gift, PartyPopper, Calendar } from 'lucide-react';
-import { birthdayPeople } from '@/data/mockData';
+import { useBirthdays } from '@/hooks/useData';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 
 export function BirthdaysSection() {
+  const { birthdayPeople, loading } = useBirthdays();
+
   const todayBirthdays = birthdayPeople.filter((p) => p.isToday);
   const upcomingBirthdays = birthdayPeople.filter((p) => !p.isToday);
 
@@ -22,6 +24,14 @@ export function BirthdaysSection() {
     const date = new Date(dateStr);
     return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -107,52 +117,52 @@ export function BirthdaysSection() {
           </div>
         </div>
 
-        <div className="space-y-3">
-          {upcomingBirthdays.map((person, index) => (
-            <motion.div
-              key={person.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <Card className="transition-all hover:shadow-md">
-                <CardContent className="flex items-center gap-4 p-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={person.avatar} />
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {getInitials(person.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className="flex-1">
-                    <h4 className="font-medium text-foreground">{person.name}</h4>
-                    <p className="text-sm text-muted-foreground">{person.sector}</p>
-                  </div>
-                  
-                  <Badge variant="outline" className="text-muted-foreground">
-                    <Cake className="mr-1 h-3 w-3" />
-                    {formatBirthday(person.birthDate)}
-                  </Badge>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      {birthdayPeople.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="mb-4 rounded-full bg-muted p-4">
-            <span className="text-4xl">🎂</span>
+        {upcomingBirthdays.length === 0 && todayBirthdays.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="mb-4 rounded-full bg-muted p-4">
+              <span className="text-4xl">🎂</span>
+            </div>
+            <h4 className="font-display text-lg font-semibold text-foreground">
+              Nenhum aniversariante
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              Não há aniversariantes neste mês com data de nascimento cadastrada
+            </p>
           </div>
-          <h4 className="font-display text-lg font-semibold text-foreground">
-            Nenhum aniversariante
-          </h4>
-          <p className="text-sm text-muted-foreground">
-            Não há aniversariantes nos próximos dias
-          </p>
-        </div>
-      )}
+        ) : (
+          <div className="space-y-3">
+            {upcomingBirthdays.map((person, index) => (
+              <motion.div
+                key={person.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Card className="transition-all hover:shadow-md">
+                  <CardContent className="flex items-center gap-4 p-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={person.avatar} />
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {getInitials(person.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div className="flex-1">
+                      <h4 className="font-medium text-foreground">{person.name}</h4>
+                      <p className="text-sm text-muted-foreground">{person.sector}</p>
+                    </div>
+                    
+                    <Badge variant="outline" className="text-muted-foreground">
+                      <Cake className="mr-1 h-3 w-3" />
+                      {formatBirthday(person.birthDate)}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }
