@@ -27,6 +27,7 @@ const menuItems = [
   { id: 'announcements', icon: Bell, label: 'Avisos' },
   { id: 'birthdays', icon: Cake, label: 'Aniversariantes' },
   { id: 'charts', icon: BarChart3, label: 'Gráficos' },
+  { id: 'management', icon: Settings, label: 'Gerenciamento', adminOnly: true },
 ];
 
 const autonomyLevelLabels: Record<string, string> = {
@@ -38,7 +39,7 @@ const autonomyLevelLabels: Record<string, string> = {
 
 export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { profile, sector, signOut } = useAuth();
+  const { profile, sector, signOut, isAdmin } = useAuth();
 
   const getInitials = (name: string) => {
     return name
@@ -85,7 +86,9 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-3">
-        {menuItems.map((item) => {
+        {menuItems
+          .filter((item) => !('adminOnly' in item) || (item.adminOnly && isAdmin))
+          .map((item) => {
           const Icon = item.icon;
           const isActive = activeSection === item.id;
           
