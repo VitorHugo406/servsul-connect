@@ -164,16 +164,18 @@ export function useBirthdays() {
   const { profiles, loading } = useProfiles();
   const { sectors } = useSectors();
 
+  // Get today in local timezone
   const today = new Date();
   const currentMonth = today.getMonth() + 1;
   const currentDay = today.getDate();
 
   const birthdayPeople = profiles
-    .filter((p) => p.birth_date)
+    .filter((p) => p.birth_date && (p as { is_active?: boolean }).is_active !== false)
     .map((p) => {
-      const birthDate = new Date(p.birth_date!);
-      const birthMonth = birthDate.getMonth() + 1;
-      const birthDay = birthDate.getDate();
+      // Parse birth date correctly - handle YYYY-MM-DD format
+      const [year, month, day] = p.birth_date!.split('-').map(Number);
+      const birthMonth = month;
+      const birthDay = day;
       const isToday = birthMonth === currentMonth && birthDay === currentDay;
       const isThisMonth = birthMonth === currentMonth;
       const sector = sectors.find((s) => s.id === p.sector_id);
@@ -184,16 +186,14 @@ export function useBirthdays() {
         avatar: p.avatar_url || '',
         sector: sector?.name || 'Sem setor',
         birthDate: p.birth_date!,
+        birthDay,
+        birthMonth,
         isToday,
         isThisMonth,
       };
     })
     .filter((p) => p.isThisMonth)
-    .sort((a, b) => {
-      const aDay = new Date(a.birthDate).getDate();
-      const bDay = new Date(b.birthDate).getDate();
-      return aDay - bDay;
-    });
+    .sort((a, b) => a.birthDay - b.birthDay);
 
-  return { birthdayPeople, loading };
+  return { birthdayPeople, loading, currentDay };
 }

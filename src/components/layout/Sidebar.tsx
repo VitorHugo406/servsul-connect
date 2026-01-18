@@ -13,7 +13,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface SidebarProps {
   activeSection: string;
@@ -39,6 +41,7 @@ const autonomyLevelLabels: Record<string, string> = {
 export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { profile, signOut, isAdmin, canAccess } = useAuth();
+  const { counts } = useNotifications();
 
   const getInitials = (name: string) => {
     return name
@@ -98,6 +101,14 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
           const Icon = item.icon;
           const isActive = activeSection === item.id;
           
+          // Get badge count for this item
+          let badgeCount = 0;
+          if (item.id === 'chat') {
+            badgeCount = counts.unreadMessages;
+          } else if (item.id === 'announcements') {
+            badgeCount = counts.unreadAnnouncements;
+          }
+          
           return (
             <motion.button
               key={item.id}
@@ -111,7 +122,17 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                   : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
               )}
             >
-              <Icon className={cn('h-5 w-5 flex-shrink-0', isActive && 'text-sidebar-primary-foreground')} />
+              <div className="relative">
+                <Icon className={cn('h-5 w-5 flex-shrink-0', isActive && 'text-sidebar-primary-foreground')} />
+                {badgeCount > 0 && !isCollapsed && (
+                  <Badge 
+                    variant="secondary" 
+                    className="absolute -right-2 -top-2 h-4 min-w-4 p-0 flex items-center justify-center text-[10px] bg-secondary text-secondary-foreground"
+                  >
+                    {badgeCount > 99 ? '99+' : badgeCount}
+                  </Badge>
+                )}
+              </div>
               
               <motion.span
                 initial={false}
@@ -120,6 +141,15 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               >
                 {item.label}
               </motion.span>
+
+              {badgeCount > 0 && isCollapsed && (
+                <Badge 
+                  variant="secondary" 
+                  className="absolute right-1 top-1 h-4 min-w-4 p-0 flex items-center justify-center text-[10px] bg-secondary text-secondary-foreground"
+                >
+                  {badgeCount > 99 ? '99+' : badgeCount}
+                </Badge>
+              )}
             </motion.button>
           );
         })}

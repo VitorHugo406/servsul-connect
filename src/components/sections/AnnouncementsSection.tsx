@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pin, AlertTriangle, Clock, Trash2, Plus, X, Send, CalendarClock } from 'lucide-react';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/hooks/useNotifications';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +42,12 @@ export function AnnouncementsSection() {
   const { announcements, loading, createAnnouncement, deleteAnnouncement } = useAnnouncements();
   const { sectors } = useSectors();
   const { profile, isAdmin, canAccess } = useAuth();
+  const { markAllAnnouncementsAsRead } = useNotifications();
+
+  // Mark all announcements as read when component mounts
+  useEffect(() => {
+    markAllAnnouncementsAsRead();
+  }, [markAllAnnouncementsAsRead]);
   
   const [showForm, setShowForm] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -96,8 +103,20 @@ export function AnnouncementsSection() {
       return;
     }
 
+    if (!startAt) {
+      toast.error('Data de início é obrigatória');
+      return;
+    }
+
     setFormLoading(true);
-    const { error } = await createAnnouncement(title, content, priority, isPinned);
+    const { error } = await createAnnouncement(
+      title, 
+      content, 
+      priority, 
+      isPinned,
+      new Date(startAt).toISOString(),
+      expireAt ? new Date(expireAt).toISOString() : null
+    );
     
     if (error) {
       console.error('Error creating announcement:', error);
@@ -108,6 +127,8 @@ export function AnnouncementsSection() {
       setContent('');
       setPriority('normal');
       setIsPinned(false);
+      setStartAt('');
+      setExpireAt('');
       setShowForm(false);
     }
     setFormLoading(false);
@@ -192,6 +213,36 @@ export function AnnouncementsSection() {
                       rows={4}
                       required
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="startAt">
+                        <CalendarClock className="inline h-4 w-4 mr-1" />
+                        Data/Hora de início *
+                      </Label>
+                      <Input
+                        id="startAt"
+                        type="datetime-local"
+                        value={startAt}
+                        onChange={(e) => setStartAt(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="expireAt">
+                        <CalendarClock className="inline h-4 w-4 mr-1" />
+                        Data/Hora de expiração
+                      </Label>
+                      <Input
+                        id="expireAt"
+                        type="datetime-local"
+                        value={expireAt}
+                        onChange={(e) => setExpireAt(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">Deixe em branco para não expirar</p>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

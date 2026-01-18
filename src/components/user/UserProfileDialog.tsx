@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Camera, Save, X } from 'lucide-react';
 import {
   Dialog,
@@ -29,10 +29,19 @@ export function UserProfileDialog({ open, onOpenChange }: UserProfileDialogProps
   
   const [name, setName] = useState(profile?.name || '');
   const [displayName, setDisplayName] = useState(profile?.display_name || '');
-  const [phone, setPhone] = useState('');
-  const [workPeriod, setWorkPeriod] = useState('');
+  const [workPeriod, setWorkPeriod] = useState(profile?.work_period || '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
   const [saving, setSaving] = useState(false);
+
+  // Update local state when profile changes
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name || '');
+      setDisplayName(profile.display_name || '');
+      setWorkPeriod(profile.work_period || '');
+      setAvatarUrl(profile.avatar_url || '');
+    }
+  }, [profile]);
 
   const getInitials = (name: string) => {
     return name
@@ -131,7 +140,7 @@ export function UserProfileDialog({ open, onOpenChange }: UserProfileDialogProps
           {/* Status */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
             <Label>Status</Label>
-            <UserStatusSelector currentStatus="available" />
+            <UserStatusSelector currentStatus={profile?.user_status || 'available'} />
           </div>
 
           {/* Form fields */}

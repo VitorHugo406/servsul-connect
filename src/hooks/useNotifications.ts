@@ -138,12 +138,22 @@ export function useNotifications() {
   const markAnnouncementAsRead = useCallback(async (announcementId: string) => {
     if (!user) return;
 
+    // First check if already read
+    const { data: existing } = await supabase
+      .from('announcement_reads')
+      .select('id')
+      .eq('announcement_id', announcementId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (existing) return; // Already read
+
     const { error } = await supabase
       .from('announcement_reads')
-      .upsert({
+      .insert({
         announcement_id: announcementId,
         user_id: user.id,
-      }, { onConflict: 'announcement_id,user_id' });
+      });
 
     if (error) {
       console.error('Error marking announcement as read:', error);
@@ -152,5 +162,43 @@ export function useNotifications() {
     }
   }, [user, fetchCounts]);
 
-  return { counts, loading, refetch: fetchCounts, markAnnouncementAsRead };
+  const markAllAnnouncementsAsRead = useCallback(async () => {
+    if (!user) return;
+
+    const now = new Date().toISOString();
+    const { data: announcements } = await supabase
+      .from('announcements')
+      .select('id')
+      .lte('start_at', now)
+      .or(`expire_at.is.null,expire_at.gt.${now}`);
+
+    if (!announcements || announcements.length === 0) return;
+
+    // Get already read
+    const { data: alreadyRead } = await supabase
+      .from('announcement_reads')
+      .select('announcement_id')
+      .eq('user_id', user.id);
+
+    const readIds = new Set((alreadyRead || []).map(r => r.announcement_id));
+    const toMark = announcements.filter(a => !readIds.has(a.id));
+
+    if (toMark.length === 0) return;
+
+    // Insert all unread
+    const { error } = await supabase
+      .from('announcement_reads')
+      .insert(toMark.map(a => ({
+        announcement_id: a.id,
+        user_id: user.id,
+      })));
+
+    if (error) {
+      console.error('Error marking all announcements as read:', error);
+    } else {
+      fetchCounts();
+    }
+  }, [user, fetchCounts]);
+
+  return { counts, loading, refetch: fetchCounts, markAnnouncementAsRead, markAllAnnouncementsAsRead };
 }
