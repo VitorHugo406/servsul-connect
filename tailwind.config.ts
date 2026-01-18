@@ -15,7 +15,7 @@ export default {
   	extend: {
   		fontFamily: {
   			sans: [
-  				'Open Sans',
+  				'Lato',
   				'ui-sans-serif',
   				'system-ui',
   				'sans-serif',
@@ -30,7 +30,7 @@ export default {
   				'sans-serif'
   			],
   			serif: [
-  				'Cormorant Garamond',
+  				'Lora',
   				'ui-serif',
   				'Georgia',
   				'Cambria',
@@ -39,7 +39,7 @@ export default {
   				'serif'
   			],
   			mono: [
-  				'Fira Code',
+  				'Roboto Mono',
   				'ui-monospace',
   				'SFMono-Regular',
   				'Menlo',
@@ -163,7 +163,7 @@ export default {
   					opacity: '0.7'
   				}
   			},
-  			'float': {
+  			float: {
   				'0%, 100%': {
   					transform: 'translateY(0)'
   				},
@@ -179,7 +179,7 @@ export default {
   			'slide-in-left': 'slide-in-left 0.3s ease-out',
   			'slide-in-right': 'slide-in-right 0.3s ease-out',
   			'pulse-soft': 'pulse-soft 2s ease-in-out infinite',
-  			'float': 'float 3s ease-in-out infinite'
+  			float: 'float 3s ease-in-out infinite'
   		}
   	}
   },
