@@ -142,6 +142,16 @@ export function SectorUsersList({ sectorId, sectorName, compact = false }: Secto
     );
   }
 
+  // Count users by status
+  const statusCounts = allUsers.reduce((acc, user) => {
+    const status = user.user_status || 'available';
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const onlineCount = allUsers.filter(u => isUserOnline(u.user_id)).length;
+  const offlineCount = allUsers.length - onlineCount;
+
   return (
     <Card>
       <CardHeader>
@@ -152,6 +162,27 @@ export function SectorUsersList({ sectorId, sectorName, compact = false }: Secto
             {allUsers.length}
           </Badge>
         </CardTitle>
+        {/* Status summary */}
+        <div className="flex flex-wrap gap-2 mt-2">
+          <Badge variant="outline" className="gap-1">
+            <span className="h-2 w-2 rounded-full bg-success" />
+            {onlineCount} online
+          </Badge>
+          <Badge variant="outline" className="gap-1">
+            <span className="h-2 w-2 rounded-full bg-muted-foreground" />
+            {offlineCount} offline
+          </Badge>
+          {Object.entries(statusCounts).map(([status, count]) => {
+            const option = STATUS_OPTIONS.find(o => o.value === status);
+            if (!option || count === 0) return null;
+            return (
+              <Badge key={status} variant="outline" className="gap-1">
+                <span className={cn('h-2 w-2 rounded-full', option.color)} />
+                {count} {option.label.toLowerCase()}
+              </Badge>
+            );
+          })}
+        </div>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-64">

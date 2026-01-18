@@ -78,7 +78,9 @@ export function useAnnouncements() {
     title: string,
     content: string,
     priority: 'normal' | 'important' | 'urgent' = 'normal',
-    isPinned: boolean = false
+    isPinned: boolean = false,
+    startAt?: string | null,
+    expireAt?: string | null
   ) => {
     if (!profile) return { error: new Error('Not authenticated') };
 
@@ -88,6 +90,8 @@ export function useAnnouncements() {
       author_id: profile.id,
       priority,
       is_pinned: isPinned,
+      start_at: startAt || new Date().toISOString(),
+      expire_at: expireAt || null,
     });
 
     return { error };

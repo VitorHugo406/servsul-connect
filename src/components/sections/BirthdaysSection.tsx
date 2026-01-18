@@ -6,24 +6,19 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 
 export function BirthdaysSection() {
-  const { birthdayPeople, loading } = useBirthdays();
-
-  const today = new Date();
-  const currentDay = today.getDate();
+  const { birthdayPeople, loading, currentDay } = useBirthdays();
 
   // Split birthdays: today, upcoming (not yet happened), and past (already happened this month)
   const todayBirthdays = birthdayPeople.filter((p) => p.isToday);
   
   const upcomingBirthdays = birthdayPeople.filter((p) => {
     if (p.isToday) return false;
-    const birthDay = new Date(p.birthDate).getDate();
-    return birthDay > currentDay;
+    return p.birthDay > currentDay;
   });
 
   const pastBirthdays = birthdayPeople.filter((p) => {
     if (p.isToday) return false;
-    const birthDay = new Date(p.birthDate).getDate();
-    return birthDay < currentDay;
+    return p.birthDay < currentDay;
   });
 
   const getInitials = (name: string) => {

@@ -541,6 +541,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_user_is_active: { Args: never; Returns: boolean }
       get_current_autonomy_level: { Args: never; Returns: string }
       get_current_profile_id: { Args: never; Returns: string }
       get_current_sector_id: { Args: never; Returns: string }
