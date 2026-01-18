@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { usePresence } from '@/hooks/usePresence';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { HomeSection } from '@/components/sections/HomeSection';
@@ -20,6 +21,9 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('home');
+  
+  // Initialize presence tracking
+  usePresence();
 
   const renderSection = () => {
     switch (activeSection) {
@@ -50,7 +54,7 @@ const Index = () => {
       
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={currentSection.title} subtitle={currentSection.subtitle} />
+        <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} />
         
         <main className="flex-1 overflow-auto">
           {renderSection()}
