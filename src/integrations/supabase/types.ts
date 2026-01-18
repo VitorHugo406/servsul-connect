@@ -53,6 +53,35 @@ export type Database = {
           },
         ]
       }
+      announcement_reads: {
+        Row: {
+          announcement_id: string
+          id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          id?: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           author_id: string
@@ -96,6 +125,67 @@ export type Database = {
             columns: ["author_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attachments: {
+        Row: {
+          announcement_id: string | null
+          created_at: string
+          direct_message_id: string | null
+          file_name: string
+          file_size: number
+          file_type: string
+          file_url: string
+          id: string
+          message_id: string | null
+          uploaded_by: string
+        }
+        Insert: {
+          announcement_id?: string | null
+          created_at?: string
+          direct_message_id?: string | null
+          file_name: string
+          file_size: number
+          file_type: string
+          file_url: string
+          id?: string
+          message_id?: string | null
+          uploaded_by: string
+        }
+        Update: {
+          announcement_id?: string | null
+          created_at?: string
+          direct_message_id?: string | null
+          file_name?: string
+          file_size?: number
+          file_type?: string
+          file_url?: string
+          id?: string
+          message_id?: string | null
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachments_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachments_direct_message_id_fkey"
+            columns: ["direct_message_id"]
+            isOneToOne: false
+            referencedRelation: "direct_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
         ]
@@ -201,6 +291,8 @@ export type Database = {
           sector_id: string | null
           updated_at: string
           user_id: string
+          user_status: string | null
+          work_period: string | null
         }
         Insert: {
           address?: string | null
@@ -221,6 +313,8 @@ export type Database = {
           sector_id?: string | null
           updated_at?: string
           user_id: string
+          user_status?: string | null
+          work_period?: string | null
         }
         Update: {
           address?: string | null
@@ -241,6 +335,8 @@ export type Database = {
           sector_id?: string | null
           updated_at?: string
           user_id?: string
+          user_status?: string | null
+          work_period?: string | null
         }
         Relationships: [
           {
@@ -391,6 +487,30 @@ export type Database = {
           created_at?: string
           id?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_presence: {
+        Row: {
+          created_at: string
+          id: string
+          is_online: boolean
+          last_heartbeat: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_online?: boolean
+          last_heartbeat?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_online?: boolean
+          last_heartbeat?: string
           user_id?: string
         }
         Relationships: []
