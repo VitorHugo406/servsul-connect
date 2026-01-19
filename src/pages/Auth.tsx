@@ -289,8 +289,8 @@ const Auth = () => {
   };
 
   return (
-    <div className="flex min-h-screen">
-      {/* Left Panel - Branding */}
+    <div className="flex min-h-screen flex-col lg:flex-row">
+      {/* Left Panel - Branding - Hidden on mobile */}
       <div className="hidden lg:flex lg:w-1/2 gradient-hero items-center justify-center p-12">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -340,28 +340,28 @@ const Auth = () => {
         </motion.div>
       </div>
 
-      {/* Right Panel - Auth Form */}
-      <div className="flex w-full items-center justify-center bg-background p-4 sm:p-8 lg:w-1/2">
+      {/* Right Panel - Auth Form - Full width on mobile */}
+      <div className="flex min-h-screen w-full items-center justify-center bg-background px-4 py-8 sm:px-8 lg:min-h-0 lg:w-1/2">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          {/* Mobile Logo */}
-          <div className="mb-6 flex items-center justify-center gap-3 lg:hidden">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl gradient-secondary">
-              <MessageSquare className="h-6 w-6 text-secondary-foreground" />
+          {/* Mobile Logo - Larger and more prominent */}
+          <div className="mb-8 flex flex-col items-center justify-center gap-3 lg:hidden">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl gradient-secondary shadow-lg">
+              <MessageSquare className="h-8 w-8 text-secondary-foreground" />
             </div>
-            <div>
-              <h1 className="font-display text-2xl font-bold text-foreground">ServChat</h1>
-              <p className="text-xs text-muted-foreground">Grupo Servsul</p>
+            <div className="text-center">
+              <h1 className="font-display text-3xl font-bold text-foreground">ServChat</h1>
+              <p className="text-sm text-muted-foreground">Grupo Servsul</p>
             </div>
           </div>
 
           <Card className="border-0 shadow-xl">
-            <CardHeader className="text-center pb-4">
-              <CardTitle className="font-display text-2xl">
+            <CardHeader className="text-center pb-4 px-4 sm:px-6">
+              <CardTitle className="font-display text-xl sm:text-2xl">
                 {isLogin ? 'Bem-vindo de volta!' : 'Criar conta'}
               </CardTitle>
               <CardDescription>
@@ -373,7 +373,7 @@ const Auth = () => {
               </CardDescription>
             </CardHeader>
             
-            <CardContent>
+            <CardContent className="px-4 sm:px-6">
               {/* Progress bar for signup */}
               {!isLogin && (
                 <div className="mb-6">
@@ -406,49 +406,53 @@ const Auth = () => {
 
               {/* Login Form */}
               {isLogin ? (
-                <form onSubmit={handleLoginSubmit} className="space-y-4">
+                <form onSubmit={handleLoginSubmit} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="loginEmail">Email corporativo</Label>
+                    <Label htmlFor="loginEmail" className="text-sm font-medium">Email corporativo</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="loginEmail"
                         type="email"
+                        inputMode="email"
+                        autoComplete="email"
                         placeholder="seu.email@servsul.com.br"
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
-                        className="pl-10"
+                        className="h-12 pl-10 text-base"
                         required
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="loginPassword">Senha</Label>
+                    <Label htmlFor="loginPassword" className="text-sm font-medium">Senha</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="loginPassword"
                         type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
                         placeholder="••••••••"
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
-                        className="pl-10 pr-10"
+                        className="h-12 pl-10 pr-12 text-base"
                         required
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground touch-manipulation"
+                        aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
                   </div>
 
                   <Button
                     type="submit"
-                    className="w-full gradient-primary"
+                    className="h-12 w-full gradient-primary text-base font-medium touch-manipulation"
                     disabled={loading}
                   >
                     {loading ? (
@@ -476,7 +480,7 @@ const Auth = () => {
                     >
                       {/* Registration Password */}
                       <div className="space-y-2">
-                        <Label htmlFor="registrationPassword" className="flex items-center gap-1">
+                        <Label htmlFor="registrationPassword" className="flex items-center gap-1 text-sm font-medium">
                           <KeyRound className="h-3 w-3" />
                           Senha de autorização *
                         </Label>
@@ -485,10 +489,11 @@ const Auth = () => {
                           <Input
                             id="registrationPassword"
                             type="password"
+                            autoComplete="off"
                             placeholder="Solicite ao administrador"
                             value={registrationPassword}
                             onChange={(e) => setRegistrationPassword(e.target.value)}
-                            className={`pl-10 ${fieldErrors.registrationPassword ? 'border-destructive' : ''}`}
+                            className={`h-12 pl-10 text-base ${fieldErrors.registrationPassword ? 'border-destructive' : ''}`}
                           />
                         </div>
                         {fieldErrors.registrationPassword && (
@@ -498,16 +503,17 @@ const Auth = () => {
 
                       {/* Name */}
                       <div className="space-y-2">
-                        <Label htmlFor="name">Nome completo *</Label>
+                        <Label htmlFor="name" className="text-sm font-medium">Nome completo *</Label>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
                             id="name"
                             type="text"
+                            autoComplete="name"
                             placeholder="Seu nome completo"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className={`pl-10 ${fieldErrors.name ? 'border-destructive' : ''}`}
+                            className={`h-12 pl-10 text-base ${fieldErrors.name ? 'border-destructive' : ''}`}
                           />
                         </div>
                         {fieldErrors.name && (
@@ -517,16 +523,18 @@ const Auth = () => {
 
                       {/* Email */}
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email corporativo *</Label>
+                        <Label htmlFor="email" className="text-sm font-medium">Email corporativo *</Label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
                             id="email"
                             type="email"
+                            inputMode="email"
+                            autoComplete="email"
                             placeholder="seu.email@servsul.com.br"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className={`pl-10 ${fieldErrors.email ? 'border-destructive' : ''}`}
+                            className={`h-12 pl-10 text-base ${fieldErrors.email ? 'border-destructive' : ''}`}
                           />
                         </div>
                         {fieldErrors.email && (
@@ -535,18 +543,19 @@ const Auth = () => {
                       </div>
 
                       {/* Passwords in grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="password">Senha *</Label>
+                          <Label htmlFor="password" className="text-sm font-medium">Senha *</Label>
                           <div className="relative">
                             <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                               id="password"
                               type={showPassword ? 'text' : 'password'}
+                              autoComplete="new-password"
                               placeholder="••••••••"
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}
-                              className={`pl-10 ${fieldErrors.password ? 'border-destructive' : ''}`}
+                              className={`h-12 pl-10 text-base ${fieldErrors.password ? 'border-destructive' : ''}`}
                             />
                           </div>
                           {fieldErrors.password && (
@@ -555,16 +564,17 @@ const Auth = () => {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="confirmPassword">Confirmar *</Label>
+                          <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirmar senha *</Label>
                           <div className="relative">
                             <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                               id="confirmPassword"
                               type={showPassword ? 'text' : 'password'}
+                              autoComplete="new-password"
                               placeholder="••••••••"
                               value={confirmPassword}
                               onChange={(e) => setConfirmPassword(e.target.value)}
-                              className={`pl-10 ${fieldErrors.confirmPassword ? 'border-destructive' : ''}`}
+                              className={`h-12 pl-10 text-base ${fieldErrors.confirmPassword ? 'border-destructive' : ''}`}
                             />
                           </div>
                           {fieldErrors.confirmPassword && (
@@ -579,9 +589,9 @@ const Auth = () => {
                           id="showPwd"
                           checked={showPassword}
                           onChange={(e) => setShowPassword(e.target.checked)}
-                          className="rounded border-muted-foreground"
+                          className="h-5 w-5 rounded border-muted-foreground touch-manipulation"
                         />
-                        <Label htmlFor="showPwd" className="text-sm text-muted-foreground cursor-pointer">
+                        <Label htmlFor="showPwd" className="text-sm text-muted-foreground cursor-pointer touch-manipulation">
                           Mostrar senhas
                         </Label>
                       </div>
@@ -589,10 +599,10 @@ const Auth = () => {
                       <Button
                         type="button"
                         onClick={handleNext}
-                        className="w-full gap-2"
+                        className="h-12 w-full gap-2 text-base font-medium touch-manipulation"
                       >
                         Próximo
-                        <ChevronRight className="h-4 w-4" />
+                        <ChevronRight className="h-5 w-5" />
                       </Button>
                     </motion.div>
                   ) : (
@@ -688,15 +698,15 @@ const Auth = () => {
 
                       {/* Birth Date */}
                       <div className="space-y-2">
-                        <Label htmlFor="birthDate">Data de nascimento *</Label>
+                        <Label htmlFor="birthDate" className="text-sm font-medium">Data de nascimento *</Label>
                         <div className="relative">
-                          <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                           <Input
                             id="birthDate"
                             type="date"
                             value={birthDate}
                             onChange={(e) => setBirthDate(e.target.value)}
-                            className={`pl-10 ${fieldErrors.birthDate ? 'border-destructive' : ''}`}
+                            className={`h-12 pl-10 text-base ${fieldErrors.birthDate ? 'border-destructive' : ''}`}
                           />
                         </div>
                         {fieldErrors.birthDate && (
@@ -704,20 +714,20 @@ const Auth = () => {
                         )}
                       </div>
 
-                      <div className="flex gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row">
                         <Button
                           type="button"
                           variant="outline"
                           onClick={handleBack}
-                          className="flex-1 gap-2"
+                          className="h-12 flex-1 gap-2 text-base font-medium touch-manipulation"
                         >
-                          <ChevronLeft className="h-4 w-4" />
+                          <ChevronLeft className="h-5 w-5" />
                           Voltar
                         </Button>
                         <Button
                           type="button"
                           onClick={handleSignupSubmit}
-                          className="flex-1 gap-2 gradient-primary"
+                          className="h-12 flex-1 gap-2 gradient-primary text-base font-medium touch-manipulation"
                           disabled={loading}
                         >
                           {loading ? (
@@ -729,7 +739,7 @@ const Auth = () => {
                           ) : (
                             <>
                               Criar conta
-                              <Check className="h-4 w-4" />
+                              <Check className="h-5 w-5" />
                             </>
                           )}
                         </Button>
@@ -740,14 +750,14 @@ const Auth = () => {
               )}
 
               {/* Toggle Login/Signup */}
-              <div className="mt-6 text-center text-sm">
-                <span className="text-muted-foreground">
+              <div className="mt-6 text-center">
+                <span className="text-sm text-muted-foreground">
                   {isLogin ? 'Não tem uma conta?' : 'Já tem uma conta?'}
                 </span>
                 <button
                   type="button"
                   onClick={toggleMode}
-                  className="ml-1 font-medium text-primary hover:underline"
+                  className="ml-1 text-sm font-semibold text-primary hover:underline touch-manipulation"
                 >
                   {isLogin ? 'Cadastre-se' : 'Fazer login'}
                 </button>
