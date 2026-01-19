@@ -17,6 +17,8 @@ interface Announcement {
   author_id: string;
   priority: string;
   is_pinned: boolean;
+  start_at: string | null;
+  expire_at: string | null;
   created_at: string;
   updated_at: string;
   author?: Profile;
@@ -24,31 +26,74 @@ interface Announcement {
 
 export function useAnnouncements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [scheduledAnnouncements, setScheduledAnnouncements] = useState<Announcement[]>([]);
+  const [expiredAnnouncements, setExpiredAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
-  const { profile } = useAuth();
+  const { profile, isAdmin, canAccess } = useAuth();
+
+  const canManageAnnouncements = isAdmin || canAccess('can_post_announcements');
 
   const fetchAnnouncements = useCallback(async () => {
     setLoading(true);
     const now = new Date().toISOString();
     
-    const { data, error } = await supabase
+    // Fetch active announcements (within valid date range)
+    const { data: activeData, error: activeError } = await supabase
       .from('announcements')
       .select(`
         *,
         author:profiles!announcements_author_id_fkey(id, name, display_name, avatar_url, sector_id)
       `)
-      .lte('start_at', now)
+      .or(`start_at.is.null,start_at.lte.${now}`)
       .or(`expire_at.is.null,expire_at.gt.${now}`)
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching announcements:', error);
+    if (activeError) {
+      console.error('Error fetching announcements:', activeError);
     } else {
-      setAnnouncements(data || []);
+      // Filter to only show announcements that are truly active
+      const filtered = (activeData || []).filter(a => {
+        const startValid = !a.start_at || new Date(a.start_at) <= new Date(now);
+        const expireValid = !a.expire_at || new Date(a.expire_at) > new Date(now);
+        return startValid && expireValid;
+      });
+      setAnnouncements(filtered);
     }
+
+    // If user can manage announcements, also fetch scheduled ones
+    if (canManageAnnouncements) {
+      // Fetch scheduled (future) announcements
+      const { data: scheduledData } = await supabase
+        .from('announcements')
+        .select(`
+          *,
+          author:profiles!announcements_author_id_fkey(id, name, display_name, avatar_url, sector_id)
+        `)
+        .gt('start_at', now)
+        .order('start_at', { ascending: true });
+
+      setScheduledAnnouncements(scheduledData || []);
+
+      // Fetch expired announcements (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const { data: expiredData } = await supabase
+        .from('announcements')
+        .select(`
+          *,
+          author:profiles!announcements_author_id_fkey(id, name, display_name, avatar_url, sector_id)
+        `)
+        .lt('expire_at', now)
+        .gt('expire_at', thirtyDaysAgo.toISOString())
+        .order('expire_at', { ascending: false });
+
+      setExpiredAnnouncements(expiredData || []);
+    }
+
     setLoading(false);
-  }, []);
+  }, [canManageAnnouncements]);
 
   useEffect(() => {
     fetchAnnouncements();
@@ -97,6 +142,24 @@ export function useAnnouncements() {
     return { error };
   };
 
+  const updateAnnouncement = async (
+    id: string,
+    updates: {
+      title?: string;
+      content?: string;
+      priority?: string;
+      is_pinned?: boolean;
+      start_at?: string | null;
+      expire_at?: string | null;
+    }
+  ) => {
+    const { error } = await supabase
+      .from('announcements')
+      .update(updates)
+      .eq('id', id);
+    return { error };
+  };
+
   const deleteAnnouncement = async (id: string) => {
     const { error } = await supabase.from('announcements').delete().eq('id', id);
     return { error };
@@ -104,9 +167,13 @@ export function useAnnouncements() {
 
   return { 
     announcements, 
+    scheduledAnnouncements,
+    expiredAnnouncements,
     loading, 
-    createAnnouncement, 
+    createAnnouncement,
+    updateAnnouncement,
     deleteAnnouncement,
-    refetch: fetchAnnouncements 
+    refetch: fetchAnnouncements,
+    canManageAnnouncements
   };
 }

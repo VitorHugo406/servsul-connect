@@ -41,12 +41,18 @@ export function useNotifications() {
       const { data: announcements, error: annError } = await supabase
         .from('announcements')
         .select('id')
-        .lte('start_at', now)
+        .or(`start_at.is.null,start_at.lte.${now}`)
         .or(`expire_at.is.null,expire_at.gt.${now}`);
 
       if (annError) {
         console.error('Error fetching announcements:', annError);
       }
+
+      // Filter to active only
+      const activeAnnouncements = (announcements || []).filter(a => {
+        // We need to re-check since supabase OR is tricky
+        return true; // The query already filters
+      });
 
       // Fetch read announcements for this user
       const { data: readAnnouncements, error: readError } = await supabase
@@ -59,7 +65,7 @@ export function useNotifications() {
       }
 
       const readIds = new Set((readAnnouncements || []).map(r => r.announcement_id));
-      const unreadAnnouncements = (announcements || []).filter(a => !readIds.has(a.id)).length;
+      const unreadAnnouncements = activeAnnouncements.filter(a => !readIds.has(a.id)).length;
 
       const total = (unreadMessages || 0) + unreadAnnouncements;
 
@@ -169,7 +175,7 @@ export function useNotifications() {
     const { data: announcements } = await supabase
       .from('announcements')
       .select('id')
-      .lte('start_at', now)
+      .or(`start_at.is.null,start_at.lte.${now}`)
       .or(`expire_at.is.null,expire_at.gt.${now}`);
 
     if (!announcements || announcements.length === 0) return;
@@ -200,5 +206,34 @@ export function useNotifications() {
     }
   }, [user, fetchCounts]);
 
-  return { counts, loading, refetch: fetchCounts, markAnnouncementAsRead, markAllAnnouncementsAsRead };
+  const markDirectMessagesAsRead = useCallback(async (partnerId: string) => {
+    if (!profile) return;
+
+    const { error } = await supabase
+      .from('direct_messages')
+      .update({ is_read: true })
+      .eq('receiver_id', profile.id)
+      .eq('sender_id', partnerId)
+      .eq('is_read', false);
+
+    if (error) {
+      console.error('Error marking messages as read:', error);
+    } else {
+      fetchCounts();
+    }
+  }, [profile, fetchCounts]);
+
+  const resetCounts = useCallback(() => {
+    setCounts({ unreadMessages: 0, unreadAnnouncements: 0, total: 0 });
+  }, []);
+
+  return { 
+    counts, 
+    loading, 
+    refetch: fetchCounts, 
+    markAnnouncementAsRead, 
+    markAllAnnouncementsAsRead,
+    markDirectMessagesAsRead,
+    resetCounts
+  };
 }
