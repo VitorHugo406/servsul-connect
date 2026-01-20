@@ -8,8 +8,10 @@ import { SectorTabs } from '@/components/chat/SectorTabs';
 import { DirectMessageList } from '@/components/chat/DirectMessageList';
 import { DirectMessageChat } from '@/components/chat/DirectMessageChat';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertCircle, Users, MessageSquare } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, Users, MessageSquare, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type ChatMode = 'sectors' | 'direct';
 
@@ -19,6 +21,7 @@ export function ChatSection() {
   const [activeSector, setActiveSector] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState<ChatMode>('sectors');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   // Filter sectors user can access using the new allAccessibleSectorIds
   const accessibleSectors = isAdmin 
@@ -38,6 +41,11 @@ export function ChatSection() {
   };
 
   const currentSector = sectors.find((s) => s.id === effectiveSector);
+
+  // Handle back button on mobile
+  const handleBack = () => {
+    setSelectedUserId(null);
+  };
 
   if (sectorsLoading) {
     return (
@@ -59,6 +67,34 @@ export function ChatSection() {
     );
   }
 
+  // Mobile Direct Message - Show Chat (when user is selected)
+  if (isMobile && chatMode === 'direct' && selectedUserId) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        className="flex h-full flex-col"
+      >
+        {/* Back button header */}
+        <div className="flex items-center gap-2 border-b border-border bg-card px-2 py-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBack}
+            className="h-10 w-10"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <span className="font-medium text-foreground">Voltar</span>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <DirectMessageChat partnerId={selectedUserId} />
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -77,7 +113,7 @@ export function ChatSection() {
           )}
         >
           <Users className="h-4 w-4" />
-          Chat por Setor
+          <span className={isMobile ? 'text-xs' : ''}>Chat por Setor</span>
         </button>
         <button
           onClick={() => setChatMode('direct')}
@@ -89,7 +125,7 @@ export function ChatSection() {
           )}
         >
           <MessageSquare className="h-4 w-4" />
-          Mensagens Diretas
+          <span className={isMobile ? 'text-xs' : ''}>Mensagens Diretas</span>
         </button>
       </div>
 
@@ -155,17 +191,29 @@ export function ChatSection() {
           )}
         </>
       ) : (
-        <div className="flex flex-1 overflow-hidden">
-          <div className="w-80 flex-shrink-0">
+        // Direct Messages Mode
+        isMobile ? (
+          // Mobile: Show only the list (chat is shown separately when user selected)
+          <div className="flex-1 overflow-hidden">
             <DirectMessageList
               selectedUserId={selectedUserId}
               onSelectUser={setSelectedUserId}
             />
           </div>
-          <div className="flex-1">
-            <DirectMessageChat partnerId={selectedUserId} />
+        ) : (
+          // Desktop: Side by side layout
+          <div className="flex flex-1 overflow-hidden">
+            <div className="w-80 flex-shrink-0">
+              <DirectMessageList
+                selectedUserId={selectedUserId}
+                onSelectUser={setSelectedUserId}
+              />
+            </div>
+            <div className="flex-1">
+              <DirectMessageChat partnerId={selectedUserId} />
+            </div>
           </div>
-        </div>
+        )
       )}
     </motion.div>
   );
