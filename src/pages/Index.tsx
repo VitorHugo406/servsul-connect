@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { usePresence } from '@/hooks/usePresence';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
+import { MobileNavigation } from '@/components/layout/MobileNavigation';
+import { MobileHeader } from '@/components/layout/MobileHeader';
 import { HomeSection } from '@/components/sections/HomeSection';
 import { ChatSection } from '@/components/sections/ChatSection';
 import { AnnouncementsSection } from '@/components/sections/AnnouncementsSection';
@@ -21,6 +24,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('home');
+  const isMobile = useIsMobile();
   
   // Initialize presence tracking
   usePresence();
@@ -47,12 +51,26 @@ const Index = () => {
   const currentSection = sectionTitles[activeSection] || sectionTitles.home;
   const isHomePage = activeSection === 'home';
 
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-screen overflow-hidden bg-background">
+        <MobileHeader title={currentSection.title} subtitle={currentSection.subtitle} />
+        
+        <main className="flex-1 overflow-auto pb-20">
+          {renderSection()}
+        </main>
+
+        <MobileNavigation activeSection={activeSection} onSectionChange={setActiveSection} />
+      </div>
+    );
+  }
+
+  // Desktop Layout
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
       <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
       
-      {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} />
         
@@ -61,7 +79,6 @@ const Index = () => {
         </main>
       </div>
 
-      {/* Chatbot Widget - only on home page */}
       <ChatbotWidget isHomePage={isHomePage} />
     </div>
   );
