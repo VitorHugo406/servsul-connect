@@ -168,10 +168,10 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
 
   return (
     <>
-      {/* Floating Button with bubble animation */}
+      {/* Floating Button with bubble animation - positioned above mobile nav */}
       <motion.button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full gradient-primary shadow-lg hover:shadow-xl transition-shadow"
+        className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-50 flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full gradient-primary shadow-lg hover:shadow-xl transition-shadow"
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ 
@@ -188,7 +188,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
           animate={{ scale: 1 }}
           transition={{ delay: 0.7, type: 'spring', stiffness: 300 }}
         >
-          <Bot className="h-7 w-7 text-white" />
+          <Bot className="h-6 w-6 md:h-7 md:w-7 text-white" />
         </motion.div>
         {totalUnread > 0 && (
           <motion.span 
@@ -221,7 +221,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.8 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed bottom-6 right-6 z-50 w-[360px] max-w-[calc(100vw-48px)] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+              className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-50 w-[calc(100vw-32px)] md:w-[360px] max-w-[360px] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
             >
               {/* Header */}
               <div className="flex items-center justify-between gradient-primary p-4 text-white">

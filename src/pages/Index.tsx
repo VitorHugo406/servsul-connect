@@ -62,6 +62,9 @@ const Index = () => {
         </main>
 
         <MobileNavigation activeSection={activeSection} onSectionChange={setActiveSection} />
+        
+        {/* Chatbot Widget - only on home page in mobile too */}
+        <ChatbotWidget isHomePage={isHomePage} />
       </div>
     );
   }
