@@ -3,15 +3,12 @@ import { motion } from 'framer-motion';
 import { 
   Users, 
   Shield, 
-  Building2, 
   KeyRound, 
   Plus,
   Search,
   Edit,
-  Trash2,
-  Check,
-  X,
-  ChevronRight
+  MoreVertical,
+  Power
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Table,
   TableBody,
@@ -42,10 +41,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserRegistrationDialog } from '@/components/management/UserRegistrationDialog';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Profile {
   id: string;
@@ -86,6 +93,7 @@ interface UserRole {
 
 export function ManagementSection() {
   const { isAdmin } = useAuth();
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState<Profile[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
@@ -96,6 +104,8 @@ export function ManagementSection() {
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
+  const [permissionsUser, setPermissionsUser] = useState<Profile | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -287,6 +297,192 @@ export function ManagementSection() {
     );
   }
 
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  };
+
+  const handleOpenPermissions = (user: Profile) => {
+    setPermissionsUser(user);
+    setShowPermissionsDialog(true);
+  };
+
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <div className="h-full overflow-auto p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="space-y-4"
+        >
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-display text-xl font-bold text-foreground">Usuários</h1>
+              <p className="text-sm text-muted-foreground">{filteredUsers.length} usuários</p>
+            </div>
+            <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar usuários..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          {/* Mobile User Cards */}
+          <ScrollArea className="h-[calc(100vh-220px)]">
+            <div className="space-y-3 pr-2">
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Users className="mb-2 h-10 w-10 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Nenhum usuário encontrado</p>
+                </div>
+              ) : (
+                filteredUsers.map((user) => {
+                  const sector = sectors.find(s => s.id === user.sector_id);
+                  const role = roles[user.user_id]?.role || 'colaborador';
+                  const roleLabels: Record<string, string> = {
+                    admin: 'Admin',
+                    gerente: 'Gerente',
+                    supervisor: 'Supervisor',
+                    colaborador: 'Colaborador',
+                  };
+
+                  return (
+                    <div
+                      key={user.id}
+                      className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border"
+                    >
+                      {/* Avatar */}
+                      <div className="relative flex-shrink-0">
+                        <Avatar className="h-11 w-11">
+                          <AvatarFallback
+                            className="text-sm text-white"
+                            style={{ backgroundColor: sector?.color || 'hsl(var(--primary))' }}
+                          >
+                            {getInitials(user.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span
+                          className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card ${
+                            user.is_active ? 'bg-green-500' : 'bg-muted-foreground'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-foreground truncate text-sm">{user.name}</span>
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0">
+                            {roleLabels[role]}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {sector?.name || 'Sem setor'}
+                        </p>
+                      </div>
+
+                      {/* Actions Menu */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setEditingUser(user);
+                              setShowEditDialog(true);
+                            }} 
+                            className="gap-2"
+                          >
+                            <Edit className="h-4 w-4" />
+                            Editar usuário
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleOpenPermissions(user)} className="gap-2">
+                            <Shield className="h-4 w-4" />
+                            Permissões
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => updateUserStatus(user.user_id, !user.is_active)}
+                            className={`gap-2 ${user.is_active ? 'text-destructive' : 'text-green-600'}`}
+                          >
+                            <Power className="h-4 w-4" />
+                            {user.is_active ? 'Desativar' : 'Ativar'}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+
+          {/* Mobile Dialogs */}
+          <UserRegistrationDialog
+            open={showCreateDialog}
+            onOpenChange={setShowCreateDialog}
+            sectors={sectors}
+            onSuccess={() => {
+              fetchData();
+              setShowCreateDialog(false);
+            }}
+          />
+
+          {editingUser && (
+            <EditUserDialog
+              open={showEditDialog}
+              onOpenChange={setShowEditDialog}
+              user={editingUser}
+              sectors={sectors}
+              currentRole={roles[editingUser.user_id]?.role}
+              onSuccess={() => {
+                fetchData();
+                setShowEditDialog(false);
+                setEditingUser(null);
+              }}
+            />
+          )}
+
+          {/* Permissions Dialog for Mobile */}
+          {permissionsUser && (
+            <MobilePermissionsDialog
+              open={showPermissionsDialog}
+              onOpenChange={setShowPermissionsDialog}
+              user={permissionsUser}
+              permissions={permissions[permissionsUser.user_id]}
+              isUserAdmin={roles[permissionsUser.user_id]?.role === 'admin'}
+              onUpdatePermission={updatePermission}
+            />
+          )}
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Desktop Layout
   return (
     <div className="h-full overflow-auto p-6">
       <motion.div
@@ -847,6 +1043,65 @@ function EditUserDialog({ open, onOpenChange, user, sectors, currentRole, onSucc
             <Button onClick={handleSave} disabled={loading}>
               {loading ? 'Salvando...' : 'Salvar'}
             </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Mobile Permissions Dialog
+interface MobilePermissionsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  user: Profile;
+  permissions?: UserPermission;
+  isUserAdmin: boolean;
+  onUpdatePermission: (userId: string, permission: keyof Omit<UserPermission, 'id' | 'user_id' | 'created_at' | 'updated_at'>, value: boolean) => void;
+}
+
+function MobilePermissionsDialog({ open, onOpenChange, user, permissions, isUserAdmin, onUpdatePermission }: MobilePermissionsDialogProps) {
+  const userPerm = permissions || {} as Partial<UserPermission>;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Permissões</DialogTitle>
+          <DialogDescription>{user.name}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="flex items-center justify-between">
+            <Label>Postar Avisos</Label>
+            <Switch
+              checked={isUserAdmin || userPerm.can_post_announcements || false}
+              disabled={isUserAdmin}
+              onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_post_announcements', checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Excluir Mensagens</Label>
+            <Switch
+              checked={isUserAdmin || userPerm.can_delete_messages || false}
+              disabled={isUserAdmin}
+              onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_delete_messages', checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Gerenciamento</Label>
+            <Switch
+              checked={isUserAdmin || userPerm.can_access_management || false}
+              disabled={isUserAdmin}
+              onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_access_management', checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Alterar Senhas</Label>
+            <Switch
+              checked={isUserAdmin || userPerm.can_access_password_change || false}
+              disabled={isUserAdmin}
+              onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_access_password_change', checked)}
+            />
           </div>
         </div>
       </DialogContent>
