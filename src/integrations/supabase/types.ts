@@ -558,6 +558,39 @@ export type Database = {
           },
         ]
       }
+      user_facial_data: {
+        Row: {
+          created_at: string
+          face_image_url: string | null
+          facial_descriptors: Json
+          id: string
+          profile_id: string
+          registered_by: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          face_image_url?: string | null
+          facial_descriptors: Json
+          id?: string
+          profile_id: string
+          registered_by: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          face_image_url?: string | null
+          facial_descriptors?: Json
+          id?: string
+          profile_id?: string
+          registered_by?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_notifications: {
         Row: {
           created_at: string
