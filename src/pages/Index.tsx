@@ -11,6 +11,7 @@ import { AnnouncementsSection } from '@/components/sections/AnnouncementsSection
 import { BirthdaysSection } from '@/components/sections/BirthdaysSection';
 import { ChartsSection } from '@/components/sections/ChartsSection';
 import { ManagementSection } from '@/components/sections/ManagementSection';
+import { FacialRegistrationSection } from '@/components/sections/FacialRegistrationSection';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
@@ -20,6 +21,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   birthdays: { title: 'Aniversariantes', subtitle: 'Mural de celebrações' },
   charts: { title: 'Gráficos', subtitle: 'Visualização de dados' },
   management: { title: 'Gerenciamento', subtitle: 'Administração do sistema' },
+  facial: { title: 'Cadastro Facial', subtitle: 'Reconhecimento biométrico' },
 };
 
 const Index = () => {
@@ -43,6 +45,8 @@ const Index = () => {
         return <ChartsSection />;
       case 'management':
         return <ManagementSection />;
+      case 'facial':
+        return <FacialRegistrationSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }
