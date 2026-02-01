@@ -73,11 +73,23 @@ serve(async (req) => {
 
     console.log(`Generated magic link for facial login: ${email}`);
 
-    // Return the magic link token for client-side verification
+    // The linkData contains the full action_link URL
+    // We need to return this URL so the frontend can use it
+    const actionLink = linkData.properties?.action_link;
+
+    if (!actionLink) {
+      console.error('No action link in response');
+      return new Response(
+        JSON.stringify({ error: 'Erro ao gerar link de acesso' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+
+    // Return the magic link URL for client-side redirect
     return new Response(
       JSON.stringify({ 
         success: true,
-        token: linkData.properties?.hashed_token,
+        actionLink: actionLink,
         email: email,
       }),
       { 
