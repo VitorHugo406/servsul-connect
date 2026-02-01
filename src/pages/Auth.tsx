@@ -94,7 +94,7 @@ const Auth = () => {
   const handleFacialLoginSuccess = async (userId: string, email: string) => {
     setLoading(true);
     try {
-      // Call edge function to generate magic link and sign in
+      // Call edge function to generate magic link
       const { data, error: funcError } = await supabase.functions.invoke('facial-login', {
         body: { userId, email },
       });
@@ -103,28 +103,18 @@ const Auth = () => {
         throw new Error(data?.error || funcError?.message || 'Erro no login facial');
       }
 
-      // Use verifyOtp with the token for magic link
-      const { error: signInError } = await supabase.auth.verifyOtp({
-        email,
-        token: data.token,
-        type: 'magiclink',
-      });
-
-      if (signInError) {
-        // Fallback: try direct password-less sign in isn't supported
-        // Just show success and redirect - the magic link email will be sent
-        toast.success('Login facial bem-sucedido!');
-        navigate('/');
-        return;
+      if (!data?.actionLink) {
+        throw new Error('Link de acesso não gerado');
       }
 
       toast.success('Login facial bem-sucedido!');
-      navigate('/');
+      
+      // Redirect to the magic link URL to complete authentication
+      window.location.href = data.actionLink;
     } catch (err) {
       console.error('Facial login error:', err);
       setError('Erro no login facial. Tente novamente.');
       setShowFacialLogin(false);
-    } finally {
       setLoading(false);
     }
   };
