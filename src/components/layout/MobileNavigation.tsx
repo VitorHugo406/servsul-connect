@@ -19,7 +19,7 @@ const mainNavItems = [
 ];
 
 const moreNavItems = [
-  { id: 'charts', icon: BarChart3, label: 'Gráficos' },
+  { id: 'charts', icon: BarChart3, label: 'Gráficos', adminOnly: true },
   { id: 'facial', icon: Camera, label: 'Cadastro Facial' },
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
 ];
@@ -30,9 +30,16 @@ export function MobileNavigation({ activeSection, onSectionChange }: MobileNavig
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const visibleMoreItems = moreNavItems.filter((item) => {
-    if (!('permission' in item)) return true;
-    if (isAdmin) return true;
-    return canAccess(item.permission);
+    // Admin-only items
+    if ('adminOnly' in item && item.adminOnly) {
+      return isAdmin;
+    }
+    // Permission-based items
+    if ('permission' in item) {
+      if (isAdmin) return true;
+      return canAccess(item.permission);
+    }
+    return true;
   });
 
   const isMoreActive = moreNavItems.some(item => item.id === activeSection);
