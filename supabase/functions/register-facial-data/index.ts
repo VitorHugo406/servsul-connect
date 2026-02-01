@@ -6,6 +6,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+// Helper function to decode JWT payload
+function decodeJwtPayload(token: string): { sub?: string } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1]));
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -15,7 +27,6 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     
     // Get the authorization header
     const authHeader = req.headers.get('authorization');
@@ -28,23 +39,19 @@ serve(async (req) => {
       );
     }
 
-    // Create user client to verify auth
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    // Verify user is authenticated using getUser
-    const { data: userData, error: userError } = await userClient.auth.getUser();
+    // Extract and decode the JWT token
+    const token = authHeader.replace('Bearer ', '');
+    const payload = decodeJwtPayload(token);
     
-    if (userError || !userData?.user) {
-      console.error('Auth error:', userError);
+    if (!payload?.sub) {
+      console.error('Invalid JWT token - no sub claim');
       return new Response(
-        JSON.stringify({ error: 'Não autorizado - sessão inválida' }),
+        JSON.stringify({ error: 'Não autorizado - token inválido' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       );
     }
 
-    const userId = userData.user.id;
+    const userId = payload.sub;
     console.log('Authenticated user:', userId);
 
     // Parse request body
@@ -74,6 +81,8 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
       );
     }
+
+    console.log('Found profile:', profile.id, 'for email:', email);
 
     // Check if user already has facial data
     const { data: existing } = await adminClient
