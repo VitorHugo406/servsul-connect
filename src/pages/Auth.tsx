@@ -447,8 +447,14 @@ const Auth = () => {
                 )}
               </AnimatePresence>
 
-              {/* Login Form */}
-              {isLogin ? (
+              {/* Facial Login Mode */}
+              {showFacialLogin ? (
+                <FacialLoginCamera
+                  onSuccess={handleFacialLoginSuccess}
+                  onCancel={() => setShowFacialLogin(false)}
+                />
+              ) : isLogin ? (
+                /* Login Form */
                 <form onSubmit={handleLoginSubmit} className="space-y-5">
                   <div className="space-y-2">
                     <Label htmlFor="loginEmail" className="text-sm font-medium">Email corporativo</Label>
@@ -528,11 +534,6 @@ const Auth = () => {
                     Entrar com reconhecimento facial
                   </Button>
                 </form>
-              ) : showFacialLogin ? (
-                <FacialLoginCamera
-                  onSuccess={handleFacialLoginSuccess}
-                  onCancel={() => setShowFacialLogin(false)}
-                />
               ) : (
                 /* Signup Form */
                 <AnimatePresence mode="wait">

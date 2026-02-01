@@ -3,13 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -20,23 +20,41 @@ serve(async (req) => {
     // Get the authorization header
     const authHeader = req.headers.get('authorization');
     
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.log('No authorization header found');
+      return new Response(
+        JSON.stringify({ error: 'Não autorizado - token não encontrado' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
     // Create user client to verify auth
     const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader || '' } }
+      global: { headers: { Authorization: authHeader } }
     });
 
-    // Verify user is authenticated
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    // Verify user is authenticated using getUser
+    const { data: userData, error: userError } = await userClient.auth.getUser();
     
-    if (authError || !user) {
-      throw new Error('Não autorizado');
+    if (userError || !userData?.user) {
+      console.error('Auth error:', userError);
+      return new Response(
+        JSON.stringify({ error: 'Não autorizado - sessão inválida' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
     }
+
+    const userId = userData.user.id;
+    console.log('Authenticated user:', userId);
 
     // Parse request body
     const { email, descriptors } = await req.json();
 
     if (!email || !descriptors || !Array.isArray(descriptors)) {
-      throw new Error('Email e descriptors são obrigatórios');
+      return new Response(
+        JSON.stringify({ error: 'Email e descriptors são obrigatórios' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
     // Create admin client to bypass RLS
@@ -51,7 +69,10 @@ serve(async (req) => {
 
     if (profileError || !profile) {
       console.error('Error finding profile:', profileError);
-      throw new Error('Perfil não encontrado');
+      return new Response(
+        JSON.stringify({ error: 'Perfil não encontrado' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      );
     }
 
     // Check if user already has facial data
@@ -68,13 +89,16 @@ serve(async (req) => {
         .update({
           facial_descriptors: descriptors,
           updated_at: new Date().toISOString(),
-          registered_by: user.id,
+          registered_by: userId,
         })
         .eq('user_id', profile.user_id);
 
       if (updateError) {
         console.error('Error updating facial data:', updateError);
-        throw new Error('Erro ao atualizar dados faciais');
+        return new Response(
+          JSON.stringify({ error: 'Erro ao atualizar dados faciais' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
       }
 
       console.log(`Updated facial data for user ${email}`);
@@ -86,12 +110,15 @@ serve(async (req) => {
           user_id: profile.user_id,
           profile_id: profile.id,
           facial_descriptors: descriptors,
-          registered_by: user.id,
+          registered_by: userId,
         });
 
       if (insertError) {
         console.error('Error inserting facial data:', insertError);
-        throw new Error('Erro ao cadastrar dados faciais');
+        return new Response(
+          JSON.stringify({ error: 'Erro ao cadastrar dados faciais' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
       }
 
       console.log(`Created facial data for user ${email}`);
@@ -111,7 +138,7 @@ serve(async (req) => {
       JSON.stringify({ error: error.message }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       }
     );
   }
