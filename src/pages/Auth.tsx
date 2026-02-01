@@ -107,10 +107,32 @@ const Auth = () => {
         throw new Error('Link de acesso não gerado');
       }
 
-      toast.success('Login facial bem-sucedido!');
+      toast.success('Login facial bem-sucedido! Redirecionando...');
       
-      // Redirect to the magic link URL to complete authentication
-      window.location.href = data.actionLink;
+      // Extract the token from the action link URL
+      // The action link format is: https://xxx.supabase.co/auth/v1/verify?token=xxx&type=magiclink&redirect_to=xxx
+      const actionUrl = new URL(data.actionLink);
+      const token = actionUrl.searchParams.get('token');
+      const type = actionUrl.searchParams.get('type');
+      
+      if (token && type === 'magiclink') {
+        // Use verifyOtp to authenticate directly without redirect
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: token,
+          type: 'magiclink',
+        });
+        
+        if (verifyError) {
+          console.error('OTP verification error:', verifyError);
+          throw new Error('Erro ao verificar autenticação');
+        }
+        
+        // Authentication successful, navigate to home
+        navigate('/');
+      } else {
+        // Fallback: redirect to the magic link URL
+        window.location.href = data.actionLink;
+      }
     } catch (err) {
       console.error('Facial login error:', err);
       setError('Erro no login facial. Tente novamente.');
