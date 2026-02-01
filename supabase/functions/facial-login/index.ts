@@ -3,13 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -20,7 +20,10 @@ serve(async (req) => {
     const { userId, email } = await req.json();
 
     if (!userId || !email) {
-      throw new Error('userId e email são obrigatórios');
+      return new Response(
+        JSON.stringify({ error: 'userId e email são obrigatórios' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
     // Create admin client
@@ -35,25 +38,37 @@ serve(async (req) => {
 
     if (profileError || !profile) {
       console.error('Error finding profile:', profileError);
-      throw new Error('Usuário não encontrado');
+      return new Response(
+        JSON.stringify({ error: 'Usuário não encontrado' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      );
     }
 
     if (!profile.is_active) {
-      throw new Error('Usuário inativo. Entre em contato com o administrador.');
+      return new Response(
+        JSON.stringify({ error: 'Usuário inativo. Entre em contato com o administrador.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
     }
+
+    // Get the origin for redirect
+    const origin = req.headers.get('origin') || 'https://serv-hub-connect.lovable.app';
 
     // Generate a magic link for the user
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: email,
       options: {
-        redirectTo: `${req.headers.get('origin') || 'https://serv-hub-connect.lovable.app'}/`,
+        redirectTo: `${origin}/`,
       },
     });
 
     if (linkError) {
       console.error('Error generating magic link:', linkError);
-      throw new Error('Erro ao gerar link de acesso');
+      return new Response(
+        JSON.stringify({ error: 'Erro ao gerar link de acesso' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
 
     console.log(`Generated magic link for facial login: ${email}`);
@@ -77,7 +92,7 @@ serve(async (req) => {
       JSON.stringify({ error: error.message }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       }
     );
   }

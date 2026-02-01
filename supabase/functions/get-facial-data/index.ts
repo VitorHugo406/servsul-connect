@@ -3,13 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -30,7 +30,10 @@ serve(async (req) => {
 
     if (facialError) {
       console.error('Error fetching facial data:', facialError);
-      throw new Error('Erro ao buscar dados faciais');
+      return new Response(
+        JSON.stringify({ error: 'Erro ao buscar dados faciais' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
 
     // Get profile info for each user
@@ -38,11 +41,11 @@ serve(async (req) => {
     for (const face of facialData || []) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('name, email')
+        .select('name, email, is_active')
         .eq('id', face.profile_id)
         .single();
 
-      if (profile) {
+      if (profile && profile.is_active) {
         // Get the first descriptor from the array
         const descriptors = face.facial_descriptors as number[][];
         if (descriptors && descriptors.length > 0) {
