@@ -13,6 +13,8 @@ import { ChartsSection } from '@/components/sections/ChartsSection';
 import { ManagementSection } from '@/components/sections/ManagementSection';
 import { FacialRegistrationSection } from '@/components/sections/FacialRegistrationSection';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
+import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
@@ -81,6 +83,7 @@ const Index = () => {
   if (isMobile) {
     return (
       <div className="flex flex-col h-screen overflow-hidden bg-background">
+        <OfflineIndicator />
         <MobileHeader title={currentSection.title} subtitle={currentSection.subtitle} />
         
         <main className="flex-1 overflow-auto pb-20">
@@ -88,6 +91,9 @@ const Index = () => {
         </main>
 
         <MobileNavigation activeSection={activeSection} onSectionChange={setActiveSection} />
+        
+        {/* PWA Install Prompt */}
+        <InstallPrompt />
         
         {/* Chatbot Widget - only on home page in mobile too */}
         <ChatbotWidget isHomePage={isHomePage} />
@@ -98,6 +104,7 @@ const Index = () => {
   // Desktop Layout
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <OfflineIndicator />
       <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
       
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -107,6 +114,9 @@ const Index = () => {
           {renderSection()}
         </main>
       </div>
+
+      {/* PWA Install Prompt */}
+      <InstallPrompt />
 
       <ChatbotWidget isHomePage={isHomePage} />
     </div>
