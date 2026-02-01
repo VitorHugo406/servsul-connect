@@ -2,26 +2,42 @@ import * as React from "react";
 
 const MOBILE_BREAKPOINT = 768;
 
-// Helper to get initial mobile state synchronously
-function getIsMobile(): boolean {
-  if (typeof window === 'undefined') return false;
+// Get mobile state synchronously from window
+function getSnapshot(): boolean {
   return window.innerWidth < MOBILE_BREAKPOINT;
 }
 
-export function useIsMobile() {
-  // Initialize with the actual value instead of undefined
-  const [isMobile, setIsMobile] = React.useState<boolean>(() => getIsMobile());
+// Server-side fallback (always return false for SSR)
+function getServerSnapshot(): boolean {
+  return false;
+}
 
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    };
-    mql.addEventListener("change", onChange);
-    // Ensure we have the correct value on mount
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    return () => mql.removeEventListener("change", onChange);
-  }, []);
+// Subscribe to window resize events
+function subscribe(callback: () => void): () => void {
+  const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+  
+  // Handle both resize and media query changes
+  const handleChange = () => {
+    callback();
+  };
+  
+  mql.addEventListener("change", handleChange);
+  window.addEventListener("resize", handleChange);
+  
+  return () => {
+    mql.removeEventListener("change", handleChange);
+    window.removeEventListener("resize", handleChange);
+  };
+}
+
+export function useIsMobile(): boolean {
+  // useSyncExternalStore ensures the value is read synchronously
+  // and consistently between server and client hydration
+  const isMobile = React.useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot
+  );
 
   return isMobile;
 }
