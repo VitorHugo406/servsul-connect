@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePresence } from '@/hooks/usePresence';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -27,9 +27,19 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
 const Index = () => {
   const [activeSection, setActiveSection] = useState('home');
   const isMobile = useIsMobile();
+  const [isReady, setIsReady] = useState(false);
   
   // Initialize presence tracking
   usePresence();
+  
+  // Ensure we're ready to render after hydration
+  useEffect(() => {
+    // Force a re-check after mount to ensure correct viewport detection
+    const timer = requestAnimationFrame(() => {
+      setIsReady(true);
+    });
+    return () => cancelAnimationFrame(timer);
+  }, []);
 
   const renderSection = () => {
     switch (activeSection) {
@@ -54,6 +64,18 @@ const Index = () => {
 
   const currentSection = sectionTitles[activeSection] || sectionTitles.home;
   const isHomePage = activeSection === 'home';
+
+  // Show loading while detecting viewport to prevent layout flash
+  if (!isReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Mobile Layout
   if (isMobile) {

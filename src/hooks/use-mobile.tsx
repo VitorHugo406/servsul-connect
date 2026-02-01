@@ -7,7 +7,7 @@ function getSnapshot(): boolean {
   return window.innerWidth < MOBILE_BREAKPOINT;
 }
 
-// Server-side fallback (always return false for SSR)
+// Server-side fallback - default to mobile to prevent flash
 function getServerSnapshot(): boolean {
   return false;
 }
@@ -16,7 +16,6 @@ function getServerSnapshot(): boolean {
 function subscribe(callback: () => void): () => void {
   const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
   
-  // Handle both resize and media query changes
   const handleChange = () => {
     callback();
   };
@@ -32,7 +31,6 @@ function subscribe(callback: () => void): () => void {
 
 export function useIsMobile(): boolean {
   // useSyncExternalStore ensures the value is read synchronously
-  // and consistently between server and client hydration
   const isMobile = React.useSyncExternalStore(
     subscribe,
     getSnapshot,
