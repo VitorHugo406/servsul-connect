@@ -27,7 +27,7 @@ const menuItems = [
   { id: 'chat', icon: MessageSquare, label: 'Chat' },
   { id: 'announcements', icon: Bell, label: 'Avisos' },
   { id: 'birthdays', icon: Cake, label: 'Aniversariantes' },
-  { id: 'charts', icon: BarChart3, label: 'Gráficos' },
+  { id: 'charts', icon: BarChart3, label: 'Gráficos', adminOnly: true },
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
 ];
 
@@ -57,11 +57,16 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
   // Filter menu items based on permissions
   const visibleMenuItems = menuItems.filter((item) => {
-    if (!('permission' in item)) return true;
-    // Admin always has access
-    if (isAdmin) return true;
-    // Check permission
-    return canAccess(item.permission);
+    // Admin-only items
+    if ('adminOnly' in item && item.adminOnly) {
+      return isAdmin;
+    }
+    // Permission-based items
+    if ('permission' in item) {
+      if (isAdmin) return true;
+      return canAccess(item.permission);
+    }
+    return true;
   });
 
   return (
