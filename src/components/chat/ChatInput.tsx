@@ -27,10 +27,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
   const imageInputRef = useRef<HTMLInputElement>(null);
   const { uploadFile, uploading, isImage } = useFileUpload();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
+  const handleSubmit = async () => {
     const trimmedMessage = message.trim();
     if (!trimmedMessage && attachments.length === 0) return;
 
@@ -62,7 +59,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
-      handleSubmit(e as unknown as React.FormEvent);
+      handleSubmit();
     }
   };
 
@@ -161,7 +158,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
         )}
       </AnimatePresence>
 
-      <form onSubmit={handleSubmit} action="javascript:void(0)" className="flex items-end gap-3">
+      <div className="flex items-end gap-3">
         {/* Action Buttons */}
         <div className="flex gap-1">
           <Button
@@ -233,13 +230,14 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
 
         {/* Send Button */}
         <Button
-          type="submit"
+          type="button"
+          onClick={handleSubmit}
           disabled={(!message.trim() && attachments.length === 0) || uploading}
           className="h-10 w-10 rounded-xl gradient-primary p-0 shadow-lg transition-all hover:shadow-xl disabled:opacity-50"
         >
           <Send className="h-5 w-5" />
         </Button>
-      </form>
+      </div>
     </div>
   );
 }
