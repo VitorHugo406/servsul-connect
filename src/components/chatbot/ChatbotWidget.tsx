@@ -33,6 +33,10 @@ const helpItems = [
     content: 'Na aba "Chat", você pode enviar mensagens para seu setor. Selecione o setor desejado nas abas superiores. O setor "Geral" está disponível para todos os colaboradores.',
   },
   {
+    title: 'Status das Mensagens',
+    content: 'Quando você envia uma mensagem, aparece um ✓ indicando que foi enviada. Após ser salva no banco de dados e visível para outros usuários, o status muda para ✓✓ (assim como no WhatsApp).',
+  },
+  {
     title: 'Mensagens Diretas',
     content: 'Clique na aba "Mensagens" para conversar individualmente com outros colaboradores. Você pode ver quem está online e iniciar conversas privadas.',
   },

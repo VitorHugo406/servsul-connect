@@ -66,9 +66,9 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
                 {getInitials(displayName)}
               </AvatarFallback>
             </Avatar>
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="text-sm text-white/70">Bem-vindo de volta,</p>
-              <h2 className="font-display text-3xl font-bold">{displayName}</h2>
+              <h2 className="font-display text-2xl md:text-3xl font-bold break-words leading-tight">{displayName}</h2>
               <div className="mt-2 flex items-center gap-2">
                 {sector && (
                   <Badge 
