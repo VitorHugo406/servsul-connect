@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useMessages, useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/hooks/useNotifications';
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { SectorTabs } from '@/components/chat/SectorTabs';
@@ -19,6 +20,7 @@ type ChatMode = 'sectors' | 'direct';
 export function ChatSection() {
   const { profile, isAdmin, geralSectorId, allAccessibleSectorIds } = useAuth();
   const { sectors, loading: sectorsLoading } = useSectors();
+  const { markDirectMessagesAsRead } = useNotifications();
   const [activeSector, setActiveSector] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState<ChatMode>('sectors');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -51,6 +53,13 @@ export function ChatSection() {
   const handleBack = () => {
     setSelectedUserId(null);
   };
+
+  // Mark messages as read when user is selected on mobile
+  useEffect(() => {
+    if (isMobile && chatMode === 'direct' && selectedUserId) {
+      markDirectMessagesAsRead(selectedUserId);
+    }
+  }, [isMobile, chatMode, selectedUserId, markDirectMessagesAsRead]);
 
   if (sectorsLoading) {
     return (

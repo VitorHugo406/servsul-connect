@@ -8,10 +8,13 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useSectors } from '@/hooks/useData';
+import { NotificationPanel } from './NotificationPanel';
 
 interface MobileHeaderProps {
   title: string;
   subtitle?: string;
+  onNavigateToChat?: () => void;
+  onNavigateToAnnouncements?: () => void;
 }
 
 const autonomyLevelLabels: Record<string, string> = {
@@ -21,11 +24,12 @@ const autonomyLevelLabels: Record<string, string> = {
   colaborador: 'Colaborador',
 };
 
-export function MobileHeader({ title, subtitle }: MobileHeaderProps) {
+export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAnnouncements }: MobileHeaderProps) {
   const { profile, signOut } = useAuth();
   const { counts } = useNotifications();
   const { sectors } = useSectors();
   const [showProfile, setShowProfile] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const getInitials = (name: string) => {
     return name
@@ -59,7 +63,10 @@ export function MobileHeader({ title, subtitle }: MobileHeaderProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="relative p-2 rounded-full hover:bg-accent">
+            <button 
+              className="relative p-2 rounded-full hover:bg-accent"
+              onClick={() => setShowNotifications(true)}
+            >
               <Bell className="h-5 w-5 text-muted-foreground" />
               {totalNotifications > 0 && (
                 <Badge 
@@ -166,6 +173,14 @@ export function MobileHeader({ title, subtitle }: MobileHeaderProps) {
           </Button>
         </SheetContent>
       </Sheet>
+
+      {/* Notification Panel */}
+      <NotificationPanel
+        open={showNotifications}
+        onOpenChange={setShowNotifications}
+        onNavigateToChat={onNavigateToChat}
+        onNavigateToAnnouncements={onNavigateToAnnouncements}
+      />
     </>
   );
 }

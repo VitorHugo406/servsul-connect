@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { usePresence } from '@/hooks/usePresence';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { MobileNavigation } from '@/components/layout/MobileNavigation';
@@ -15,6 +17,7 @@ import { FacialRegistrationSection } from '@/components/sections/FacialRegistrat
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
+import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
@@ -30,6 +33,8 @@ const Index = () => {
   const [activeSection, setActiveSection] = useState('home');
   const isMobile = useIsMobile();
   const [isReady, setIsReady] = useState(false);
+  const { profile } = useAuth();
+  const { showOnboarding, completeOnboarding } = useOnboarding();
   
   // Initialize presence tracking
   usePresence();
@@ -42,6 +47,20 @@ const Index = () => {
     });
     return () => cancelAnimationFrame(timer);
   }, []);
+
+  // Navigation handlers for notifications
+  const handleNavigateToChat = () => {
+    setActiveSection('chat');
+  };
+
+  const handleNavigateToAnnouncements = () => {
+    setActiveSection('announcements');
+  };
+
+  const handleRegisterFacial = () => {
+    completeOnboarding();
+    setActiveSection('facial');
+  };
 
   const renderSection = () => {
     switch (activeSection) {
@@ -67,6 +86,17 @@ const Index = () => {
   const currentSection = sectionTitles[activeSection] || sectionTitles.home;
   const isHomePage = activeSection === 'home';
 
+  // Show onboarding for new users
+  if (showOnboarding && profile) {
+    return (
+      <OnboardingScreen
+        userName={profile.display_name || profile.name}
+        onComplete={completeOnboarding}
+        onRegisterFacial={handleRegisterFacial}
+      />
+    );
+  }
+
   // Show loading while detecting viewport to prevent layout flash
   if (!isReady) {
     return (
@@ -84,7 +114,12 @@ const Index = () => {
     return (
       <div className="flex flex-col h-screen overflow-hidden bg-background">
         <OfflineIndicator />
-        <MobileHeader title={currentSection.title} subtitle={currentSection.subtitle} />
+        <MobileHeader 
+          title={currentSection.title} 
+          subtitle={currentSection.subtitle}
+          onNavigateToChat={handleNavigateToChat}
+          onNavigateToAnnouncements={handleNavigateToAnnouncements}
+        />
         
         <main className="flex-1 overflow-auto pb-20">
           {renderSection()}

@@ -199,10 +199,10 @@ export function FacialRegistrationSection() {
               {filteredProfiles.map(profile => (
                 <div
                   key={profile.id}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                  className="flex items-center justify-between gap-2 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <Avatar className="h-10 w-10 flex-shrink-0">
                       <AvatarImage src={profile.avatar_url || undefined} />
                       <AvatarFallback>
                         <User className="h-5 w-5" />
@@ -216,17 +216,18 @@ export function FacialRegistrationSection() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     {profile.hasFacialData ? (
                       <>
-                        <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
-                          <Check className="h-3 w-3 mr-1" />
-                          Cadastrado
+                        <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20 whitespace-nowrap px-1.5">
+                          <Check className="h-3 w-3 mr-0.5" />
+                          <span className="hidden sm:inline">Cadastrado</span>
                         </Badge>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => handleOpenCamera(profile)}
+                          className="h-8 w-8 p-0"
                         >
                           <RefreshCw className="h-4 w-4" />
                         </Button>
@@ -235,10 +236,10 @@ export function FacialRegistrationSection() {
                       <Button
                         size="sm"
                         onClick={() => handleOpenCamera(profile)}
-                        className="gradient-primary text-xs"
+                        className="gradient-primary text-xs h-8 px-2"
                       >
-                        <Camera className="h-4 w-4 mr-1" />
-                        Cadastrar
+                        <Camera className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Cadastrar</span>
                       </Button>
                     )}
                   </div>
