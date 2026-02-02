@@ -29,20 +29,27 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() && attachments.length === 0) return;
+    e.stopPropagation();
+    
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage && attachments.length === 0) return;
+
+    // Clear input immediately for better UX
+    const currentMessage = trimmedMessage;
+    const currentAttachments = [...attachments];
+    setMessage('');
+    setAttachments([]);
 
     // Upload attachments first
     const uploadedAttachments = [];
-    for (const attachment of attachments) {
+    for (const attachment of currentAttachments) {
       const result = await uploadFile(attachment.file);
       if (result) {
         uploadedAttachments.push(result);
       }
     }
 
-    onSendMessage(message.trim(), uploadedAttachments.length > 0 ? uploadedAttachments : undefined);
-    setMessage('');
-    setAttachments([]);
+    onSendMessage(currentMessage, uploadedAttachments.length > 0 ? uploadedAttachments : undefined);
   };
 
   const handleEmojiSelect = (emoji: string) => {
@@ -54,7 +61,8 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      e.stopPropagation();
+      handleSubmit(e as unknown as React.FormEvent);
     }
   };
 
