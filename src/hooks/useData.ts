@@ -83,7 +83,7 @@ export function useMessages(sectorId: string | null) {
     };
   }, [sectorId, fetchMessages]);
 
-  const sendMessage = async (content: string) => {
+  const sendMessage = async (content: string, onOptimisticUpdate?: (tempMessage: Message) => void) => {
     if (!profile || !sectorId) return { error: new Error('Not authenticated') };
 
     // Check if user can send to this sector (their sector, Geral, or admin)
@@ -95,13 +95,34 @@ export function useMessages(sectorId: string | null) {
       return { error: new Error('You cannot send messages to this sector') };
     }
 
-    const { error } = await supabase.from('messages').insert({
+    // Create optimistic message for immediate UI update
+    const tempId = `temp-${Date.now()}`;
+    const tempMessage: Message = {
+      id: tempId,
       content,
       author_id: profile.id,
       sector_id: sectorId,
-    });
+      created_at: new Date().toISOString(),
+      author: profile as Profile,
+    };
+    
+    // Immediately add to local state for instant feedback
+    setMessages(prev => [...prev, tempMessage]);
+    onOptimisticUpdate?.(tempMessage);
 
-    return { error };
+    const { error, data } = await supabase.from('messages').insert({
+      content,
+      author_id: profile.id,
+      sector_id: sectorId,
+    }).select().single();
+
+    if (error) {
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+    }
+    // The realtime subscription will update with the real message
+
+    return { error, data };
   };
 
   // Check if user can send messages to this sector (including additional sectors)

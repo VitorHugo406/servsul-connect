@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { AlertCircle, Users, MessageSquare, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSound } from '@/hooks/useSound';
 
 type ChatMode = 'sectors' | 'direct';
 
@@ -22,6 +23,7 @@ export function ChatSection() {
   const [chatMode, setChatMode] = useState<ChatMode>('sectors');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const { playMessageSent } = useSound();
 
   // Filter sectors user can access using the new allAccessibleSectorIds
   const accessibleSectors = isAdmin 
@@ -34,6 +36,9 @@ export function ChatSection() {
   const { messages, loading: messagesLoading, sendMessage, canSendMessages } = useMessages(effectiveSector);
 
   const handleSendMessage = async (content: string) => {
+    // Play sound immediately for instant feedback
+    playMessageSent();
+    
     const { error } = await sendMessage(content);
     if (error) {
       console.error('Error sending message:', error);

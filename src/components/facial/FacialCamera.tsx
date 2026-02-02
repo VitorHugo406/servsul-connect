@@ -126,36 +126,36 @@ export function FacialCamera({ onCapture, onCancel, mode, className }: FacialCam
         <Button
           variant="outline"
           onClick={onCancel}
-          className="flex-1"
+          className="flex-1 min-w-0"
           disabled={isCapturing}
         >
-          <X className="h-4 w-4 mr-2" />
-          Cancelar
+          <X className="h-4 w-4 mr-1 flex-shrink-0" />
+          <span className="truncate">Cancelar</span>
         </Button>
         
         {error ? (
           <Button
             onClick={handleRetry}
-            className="flex-1"
+            className="flex-1 min-w-0"
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Tentar novamente
+            <RefreshCw className="h-4 w-4 mr-1 flex-shrink-0" />
+            <span className="truncate">Tentar novamente</span>
           </Button>
         ) : (
           <Button
             onClick={handleCapture}
             disabled={!isCameraActive || isLoading || isCapturing || captureSuccess}
-            className="flex-1 gradient-primary"
+            className="flex-1 min-w-0 gradient-primary"
           >
             {isCapturing ? (
               <>
-                <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Capturando...
+                <div className="h-4 w-4 mr-1 flex-shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                <span className="truncate">Capturando...</span>
               </>
             ) : (
               <>
-                <Camera className="h-4 w-4 mr-2" />
-                Capturar
+                <Camera className="h-4 w-4 mr-1 flex-shrink-0" />
+                <span className="truncate">Capturar</span>
               </>
             )}
           </Button>

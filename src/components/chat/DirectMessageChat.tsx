@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Check, CheckCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { useDirectMessages, useActiveUsers } from '@/hooks/useDirectMessages';
 import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSound } from '@/hooks/useSound';
 import { cn } from '@/lib/utils';
 
 interface DirectMessageChatProps {
@@ -18,6 +19,7 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
   const { messages, loading, sendMessage } = useDirectMessages(partnerId || undefined);
   const { users } = useActiveUsers();
   const { sectors } = useSectors();
+  const { playMessageSent } = useSound();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const partner = users.find(u => u.id === partnerId);
@@ -45,6 +47,7 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
   };
 
   const handleSendMessage = async (content: string) => {
+    playMessageSent();
     const { error } = await sendMessage(content);
     if (error) {
       console.error('Error sending message:', error);
@@ -140,7 +143,7 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
                     </AvatarFallback>
                   </Avatar>
 
-                  <div className={cn('max-w-[70%]', isOwn && 'items-end')}>
+                  <div className={cn('flex flex-col', isOwn && 'items-end')}>
                     <div className={cn('mb-1 flex items-center gap-2', isOwn && 'flex-row-reverse')}>
                       <span className="text-xs text-muted-foreground">
                         {formatTime(message.created_at)}
@@ -149,13 +152,24 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
 
                     <div
                       className={cn(
-                        'rounded-2xl px-4 py-2.5 shadow-sm',
+                        'rounded-2xl px-4 py-2.5 shadow-sm max-w-[min(70vw,400px)] w-fit',
                         isOwn
                           ? 'gradient-primary text-white rounded-tr-md'
                           : 'bg-card text-card-foreground rounded-tl-md border border-border'
                       )}
                     >
-                      <p className="text-sm leading-relaxed">{message.content}</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                        {message.content}
+                        {isOwn && (
+                          <span className="ml-1 inline-flex items-center">
+                            {message.id.startsWith('temp-') ? (
+                              <Check className="h-3.5 w-3.5 text-white/60" />
+                            ) : (
+                              <CheckCheck className="h-3.5 w-3.5 text-white/80" />
+                            )}
+                          </span>
+                        )}
+                      </p>
                     </div>
                   </div>
                 </motion.div>

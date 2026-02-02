@@ -109,11 +109,31 @@ export function useDirectMessages(partnerId?: string) {
   const sendMessage = async (content: string) => {
     if (!profile || !partnerId) return { error: new Error('Not authenticated') };
 
+    // Create optimistic message for immediate UI update
+    const tempId = `temp-${Date.now()}`;
+    const tempMessage: DirectMessage = {
+      id: tempId,
+      sender_id: profile.id,
+      receiver_id: partnerId,
+      content,
+      is_read: false,
+      created_at: new Date().toISOString(),
+    };
+    
+    // Immediately add to local state for instant feedback
+    setMessages(prev => [...prev, tempMessage]);
+
     const { error } = await supabase.from('direct_messages').insert({
       sender_id: profile.id,
       receiver_id: partnerId,
       content,
     });
+
+    if (error) {
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+    }
+    // The realtime subscription will update with the real message
 
     return { error };
   };

@@ -3,6 +3,7 @@ import { Send, Smile, Paperclip, Image, X, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Attachment {
   file: File;
@@ -11,11 +12,13 @@ interface Attachment {
 
 interface ChatInputProps {
   onSendMessage: (message: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[]) => void;
+  hideAttachment?: boolean;
 }
 
 const EMOJI_LIST = ['😀', '😂', '😍', '🤔', '👍', '👏', '🎉', '🔥', '❤️', '✅', '🚀', '💪', '😊', '👋', '🙏', '💡'];
 
-export function ChatInput({ onSendMessage }: ChatInputProps) {
+export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputProps) {
+  const { isAdmin } = useAuth();
   const [message, setMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -162,26 +165,31 @@ export function ChatInput({ onSendMessage }: ChatInputProps) {
           >
             <Smile className="h-5 w-5" />
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 text-muted-foreground hover:text-foreground"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            <Paperclip className="h-5 w-5" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 text-muted-foreground hover:text-foreground"
-            onClick={() => imageInputRef.current?.click()}
-            disabled={uploading}
-          >
-            <Image className="h-5 w-5" />
-          </Button>
+          {/* Only show attachment buttons for admins (feature in testing) */}
+          {isAdmin && !hideAttachment && (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 text-muted-foreground hover:text-foreground"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+              >
+                <Paperclip className="h-5 w-5" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 text-muted-foreground hover:text-foreground"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={uploading}
+              >
+                <Image className="h-5 w-5" />
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Hidden file inputs */}
