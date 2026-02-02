@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { usePresence } from '@/hooks/usePresence';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOnboarding } from '@/hooks/useOnboarding';
+import { useBirthdayCelebration } from '@/hooks/useBirthdayCelebration';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
@@ -19,6 +20,7 @@ import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
+import { BirthdayCelebrationModal } from '@/components/birthday/BirthdayCelebrationModal';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
@@ -37,6 +39,7 @@ const Index = () => {
   const [isReady, setIsReady] = useState(false);
   const { profile } = useAuth();
   const { showOnboarding, completeOnboarding } = useOnboarding();
+  const { showCelebration, closeCelebration, userName } = useBirthdayCelebration();
   
   // Initialize presence tracking
   usePresence();
@@ -136,6 +139,13 @@ const Index = () => {
         
         {/* Chatbot Widget - only on home page in mobile too */}
         <ChatbotWidget isHomePage={isHomePage} />
+        
+        {/* Birthday Celebration */}
+        <BirthdayCelebrationModal
+          isOpen={showCelebration}
+          onClose={closeCelebration}
+          userName={userName}
+        />
       </div>
     );
   }
@@ -158,6 +168,13 @@ const Index = () => {
       <InstallPrompt />
 
       <ChatbotWidget isHomePage={isHomePage} />
+      
+      {/* Birthday Celebration */}
+      <BirthdayCelebrationModal
+        isOpen={showCelebration}
+        onClose={closeCelebration}
+        userName={userName}
+      />
     </div>
   );
 };

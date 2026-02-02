@@ -37,6 +37,20 @@ const SOUNDS = {
     type: 'sine' as OscillatorType,
     volume: 0.35,
   },
+  // Chatbot click - friendly pop
+  chatbotClick: {
+    frequencies: [659.25, 880], // E5, A5 - bright ascending
+    duration: 0.1,
+    type: 'sine' as OscillatorType,
+    volume: 0.25,
+  },
+  // Chatbot close - soft descending
+  chatbotClose: {
+    frequencies: [880, 659.25], // A5, E5 - soft descending
+    duration: 0.08,
+    type: 'sine' as OscillatorType,
+    volume: 0.2,
+  },
 };
 
 type SoundType = keyof typeof SOUNDS;
@@ -95,6 +109,8 @@ export function useSound() {
   const playMessageReceived = useCallback(() => playSound('messageReceived'), [playSound]);
   const playSuccess = useCallback(() => playSound('success'), [playSound]);
   const playDeepNotification = useCallback(() => playSound('deepNotification'), [playSound]);
+  const playChatbotClick = useCallback(() => playSound('chatbotClick'), [playSound]);
+  const playChatbotClose = useCallback(() => playSound('chatbotClose'), [playSound]);
 
   return {
     playSound,
@@ -103,5 +119,7 @@ export function useSound() {
     playMessageReceived,
     playSuccess,
     playDeepNotification,
+    playChatbotClick,
+    playChatbotClose,
   };
 }

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useSound } from '@/hooks/useSound';
 
 interface Notification {
   id: string;
@@ -61,9 +62,20 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
   const [unreadCounts, setUnreadCounts] = useState<UnreadCounts>({ announcements: 0, messages: 0 });
   const [loading, setLoading] = useState(false);
   const { user, profile, sector, additionalSectors, isAdmin } = useAuth();
+  const { playChatbotClick, playChatbotClose } = useSound();
 
   const unreadNotifications = notifications.filter(n => !n.is_read).length;
   const totalUnread = unreadNotifications + unreadCounts.announcements + unreadCounts.messages;
+
+  const handleOpen = () => {
+    playChatbotClick();
+    setIsOpen(true);
+  };
+
+  const handleClose = () => {
+    playChatbotClose();
+    setIsOpen(false);
+  };
 
   useEffect(() => {
     if (!user || !profile || !isHomePage) return;
@@ -174,7 +186,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
     <>
       {/* Floating Button with bubble animation - positioned above mobile nav */}
       <motion.button
-        onClick={() => setIsOpen(true)}
+        onClick={handleOpen}
         className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-50 flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full gradient-primary shadow-lg hover:shadow-xl transition-shadow"
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -215,7 +227,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
               className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm md:hidden"
             />
 
@@ -241,7 +253,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setIsOpen(false)}
+                  onClick={handleClose}
                   className="h-8 w-8 text-white hover:bg-white/20"
                 >
                   <X className="h-5 w-5" />
