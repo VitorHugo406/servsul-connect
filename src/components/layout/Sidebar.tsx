@@ -9,7 +9,8 @@ import {
   Cake,
   BarChart3,
   Settings,
-  LogOut
+  LogOut,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,6 +30,7 @@ const menuItems = [
   { id: 'birthdays', icon: Cake, label: 'Aniversariantes' },
   { id: 'charts', icon: BarChart3, label: 'Gráficos', adminOnly: true },
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
+  { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
 ];
 
 const autonomyLevelLabels: Record<string, string> = {

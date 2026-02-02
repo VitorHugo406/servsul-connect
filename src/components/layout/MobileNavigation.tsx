@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, MessageSquare, Bell, Cake, MoreHorizontal, BarChart3, Settings, Camera } from 'lucide-react';
+import { Home, MessageSquare, Bell, Cake, MoreHorizontal, BarChart3, Settings, Camera, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -22,6 +22,7 @@ const moreNavItems = [
   { id: 'charts', icon: BarChart3, label: 'Gráficos', adminOnly: true },
   { id: 'facial', icon: Camera, label: 'Cadastro Facial' },
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
+  { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
 ];
 
 export function MobileNavigation({ activeSection, onSectionChange }: MobileNavigationProps) {

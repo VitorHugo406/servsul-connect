@@ -57,7 +57,7 @@ export function NotificationPanel({
     if (open && profile && user) {
       fetchNotificationDetails();
     }
-  }, [open, profile, user]);
+  }, [open, profile, user, counts]);
 
   const fetchNotificationDetails = async () => {
     if (!profile || !user) return;
@@ -142,12 +142,16 @@ export function NotificationPanel({
 
   const handleMessageClick = async (senderId: string) => {
     await markDirectMessagesAsRead(senderId);
+    // Update local state immediately
+    setUnreadMessages(prev => prev.filter(m => m.sender.id !== senderId));
     onOpenChange(false);
     onNavigateToChat?.();
   };
 
   const handleAnnouncementClick = async (announcementId: string) => {
     await markAnnouncementAsRead(announcementId);
+    // Update local state immediately
+    setUnreadAnnouncements(prev => prev.filter(a => a.id !== announcementId));
     onOpenChange(false);
     onNavigateToAnnouncements?.();
   };
