@@ -164,6 +164,13 @@ export function useNotifications() {
     if (error) {
       console.error('Error marking announcement as read:', error);
     } else {
+      // Immediately update the counts locally for instant feedback
+      setCounts(prev => ({
+        ...prev,
+        unreadAnnouncements: Math.max(0, prev.unreadAnnouncements - 1),
+        total: Math.max(0, prev.total - 1),
+      }));
+      // Then refetch to get accurate counts
       fetchCounts();
     }
   }, [user, fetchCounts]);
@@ -219,6 +226,13 @@ export function useNotifications() {
     if (error) {
       console.error('Error marking messages as read:', error);
     } else {
+      // Immediately update the counts locally for instant feedback
+      setCounts(prev => ({
+        ...prev,
+        unreadMessages: Math.max(0, prev.unreadMessages - 1),
+        total: Math.max(0, prev.total - 1),
+      }));
+      // Then refetch to get accurate counts
       fetchCounts();
     }
   }, [profile, fetchCounts]);

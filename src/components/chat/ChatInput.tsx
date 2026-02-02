@@ -161,7 +161,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
         )}
       </AnimatePresence>
 
-      <form onSubmit={handleSubmit} className="flex items-end gap-3">
+      <form onSubmit={handleSubmit} action="javascript:void(0)" className="flex items-end gap-3">
         {/* Action Buttons */}
         <div className="flex gap-1">
           <Button

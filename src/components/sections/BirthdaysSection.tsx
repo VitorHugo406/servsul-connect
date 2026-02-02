@@ -31,8 +31,11 @@ export function BirthdaysSection() {
   };
 
   const formatBirthday = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
+    // Parse date string in YYYY-MM-DD format correctly
+    const [year, month, day] = dateStr.split('-').map(Number);
+    // Create date using UTC to avoid timezone issues
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
   };
 
   if (loading) {
