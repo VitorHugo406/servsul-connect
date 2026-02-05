@@ -8,7 +8,8 @@ import {
   Users, 
   Database,
   Shield,
-  Loader2
+   Loader2,
+   ScanFace
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,7 @@ interface DeletionOption {
   icon: typeof MessageSquare;
   confirmText: string;
   dangerLevel: 'medium' | 'high' | 'critical';
-  action: () => Promise<void>;
+   type: string;
 }
 
 export function DataManagementSection() {
@@ -61,164 +62,26 @@ export function DataManagementSection() {
     );
   }
 
-  const deleteAllMessages = async () => {
-    // Delete sector messages
-    const { error: msgError } = await supabase
-      .from('messages')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
-
-    if (msgError) throw msgError;
-
-    // Delete direct messages
-    const { error: dmError } = await supabase
-      .from('direct_messages')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
-
-    if (dmError) throw dmError;
-
-    // Delete private group messages
-    const { error: pgmError } = await supabase
-      .from('private_group_messages')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
-
-    if (pgmError) throw pgmError;
-  };
-
-  const deleteAllAnnouncements = async () => {
-    // Delete announcement comments first
-    const { error: commentsError } = await supabase
-      .from('announcement_comments')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
-
-    if (commentsError) throw commentsError;
-
-    // Delete announcement reads
-    const { error: readsError } = await supabase
-      .from('announcement_reads')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
-
-    if (readsError) throw readsError;
-
-    // Delete announcements
-    const { error: annError } = await supabase
-      .from('announcements')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
-
-    if (annError) throw annError;
-  };
-
-  const deleteAllUsers = async () => {
-    // First get the main admin's profile to exclude it
-    const { data: adminProfile } = await supabase
-      .from('profiles')
-      .select('id, user_id')
-      .eq('email', ADMIN_EMAIL)
-      .single();
-
-    if (!adminProfile) {
-      throw new Error('Não foi possível encontrar o perfil do administrador principal');
-    }
-
-    // Delete user-related data for non-admin users
-    const { error: permError } = await supabase
-      .from('user_permissions')
-      .delete()
-      .neq('user_id', adminProfile.user_id);
-
-    if (permError) throw permError;
-
-    const { error: rolesError } = await supabase
-      .from('user_roles')
-      .delete()
-      .neq('user_id', adminProfile.user_id);
-
-    if (rolesError) throw rolesError;
-
-    const { error: presenceError } = await supabase
-      .from('user_presence')
-      .delete()
-      .neq('user_id', adminProfile.user_id);
-
-    if (presenceError) throw presenceError;
-
-    const { error: facialError } = await supabase
-      .from('user_facial_data')
-      .delete()
-      .neq('user_id', adminProfile.user_id);
-
-    if (facialError) throw facialError;
-
-    const { error: additionalSectorsError } = await supabase
-      .from('user_additional_sectors')
-      .delete()
-      .neq('user_id', adminProfile.user_id);
-
-    if (additionalSectorsError) throw additionalSectorsError;
-
-    // Note: We cannot delete from profiles directly as that requires auth.users deletion
-    // which needs service role. We'll mark users as inactive instead.
-    const { error: profilesError } = await supabase
-      .from('profiles')
-      .update({ is_active: false })
-      .neq('email', ADMIN_EMAIL);
-
-    if (profilesError) throw profilesError;
-
-    toast.info('Usuários foram desativados. Para exclusão completa, acesse o painel administrativo.');
-  };
-
-  const deleteAllData = async () => {
-    // Delete in order to respect foreign keys
-    await deleteAllMessages();
-    await deleteAllAnnouncements();
-    
-    // Delete attachments
-    const { error: attachError } = await supabase
-      .from('attachments')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
-
-    if (attachError) throw attachError;
-
-    // Delete user notifications
-    const { error: notifError } = await supabase
-      .from('user_notifications')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
-
-    if (notifError) throw notifError;
-
-    // Delete private groups
-    const { error: pgmrError } = await supabase
-      .from('private_group_message_reads')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
-
-    if (pgmrError) throw pgmrError;
-
-    const { error: pgmembersError } = await supabase
-      .from('private_group_members')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
-
-    if (pgmembersError) throw pgmembersError;
-
-    const { error: pgError } = await supabase
-      .from('private_groups')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
-
-    if (pgError) throw pgError;
-
-    // Delete users (excluding main admin)
-    await deleteAllUsers();
-  };
+   const executeDelete = async (type: string) => {
+     const { data: sessionData } = await supabase.auth.getSession();
+     if (!sessionData.session) {
+       throw new Error('Sessão não encontrada');
+     }
+ 
+     const response = await supabase.functions.invoke('delete-data', {
+       body: { type },
+     });
+ 
+     if (response.error) {
+       throw new Error(response.error.message || 'Erro ao executar exclusão');
+     }
+ 
+     if (response.data?.error) {
+       throw new Error(response.data.error);
+     }
+ 
+     return response.data;
+   };
 
   const deletionOptions: DeletionOption[] = [
     {
@@ -228,7 +91,7 @@ export function DataManagementSection() {
       icon: MessageSquare,
       confirmText: 'EXCLUIR MENSAGENS',
       dangerLevel: 'high',
-      action: deleteAllMessages,
+       type: 'messages',
     },
     {
       id: 'announcements',
@@ -237,7 +100,7 @@ export function DataManagementSection() {
       icon: Megaphone,
       confirmText: 'EXCLUIR AVISOS',
       dangerLevel: 'high',
-      action: deleteAllAnnouncements,
+       type: 'announcements',
     },
     {
       id: 'users',
@@ -246,16 +109,25 @@ export function DataManagementSection() {
       icon: Users,
       confirmText: 'EXCLUIR USUARIOS',
       dangerLevel: 'critical',
-      action: deleteAllUsers,
+       type: 'users',
     },
     {
+       id: 'facial',
+       title: 'Excluir Dados Faciais',
+       description: 'Remove todos os dados de reconhecimento facial cadastrados, exceto do administrador principal.',
+       icon: ScanFace,
+       confirmText: 'EXCLUIR FACIAIS',
+       dangerLevel: 'high',
+       type: 'facial',
+     },
+     {
       id: 'all',
       title: 'Limpar Todo o Banco de Dados',
       description: 'Remove TODOS os dados do sistema, mantendo apenas o administrador principal. Esta ação é IRREVERSÍVEL!',
       icon: Database,
       confirmText: 'LIMPAR TUDO',
       dangerLevel: 'critical',
-      action: deleteAllData,
+       type: 'all',
     },
   ];
 
@@ -270,8 +142,8 @@ export function DataManagementSection() {
 
     setLoading(true);
     try {
-      await selectedOption.action();
-      toast.success(`${selectedOption.title} - Concluído com sucesso!`);
+       const result = await executeDelete(selectedOption.type);
+       toast.success(result.message || `${selectedOption.title} - Concluído com sucesso!`);
       setShowConfirmDialog(false);
     } catch (error) {
       console.error('Error during deletion:', error);
