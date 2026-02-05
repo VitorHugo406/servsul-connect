@@ -18,6 +18,8 @@ import { ManagementSection } from '@/components/sections/ManagementSection';
 import { FacialRegistrationSection } from '@/components/sections/FacialRegistrationSection';
 import { DataManagementSection } from '@/components/sections/DataManagementSection';
 import { SectorManagementSection } from '@/components/sections/SectorManagementSection';
+ import { ImportantAnnouncementsSection } from '@/components/sections/ImportantAnnouncementsSection';
+ import { TaskBoardSection } from '@/components/sections/TaskBoardSection';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
@@ -35,6 +37,8 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   facial: { title: 'Cadastro Facial', subtitle: 'Reconhecimento biométrico' },
   'data-management': { title: 'Exclusão de Dados', subtitle: 'Gerenciamento de dados do sistema' },
   sectors: { title: 'Gestão de Setores', subtitle: 'Departamentos da empresa' },
+   'important-announcements': { title: 'Comunicados Importantes', subtitle: 'Avisos em destaque' },
+   tasks: { title: 'Gestão de Tarefas', subtitle: 'Quadro de atividades' },
 };
 
 const Index = () => {
@@ -92,6 +96,10 @@ const Index = () => {
         return <DataManagementSection />;
       case 'sectors':
         return <SectorManagementSection />;
+       case 'important-announcements':
+         return <ImportantAnnouncementsSection />;
+       case 'tasks':
+         return <TaskBoardSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }

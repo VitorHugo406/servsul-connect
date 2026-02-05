@@ -1,247 +1,286 @@
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Users } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { supabase } from '@/integrations/supabase/client';
-import { useAllUsersPresence } from '@/hooks/usePresence';
-import { UserStatusBadge, STATUS_OPTIONS } from '@/components/user/UserStatusSelector';
-import { cn } from '@/lib/utils';
-
-interface Profile {
-  id: string;
-  user_id: string;
-  name: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  sector_id: string | null;
-  user_status: string | null;
-}
-
-interface SectorUsersListProps {
-  sectorId: string;
-  sectorName?: string;
-  compact?: boolean;
-}
-
-export function SectorUsersList({ sectorId, sectorName, compact = false }: SectorUsersListProps) {
-  const [users, setUsers] = useState<Profile[]>([]);
-  const [additionalUsers, setAdditionalUsers] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { isUserOnline } = useAllUsersPresence();
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true);
-      
-      // Fetch users with this as primary sector
-      const { data: primaryUsers, error: primaryError } = await supabase
-        .from('profiles')
-        .select('id, user_id, name, display_name, avatar_url, sector_id, user_status')
-        .eq('sector_id', sectorId)
-        .eq('is_active', true)
-        .order('name');
-
-      if (primaryError) {
-        console.error('Error fetching primary sector users:', primaryError);
-      } else {
-        setUsers(primaryUsers || []);
-      }
-
-      // Fetch users with this as additional sector
-      const { data: additionalData, error: additionalError } = await supabase
-        .from('user_additional_sectors')
-        .select('user_id')
-        .eq('sector_id', sectorId);
-
-      if (!additionalError && additionalData && additionalData.length > 0) {
-        const userIds = additionalData.map(d => d.user_id);
-        
-        const { data: additionalProfiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, user_id, name, display_name, avatar_url, sector_id, user_status')
-          .in('user_id', userIds)
-          .eq('is_active', true)
-          .order('name');
-
-        if (!profilesError && additionalProfiles) {
-          setAdditionalUsers(additionalProfiles);
-        }
-      }
-
-      setLoading(false);
-    };
-
-    if (sectorId) {
-      fetchUsers();
-    }
-  }, [sectorId]);
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
-  };
-
-  const allUsers = [...users, ...additionalUsers];
-
-  if (loading) {
-    return (
-      <Card className={cn(compact && 'border-0 shadow-none')}>
-        <CardContent className="flex items-center justify-center py-8">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (compact) {
-    return (
-      <div className="space-y-2">
-        {allUsers.map((user) => {
-          const isOnline = isUserOnline(user.user_id);
-          return (
-            <div
-              key={user.id}
-              className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors"
-            >
-              <div className="relative">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.avatar_url || ''} alt={user.name} />
-                  <AvatarFallback className="text-xs">
-                    {getInitials(user.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <span
-                  className={cn(
-                    'absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background',
-                    isOnline ? 'bg-success' : 'bg-muted-foreground'
-                  )}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
-                  {user.display_name || user.name}
-                </p>
-              </div>
-              <UserStatusBadge status={user.user_status || 'available'} />
-            </div>
-          );
-        })}
-        {allUsers.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            Nenhum usuário neste setor
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  // Count users by status
-  const statusCounts = allUsers.reduce((acc, user) => {
-    const status = user.user_status || 'available';
-    acc[status] = (acc[status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const onlineCount = allUsers.filter(u => isUserOnline(u.user_id)).length;
-  const offlineCount = allUsers.length - onlineCount;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Users className="h-5 w-5" />
-          {sectorName ? `Usuários - ${sectorName}` : 'Usuários do Setor'}
-          <Badge variant="secondary" className="ml-auto">
-            {allUsers.length}
-          </Badge>
-        </CardTitle>
-        {/* Status summary */}
-        <div className="flex flex-wrap gap-2 mt-2">
-          <Badge variant="outline" className="gap-1">
-            <span className="h-2 w-2 rounded-full bg-success" />
-            {onlineCount} online
-          </Badge>
-          <Badge variant="outline" className="gap-1">
-            <span className="h-2 w-2 rounded-full bg-muted-foreground" />
-            {offlineCount} offline
-          </Badge>
-          {Object.entries(statusCounts).map(([status, count]) => {
-            const option = STATUS_OPTIONS.find(o => o.value === status);
-            if (!option || count === 0) return null;
-            return (
-              <Badge key={status} variant="outline" className="gap-1">
-                <span className={cn('h-2 w-2 rounded-full', option.color)} />
-                {count} {option.label.toLowerCase()}
-              </Badge>
-            );
-          })}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-64">
-          <div className="space-y-3">
-            {allUsers.map((user, index) => {
-              const isOnline = isUserOnline(user.user_id);
-              const isPrimary = user.sector_id === sectorId;
-              
-              return (
-                <motion.div
-                  key={user.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="relative">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.avatar_url || ''} alt={user.name} />
-                      <AvatarFallback>
-                        {getInitials(user.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span
-                      className={cn(
-                        'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background',
-                        isOnline ? 'bg-success' : 'bg-muted-foreground'
-                      )}
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium truncate">
-                        {user.display_name || user.name}
-                      </p>
-                      {!isPrimary && (
-                        <Badge variant="outline" className="text-xs">
-                          Adicional
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <UserStatusBadge status={user.user_status || 'available'} showLabel />
-                      <span className="text-xs text-muted-foreground">
-                        • {isOnline ? 'Online' : 'Offline'}
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-            {allUsers.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                Nenhum usuário encontrado neste setor
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
-  );
-}
+ import { useState, useEffect } from 'react';
+ import { motion, AnimatePresence } from 'framer-motion';
+ import { Users, X, Coffee, Briefcase, Clock, Moon, CheckCircle } from 'lucide-react';
+ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+ import { Badge } from '@/components/ui/badge';
+ import { Button } from '@/components/ui/button';
+ import { ScrollArea } from '@/components/ui/scroll-area';
+ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+ import { supabase } from '@/integrations/supabase/client';
+ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
+ import { cn } from '@/lib/utils';
+ 
+ interface SectorUser {
+   id: string;
+   user_id: string;
+   name: string;
+   display_name: string | null;
+   avatar_url: string | null;
+   user_status: string | null;
+   is_online?: boolean;
+ }
+ 
+ interface SectorUsersListProps {
+   sectorId: string;
+   sectorName: string;
+   sectorColor: string;
+   isOpen: boolean;
+   onClose: () => void;
+ }
+ 
+ const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; color: string }> = {
+   available: { label: 'Disponível', icon: CheckCircle, color: 'text-green-500' },
+   lunch: { label: 'Almoçando', icon: Coffee, color: 'text-orange-500' },
+   meeting: { label: 'Em reunião', icon: Briefcase, color: 'text-blue-500' },
+   busy: { label: 'Ocupado', icon: Clock, color: 'text-red-500' },
+   away: { label: 'Ausente', icon: Moon, color: 'text-gray-500' },
+ };
+ 
+ export function SectorUsersList({ sectorId, sectorName, sectorColor, isOpen, onClose }: SectorUsersListProps) {
+   const [users, setUsers] = useState<SectorUser[]>([]);
+   const [loading, setLoading] = useState(true);
+   const [selectedUser, setSelectedUser] = useState<SectorUser | null>(null);
+   const [showProfileDialog, setShowProfileDialog] = useState(false);
+ 
+   useEffect(() => {
+     if (!isOpen) return;
+ 
+     const fetchUsers = async () => {
+       setLoading(true);
+       try {
+         // Get users from primary sector
+         const { data: primaryUsers, error: primaryError } = await supabase
+           .from('profiles')
+           .select('id, user_id, name, display_name, avatar_url, user_status')
+           .eq('sector_id', sectorId)
+           .eq('is_active', true);
+ 
+         if (primaryError) throw primaryError;
+ 
+         // Get users with additional sector access
+         const { data: additionalUsers, error: additionalError } = await supabase
+           .from('user_additional_sectors')
+           .select(`
+             user_id,
+             profiles!inner(id, user_id, name, display_name, avatar_url, user_status, is_active)
+           `)
+           .eq('sector_id', sectorId);
+ 
+         if (additionalError) throw additionalError;
+ 
+         // Get online status
+         const { data: presenceData } = await supabase
+           .from('user_presence')
+           .select('user_id, is_online');
+ 
+         const presenceMap = new Map(presenceData?.map(p => [p.user_id, p.is_online]) || []);
+ 
+         // Combine and deduplicate users
+         const allUsers = new Map<string, SectorUser>();
+ 
+         primaryUsers?.forEach(u => {
+           allUsers.set(u.id, {
+             ...u,
+             is_online: presenceMap.get(u.user_id) || false,
+           });
+         });
+ 
+         additionalUsers?.forEach(au => {
+           const p = au.profiles as any;
+           if (p && p.is_active && !allUsers.has(p.id)) {
+             allUsers.set(p.id, {
+               id: p.id,
+               user_id: p.user_id,
+               name: p.name,
+               display_name: p.display_name,
+               avatar_url: p.avatar_url,
+               user_status: p.user_status,
+               is_online: presenceMap.get(p.user_id) || false,
+             });
+           }
+         });
+ 
+         setUsers(Array.from(allUsers.values()));
+       } catch (error) {
+         console.error('Error fetching sector users:', error);
+       } finally {
+         setLoading(false);
+       }
+     };
+ 
+     fetchUsers();
+ 
+     // Subscribe to presence changes
+     const presenceChannel = supabase
+       .channel('sector-presence')
+       .on(
+         'postgres_changes',
+         { event: '*', schema: 'public', table: 'user_presence' },
+         (payload) => {
+           const presence = payload.new as { user_id: string; is_online: boolean };
+           if (presence) {
+             setUsers(prev => prev.map(u => 
+               u.user_id === presence.user_id 
+                 ? { ...u, is_online: presence.is_online }
+                 : u
+             ));
+           }
+         }
+       )
+       .subscribe();
+ 
+     return () => {
+       supabase.removeChannel(presenceChannel);
+     };
+   }, [isOpen, sectorId]);
+ 
+   const getInitials = (name: string) => {
+     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+   };
+ 
+   const handleUserClick = (user: SectorUser) => {
+     setSelectedUser(user);
+     setShowProfileDialog(true);
+   };
+ 
+   const onlineUsers = users.filter(u => u.is_online);
+   const offlineUsers = users.filter(u => !u.is_online);
+ 
+   return (
+     <>
+       <Dialog open={isOpen} onOpenChange={onClose}>
+         <DialogContent className="max-w-md max-h-[80vh]">
+           <DialogHeader>
+             <DialogTitle className="flex items-center gap-3">
+               <div 
+                 className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
+                 style={{ backgroundColor: sectorColor }}
+               >
+                 {sectorName.charAt(0)}
+               </div>
+               <div>
+                 <span>{sectorName}</span>
+                 <p className="text-xs text-muted-foreground font-normal">
+                   {users.length} membro{users.length !== 1 ? 's' : ''}
+                 </p>
+               </div>
+             </DialogTitle>
+           </DialogHeader>
+ 
+           {loading ? (
+             <div className="flex items-center justify-center py-8">
+               <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+             </div>
+           ) : users.length === 0 ? (
+             <div className="text-center py-8 text-muted-foreground">
+               <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+               <p>Nenhum membro neste setor</p>
+             </div>
+           ) : (
+             <ScrollArea className="max-h-[60vh] pr-4">
+               <div className="space-y-4">
+                 {/* Online Users */}
+                 {onlineUsers.length > 0 && (
+                   <div>
+                     <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                       <span className="h-2 w-2 rounded-full bg-green-500" />
+                       Online ({onlineUsers.length})
+                     </h4>
+                     <div className="space-y-1">
+                       {onlineUsers.map(user => {
+                         const status = STATUS_CONFIG[user.user_status || 'available'];
+                         const StatusIcon = status?.icon || CheckCircle;
+                         
+                         return (
+                           <motion.button
+                             key={user.id}
+                             onClick={() => handleUserClick(user)}
+                             className="flex w-full items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors text-left"
+                             whileHover={{ scale: 1.01 }}
+                             whileTap={{ scale: 0.99 }}
+                           >
+                             <div className="relative">
+                               <Avatar className="h-10 w-10">
+                                 <AvatarImage src={user.avatar_url || ''} />
+                                 <AvatarFallback 
+                                   className="text-white text-sm"
+                                   style={{ backgroundColor: sectorColor }}
+                                 >
+                                   {getInitials(user.display_name || user.name)}
+                                 </AvatarFallback>
+                               </Avatar>
+                               <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-green-500" />
+                             </div>
+                             <div className="flex-1 min-w-0">
+                               <p className="font-medium text-foreground truncate">
+                                 {user.display_name || user.name}
+                               </p>
+                               <div className="flex items-center gap-1 text-xs">
+                                 <StatusIcon className={cn('h-3 w-3', status?.color)} />
+                                 <span className={status?.color}>{status?.label}</span>
+                               </div>
+                             </div>
+                           </motion.button>
+                         );
+                       })}
+                     </div>
+                   </div>
+                 )}
+ 
+                 {/* Offline Users */}
+                 {offlineUsers.length > 0 && (
+                   <div>
+                     <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                       <span className="h-2 w-2 rounded-full bg-gray-400" />
+                       Offline ({offlineUsers.length})
+                     </h4>
+                     <div className="space-y-1">
+                       {offlineUsers.map(user => (
+                         <motion.button
+                           key={user.id}
+                           onClick={() => handleUserClick(user)}
+                           className="flex w-full items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors text-left opacity-60"
+                           whileHover={{ scale: 1.01 }}
+                           whileTap={{ scale: 0.99 }}
+                         >
+                           <div className="relative">
+                             <Avatar className="h-10 w-10">
+                               <AvatarImage src={user.avatar_url || ''} />
+                               <AvatarFallback 
+                                 className="text-white text-sm"
+                                 style={{ backgroundColor: sectorColor }}
+                               >
+                                 {getInitials(user.display_name || user.name)}
+                               </AvatarFallback>
+                             </Avatar>
+                             <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-gray-400" />
+                           </div>
+                           <div className="flex-1 min-w-0">
+                             <p className="font-medium text-foreground truncate">
+                               {user.display_name || user.name}
+                             </p>
+                             <p className="text-xs text-muted-foreground">Offline</p>
+                           </div>
+                         </motion.button>
+                       ))}
+                     </div>
+                   </div>
+                 )}
+               </div>
+             </ScrollArea>
+           )}
+         </DialogContent>
+       </Dialog>
+ 
+       {/* User Preview Dialog */}
+       <UserPreviewDialog
+         isOpen={showProfileDialog}
+         onClose={() => {
+           setShowProfileDialog(false);
+           setSelectedUser(null);
+         }}
+         userId={selectedUser?.user_id || ''}
+       />
+     </>
+   );
+ }
