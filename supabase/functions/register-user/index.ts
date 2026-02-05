@@ -122,7 +122,15 @@ Deno.serve(async (req) => {
     }
 
     // Add role based on profile type
-    const role = profileType === 'admin' ? 'admin' : 'colaborador';
+    const roleMap: Record<string, string> = {
+      admin: 'admin',
+      gestor: 'gestor',
+      gerente: 'gerente',
+      supervisor: 'supervisor',
+      diretoria: 'diretoria',
+      user: 'colaborador',
+    };
+    const role = roleMap[profileType] || 'colaborador';
     const { error: roleError } = await supabaseAdmin
       .from("user_roles")
       .insert({

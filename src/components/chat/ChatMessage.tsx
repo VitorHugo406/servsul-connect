@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Check, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -28,7 +27,7 @@ interface ChatMessageProps {
   index: number;
 }
 
-export function ChatMessage({ message, index }: ChatMessageProps) {
+export function ChatMessage({ message }: ChatMessageProps) {
   const { profile } = useAuth();
   const { sectors } = useSectors();
   
@@ -70,12 +69,7 @@ export function ChatMessage({ message, index }: ChatMessageProps) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.3 }}
-      className={cn('flex gap-3', isOwn && 'flex-row-reverse')}
-    >
+    <div className={cn('flex gap-3', isOwn && 'flex-row-reverse')}>
       <Avatar className="h-10 w-10 flex-shrink-0 ring-2 ring-border">
         <AvatarImage src={author?.avatar_url || ''} alt={displayName} />
         <AvatarFallback 
@@ -114,6 +108,33 @@ export function ChatMessage({ message, index }: ChatMessageProps) {
           </p>
         </div>
       </div>
-    </motion.div>
+    </div>
+  );
+}
+
+// Date separator component
+export function DateSeparator({ date }: { date: string }) {
+  const getLabel = (dateStr: string) => {
+    const msgDate = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    const isSameDay = (a: Date, b: Date) =>
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+
+    if (isSameDay(msgDate, today)) return 'Hoje';
+    if (isSameDay(msgDate, yesterday)) return 'Ontem';
+    return msgDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  return (
+    <div className="flex items-center justify-center my-4">
+      <span className="rounded-lg bg-muted px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm">
+        {getLabel(date)}
+      </span>
+    </div>
   );
 }

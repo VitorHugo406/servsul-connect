@@ -47,9 +47,11 @@ export function SectorUsersList({ sectorId, sectorName, sectorColor, isOpen = tr
    useEffect(() => {
      if (!isOpen) return;
  
-     const fetchUsers = async () => {
-       setLoading(true);
-       try {
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        const GERAL_SECTOR_ID = '00000000-0000-0000-0000-000000000001';
+        
         // Fetch sector info if not provided
         if (!sectorName || !sectorColor) {
           const { data: sectorData } = await supabase
@@ -62,59 +64,66 @@ export function SectorUsersList({ sectorId, sectorName, sectorColor, isOpen = tr
           }
         }
 
-         // Get users from primary sector
-         const { data: primaryUsers, error: primaryError } = await supabase
-           .from('profiles')
-           .select('id, user_id, name, display_name, avatar_url, user_status')
-           .eq('sector_id', sectorId)
-           .eq('is_active', true);
- 
-         if (primaryError) throw primaryError;
- 
-         // Get users with additional sector access
-         const { data: additionalUsers, error: additionalError } = await supabase
-           .from('user_additional_sectors')
-           .select(`
-             user_id,
-             profiles!inner(id, user_id, name, display_name, avatar_url, user_status, is_active)
-           `)
-           .eq('sector_id', sectorId);
- 
-         if (additionalError) throw additionalError;
- 
-         // Get online status
-         const { data: presenceData } = await supabase
-           .from('user_presence')
-           .select('user_id, is_online');
- 
-         const presenceMap = new Map(presenceData?.map(p => [p.user_id, p.is_online]) || []);
- 
-         // Combine and deduplicate users
-         const allUsers = new Map<string, SectorUser>();
- 
-         primaryUsers?.forEach(u => {
-           allUsers.set(u.id, {
-             ...u,
-             is_online: presenceMap.get(u.user_id) || false,
-           });
-         });
- 
-         additionalUsers?.forEach(au => {
-           const p = au.profiles as any;
-           if (p && p.is_active && !allUsers.has(p.id)) {
-             allUsers.set(p.id, {
-               id: p.id,
-               user_id: p.user_id,
-               name: p.name,
-               display_name: p.display_name,
-               avatar_url: p.avatar_url,
-               user_status: p.user_status,
-               is_online: presenceMap.get(p.user_id) || false,
-             });
-           }
-         });
- 
-         setUsers(Array.from(allUsers.values()));
+        let primaryUsers: any[] = [];
+
+        if (sectorId === GERAL_SECTOR_ID) {
+          // Geral sector: show ALL active users
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('id, user_id, name, display_name, avatar_url, user_status')
+            .eq('is_active', true);
+          if (error) throw error;
+          primaryUsers = data || [];
+        } else {
+          // Get users from primary sector
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('id, user_id, name, display_name, avatar_url, user_status')
+            .eq('sector_id', sectorId)
+            .eq('is_active', true);
+          if (error) throw error;
+          primaryUsers = data || [];
+
+          // Get users with additional sector access
+          const { data: additionalUsers, error: additionalError } = await supabase
+            .from('user_additional_sectors')
+            .select(`
+              user_id,
+              profiles!inner(id, user_id, name, display_name, avatar_url, user_status, is_active)
+            `)
+            .eq('sector_id', sectorId);
+          if (additionalError) throw additionalError;
+
+          // Merge additional users
+          additionalUsers?.forEach(au => {
+            const p = au.profiles as any;
+            if (p && p.is_active && !primaryUsers.find((u: any) => u.id === p.id)) {
+              primaryUsers.push({
+                id: p.id,
+                user_id: p.user_id,
+                name: p.name,
+                display_name: p.display_name,
+                avatar_url: p.avatar_url,
+                user_status: p.user_status,
+              });
+            }
+          });
+        }
+
+        // Get online status
+        const { data: presenceData } = await supabase
+          .from('user_presence')
+          .select('user_id, is_online');
+
+        const presenceMap = new Map(presenceData?.map(p => [p.user_id, p.is_online]) || []);
+
+        // Map to final format
+        const allUsers = primaryUsers.map(u => ({
+          ...u,
+          is_online: presenceMap.get(u.user_id) || false,
+        }));
+
+        setUsers(allUsers);
        } catch (error) {
          console.error('Error fetching sector users:', error);
        } finally {
