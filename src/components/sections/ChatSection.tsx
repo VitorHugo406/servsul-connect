@@ -8,14 +8,17 @@ import { ChatInput } from '@/components/chat/ChatInput';
 import { SectorTabs } from '@/components/chat/SectorTabs';
 import { DirectMessageList } from '@/components/chat/DirectMessageList';
 import { DirectMessageChat } from '@/components/chat/DirectMessageChat';
+import { PrivateGroupList } from '@/components/chat/PrivateGroupList';
+import { PrivateGroupChat } from '@/components/chat/PrivateGroupChat';
+import { usePrivateGroups } from '@/hooks/usePrivateGroups';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Users, MessageSquare, ArrowLeft } from 'lucide-react';
+import { AlertCircle, Users, MessageSquare, ArrowLeft, UsersRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSound } from '@/hooks/useSound';
 
-type ChatMode = 'sectors' | 'direct';
+type ChatMode = 'sectors' | 'direct' | 'groups';
 
 export function ChatSection() {
   const { profile, isAdmin, geralSectorId, allAccessibleSectorIds } = useAuth();
@@ -24,8 +27,10 @@ export function ChatSection() {
   const [activeSector, setActiveSector] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState<ChatMode>('sectors');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const { playMessageSent } = useSound();
+  const { groups } = usePrivateGroups();
 
   // Filter sectors user can access using the new allAccessibleSectorIds
   const accessibleSectors = isAdmin 
@@ -48,10 +53,12 @@ export function ChatSection() {
   };
 
   const currentSector = sectors.find((s) => s.id === effectiveSector);
+  const selectedGroup = groups.find(g => g.id === selectedGroupId) || null;
 
   // Handle back button on mobile
   const handleBack = () => {
     setSelectedUserId(null);
+    setSelectedGroupId(null);
   };
 
   // Mark messages as read when user is selected on mobile
@@ -109,6 +116,28 @@ export function ChatSection() {
     );
   }
 
+  // Mobile Group Chat
+  if (isMobile && chatMode === 'groups' && selectedGroupId) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        className="flex h-full flex-col"
+      >
+        <div className="flex items-center gap-2 border-b border-border bg-card px-2 py-2">
+          <Button variant="ghost" size="icon" onClick={handleBack} className="h-10 w-10">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <span className="font-medium text-foreground">Voltar</span>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <PrivateGroupChat group={selectedGroup} />
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -127,7 +156,7 @@ export function ChatSection() {
           )}
         >
           <Users className="h-4 w-4" />
-          <span className={isMobile ? 'text-xs' : ''}>Chat por Setor</span>
+          <span className={isMobile ? 'text-xs' : ''}>Setores</span>
         </button>
         <button
           onClick={() => setChatMode('direct')}
@@ -139,7 +168,19 @@ export function ChatSection() {
           )}
         >
           <MessageSquare className="h-4 w-4" />
-          <span className={isMobile ? 'text-xs' : ''}>Mensagens Diretas</span>
+          <span className={isMobile ? 'text-xs' : ''}>Individual</span>
+        </button>
+        <button
+          onClick={() => setChatMode('groups')}
+          className={cn(
+            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
+            chatMode === 'groups'
+              ? 'border-b-2 border-primary text-primary'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <UsersRound className="h-4 w-4" />
+          <span className={isMobile ? 'text-xs' : ''}>Grupos</span>
         </button>
       </div>
 
@@ -204,7 +245,7 @@ export function ChatSection() {
             </div>
           )}
         </>
-      ) : (
+      ) : chatMode === 'direct' ? (
         // Direct Messages Mode
         isMobile ? (
           // Mobile: Show only the list (chat is shown separately when user selected)
@@ -225,6 +266,22 @@ export function ChatSection() {
             </div>
             <div className="flex-1">
               <DirectMessageChat partnerId={selectedUserId} />
+            </div>
+          </div>
+        )
+      ) : (
+        // Private Groups Mode
+        isMobile ? (
+          <div className="flex-1 overflow-hidden">
+            <PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} />
+          </div>
+        ) : (
+          <div className="flex flex-1 overflow-hidden">
+            <div className="w-80 flex-shrink-0">
+              <PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} />
+            </div>
+            <div className="flex-1">
+              <PrivateGroupChat group={selectedGroup} />
             </div>
           </div>
         )

@@ -17,6 +17,7 @@ import { ChartsSection } from '@/components/sections/ChartsSection';
 import { ManagementSection } from '@/components/sections/ManagementSection';
 import { FacialRegistrationSection } from '@/components/sections/FacialRegistrationSection';
 import { DataManagementSection } from '@/components/sections/DataManagementSection';
+import { SectorManagementSection } from '@/components/sections/SectorManagementSection';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
@@ -33,6 +34,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   management: { title: 'Gerenciamento', subtitle: 'Administração do sistema' },
   facial: { title: 'Cadastro Facial', subtitle: 'Reconhecimento biométrico' },
   'data-management': { title: 'Exclusão de Dados', subtitle: 'Gerenciamento de dados do sistema' },
+  sectors: { title: 'Gestão de Setores', subtitle: 'Departamentos da empresa' },
 };
 
 const Index = () => {
@@ -88,6 +90,8 @@ const Index = () => {
         return <FacialRegistrationSection />;
       case 'data-management':
         return <DataManagementSection />;
+      case 'sectors':
+        return <SectorManagementSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }

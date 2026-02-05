@@ -247,14 +247,10 @@ const Auth = () => {
       const { error } = await signIn(loginEmail, loginPassword);
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-          if (error.message.includes('Usuário inativo')) {
-            setError('Sua conta está inativa. Entre em contato com o administrador do sistema.');
-          } else {
-            setError('Email ou senha incorretos');
-          }
+                 setError('Email ou senha incorretos');
         } else {
           if (error.message.includes('inativo') || error.message.includes('Inativo')) {
-            setError('Sua conta está inativa. Entre em contato com o administrador do sistema.');
+                   setError('Sua conta está inativa. Por favor, entre em contato com o administrador do sistema para reativação.');
           } else {
             setError(error.message);
           }
@@ -486,9 +482,24 @@ const Auth = () => {
                         </p>
                         <p className="mt-1 text-muted-foreground">{error}</p>
                         {(error.includes('inativa') || error.includes('Inativa')) && (
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            Por favor, entre em contato com o administrador em <strong>{ADMIN_EMAIL}</strong> para reativar sua conta.
-                          </p>
+                         <div className="mt-3 space-y-2">
+                           <p className="text-xs text-muted-foreground">
+                             Por favor, entre em contato com o administrador em <strong>{ADMIN_EMAIL}</strong> para reativar sua conta.
+                           </p>
+                           <Button
+                             type="button"
+                             variant="outline"
+                             size="sm"
+                             className="w-full"
+                             onClick={() => {
+                               setError(null);
+                               setLoginEmail('');
+                               setLoginPassword('');
+                             }}
+                           >
+                             Sair do Sistema
+                           </Button>
+                         </div>
                         )}
                       </div>
                     </div>
