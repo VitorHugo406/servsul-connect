@@ -127,7 +127,7 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
   };
 
    // Filter users not in group
-   const availableUsers = users.filter(u => 
+   const availableUsers = users.filter((u: any) => 
      !members.some(m => m.profile_id === u.id)
    );
 

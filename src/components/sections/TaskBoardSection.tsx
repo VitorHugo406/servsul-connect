@@ -1,4 +1,4 @@
- import { useState } from 'react';
+import { useState, useMemo } from 'react';
  import { motion } from 'framer-motion';
  import { 
    Plus, 
@@ -15,7 +15,9 @@
    GripVertical,
   ListTodo,
   MessageSquare,
-  X
+  X,
+  AlertTriangle,
+  Clock4
  } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
  import { Button } from '@/components/ui/button';
@@ -67,17 +69,40 @@ import { useTasks, useTaskComments, Task } from '@/hooks/useTasks';
    const [title, setTitle] = useState('');
    const [description, setDescription] = useState('');
    const [priority, setPriority] = useState('medium');
-   const [assignedTo, setAssignedTo] = useState('');
-   const [sectorId, setSectorId] = useState('');
+   const [assignedTo, setAssignedTo] = useState('none');
+   const [sectorId, setSectorId] = useState('none');
    const [dueDate, setDueDate] = useState('');
   const [newComment, setNewComment] = useState('');
+ 
+  // Calculate due date urgency
+  const getDueDateInfo = (dueDateStr: string | null) => {
+    if (!dueDateStr) return null;
+    
+    const dueDate = new Date(dueDateStr);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const due = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+    
+    const diffTime = due.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return { status: 'overdue', label: 'Atrasado', color: 'text-red-500 bg-red-500/10', icon: AlertTriangle };
+    } else if (diffDays === 0) {
+      return { status: 'today', label: 'Hoje', color: 'text-orange-500 bg-orange-500/10', icon: Clock4 };
+    } else if (diffDays <= 2) {
+      return { status: 'soon', label: `${diffDays}d`, color: 'text-yellow-500 bg-yellow-500/10', icon: Clock };
+    } else {
+      return { status: 'normal', label: `${diffDays}d`, color: 'text-muted-foreground bg-muted', icon: Calendar };
+    }
+  };
  
    const resetForm = () => {
      setTitle('');
      setDescription('');
      setPriority('medium');
-     setAssignedTo('');
-     setSectorId('');
+    setAssignedTo('none');
+    setSectorId('none');
      setDueDate('');
    };
  
@@ -92,8 +117,8 @@ import { useTasks, useTaskComments, Task } from '@/hooks/useTasks';
        title: title.trim(),
        description: description.trim() || undefined,
        priority,
-       assigned_to: assignedTo || undefined,
-       sector_id: sectorId || undefined,
+       assigned_to: assignedTo && assignedTo !== 'none' ? assignedTo : undefined,
+       sector_id: sectorId && sectorId !== 'none' ? sectorId : undefined,
        due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
      });
      setCreating(false);
@@ -115,8 +140,8 @@ import { useTasks, useTaskComments, Task } from '@/hooks/useTasks';
        title: title.trim(),
        description: description.trim() || null,
        priority: priority as Task['priority'],
-       assigned_to: assignedTo || null,
-       sector_id: sectorId || null,
+       assigned_to: assignedTo && assignedTo !== 'none' ? assignedTo : null,
+       sector_id: sectorId && sectorId !== 'none' ? sectorId : null,
        due_date: dueDate ? new Date(dueDate).toISOString() : null,
      });
      setCreating(false);
@@ -145,8 +170,8 @@ import { useTasks, useTaskComments, Task } from '@/hooks/useTasks';
      setTitle(task.title);
      setDescription(task.description || '');
      setPriority(task.priority);
-     setAssignedTo(task.assigned_to || '');
-     setSectorId(task.sector_id || '');
+    setAssignedTo(task.assigned_to || 'none');
+    setSectorId(task.sector_id || 'none');
      setDueDate(task.due_date ? task.due_date.split('T')[0] : '');
      setShowEditDialog(true);
    };
@@ -375,13 +400,26 @@ import { useTasks, useTaskComments, Task } from '@/hooks/useTasks';
                              )}
  
                              {task.due_date && (
-                               <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                 <Calendar className="h-3 w-3" />
-                                 {new Date(task.due_date).toLocaleDateString('pt-BR', { 
-                                   day: '2-digit', 
-                                   month: 'short' 
-                                 })}
-                               </div>
+                              (() => {
+                                const dueDateInfo = getDueDateInfo(task.due_date);
+                                if (!dueDateInfo) return null;
+                                const DueIcon = dueDateInfo.icon;
+                                return (
+                                  <div className={cn(
+                                    "flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md font-medium",
+                                    dueDateInfo.color
+                                  )}>
+                                    <DueIcon className="h-3 w-3" />
+                                    {dueDateInfo.status === 'overdue' || dueDateInfo.status === 'today' 
+                                      ? dueDateInfo.label 
+                                      : new Date(task.due_date).toLocaleDateString('pt-BR', { 
+                                          day: '2-digit', 
+                                          month: 'short' 
+                                        })
+                                    }
+                                  </div>
+                                );
+                              })()
                              )}
                            </div>
                          </CardContent>
@@ -473,7 +511,7 @@ import { useTasks, useTaskComments, Task } from '@/hooks/useTasks';
                      <SelectValue placeholder="Selecionar" />
                    </SelectTrigger>
                    <SelectContent>
-                     <SelectItem value="">Nenhum</SelectItem>
+                     <SelectItem value="none">Nenhum</SelectItem>
                      {users.map(u => (
                        <SelectItem key={u.id} value={u.id}>
                          {u.display_name || u.name}
@@ -492,7 +530,7 @@ import { useTasks, useTaskComments, Task } from '@/hooks/useTasks';
                      <SelectValue placeholder="Selecionar" />
                    </SelectTrigger>
                    <SelectContent>
-                     <SelectItem value="">Nenhum</SelectItem>
+                     <SelectItem value="none">Nenhum</SelectItem>
                      {sectors.map(s => (
                        <SelectItem key={s.id} value={s.id}>
                          {s.name}
