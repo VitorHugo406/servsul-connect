@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Home, MessageSquare, Bell, Cake, MoreHorizontal, BarChart3, Settings, Camera, Trash2, Building2 } from 'lucide-react';
+ import { Home, MessageSquare, Bell, Cake, MoreHorizontal, BarChart3, Settings, Camera, Trash2, Building2, Sparkles, ListTodo } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+ import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface MobileNavigationProps {
   activeSection: string;
@@ -23,6 +24,8 @@ const moreNavItems = [
   { id: 'facial', icon: Camera, label: 'Cadastro Facial' },
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
   { id: 'sectors', icon: Building2, label: 'Gestão de Setores', adminOnly: true },
+   { id: 'important-announcements', icon: Sparkles, label: 'Comunicados Importantes', adminOnly: true },
+   { id: 'tasks', icon: ListTodo, label: 'Gestão de Tarefas' },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
 ];
 
@@ -122,7 +125,8 @@ export function MobileNavigation({ activeSection, onSectionChange }: MobileNavig
           <SheetHeader className="pb-4">
             <SheetTitle>Mais opções</SheetTitle>
           </SheetHeader>
-          <div className="space-y-2 pb-6">
+           <ScrollArea className="max-h-[60vh]">
+             <div className="space-y-2 pb-6 pr-4">
             {visibleMoreItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeSection === item.id;
@@ -148,7 +152,8 @@ export function MobileNavigation({ activeSection, onSectionChange }: MobileNavig
                 </button>
               );
             })}
-          </div>
+             </div>
+           </ScrollArea>
         </SheetContent>
       </Sheet>
     </>
