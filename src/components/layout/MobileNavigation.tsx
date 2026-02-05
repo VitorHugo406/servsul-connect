@@ -1,5 +1,5 @@
 import { useState } from 'react';
- import { Home, MessageSquare, Bell, Cake, MoreHorizontal, BarChart3, Settings, Camera, Trash2, Building2, Sparkles, ListTodo } from 'lucide-react';
+ import { Home, MessageSquare, Bell, Cake, MoreHorizontal, BarChart3, Settings, Camera, Trash2, Building2, Sparkles, ListTodo, UsersRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -26,20 +26,24 @@ const moreNavItems = [
   { id: 'sectors', icon: Building2, label: 'Gestão de Setores', adminOnly: true },
    { id: 'important-announcements', icon: Sparkles, label: 'Comunicados Importantes', adminOnly: true },
    { id: 'tasks', icon: ListTodo, label: 'Gestão de Tarefas' },
+   { id: 'people-management', icon: UsersRound, label: 'Gestão de Pessoas', supervisorOnly: true },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
 ];
 
 export function MobileNavigation({ activeSection, onSectionChange }: MobileNavigationProps) {
-  const { isAdmin, canAccess } = useAuth();
+  const { isAdmin, canAccess, profile } = useAuth();
   const { counts } = useNotifications();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const visibleMoreItems = moreNavItems.filter((item) => {
-    // Admin-only items
     if ('adminOnly' in item && item.adminOnly) {
       return isAdmin;
     }
-    // Permission-based items
+    if ('supervisorOnly' in item && item.supervisorOnly) {
+      if (isAdmin) return true;
+      const level = profile?.autonomy_level;
+      return level === 'supervisor' || level === 'gerente' || level === 'gestor' || level === 'diretoria';
+    }
     if ('permission' in item) {
       if (isAdmin) return true;
       return canAccess(item.permission);

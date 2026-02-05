@@ -570,6 +570,35 @@ export type Database = {
         }
         Relationships: []
       }
+      supervisor_team_members: {
+        Row: {
+          created_at: string
+          id: string
+          member_profile_id: string
+          supervisor_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          member_profile_id: string
+          supervisor_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          member_profile_id?: string
+          supervisor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supervisor_team_members_member_profile_id_fkey"
+            columns: ["member_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           created_at: string
