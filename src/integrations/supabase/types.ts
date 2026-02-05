@@ -594,6 +594,106 @@ export type Database = {
         }
         Relationships: []
       }
+      task_board_columns: {
+        Row: {
+          board_id: string
+          color: string
+          created_at: string
+          id: string
+          position: number
+          title: string
+        }
+        Insert: {
+          board_id: string
+          color?: string
+          created_at?: string
+          id?: string
+          position?: number
+          title: string
+        }
+        Update: {
+          board_id?: string
+          color?: string
+          created_at?: string
+          id?: string
+          position?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_board_columns_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "task_boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_board_members: {
+        Row: {
+          board_id: string
+          id: string
+          joined_at: string
+          profile_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          board_id: string
+          id?: string
+          joined_at?: string
+          profile_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          board_id?: string
+          id?: string
+          joined_at?: string
+          profile_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_board_members_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "task_boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_boards: {
+        Row: {
+          background_image: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          background_image?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          background_image?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       task_comments: {
         Row: {
           author_id: string
@@ -636,6 +736,8 @@ export type Database = {
       tasks: {
         Row: {
           assigned_to: string | null
+          board_id: string | null
+          cover_image: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -651,6 +753,8 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          board_id?: string | null
+          cover_image?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -666,6 +770,8 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          board_id?: string | null
+          cover_image?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -685,6 +791,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "task_boards"
             referencedColumns: ["id"]
           },
           {
@@ -887,6 +1000,8 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_board_member: { Args: { check_board_id: string }; Returns: boolean }
+      is_board_owner: { Args: { check_board_id: string }; Returns: boolean }
       is_group_admin: { Args: { check_group_id: string }; Returns: boolean }
       is_group_empty: { Args: { check_group_id: string }; Returns: boolean }
       is_group_member: { Args: { check_group_id: string }; Returns: boolean }
