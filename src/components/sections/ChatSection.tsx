@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useMessages, useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
-import { ChatMessage } from '@/components/chat/ChatMessage';
+import { ChatMessage, DateSeparator } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { SectorTabs } from '@/components/chat/SectorTabs';
 import { DirectMessageList } from '@/components/chat/DirectMessageList';
@@ -250,9 +250,20 @@ export function ChatSection() {
                     </p>
                   </div>
                 ) : (
-                  messages.map((message, index) => (
-                    <ChatMessage key={message.id} message={message} index={index} />
-                  ))
+                  messages.map((message, index) => {
+                    // Show date separator when date changes
+                    const prevMessage = index > 0 ? messages[index - 1] : null;
+                    const msgDate = new Date(message.created_at).toDateString();
+                    const prevDate = prevMessage ? new Date(prevMessage.created_at).toDateString() : null;
+                    const showDateSeparator = msgDate !== prevDate;
+
+                    return (
+                      <div key={message.id}>
+                        {showDateSeparator && <DateSeparator date={message.created_at} />}
+                        <ChatMessage message={message} index={index} />
+                      </div>
+                    );
+                  })
                 )}
                 <div ref={messagesEndRef} />
               </div>

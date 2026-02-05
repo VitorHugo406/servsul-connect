@@ -58,7 +58,7 @@ const step1Schema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   company: z.string().optional(),
-  profileType: z.enum(['admin', 'user']),
+  profileType: z.enum(['admin', 'user', 'gestor', 'gerente', 'supervisor', 'diretoria']),
   registrationNumber: z.string().optional(),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
 });
@@ -84,7 +84,7 @@ export function UserRegistrationDialog({
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [company, setCompany] = useState('');
-  const [profileType, setProfileType] = useState<'admin' | 'user'>('user');
+  const [profileType, setProfileType] = useState<'admin' | 'user' | 'gestor' | 'gerente' | 'supervisor' | 'diretoria'>('user');
   const [registrationNumber, setRegistrationNumber] = useState('');
   const [password, setPassword] = useState('');
 
@@ -371,13 +371,17 @@ export function UserRegistrationDialog({
                 {/* Tipo de Perfil */}
                 <div className="space-y-2">
                   <Label>Tipo de Perfil *</Label>
-                  <Select value={profileType} onValueChange={(v) => setProfileType(v as 'admin' | 'user')}>
+                  <Select value={profileType} onValueChange={(v) => setProfileType(v as typeof profileType)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="admin">Administrador</SelectItem>
-                      <SelectItem value="user">Usuário</SelectItem>
+                      <SelectItem value="gestor">Gestor</SelectItem>
+                      <SelectItem value="gerente">Gerente</SelectItem>
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
+                      <SelectItem value="diretoria">Diretoria</SelectItem>
+                      <SelectItem value="user">Colaborador</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

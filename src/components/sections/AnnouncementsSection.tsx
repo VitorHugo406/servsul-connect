@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pin, AlertTriangle, Clock, Trash2, Plus, X, Send, CalendarClock, Calendar, Edit2 } from 'lucide-react';
+import { Pin, AlertTriangle, Clock, Trash2, Plus, X, Send, CalendarClock, Calendar, Edit2, Sparkles } from 'lucide-react';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
+import { useImportantAnnouncements } from '@/hooks/useImportantAnnouncements';
 import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -51,6 +52,7 @@ export function AnnouncementsSection() {
   } = useAnnouncements();
   const { sectors } = useSectors();
   const { profile, isAdmin } = useAuth();
+  const { allAnnouncements: importantAnnouncements } = useImportantAnnouncements();
   const { markAllAnnouncementsAsRead, refetch: refetchNotifications } = useNotifications();
   const [activeTab, setActiveTab] = useState('active');
 
@@ -537,9 +539,51 @@ export function AnnouncementsSection() {
             </TabsContent>
           </Tabs>
         ) : (
-          // Regular user view - only active announcements
-          <>
-            {announcements.length === 0 ? (
+          // Regular user view - show important announcements + active announcements
+          <div className="space-y-6">
+            {/* Important Announcements Section */}
+            {importantAnnouncements.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h3 className="font-display text-lg font-bold text-foreground">Avisos Importantes</h3>
+                  <Badge variant="secondary">{importantAnnouncements.length}</Badge>
+                </div>
+                <div className="space-y-3">
+                  {importantAnnouncements.map((ia) => (
+                    <Card key={ia.id} className={cn('overflow-hidden border-2 border-primary/30 bg-primary/5')}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 flex-shrink-0">
+                            <Sparkles className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-foreground mb-1">{ia.title}</h4>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{ia.content}</p>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {new Date(ia.created_at).toLocaleDateString('pt-BR', {
+                                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Regular Announcements */}
+            {importantAnnouncements.length > 0 && announcements.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Pin className="h-5 w-5 text-muted-foreground" />
+                <h3 className="font-display text-lg font-bold text-foreground">Avisos Gerais</h3>
+                <Badge variant="secondary">{announcements.length}</Badge>
+              </div>
+            )}
+
+            {announcements.length === 0 && importantAnnouncements.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="mb-4 rounded-full bg-muted p-4">
                   <span className="text-4xl">📢</span>
@@ -554,7 +598,7 @@ export function AnnouncementsSection() {
                 {announcements.map((announcement) => renderAnnouncementCard(announcement))}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </motion.div>
