@@ -203,6 +203,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const { uploadFile, uploading: fileUploading } = useFileUpload();
   const isMobile = useIsMobile();
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const autoCoverInputRef = useRef<HTMLInputElement>(null);
 
   const [showSettings, setShowSettings] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
@@ -260,10 +261,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   };
 
   const openCreateTask = (columnId: string) => {
-    // First set automations, then reset only non-automated fields
     const col = columns.find(c => c.id === columnId);
     setTitle(''); setDescription(''); setPriority('medium');
-    setDueDate(''); setCoverImageUrl('');
+    setDueDate('');
     setEditingTask(null);
     setTargetColumn(columnId);
     
@@ -274,12 +274,19 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
       setAssignedTo('none');
     }
     if (col?.auto_cover) {
-      setCoverImage(col.auto_cover);
+      // Check if auto_cover is an image URL
+      if (col.auto_cover.startsWith('http')) {
+        setCoverImage('custom');
+        setCoverImageUrl(col.auto_cover);
+      } else {
+        setCoverImage(col.auto_cover);
+        setCoverImageUrl('');
+      }
     } else {
       setCoverImage('none');
+      setCoverImageUrl('');
     }
     
-    console.log('[Automation] Column:', col?.title, 'auto_assign:', col?.auto_assign_to, 'auto_cover:', col?.auto_cover);
     setShowCreateTask(true);
   };
 
@@ -417,6 +424,15 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
     setShowAutomation(col);
   };
 
+  const handleAutoCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const result = await uploadFile(file);
+    if (result) {
+      setAutoCover(result.url);
+    }
+  };
+
   const handleCreateLabel = async () => {
     if (!newLabelName.trim()) return;
     const { error } = await createLabel(newLabelName.trim(), newLabelColor);
@@ -456,6 +472,20 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
     } else if (draggedTask.status !== colId) {
       const colTasks = tasks.filter(t => t.status === colId);
       await moveTask(draggedTask.id, colId, position ?? colTasks.length);
+      
+      // Apply column automations on drag
+      const targetCol = columns.find(c => c.id === colId);
+      if (targetCol) {
+        const autoUpdates: Record<string, any> = {};
+        if (targetCol.auto_assign_to) autoUpdates.assigned_to = targetCol.auto_assign_to;
+        if (targetCol.auto_cover) {
+          autoUpdates.cover_image = targetCol.auto_cover;
+        }
+        if (Object.keys(autoUpdates).length > 0) {
+          await updateTask(draggedTask.id, autoUpdates);
+          toast.info('Automações da coluna aplicadas');
+        }
+      }
     }
     setDraggedTask(null);
   };
@@ -524,6 +554,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
           'h-full p-4 task-board-scroll',
           isMobile ? 'overflow-y-auto space-y-4' : 'overflow-x-auto overflow-y-hidden'
         )}>
+          <TooltipProvider delayDuration={200}>
           <div className={cn(isMobile ? '' : 'inline-flex gap-4 h-full pb-2 items-start')}>
             {columns.map((column) => {
               const colTasks = tasks.filter(t => t.status === column.id).sort((a, b) => a.position - b.position);
@@ -532,7 +563,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                   key={column.id}
                   className={cn(
                     'rounded-xl transition-colors flex flex-col',
-                    isMobile ? 'w-full' : 'min-w-[272px] max-w-[320px] flex-shrink-0',
+                    isMobile ? 'w-full' : 'w-[280px] flex-shrink-0',
                     dragOverColumn === column.id ? 'bg-primary/10 ring-2 ring-primary/30' : 'bg-background/60 backdrop-blur-sm'
                   )}
                   onDragOver={(e) => handleDragOver(e, column.id)}
@@ -593,16 +624,23 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                             </div>
                           )}
                           <CardContent className="p-3">
-                            {/* Labels */}
+                            {/* Labels with hover expand */}
                             {taskLabelsForCard.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mb-1.5">
+                              <div className="flex flex-wrap gap-1 mb-1.5 group/labels">
                                 {taskLabelsForCard.map(l => (
-                                  <span
-                                    key={l.id}
-                                    className="inline-block h-2 w-10 rounded-full"
-                                    style={{ backgroundColor: l.color }}
-                                    title={l.name}
-                                  />
+                                  <Tooltip key={l.id}>
+                                    <TooltipTrigger asChild>
+                                      <span
+                                        className="inline-flex items-center h-2 rounded-full transition-all duration-200 cursor-default group-hover/labels:h-5 group-hover/labels:px-2"
+                                        style={{ backgroundColor: l.color, minWidth: '2.5rem' }}
+                                      >
+                                        <span className="text-[0px] group-hover/labels:text-[10px] text-white font-medium whitespace-nowrap opacity-0 group-hover/labels:opacity-100 transition-opacity duration-200">
+                                          {l.name}
+                                        </span>
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="text-xs">{l.name}</TooltipContent>
+                                  </Tooltip>
                                 ))}
                               </div>
                             )}
@@ -628,7 +666,18 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                                     <Tag className="h-4 w-4 mr-2" /> Etiquetas
                                   </DropdownMenuItem>
                                   {columns.filter(c => c.id !== column.id).map(c => (
-                                    <DropdownMenuItem key={c.id} onClick={(e) => { e.stopPropagation(); moveTask(task.id, c.id, 0); }}>
+                                    <DropdownMenuItem key={c.id} onClick={async (e) => {
+                                      e.stopPropagation();
+                                      await moveTask(task.id, c.id, 0);
+                                      // Apply automations from target column
+                                      const autoUpdates: Record<string, any> = {};
+                                      if (c.auto_assign_to) autoUpdates.assigned_to = c.auto_assign_to;
+                                      if (c.auto_cover) autoUpdates.cover_image = c.auto_cover;
+                                      if (Object.keys(autoUpdates).length > 0) {
+                                        await updateTask(task.id, autoUpdates);
+                                        toast.info('Automações aplicadas');
+                                      }
+                                    }}>
                                       <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: c.color }} />
                                       Mover para {c.title}
                                     </DropdownMenuItem>
@@ -689,7 +738,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
               );
             })}
             {/* Add column button */}
-            <div className={cn('flex-shrink-0', isMobile ? 'w-full' : 'min-w-[272px] max-w-[320px]')}>
+            <div className={cn('flex-shrink-0', isMobile ? 'w-full' : 'w-[280px]')}>
               {showAddColumn ? (
                 <div className="bg-background/60 backdrop-blur-sm rounded-xl p-3 space-y-2">
                   <Input value={newColumnTitle} onChange={(e) => setNewColumnTitle(e.target.value)} placeholder="Nome da coluna" autoFocus />
@@ -708,6 +757,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
               )}
             </div>
           </div>
+          </TooltipProvider>
         </div>
       </div>
 
@@ -1034,7 +1084,29 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                     title={c.name}
                   />
                 ))}
+                <button
+                  onClick={() => autoCoverInputRef.current?.click()}
+                  className={cn(
+                    'w-10 h-6 rounded border-2 border-dashed flex items-center justify-center transition-all',
+                    autoCover.startsWith('http') ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/50'
+                  )}
+                  title="Enviar imagem"
+                >
+                  <Upload className="h-3 w-3 text-muted-foreground" />
+                </button>
               </div>
+              <input
+                ref={autoCoverInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAutoCoverUpload}
+              />
+              {autoCover.startsWith('http') && (
+                <div className="mt-2 rounded-lg overflow-hidden h-16">
+                  <img src={autoCover} alt="Auto-capa preview" className="w-full h-full object-cover" />
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">Novos cards nesta coluna terão esta capa automaticamente</p>
             </div>
           </div>
