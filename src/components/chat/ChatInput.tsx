@@ -1,9 +1,10 @@
- import { useState, useRef, useCallback } from 'react';
- import { Send, Smile, Paperclip, Image as ImageIcon, X, FileText } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Send, Smile, Paperclip, Image as ImageIcon, X, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useAuth } from '@/contexts/AuthContext';
+import { CardMentionPicker, formatCardMention } from './CardMentionPicker';
 
 interface Attachment {
   file: File;
@@ -22,44 +23,39 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
   const [message, setMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-   const [isSending, setIsSending] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [showCardPicker, setShowCardPicker] = useState(false);
+  const [cardQuery, setCardQuery] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const { uploadFile, uploading, isImage } = useFileUpload();
 
-   const handleSubmit = useCallback(async () => {
-     if (isSending) return;
-     
+  const handleSubmit = useCallback(async () => {
+    if (isSending) return;
     const trimmedMessage = message.trim();
     if (!trimmedMessage && attachments.length === 0) return;
 
-     setIsSending(true);
- 
-    // Clear input immediately for better UX
+    setIsSending(true);
     const currentMessage = trimmedMessage;
     const currentAttachments = [...attachments];
     setMessage('');
     setAttachments([]);
+    setShowCardPicker(false);
 
-     try {
-       // Upload attachments first
-       const uploadedAttachments = [];
-       for (const attachment of currentAttachments) {
-         const result = await uploadFile(attachment.file);
-         if (result) {
-           uploadedAttachments.push(result);
-         }
+    try {
+      const uploadedAttachments = [];
+      for (const attachment of currentAttachments) {
+        const result = await uploadFile(attachment.file);
+        if (result) uploadedAttachments.push(result);
       }
- 
-       // Send message without causing any page interaction
-       await onSendMessage(currentMessage, uploadedAttachments.length > 0 ? uploadedAttachments : undefined);
-     } catch (error) {
-       console.error('Error sending message:', error);
-     } finally {
-       setIsSending(false);
+      await onSendMessage(currentMessage, uploadedAttachments.length > 0 ? uploadedAttachments : undefined);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setIsSending(false);
     }
-   }, [message, attachments, isSending, uploadFile, onSendMessage]);
+  }, [message, attachments, isSending, uploadFile, onSendMessage]);
 
   const handleEmojiSelect = (emoji: string) => {
     setMessage((prev) => prev + emoji);
@@ -67,24 +63,55 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
     inputRef.current?.focus();
   };
 
-   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
-      handleSubmit();
+      if (!showCardPicker) handleSubmit();
     }
-   }, [handleSubmit]);
+    if (e.key === 'Escape' && showCardPicker) {
+      setShowCardPicker(false);
+    }
+  }, [handleSubmit, showCardPicker]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setMessage(val);
+
+    // Detect # trigger
+    const cursorPos = e.target.selectionStart;
+    const textBeforeCursor = val.substring(0, cursorPos);
+    const hashMatch = textBeforeCursor.match(/#(\w*)$/);
+    if (hashMatch) {
+      setShowCardPicker(true);
+      setCardQuery(hashMatch[1]);
+    } else {
+      setShowCardPicker(false);
+      setCardQuery('');
+    }
+  };
+
+  const handleCardSelect = (task: any) => {
+    const mention = formatCardMention(task);
+    // Replace the #query with the formatted mention
+    const cursorPos = inputRef.current?.selectionStart || message.length;
+    const textBeforeCursor = message.substring(0, cursorPos);
+    const hashIndex = textBeforeCursor.lastIndexOf('#');
+    const before = message.substring(0, hashIndex);
+    const after = message.substring(cursorPos);
+    setMessage(before + mention + after);
+    setShowCardPicker(false);
+    setCardQuery('');
+    inputRef.current?.focus();
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-
     const newAttachments: Attachment[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const preview = file.type.startsWith('image/') 
-        ? URL.createObjectURL(file) 
-        : undefined;
+      const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
       newAttachments.push({ file, preview });
     }
     setAttachments((prev) => [...prev, ...newAttachments]);
@@ -94,16 +121,23 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
   const removeAttachment = (index: number) => {
     setAttachments((prev) => {
       const newAttachments = [...prev];
-      if (newAttachments[index].preview) {
-        URL.revokeObjectURL(newAttachments[index].preview!);
-      }
+      if (newAttachments[index].preview) URL.revokeObjectURL(newAttachments[index].preview!);
       newAttachments.splice(index, 1);
       return newAttachments;
     });
   };
 
   return (
-     <div className="relative border-t border-border bg-card p-4" onSubmit={(e) => e.preventDefault()}>
+    <div className="relative border-t border-border bg-card p-4" onSubmit={(e) => e.preventDefault()}>
+      {/* Card Mention Picker */}
+      {showCardPicker && (
+        <CardMentionPicker
+          query={cardQuery}
+          onSelect={handleCardSelect}
+          onClose={() => setShowCardPicker(false)}
+        />
+      )}
+
       {/* Attachments preview */}
       <AnimatePresence>
         {attachments.length > 0 && (
@@ -114,16 +148,9 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
             className="mb-3 flex flex-wrap gap-2"
           >
             {attachments.map((attachment, index) => (
-              <div
-                key={index}
-                className="relative group rounded-lg border border-border bg-muted/50 p-2"
-              >
+              <div key={index} className="relative group rounded-lg border border-border bg-muted/50 p-2">
                 {attachment.preview ? (
-                  <img
-                    src={attachment.preview}
-                    alt={attachment.file.name}
-                    className="h-16 w-16 rounded object-cover"
-                  />
+                  <img src={attachment.preview} alt={attachment.file.name} className="h-16 w-16 rounded object-cover" />
                 ) : (
                   <div className="flex h-16 w-16 flex-col items-center justify-center gap-1">
                     <FileText className="h-6 w-6 text-muted-foreground" />
@@ -171,80 +198,51 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
       </AnimatePresence>
 
       <div className="flex items-end gap-3">
-        {/* Action Buttons */}
         <div className="flex gap-1">
           <Button
-            type="button"
-            variant="ghost"
-            size="icon"
+            type="button" variant="ghost" size="icon"
             className="h-10 w-10 text-muted-foreground hover:text-foreground"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           >
             <Smile className="h-5 w-5" />
           </Button>
-          {/* Only show attachment buttons for admins (feature in testing) */}
           {isAdmin && !hideAttachment && (
             <>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+              <Button type="button" variant="ghost" size="icon"
                 className="h-10 w-10 text-muted-foreground hover:text-foreground"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
+                onClick={() => fileInputRef.current?.click()} disabled={uploading}
               >
                 <Paperclip className="h-5 w-5" />
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+              <Button type="button" variant="ghost" size="icon"
                 className="h-10 w-10 text-muted-foreground hover:text-foreground"
-                onClick={() => imageInputRef.current?.click()}
-                disabled={uploading}
+                onClick={() => imageInputRef.current?.click()} disabled={uploading}
               >
-                   <ImageIcon className="h-5 w-5" />
+                <ImageIcon className="h-5 w-5" />
               </Button>
             </>
           )}
         </div>
 
-        {/* Hidden file inputs */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.txt"
-          className="hidden"
-          onChange={handleFileSelect}
-        />
-        <input
-          ref={imageInputRef}
-          type="file"
-          multiple
-          accept="image/*"
-          className="hidden"
-          onChange={handleFileSelect}
-        />
+        <input ref={fileInputRef} type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.txt" className="hidden" onChange={handleFileSelect} />
+        <input ref={imageInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFileSelect} />
 
-        {/* Input */}
         <div className="flex-1">
           <textarea
             ref={inputRef}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={handleChange}
             onKeyDown={handleKeyDown}
-            placeholder="Digite sua mensagem..."
+            placeholder='Digite sua mensagem... (use # para mencionar cards)'
             rows={1}
             className="w-full resize-none rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
-        {/* Send Button */}
         <Button
           type="button"
           onClick={handleSubmit}
-           disabled={(!message.trim() && attachments.length === 0) || uploading || isSending}
+          disabled={(!message.trim() && attachments.length === 0) || uploading || isSending}
           className="h-10 w-10 rounded-xl gradient-primary p-0 shadow-lg transition-all hover:shadow-xl disabled:opacity-50"
         >
           <Send className="h-5 w-5" />
