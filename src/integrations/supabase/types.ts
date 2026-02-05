@@ -596,6 +596,8 @@ export type Database = {
       }
       task_board_columns: {
         Row: {
+          auto_assign_to: string | null
+          auto_cover: string | null
           board_id: string
           color: string
           created_at: string
@@ -604,6 +606,8 @@ export type Database = {
           title: string
         }
         Insert: {
+          auto_assign_to?: string | null
+          auto_cover?: string | null
           board_id: string
           color?: string
           created_at?: string
@@ -612,6 +616,8 @@ export type Database = {
           title: string
         }
         Update: {
+          auto_assign_to?: string | null
+          auto_cover?: string | null
           board_id?: string
           color?: string
           created_at?: string
@@ -620,6 +626,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "task_board_columns_auto_assign_to_fkey"
+            columns: ["auto_assign_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "task_board_columns_board_id_fkey"
             columns: ["board_id"]
