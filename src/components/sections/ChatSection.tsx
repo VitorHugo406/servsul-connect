@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useMessages, useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,9 +11,10 @@ import { DirectMessageChat } from '@/components/chat/DirectMessageChat';
 import { PrivateGroupList } from '@/components/chat/PrivateGroupList';
 import { PrivateGroupChat } from '@/components/chat/PrivateGroupChat';
 import { usePrivateGroups } from '@/hooks/usePrivateGroups';
+import { SectorUsersList } from '@/components/sector/SectorUsersList';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Users, MessageSquare, ArrowLeft, UsersRound } from 'lucide-react';
+import { AlertCircle, Users, MessageSquare, ArrowLeft, UsersRound, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSound } from '@/hooks/useSound';
@@ -28,9 +29,11 @@ export function ChatSection() {
   const [chatMode, setChatMode] = useState<ChatMode>('sectors');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [showSectorUsers, setShowSectorUsers] = useState(false);
   const isMobile = useIsMobile();
   const { playMessageSent } = useSound();
   const { groups } = usePrivateGroups();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Filter sectors user can access using the new allAccessibleSectorIds
   const accessibleSectors = isAdmin 
@@ -41,6 +44,13 @@ export function ChatSection() {
   const effectiveSector = activeSector || profile?.sector_id || geralSectorId;
   
   const { messages, loading: messagesLoading, sendMessage, canSendMessages } = useMessages(effectiveSector);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
   const handleSendMessage = async (content: string) => {
     // Play sound immediately for instant feedback
@@ -207,34 +217,67 @@ export function ChatSection() {
                 {messages.length} mensagens
               </p>
             </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="ml-auto"
+              onClick={() => setShowSectorUsers(!showSectorUsers)}
+              title={showSectorUsers ? 'Ocultar membros' : 'Ver membros do setor'}
+            >
+              {showSectorUsers ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </Button>
           </div>
 
-          {/* Messages */}
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
-              {messagesLoading ? (
-                <div className="flex justify-center py-8">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="mb-4 rounded-full bg-muted p-4">
-                    <span className="text-4xl">💬</span>
+          {/* Main Chat Area */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Messages */}
+            <ScrollArea className={cn("flex-1 p-4", showSectorUsers && !isMobile && "border-r border-border")}>
+              <div className="space-y-4">
+                {messagesLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                   </div>
-                  <h4 className="font-display text-lg font-semibold text-foreground">Nenhuma mensagem ainda</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {canSendMessages 
-                      ? 'Seja o primeiro a enviar uma mensagem neste setor!'
-                      : 'Aguarde mensagens da sua equipe'}
-                  </p>
-                </div>
-              ) : (
-                messages.map((message, index) => (
-                  <ChatMessage key={message.id} message={message} index={index} />
-                ))
-              )}
+                ) : messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="mb-4 rounded-full bg-muted p-4">
+                      <span className="text-4xl">💬</span>
+                    </div>
+                    <h4 className="font-display text-lg font-semibold text-foreground">Nenhuma mensagem ainda</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {canSendMessages 
+                        ? 'Seja o primeiro a enviar uma mensagem neste setor!'
+                        : 'Aguarde mensagens da sua equipe'}
+                    </p>
+                  </div>
+                ) : (
+                  messages.map((message, index) => (
+                    <ChatMessage key={message.id} message={message} index={index} />
+                  ))
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+
+            {/* Sector Users Panel */}
+            {showSectorUsers && !isMobile && (
+              <div className="w-72 flex-shrink-0">
+                <SectorUsersList sectorId={effectiveSector || ''} inline />
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Sector Users Modal */}
+          {showSectorUsers && isMobile && (
+            <div className="absolute inset-0 z-50 bg-background">
+              <div className="flex items-center justify-between border-b border-border p-3">
+                <h3 className="font-semibold">Membros do Setor</h3>
+                <Button variant="ghost" size="icon" onClick={() => setShowSectorUsers(false)}>
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              </div>
+            <SectorUsersList sectorId={effectiveSector || ''} inline />
             </div>
-          </ScrollArea>
+          )}
 
           {/* Input */}
           {canSendMessages ? (

@@ -1,10 +1,12 @@
  import { useEffect, useRef, useState } from 'react';
  import { motion } from 'framer-motion';
- import { Users, Settings, UserPlus, Check, CheckCheck, Crown, Loader2, Trash2 } from 'lucide-react';
+import { Users, Settings, UserPlus, Check, CheckCheck, Crown, Loader2, Trash2, Image, Eye } from 'lucide-react';
  import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
  import { Button } from '@/components/ui/button';
  import { ScrollArea } from '@/components/ui/scroll-area';
  import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
  import { 
    Sheet, 
    SheetContent, 
@@ -19,13 +21,15 @@
    DialogDescription,
    DialogHeader,
    DialogTitle,
+  DialogFooter,
  } from '@/components/ui/dialog';
  import { ChatInput } from '@/components/chat/ChatInput';
- import { useGroupMessages, useGroupMembers, PrivateGroup } from '@/hooks/usePrivateGroups';
+import { useGroupMessages, useGroupMembers, PrivateGroup, usePrivateGroups } from '@/hooks/usePrivateGroups';
  import { useActiveUsers } from '@/hooks/useDirectMessages';
  import { useSectors } from '@/hooks/useData';
  import { useAuth } from '@/contexts/AuthContext';
  import { useSound } from '@/hooks/useSound';
+import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
  import { cn } from '@/lib/utils';
  import { toast } from 'sonner';
  
@@ -37,12 +41,16 @@
    const { profile, user } = useAuth();
    const { messages, loading, sendMessage } = useGroupMessages(group?.id || null);
    const { members, addMember, removeMember, updateMemberRole, refetch: refetchMembers } = useGroupMembers(group?.id || null);
+  const { updateGroup } = usePrivateGroups();
    const { users } = useActiveUsers();
    const { sectors } = useSectors();
    const { playMessageSent } = useSound();
    const scrollRef = useRef<HTMLDivElement>(null);
    const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
    const [addingMember, setAddingMember] = useState<string | null>(null);
+  const [showEditAvatarDialog, setShowEditAvatarDialog] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [previewUserId, setPreviewUserId] = useState<string | null>(null);
  
    const isAdmin = members.some(m => m.user_id === user?.id && m.role === 'admin');
    const currentMember = members.find(m => m.user_id === user?.id);
@@ -52,6 +60,12 @@
        scrollRef.current.scrollIntoView({ behavior: 'smooth' });
      }
    }, [messages]);
+
+  useEffect(() => {
+    if (group?.avatar_url) {
+      setAvatarUrl(group.avatar_url);
+    }
+  }, [group?.avatar_url]);
  
    const getInitials = (name: string) => {
      return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
@@ -101,10 +115,46 @@
      }
    };
  
+  const handleUpdateAvatar = async () => {
+    if (!group) return;
+    const { error } = await updateGroup(group.id, { avatar_url: avatarUrl });
+    if (error) {
+      toast.error('Erro ao atualizar imagem');
+    } else {
+      toast.success('Imagem atualizada!');
+      setShowEditAvatarDialog(false);
+    }
+  };
+
    // Filter users not in group
    const availableUsers = users.filter(u => 
      !members.some(m => m.profile_id === u.id)
    );
+
+  // Get user status label
+  const getStatusLabel = (status: string | null | undefined) => {
+    switch (status) {
+      case 'available': return 'Disponível';
+      case 'lunch': return 'Almoçando';
+      case 'meeting': return 'Em reunião';
+      case 'busy': return 'Ocupado';
+      case 'away': return 'Ausente';
+      case 'working': return 'Trabalhando';
+      default: return 'Disponível';
+    }
+  };
+
+  const getStatusColor = (status: string | null | undefined) => {
+    switch (status) {
+      case 'available': return 'text-green-500';
+      case 'lunch': return 'text-orange-500';
+      case 'meeting': return 'text-blue-500';
+      case 'busy': return 'text-red-500';
+      case 'away': return 'text-yellow-500';
+      case 'working': return 'text-emerald-500';
+      default: return 'text-green-500';
+    }
+  };
  
    if (!group) {
      return (
@@ -170,6 +220,17 @@
                      <p className="text-sm text-muted-foreground">{group.description}</p>
                    )}
                  </div>
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowEditAvatarDialog(true)}
+                      className="ml-auto gap-1"
+                    >
+                      <Image className="h-4 w-4" />
+                      Editar
+                    </Button>
+                  )}
                </div>
  
                {/* Add Member Button */}
@@ -197,7 +258,8 @@
                        return (
                          <div
                            key={member.id}
-                           className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted"
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer"
+                            onClick={() => !isCurrentUser && setPreviewUserId(memberProfile?.id || null)}
                          >
                            <Avatar className="h-10 w-10">
                              <AvatarImage src={memberProfile?.avatar_url || ''} />
@@ -215,16 +277,25 @@
                                  <Crown className="h-4 w-4 text-yellow-500" />
                                )}
                              </div>
-                             <p className="text-xs text-muted-foreground">
-                               {memberProfile?.user_status === 'available' ? 'Disponível' :
-                                memberProfile?.user_status === 'lunch' ? 'Almoçando' :
-                                memberProfile?.user_status === 'meeting' ? 'Em reunião' :
-                                memberProfile?.user_status === 'busy' ? 'Ocupado' :
-                                memberProfile?.user_status === 'away' ? 'Ausente' : 'Disponível'}
+                              <p className={cn("text-xs", getStatusColor(memberProfile?.user_status))}>
+                                {getStatusLabel(memberProfile?.user_status)}
                              </p>
                            </div>
+                            {!isCurrentUser && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewUserId(memberProfile?.id || null);
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            )}
                            {isAdmin && !isCurrentUser && (
-                             <div className="flex gap-1">
+                              <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                                <Button
                                  variant="ghost"
                                  size="icon"
@@ -385,9 +456,14 @@
                        </Avatar>
                        <div className="flex-1">
                          <span className="font-medium text-foreground">{displayName}</span>
-                         {sector && (
-                           <p className="text-xs text-muted-foreground">{sector.name}</p>
-                         )}
+                          <div className="flex items-center gap-2">
+                            {sector && (
+                              <span className="text-xs text-muted-foreground">{sector.name}</span>
+                            )}
+                            <span className={cn("text-xs", getStatusColor((availableUser as any).user_status))}>
+                              • {getStatusLabel((availableUser as any).user_status)}
+                            </span>
+                          </div>
                        </div>
                        {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                      </button>
@@ -398,6 +474,52 @@
            </ScrollArea>
          </DialogContent>
        </Dialog>
+
+        {/* Edit Avatar Dialog */}
+        <Dialog open={showEditAvatarDialog} onOpenChange={setShowEditAvatarDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Alterar Imagem do Grupo</DialogTitle>
+              <DialogDescription>
+                Cole a URL de uma imagem para usar como capa do grupo
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="flex justify-center">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={avatarUrl} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+                    {getInitials(group?.name || 'G')}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <div className="space-y-2">
+                <Label>URL da Imagem</Label>
+                <Input
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  placeholder="https://exemplo.com/imagem.jpg"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditAvatarDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleUpdateAvatar}>
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* User Preview Dialog */}
+        <UserPreviewDialog
+          open={!!previewUserId}
+          onOpenChange={(open) => !open && setPreviewUserId(null)}
+          profileId={previewUserId || ''}
+          userId=""
+        />
      </div>
    );
  }

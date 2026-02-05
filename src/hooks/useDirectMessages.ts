@@ -312,7 +312,7 @@ export function useActiveUsers() {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, display_name, avatar_url, sector_id, is_active')
+        .select('id, user_id, name, display_name, avatar_url, sector_id, is_active, user_status')
         .eq('is_active', true)
         .neq('id', profile.id)
         .order('name');

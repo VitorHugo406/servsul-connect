@@ -50,9 +50,10 @@
    const [loading, setLoading] = useState(true);
  
    const fetchGroups = useCallback(async () => {
-     if (!user) return;
+    if (!user || !profile) return;
  
      try {
+      // First create the group with the current user as the first member
        const { data, error } = await supabase
          .from('private_groups')
          .select('*')
@@ -65,7 +66,7 @@
      } finally {
        setLoading(false);
      }
-   }, [user]);
+  }, [user, profile]);
  
    useEffect(() => {
      fetchGroups();
@@ -107,11 +108,47 @@
        return { data: null, error };
      }
    };
+
+  const updateGroup = async (groupId: string, updates: { name?: string; description?: string; avatar_url?: string }) => {
+    try {
+      const { error } = await supabase
+        .from('private_groups')
+        .update(updates)
+        .eq('id', groupId);
+
+      if (error) throw error;
+      await fetchGroups();
+      return { error: null };
+    } catch (error) {
+      console.error('Error updating group:', error);
+      return { error };
+    }
+  };
+
+  const deleteGroup = async (groupId: string) => {
+    try {
+      // Delete all members first
+      await supabase.from('private_group_members').delete().eq('group_id', groupId);
+      // Delete all messages
+      await supabase.from('private_group_messages').delete().eq('group_id', groupId);
+      // Delete the group
+      const { error } = await supabase.from('private_groups').delete().eq('id', groupId);
+
+      if (error) throw error;
+      await fetchGroups();
+      return { error: null };
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      return { error };
+    }
+  };
  
    return {
      groups,
      loading,
      createGroup,
+    updateGroup,
+    deleteGroup,
      refetch: fetchGroups,
    };
  }

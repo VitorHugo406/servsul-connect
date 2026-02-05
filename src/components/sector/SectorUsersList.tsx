@@ -22,10 +22,11 @@
  
  interface SectorUsersListProps {
    sectorId: string;
-   sectorName: string;
-   sectorColor: string;
-   isOpen: boolean;
-   onClose: () => void;
+  sectorName?: string;
+  sectorColor?: string;
+  isOpen?: boolean;
+  onClose?: () => void;
+  inline?: boolean;
  }
  
  const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; color: string }> = {
@@ -36,11 +37,12 @@
    away: { label: 'Ausente', icon: Moon, color: 'text-gray-500' },
  };
  
- export function SectorUsersList({ sectorId, sectorName, sectorColor, isOpen, onClose }: SectorUsersListProps) {
+export function SectorUsersList({ sectorId, sectorName, sectorColor, isOpen = true, onClose, inline = false }: SectorUsersListProps) {
    const [users, setUsers] = useState<SectorUser[]>([]);
    const [loading, setLoading] = useState(true);
    const [selectedUser, setSelectedUser] = useState<SectorUser | null>(null);
    const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [sector, setSector] = useState<{ name: string; color: string } | null>(null);
  
    useEffect(() => {
      if (!isOpen) return;
@@ -48,6 +50,18 @@
      const fetchUsers = async () => {
        setLoading(true);
        try {
+        // Fetch sector info if not provided
+        if (!sectorName || !sectorColor) {
+          const { data: sectorData } = await supabase
+            .from('sectors')
+            .select('name, color')
+            .eq('id', sectorId)
+            .single();
+          if (sectorData) {
+            setSector(sectorData);
+          }
+        }
+
          // Get users from primary sector
          const { data: primaryUsers, error: primaryError } = await supabase
            .from('profiles')
@@ -133,6 +147,9 @@
        supabase.removeChannel(presenceChannel);
      };
    }, [isOpen, sectorId]);
+
+  const effectiveSectorName = sectorName || sector?.name || 'Setor';
+  const effectiveSectorColor = sectorColor || sector?.color || '#6366f1';
  
    const getInitials = (name: string) => {
      return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
@@ -146,6 +163,136 @@
    const onlineUsers = users.filter(u => u.is_online);
    const offlineUsers = users.filter(u => !u.is_online);
  
+  // Inline version (for side panel)
+  if (inline) {
+    return (
+      <div className="flex flex-col h-full bg-card">
+        <div className="p-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <div 
+              className="h-6 w-6 rounded flex items-center justify-center text-white text-xs font-bold"
+              style={{ backgroundColor: effectiveSectorColor }}
+            >
+              {effectiveSectorName.charAt(0)}
+            </div>
+            <div>
+              <h4 className="font-medium text-sm">{effectiveSectorName}</h4>
+              <p className="text-xs text-muted-foreground">
+                {users.length} membro{users.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <ScrollArea className="flex-1">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+          ) : users.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Nenhum membro</p>
+            </div>
+          ) : (
+            <div className="p-2 space-y-3">
+              {onlineUsers.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-medium text-muted-foreground mb-2 px-2 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-green-500" />
+                    Online ({onlineUsers.length})
+                  </h4>
+                  <div className="space-y-1">
+                    {onlineUsers.map(user => {
+                      const status = STATUS_CONFIG[user.user_status || 'available'];
+                      const StatusIcon = status?.icon || CheckCircle;
+                      
+                      return (
+                        <button
+                          key={user.id}
+                          onClick={() => handleUserClick(user)}
+                          className="flex w-full items-center gap-2 p-2 rounded-lg hover:bg-muted transition-colors text-left"
+                        >
+                          <div className="relative">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={user.avatar_url || ''} />
+                              <AvatarFallback 
+                                className="text-white text-xs"
+                                style={{ backgroundColor: effectiveSectorColor }}
+                              >
+                                {getInitials(user.display_name || user.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-card bg-green-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground truncate text-sm">
+                              {user.display_name || user.name}
+                            </p>
+                            <div className="flex items-center gap-1 text-xs">
+                              <StatusIcon className={cn('h-3 w-3', status?.color)} />
+                              <span className={status?.color}>{status?.label}</span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {offlineUsers.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-medium text-muted-foreground mb-2 px-2 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-gray-400" />
+                    Offline ({offlineUsers.length})
+                  </h4>
+                  <div className="space-y-1">
+                    {offlineUsers.map(user => (
+                      <button
+                        key={user.id}
+                        onClick={() => handleUserClick(user)}
+                        className="flex w-full items-center gap-2 p-2 rounded-lg hover:bg-muted transition-colors text-left opacity-60"
+                      >
+                        <div className="relative">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={user.avatar_url || ''} />
+                            <AvatarFallback 
+                              className="text-white text-xs"
+                              style={{ backgroundColor: effectiveSectorColor }}
+                            >
+                              {getInitials(user.display_name || user.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-card bg-gray-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground truncate text-sm">
+                            {user.display_name || user.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Offline</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </ScrollArea>
+
+        <UserPreviewDialog
+          isOpen={showProfileDialog}
+          onClose={() => {
+            setShowProfileDialog(false);
+            setSelectedUser(null);
+          }}
+          userId={selectedUser?.user_id || ''}
+        />
+      </div>
+    );
+  }
+
    return (
      <>
        <Dialog open={isOpen} onOpenChange={onClose}>
@@ -154,12 +301,12 @@
              <DialogTitle className="flex items-center gap-3">
                <div 
                  className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
-                 style={{ backgroundColor: sectorColor }}
+                style={{ backgroundColor: effectiveSectorColor }}
                >
-                 {sectorName.charAt(0)}
+                {effectiveSectorName.charAt(0)}
                </div>
                <div>
-                 <span>{sectorName}</span>
+                <span>{effectiveSectorName}</span>
                  <p className="text-xs text-muted-foreground font-normal">
                    {users.length} membro{users.length !== 1 ? 's' : ''}
                  </p>
@@ -204,7 +351,7 @@
                                  <AvatarImage src={user.avatar_url || ''} />
                                  <AvatarFallback 
                                    className="text-white text-sm"
-                                   style={{ backgroundColor: sectorColor }}
+                                style={{ backgroundColor: effectiveSectorColor }}
                                  >
                                    {getInitials(user.display_name || user.name)}
                                  </AvatarFallback>
@@ -248,7 +395,7 @@
                                <AvatarImage src={user.avatar_url || ''} />
                                <AvatarFallback 
                                  className="text-white text-sm"
-                                 style={{ backgroundColor: sectorColor }}
+                              style={{ backgroundColor: effectiveSectorColor }}
                                >
                                  {getInitials(user.display_name || user.name)}
                                </AvatarFallback>

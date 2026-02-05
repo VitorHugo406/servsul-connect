@@ -27,9 +27,12 @@
  }
  
  interface UserPreviewDialogProps {
-   isOpen: boolean;
-   onClose: () => void;
+  open?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onClose?: () => void;
    userId: string;
+  profileId?: string;
  }
  
  const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; color: string }> = {
@@ -49,22 +52,31 @@
    colaborador: 'Colaborador',
  };
  
- export function UserPreviewDialog({ isOpen, onClose, userId }: UserPreviewDialogProps) {
+export function UserPreviewDialog({ open, isOpen, onOpenChange, onClose, userId, profileId }: UserPreviewDialogProps) {
    const [user, setUser] = useState<UserProfile | null>(null);
    const [sector, setSector] = useState<{ name: string; color: string } | null>(null);
    const [loading, setLoading] = useState(true);
    const [isOnline, setIsOnline] = useState(false);
  
+  const dialogOpen = open ?? isOpen ?? false;
+  const handleOpenChange = (newOpen: boolean) => {
+    if (onOpenChange) onOpenChange(newOpen);
+    if (!newOpen && onClose) onClose();
+  };
+
+  const targetId = profileId || userId;
+
    useEffect(() => {
-     if (!isOpen || !userId) return;
+    if (!dialogOpen || !targetId) return;
  
      const fetchUser = async () => {
        setLoading(true);
        try {
+        // Try to fetch by profile id first, then by user_id
          const { data: profileData, error } = await supabase
            .from('profiles')
            .select('*')
-           .eq('user_id', userId)
+          .or(`id.eq.${targetId},user_id.eq.${targetId}`)
            .single();
  
          if (error) throw error;
@@ -83,7 +95,7 @@
          const { data: presenceData } = await supabase
            .from('user_presence')
            .select('is_online')
-           .eq('user_id', userId)
+          .eq('user_id', profileData?.user_id)
            .single();
          setIsOnline(presenceData?.is_online || false);
        } catch (error) {
@@ -94,7 +106,7 @@
      };
  
      fetchUser();
-   }, [isOpen, userId]);
+  }, [dialogOpen, targetId]);
  
    const getInitials = (name: string) => {
      return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
@@ -104,7 +116,7 @@
    const StatusIcon = status?.icon || CheckCircle;
  
    return (
-     <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
        <DialogContent className="max-w-sm">
          {loading ? (
            <div className="flex items-center justify-center py-12">

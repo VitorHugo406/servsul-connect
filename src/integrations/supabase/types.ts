@@ -887,8 +887,15 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_group_admin: { Args: { check_group_id: string }; Returns: boolean }
+      is_group_empty: { Args: { check_group_id: string }; Returns: boolean }
+      is_group_member: { Args: { check_group_id: string }; Returns: boolean }
       user_has_sector_access: {
         Args: { check_sector_id: string; check_user_id: string }
+        Returns: boolean
+      }
+      user_is_member_of_group: {
+        Args: { check_group_id: string }
         Returns: boolean
       }
     }
