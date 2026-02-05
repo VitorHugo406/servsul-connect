@@ -27,12 +27,14 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { TaskDetailDialog } from '@/components/tasks/TaskDetailDialog';
 import { ReportDialog } from '@/components/tasks/ReportDialog';
+import { useSubtaskCounts } from '@/hooks/useSubtasks';
 import {
   PRIORITIES, BACKGROUND_IMAGES, CARD_COVERS,
   getBoardBg, getBoardBgStyle, getInitials, getCoverDisplay,
 } from '@/components/tasks/taskConstants';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { CheckSquare } from 'lucide-react';
 
 export function TaskBoardSection() {
   const { user } = useAuth();
@@ -196,6 +198,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const { tasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, refetch: refetchTasks } = useBoardTasks(board.id);
   const { members, addMember, removeMember } = useBoardMembers(board.id);
   const { labels, getTaskLabels, createLabel, deleteLabel, assignLabel, removeLabel } = useTaskLabels(board.id);
+  const { counts: subtaskCounts } = useSubtaskCounts(tasks.map(t => t.id));
   const { users: allUsers } = useActiveUsers();
   const { uploadFile, uploading: fileUploading } = useFileUpload();
   const isMobile = useIsMobile();
@@ -386,14 +389,15 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
 
   const handleSaveAutomation = async () => {
     if (!showAutomation) return;
-    const { error } = await updateColumn(showAutomation.id, {
+    const updates: Record<string, string | null> = {
       auto_assign_to: autoAssign !== 'none' ? autoAssign : null,
       auto_cover: autoCover !== 'none' ? autoCover : null,
-    } as any);
+    };
+    const { error } = await updateColumn(showAutomation.id, updates as any);
     if (error) { toast.error('Erro ao salvar automação'); return; }
     toast.success('Automação salva!');
     setShowAutomation(null);
-    await refetchColumns();
+    refetchColumns();
   };
 
   const openAutomation = (col: TaskBoardColumn) => {
@@ -517,7 +521,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                   key={column.id}
                   className={cn(
                     'rounded-xl transition-colors flex flex-col',
-                    isMobile ? 'w-full' : 'min-w-[280px] max-w-[340px] w-[280px] flex-shrink-0',
+                    isMobile ? 'w-full' : 'w-72 flex-shrink-0',
                     dragOverColumn === column.id ? 'bg-primary/10 ring-2 ring-primary/30' : 'bg-background/60 backdrop-blur-sm'
                   )}
                   onDragOver={(e) => handleDragOver(e, column.id)}
@@ -551,7 +555,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                     </DropdownMenu>
                   </div>
 
-                  <div className="p-2 space-y-2 min-h-[100px] flex-1 overflow-y-auto max-h-[calc(100vh-220px)] task-col-scroll">
+                  <div className="p-2 space-y-2 min-h-[60px] flex-1 overflow-y-auto max-h-[calc(100vh-220px)] task-col-scroll">
                     {colTasks.map((task, index) => {
                       const cover = getCoverDisplay(task.cover_image);
                       const dueInfo = getDueDateInfo(task.due_date);
@@ -630,6 +634,12 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                               <Badge className={cn('text-[9px]', PRIORITIES.find(p => p.id === task.priority)?.color, 'text-white')}>
                                 {PRIORITIES.find(p => p.id === task.priority)?.label}
                               </Badge>
+                              {subtaskCounts[task.id] && subtaskCounts[task.id].total > 0 && (
+                                <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                                  <CheckSquare className="h-3 w-3" />
+                                  <span>{subtaskCounts[task.id].completed}/{subtaskCounts[task.id].total}</span>
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-border">
                               {task.assignee ? (
@@ -668,7 +678,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
               );
             })}
             {/* Add column button */}
-            <div className={cn('flex-shrink-0', isMobile ? 'w-full' : 'min-w-[280px] w-[280px]')}>
+            <div className={cn('flex-shrink-0', isMobile ? 'w-full' : 'w-72')}>
               {showAddColumn ? (
                 <div className="bg-background/60 backdrop-blur-sm rounded-xl p-3 space-y-2">
                   <Input value={newColumnTitle} onChange={(e) => setNewColumnTitle(e.target.value)} placeholder="Nome da coluna" autoFocus />
@@ -802,6 +812,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         open={showTaskDetail}
         onOpenChange={(o) => { setShowTaskDetail(o); if (!o) setSelectedTask(null); }}
         onEdit={(t) => { setShowTaskDetail(false); openEditTask(t); }}
+        taskLabels={selectedTask ? getTaskLabels(selectedTask.id) : []}
+        allLabels={labels}
+        onToggleLabel={handleToggleLabel}
       />
 
       {/* Label Picker Dialog */}

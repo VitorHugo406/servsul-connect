@@ -1,25 +1,35 @@
 import { useState } from 'react';
-import { Calendar, Edit, Loader2, MessageSquare } from 'lucide-react';
+import { Calendar, CheckSquare, Edit, Loader2, MessageSquare, Plus, Tag, Trash2, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 import { BoardTask } from '@/hooks/useBoardTasks';
 import { useTaskComments } from '@/hooks/useTasks';
+import { useSubtasks } from '@/hooks/useSubtasks';
+import { TaskLabel } from '@/hooks/useTaskLabels';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
 import { cn } from '@/lib/utils';
 
-export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: {
+export function TaskDetailDialog({ task, open, onOpenChange, onEdit, taskLabels, allLabels, onToggleLabel }: {
   task: BoardTask | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onEdit: (t: BoardTask) => void;
+  taskLabels?: TaskLabel[];
+  allLabels?: TaskLabel[];
+  onToggleLabel?: (taskId: string, labelId: string) => void;
 }) {
   const { comments, addComment, loading: commentsLoading } = useTaskComments(task?.id || null);
+  const { subtasks, addSubtask, toggleSubtask, deleteSubtask, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null);
   const [newComment, setNewComment] = useState('');
+  const [newSubtask, setNewSubtask] = useState('');
   const [sending, setSending] = useState(false);
+  const [showLabelPicker, setShowLabelPicker] = useState(false);
   if (!task) return null;
 
   const handleAddComment = async () => {
@@ -30,7 +40,14 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: {
     setSending(false);
   };
 
+  const handleAddSubtask = async () => {
+    if (!newSubtask.trim()) return;
+    await addSubtask(newSubtask.trim());
+    setNewSubtask('');
+  };
+
   const cover = getCoverDisplay(task.cover_image);
+  const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -42,7 +59,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: {
           </div>
         )}
         <DialogHeader>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="outline">#{task.task_number}</Badge>
             <Badge className={cn(
               task.priority === 'urgent' && 'bg-red-500',
@@ -52,7 +69,39 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: {
             )}>
               {PRIORITIES.find(p => p.id === task.priority)?.label}
             </Badge>
+            {/* Labels on card detail */}
+            {taskLabels && taskLabels.length > 0 && taskLabels.map(l => (
+              <Badge key={l.id} className="text-white text-[10px]" style={{ backgroundColor: l.color }}>
+                {l.name}
+              </Badge>
+            ))}
+            {allLabels && allLabels.length > 0 && (
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowLabelPicker(!showLabelPicker)}>
+                <Tag className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </div>
+          {/* Inline label picker */}
+          {showLabelPicker && allLabels && onToggleLabel && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {allLabels.map(l => {
+                const isAssigned = taskLabels?.some(tl => tl.id === l.id);
+                return (
+                  <button
+                    key={l.id}
+                    onClick={() => onToggleLabel(task.id, l.id)}
+                    className={cn(
+                      'px-2 py-0.5 rounded-full text-[10px] font-medium text-white border-2 transition-all',
+                      isAssigned ? 'border-foreground/50 ring-1 ring-foreground/20' : 'border-transparent opacity-60 hover:opacity-100'
+                    )}
+                    style={{ backgroundColor: l.color }}
+                  >
+                    {l.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <DialogTitle className="text-xl">{task.title}</DialogTitle>
         </DialogHeader>
         <ScrollArea className="flex-1 -mx-6 px-6">
@@ -83,6 +132,57 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: {
                 </div>
               )}
             </div>
+
+            {/* Subtasks / Checklist */}
+            <div className="border-t border-border pt-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckSquare className="h-4 w-4" />
+                <h4 className="font-medium">Subtarefas</h4>
+                {total > 0 && (
+                  <span className="text-xs text-muted-foreground ml-auto">{completed}/{total}</span>
+                )}
+              </div>
+              {total > 0 && (
+                <Progress value={progress} className="h-1.5 mb-3" />
+              )}
+              {subtasksLoading ? (
+                <div className="flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+              ) : (
+                <div className="space-y-1 mb-2">
+                  {subtasks.map(s => (
+                    <div key={s.id} className="flex items-center gap-2 group py-0.5">
+                      <Checkbox
+                        checked={s.is_completed}
+                        onCheckedChange={(checked) => toggleSubtask(s.id, !!checked)}
+                      />
+                      <span className={cn('text-sm flex-1', s.is_completed && 'line-through text-muted-foreground')}>{s.title}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => deleteSubtask(s.id)}
+                      >
+                        <X className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Input
+                  value={newSubtask}
+                  onChange={(e) => setNewSubtask(e.target.value)}
+                  placeholder="Nova subtarefa..."
+                  className="h-8 text-sm"
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                />
+                <Button onClick={handleAddSubtask} disabled={!newSubtask.trim()} size="sm" variant="outline" className="h-8">
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Comments */}
             <div className="border-t border-border pt-4">
               <div className="flex items-center gap-2 mb-3">
                 <MessageSquare className="h-4 w-4" />
