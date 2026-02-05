@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Send, Smile, Paperclip, Image, X, FileText } from 'lucide-react';
+ import { useState, useRef, useCallback } from 'react';
+ import { Send, Smile, Paperclip, Image as ImageIcon, X, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -22,32 +22,44 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
   const [message, setMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+   const [isSending, setIsSending] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const { uploadFile, uploading, isImage } = useFileUpload();
 
-  const handleSubmit = async () => {
+   const handleSubmit = useCallback(async () => {
+     if (isSending) return;
+     
     const trimmedMessage = message.trim();
     if (!trimmedMessage && attachments.length === 0) return;
 
+     setIsSending(true);
+ 
     // Clear input immediately for better UX
     const currentMessage = trimmedMessage;
     const currentAttachments = [...attachments];
     setMessage('');
     setAttachments([]);
 
-    // Upload attachments first
-    const uploadedAttachments = [];
-    for (const attachment of currentAttachments) {
-      const result = await uploadFile(attachment.file);
-      if (result) {
-        uploadedAttachments.push(result);
+     try {
+       // Upload attachments first
+       const uploadedAttachments = [];
+       for (const attachment of currentAttachments) {
+         const result = await uploadFile(attachment.file);
+         if (result) {
+           uploadedAttachments.push(result);
+         }
       }
+ 
+       // Send message without causing any page interaction
+       await onSendMessage(currentMessage, uploadedAttachments.length > 0 ? uploadedAttachments : undefined);
+     } catch (error) {
+       console.error('Error sending message:', error);
+     } finally {
+       setIsSending(false);
     }
-
-    onSendMessage(currentMessage, uploadedAttachments.length > 0 ? uploadedAttachments : undefined);
-  };
+   }, [message, attachments, isSending, uploadFile, onSendMessage]);
 
   const handleEmojiSelect = (emoji: string) => {
     setMessage((prev) => prev + emoji);
@@ -55,13 +67,13 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
     inputRef.current?.focus();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
       handleSubmit();
     }
-  };
+   }, [handleSubmit]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -91,7 +103,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
   };
 
   return (
-    <div className="relative border-t border-border bg-card p-4">
+     <div className="relative border-t border-border bg-card p-4" onSubmit={(e) => e.preventDefault()}>
       {/* Attachments preview */}
       <AnimatePresence>
         {attachments.length > 0 && (
@@ -191,7 +203,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
                 onClick={() => imageInputRef.current?.click()}
                 disabled={uploading}
               >
-                <Image className="h-5 w-5" />
+                   <ImageIcon className="h-5 w-5" />
               </Button>
             </>
           )}
@@ -232,7 +244,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
         <Button
           type="button"
           onClick={handleSubmit}
-          disabled={(!message.trim() && attachments.length === 0) || uploading}
+           disabled={(!message.trim() && attachments.length === 0) || uploading || isSending}
           className="h-10 w-10 rounded-xl gradient-primary p-0 shadow-lg transition-all hover:shadow-xl disabled:opacity-50"
         >
           <Send className="h-5 w-5" />

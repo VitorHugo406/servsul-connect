@@ -83,35 +83,26 @@ export function DataManagementSection() {
      return response.data;
    };
 
-  const deletionOptions: DeletionOption[] = [
-    {
-      id: 'messages',
-      title: 'Excluir Todas as Mensagens',
-      description: 'Remove todas as mensagens de setores, mensagens diretas e mensagens de grupos privados.',
-      icon: MessageSquare,
-      confirmText: 'EXCLUIR MENSAGENS',
-      dangerLevel: 'high',
+   const deletionOptions: DeletionOption[] = [
+     {
+       id: 'messages',
+       title: 'Excluir Todas as Mensagens',
+       description: 'Remove todas as mensagens de setores, mensagens diretas e mensagens de grupos privados.',
+       icon: MessageSquare,
+       confirmText: 'EXCLUIR MENSAGENS',
+       dangerLevel: 'high',
        type: 'messages',
-    },
-    {
-      id: 'announcements',
-      title: 'Excluir Todos os Avisos',
-      description: 'Remove todos os avisos, comentários e registros de leitura.',
-      icon: Megaphone,
-      confirmText: 'EXCLUIR AVISOS',
-      dangerLevel: 'high',
+     },
+     {
+       id: 'announcements',
+       title: 'Excluir Todos os Avisos',
+       description: 'Remove todos os avisos, comentários e registros de leitura.',
+       icon: Megaphone,
+       confirmText: 'EXCLUIR AVISOS',
+       dangerLevel: 'high',
        type: 'announcements',
-    },
-    {
-      id: 'users',
-      title: 'Excluir Todos os Usuários',
-      description: 'Desativa todos os usuários do sistema, exceto o administrador principal.',
-      icon: Users,
-      confirmText: 'EXCLUIR USUARIOS',
-      dangerLevel: 'critical',
-       type: 'users',
-    },
-    {
+     },
+     {
        id: 'facial',
        title: 'Excluir Dados Faciais',
        description: 'Remove todos os dados de reconhecimento facial cadastrados, exceto do administrador principal.',
@@ -121,15 +112,24 @@ export function DataManagementSection() {
        type: 'facial',
      },
      {
-      id: 'all',
-      title: 'Limpar Todo o Banco de Dados',
-      description: 'Remove TODOS os dados do sistema, mantendo apenas o administrador principal. Esta ação é IRREVERSÍVEL!',
-      icon: Database,
-      confirmText: 'LIMPAR TUDO',
-      dangerLevel: 'critical',
+       id: 'users',
+       title: 'Excluir Todos os Usuários',
+       description: 'Desativa todos os usuários do sistema, exceto o administrador principal.',
+       icon: Users,
+       confirmText: 'EXCLUIR USUARIOS',
+       dangerLevel: 'critical',
+       type: 'users',
+     },
+     {
+       id: 'all',
+       title: 'Limpar Todo o Banco de Dados',
+       description: 'Remove TODOS os dados do sistema, mantendo apenas o administrador principal. Esta ação é IRREVERSÍVEL!',
+       icon: Database,
+       confirmText: 'LIMPAR TUDO',
+       dangerLevel: 'critical',
        type: 'all',
-    },
-  ];
+     },
+   ];
 
   const handleOptionClick = (option: DeletionOption) => {
     setSelectedOption(option);
