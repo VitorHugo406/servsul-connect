@@ -30,6 +30,7 @@ interface Message {
   sector_id: string;
   created_at: string;
   author?: Profile;
+  status?: 'sending' | 'sent' | 'delivered';
 }
 
 export function useMessages(sectorId: string | null) {
@@ -53,7 +54,24 @@ export function useMessages(sectorId: string | null) {
     if (error) {
       console.error('Error fetching messages:', error);
     } else {
-      setMessages(data || []);
+      // Preserve temp messages and merge with real data
+      setMessages(prev => {
+        const tempMessages = prev.filter(m => m.id.startsWith('temp-'));
+        const realMessages = (data || []).map(m => ({ ...m, status: 'delivered' as const }));
+        
+        // Filter out temp messages that now have real counterparts
+        const filteredTemp = tempMessages.filter(temp => 
+          !realMessages.some(real => 
+            real.content === temp.content && 
+            real.author_id === temp.author_id &&
+            Math.abs(new Date(real.created_at).getTime() - new Date(temp.created_at).getTime()) < 5000
+          )
+        );
+        
+        return [...realMessages, ...filteredTemp].sort((a, b) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+      });
     }
     setLoading(false);
   }, [sectorId]);
@@ -72,8 +90,49 @@ export function useMessages(sectorId: string | null) {
           table: 'messages',
           filter: `sector_id=eq.${sectorId}`,
         },
-        () => {
-          fetchMessages();
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            // Add new message directly without full refetch
+            const newMessage = payload.new as Message;
+            setMessages(prev => {
+              // Check if we already have this message (from optimistic update)
+              const existingIndex = prev.findIndex(m => 
+                m.id === newMessage.id || 
+                (m.id.startsWith('temp-') && 
+                 m.content === newMessage.content && 
+                 m.author_id === newMessage.author_id)
+              );
+              
+              if (existingIndex >= 0) {
+                // Replace temp message with real one
+                const updated = [...prev];
+                updated[existingIndex] = { ...newMessage, status: 'delivered' };
+                return updated;
+              }
+              
+              // Add new message (from another user)
+              return [...prev, { ...newMessage, status: 'delivered' }];
+            });
+            
+            // Fetch full message with author info in background
+            supabase
+              .from('messages')
+              .select(`*, author:profiles!messages_author_id_fkey(*)`)
+              .eq('id', newMessage.id)
+              .single()
+              .then(({ data }) => {
+                if (data) {
+                  setMessages(prev => 
+                    prev.map(m => m.id === newMessage.id ? { ...data, status: 'delivered' } : m)
+                  );
+                }
+              });
+          } else if (payload.eventType === 'DELETE') {
+            setMessages(prev => prev.filter(m => m.id !== (payload.old as Message).id));
+          } else {
+            // For UPDATE, refetch
+            fetchMessages();
+          }
         }
       )
       .subscribe();
@@ -104,6 +163,7 @@ export function useMessages(sectorId: string | null) {
       sector_id: sectorId,
       created_at: new Date().toISOString(),
       author: profile as Profile,
+      status: 'sending',
     };
     
     // Immediately add to local state for instant feedback
@@ -119,8 +179,12 @@ export function useMessages(sectorId: string | null) {
     if (error) {
       // Remove optimistic message on error
       setMessages(prev => prev.filter(m => m.id !== tempId));
+    } else if (data) {
+      // Update temp message to sent status immediately
+      setMessages(prev => prev.map(m => 
+        m.id === tempId ? { ...m, status: 'sent' as const } : m
+      ));
     }
-    // The realtime subscription will update with the real message
 
     return { error, data };
   };

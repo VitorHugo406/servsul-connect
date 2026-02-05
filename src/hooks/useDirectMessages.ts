@@ -55,7 +55,24 @@ export function useDirectMessages(partnerId?: string) {
     if (error) {
       console.error('Error fetching direct messages:', error);
     } else {
-      setMessages(data || []);
+      // Preserve temp messages and merge with real data
+      setMessages(prev => {
+        const tempMessages = prev.filter(m => m.id.startsWith('temp-'));
+        const realMessages = data || [];
+        
+        // Filter out temp messages that now have real counterparts
+        const filteredTemp = tempMessages.filter(temp => 
+          !realMessages.some(real => 
+            real.content === temp.content && 
+            real.sender_id === temp.sender_id &&
+            Math.abs(new Date(real.created_at).getTime() - new Date(temp.created_at).getTime()) < 5000
+          )
+        );
+        
+        return [...realMessages, ...filteredTemp].sort((a, b) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+      });
       // Mark messages as read
       if (data && data.length > 0) {
         const unreadIds = data
@@ -90,12 +107,59 @@ export function useDirectMessages(partnerId?: string) {
         },
         (payload) => {
           const msg = payload.new as DirectMessage;
-          // Only refetch if the message involves this conversation
-          if (
-            (msg.sender_id === profile.id && msg.receiver_id === partnerId) ||
-            (msg.sender_id === partnerId && msg.receiver_id === profile.id)
-          ) {
-            fetchMessages();
+          
+          if (payload.eventType === 'INSERT') {
+            // Only handle if the message involves this conversation
+            if (
+              (msg.sender_id === profile.id && msg.receiver_id === partnerId) ||
+              (msg.sender_id === partnerId && msg.receiver_id === profile.id)
+            ) {
+              setMessages(prev => {
+                // Check if we already have this message (from optimistic update)
+                const existingIndex = prev.findIndex(m => 
+                  m.id === msg.id || 
+                  (m.id.startsWith('temp-') && 
+                   m.content === msg.content && 
+                   m.sender_id === msg.sender_id)
+                );
+                
+                if (existingIndex >= 0) {
+                  // Replace temp message with real one
+                  const updated = [...prev];
+                  updated[existingIndex] = msg;
+                  return updated;
+                }
+                
+                // Add new message (from partner)
+                return [...prev, msg];
+              });
+              
+              // Fetch full message with profile info in background
+              supabase
+                .from('direct_messages')
+                .select(`
+                  *,
+                  sender:profiles!direct_messages_sender_id_fkey(id, name, display_name, avatar_url, sector_id, is_active),
+                  receiver:profiles!direct_messages_receiver_id_fkey(id, name, display_name, avatar_url, sector_id, is_active)
+                `)
+                .eq('id', msg.id)
+                .single()
+                .then(({ data }) => {
+                  if (data) {
+                    setMessages(prev => prev.map(m => m.id === msg.id ? data : m));
+                  }
+                });
+              
+              // Mark as read if from partner
+              if (msg.sender_id === partnerId) {
+                supabase
+                  .from('direct_messages')
+                  .update({ is_read: true })
+                  .eq('id', msg.id);
+              }
+            }
+          } else if (payload.eventType === 'DELETE') {
+            setMessages(prev => prev.filter(m => m.id !== (payload.old as DirectMessage).id));
           }
         }
       )
@@ -133,7 +197,6 @@ export function useDirectMessages(partnerId?: string) {
       // Remove optimistic message on error
       setMessages(prev => prev.filter(m => m.id !== tempId));
     }
-    // The realtime subscription will update with the real message
 
     return { error };
   };
