@@ -260,15 +260,26 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   };
 
   const openCreateTask = (columnId: string) => {
-    resetForm();
-    // Apply column automations
+    // First set automations, then reset only non-automated fields
     const col = columns.find(c => c.id === columnId);
-    if (col) {
-      if (col.auto_assign_to) setAssignedTo(col.auto_assign_to);
-      if (col.auto_cover) setCoverImage(col.auto_cover);
-    }
-    setTargetColumn(columnId);
+    setTitle(''); setDescription(''); setPriority('medium');
+    setDueDate(''); setCoverImageUrl('');
     setEditingTask(null);
+    setTargetColumn(columnId);
+    
+    // Apply column automations
+    if (col?.auto_assign_to) {
+      setAssignedTo(col.auto_assign_to);
+    } else {
+      setAssignedTo('none');
+    }
+    if (col?.auto_cover) {
+      setCoverImage(col.auto_cover);
+    } else {
+      setCoverImage('none');
+    }
+    
+    console.log('[Automation] Column:', col?.title, 'auto_assign:', col?.auto_assign_to, 'auto_cover:', col?.auto_cover);
     setShowCreateTask(true);
   };
 
@@ -513,7 +524,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
           'h-full p-4 task-board-scroll',
           isMobile ? 'overflow-y-auto space-y-4' : 'overflow-x-auto overflow-y-hidden'
         )}>
-          <div className={cn(isMobile ? '' : 'flex gap-4 h-full pb-2')}>
+          <div className={cn(isMobile ? '' : 'inline-flex gap-4 h-full pb-2 items-start')}>
             {columns.map((column) => {
               const colTasks = tasks.filter(t => t.status === column.id).sort((a, b) => a.position - b.position);
               return (
@@ -521,7 +532,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                   key={column.id}
                   className={cn(
                     'rounded-xl transition-colors flex flex-col',
-                    isMobile ? 'w-full' : 'w-72 flex-shrink-0',
+                    isMobile ? 'w-full' : 'min-w-[272px] max-w-[320px] flex-shrink-0',
                     dragOverColumn === column.id ? 'bg-primary/10 ring-2 ring-primary/30' : 'bg-background/60 backdrop-blur-sm'
                   )}
                   onDragOver={(e) => handleDragOver(e, column.id)}
@@ -678,7 +689,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
               );
             })}
             {/* Add column button */}
-            <div className={cn('flex-shrink-0', isMobile ? 'w-full' : 'w-72')}>
+            <div className={cn('flex-shrink-0', isMobile ? 'w-full' : 'min-w-[272px] max-w-[320px]')}>
               {showAddColumn ? (
                 <div className="bg-background/60 backdrop-blur-sm rounded-xl p-3 space-y-2">
                   <Input value={newColumnTitle} onChange={(e) => setNewColumnTitle(e.target.value)} placeholder="Nome da coluna" autoFocus />
