@@ -232,6 +232,71 @@ export type Database = {
           },
         ]
       }
+      important_announcement_reads: {
+        Row: {
+          announcement_id: string
+          id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          id?: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "important_announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "important_announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      important_announcements: {
+        Row: {
+          border_style: string
+          content: string
+          created_at: string
+          created_by: string
+          expire_at: string | null
+          id: string
+          is_active: boolean
+          start_at: string | null
+          title: string
+        }
+        Insert: {
+          border_style?: string
+          content: string
+          created_at?: string
+          created_by: string
+          expire_at?: string | null
+          id?: string
+          is_active?: boolean
+          start_at?: string | null
+          title: string
+        }
+        Update: {
+          border_style?: string
+          content?: string
+          created_at?: string
+          created_by?: string
+          expire_at?: string | null
+          id?: string
+          is_active?: boolean
+          start_at?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           author_id: string

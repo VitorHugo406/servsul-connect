@@ -3,6 +3,7 @@ import { usePresence } from '@/hooks/usePresence';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useBirthdayCelebration } from '@/hooks/useBirthdayCelebration';
+import { useImportantAnnouncements } from '@/hooks/useImportantAnnouncements';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
@@ -21,6 +22,7 @@ import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { BirthdayCelebrationModal } from '@/components/birthday/BirthdayCelebrationModal';
+import { ImportantAnnouncementModal } from '@/components/announcements/ImportantAnnouncementModal';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
@@ -40,6 +42,7 @@ const Index = () => {
   const { profile } = useAuth();
   const { showOnboarding, completeOnboarding } = useOnboarding();
   const { showCelebration, closeCelebration, userName } = useBirthdayCelebration();
+  const { pendingAnnouncement, dismissAnnouncement } = useImportantAnnouncements();
   
   // Initialize presence tracking
   usePresence();
@@ -146,6 +149,17 @@ const Index = () => {
           onClose={closeCelebration}
           userName={userName}
         />
+      
+      {/* Important Announcement Modal */}
+      {pendingAnnouncement && !showCelebration && !showOnboarding && (
+        <ImportantAnnouncementModal
+          isOpen={true}
+          onClose={dismissAnnouncement}
+          title={pendingAnnouncement.title}
+          content={pendingAnnouncement.content}
+          borderStyle={pendingAnnouncement.border_style}
+        />
+      )}
       </div>
     );
   }
@@ -175,6 +189,17 @@ const Index = () => {
         onClose={closeCelebration}
         userName={userName}
       />
+      
+      {/* Important Announcement Modal */}
+      {pendingAnnouncement && !showCelebration && !showOnboarding && (
+        <ImportantAnnouncementModal
+          isOpen={true}
+          onClose={dismissAnnouncement}
+          title={pendingAnnouncement.title}
+          content={pendingAnnouncement.content}
+          borderStyle={pendingAnnouncement.border_style}
+        />
+      )}
     </div>
   );
 };

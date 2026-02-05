@@ -150,7 +150,7 @@
        }
  
        case 'users': {
-         console.log('Deactivating all users (except main admin)...');
+          console.log('Inactivating all users (except main admin)...');
          const { error: e1 } = await adminClient.from('user_permissions').delete().neq('user_id', mainAdminProfile.user_id);
          const { error: e2 } = await adminClient.from('user_roles').delete().neq('user_id', mainAdminProfile.user_id);
          const { error: e3 } = await adminClient.from('user_presence').delete().neq('user_id', mainAdminProfile.user_id);
@@ -161,9 +161,59 @@
          if (e1 || e2 || e3 || e4 || e5 || e6) {
            console.error('User deletion errors:', e1, e2, e3, e4, e5, e6);
          }
-         result.message = 'Todos os usuários foram desativados (exceto admin principal)';
+          result.message = 'Todos os usuários foram inativados (exceto admin principal)';
          break;
        }
+
+        case 'delete-users': {
+          console.log('Permanently deleting all users (except main admin)...');
+          // Get all users except main admin
+          const { data: usersToDelete, error: fetchError } = await adminClient
+            .from('profiles')
+            .select('user_id')
+            .neq('email', ADMIN_EMAIL);
+          
+          if (fetchError) {
+            console.error('Error fetching users to delete:', fetchError);
+            return new Response(
+              JSON.stringify({ error: 'Erro ao buscar usuários para exclusão' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+            );
+          }
+          
+          // Delete all related data first
+          const { error: e1 } = await adminClient.from('user_permissions').delete().neq('user_id', mainAdminProfile.user_id);
+          const { error: e2 } = await adminClient.from('user_roles').delete().neq('user_id', mainAdminProfile.user_id);
+          const { error: e3 } = await adminClient.from('user_presence').delete().neq('user_id', mainAdminProfile.user_id);
+          const { error: e4 } = await adminClient.from('user_facial_data').delete().neq('user_id', mainAdminProfile.user_id);
+          const { error: e5 } = await adminClient.from('user_additional_sectors').delete().neq('user_id', mainAdminProfile.user_id);
+          const { error: e6 } = await adminClient.from('user_notifications').delete().neq('user_id', mainAdminProfile.user_id);
+          const { error: e7 } = await adminClient.from('important_announcement_reads').delete().neq('user_id', mainAdminProfile.user_id);
+          
+          // Delete profiles (except admin)
+          const { error: e8 } = await adminClient.from('profiles').delete().neq('email', ADMIN_EMAIL);
+          
+          // Delete auth users using admin API
+          let authDeleteErrors = 0;
+          if (usersToDelete) {
+            for (const user of usersToDelete) {
+              if (user.user_id !== mainAdminProfile.user_id) {
+                const { error: authError } = await adminClient.auth.admin.deleteUser(user.user_id);
+                if (authError) {
+                  console.error('Error deleting auth user:', user.user_id, authError);
+                  authDeleteErrors++;
+                }
+              }
+            }
+          }
+          
+          if (e1 || e2 || e3 || e4 || e5 || e6 || e7 || e8) {
+            console.error('User permanent deletion errors:', e1, e2, e3, e4, e5, e6, e7, e8);
+          }
+          
+          result.message = `Todos os usuários foram excluídos permanentemente (exceto admin principal)${authDeleteErrors > 0 ? `. ${authDeleteErrors} erros ao excluir autenticações.` : ''}`;
+          break;
+        }
  
        case 'all': {
          console.log('Deleting all data (except main admin)...');
