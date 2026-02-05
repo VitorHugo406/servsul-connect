@@ -4,11 +4,13 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface Profile {
   id: string;
+  user_id?: string;
   name: string;
   display_name: string | null;
   avatar_url: string | null;
   sector_id: string | null;
   is_active: boolean;
+  user_status?: string | null;
 }
 
 interface DirectMessage {
@@ -298,7 +300,7 @@ export function useConversations() {
 }
 
 export function useActiveUsers() {
-  const [users, setUsers] = useState<Profile[]>([]);
+  const [users, setUsers] = useState<(Profile & { user_id: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const { profile } = useAuth();
 
