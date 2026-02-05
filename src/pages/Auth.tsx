@@ -33,6 +33,8 @@ import { FacialLoginCamera } from '@/components/facial/FacialLoginCamera';
 import { z } from 'zod';
 import { toast } from 'sonner';
 
+const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
+
 interface Sector {
   id: string;
   name: string;
@@ -93,6 +95,7 @@ const Auth = () => {
   // Handle facial login success
   const handleFacialLoginSuccess = async (userId: string, email: string) => {
     setLoading(true);
+    setError(null);
     try {
       // Call edge function to generate magic link
       const { data, error: funcError } = await supabase.functions.invoke('facial-login', {
@@ -244,9 +247,17 @@ const Auth = () => {
       const { error } = await signIn(loginEmail, loginPassword);
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-          setError('Email ou senha incorretos');
+          if (error.message.includes('Usuário inativo')) {
+            setError('Sua conta está inativa. Entre em contato com o administrador do sistema.');
+          } else {
+            setError('Email ou senha incorretos');
+          }
         } else {
-          setError(error.message);
+          if (error.message.includes('inativo') || error.message.includes('Inativo')) {
+            setError('Sua conta está inativa. Entre em contato com o administrador do sistema.');
+          } else {
+            setError(error.message);
+          }
         }
         setLoading(false);
         return;
@@ -451,10 +462,36 @@ const Auth = () => {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="mb-4 flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive"
+                    className={`mb-4 rounded-lg p-4 text-sm ${
+                      error.includes('inativa') || error.includes('Inativa') 
+                        ? 'bg-warning/10 border border-warning/30' 
+                        : 'bg-destructive/10'
+                    }`}
                   >
-                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                    <span>{error}</span>
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
+                        error.includes('inativa') || error.includes('Inativa')
+                          ? 'text-warning'
+                          : 'text-destructive'
+                      }`} />
+                      <div className="flex-1">
+                        <p className={`font-medium ${
+                          error.includes('inativa') || error.includes('Inativa')
+                            ? 'text-warning'
+                            : 'text-destructive'
+                        }`}>
+                          {error.includes('inativa') || error.includes('Inativa') 
+                            ? 'Conta Inativa' 
+                            : 'Erro'}
+                        </p>
+                        <p className="mt-1 text-muted-foreground">{error}</p>
+                        {(error.includes('inativa') || error.includes('Inativa')) && (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            Por favor, entre em contato com o administrador em <strong>{ADMIN_EMAIL}</strong> para reativar sua conta.
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
