@@ -1,74 +1,37 @@
-import { useState, useMemo } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus, MoreVertical, Calendar, Trash2, Edit, Loader2,
-  GripVertical, ListTodo, MessageSquare, X, AlertTriangle,
-  Clock4, Clock, Users, Settings, Image, FileDown, ArrowLeft,
-  PlusCircle, Palette
+  GripVertical, ListTodo, X, AlertTriangle,
+  Clock4, Clock, Users, Settings, Image, ArrowLeft,
+  PlusCircle, FileDown, Zap, Upload
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useTaskBoards, useBoardMembers, useBoardColumns } from '@/hooks/useTaskBoards';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useTaskBoards, useBoardMembers, useBoardColumns, TaskBoardColumn } from '@/hooks/useTaskBoards';
 import { useBoardTasks, BoardTask } from '@/hooks/useBoardTasks';
-import { useTaskComments } from '@/hooks/useTasks';
 import { useActiveUsers } from '@/hooks/useDirectMessages';
-import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { TaskDetailDialog } from '@/components/tasks/TaskDetailDialog';
+import { ReportDialog } from '@/components/tasks/ReportDialog';
+import {
+  PRIORITIES, BACKGROUND_IMAGES, CARD_COVERS,
+  getBoardBg, getBoardBgStyle, getInitials, getCoverDisplay,
+} from '@/components/tasks/taskConstants';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-
-const PRIORITIES = [
-  { id: 'low', label: 'Baixa', color: 'bg-gray-500' },
-  { id: 'medium', label: 'Média', color: 'bg-blue-500' },
-  { id: 'high', label: 'Alta', color: 'bg-orange-500' },
-  { id: 'urgent', label: 'Urgente', color: 'bg-red-500' },
-];
-
-const BACKGROUND_IMAGES = [
-  { id: 'default', name: 'Padrão', preview: 'bg-muted/30' },
-  { id: 'gradient-blue', name: 'Azul', preview: 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20' },
-  { id: 'gradient-purple', name: 'Roxo', preview: 'bg-gradient-to-br from-purple-500/20 to-pink-500/20' },
-  { id: 'gradient-green', name: 'Verde', preview: 'bg-gradient-to-br from-green-500/20 to-emerald-500/20' },
-  { id: 'gradient-orange', name: 'Laranja', preview: 'bg-gradient-to-br from-orange-500/20 to-yellow-500/20' },
-  { id: 'gradient-dark', name: 'Escuro', preview: 'bg-gradient-to-br from-gray-800/30 to-gray-900/30' },
-  { id: 'gradient-ocean', name: 'Oceano', preview: 'bg-gradient-to-br from-blue-600/20 to-teal-400/20' },
-  { id: 'gradient-sunset', name: 'Pôr do Sol', preview: 'bg-gradient-to-br from-red-500/20 to-orange-400/20' },
-];
-
-const CARD_COVERS = [
-  { id: 'none', name: 'Nenhuma', color: '' },
-  { id: 'blue', name: 'Azul', color: 'bg-blue-500' },
-  { id: 'green', name: 'Verde', color: 'bg-green-500' },
-  { id: 'yellow', name: 'Amarelo', color: 'bg-yellow-500' },
-  { id: 'red', name: 'Vermelho', color: 'bg-red-500' },
-  { id: 'purple', name: 'Roxo', color: 'bg-purple-500' },
-  { id: 'pink', name: 'Rosa', color: 'bg-pink-500' },
-  { id: 'orange', name: 'Laranja', color: 'bg-orange-500' },
-];
-
-function getBoardBg(bg: string) {
-  const found = BACKGROUND_IMAGES.find(b => b.id === bg);
-  if (found) return found.preview;
-  // Custom URL
-  return '';
-}
-
-function getBoardBgStyle(bg: string): React.CSSProperties {
-  if (bg && bg.startsWith('http')) {
-    return { backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' };
-  }
-  return {};
-}
 
 export function TaskBoardSection() {
   const { user } = useAuth();
@@ -87,19 +50,15 @@ export function TaskBoardSection() {
     setCreating(false);
     if (error) { toast.error('Erro ao criar mural'); return; }
     toast.success('Mural criado!');
-    setBoardName('');
-    setBoardDesc('');
-    setShowCreateBoard(false);
+    setBoardName(''); setBoardDesc(''); setShowCreateBoard(false);
   };
 
   const handleDeleteBoard = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este mural e todas as suas tarefas?')) return;
     const { error } = await deleteBoard(id);
-    if (error) toast.error('Erro ao excluir');
-    else {
-      toast.success('Mural excluído');
-      if (selectedBoardId === id) setSelectedBoardId(null);
-    }
+    if (error) { toast.error('Erro ao excluir mural'); return; }
+    toast.success('Mural excluído com sucesso!');
+    if (selectedBoardId === id) setSelectedBoardId(null);
   };
 
   if (boardsLoading) {
@@ -110,7 +69,6 @@ export function TaskBoardSection() {
     );
   }
 
-  // Board view
   if (selectedBoardId) {
     const board = boards.find(b => b.id === selectedBoardId);
     if (!board) { setSelectedBoardId(null); return null; }
@@ -124,7 +82,6 @@ export function TaskBoardSection() {
     );
   }
 
-  // Board list
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
       <div className="flex items-center justify-between p-4 border-b border-border">
@@ -197,7 +154,6 @@ export function TaskBoardSection() {
         )}
       </ScrollArea>
 
-      {/* Create Board Dialog */}
       <Dialog open={showCreateBoard} onOpenChange={setShowCreateBoard}>
         <DialogContent>
           <DialogHeader>
@@ -239,8 +195,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const { tasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn } = useBoardTasks(board.id);
   const { members, addMember, removeMember } = useBoardMembers(board.id);
   const { users: allUsers } = useActiveUsers();
-  const { sectors } = useSectors();
+  const { uploadFile, uploading: fileUploading } = useFileUpload();
   const isMobile = useIsMobile();
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const [showSettings, setShowSettings] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
@@ -248,6 +205,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showTaskDetail, setShowTaskDetail] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [showAutomation, setShowAutomation] = useState<TaskBoardColumn | null>(null);
   const [selectedTask, setSelectedTask] = useState<BoardTask | null>(null);
   const [targetColumn, setTargetColumn] = useState<string>('');
   const [draggedTask, setDraggedTask] = useState<BoardTask | null>(null);
@@ -261,9 +219,12 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const [assignedTo, setAssignedTo] = useState('none');
   const [dueDate, setDueDate] = useState('');
   const [coverImage, setCoverImage] = useState('none');
+  const [coverImageUrl, setCoverImageUrl] = useState('');
   const [newColumnTitle, setNewColumnTitle] = useState('');
   const [newColumnColor, setNewColumnColor] = useState('#6366f1');
   const [customBgUrl, setCustomBgUrl] = useState('');
+  const [autoAssign, setAutoAssign] = useState('none');
+  const [autoCover, setAutoCover] = useState('none');
 
   const [creating, setCreating] = useState(false);
   const [editingTask, setEditingTask] = useState<BoardTask | null>(null);
@@ -286,11 +247,17 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
 
   const resetForm = () => {
     setTitle(''); setDescription(''); setPriority('medium');
-    setAssignedTo('none'); setDueDate(''); setCoverImage('none');
+    setAssignedTo('none'); setDueDate(''); setCoverImage('none'); setCoverImageUrl('');
   };
 
   const openCreateTask = (columnId: string) => {
     resetForm();
+    // Apply column automations
+    const col = columns.find(c => c.id === columnId);
+    if (col) {
+      if ((col as any).auto_assign_to) setAssignedTo((col as any).auto_assign_to);
+      if ((col as any).auto_cover) setCoverImage((col as any).auto_cover);
+    }
     setTargetColumn(columnId);
     setEditingTask(null);
     setShowCreateTask(true);
@@ -302,15 +269,34 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
     setPriority(task.priority);
     setAssignedTo(task.assigned_to || 'none');
     setDueDate(task.due_date ? task.due_date.split('T')[0] : '');
-    setCoverImage(task.cover_image || 'none');
+    const cover = getCoverDisplay(task.cover_image);
+    if (cover.type === 'image') {
+      setCoverImage('custom');
+      setCoverImageUrl(task.cover_image || '');
+    } else {
+      setCoverImage(task.cover_image || 'none');
+      setCoverImageUrl('');
+    }
     setTargetColumn(task.status);
     setEditingTask(task);
     setShowCreateTask(true);
   };
 
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const result = await uploadFile(file);
+    if (result) {
+      setCoverImage('custom');
+      setCoverImageUrl(result.url);
+    }
+  };
+
   const handleSaveTask = async () => {
     if (!title.trim()) { toast.error('Título é obrigatório'); return; }
     setCreating(true);
+
+    const finalCover = coverImage === 'custom' ? coverImageUrl : (coverImage !== 'none' ? coverImage : undefined);
 
     const taskData = {
       title: title.trim(),
@@ -319,7 +305,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
       priority,
       assigned_to: assignedTo !== 'none' ? assignedTo : undefined,
       due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
-      cover_image: coverImage !== 'none' ? coverImage : undefined,
+      cover_image: finalCover,
     };
 
     let result;
@@ -328,7 +314,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         ...taskData,
         assigned_to: assignedTo !== 'none' ? assignedTo : null,
         due_date: dueDate ? new Date(dueDate).toISOString() : null,
-        cover_image: coverImage !== 'none' ? coverImage : null,
+        cover_image: finalCover || null,
         description: description.trim() || null,
       } as any);
     } else {
@@ -387,6 +373,22 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
     setCustomBgUrl('');
   };
 
+  const handleSaveAutomation = async () => {
+    if (!showAutomation) return;
+    await updateColumn(showAutomation.id, {
+      auto_assign_to: autoAssign !== 'none' ? autoAssign : null,
+      auto_cover: autoCover !== 'none' ? autoCover : null,
+    } as any);
+    toast.success('Automação salva!');
+    setShowAutomation(null);
+  };
+
+  const openAutomation = (col: TaskBoardColumn) => {
+    setAutoAssign((col as any).auto_assign_to || 'none');
+    setAutoCover((col as any).auto_cover || 'none');
+    setShowAutomation(col);
+  };
+
   // Drag and drop
   const handleDragStart = (e: React.DragEvent, task: BoardTask) => {
     setDraggedTask(task);
@@ -402,10 +404,8 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const handleDragLeave = () => { setDragOverColumn(null); setDragOverPosition(null); };
   const handleDrop = async (e: React.DragEvent, colId: string, position?: number) => {
     e.preventDefault();
-    setDragOverColumn(null);
-    setDragOverPosition(null);
+    setDragOverColumn(null); setDragOverPosition(null);
     if (!draggedTask) return;
-
     if (draggedTask.status === colId && position !== undefined) {
       await reorderInColumn(draggedTask.id, position);
     } else if (draggedTask.status !== colId) {
@@ -415,9 +415,6 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
     setDraggedTask(null);
   };
   const handleDragEnd = () => { setDraggedTask(null); setDragOverColumn(null); setDragOverPosition(null); };
-
-  const getInitials = (name: string) => name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-  const getCoverClass = (cover: string | null) => CARD_COVERS.find(c => c.id === cover)?.color || '';
 
   const boardBg = getBoardBg(board.background_image);
   const boardBgStyle = getBoardBgStyle(board.background_image);
@@ -431,6 +428,33 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
           <h2 className="font-semibold text-foreground truncate">{board.name}</h2>
           <p className="text-xs text-muted-foreground">{tasks.length} tarefas</p>
         </div>
+
+        {/* Member avatars */}
+        <TooltipProvider>
+          <div className="flex items-center -space-x-2 mr-1">
+            {members.slice(0, 5).map(m => (
+              <Tooltip key={m.id}>
+                <TooltipTrigger asChild>
+                  <Avatar className="h-7 w-7 border-2 border-background">
+                    <AvatarImage src={m.profile?.avatar_url || ''} />
+                    <AvatarFallback className="text-[9px] bg-primary text-primary-foreground">
+                      {getInitials(m.profile?.display_name || m.profile?.name || 'U')}
+                    </AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent>{m.profile?.display_name || m.profile?.name}</TooltipContent>
+              </Tooltip>
+            ))}
+            {members.length > 5 && (
+              <Avatar className="h-7 w-7 border-2 border-background">
+                <AvatarFallback className="text-[9px] bg-muted text-muted-foreground">
+                  +{members.length - 5}
+                </AvatarFallback>
+              </Avatar>
+            )}
+          </div>
+        </TooltipProvider>
+
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" onClick={() => setShowReport(true)} title="Relatório">
             <FileDown className="h-4 w-4" />
@@ -446,159 +470,175 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         </div>
       </div>
 
-      {/* Board */}
-      <ScrollArea className="flex-1">
-        <div className={cn('p-4 gap-4', isMobile ? 'space-y-4' : 'flex min-w-max')}>
-          {columns.map((column) => {
-            const colTasks = tasks.filter(t => t.status === column.id).sort((a, b) => a.position - b.position);
-            return (
-              <div
-                key={column.id}
-                className={cn(
-                  'rounded-xl transition-colors',
-                  isMobile ? 'w-full' : 'w-72 flex-shrink-0',
-                  dragOverColumn === column.id ? 'bg-primary/10 ring-2 ring-primary/30' : 'bg-background/60 backdrop-blur-sm'
-                )}
-                onDragOver={(e) => handleDragOver(e, column.id)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, column.id)}
-              >
-                <div className="flex items-center gap-2 p-3 border-b border-border">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: column.color }} />
-                  <h3 className="font-semibold text-foreground text-sm flex-1 truncate">{column.title}</h3>
-                  <Badge variant="secondary" className="text-xs">{colTasks.length}</Badge>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-6 w-6"><MoreVertical className="h-3 w-3" /></Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openCreateTask(column.id)}>
-                        <Plus className="h-4 w-4 mr-2" /> Adicionar Tarefa
-                      </DropdownMenuItem>
-                      {isOwner && (
-                        <DropdownMenuItem onClick={() => handleDeleteColumn(column.id)} className="text-destructive">
-                          <Trash2 className="h-4 w-4 mr-2" /> Excluir Coluna
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                <div className="p-2 space-y-2 min-h-[100px]">
-                  {colTasks.map((task, index) => {
-                    const cover = getCoverClass(task.cover_image);
-                    const dueInfo = getDueDateInfo(task.due_date);
-                    return (
-                      <Card
-                        key={task.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, task)}
-                        onDragEnd={handleDragEnd}
-                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); handleDragOver(e, column.id, index); }}
-                        onDrop={(e) => { e.stopPropagation(); handleDrop(e, column.id, index); }}
-                        onClick={() => { setSelectedTask(task); setShowTaskDetail(true); }}
-                        className={cn(
-                          'cursor-pointer hover:shadow-md transition-all',
-                          draggedTask?.id === task.id && 'opacity-50 scale-95',
-                          dragOverColumn === column.id && dragOverPosition === index && 'ring-2 ring-primary'
-                        )}
-                      >
-                        {cover && <div className={cn('h-2 rounded-t-lg', cover)} />}
-                        <CardContent className="p-3">
-                          <div className="flex items-start justify-between gap-1 mb-1">
-                            <div className="cursor-grab active:cursor-grabbing p-0.5 -ml-0.5">
-                              <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <Badge variant="outline" className="text-[9px] mb-0.5">#{task.task_number}</Badge>
-                              <h4 className="font-medium text-sm text-foreground line-clamp-2">{task.title}</h4>
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0">
-                                  <MoreVertical className="h-3 w-3" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(task); }}>
-                                  <Edit className="h-4 w-4 mr-2" /> Editar
-                                </DropdownMenuItem>
-                                {columns.filter(c => c.id !== column.id).map(c => (
-                                  <DropdownMenuItem key={c.id} onClick={(e) => { e.stopPropagation(); moveTask(task.id, c.id, 0); }}>
-                                    <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: c.color }} />
-                                    Mover para {c.title}
-                                  </DropdownMenuItem>
-                                ))}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} className="text-destructive">
-                                  <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                          {task.description && <p className="text-xs text-muted-foreground mb-1.5 line-clamp-2">{task.description}</p>}
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <Badge className={cn('text-[9px]', PRIORITIES.find(p => p.id === task.priority)?.color, 'text-white')}>
-                              {PRIORITIES.find(p => p.id === task.priority)?.label}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-border">
-                            {task.assignee ? (
-                              <div className="flex items-center gap-1">
-                                <Avatar className="h-5 w-5">
-                                  <AvatarImage src={task.assignee.avatar_url || ''} />
-                                  <AvatarFallback className="text-[8px] bg-primary text-primary-foreground">
-                                    {getInitials(task.assignee.display_name || task.assignee.name)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-[10px] text-muted-foreground truncate max-w-16">{task.assignee.display_name || task.assignee.name}</span>
-                              </div>
-                            ) : <span className="text-[10px] text-muted-foreground">Sem responsável</span>}
-                            {dueInfo && (() => {
-                              const DI = dueInfo.icon;
-                              return (
-                                <div className={cn('flex items-center gap-0.5 text-[10px] px-1 py-0.5 rounded font-medium', dueInfo.color)}>
-                                  <DI className="h-2.5 w-2.5" />
-                                  {dueInfo.label}
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                  {colTasks.length === 0 && (
-                    <div className="text-center py-6 text-muted-foreground text-xs">Nenhuma tarefa</div>
+      {/* Board columns with horizontal scroll */}
+      <div className="flex-1 overflow-hidden">
+        <div className={cn(
+          'h-full p-4',
+          isMobile ? 'overflow-y-auto space-y-4' : 'overflow-x-auto overflow-y-auto'
+        )}>
+          <div className={cn(isMobile ? '' : 'flex gap-4 min-w-max h-full pb-4')}>
+            {columns.map((column) => {
+              const colTasks = tasks.filter(t => t.status === column.id).sort((a, b) => a.position - b.position);
+              return (
+                <div
+                  key={column.id}
+                  className={cn(
+                    'rounded-xl transition-colors flex flex-col',
+                    isMobile ? 'w-full' : 'w-72 flex-shrink-0',
+                    dragOverColumn === column.id ? 'bg-primary/10 ring-2 ring-primary/30' : 'bg-background/60 backdrop-blur-sm'
                   )}
-                  <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1" onClick={() => openCreateTask(column.id)}>
-                    <Plus className="h-3 w-3" /> Adicionar
-                  </Button>
+                  onDragOver={(e) => handleDragOver(e, column.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, column.id)}
+                >
+                  <div className="flex items-center gap-2 p-3 border-b border-border">
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: column.color }} />
+                    <h3 className="font-semibold text-foreground text-sm flex-1 truncate">{column.title}</h3>
+                    <Badge variant="secondary" className="text-xs">{colTasks.length}</Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6"><MoreVertical className="h-3 w-3" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openCreateTask(column.id)}>
+                          <Plus className="h-4 w-4 mr-2" /> Adicionar Tarefa
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openAutomation(column)}>
+                          <Zap className="h-4 w-4 mr-2" /> Automações
+                        </DropdownMenuItem>
+                        {isOwner && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleDeleteColumn(column.id)} className="text-destructive">
+                              <Trash2 className="h-4 w-4 mr-2" /> Excluir Coluna
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <div className="p-2 space-y-2 min-h-[100px] flex-1 overflow-y-auto max-h-[calc(100vh-220px)]">
+                    {colTasks.map((task, index) => {
+                      const cover = getCoverDisplay(task.cover_image);
+                      const dueInfo = getDueDateInfo(task.due_date);
+                      return (
+                        <Card
+                          key={task.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, task)}
+                          onDragEnd={handleDragEnd}
+                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); handleDragOver(e, column.id, index); }}
+                          onDrop={(e) => { e.stopPropagation(); handleDrop(e, column.id, index); }}
+                          onClick={() => { setSelectedTask(task); setShowTaskDetail(true); }}
+                          className={cn(
+                            'cursor-pointer hover:shadow-md transition-all',
+                            draggedTask?.id === task.id && 'opacity-50 scale-95',
+                            dragOverColumn === column.id && dragOverPosition === index && 'ring-2 ring-primary'
+                          )}
+                        >
+                          {cover.type === 'color' && <div className={cn('h-2 rounded-t-lg', cover.value)} />}
+                          {cover.type === 'image' && (
+                            <div className="h-24 rounded-t-lg overflow-hidden">
+                              <img src={cover.value} alt="Capa" className="w-full h-full object-cover" />
+                            </div>
+                          )}
+                          <CardContent className="p-3">
+                            <div className="flex items-start justify-between gap-1 mb-1">
+                              <div className="cursor-grab active:cursor-grabbing p-0.5 -ml-0.5">
+                                <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <Badge variant="outline" className="text-[9px] mb-0.5">#{task.task_number}</Badge>
+                                <h4 className="font-medium text-sm text-foreground line-clamp-2">{task.title}</h4>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0">
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(task); }}>
+                                    <Edit className="h-4 w-4 mr-2" /> Editar
+                                  </DropdownMenuItem>
+                                  {columns.filter(c => c.id !== column.id).map(c => (
+                                    <DropdownMenuItem key={c.id} onClick={(e) => { e.stopPropagation(); moveTask(task.id, c.id, 0); }}>
+                                      <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: c.color }} />
+                                      Mover para {c.title}
+                                    </DropdownMenuItem>
+                                  ))}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} className="text-destructive">
+                                    <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                            {task.description && <p className="text-xs text-muted-foreground mb-1.5 line-clamp-2">{task.description}</p>}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <Badge className={cn('text-[9px]', PRIORITIES.find(p => p.id === task.priority)?.color, 'text-white')}>
+                                {PRIORITIES.find(p => p.id === task.priority)?.label}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-border">
+                              {task.assignee ? (
+                                <div className="flex items-center gap-1">
+                                  <Avatar className="h-5 w-5">
+                                    <AvatarImage src={task.assignee.avatar_url || ''} />
+                                    <AvatarFallback className="text-[8px] bg-primary text-primary-foreground">
+                                      {getInitials(task.assignee.display_name || task.assignee.name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-[10px] text-muted-foreground truncate max-w-16">{task.assignee.display_name || task.assignee.name}</span>
+                                </div>
+                              ) : <span className="text-[10px] text-muted-foreground">Sem responsável</span>}
+                              {dueInfo && (() => {
+                                const DI = dueInfo.icon;
+                                return (
+                                  <div className={cn('flex items-center gap-0.5 text-[10px] px-1 py-0.5 rounded font-medium', dueInfo.color)}>
+                                    <DI className="h-2.5 w-2.5" />
+                                    {dueInfo.label}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                    {colTasks.length === 0 && (
+                      <div className="text-center py-6 text-muted-foreground text-xs">Nenhuma tarefa</div>
+                    )}
+                    <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1" onClick={() => openCreateTask(column.id)}>
+                      <Plus className="h-3 w-3" /> Adicionar
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-          {/* Add column button */}
-          <div className={cn('flex-shrink-0', isMobile ? 'w-full' : 'w-72')}>
-            {showAddColumn ? (
-              <div className="bg-background/60 backdrop-blur-sm rounded-xl p-3 space-y-2">
-                <Input value={newColumnTitle} onChange={(e) => setNewColumnTitle(e.target.value)} placeholder="Nome da coluna" autoFocus />
-                <div className="flex items-center gap-2">
-                  <input type="color" value={newColumnColor} onChange={(e) => setNewColumnColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer" />
-                  <Button size="sm" onClick={handleAddColumn} className="flex-1">Criar</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setShowAddColumn(false)}>
-                    <X className="h-4 w-4" />
-                  </Button>
+              );
+            })}
+            {/* Add column button */}
+            <div className={cn('flex-shrink-0', isMobile ? 'w-full' : 'w-72')}>
+              {showAddColumn ? (
+                <div className="bg-background/60 backdrop-blur-sm rounded-xl p-3 space-y-2">
+                  <Input value={newColumnTitle} onChange={(e) => setNewColumnTitle(e.target.value)} placeholder="Nome da coluna" autoFocus />
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={newColumnColor} onChange={(e) => setNewColumnColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer" />
+                    <Button size="sm" onClick={handleAddColumn} className="flex-1">Criar</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setShowAddColumn(false)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <Button variant="outline" className="w-full gap-2 bg-background/40" onClick={() => setShowAddColumn(true)}>
-                <PlusCircle className="h-4 w-4" /> Nova Coluna
-              </Button>
-            )}
+              ) : (
+                <Button variant="outline" className="w-full gap-2 bg-background/40" onClick={() => setShowAddColumn(true)}>
+                  <PlusCircle className="h-4 w-4" /> Nova Coluna
+                </Button>
+              )}
+            </div>
           </div>
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Create/Edit Task Dialog */}
       <Dialog open={showCreateTask} onOpenChange={(o) => { if (!o) { setShowCreateTask(false); setEditingTask(null); resetForm(); } }}>
@@ -647,32 +687,58 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Data de Entrega</Label>
-                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            <div className="space-y-2">
+              <Label>Data de Entrega</Label>
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Capa do Card</Label>
+              <div className="flex flex-wrap gap-2">
+                {CARD_COVERS.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => { setCoverImage(c.id); setCoverImageUrl(''); }}
+                    className={cn(
+                      'w-10 h-6 rounded border-2 transition-all',
+                      c.id === 'none' ? 'bg-muted border-dashed' : c.color,
+                      coverImage === c.id ? 'border-primary ring-2 ring-primary/30' : 'border-transparent'
+                    )}
+                    title={c.name}
+                  />
+                ))}
+                <button
+                  onClick={() => coverInputRef.current?.click()}
+                  className={cn(
+                    'w-10 h-6 rounded border-2 border-dashed flex items-center justify-center transition-all',
+                    coverImage === 'custom' ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/50'
+                  )}
+                  title="Enviar imagem"
+                >
+                  <Upload className="h-3 w-3 text-muted-foreground" />
+                </button>
               </div>
-              <div className="space-y-2">
-                <Label>Capa do Card</Label>
-                <Select value={coverImage} onValueChange={setCoverImage}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {CARD_COVERS.map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        <div className="flex items-center gap-2">
-                          {c.color && <div className={cn('w-4 h-2 rounded', c.color)} />}
-                          {c.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCoverUpload}
+              />
+              {coverImage === 'custom' && coverImageUrl && (
+                <div className="mt-2 rounded-lg overflow-hidden h-20">
+                  <img src={coverImageUrl} alt="Capa preview" className="w-full h-full object-cover" />
+                </div>
+              )}
+              {fileUploading && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Enviando imagem...
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowCreateTask(false); resetForm(); setEditingTask(null); }}>Cancelar</Button>
-            <Button onClick={handleSaveTask} disabled={creating}>
+            <Button onClick={handleSaveTask} disabled={creating || fileUploading}>
               {creating && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               {editingTask ? 'Salvar' : 'Criar'}
             </Button>
@@ -686,7 +752,6 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         open={showTaskDetail}
         onOpenChange={(o) => { setShowTaskDetail(o); if (!o) setSelectedTask(null); }}
         onEdit={(t) => { setShowTaskDetail(false); openEditTask(t); }}
-        members={members}
       />
 
       {/* Members Dialog */}
@@ -771,238 +836,63 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         </DialogContent>
       </Dialog>
 
-      {/* Report Dialog */}
-      <ReportDialog open={showReport} onOpenChange={setShowReport} tasks={tasks} columns={columns} boardName={board.name} members={members} />
-    </div>
-  );
-}
-
-// ============ Task Detail Dialog ============
-function TaskDetailDialog({ task, open, onOpenChange, onEdit, members }: {
-  task: BoardTask | null; open: boolean; onOpenChange: (o: boolean) => void;
-  onEdit: (t: BoardTask) => void; members: any[];
-}) {
-  const { comments, addComment, loading: commentsLoading } = useTaskComments(task?.id || null);
-  const [newComment, setNewComment] = useState('');
-  const [sending, setSending] = useState(false);
-  if (!task) return null;
-
-  const getInitials = (name: string) => name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-  const handleAddComment = async () => {
-    if (!newComment.trim()) return;
-    setSending(true);
-    await addComment(newComment.trim());
-    setNewComment('');
-    setSending(false);
-  };
-
-  const cover = CARD_COVERS.find(c => c.id === task.cover_image)?.color;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        {cover && <div className={cn('h-3 -mx-6 -mt-6 mb-2 rounded-t-lg', cover)} />}
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline">#{task.task_number}</Badge>
-            <Badge className={cn(
-              task.priority === 'urgent' && 'bg-red-500',
-              task.priority === 'high' && 'bg-orange-500',
-              task.priority === 'medium' && 'bg-blue-500',
-              task.priority === 'low' && 'bg-gray-500', 'text-white'
-            )}>
-              {PRIORITIES.find(p => p.id === task.priority)?.label}
-            </Badge>
-          </div>
-          <DialogTitle className="text-xl">{task.title}</DialogTitle>
-        </DialogHeader>
-        <ScrollArea className="flex-1 -mx-6 px-6">
-          <div className="space-y-4 pb-4">
-            {task.description && <p className="text-foreground">{task.description}</p>}
-            <div className="grid grid-cols-2 gap-4">
-              {task.assignee && (
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={task.assignee.avatar_url || ''} />
-                    <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                      {getInitials(task.assignee.display_name || task.assignee.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Responsável</p>
-                    <p className="text-sm font-medium">{task.assignee.display_name || task.assignee.name}</p>
-                  </div>
-                </div>
-              )}
-              {task.due_date && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Entrega</p>
-                    <p className="text-sm font-medium">{new Date(task.due_date).toLocaleDateString('pt-BR')}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-            {/* Comments */}
-            <div className="border-t border-border pt-4">
-              <div className="flex items-center gap-2 mb-3">
-                <MessageSquare className="h-4 w-4" />
-                <h4 className="font-medium">Comentários</h4>
-              </div>
-              {commentsLoading ? (
-                <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-              ) : comments.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-3">Nenhum comentário</p>
-              ) : (
-                <div className="space-y-3 mb-4">
-                  {comments.map(c => (
-                    <div key={c.id} className="flex gap-3">
-                      <Avatar className="h-7 w-7 flex-shrink-0">
-                        <AvatarImage src={c.author?.avatar_url || ''} />
-                        <AvatarFallback className="text-[9px] bg-muted">{getInitials(c.author?.display_name || c.author?.name || 'U')}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 bg-muted rounded-lg p-2.5">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-xs font-medium">{c.author?.display_name || c.author?.name}</span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {new Date(c.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <p className="text-sm">{c.content}</p>
-                      </div>
-                    </div>
+      {/* Automation Dialog */}
+      <Dialog open={!!showAutomation} onOpenChange={(o) => { if (!o) setShowAutomation(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-primary" />
+              Automações: {showAutomation?.title}
+            </DialogTitle>
+            <DialogDescription>
+              Configure ações automáticas para novos cards nesta coluna
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Auto-atribuir responsável</Label>
+              <Select value={autoAssign} onValueChange={setAutoAssign}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {members.map(m => (
+                    <SelectItem key={m.profile_id} value={m.profile_id}>
+                      {m.profile?.display_name || m.profile?.name || 'Membro'}
+                    </SelectItem>
                   ))}
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Input value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Comentar..." onKeyDown={(e) => e.key === 'Enter' && handleAddComment()} />
-                <Button onClick={handleAddComment} disabled={sending || !newComment.trim()} size="sm">
-                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar'}
-                </Button>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Novos cards nesta coluna terão este responsável automaticamente</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Auto-capa padrão</Label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setAutoCover('none')}
+                  className={cn('w-10 h-6 rounded border-2 bg-muted border-dashed', autoCover === 'none' && 'border-primary ring-2 ring-primary/30')}
+                  title="Nenhuma"
+                />
+                {CARD_COVERS.filter(c => c.id !== 'none').map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => setAutoCover(c.id)}
+                    className={cn('w-10 h-6 rounded border-2 transition-all', c.color, autoCover === c.id ? 'border-primary ring-2 ring-primary/30' : 'border-transparent')}
+                    title={c.name}
+                  />
+                ))}
               </div>
+              <p className="text-xs text-muted-foreground">Novos cards nesta coluna terão esta capa automaticamente</p>
             </div>
           </div>
-        </ScrollArea>
-        <DialogFooter className="border-t border-border pt-3">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
-          <Button onClick={() => onEdit(task)}><Edit className="h-4 w-4 mr-2" /> Editar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAutomation(null)}>Cancelar</Button>
+            <Button onClick={handleSaveAutomation}>Salvar Automação</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-// ============ Report Dialog ============
-function ReportDialog({ open, onOpenChange, tasks, columns, boardName, members }: {
-  open: boolean; onOpenChange: (o: boolean) => void; tasks: BoardTask[];
-  columns: any[]; boardName: string; members: any[];
-}) {
-  const [includeTitle, setIncludeTitle] = useState(true);
-  const [includeDescription, setIncludeDescription] = useState(true);
-  const [includeStatus, setIncludeStatus] = useState(true);
-  const [includePriority, setIncludePriority] = useState(true);
-  const [includeAssignee, setIncludeAssignee] = useState(true);
-  const [includeDueDate, setIncludeDueDate] = useState(true);
-
-  const generateCSV = () => {
-    const headers: string[] = ['#'];
-    if (includeTitle) headers.push('Título');
-    if (includeDescription) headers.push('Descrição');
-    if (includeStatus) headers.push('Status');
-    if (includePriority) headers.push('Prioridade');
-    if (includeAssignee) headers.push('Responsável');
-    if (includeDueDate) headers.push('Data de Entrega');
-
-    const rows = tasks.map(t => {
-      const row: string[] = [`#${t.task_number}`];
-      if (includeTitle) row.push(t.title);
-      if (includeDescription) row.push(t.description || '');
-      if (includeStatus) {
-        const col = columns.find(c => c.id === t.status);
-        row.push(col?.title || t.status);
-      }
-      if (includePriority) row.push(PRIORITIES.find(p => p.id === t.priority)?.label || t.priority);
-      if (includeAssignee) row.push(t.assignee?.display_name || t.assignee?.name || 'Sem responsável');
-      if (includeDueDate) row.push(t.due_date ? new Date(t.due_date).toLocaleDateString('pt-BR') : '');
-      return row;
-    });
-
-    const csvContent = [headers, ...rows].map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${boardName}_relatorio.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Relatório CSV gerado!');
-  };
-
-  const generatePDF = () => {
-    const colMap = new Map(columns.map(c => [c.id, c.title]));
-    let html = `<html><head><meta charset="utf-8"><title>Relatório - ${boardName}</title>
-    <style>body{font-family:Arial,sans-serif;margin:40px}h1{color:#1a1a1a;border-bottom:2px solid #3b82f6;padding-bottom:10px}
-    table{width:100%;border-collapse:collapse;margin-top:20px}th{background:#3b82f6;color:white;padding:10px;text-align:left;font-size:12px}
-    td{padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:11px}tr:nth-child(even){background:#f9fafb}
-    .footer{margin-top:30px;color:#6b7280;font-size:10px;text-align:center}</style></head><body>`;
-    html += `<h1>📋 ${boardName}</h1><p style="color:#6b7280">${tasks.length} tarefas | Gerado em ${new Date().toLocaleString('pt-BR')}</p>`;
-    html += '<table><thead><tr><th>#</th>';
-    if (includeTitle) html += '<th>Título</th>';
-    if (includeDescription) html += '<th>Descrição</th>';
-    if (includeStatus) html += '<th>Status</th>';
-    if (includePriority) html += '<th>Prioridade</th>';
-    if (includeAssignee) html += '<th>Responsável</th>';
-    if (includeDueDate) html += '<th>Entrega</th>';
-    html += '</tr></thead><tbody>';
-    tasks.forEach(t => {
-      html += `<tr><td>#${t.task_number}</td>`;
-      if (includeTitle) html += `<td>${t.title}</td>`;
-      if (includeDescription) html += `<td>${t.description || '-'}</td>`;
-      if (includeStatus) html += `<td>${colMap.get(t.status) || t.status}</td>`;
-      if (includePriority) html += `<td>${PRIORITIES.find(p => p.id === t.priority)?.label || t.priority}</td>`;
-      if (includeAssignee) html += `<td>${t.assignee?.display_name || t.assignee?.name || '-'}</td>`;
-      if (includeDueDate) html += `<td>${t.due_date ? new Date(t.due_date).toLocaleDateString('pt-BR') : '-'}</td>`;
-      html += '</tr>';
-    });
-    html += '</tbody></table>';
-    html += `<div class="footer">Relatório gerado automaticamente pelo ServChat</div></body></html>`;
-    const w = window.open('', '_blank');
-    if (w) { w.document.write(html); w.document.close(); w.print(); }
-    toast.success('Relatório PDF gerado!');
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Gerar Relatório</DialogTitle>
-          <DialogDescription>Selecione os campos que deseja incluir</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3 py-2">
-          {[
-            { label: 'Título', checked: includeTitle, set: setIncludeTitle },
-            { label: 'Descrição', checked: includeDescription, set: setIncludeDescription },
-            { label: 'Status', checked: includeStatus, set: setIncludeStatus },
-            { label: 'Prioridade', checked: includePriority, set: setIncludePriority },
-            { label: 'Responsável', checked: includeAssignee, set: setIncludeAssignee },
-            { label: 'Data de Entrega', checked: includeDueDate, set: setIncludeDueDate },
-          ].map(f => (
-            <label key={f.label} className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" checked={f.checked} onChange={(e) => f.set(e.target.checked)} className="rounded border-border" />
-              <span className="text-sm">{f.label}</span>
-            </label>
-          ))}
-        </div>
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={generateCSV} className="gap-2 w-full sm:w-auto">
-            <FileDown className="h-4 w-4" /> Excel (CSV)
-          </Button>
-          <Button onClick={generatePDF} className="gap-2 w-full sm:w-auto">
-            <FileDown className="h-4 w-4" /> PDF
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      {/* Report Dialog */}
+      <ReportDialog open={showReport} onOpenChange={setShowReport} tasks={tasks} columns={columns} boardName={board.name} />
+    </div>
   );
 }
