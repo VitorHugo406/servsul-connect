@@ -180,4 +180,44 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+
+  /* Custom styled scrollbar for task board */
+  .task-board-scroll::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  .task-board-scroll::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+  }
+  .task-board-scroll::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.2);
+    border-radius: 10px;
+    transition: background 0.2s;
+  }
+  .task-board-scroll::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+  .task-board-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
+  }
+
+  .task-col-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+  .task-col-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .task-col-scroll::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.15);
+    border-radius: 10px;
+  }
+  .task-col-scroll::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.3);
+  }
+  .task-col-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.15) transparent;
+  }
 }

@@ -3,14 +3,14 @@ import { motion } from 'framer-motion';
 import {
   Plus, MoreVertical, Calendar, Trash2, Edit, Loader2,
   GripVertical, ListTodo, X, AlertTriangle,
-  Clock4, Clock, Users, Settings, Image, ArrowLeft,
-  PlusCircle, FileDown, Zap, Upload
+  Clock4, Clock, Users, Settings, ArrowLeft,
+  PlusCircle, FileDown, Zap, Upload, Tag
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTaskBoards, useBoardMembers, useBoardColumns, TaskBoardColumn } from '@/hooks/useTaskBoards';
 import { useBoardTasks, BoardTask } from '@/hooks/useBoardTasks';
+import { useTaskLabels } from '@/hooks/useTaskLabels';
 import { useActiveUsers } from '@/hooks/useDirectMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -191,9 +192,10 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   isOwner: boolean;
 }) {
   const { profile } = useAuth();
-  const { columns, addColumn, updateColumn, deleteColumn } = useBoardColumns(board.id);
-  const { tasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn } = useBoardTasks(board.id);
+  const { columns, addColumn, updateColumn, deleteColumn, refetch: refetchColumns } = useBoardColumns(board.id);
+  const { tasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, refetch: refetchTasks } = useBoardTasks(board.id);
   const { members, addMember, removeMember } = useBoardMembers(board.id);
+  const { labels, getTaskLabels, createLabel, deleteLabel, assignLabel, removeLabel } = useTaskLabels(board.id);
   const { users: allUsers } = useActiveUsers();
   const { uploadFile, uploading: fileUploading } = useFileUpload();
   const isMobile = useIsMobile();
@@ -206,6 +208,8 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const [showTaskDetail, setShowTaskDetail] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showAutomation, setShowAutomation] = useState<TaskBoardColumn | null>(null);
+  const [showLabelsManager, setShowLabelsManager] = useState(false);
+  const [showLabelPicker, setShowLabelPicker] = useState<string | null>(null); // task id
   const [selectedTask, setSelectedTask] = useState<BoardTask | null>(null);
   const [targetColumn, setTargetColumn] = useState<string>('');
   const [draggedTask, setDraggedTask] = useState<BoardTask | null>(null);
@@ -225,6 +229,8 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const [customBgUrl, setCustomBgUrl] = useState('');
   const [autoAssign, setAutoAssign] = useState('none');
   const [autoCover, setAutoCover] = useState('none');
+  const [newLabelName, setNewLabelName] = useState('');
+  const [newLabelColor, setNewLabelColor] = useState('#6366f1');
 
   const [creating, setCreating] = useState(false);
   const [editingTask, setEditingTask] = useState<BoardTask | null>(null);
@@ -255,8 +261,8 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
     // Apply column automations
     const col = columns.find(c => c.id === columnId);
     if (col) {
-      if ((col as any).auto_assign_to) setAssignedTo((col as any).auto_assign_to);
-      if ((col as any).auto_cover) setCoverImage((col as any).auto_cover);
+      if (col.auto_assign_to) setAssignedTo(col.auto_assign_to);
+      if (col.auto_cover) setCoverImage(col.auto_cover);
     }
     setTargetColumn(columnId);
     setEditingTask(null);
@@ -330,9 +336,11 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   };
 
   const handleDeleteTask = async (taskId: string) => {
+    if (!confirm('Excluir esta tarefa?')) return;
     const { error } = await deleteTask(taskId);
-    if (error) toast.error('Erro ao excluir');
-    else toast.success('Tarefa excluída');
+    if (error) { toast.error('Erro ao excluir tarefa'); return; }
+    toast.success('Tarefa excluída');
+    await refetchTasks();
   };
 
   const handleAddColumn = async () => {
@@ -345,8 +353,11 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const handleDeleteColumn = async (colId: string) => {
     const colTasks = tasks.filter(t => t.status === colId);
     if (colTasks.length > 0) { toast.error('Remova as tarefas antes de excluir a coluna'); return; }
-    await deleteColumn(colId);
+    if (!confirm('Excluir esta coluna?')) return;
+    const { error } = await deleteColumn(colId);
+    if (error) { toast.error('Erro ao excluir coluna'); return; }
     toast.success('Coluna excluída');
+    await refetchColumns();
   };
 
   const handleAddMember = async (user: any) => {
@@ -375,18 +386,37 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
 
   const handleSaveAutomation = async () => {
     if (!showAutomation) return;
-    await updateColumn(showAutomation.id, {
+    const { error } = await updateColumn(showAutomation.id, {
       auto_assign_to: autoAssign !== 'none' ? autoAssign : null,
       auto_cover: autoCover !== 'none' ? autoCover : null,
     } as any);
+    if (error) { toast.error('Erro ao salvar automação'); return; }
     toast.success('Automação salva!');
     setShowAutomation(null);
+    await refetchColumns();
   };
 
   const openAutomation = (col: TaskBoardColumn) => {
-    setAutoAssign((col as any).auto_assign_to || 'none');
-    setAutoCover((col as any).auto_cover || 'none');
+    setAutoAssign(col.auto_assign_to || 'none');
+    setAutoCover(col.auto_cover || 'none');
     setShowAutomation(col);
+  };
+
+  const handleCreateLabel = async () => {
+    if (!newLabelName.trim()) return;
+    const { error } = await createLabel(newLabelName.trim(), newLabelColor);
+    if (error) toast.error('Erro ao criar etiqueta');
+    else { toast.success('Etiqueta criada!'); setNewLabelName(''); }
+  };
+
+  const handleToggleLabel = async (taskId: string, labelId: string) => {
+    const taskLabels = getTaskLabels(taskId);
+    const hasLabel = taskLabels.some(l => l.id === labelId);
+    if (hasLabel) {
+      await removeLabel(taskId, labelId);
+    } else {
+      await assignLabel(taskId, labelId);
+    }
   };
 
   // Drag and drop
@@ -456,6 +486,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         </TooltipProvider>
 
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={() => setShowLabelsManager(true)} title="Etiquetas">
+            <Tag className="h-4 w-4" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => setShowReport(true)} title="Relatório">
             <FileDown className="h-4 w-4" />
           </Button>
@@ -473,10 +506,10 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
       {/* Board columns with horizontal scroll */}
       <div className="flex-1 overflow-hidden">
         <div className={cn(
-          'h-full p-4',
-          isMobile ? 'overflow-y-auto space-y-4' : 'overflow-x-auto overflow-y-auto'
+          'h-full p-4 task-board-scroll',
+          isMobile ? 'overflow-y-auto space-y-4' : 'overflow-x-auto overflow-y-hidden'
         )}>
-          <div className={cn(isMobile ? '' : 'flex gap-4 min-w-max h-full pb-4')}>
+          <div className={cn(isMobile ? '' : 'flex gap-4 h-full pb-2')}>
             {columns.map((column) => {
               const colTasks = tasks.filter(t => t.status === column.id).sort((a, b) => a.position - b.position);
               return (
@@ -484,7 +517,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                   key={column.id}
                   className={cn(
                     'rounded-xl transition-colors flex flex-col',
-                    isMobile ? 'w-full' : 'w-72 flex-shrink-0',
+                    isMobile ? 'w-full' : 'min-w-[280px] max-w-[340px] w-[280px] flex-shrink-0',
                     dragOverColumn === column.id ? 'bg-primary/10 ring-2 ring-primary/30' : 'bg-background/60 backdrop-blur-sm'
                   )}
                   onDragOver={(e) => handleDragOver(e, column.id)}
@@ -518,10 +551,11 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                     </DropdownMenu>
                   </div>
 
-                  <div className="p-2 space-y-2 min-h-[100px] flex-1 overflow-y-auto max-h-[calc(100vh-220px)]">
+                  <div className="p-2 space-y-2 min-h-[100px] flex-1 overflow-y-auto max-h-[calc(100vh-220px)] task-col-scroll">
                     {colTasks.map((task, index) => {
                       const cover = getCoverDisplay(task.cover_image);
                       const dueInfo = getDueDateInfo(task.due_date);
+                      const taskLabelsForCard = getTaskLabels(task.id);
                       return (
                         <Card
                           key={task.id}
@@ -544,6 +578,19 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                             </div>
                           )}
                           <CardContent className="p-3">
+                            {/* Labels */}
+                            {taskLabelsForCard.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mb-1.5">
+                                {taskLabelsForCard.map(l => (
+                                  <span
+                                    key={l.id}
+                                    className="inline-block h-2 w-10 rounded-full"
+                                    style={{ backgroundColor: l.color }}
+                                    title={l.name}
+                                  />
+                                ))}
+                              </div>
+                            )}
                             <div className="flex items-start justify-between gap-1 mb-1">
                               <div className="cursor-grab active:cursor-grabbing p-0.5 -ml-0.5">
                                 <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
@@ -561,6 +608,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(task); }}>
                                     <Edit className="h-4 w-4 mr-2" /> Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowLabelPicker(task.id); }}>
+                                    <Tag className="h-4 w-4 mr-2" /> Etiquetas
                                   </DropdownMenuItem>
                                   {columns.filter(c => c.id !== column.id).map(c => (
                                     <DropdownMenuItem key={c.id} onClick={(e) => { e.stopPropagation(); moveTask(task.id, c.id, 0); }}>
@@ -618,7 +668,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
               );
             })}
             {/* Add column button */}
-            <div className={cn('flex-shrink-0', isMobile ? 'w-full' : 'w-72')}>
+            <div className={cn('flex-shrink-0', isMobile ? 'w-full' : 'min-w-[280px] w-[280px]')}>
               {showAddColumn ? (
                 <div className="bg-background/60 backdrop-blur-sm rounded-xl p-3 space-y-2">
                   <Input value={newColumnTitle} onChange={(e) => setNewColumnTitle(e.target.value)} placeholder="Nome da coluna" autoFocus />
@@ -753,6 +803,86 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         onOpenChange={(o) => { setShowTaskDetail(o); if (!o) setSelectedTask(null); }}
         onEdit={(t) => { setShowTaskDetail(false); openEditTask(t); }}
       />
+
+      {/* Label Picker Dialog */}
+      <Dialog open={!!showLabelPicker} onOpenChange={(o) => { if (!o) setShowLabelPicker(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5 text-primary" /> Etiquetas
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            {labels.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-3">Nenhuma etiqueta criada. Use o botão de etiquetas no cabeçalho para criar.</p>
+            ) : (
+              labels.map(l => {
+                const isAssigned = showLabelPicker ? getTaskLabels(showLabelPicker).some(tl => tl.id === l.id) : false;
+                return (
+                  <button
+                    key={l.id}
+                    onClick={() => showLabelPicker && handleToggleLabel(showLabelPicker, l.id)}
+                    className={cn(
+                      'w-full flex items-center gap-3 p-2 rounded-lg border-2 transition-all text-left',
+                      isAssigned ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted'
+                    )}
+                  >
+                    <div className="w-8 h-5 rounded" style={{ backgroundColor: l.color }} />
+                    <span className="text-sm font-medium flex-1">{l.name}</span>
+                    {isAssigned && <div className="w-2 h-2 rounded-full bg-primary" />}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Labels Manager Dialog */}
+      <Dialog open={showLabelsManager} onOpenChange={setShowLabelsManager}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5 text-primary" /> Gerenciar Etiquetas
+            </DialogTitle>
+            <DialogDescription>Crie e gerencie etiquetas para organizar suas tarefas</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="flex items-center gap-2">
+              <input type="color" value={newLabelColor} onChange={(e) => setNewLabelColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer flex-shrink-0" />
+              <Input
+                value={newLabelName}
+                onChange={(e) => setNewLabelName(e.target.value)}
+                placeholder="Nome da etiqueta"
+                className="flex-1"
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateLabel()}
+              />
+              <Button size="sm" onClick={handleCreateLabel} disabled={!newLabelName.trim()}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-1.5 max-h-60 overflow-y-auto task-col-scroll">
+              {labels.map(l => (
+                <div key={l.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted group">
+                  <div className="w-6 h-4 rounded" style={{ backgroundColor: l.color }} />
+                  <span className="text-sm flex-1">{l.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => deleteLabel(l.id)}
+                  >
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+              {labels.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma etiqueta ainda</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Members Dialog */}
       <Dialog open={showMembers} onOpenChange={setShowMembers}>
