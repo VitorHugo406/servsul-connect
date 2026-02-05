@@ -85,29 +85,28 @@ export function SectorUsersList({ sectorId, sectorName, sectorColor, isOpen = tr
           primaryUsers = data || [];
 
           // Get users with additional sector access
-          const { data: additionalUsers, error: additionalError } = await supabase
+          const { data: additionalSectorEntries, error: additionalError } = await supabase
             .from('user_additional_sectors')
-            .select(`
-              user_id,
-              profiles!inner(id, user_id, name, display_name, avatar_url, user_status, is_active)
-            `)
+            .select('user_id')
             .eq('sector_id', sectorId);
           if (additionalError) throw additionalError;
 
-          // Merge additional users
-          additionalUsers?.forEach(au => {
-            const p = au.profiles as any;
-            if (p && p.is_active && !primaryUsers.find((u: any) => u.id === p.id)) {
-              primaryUsers.push({
-                id: p.id,
-                user_id: p.user_id,
-                name: p.name,
-                display_name: p.display_name,
-                avatar_url: p.avatar_url,
-                user_status: p.user_status,
-              });
-            }
-          });
+          if (additionalSectorEntries && additionalSectorEntries.length > 0) {
+            const additionalUserIds = additionalSectorEntries.map(e => e.user_id);
+            
+            const { data: additionalProfiles, error: profilesError } = await supabase
+              .from('profiles')
+              .select('id, user_id, name, display_name, avatar_url, user_status')
+              .in('user_id', additionalUserIds)
+              .eq('is_active', true);
+            if (profilesError) throw profilesError;
+
+            additionalProfiles?.forEach(p => {
+              if (!primaryUsers.find((u: any) => u.id === p.id)) {
+                primaryUsers.push(p);
+              }
+            });
+          }
         }
 
         // Get online status

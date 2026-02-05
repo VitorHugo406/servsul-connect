@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { UsersRound } from 'lucide-react';
 import { 
   MessageSquare, 
   Bell, 
@@ -32,6 +33,7 @@ const menuItems = [
   { id: 'announcements', icon: Bell, label: 'Avisos' },
   { id: 'birthdays', icon: Cake, label: 'Aniversariantes' },
    { id: 'tasks', icon: ListTodo, label: 'Tarefas' },
+  { id: 'people-management', icon: UsersRound, label: 'Gestão de Pessoas', supervisorOnly: true },
   { id: 'charts', icon: BarChart3, label: 'Gráficos', adminOnly: true },
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
   { id: 'sectors', icon: Building2, label: 'Gestão de Setores', adminOnly: true },
@@ -70,6 +72,12 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
     // Admin-only items
     if ('adminOnly' in item && item.adminOnly) {
       return isAdmin;
+    }
+    // Supervisor-only items (supervisors, gerentes, admins)
+    if ('supervisorOnly' in item && item.supervisorOnly) {
+      if (isAdmin) return true;
+      const level = profile?.autonomy_level;
+      return level === 'supervisor' || level === 'gerente' || level === 'gestor' || level === 'diretoria';
     }
     // Permission-based items
     if ('permission' in item) {
