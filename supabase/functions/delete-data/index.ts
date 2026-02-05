@@ -18,7 +18,6 @@
    try {
      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
      const authHeader = req.headers.get('Authorization');
      
      console.log('Auth header present:', !!authHeader);
@@ -31,26 +30,25 @@
        );
      }
  
-     // Use anon key client with user's auth header to get user info
-     const userClient = createClient(supabaseUrl, anonKey, {
-       global: { headers: { Authorization: authHeader } }
-     });
-     
-     const { data: { user }, error: authError } = await userClient.auth.getUser();
-     
-     console.log('User fetched:', user?.id, 'Error:', authError?.message);
-     
-     if (authError || !user) {
-       console.log('Auth error or no user:', authError?.message);
+    // Extract token from Authorization header
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Use service role client for all operations
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    
+    // Get user from token using service role
+    const { data: { user }, error: userError } = await adminClient.auth.getUser(token);
+    
+    console.log('User from token:', user?.id, user?.email, 'Error:', userError?.message);
+    
+    if (userError || !user) {
+      console.log('Token validation failed:', userError?.message);
        return new Response(
-         JSON.stringify({ error: 'Não autorizado - usuário inválido' }),
+        JSON.stringify({ error: 'Não autorizado - token inválido' }),
          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
        );
      }
  
-     // Use service role client for admin operations
-     const adminClient = createClient(supabaseUrl, serviceRoleKey);
-     
      // Get user profile and roles using service role
      const { data: userProfile, error: profileError } = await adminClient
        .from('profiles')
@@ -60,6 +58,13 @@
  
      console.log('User profile:', userProfile?.email, 'Error:', profileError?.message);
  
+    if (profileError || !userProfile) {
+      return new Response(
+        JSON.stringify({ error: 'Perfil do usuário não encontrado' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
      const { data: userRoles, error: rolesError } = await adminClient
        .from('user_roles')
        .select('role')
