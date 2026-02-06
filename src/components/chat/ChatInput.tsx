@@ -3,7 +3,6 @@ import { Send, Smile, Paperclip, Image as ImageIcon, X, FileText } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFileUpload } from '@/hooks/useFileUpload';
-import { useAuth } from '@/contexts/AuthContext';
 import { CardMentionPicker, formatCardMention } from './CardMentionPicker';
 
 interface Attachment {
@@ -19,7 +18,6 @@ interface ChatInputProps {
 const EMOJI_LIST = ['😀', '😂', '😍', '🤔', '👍', '👏', '🎉', '🔥', '❤️', '✅', '🚀', '💪', '😊', '👋', '🙏', '💡'];
 
 export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputProps) {
-  const { isAdmin } = useAuth();
   const [message, setMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -197,8 +195,8 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
         )}
       </AnimatePresence>
 
-      <div className="flex items-end gap-3">
-        <div className="flex gap-1">
+      <div className="flex items-end gap-2">
+        <div className="flex items-center gap-0.5 flex-shrink-0">
           <Button
             type="button" variant="ghost" size="icon"
             className="h-10 w-10 text-muted-foreground hover:text-foreground"
@@ -206,7 +204,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
           >
             <Smile className="h-5 w-5" />
           </Button>
-          {isAdmin && !hideAttachment && (
+          {!hideAttachment && (
             <>
               <Button type="button" variant="ghost" size="icon"
                 className="h-10 w-10 text-muted-foreground hover:text-foreground"
@@ -227,7 +225,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
         <input ref={fileInputRef} type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.txt" className="hidden" onChange={handleFileSelect} />
         <input ref={imageInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFileSelect} />
 
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <textarea
             ref={inputRef}
             value={message}
@@ -235,7 +233,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
             onKeyDown={handleKeyDown}
             placeholder='Digite sua mensagem... (use # para mencionar cards)'
             rows={1}
-            className="w-full resize-none rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full resize-none rounded-xl border border-border bg-muted/50 px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
@@ -243,7 +241,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
           type="button"
           onClick={handleSubmit}
           disabled={(!message.trim() && attachments.length === 0) || uploading || isSending}
-          className="h-10 w-10 rounded-xl gradient-primary p-0 shadow-lg transition-all hover:shadow-xl disabled:opacity-50"
+          className="h-10 w-10 flex-shrink-0 rounded-xl gradient-primary p-0 shadow-lg transition-all hover:shadow-xl disabled:opacity-50"
         >
           <Send className="h-5 w-5" />
         </Button>

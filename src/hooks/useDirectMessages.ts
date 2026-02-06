@@ -126,31 +126,34 @@ export function useDirectMessages(partnerId?: string) {
                 );
                 
                 if (existingIndex >= 0) {
-                  // Replace temp message with real one
+                  // Replace temp message with real one, keep sender/receiver info
                   const updated = [...prev];
-                  updated[existingIndex] = msg;
+                  updated[existingIndex] = { 
+                    ...msg, 
+                    sender: prev[existingIndex].sender, 
+                    receiver: prev[existingIndex].receiver 
+                  };
                   return updated;
                 }
                 
-                // Add new message (from partner)
+                // New message from partner - fetch profile info
+                supabase
+                  .from('direct_messages')
+                  .select(`
+                    *,
+                    sender:profiles!direct_messages_sender_id_fkey(id, name, display_name, avatar_url, sector_id, is_active),
+                    receiver:profiles!direct_messages_receiver_id_fkey(id, name, display_name, avatar_url, sector_id, is_active)
+                  `)
+                  .eq('id', msg.id)
+                  .single()
+                  .then(({ data }) => {
+                    if (data) {
+                      setMessages(p => p.map(m => m.id === msg.id ? data : m));
+                    }
+                  });
+                
                 return [...prev, msg];
               });
-              
-              // Fetch full message with profile info in background
-              supabase
-                .from('direct_messages')
-                .select(`
-                  *,
-                  sender:profiles!direct_messages_sender_id_fkey(id, name, display_name, avatar_url, sector_id, is_active),
-                  receiver:profiles!direct_messages_receiver_id_fkey(id, name, display_name, avatar_url, sector_id, is_active)
-                `)
-                .eq('id', msg.id)
-                .single()
-                .then(({ data }) => {
-                  if (data) {
-                    setMessages(prev => prev.map(m => m.id === msg.id ? data : m));
-                  }
-                });
               
               // Mark as read if from partner
               if (msg.sender_id === partnerId) {
