@@ -177,18 +177,12 @@ Deno.serve(async (req) => {
           continue
         }
 
-        // Without a verified domain, onboarding@resend.dev can only send to gmail.com addresses
-        const isGmail = recipientEmail.toLowerCase().endsWith('@gmail.com')
-        if (!isGmail) {
-          console.log(`Skipping ${recipientEmail}: not gmail.com (needs verified domain)`)
-          errors.push(`${profile.name}: e-mail ${recipientEmail} requer domínio verificado`)
-          continue
-        }
-
+        // Without a verified domain, onboarding@resend.dev can ONLY send to the Resend account owner
+        const adminEmail = 'servchatadm@gmail.com'
         const { error: sendError } = await resend.emails.send({
           from: 'ServChat <onboarding@resend.dev>',
-          to: [recipientEmail],
-          subject: `📊 Feedback Mensal — ${currentMonth}`,
+          to: [adminEmail],
+          subject: `📊 Feedback de ${displayName} (${recipientEmail}) — ${currentMonth}`,
           html: emailHtml,
         })
 
