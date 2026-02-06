@@ -105,20 +105,21 @@ Deno.serve(async (req) => {
 
     const emails = targetProfiles.map(p => p.email).filter(Boolean)
 
-    if (emails.length === 1) {
+    const resendAccountEmail = 'servchatadm@gmail.com'
+
+    if (emails.length === 1 && emails[0] === resendAccountEmail) {
       const { error } = await resend.emails.send({
         from: 'ServChat <onboarding@resend.dev>',
-        to: emails,
+        to: [resendAccountEmail],
         subject: `📊 Feedback Mensal — ${currentMonth}`,
         html: emailHtml,
       })
       if (error) throw error
     } else {
-      // Send single email with all recipients in BCC
+      // With onboarding@resend.dev, can only send to the account owner
       const { error } = await resend.emails.send({
         from: 'ServChat <onboarding@resend.dev>',
-        to: ['onboarding@resend.dev'],
-        bcc: emails,
+        to: [resendAccountEmail],
         subject: `📊 Feedback Mensal — ${currentMonth}`,
         html: emailHtml,
       })

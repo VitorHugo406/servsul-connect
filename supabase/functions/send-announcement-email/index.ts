@@ -91,11 +91,12 @@ Deno.serve(async (req) => {
     </body>
     </html>`
 
-    // Send single email with all in BCC
+    const resendAccountEmail = 'servchatadm@gmail.com'
+
+    // With onboarding@resend.dev, can only send to the account owner
     const { error } = await resend.emails.send({
       from: 'ServChat <onboarding@resend.dev>',
-      to: ['onboarding@resend.dev'],
-      bcc: emails,
+      to: [resendAccountEmail],
       subject: `📢 ${pLabel}: ${title}`,
       html: emailHtml,
     })
