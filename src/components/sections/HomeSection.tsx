@@ -6,8 +6,6 @@ import {
   ListTodo, 
   Cake, 
   ArrowRight,
-  Users,
-  AlertTriangle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -71,7 +69,6 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
   const latestAnnouncement = announcements[0];
   const displayName = profile?.display_name || profile?.name || 'Usuário';
   const autonomyLevel = profile?.autonomy_level || 'colaborador';
-  const isSupervisorOrAbove = ['admin', 'gerente', 'supervisor', 'gestor', 'diretoria'].includes(autonomyLevel);
 
   return (
     <motion.div
@@ -142,7 +139,6 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
           { id: 'announcements', icon: Bell, label: 'Avisos', color: 'bg-secondary', count: announcements.length },
           { id: 'tasks', icon: ListTodo, label: 'Tarefas', color: 'bg-purple-500', count: totalTasks > 0 ? totalTasks : null },
           { id: 'birthdays', icon: Cake, label: 'Aniversariantes', color: 'bg-success', count: todayBirthdays.length },
-          ...(isSupervisorOrAbove ? [{ id: 'people', icon: Users, label: 'Gestão de Pessoas', color: 'bg-indigo-500', count: null }] : []),
         ].map((action, index) => (
           <motion.div
             key={action.id}

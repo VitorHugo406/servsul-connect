@@ -178,10 +178,13 @@ Deno.serve(async (req) => {
           continue
         }
 
+        // With onboarding@resend.dev, can only send to the Resend account owner email
+        // Until a custom domain is verified, all emails go to the admin inbox
+        const resendAccountEmail = 'servchatadm@gmail.com'
         const { error: sendError } = await resend.emails.send({
           from: 'ServChat <onboarding@resend.dev>',
-          to: [recipientEmail],
-          subject: `📊 Feedback Mensal — ${currentMonth}`,
+          to: [resendAccountEmail],
+          subject: `📊 Feedback Mensal de ${displayName} — ${currentMonth}`,
           html: emailHtml,
         })
 
