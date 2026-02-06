@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useConversations, useActiveUsers } from '@/hooks/useDirectMessages';
 import { useSectors } from '@/hooks/useData';
+import { useAllUsersPresence } from '@/hooks/usePresence';
+import { PresenceIndicator } from '@/components/user/PresenceIndicator';
 import { cn } from '@/lib/utils';
 
 interface DirectMessageListProps {
@@ -20,6 +22,7 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
   const { conversations, loading: conversationsLoading } = useConversations();
   const { users, loading: usersLoading } = useActiveUsers();
   const { sectors } = useSectors();
+  const { getUserPresence } = useAllUsersPresence();
 
   const getInitials = (name: string) => {
     return name
@@ -132,6 +135,8 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
                 filteredConversations.map((conv) => {
                   const sector = sectors.find(s => s.id === conv.partner.sector_id);
                   const displayName = conv.partner.display_name || conv.partner.name;
+                  const partnerUserId = (conv.partner as any).user_id || conv.partnerId;
+                  const presence = getUserPresence(partnerUserId);
                   
                   return (
                     <motion.button
@@ -140,13 +145,13 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                       className={cn(
-                        'flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors',
+                        'flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors min-h-[64px]',
                         selectedUserId === conv.partnerId
                           ? 'bg-primary/10'
                           : 'hover:bg-muted'
                       )}
                     >
-                      <div className="relative">
+                      <div className="relative flex-shrink-0">
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={conv.partner.avatar_url || ''} />
                           <AvatarFallback
@@ -156,14 +161,15 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
                             {getInitials(displayName)}
                           </AvatarFallback>
                         </Avatar>
-                        {conv.partner.is_active && (
-                          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card bg-green-500" />
-                        )}
+                        <PresenceIndicator
+                          isOnline={presence.isOnline}
+                          lastHeartbeat={presence.lastHeartbeat}
+                        />
                       </div>
-                      <div className="flex-1 overflow-hidden">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-foreground">{displayName}</span>
-                          <span className="text-xs text-muted-foreground">
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-foreground truncate">{displayName}</span>
+                          <span className="text-xs text-muted-foreground flex-shrink-0">
                             {formatTime(conv.lastMessage.created_at)}
                           </span>
                         </div>
@@ -172,7 +178,7 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
                         </p>
                       </div>
                       {conv.unreadCount > 0 && (
-                        <Badge className="ml-2 h-5 min-w-[20px] rounded-full px-1.5 text-xs">
+                        <Badge className="ml-2 h-5 min-w-[20px] rounded-full px-1.5 text-xs flex-shrink-0">
                           {conv.unreadCount}
                         </Badge>
                       )}
@@ -193,6 +199,7 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
                 filteredUsers.map((user) => {
                   const sector = sectors.find(s => s.id === user.sector_id);
                   const displayName = user.display_name || user.name;
+                  const presence = getUserPresence(user.user_id || user.id);
                   
                   return (
                     <motion.button
@@ -204,13 +211,13 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                       className={cn(
-                        'flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors',
+                        'flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors min-h-[64px]',
                         selectedUserId === user.id
                           ? 'bg-primary/10'
                           : 'hover:bg-muted'
                       )}
                     >
-                      <div className="relative">
+                      <div className="relative flex-shrink-0">
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={user.avatar_url || ''} />
                           <AvatarFallback
@@ -220,12 +227,13 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
                             {getInitials(displayName)}
                           </AvatarFallback>
                         </Avatar>
-                        {user.is_active && (
-                          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card bg-green-500" />
-                        )}
+                        <PresenceIndicator
+                          isOnline={presence.isOnline}
+                          lastHeartbeat={presence.lastHeartbeat}
+                        />
                       </div>
-                      <div className="flex-1">
-                        <span className="font-medium text-foreground">{displayName}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-foreground truncate block">{displayName}</span>
                         {sector && (
                           <p className="text-xs text-muted-foreground">{sector.name}</p>
                         )}

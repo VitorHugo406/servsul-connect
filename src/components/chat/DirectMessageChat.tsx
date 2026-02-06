@@ -8,6 +8,8 @@ import { useDirectMessages, useActiveUsers } from '@/hooks/useDirectMessages';
 import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSound } from '@/hooks/useSound';
+import { useAllUsersPresence } from '@/hooks/usePresence';
+import { PresenceIndicator } from '@/components/user/PresenceIndicator';
 import { cn } from '@/lib/utils';
 
 interface DirectMessageChatProps {
@@ -20,6 +22,7 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
   const { users } = useActiveUsers();
   const { sectors } = useSectors();
   const { playMessageSent } = useSound();
+  const { getUserPresence } = useAllUsersPresence();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const partner = users.find(u => u.id === partnerId);
@@ -86,14 +89,26 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
               {getInitials(displayName)}
             </AvatarFallback>
           </Avatar>
-          {partner?.is_active && (
-            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card bg-green-500" />
+          {partner && (
+            <PresenceIndicator
+              isOnline={getUserPresence(partner.user_id || partner.id).isOnline}
+              lastHeartbeat={getUserPresence(partner.user_id || partner.id).lastHeartbeat}
+            />
           )}
         </div>
         <div>
           <h3 className="font-display font-semibold text-foreground">{displayName}</h3>
           <p className="text-xs text-muted-foreground">
-            {partner?.is_active ? 'Online' : 'Offline'}
+            {(() => {
+              if (!partner) return 'Offline';
+              const p = getUserPresence(partner.user_id || partner.id);
+              if (p.isOnline && p.lastHeartbeat) {
+                const timeSince = Date.now() - p.lastHeartbeat.getTime();
+                if (timeSince < 120000) return 'Online';
+                return 'Inativo';
+              }
+              return 'Offline';
+            })()}
             {partnerSector && ` • ${partnerSector.name}`}
           </p>
         </div>
