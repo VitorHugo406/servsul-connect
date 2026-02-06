@@ -104,29 +104,30 @@ export function useMessages(sectorId: string | null) {
               );
               
               if (existingIndex >= 0) {
-                // Replace temp message with real one
+                // Replace temp message with real one, keep author info from optimistic
                 const updated = [...prev];
-                updated[existingIndex] = { ...newMessage, status: 'delivered' };
+                updated[existingIndex] = { 
+                  ...newMessage, 
+                  author: prev[existingIndex].author, 
+                  status: 'delivered' 
+                };
                 return updated;
               }
               
-              // Add new message (from another user)
+              // New message from another user - fetch author info
+              supabase
+                .from('messages')
+                .select(`*, author:profiles!messages_author_id_fkey(*)`)
+                .eq('id', newMessage.id)
+                .single()
+                .then(({ data }) => {
+                  if (data) {
+                    setMessages(p => p.map(m => m.id === newMessage.id ? { ...data, status: 'delivered' } : m));
+                  }
+                });
+              
               return [...prev, { ...newMessage, status: 'delivered' }];
             });
-            
-            // Fetch full message with author info in background
-            supabase
-              .from('messages')
-              .select(`*, author:profiles!messages_author_id_fkey(*)`)
-              .eq('id', newMessage.id)
-              .single()
-              .then(({ data }) => {
-                if (data) {
-                  setMessages(prev => 
-                    prev.map(m => m.id === newMessage.id ? { ...data, status: 'delivered' } : m)
-                  );
-                }
-              });
           } else if (payload.eventType === 'DELETE') {
             setMessages(prev => prev.filter(m => m.id !== (payload.old as Message).id));
           } else {
