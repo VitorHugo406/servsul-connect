@@ -24,10 +24,19 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   settings: Settings,
 };
 
+const GERAL_SECTOR_ID = '00000000-0000-0000-0000-000000000001';
+
 export function SectorTabs({ sectors, activeSector, onSectorChange }: SectorTabsProps) {
+  // Sort sectors: Geral always first
+  const sortedSectors = [...sectors].sort((a, b) => {
+    if (a.id === GERAL_SECTOR_ID) return -1;
+    if (b.id === GERAL_SECTOR_ID) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
   return (
     <div className="flex gap-2 overflow-x-auto border-b border-border bg-card px-4 py-3 scrollbar-hide">
-      {sectors.map((sector) => {
+      {sortedSectors.map((sector) => {
         const Icon = iconMap[sector.icon || 'building'] || Building;
         const isActive = activeSector === sector.id;
         

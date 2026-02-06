@@ -1,5 +1,5 @@
 import { useState } from 'react';
- import { Home, MessageSquare, Bell, Cake, MoreHorizontal, Settings, Camera, Trash2, Building2, Sparkles, ListTodo, UsersRound } from 'lucide-react';
+ import { Home, MessageSquare, Bell, Cake, MoreHorizontal, Settings, Camera, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -28,6 +28,7 @@ const moreNavItems = [
    { id: 'tasks', icon: ListTodo, label: 'Gestão de Tarefas' },
    { id: 'people-management', icon: UsersRound, label: 'Gestão de Pessoas', supervisorOnly: true },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
+  { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
 ];
 
 export function MobileNavigation({ activeSection, onSectionChange }: MobileNavigationProps) {
