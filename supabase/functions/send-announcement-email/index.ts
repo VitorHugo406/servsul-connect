@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
 
     // Send single email with all in BCC
     const { error } = await resend.emails.send({
-      from: 'ServChat <noreply@servsul.com.br>',
+      from: 'ServChat <onboarding@resend.dev>',
       to: ['noreply@servsul.com.br'],
       bcc: emails,
       subject: `📢 ${pLabel}: ${title}`,
