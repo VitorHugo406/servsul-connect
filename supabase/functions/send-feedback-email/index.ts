@@ -171,20 +171,24 @@ Deno.serve(async (req) => {
         </body>
         </html>`
 
-        // Send to user's actual email
         const recipientEmail = profile.email
         if (!recipientEmail) {
           console.log(`Skipping user ${profile.name}: no email`)
           continue
         }
 
-        // With onboarding@resend.dev, can only send to the Resend account owner email
-        // Until a custom domain is verified, all emails go to the admin inbox
-        const resendAccountEmail = 'servchatadm@gmail.com'
+        // Without a verified domain, onboarding@resend.dev can only send to gmail.com addresses
+        const isGmail = recipientEmail.toLowerCase().endsWith('@gmail.com')
+        if (!isGmail) {
+          console.log(`Skipping ${recipientEmail}: not gmail.com (needs verified domain)`)
+          errors.push(`${profile.name}: e-mail ${recipientEmail} requer domínio verificado`)
+          continue
+        }
+
         const { error: sendError } = await resend.emails.send({
           from: 'ServChat <onboarding@resend.dev>',
-          to: [resendAccountEmail],
-          subject: `📊 Feedback Mensal de ${displayName} — ${currentMonth}`,
+          to: [recipientEmail],
+          subject: `📊 Feedback Mensal — ${currentMonth}`,
           html: emailHtml,
         })
 
