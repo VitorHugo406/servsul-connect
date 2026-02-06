@@ -1,1 +1,31 @@
 project_id = "efkhsesptcoukapcdllg"
+
+[functions.create-admin]
+verify_jwt = false
+
+[functions.delete-data]
+verify_jwt = false
+
+[functions.facial-login]
+verify_jwt = false
+
+[functions.get-facial-data]
+verify_jwt = false
+
+[functions.get-public-sectors]
+verify_jwt = false
+
+[functions.register-facial-data]
+verify_jwt = false
+
+[functions.register-user]
+verify_jwt = false
+
+[functions.update-user-permissions]
+verify_jwt = false
+
+[functions.send-feedback-email]
+verify_jwt = false
+
+[functions.send-announcement-email]
+verify_jwt = false

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { UsersRound } from 'lucide-react';
+import { UsersRound, Mail } from 'lucide-react';
 import { 
   MessageSquare, 
   Bell, 
@@ -38,6 +38,7 @@ const menuItems = [
   { id: 'sectors', icon: Building2, label: 'Gestão de Setores', adminOnly: true },
    { id: 'important-announcements', icon: Sparkles, label: 'Comunicados Importantes', adminOnly: true },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
+  { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
 ];
 
 const autonomyLevelLabels: Record<string, string> = {

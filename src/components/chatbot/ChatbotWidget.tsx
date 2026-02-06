@@ -158,6 +158,21 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
         .update({ last_seen_at: new Date().toISOString() })
         .eq('user_id', user.id);
 
+      // Auto-send monthly feedback on 1st of month (admin only)
+      const today = new Date();
+      if (today.getDate() === 1 && isAdmin) {
+        const monthKey = `feedback-sent-${today.getFullYear()}-${today.getMonth()}`;
+        if (!localStorage.getItem(monthKey)) {
+          localStorage.setItem(monthKey, 'true');
+          supabase.functions.invoke('send-feedback-email', {
+            body: { type: 'all' },
+          }).then(res => {
+            if (res.error) console.error('Auto feedback email error:', res.error);
+            else console.log('Monthly feedback email sent automatically');
+          });
+        }
+      }
+
       setLoading(false);
     };
 

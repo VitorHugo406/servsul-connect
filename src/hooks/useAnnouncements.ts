@@ -129,7 +129,7 @@ export function useAnnouncements() {
   ) => {
     if (!profile) return { error: new Error('Not authenticated') };
 
-    const { error } = await supabase.from('announcements').insert({
+    const { data, error } = await supabase.from('announcements').insert({
       title,
       content,
       author_id: profile.id,
@@ -137,7 +137,18 @@ export function useAnnouncements() {
       is_pinned: isPinned,
       start_at: startAt || new Date().toISOString(),
       expire_at: expireAt || null,
-    });
+    }).select().single();
+
+    // Send email notification in background
+    if (!error && data) {
+      const authorName = profile.display_name || profile.name || 'Administrador';
+      supabase.functions.invoke('send-announcement-email', {
+        body: { title, content, priority, authorName },
+      }).then(res => {
+        if (res.error) console.error('Error sending announcement email:', res.error);
+        else console.log('Announcement email sent successfully');
+      });
+    }
 
     return { error };
   };
