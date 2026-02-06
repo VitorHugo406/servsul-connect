@@ -52,11 +52,23 @@ export function ChatSection() {
     }
   }, [messages]);
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[]) => {
     // Play sound immediately for instant feedback
     playMessageSent();
     
-    const { error } = await sendMessage(content);
+    // Build message content with attachments
+    let fullContent = content;
+    if (attachments && attachments.length > 0) {
+      const attachmentLinks = attachments.map(a => {
+        if (a.fileType.startsWith('image/')) {
+          return `\n📷 [${a.fileName}](${a.url})`;
+        }
+        return `\n📎 [${a.fileName}](${a.url})`;
+      }).join('');
+      fullContent = content + attachmentLinks;
+    }
+    
+    const { error } = await sendMessage(fullContent);
     if (error) {
       console.error('Error sending message:', error);
     }

@@ -49,9 +49,43 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
     return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleSendMessage = async (content: string) => {
+  const renderMessageContent = (content: string, isOwn: boolean) => {
+    const lines = content.split('\n');
+    const textLines: string[] = [];
+    const attachments: { type: 'image' | 'file'; name: string; url: string }[] = [];
+    for (const line of lines) {
+      const imageMatch = line.match(/^📷 \[(.+?)\]\((.+?)\)$/);
+      const fileMatch = line.match(/^📎 \[(.+?)\]\((.+?)\)$/);
+      if (imageMatch) attachments.push({ type: 'image', name: imageMatch[1], url: imageMatch[2] });
+      else if (fileMatch) attachments.push({ type: 'file', name: fileMatch[1], url: fileMatch[2] });
+      else textLines.push(line);
+    }
+    const textContent = textLines.join('\n').trim();
+    return (
+      <div className="space-y-2">
+        {textContent && <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{textContent}</p>}
+        {attachments.map((att, i) => att.type === 'image' ? (
+          <a key={i} href={att.url} target="_blank" rel="noopener noreferrer"><img src={att.url} alt={att.name} className="max-w-full max-h-48 rounded-lg object-cover" /></a>
+        ) : (
+          <a key={i} href={att.url} target="_blank" rel="noopener noreferrer" className={cn("flex items-center gap-2 rounded-lg p-2 text-xs", isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80")}>
+            <span>📎</span><span className="truncate">{att.name}</span>
+          </a>
+        ))}
+      </div>
+    );
+  };
+
+  const handleSendMessage = async (content: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[]) => {
     playMessageSent();
-    const { error } = await sendMessage(content);
+    let fullContent = content;
+    if (attachments && attachments.length > 0) {
+      const attachmentLinks = attachments.map(a => {
+        if (a.fileType.startsWith('image/')) return `\n📷 [${a.fileName}](${a.url})`;
+        return `\n📎 [${a.fileName}](${a.url})`;
+      }).join('');
+      fullContent = content + attachmentLinks;
+    }
+    const { error } = await sendMessage(fullContent);
     if (error) {
       console.error('Error sending message:', error);
     }
@@ -141,11 +175,8 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
               const senderName = sender?.display_name || sender?.name || 'Usuário';
 
               return (
-                <motion.div
+                <div
                   key={message.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.02, duration: 0.2 }}
                   className={cn('flex gap-3', isOwn && 'flex-row-reverse')}
                 >
                   <Avatar className="h-8 w-8 flex-shrink-0">
@@ -173,21 +204,19 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
                           : 'bg-card text-card-foreground rounded-tl-md border border-border'
                       )}
                     >
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                        {message.content}
-                        {isOwn && (
-                          <span className="ml-1 inline-flex items-center">
-                            {message.id.startsWith('temp-') ? (
-                              <Check className="h-3.5 w-3.5 text-white/60" />
-                            ) : (
-                              <CheckCheck className="h-3.5 w-3.5 text-white/80" />
-                            )}
-                          </span>
-                        )}
-                      </p>
+                      {renderMessageContent(message.content, isOwn)}
+                      {isOwn && (
+                        <span className="ml-1 inline-flex items-center">
+                          {message.id.startsWith('temp-') ? (
+                            <Check className="h-3.5 w-3.5 text-white/60" />
+                          ) : (
+                            <CheckCheck className="h-3.5 w-3.5 text-white/80" />
+                          )}
+                        </span>
+                      )}
                     </div>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
             <div ref={scrollRef} />
