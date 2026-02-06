@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   MessageSquare, 
@@ -5,6 +6,8 @@ import {
   ListTodo, 
   Cake, 
   ArrowRight,
+  Users,
+  AlertTriangle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessages, useBirthdays, useSectors } from '@/hooks/useData';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
+import { supabase } from '@/integrations/supabase/client';
 
 interface HomeSectionProps {
   onNavigate: (section: string) => void;
@@ -31,6 +35,28 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
   const { messages } = useMessages(sector?.id || null);
   const { announcements } = useAnnouncements();
   const { birthdayPeople } = useBirthdays();
+  const [overdueTasks, setOverdueTasks] = useState(0);
+  const [totalTasks, setTotalTasks] = useState(0);
+
+  useEffect(() => {
+    if (!profile) return;
+    const fetchTaskStats = async () => {
+      const { count: overdueCount } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('assigned_to', profile.id)
+        .is('completed_at', null)
+        .lt('due_date', new Date().toISOString());
+      const { count: total } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('assigned_to', profile.id)
+        .is('completed_at', null);
+      setOverdueTasks(overdueCount || 0);
+      setTotalTasks(total || 0);
+    };
+    fetchTaskStats();
+  }, [profile]);
 
   const getInitials = (name: string) => {
     return name
@@ -45,6 +71,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
   const latestAnnouncement = announcements[0];
   const displayName = profile?.display_name || profile?.name || 'Usuário';
   const autonomyLevel = profile?.autonomy_level || 'colaborador';
+  const isSupervisorOrAbove = ['admin', 'gerente', 'supervisor', 'gestor', 'diretoria'].includes(autonomyLevel);
 
   return (
     <motion.div
@@ -94,6 +121,16 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
               <p className="text-sm text-white/70">Avisos</p>
               <p className="font-display text-3xl font-bold">{announcements.length}</p>
             </div>
+            <div className="rounded-xl bg-white/10 px-6 py-4 backdrop-blur-sm">
+              <p className="text-sm text-white/70">Tarefas Pendentes</p>
+              <p className="font-display text-3xl font-bold">{totalTasks}</p>
+            </div>
+            {overdueTasks > 0 && (
+              <div className="rounded-xl bg-red-500/20 px-6 py-4 backdrop-blur-sm border border-red-400/30">
+                <p className="text-sm text-white/70">⚠️ Atrasadas</p>
+                <p className="font-display text-3xl font-bold text-red-200">{overdueTasks}</p>
+              </div>
+            )}
           </div>
         </div>
       </motion.div>
@@ -103,8 +140,9 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
         {[
           { id: 'chat', icon: MessageSquare, label: 'Chat', color: 'bg-primary', count: messages.length },
           { id: 'announcements', icon: Bell, label: 'Avisos', color: 'bg-secondary', count: announcements.length },
+          { id: 'tasks', icon: ListTodo, label: 'Tarefas', color: 'bg-purple-500', count: totalTasks > 0 ? totalTasks : null },
           { id: 'birthdays', icon: Cake, label: 'Aniversariantes', color: 'bg-success', count: todayBirthdays.length },
-          { id: 'tasks', icon: ListTodo, label: 'Tarefas', color: 'bg-purple-500', count: null },
+          ...(isSupervisorOrAbove ? [{ id: 'people', icon: Users, label: 'Gestão de Pessoas', color: 'bg-indigo-500', count: null }] : []),
         ].map((action, index) => (
           <motion.div
             key={action.id}

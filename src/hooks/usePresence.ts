@@ -131,7 +131,7 @@ export function useUserPresence(userId?: string) {
 }
 
 export function useAllUsersPresence() {
-  const [presenceMap, setPresenceMap] = useState<Record<string, boolean>>({});
+  const [presenceMap, setPresenceMap] = useState<Record<string, { isOnline: boolean; lastHeartbeat: Date | null }>>({});
 
   const fetchAllPresence = useCallback(async () => {
     const { data, error } = await supabase
@@ -139,11 +139,14 @@ export function useAllUsersPresence() {
       .select('user_id, is_online, last_heartbeat');
 
     if (data) {
-      const map: Record<string, boolean> = {};
+      const map: Record<string, { isOnline: boolean; lastHeartbeat: Date | null }> = {};
       data.forEach((p) => {
         const lastHeartbeat = new Date(p.last_heartbeat);
         const isRecentlyActive = Date.now() - lastHeartbeat.getTime() < OFFLINE_THRESHOLD;
-        map[p.user_id] = p.is_online && isRecentlyActive;
+        map[p.user_id] = {
+          isOnline: p.is_online && isRecentlyActive,
+          lastHeartbeat,
+        };
       });
       setPresenceMap(map);
     }
@@ -178,8 +181,12 @@ export function useAllUsersPresence() {
   }, [fetchAllPresence]);
 
   const isUserOnline = useCallback((userId: string) => {
-    return presenceMap[userId] ?? false;
+    return presenceMap[userId]?.isOnline ?? false;
   }, [presenceMap]);
 
-  return { presenceMap, isUserOnline, refetch: fetchAllPresence };
+  const getUserPresence = useCallback((userId: string) => {
+    return presenceMap[userId] ?? { isOnline: false, lastHeartbeat: null };
+  }, [presenceMap]);
+
+  return { presenceMap, isUserOnline, getUserPresence, refetch: fetchAllPresence };
 }

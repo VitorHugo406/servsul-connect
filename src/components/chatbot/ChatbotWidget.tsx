@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, X, Bell, HelpCircle, Sparkles, ChevronRight, Check, Building2, MessageSquare, Megaphone } from 'lucide-react';
+import { Bot, X, Bell, HelpCircle, Sparkles, ChevronRight, Check, Building2, MessageSquare, Megaphone, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -27,27 +27,51 @@ type TabType = 'notifications' | 'help' | 'sectors';
 const helpItems = [
   {
     title: 'Bem-vindo ao ServChat!',
-    content: 'O ServChat é a plataforma de comunicação interna do Grupo Servsul. Aqui você pode trocar mensagens com sua equipe, receber avisos importantes e muito mais.',
+    content: 'O ServChat é a plataforma de comunicação interna do Grupo Servsul. Aqui você pode trocar mensagens com sua equipe, receber avisos importantes, gerenciar tarefas e muito mais.',
   },
   {
     title: 'Como usar o Chat',
-    content: 'Na aba "Chat", você pode enviar mensagens para seu setor. Selecione o setor desejado nas abas superiores. O setor "Geral" está disponível para todos os colaboradores.',
+    content: 'Na aba "Chat", você pode enviar mensagens para seu setor, mensagens diretas (individuais) e grupos privados. O setor "Geral" está disponível para todos os colaboradores.',
   },
   {
     title: 'Status das Mensagens',
-    content: 'Quando você envia uma mensagem, aparece um ✓ indicando que foi enviada. Após ser salva no banco de dados e visível para outros usuários, o status muda para ✓✓ (assim como no WhatsApp).',
+    content: 'Quando você envia uma mensagem, aparece um ✓ indicando que foi enviada. Após ser salva e visível para outros usuários, o status muda para ✓✓ (assim como no WhatsApp).',
   },
   {
     title: 'Mensagens Diretas',
-    content: 'Clique na aba "Mensagens" para conversar individualmente com outros colaboradores. Você pode ver quem está online e iniciar conversas privadas.',
+    content: 'Clique na aba "Individual" para conversar individualmente com outros colaboradores. Você pode ver quem está online (verde), inativo (vermelho) ou offline (cinza).',
   },
   {
-    title: 'Avisos Gerais',
-    content: 'A aba "Avisos" mostra os comunicados oficiais da empresa. Fique atento aos avisos marcados como "Urgente" ou "Importante".',
+    title: 'Grupos Privados',
+    content: 'Crie ou participe de grupos privados para comunicação entre equipes específicas. Admins do grupo podem gerenciar membros e permissões.',
+  },
+  {
+    title: 'Menção de Cards no Chat',
+    content: 'Digite "#" em qualquer chat para mencionar um card de tarefa. Selecione o mural e o card para compartilhar um resumo com título, etiquetas, prioridade e prazo.',
+  },
+  {
+    title: 'Gestão de Tarefas',
+    content: 'Acesse a aba "Tarefas" para criar murais no estilo Kanban. Arraste cards entre colunas, configure automações (responsável, capa, conclusão) e acompanhe prazos.',
+  },
+  {
+    title: 'Automação de Conclusão',
+    content: 'Marque uma coluna como "Conclusão" para registrar automaticamente quando uma tarefa foi finalizada, se houve atraso e quantos dias de atraso.',
+  },
+  {
+    title: 'Avisos e Comunicados Importantes',
+    content: 'A aba "Avisos" mostra comunicados oficiais. Comunicados Importantes aparecem como modal no primeiro acesso e ficam em uma aba exclusiva.',
   },
   {
     title: 'Mural de Aniversariantes',
     content: 'Consulte a aba "Aniversariantes" para ver os aniversários do mês e parabenizar seus colegas!',
+  },
+  {
+    title: 'Gestão de Pessoas (Supervisores)',
+    content: 'Supervisores, gerentes e administradores podem acessar "Gestão de Pessoas" para gerenciar colaboradores e visualizar relatórios de desempenho com gráficos.',
+  },
+  {
+    title: 'Indicadores de Presença',
+    content: '🟢 Verde = Online | 🔴 Vermelho = Inativo (sem atividade recente) | ⚫ Cinza = Offline. Os indicadores são atualizados em tempo real.',
   },
 ];
 
@@ -60,12 +84,13 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
   const [activeTab, setActiveTab] = useState<TabType>('notifications');
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCounts, setUnreadCounts] = useState<UnreadCounts>({ announcements: 0, messages: 0 });
+  const [overdueTasks, setOverdueTasks] = useState(0);
   const [loading, setLoading] = useState(false);
   const { user, profile, sector, additionalSectors, isAdmin } = useAuth();
   const { playChatbotClick, playChatbotClose } = useSound();
 
   const unreadNotifications = notifications.filter(n => !n.is_read).length;
-  const totalUnread = unreadNotifications + unreadCounts.announcements + unreadCounts.messages;
+  const totalUnread = unreadNotifications + unreadCounts.announcements + unreadCounts.messages + (overdueTasks > 0 ? 1 : 0);
 
   const handleOpen = () => {
     playChatbotClick();
@@ -111,6 +136,16 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
         .select('*', { count: 'exact', head: true })
         .eq('receiver_id', profile.id)
         .eq('is_read', false);
+
+      // Count overdue incomplete tasks assigned to the user
+      const { count: overdueCount } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('assigned_to', profile.id)
+        .is('completed_at', null)
+        .lt('due_date', new Date().toISOString());
+
+      setOverdueTasks(overdueCount || 0);
 
       setUnreadCounts({
         announcements: announcementCount || 0,
@@ -332,7 +367,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                       <div className="flex items-center justify-center py-8">
                         <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                       </div>
-                    ) : notifications.length === 0 && unreadCounts.announcements === 0 && unreadCounts.messages === 0 ? (
+                    ) : notifications.length === 0 && unreadCounts.announcements === 0 && unreadCounts.messages === 0 && overdueTasks === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
                         <Bell className="mb-2 h-10 w-10 text-muted-foreground" />
                         <p className="font-medium text-foreground">Nenhuma novidade</p>
@@ -376,6 +411,25 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                             </div>
                             <p className="mt-1 text-sm text-muted-foreground">
                               Acesse o chat para responder
+                            </p>
+                          </motion.div>
+                        )}
+
+                        {overdueTasks > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.15 }}
+                            className="rounded-lg border border-destructive/30 bg-destructive/5 p-3"
+                          >
+                            <div className="flex items-center gap-2">
+                              <AlertTriangle className="h-4 w-4 text-destructive" />
+                              <span className="font-medium text-foreground">
+                                {overdueTasks} tarefa(s) atrasada(s)
+                              </span>
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Você possui tarefas com prazo vencido. Acesse "Tarefas" para verificar.
                             </p>
                           </motion.div>
                         )}
