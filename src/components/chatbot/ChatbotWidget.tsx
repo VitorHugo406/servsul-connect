@@ -85,12 +85,13 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCounts, setUnreadCounts] = useState<UnreadCounts>({ announcements: 0, messages: 0 });
   const [overdueTasks, setOverdueTasks] = useState(0);
+  const [overdueTasksDismissed, setOverdueTasksDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user, profile, sector, additionalSectors, isAdmin } = useAuth();
   const { playChatbotClick, playChatbotClose } = useSound();
 
   const unreadNotifications = notifications.filter(n => !n.is_read).length;
-  const totalUnread = unreadNotifications + unreadCounts.announcements + unreadCounts.messages + (overdueTasks > 0 ? 1 : 0);
+  const totalUnread = unreadNotifications + unreadCounts.announcements + unreadCounts.messages + (!overdueTasksDismissed && overdueTasks > 0 ? 1 : 0);
 
   const handleOpen = () => {
     playChatbotClick();
@@ -430,18 +431,28 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                           </motion.div>
                         )}
 
-                        {overdueTasks > 0 && (
+                        {overdueTasks > 0 && !overdueTasksDismissed && (
                           <motion.div
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.15 }}
                             className="rounded-lg border border-destructive/30 bg-destructive/5 p-3"
                           >
-                            <div className="flex items-center gap-2">
-                              <AlertTriangle className="h-4 w-4 text-destructive" />
-                              <span className="font-medium text-foreground">
-                                {overdueTasks} tarefa(s) atrasada(s)
-                              </span>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4 text-destructive" />
+                                <span className="font-medium text-foreground">
+                                  {overdueTasks} tarefa(s) atrasada(s)
+                                </span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                onClick={() => setOverdueTasksDismissed(true)}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
                             </div>
                             <p className="mt-1 text-sm text-muted-foreground">
                               Você possui tarefas com prazo vencido. Acesse "Tarefas" para verificar.
