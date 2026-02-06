@@ -54,6 +54,56 @@ export function ChatMessage({ message }: ChatMessageProps) {
   // Message status - if it has an ID, it's in the database (delivered)
   const messageStatus = message.status || (message.id ? 'delivered' : 'sending');
 
+  // Parse content for attachment links
+  const renderContent = (content: string, isOwn: boolean) => {
+    const lines = content.split('\n');
+    const textLines: string[] = [];
+    const attachments: { type: 'image' | 'file'; name: string; url: string }[] = [];
+
+    for (const line of lines) {
+      const imageMatch = line.match(/^📷 \[(.+?)\]\((.+?)\)$/);
+      const fileMatch = line.match(/^📎 \[(.+?)\]\((.+?)\)$/);
+      if (imageMatch) {
+        attachments.push({ type: 'image', name: imageMatch[1], url: imageMatch[2] });
+      } else if (fileMatch) {
+        attachments.push({ type: 'file', name: fileMatch[1], url: fileMatch[2] });
+      } else {
+        textLines.push(line);
+      }
+    }
+
+    const textContent = textLines.join('\n').trim();
+
+    return (
+      <div className="space-y-2">
+        {textContent && (
+          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{textContent}</p>
+        )}
+        {attachments.map((att, i) => (
+          att.type === 'image' ? (
+            <a key={i} href={att.url} target="_blank" rel="noopener noreferrer">
+              <img src={att.url} alt={att.name} className="max-w-full max-h-48 rounded-lg object-cover" />
+            </a>
+          ) : (
+            <a
+              key={i}
+              href={att.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "flex items-center gap-2 rounded-lg p-2 text-xs",
+                isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80"
+              )}
+            >
+              <span>📎</span>
+              <span className="truncate">{att.name}</span>
+            </a>
+          )
+        ))}
+      </div>
+    );
+  };
+
   const renderStatus = () => {
     if (!isOwn) return null;
     
@@ -102,10 +152,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
               : 'bg-card text-card-foreground rounded-tl-md border border-border'
           )}
         >
-          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-            {message.content}
-            {renderStatus()}
-          </p>
+          {renderContent(message.content, isOwn)}
+          {renderStatus()}
         </div>
       </div>
     </div>

@@ -281,18 +281,32 @@
        return;
      }
  
-     try {
-       const { data, error } = await supabase
-         .from('private_group_messages')
-         .select(`
-           *,
-           sender:profiles(id, name, display_name, avatar_url, sector_id)
-         `)
-         .eq('group_id', groupId)
-         .order('created_at', { ascending: true });
- 
-       if (error) throw error;
-       setMessages((data || []) as GroupMessage[]);
+      try {
+        const { data, error } = await supabase
+          .from('private_group_messages')
+          .select(`
+            *,
+            sender:profiles(id, name, display_name, avatar_url, sector_id)
+          `)
+          .eq('group_id', groupId)
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+        // Preserve temp messages and merge
+        setMessages(prev => {
+          const tempMessages = prev.filter(m => m.id.startsWith('temp-'));
+          const realMessages = (data || []) as GroupMessage[];
+          const filteredTemp = tempMessages.filter(temp =>
+            !realMessages.some(real =>
+              real.content === temp.content &&
+              real.sender_id === temp.sender_id &&
+              Math.abs(new Date(real.created_at).getTime() - new Date(temp.created_at).getTime()) < 5000
+            )
+          );
+          return [...realMessages, ...filteredTemp].sort((a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+        });
      } catch (error) {
        console.error('Error fetching messages:', error);
      } finally {
@@ -315,20 +329,42 @@
            table: 'private_group_messages',
            filter: `group_id=eq.${groupId}`,
          },
-         async (payload) => {
-           const newMsg = payload.new as GroupMessage;
-           // Fetch sender info
-           const { data: sender } = await supabase
-             .from('profiles')
-             .select('id, name, display_name, avatar_url, sector_id')
-             .eq('id', newMsg.sender_id)
-             .single();
- 
-           setMessages(prev => {
-             const exists = prev.some(m => m.id === newMsg.id);
-             if (exists) return prev;
-             return [...prev, { ...newMsg, sender: sender || undefined }];
-           });
+          async (payload) => {
+            const newMsg = payload.new as GroupMessage;
+            
+            setMessages(prev => {
+              // Check if we already have this message (from optimistic update)
+              const existingIndex = prev.findIndex(m =>
+                m.id === newMsg.id ||
+                (m.id.startsWith('temp-') &&
+                 m.content === newMsg.content &&
+                 m.sender_id === newMsg.sender_id)
+              );
+              
+              if (existingIndex >= 0) {
+                // Replace temp message with real one, keep sender info
+                const updated = [...prev];
+                updated[existingIndex] = {
+                  ...newMsg,
+                  sender: prev[existingIndex].sender,
+                };
+                return updated;
+              }
+              
+              // New message from another user - fetch sender info
+              supabase
+                .from('profiles')
+                .select('id, name, display_name, avatar_url, sector_id')
+                .eq('id', newMsg.sender_id)
+                .single()
+                .then(({ data: sender }) => {
+                  if (sender) {
+                    setMessages(p => p.map(m => m.id === newMsg.id ? { ...newMsg, sender } : m));
+                  }
+                });
+              
+              return [...prev, newMsg];
+            });
          }
        )
        .subscribe();

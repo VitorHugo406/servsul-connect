@@ -191,7 +191,7 @@ export function SectorUsersList({ sectorId, sectorName, sectorColor, isOpen = tr
       }
       return true;
     });
-    const inactiveUsers = users.filter(u => {
+    const awayUsers = users.filter(u => {
       if (!u.is_online) return false;
       if (u.last_heartbeat) {
         return Date.now() - u.last_heartbeat.getTime() >= INACTIVE_THRESHOLD;
@@ -266,14 +266,14 @@ export function SectorUsersList({ sectorId, sectorName, sectorColor, isOpen = tr
                 </div>
               )}
 
-              {inactiveUsers.length > 0 && (
+              {awayUsers.length > 0 && (
                 <div>
                   <h4 className="text-xs font-medium text-muted-foreground mb-2 px-2 flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-red-500" />
-                    Inativo ({inactiveUsers.length})
+                    Ausente ({awayUsers.length})
                   </h4>
                   <div className="space-y-1">
-                    {inactiveUsers.map(user => (
+                    {awayUsers.map(user => (
                       <button key={user.id} onClick={() => handleUserClick(user)} className="flex w-full items-center gap-2 p-2 rounded-lg hover:bg-muted transition-colors text-left opacity-75">
                         <div className="relative">
                           <Avatar className="h-8 w-8">
@@ -284,7 +284,7 @@ export function SectorUsersList({ sectorId, sectorName, sectorColor, isOpen = tr
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-foreground truncate text-sm">{user.display_name || user.name}</p>
-                          <p className="text-xs text-red-500">Inativo</p>
+                          <p className="text-xs text-orange-500">Ausente</p>
                         </div>
                       </button>
                     ))}
@@ -414,15 +414,15 @@ export function SectorUsersList({ sectorId, sectorName, sectorColor, isOpen = tr
                    </div>
                  )}
  
-                  {/* Inactive Users */}
-                  {inactiveUsers.length > 0 && (
+                  {/* Away Users */}
+                  {awayUsers.length > 0 && (
                     <div>
                       <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-2">
                         <span className="h-2 w-2 rounded-full bg-red-500" />
-                        Inativo ({inactiveUsers.length})
+                        Ausente ({awayUsers.length})
                       </h4>
                       <div className="space-y-1">
-                        {inactiveUsers.map(user => (
+                        {awayUsers.map(user => (
                           <motion.button key={user.id} onClick={() => handleUserClick(user)} className="flex w-full items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors text-left opacity-75" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                             <div className="relative">
                               <Avatar className="h-10 w-10"><AvatarImage src={user.avatar_url || ''} /><AvatarFallback className="text-white text-sm" style={{ backgroundColor: effectiveSectorColor }}>{getInitials(user.display_name || user.name)}</AvatarFallback></Avatar>
@@ -430,7 +430,7 @@ export function SectorUsersList({ sectorId, sectorName, sectorColor, isOpen = tr
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-foreground truncate">{user.display_name || user.name}</p>
-                              <p className="text-xs text-red-500">Inativo</p>
+                              <p className="text-xs text-orange-500">Ausente</p>
                             </div>
                           </motion.button>
                         ))}
