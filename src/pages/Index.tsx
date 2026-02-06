@@ -13,7 +13,7 @@ import { HomeSection } from '@/components/sections/HomeSection';
 import { ChatSection } from '@/components/sections/ChatSection';
 import { AnnouncementsSection } from '@/components/sections/AnnouncementsSection';
 import { BirthdaysSection } from '@/components/sections/BirthdaysSection';
-import { ChartsSection } from '@/components/sections/ChartsSection';
+
 import { ManagementSection } from '@/components/sections/ManagementSection';
 import { FacialRegistrationSection } from '@/components/sections/FacialRegistrationSection';
 import { DataManagementSection } from '@/components/sections/DataManagementSection';
@@ -33,7 +33,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   chat: { title: 'Chat por Setores', subtitle: 'Comunicação entre equipes' },
   announcements: { title: 'Avisos Gerais', subtitle: 'Comunicados oficiais' },
   birthdays: { title: 'Aniversariantes', subtitle: 'Mural de celebrações' },
-  charts: { title: 'Gráficos', subtitle: 'Visualização de dados' },
+  
   management: { title: 'Gerenciamento', subtitle: 'Administração do sistema' },
   facial: { title: 'Cadastro Facial', subtitle: 'Reconhecimento biométrico' },
   'data-management': { title: 'Exclusão de Dados', subtitle: 'Gerenciamento de dados do sistema' },
@@ -88,8 +88,6 @@ const Index = () => {
         return <AnnouncementsSection />;
       case 'birthdays':
         return <BirthdaysSection />;
-      case 'charts':
-        return <ChartsSection />;
       case 'management':
         return <ManagementSection />;
       case 'facial':

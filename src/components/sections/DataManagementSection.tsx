@@ -1,17 +1,18 @@
  import { useState } from 'react';
  import { motion } from 'framer-motion';
- import { 
-   Trash2, 
-   AlertTriangle, 
-   MessageSquare, 
-   Megaphone, 
-   Users, 
-   Database,
-   Shield,
-   Loader2,
-   ScanFace,
-   UserX
- } from 'lucide-react';
+  import { 
+    Trash2, 
+    AlertTriangle, 
+    MessageSquare, 
+    Megaphone, 
+    Users, 
+    Database,
+    Shield,
+    Loader2,
+    ScanFace,
+    UserX,
+    ListTodo
+  } from 'lucide-react';
  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
  import { Button } from '@/components/ui/button';
  import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -109,7 +110,16 @@
        confirmText: 'EXCLUIR FACIAIS',
        dangerLevel: 'high',
        type: 'facial',
-     },
+      },
+      {
+        id: 'tasks',
+        title: 'Excluir Dados de Tarefas',
+        description: 'Remove todos os murais, tarefas, colunas, etiquetas, subtarefas e comentários de tarefas.',
+        icon: ListTodo,
+        confirmText: 'EXCLUIR TAREFAS',
+        dangerLevel: 'high',
+        type: 'tasks',
+      },
      {
        id: 'users',
        title: 'Inativar Todos os Usuários',

@@ -215,6 +215,20 @@
           break;
         }
  
+       case 'tasks': {
+         console.log('Deleting all task data...');
+         await adminClient.from('task_comments').delete().gte('created_at', '1970-01-01');
+         await adminClient.from('task_subtasks').delete().gte('created_at', '1970-01-01');
+         await adminClient.from('task_label_assignments').delete().gte('created_at', '1970-01-01');
+         await adminClient.from('task_labels').delete().gte('created_at', '1970-01-01');
+         await adminClient.from('tasks').delete().gte('created_at', '1970-01-01');
+         await adminClient.from('task_board_columns').delete().gte('created_at', '1970-01-01');
+         await adminClient.from('task_board_members').delete().gte('id', '00000000-0000-0000-0000-000000000000');
+         await adminClient.from('task_boards').delete().gte('created_at', '1970-01-01');
+         result.message = 'Todos os dados de tarefas foram excluídos';
+         break;
+       }
+
        case 'all': {
          console.log('Deleting all data (except main admin)...');
          // Messages
@@ -226,6 +240,15 @@
          await adminClient.from('announcement_comments').delete().gte('created_at', '1970-01-01');
          await adminClient.from('announcement_reads').delete().gte('id', '00000000-0000-0000-0000-000000000000');
          await adminClient.from('announcements').delete().gte('created_at', '1970-01-01');
+         // Tasks
+         await adminClient.from('task_comments').delete().gte('created_at', '1970-01-01');
+         await adminClient.from('task_subtasks').delete().gte('created_at', '1970-01-01');
+         await adminClient.from('task_label_assignments').delete().gte('created_at', '1970-01-01');
+         await adminClient.from('task_labels').delete().gte('created_at', '1970-01-01');
+         await adminClient.from('tasks').delete().gte('created_at', '1970-01-01');
+         await adminClient.from('task_board_columns').delete().gte('created_at', '1970-01-01');
+         await adminClient.from('task_board_members').delete().gte('id', '00000000-0000-0000-0000-000000000000');
+         await adminClient.from('task_boards').delete().gte('created_at', '1970-01-01');
          // Notifications
          await adminClient.from('user_notifications').delete().gte('created_at', '1970-01-01');
          // Private groups

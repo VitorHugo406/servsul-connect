@@ -233,6 +233,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const [customBgUrl, setCustomBgUrl] = useState('');
   const [autoAssign, setAutoAssign] = useState('none');
   const [autoCover, setAutoCover] = useState('none');
+  const [autoConclusion, setAutoConclusion] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState('#6366f1');
 
@@ -407,9 +408,10 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
 
   const handleSaveAutomation = async () => {
     if (!showAutomation) return;
-    const updates: Record<string, string | null> = {
+    const updates: Record<string, string | boolean | null> = {
       auto_assign_to: autoAssign !== 'none' ? autoAssign : null,
       auto_cover: autoCover !== 'none' ? autoCover : null,
+      is_conclusion: autoConclusion,
     };
     const { error } = await updateColumn(showAutomation.id, updates as any);
     if (error) { toast.error('Erro ao salvar automação'); return; }
@@ -421,6 +423,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const openAutomation = (col: TaskBoardColumn) => {
     setAutoAssign(col.auto_assign_to || 'none');
     setAutoCover(col.auto_cover || 'none');
+    setAutoConclusion(col.is_conclusion || false);
     setShowAutomation(col);
   };
 
@@ -478,12 +481,33 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
       if (targetCol) {
         const autoUpdates: Record<string, any> = {};
         if (targetCol.auto_assign_to) autoUpdates.assigned_to = targetCol.auto_assign_to;
-        if (targetCol.auto_cover) {
-          autoUpdates.cover_image = targetCol.auto_cover;
+        if (targetCol.auto_cover) autoUpdates.cover_image = targetCol.auto_cover;
+        
+        // Conclusion automation
+        if (targetCol.is_conclusion) {
+          autoUpdates.completed_at = new Date().toISOString();
+          if (draggedTask.due_date) {
+            const due = new Date(draggedTask.due_date);
+            const now = new Date();
+            due.setHours(0, 0, 0, 0);
+            now.setHours(0, 0, 0, 0);
+            const diffDays = Math.ceil((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+            autoUpdates.completed_late = diffDays > 0;
+            autoUpdates.delay_days = diffDays > 0 ? diffDays : 0;
+          } else {
+            autoUpdates.completed_late = false;
+            autoUpdates.delay_days = 0;
+          }
         }
+        
         if (Object.keys(autoUpdates).length > 0) {
           await updateTask(draggedTask.id, autoUpdates);
-          toast.info('Automações da coluna aplicadas');
+          if (targetCol.is_conclusion) {
+            const late = autoUpdates.completed_late;
+            toast.info(late ? `Tarefa concluída com ${autoUpdates.delay_days} dia(s) de atraso` : 'Tarefa concluída no prazo!');
+          } else {
+            toast.info('Automações da coluna aplicadas');
+          }
         }
       }
     }
@@ -573,6 +597,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                   <div className="flex items-center gap-2 p-3 border-b border-border">
                     <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: column.color }} />
                     <h3 className="font-semibold text-foreground text-sm flex-1 truncate">{column.title}</h3>
+                    {column.is_conclusion && (
+                      <Badge variant="outline" className="text-[9px] border-green-500 text-green-600">✓ Conclusão</Badge>
+                    )}
                     <Badge variant="secondary" className="text-xs">{colTasks.length}</Badge>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -665,23 +692,42 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowLabelPicker(task.id); }}>
                                     <Tag className="h-4 w-4 mr-2" /> Etiquetas
                                   </DropdownMenuItem>
-                                  {columns.filter(c => c.id !== column.id).map(c => (
-                                    <DropdownMenuItem key={c.id} onClick={async (e) => {
-                                      e.stopPropagation();
-                                      await moveTask(task.id, c.id, 0);
-                                      // Apply automations from target column
-                                      const autoUpdates: Record<string, any> = {};
-                                      if (c.auto_assign_to) autoUpdates.assigned_to = c.auto_assign_to;
-                                      if (c.auto_cover) autoUpdates.cover_image = c.auto_cover;
-                                      if (Object.keys(autoUpdates).length > 0) {
-                                        await updateTask(task.id, autoUpdates);
-                                        toast.info('Automações aplicadas');
-                                      }
-                                    }}>
-                                      <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: c.color }} />
-                                      Mover para {c.title}
-                                    </DropdownMenuItem>
-                                  ))}
+                                    {columns.filter(c => c.id !== column.id).map(c => (
+                                     <DropdownMenuItem key={c.id} onClick={async (e) => {
+                                       e.stopPropagation();
+                                       await moveTask(task.id, c.id, 0);
+                                       // Apply automations from target column
+                                       const autoUpdates: Record<string, any> = {};
+                                       if (c.auto_assign_to) autoUpdates.assigned_to = c.auto_assign_to;
+                                       if (c.auto_cover) autoUpdates.cover_image = c.auto_cover;
+                                       if (c.is_conclusion) {
+                                         autoUpdates.completed_at = new Date().toISOString();
+                                         if (task.due_date) {
+                                           const due = new Date(task.due_date);
+                                           const now = new Date();
+                                           due.setHours(0, 0, 0, 0);
+                                           now.setHours(0, 0, 0, 0);
+                                           const diffDays = Math.ceil((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+                                           autoUpdates.completed_late = diffDays > 0;
+                                           autoUpdates.delay_days = diffDays > 0 ? diffDays : 0;
+                                         } else {
+                                           autoUpdates.completed_late = false;
+                                           autoUpdates.delay_days = 0;
+                                         }
+                                       }
+                                       if (Object.keys(autoUpdates).length > 0) {
+                                         await updateTask(task.id, autoUpdates);
+                                         if (c.is_conclusion) {
+                                           toast.info(autoUpdates.completed_late ? `Concluída com ${autoUpdates.delay_days} dia(s) de atraso` : 'Concluída no prazo!');
+                                         } else {
+                                           toast.info('Automações aplicadas');
+                                         }
+                                       }
+                                     }}>
+                                       <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: c.color }} />
+                                       Mover para {c.title}
+                                     </DropdownMenuItem>
+                                   ))}
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} className="text-destructive">
                                     <Trash2 className="h-4 w-4 mr-2" /> Excluir
@@ -1108,6 +1154,26 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                 </div>
               )}
               <p className="text-xs text-muted-foreground">Novos cards nesta coluna terão esta capa automaticamente</p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Coluna de Conclusão</Label>
+                  <p className="text-xs text-muted-foreground">Marca tarefas como concluídas e registra atrasos</p>
+                </div>
+                <button
+                  onClick={() => setAutoConclusion(!autoConclusion)}
+                  className={cn(
+                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                    autoConclusion ? 'bg-primary' : 'bg-muted'
+                  )}
+                >
+                  <span className={cn(
+                    'inline-block h-4 w-4 rounded-full bg-white transition-transform',
+                    autoConclusion ? 'translate-x-6' : 'translate-x-1'
+                  )} />
+                </button>
+              </div>
             </div>
           </div>
           <DialogFooter>
