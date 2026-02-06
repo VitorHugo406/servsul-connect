@@ -8,13 +8,12 @@ import {
   ChevronRight,
   Home,
   Cake,
-  BarChart3,
   Settings,
   LogOut,
   Trash2,
-   Building2,
-   Sparkles,
-   ListTodo
+  Building2,
+  Sparkles,
+  ListTodo
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -34,7 +33,7 @@ const menuItems = [
   { id: 'birthdays', icon: Cake, label: 'Aniversariantes' },
    { id: 'tasks', icon: ListTodo, label: 'Tarefas' },
   { id: 'people-management', icon: UsersRound, label: 'Gestão de Pessoas', supervisorOnly: true },
-  { id: 'charts', icon: BarChart3, label: 'Gráficos', adminOnly: true },
+  
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
   { id: 'sectors', icon: Building2, label: 'Gestão de Setores', adminOnly: true },
    { id: 'important-announcements', icon: Sparkles, label: 'Comunicados Importantes', adminOnly: true },

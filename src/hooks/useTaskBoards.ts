@@ -36,6 +36,7 @@ export interface TaskBoardColumn {
   created_at: string;
   auto_assign_to: string | null;
   auto_cover: string | null;
+  is_conclusion: boolean;
 }
 
 export function useTaskBoards() {

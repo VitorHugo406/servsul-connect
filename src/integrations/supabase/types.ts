@@ -631,6 +631,7 @@ export type Database = {
           color: string
           created_at: string
           id: string
+          is_conclusion: boolean | null
           position: number
           title: string
         }
@@ -641,6 +642,7 @@ export type Database = {
           color?: string
           created_at?: string
           id?: string
+          is_conclusion?: boolean | null
           position?: number
           title: string
         }
@@ -651,6 +653,7 @@ export type Database = {
           color?: string
           created_at?: string
           id?: string
+          is_conclusion?: boolean | null
           position?: number
           title?: string
         }
@@ -882,9 +885,12 @@ export type Database = {
         Row: {
           assigned_to: string | null
           board_id: string | null
+          completed_at: string | null
+          completed_late: boolean | null
           cover_image: string | null
           created_at: string
           created_by: string
+          delay_days: number | null
           description: string | null
           due_date: string | null
           id: string
@@ -899,9 +905,12 @@ export type Database = {
         Insert: {
           assigned_to?: string | null
           board_id?: string | null
+          completed_at?: string | null
+          completed_late?: boolean | null
           cover_image?: string | null
           created_at?: string
           created_by: string
+          delay_days?: number | null
           description?: string | null
           due_date?: string | null
           id?: string
@@ -916,9 +925,12 @@ export type Database = {
         Update: {
           assigned_to?: string | null
           board_id?: string | null
+          completed_at?: string | null
+          completed_late?: boolean | null
           cover_image?: string | null
           created_at?: string
           created_by?: string
+          delay_days?: number | null
           description?: string | null
           due_date?: string | null
           id?: string

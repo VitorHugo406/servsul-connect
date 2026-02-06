@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { 
   MessageSquare, 
   Bell, 
-  BarChart3, 
+  ListTodo, 
   Cake, 
   ArrowRight,
 } from 'lucide-react';
@@ -104,7 +104,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
           { id: 'chat', icon: MessageSquare, label: 'Chat', color: 'bg-primary', count: messages.length },
           { id: 'announcements', icon: Bell, label: 'Avisos', color: 'bg-secondary', count: announcements.length },
           { id: 'birthdays', icon: Cake, label: 'Aniversariantes', color: 'bg-success', count: todayBirthdays.length },
-          { id: 'charts', icon: BarChart3, label: 'Gráficos', color: 'bg-purple-500', count: null },
+          { id: 'tasks', icon: ListTodo, label: 'Tarefas', color: 'bg-purple-500', count: null },
         ].map((action, index) => (
           <motion.div
             key={action.id}
