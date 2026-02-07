@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { UsersRound, Mail } from 'lucide-react';
+import logoServsul from '@/assets/logo-servsul.png';
 import { 
   MessageSquare, 
   Bell, 
@@ -101,9 +102,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
           animate={{ opacity: isCollapsed ? 0 : 1, width: isCollapsed ? 0 : 'auto' }}
           className="flex items-center gap-3 overflow-hidden"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-secondary shadow-glow">
-            <MessageSquare className="h-5 w-5 text-secondary-foreground" />
-          </div>
+          <img src={logoServsul} alt="Servsul" className="h-10 w-10 object-contain rounded-xl" />
           <div>
             <h1 className="font-display text-lg font-bold text-sidebar-foreground">ServChat</h1>
             <p className="text-xs text-sidebar-foreground/60">Grupo Servsul</p>

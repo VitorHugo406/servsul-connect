@@ -8,7 +8,6 @@ const corsHeaders = {
 
 const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
 
-// Helper to delete all rows from a table with proper filter
 async function deleteAll(client: any, table: string, filter?: { column: string; op: string; value: any }) {
   let query = client.from(table).delete();
   if (filter) {
@@ -18,7 +17,6 @@ async function deleteAll(client: any, table: string, filter?: { column: string; 
       query = query.gte(filter.column, filter.value);
     }
   } else {
-    // Use a filter that matches all rows
     query = query.gte('id', '00000000-0000-0000-0000-000000000000');
   }
   const { error } = await query;
@@ -28,9 +26,26 @@ async function deleteAll(client: any, table: string, filter?: { column: string; 
   return error;
 }
 
+// Nullify FK references to profiles in tables we want to keep
+async function nullifyProfileReferences(client: any, adminProfileId: string) {
+  // Nullify auto_assign_to in task_board_columns (FK to profiles)
+  const { error: colErr } = await client
+    .from('task_board_columns')
+    .update({ auto_assign_to: null })
+    .neq('auto_assign_to', adminProfileId);
+  if (colErr) console.error('Error nullifying task_board_columns.auto_assign_to:', colErr.message);
+
+  // Nullify assigned_to in tasks (FK to profiles)
+  const { error: taskErr } = await client
+    .from('tasks')
+    .update({ assigned_to: null })
+    .neq('assigned_to', adminProfileId);
+  if (taskErr) console.error('Error nullifying tasks.assigned_to:', taskErr.message);
+}
+
 serve(async (req) => {
   console.log('Delete-data function called');
-  
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -39,7 +54,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const authHeader = req.headers.get('Authorization');
-    
+
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Não autorizado - sem token' }),
@@ -49,9 +64,9 @@ serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '');
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    
+
     const { data: { user }, error: userError } = await adminClient.auth.getUser(token);
-    
+
     if (userError || !user) {
       return new Response(
         JSON.stringify({ error: 'Não autorizado - token inválido' }),
@@ -79,7 +94,7 @@ serve(async (req) => {
 
     const hasAdminRole = userRoles?.some(r => r.role === 'admin');
     const isMainAdmin = userProfile.email === ADMIN_EMAIL;
-    
+
     if (!hasAdminRole && !isMainAdmin) {
       return new Response(
         JSON.stringify({ error: 'Apenas administradores podem executar esta ação' }),
@@ -107,66 +122,72 @@ serve(async (req) => {
     const adminUserId = mainAdminProfile.user_id;
     const adminProfileId = mainAdminProfile.id;
     let result = { success: true, message: '' };
+    const errors: string[] = [];
+
+    const safeDelete = async (table: string, filter?: { column: string; op: string; value: any }) => {
+      const err = await deleteAll(adminClient, table, filter);
+      if (err) errors.push(`${table}: ${err.message}`);
+    };
 
     switch (type) {
       case 'messages': {
         console.log('Deleting all messages...');
-        // Delete attachments linked to messages first (FK constraint)
-        await deleteAll(adminClient, 'attachments');
-        // Then delete messages
-        await deleteAll(adminClient, 'private_group_messages');
-        await deleteAll(adminClient, 'direct_messages');
-        await deleteAll(adminClient, 'messages');
+        await safeDelete('attachments');
+        await safeDelete('private_group_messages');
+        await safeDelete('private_group_message_reads');
+        await safeDelete('direct_messages');
+        await safeDelete('messages');
         result.message = 'Todas as mensagens foram excluídas';
         break;
       }
 
       case 'announcements': {
         console.log('Deleting all announcements...');
-        // Delete attachments linked to announcements first
-        await deleteAll(adminClient, 'attachments');
-        await deleteAll(adminClient, 'announcement_comments');
-        await deleteAll(adminClient, 'announcement_reads');
-        await deleteAll(adminClient, 'important_announcement_reads');
-        await deleteAll(adminClient, 'important_announcements');
-        await deleteAll(adminClient, 'announcements');
+        await safeDelete('attachments');
+        await safeDelete('announcement_comments');
+        await safeDelete('announcement_reads');
+        await safeDelete('announcements');
+        await safeDelete('important_announcement_reads');
+        await safeDelete('important_announcements');
         result.message = 'Todos os avisos foram excluídos';
         break;
       }
 
       case 'facial': {
         console.log('Deleting facial data (except main admin)...');
-        await deleteAll(adminClient, 'user_facial_data', { column: 'user_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_facial_data', { column: 'user_id', op: 'neq', value: adminUserId });
         result.message = 'Todos os dados faciais foram excluídos (exceto admin principal)';
         break;
       }
 
       case 'tasks': {
         console.log('Deleting all task data...');
-        await deleteAll(adminClient, 'task_comments');
-        await deleteAll(adminClient, 'task_subtasks');
-        await deleteAll(adminClient, 'task_label_assignments');
-        await deleteAll(adminClient, 'task_labels');
-        await deleteAll(adminClient, 'tasks');
-        await deleteAll(adminClient, 'task_board_columns');
-        await deleteAll(adminClient, 'task_board_members');
-        await deleteAll(adminClient, 'task_boards');
+        await safeDelete('task_comments');
+        await safeDelete('task_subtasks');
+        await safeDelete('task_label_assignments');
+        await safeDelete('tasks');
+        await safeDelete('task_labels');
+        await safeDelete('task_board_columns');
+        await safeDelete('task_board_members');
+        await safeDelete('task_boards');
         result.message = 'Todos os dados de tarefas foram excluídos';
         break;
       }
 
       case 'users': {
         console.log('Inactivating all users (except main admin)...');
-        // Delete dependent data first
-        await deleteAll(adminClient, 'supervisor_team_members', { column: 'supervisor_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_permissions', { column: 'user_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_roles', { column: 'user_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_presence', { column: 'user_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_facial_data', { column: 'user_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_additional_sectors', { column: 'user_id', op: 'neq', value: adminUserId });
+        // Nullify FK references to profiles in tables we keep
+        await nullifyProfileReferences(adminClient, adminProfileId);
+        // Delete dependent data
+        await safeDelete('supervisor_team_members', { column: 'supervisor_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_permissions', { column: 'user_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_roles', { column: 'user_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_presence', { column: 'user_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_facial_data', { column: 'user_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_additional_sectors', { column: 'user_id', op: 'neq', value: adminUserId });
         // Inactivate profiles
         const { error } = await adminClient.from('profiles').update({ is_active: false }).neq('email', ADMIN_EMAIL);
-        if (error) console.error('Error inactivating profiles:', error.message);
+        if (error) errors.push(`profiles update: ${error.message}`);
         result.message = 'Todos os usuários foram inativados (exceto admin principal)';
         break;
       }
@@ -178,31 +199,42 @@ serve(async (req) => {
           .select('user_id')
           .neq('email', ADMIN_EMAIL);
 
-        // Delete ALL dependent data first (order matters for FK constraints)
-        await deleteAll(adminClient, 'attachments');
-        await deleteAll(adminClient, 'private_group_messages');
-        await deleteAll(adminClient, 'private_group_message_reads');
-        await deleteAll(adminClient, 'private_group_members');
-        await deleteAll(adminClient, 'direct_messages');
-        await deleteAll(adminClient, 'messages');
-        await deleteAll(adminClient, 'announcement_comments');
-        await deleteAll(adminClient, 'announcement_reads');
-        await deleteAll(adminClient, 'task_comments');
-        await deleteAll(adminClient, 'task_subtasks');
-        await deleteAll(adminClient, 'task_label_assignments');
-        await deleteAll(adminClient, 'task_board_members');
-        await deleteAll(adminClient, 'tasks');
-        await deleteAll(adminClient, 'supervisor_team_members', { column: 'supervisor_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_notifications', { column: 'user_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'important_announcement_reads', { column: 'user_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_permissions', { column: 'user_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_roles', { column: 'user_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_presence', { column: 'user_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_facial_data', { column: 'user_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_additional_sectors', { column: 'user_id', op: 'neq', value: adminUserId });
-        // Delete profiles
-        await deleteAll(adminClient, 'profiles', { column: 'email', op: 'neq', value: ADMIN_EMAIL });
-        
+        // 1. Delete ALL content data first (no user filter needed - deleting everything)
+        await safeDelete('attachments');
+        // Messages
+        await safeDelete('private_group_messages');
+        await safeDelete('private_group_message_reads');
+        await safeDelete('private_group_members');
+        await safeDelete('private_groups');
+        await safeDelete('direct_messages');
+        await safeDelete('messages');
+        // Announcements - MUST delete before profiles (author_id FK)
+        await safeDelete('announcement_comments');
+        await safeDelete('announcement_reads');
+        await safeDelete('announcements');
+        await safeDelete('important_announcement_reads');
+        await safeDelete('important_announcements');
+        // Tasks - MUST delete before profiles (assigned_to, author_id FKs)
+        await safeDelete('task_comments');
+        await safeDelete('task_subtasks');
+        await safeDelete('task_label_assignments');
+        await safeDelete('tasks');
+        await safeDelete('task_labels');
+        await safeDelete('task_board_columns');
+        await safeDelete('task_board_members');
+        await safeDelete('task_boards');
+        // Notifications
+        await safeDelete('user_notifications', { column: 'user_id', op: 'neq', value: adminUserId });
+        // User-specific data
+        await safeDelete('supervisor_team_members', { column: 'supervisor_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_permissions', { column: 'user_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_roles', { column: 'user_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_presence', { column: 'user_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_facial_data', { column: 'user_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_additional_sectors', { column: 'user_id', op: 'neq', value: adminUserId });
+        // NOW safe to delete profiles
+        await safeDelete('profiles', { column: 'email', op: 'neq', value: ADMIN_EMAIL });
+
         // Delete auth users
         let authDeleteErrors = 0;
         if (usersToDelete) {
@@ -222,42 +254,43 @@ serve(async (req) => {
 
       case 'all': {
         console.log('Deleting all data (except main admin)...');
-        // Attachments first (references messages, announcements)
-        await deleteAll(adminClient, 'attachments');
+        // Attachments first
+        await safeDelete('attachments');
         // Messages
-        await deleteAll(adminClient, 'private_group_messages');
-        await deleteAll(adminClient, 'private_group_message_reads');
-        await deleteAll(adminClient, 'private_group_members');
-        await deleteAll(adminClient, 'private_groups');
-        await deleteAll(adminClient, 'direct_messages');
-        await deleteAll(adminClient, 'messages');
+        await safeDelete('private_group_messages');
+        await safeDelete('private_group_message_reads');
+        await safeDelete('private_group_members');
+        await safeDelete('private_groups');
+        await safeDelete('direct_messages');
+        await safeDelete('messages');
         // Announcements
-        await deleteAll(adminClient, 'announcement_comments');
-        await deleteAll(adminClient, 'announcement_reads');
-        await deleteAll(adminClient, 'important_announcement_reads');
-        await deleteAll(adminClient, 'important_announcements');
-        await deleteAll(adminClient, 'announcements');
+        await safeDelete('announcement_comments');
+        await safeDelete('announcement_reads');
+        await safeDelete('announcements');
+        await safeDelete('important_announcement_reads');
+        await safeDelete('important_announcements');
         // Tasks
-        await deleteAll(adminClient, 'task_comments');
-        await deleteAll(adminClient, 'task_subtasks');
-        await deleteAll(adminClient, 'task_label_assignments');
-        await deleteAll(adminClient, 'task_labels');
-        await deleteAll(adminClient, 'tasks');
-        await deleteAll(adminClient, 'task_board_columns');
-        await deleteAll(adminClient, 'task_board_members');
-        await deleteAll(adminClient, 'task_boards');
+        await safeDelete('task_comments');
+        await safeDelete('task_subtasks');
+        await safeDelete('task_label_assignments');
+        await safeDelete('tasks');
+        await safeDelete('task_labels');
+        await safeDelete('task_board_columns');
+        await safeDelete('task_board_members');
+        await safeDelete('task_boards');
         // Notifications
-        await deleteAll(adminClient, 'user_notifications');
+        await safeDelete('user_notifications');
         // User data (except admin)
-        await deleteAll(adminClient, 'supervisor_team_members', { column: 'supervisor_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_permissions', { column: 'user_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_roles', { column: 'user_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_presence', { column: 'user_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_facial_data', { column: 'user_id', op: 'neq', value: adminUserId });
-        await deleteAll(adminClient, 'user_additional_sectors', { column: 'user_id', op: 'neq', value: adminUserId });
+        await nullifyProfileReferences(adminClient, adminProfileId);
+        await safeDelete('supervisor_team_members', { column: 'supervisor_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_permissions', { column: 'user_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_roles', { column: 'user_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_presence', { column: 'user_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_facial_data', { column: 'user_id', op: 'neq', value: adminUserId });
+        await safeDelete('user_additional_sectors', { column: 'user_id', op: 'neq', value: adminUserId });
         // Inactivate remaining profiles
         await adminClient.from('profiles').update({ is_active: false }).neq('email', ADMIN_EMAIL);
-        
+
         result.message = 'Todo o banco de dados foi limpo (exceto admin principal)';
         break;
       }
@@ -267,6 +300,11 @@ serve(async (req) => {
           JSON.stringify({ error: 'Tipo de exclusão inválido' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
+    }
+
+    if (errors.length > 0) {
+      console.warn(`Deletion completed with ${errors.length} errors:`, errors);
+      result.message += ` (${errors.length} avisos durante execução)`;
     }
 
     console.log(`Deletion completed: ${type} by user ${user.id}`);
