@@ -361,9 +361,7 @@ const Auth = () => {
           className="max-w-md text-white"
         >
           <div className="mb-8 flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl gradient-secondary shadow-glow">
-              <MessageSquare className="h-8 w-8" />
-            </div>
+            <img src="/icons/logo-512.png" alt="Servsul" className="h-16 w-16 object-contain rounded-2xl bg-white/10 p-1" />
             <div>
               <h1 className="font-display text-4xl font-bold">ServChat</h1>
               <p className="text-white/70">Grupo Servsul</p>
@@ -412,9 +410,7 @@ const Auth = () => {
         >
           {/* Mobile Logo - Larger and more prominent */}
           <div className="mb-8 flex flex-col items-center justify-center gap-3 lg:hidden">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl gradient-secondary shadow-lg">
-              <MessageSquare className="h-8 w-8 text-secondary-foreground" />
-            </div>
+            <img src="/icons/logo-512.png" alt="Servsul" className="h-20 w-20 object-contain" />
             <div className="text-center">
               <h1 className="font-display text-3xl font-bold text-foreground">ServChat</h1>
               <p className="text-sm text-muted-foreground">Grupo Servsul</p>
