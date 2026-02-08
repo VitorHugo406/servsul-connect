@@ -9,21 +9,37 @@ const corsHeaders = {
 const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
 
 async function deleteAll(client: any, table: string, filter?: { column: string; op: string; value: any }) {
-  let query = client.from(table).delete();
-  if (filter) {
-    if (filter.op === 'neq') {
-      query = query.neq(filter.column, filter.value);
+  try {
+    let query = client.from(table).delete();
+    if (filter) {
+      if (filter.op === 'neq') {
+        query = query.neq(filter.column, filter.value);
+      } else {
+        query = query.gte(filter.column, filter.value);
+      }
     } else {
-      query = query.gte(filter.column, filter.value);
+      // Use neq with empty string on id to match all rows - more reliable than gte
+      query = query.neq('id', '00000000-0000-0000-0000-000000000000');
     }
-  } else {
-    query = query.gte('id', '00000000-0000-0000-0000-000000000000');
+    const { error } = await query;
+    if (error) {
+      console.error(`Error deleting from ${table}:`, error.code, error.message, error.details);
+      // If the first approach fails, try alternative
+      if (error.code === '22P02' || error.message?.includes('invalid input')) {
+        console.log(`Retrying ${table} with text-based filter...`);
+        const { error: retryError } = await client.from(table).delete().gt('created_at', '1970-01-01');
+        if (retryError) {
+          console.error(`Retry failed for ${table}:`, retryError.message);
+          return retryError;
+        }
+        return null;
+      }
+    }
+    return error;
+  } catch (e) {
+    console.error(`Exception deleting from ${table}:`, e);
+    return e;
   }
-  const { error } = await query;
-  if (error) {
-    console.error(`Error deleting from ${table}:`, error.message);
-  }
-  return error;
 }
 
 // Nullify FK references to profiles in tables we want to keep
