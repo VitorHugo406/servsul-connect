@@ -8,7 +8,8 @@ import {
   Search,
   Edit,
   MoreVertical,
-  Power
+  Power,
+  Trash2
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -106,6 +107,10 @@ export function ManagementSection() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
   const [permissionsUser, setPermissionsUser] = useState<Profile | null>(null);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [passwordUser, setPasswordUser] = useState<Profile | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteTargetUser, setDeleteTargetUser] = useState<Profile | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -311,6 +316,42 @@ export function ManagementSection() {
     setShowPermissionsDialog(true);
   };
 
+
+
+
+  const handleChangePassword = (user: Profile) => {
+    setPasswordUser(user);
+    setShowPasswordDialog(true);
+  };
+
+  const handleDeleteUser = (user: Profile) => {
+    if (user.email === 'adminservchat@servsul.com.br') {
+      toast.error('Não é possível excluir o administrador principal');
+      return;
+    }
+    setDeleteTargetUser(user);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!deleteTargetUser) return;
+    try {
+      const response = await supabase.functions.invoke('delete-data', {
+        body: { type: 'delete-single-user', userId: deleteTargetUser.user_id },
+      });
+      if (response.error || response.data?.error) {
+        throw new Error(response.data?.error || response.error?.message);
+      }
+      toast.success(`Usuário ${deleteTargetUser.name} excluído com sucesso`);
+      setShowDeleteConfirm(false);
+      setDeleteTargetUser(null);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast.error('Erro ao excluir usuário: ' + (error.message || 'Erro desconhecido'));
+    }
+  };
+
   // Mobile Layout
   if (isMobile) {
     return (
@@ -423,6 +464,13 @@ export function ManagementSection() {
                             <Shield className="h-4 w-4" />
                             Permissões
                           </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleChangePassword(user)}
+                            className="gap-2"
+                          >
+                            <KeyRound className="h-4 w-4" />
+                            Alterar Senha
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             onClick={() => updateUserStatus(user.user_id, !user.is_active)}
@@ -430,6 +478,14 @@ export function ManagementSection() {
                           >
                             <Power className="h-4 w-4" />
                             {user.is_active ? 'Desativar' : 'Ativar'}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteUser(user)}
+                            className="gap-2 text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Excluir Usuário
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -477,6 +533,31 @@ export function ManagementSection() {
               onUpdatePermission={updatePermission}
             />
           )}
+
+          {/* Password Change Dialog */}
+          {passwordUser && (
+            <ChangePasswordDialog
+              open={showPasswordDialog}
+              onOpenChange={setShowPasswordDialog}
+              user={passwordUser}
+            />
+          )}
+
+          {/* Delete Confirm Dialog */}
+          <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>Confirmar Exclusão</DialogTitle>
+                <DialogDescription>
+                  Tem certeza que deseja excluir permanentemente o usuário <strong>{deleteTargetUser?.name}</strong>? Esta ação não pode ser desfeita.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancelar</Button>
+                <Button variant="destructive" onClick={confirmDeleteUser}>Excluir</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </motion.div>
       </div>
     );
@@ -602,13 +683,31 @@ export function ManagementSection() {
                                     setEditingUser(user);
                                     setShowEditDialog(true);
                                   }}
+                                  title="Editar"
                                 >
                                   <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleChangePassword(user)}
+                                  title="Alterar senha"
+                                >
+                                  <KeyRound className="h-4 w-4" />
                                 </Button>
                                 <Switch
                                   checked={user.is_active}
                                   onCheckedChange={(checked) => updateUserStatus(user.user_id, checked)}
                                 />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteUser(user)}
+                                  title="Excluir usuário"
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -733,6 +832,31 @@ export function ManagementSection() {
             }}
           />
         )}
+
+          {/* Password Change Dialog */}
+          {passwordUser && (
+            <ChangePasswordDialog
+              open={showPasswordDialog}
+              onOpenChange={setShowPasswordDialog}
+              user={passwordUser}
+            />
+          )}
+
+          {/* Delete Confirm Dialog */}
+          <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>Confirmar Exclusão</DialogTitle>
+                <DialogDescription>
+                  Tem certeza que deseja excluir permanentemente o usuário <strong>{deleteTargetUser?.name}</strong>? Esta ação não pode ser desfeita.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancelar</Button>
+                <Button variant="destructive" onClick={confirmDeleteUser}>Excluir</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
       </motion.div>
     </div>
   );
@@ -884,6 +1008,21 @@ function EditUserDialog({ open, onOpenChange, user, sectors, currentRole, onSucc
         .eq('user_id', user.user_id);
 
       if (profileError) throw profileError;
+
+      // Update autonomy_level on profile to match role
+      const autonomyMap: Record<string, string> = {
+        admin: 'admin',
+        gerente: 'gerente',
+        supervisor: 'supervisor',
+        colaborador: 'colaborador',
+        gestor: 'gestor',
+        diretoria: 'diretoria',
+      };
+      const { error: autonomyError } = await supabase
+        .from('profiles')
+        .update({ autonomy_level: autonomyMap[role] || 'colaborador' })
+        .eq('user_id', user.user_id);
+      if (autonomyError) console.error('Error updating autonomy_level:', autonomyError);
 
       // Update role if changed
       if (role !== currentRole) {
@@ -1102,6 +1241,75 @@ function MobilePermissionsDialog({ open, onOpenChange, user, permissions, isUser
               disabled={isUserAdmin}
               onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_access_password_change', checked)}
             />
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Change Password Dialog
+interface ChangePasswordDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  user: Profile;
+}
+
+function ChangePasswordDialog({ open, onOpenChange, user }: ChangePasswordDialogProps) {
+  const [newPassword, setNewPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await supabase.functions.invoke('delete-data', {
+        body: { type: 'change-password', userId: user.user_id, newPassword },
+      });
+
+      if (response.error || response.data?.error) {
+        throw new Error(response.data?.error || response.error?.message);
+      }
+
+      toast.success(`Senha de ${user.name} alterada com sucesso`);
+      setNewPassword('');
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      toast.error('Erro ao alterar senha: ' + (error.message || 'Erro desconhecido'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Alterar Senha</DialogTitle>
+          <DialogDescription>
+            Definir nova senha para <strong>{user.name}</strong>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-2">
+            <Label>Nova Senha</Label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Mínimo 6 caracteres"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button onClick={handleChangePassword} disabled={loading}>
+              {loading ? 'Salvando...' : 'Salvar'}
+            </Button>
           </div>
         </div>
       </DialogContent>

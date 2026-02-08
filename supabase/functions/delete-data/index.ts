@@ -311,6 +311,91 @@ serve(async (req) => {
         break;
       }
 
+      case 'change-password': {
+        const { userId: targetUserId, newPassword } = body;
+        if (!targetUserId || !newPassword) {
+          return new Response(
+            JSON.stringify({ error: 'userId e newPassword são obrigatórios' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+        console.log('Changing password for user:', targetUserId);
+        const { error: pwError } = await adminClient.auth.admin.updateUserById(targetUserId, {
+          password: newPassword,
+        });
+        if (pwError) {
+          console.error('Error changing password:', pwError.message);
+          return new Response(
+            JSON.stringify({ error: pwError.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+          );
+        }
+        result.message = 'Senha alterada com sucesso';
+        break;
+      }
+
+      case 'delete-single-user': {
+        const { userId: targetUserId2 } = body;
+        if (!targetUserId2) {
+          return new Response(
+            JSON.stringify({ error: 'userId é obrigatório' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+        // Don't allow deleting the main admin
+        if (targetUserId2 === adminUserId) {
+          return new Response(
+            JSON.stringify({ error: 'Não é possível excluir o administrador principal' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+          );
+        }
+        console.log('Deleting single user:', targetUserId2);
+
+        // Get target profile
+        const { data: targetProfile } = await adminClient
+          .from('profiles')
+          .select('id')
+          .eq('user_id', targetUserId2)
+          .single();
+
+        if (targetProfile) {
+          const tpId = targetProfile.id;
+          // Nullify references
+          await adminClient.from('task_board_columns').update({ auto_assign_to: null }).eq('auto_assign_to', tpId);
+          await adminClient.from('tasks').update({ assigned_to: null }).eq('assigned_to', tpId);
+          // Delete user-specific data
+          await adminClient.from('announcement_comments').delete().eq('author_id', tpId);
+          await adminClient.from('task_comments').delete().eq('author_id', tpId);
+          await adminClient.from('supervisor_team_members').delete().eq('supervisor_id', targetUserId2);
+          await adminClient.from('supervisor_team_members').delete().eq('member_profile_id', tpId);
+          await adminClient.from('private_group_members').delete().eq('profile_id', tpId);
+          await adminClient.from('task_board_members').delete().eq('profile_id', tpId);
+          await adminClient.from('user_permissions').delete().eq('user_id', targetUserId2);
+          await adminClient.from('user_roles').delete().eq('user_id', targetUserId2);
+          await adminClient.from('user_presence').delete().eq('user_id', targetUserId2);
+          await adminClient.from('user_facial_data').delete().eq('user_id', targetUserId2);
+          await adminClient.from('user_additional_sectors').delete().eq('user_id', targetUserId2);
+          await adminClient.from('user_notifications').delete().eq('user_id', targetUserId2);
+          // Delete attachments uploaded by this user
+          await adminClient.from('attachments').delete().eq('uploaded_by', targetUserId2);
+          // Delete DMs
+          await adminClient.from('direct_messages').delete().eq('sender_id', tpId);
+          await adminClient.from('direct_messages').delete().eq('receiver_id', tpId);
+          // Delete messages
+          await adminClient.from('messages').delete().eq('author_id', tpId);
+          // Delete profile
+          await adminClient.from('profiles').delete().eq('user_id', targetUserId2);
+          // Delete auth user
+          const { error: authDelError } = await adminClient.auth.admin.deleteUser(targetUserId2);
+          if (authDelError) {
+            console.error('Error deleting auth user:', authDelError.message);
+            errors.push(`auth: ${authDelError.message}`);
+          }
+        }
+        result.message = 'Usuário excluído com sucesso';
+        break;
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: 'Tipo de exclusão inválido' }),

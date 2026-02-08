@@ -304,12 +304,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
     setProfile(null);
     setSector(null);
     setAdditionalSectors([]);
     setRoles([]);
     setPermissions(null);
+    await supabase.auth.signOut();
   };
 
   return (
