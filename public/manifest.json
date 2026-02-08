@@ -2,6 +2,7 @@
   "name": "ServChat - Comunicação Empresarial",
   "short_name": "ServChat",
   "description": "Sistema de comunicação empresarial com chat por setores, avisos e reconhecimento facial",
+  "id": "/",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1a365d",
@@ -29,6 +30,5 @@
     }
   ],
   "categories": ["business", "productivity", "communication"],
-  "screenshots": [],
   "prefer_related_applications": false
 }
