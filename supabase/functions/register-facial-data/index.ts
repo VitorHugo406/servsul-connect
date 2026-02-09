@@ -1,25 +1,11 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Helper function to decode JWT payload
-function decodeJwtPayload(token: string): { sub?: string } | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(atob(parts[1]));
-    return payload;
-  } catch {
-    return null;
-  }
-}
-
-serve(async (req) => {
-  // Handle CORS preflight
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -27,32 +13,32 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    // Get the authorization header
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+    // Validate JWT properly using getClaims
     const authHeader = req.headers.get('authorization');
-    
     if (!authHeader?.startsWith('Bearer ')) {
-      console.log('No authorization header found');
       return new Response(
         JSON.stringify({ error: 'Não autorizado - token não encontrado' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       );
     }
 
-    // Extract and decode the JWT token
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
     const token = authHeader.replace('Bearer ', '');
-    const payload = decodeJwtPayload(token);
-    
-    if (!payload?.sub) {
-      console.error('Invalid JWT token - no sub claim');
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+
+    if (claimsError || !claimsData?.claims?.sub) {
       return new Response(
         JSON.stringify({ error: 'Não autorizado - token inválido' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       );
     }
 
-    const userId = payload.sub;
-    console.log('Authenticated user:', userId);
+    const userId = claimsData.claims.sub;
 
     // Parse request body
     const { email, descriptors } = await req.json();
@@ -75,14 +61,11 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profile) {
-      console.error('Error finding profile:', profileError);
       return new Response(
         JSON.stringify({ error: 'Perfil não encontrado' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
       );
     }
-
-    console.log('Found profile:', profile.id, 'for email:', email);
 
     // Check if user already has facial data
     const { data: existing } = await adminClient
@@ -92,7 +75,6 @@ serve(async (req) => {
       .single();
 
     if (existing) {
-      // Update existing
       const { error: updateError } = await adminClient
         .from('user_facial_data')
         .update({
@@ -103,16 +85,12 @@ serve(async (req) => {
         .eq('user_id', profile.user_id);
 
       if (updateError) {
-        console.error('Error updating facial data:', updateError);
         return new Response(
           JSON.stringify({ error: 'Erro ao atualizar dados faciais' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
         );
       }
-
-      console.log(`Updated facial data for user ${email}`);
     } else {
-      // Insert new
       const { error: insertError } = await adminClient
         .from('user_facial_data')
         .insert({
@@ -123,32 +101,23 @@ serve(async (req) => {
         });
 
       if (insertError) {
-        console.error('Error inserting facial data:', insertError);
         return new Response(
           JSON.stringify({ error: 'Erro ao cadastrar dados faciais' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
         );
       }
-
-      console.log(`Created facial data for user ${email}`);
     }
 
     return new Response(
       JSON.stringify({ success: true }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (err) {
     const error = err as Error;
     console.error('Error in register-facial-data:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });

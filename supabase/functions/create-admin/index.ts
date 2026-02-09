@@ -6,7 +6,6 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -14,78 +13,103 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // Validate caller is authenticated and is an admin
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Não autorizado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
     });
 
-    const adminEmail = "adminservchat@servsul.com.br";
-    const adminPassword = "@DminServChat1598753";
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(
+        JSON.stringify({ error: "Token inválido" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    // Check if admin already exists
+    const callerId = claimsData.claims.sub;
+
+    // Verify caller is admin using service role
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: callerRole } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", callerId)
+      .eq("role", "admin")
+      .single();
+
+    if (!callerRole) {
+      return new Response(
+        JSON.stringify({ error: "Apenas administradores podem criar outros administradores" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get email and password from request body
+    const { email, password, name } = await req.json();
+
+    if (!email || !password) {
+      return new Response(
+        JSON.stringify({ error: "Email e senha são obrigatórios" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if user already exists
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const adminExists = existingUsers?.users?.some(u => u.email === adminEmail);
+    const adminExists = existingUsers?.users?.some(u => u.email === email);
 
     if (adminExists) {
       return new Response(
-        JSON.stringify({ message: "Usuário administrador já existe" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ message: "Usuário já existe com este email" }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Create admin user
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: adminEmail,
-      password: adminPassword,
+      email,
+      password,
       email_confirm: true,
       user_metadata: {
-        name: "Administrador ServChat",
-        display_name: "Admin",
+        name: name || "Administrador",
+        display_name: name || "Admin",
       },
     });
 
-    if (authError) {
-      console.error("Error creating admin:", authError);
+    if (authError || !authData.user) {
       return new Response(
-        JSON.stringify({ error: authError.message }),
+        JSON.stringify({ error: authError?.message || "Erro ao criar administrador" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!authData.user) {
-      return new Response(
-        JSON.stringify({ error: "Erro ao criar administrador" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Update admin profile with Geral sector
-    const { error: profileError } = await supabaseAdmin
+    // Update admin profile
+    await supabaseAdmin
       .from("profiles")
       .update({
-        sector_id: "00000000-0000-0000-0000-000000000001", // Geral sector
+        sector_id: "00000000-0000-0000-0000-000000000001",
         autonomy_level: "admin",
       })
       .eq("user_id", authData.user.id);
 
-    if (profileError) {
-      console.error("Error updating admin profile:", profileError);
-    }
-
     // Add admin role
-    const { error: roleError } = await supabaseAdmin
+    await supabaseAdmin
       .from("user_roles")
-      .insert({
-        user_id: authData.user.id,
-        role: "admin",
-      });
-
-    if (roleError) {
-      console.error("Error adding admin role:", roleError);
-    }
+      .insert({ user_id: authData.user.id, role: "admin" });
 
     return new Response(
       JSON.stringify({ success: true, message: "Administrador criado com sucesso" }),
