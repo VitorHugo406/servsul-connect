@@ -10,32 +10,33 @@
    Loader2,
    AlertTriangle
  } from 'lucide-react';
- import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
- import { Button } from '@/components/ui/button';
- import { Input } from '@/components/ui/input';
- import { Label } from '@/components/ui/label';
- import { Badge } from '@/components/ui/badge';
- import { 
-   Dialog, 
-   DialogContent, 
-   DialogDescription, 
-   DialogFooter, 
-   DialogHeader, 
-   DialogTitle 
- } from '@/components/ui/dialog';
- import {
-   AlertDialog,
-   AlertDialogAction,
-   AlertDialogCancel,
-   AlertDialogContent,
-   AlertDialogDescription,
-   AlertDialogFooter,
-   AlertDialogHeader,
-   AlertDialogTitle,
- } from '@/components/ui/alert-dialog';
- import { useSectorManagement } from '@/hooks/useSectorManagement';
- import { useAuth } from '@/contexts/AuthContext';
- import { toast } from 'sonner';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useSectorManagement } from '@/hooks/useSectorManagement';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { SectorIconPicker, SECTOR_ICON_MAP } from '@/components/sectors/SectorIconPicker';
  
  const GERAL_SECTOR_ID = '00000000-0000-0000-0000-000000000001';
  
@@ -52,9 +53,10 @@
    const [showEditDialog, setShowEditDialog] = useState(false);
    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
    const [selectedSector, setSelectedSector] = useState<any>(null);
-   const [newName, setNewName] = useState('');
-   const [newColor, setNewColor] = useState('#3B82F6');
-   const [submitting, setSubmitting] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newColor, setNewColor] = useState('#3B82F6');
+  const [newIcon, setNewIcon] = useState('building');
+  const [submitting, setSubmitting] = useState(false);
  
    if (!isAdmin) {
      return (
@@ -68,44 +70,49 @@
      );
    }
  
-   const handleCreate = async () => {
-     if (!newName.trim()) {
-       toast.error('Digite o nome do setor');
-       return;
-     }
-     
-     setSubmitting(true);
-     const { error } = await createSector(newName.trim(), newColor);
-     setSubmitting(false);
-     
-     if (error) {
-       toast.error('Erro ao criar setor');
-     } else {
-       toast.success('Setor criado com sucesso!');
-       setShowCreateDialog(false);
-       setNewName('');
-       setNewColor('#3B82F6');
-     }
-   };
+    const handleCreate = async () => {
+      if (!newName.trim()) {
+        toast.error('Digite o nome do setor');
+        return;
+      }
+      
+      setSubmitting(true);
+      const { data, error } = await createSector(newName.trim(), newColor);
+      if (!error && data) {
+        await updateSector(data.id, { icon: newIcon });
+      }
+      setSubmitting(false);
+      
+      if (error) {
+        toast.error('Erro ao criar setor');
+      } else {
+        toast.success('Setor criado com sucesso!');
+        setShowCreateDialog(false);
+        setNewName('');
+        setNewColor('#3B82F6');
+        setNewIcon('building');
+      }
+    };
  
-   const handleEdit = async () => {
-     if (!selectedSector || !newName.trim()) return;
-     
-     setSubmitting(true);
-     const { error } = await updateSector(selectedSector.id, { 
-       name: newName.trim(), 
-       color: newColor 
-     });
-     setSubmitting(false);
-     
-     if (error) {
-       toast.error('Erro ao atualizar setor');
-     } else {
-       toast.success('Setor atualizado!');
-       setShowEditDialog(false);
-       setSelectedSector(null);
-     }
-   };
+    const handleEdit = async () => {
+      if (!selectedSector || !newName.trim()) return;
+      
+      setSubmitting(true);
+      const { error } = await updateSector(selectedSector.id, { 
+        name: newName.trim(), 
+        color: newColor,
+        icon: newIcon,
+      });
+      setSubmitting(false);
+      
+      if (error) {
+        toast.error('Erro ao atualizar setor');
+      } else {
+        toast.success('Setor atualizado!');
+        setShowEditDialog(false);
+        setSelectedSector(null);
+      }
+    };
  
    const handleDelete = async () => {
      if (!selectedSector) return;
@@ -123,12 +130,13 @@
      }
    };
  
-   const openEditDialog = (sector: any) => {
-     setSelectedSector(sector);
-     setNewName(sector.name);
-     setNewColor(sector.color);
-     setShowEditDialog(true);
-   };
+    const openEditDialog = (sector: any) => {
+      setSelectedSector(sector);
+      setNewName(sector.name);
+      setNewColor(sector.color);
+      setNewIcon(sector.icon || 'building');
+      setShowEditDialog(true);
+    };
  
    const openDeleteDialog = (sector: any) => {
      setSelectedSector(sector);
@@ -173,20 +181,20 @@
                  className="h-2" 
                  style={{ backgroundColor: sector.color }} 
                />
-               <CardHeader className="pb-2">
-                 <div className="flex items-center justify-between">
-                   <CardTitle className="text-lg flex items-center gap-2">
-                     <span 
-                       className="h-3 w-3 rounded-full" 
-                       style={{ backgroundColor: sector.color }} 
-                     />
-                     {sector.name}
-                   </CardTitle>
-                   {sector.id === GERAL_SECTOR_ID && (
-                     <Badge variant="secondary">Padrão</Badge>
-                   )}
-                 </div>
-               </CardHeader>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      {(() => {
+                        const SectorIcon = SECTOR_ICON_MAP[sector.icon || 'building'] || Building2;
+                        return <SectorIcon className="h-5 w-5" style={{ color: sector.color }} />;
+                      })()}
+                      {sector.name}
+                    </CardTitle>
+                    {sector.id === GERAL_SECTOR_ID && (
+                      <Badge variant="secondary">Padrão</Badge>
+                    )}
+                  </div>
+                </CardHeader>
                <CardContent>
                  {sector.id !== GERAL_SECTOR_ID && (
                    <div className="flex gap-2">
@@ -252,10 +260,11 @@
                    />
                  ))}
                </div>
-             </div>
-           </div>
-           <DialogFooter>
-             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              </div>
+              <SectorIconPicker value={newIcon} onChange={setNewIcon} color={newColor} />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
                Cancelar
              </Button>
              <Button onClick={handleCreate} disabled={submitting}>
@@ -302,10 +311,11 @@
                    />
                  ))}
                </div>
-             </div>
-           </div>
-           <DialogFooter>
-             <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              </div>
+              <SectorIconPicker value={newIcon} onChange={setNewIcon} color={newColor} />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditDialog(false)}>
                Cancelar
              </Button>
              <Button onClick={handleEdit} disabled={submitting}>

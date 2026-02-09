@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
-import { Building, TrendingUp, DollarSign, Users, Monitor, Settings } from 'lucide-react';
+import { Building } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SECTOR_ICON_MAP } from '@/components/sectors/SectorIconPicker';
 
 interface Sector {
   id: string;
@@ -15,15 +16,6 @@ interface SectorTabsProps {
   onSectorChange: (sectorId: string) => void;
 }
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  building: Building,
-  'trending-up': TrendingUp,
-  'dollar-sign': DollarSign,
-  users: Users,
-  monitor: Monitor,
-  settings: Settings,
-};
-
 const GERAL_SECTOR_ID = '00000000-0000-0000-0000-000000000001';
 
 export function SectorTabs({ sectors, activeSector, onSectorChange }: SectorTabsProps) {
@@ -37,7 +29,7 @@ export function SectorTabs({ sectors, activeSector, onSectorChange }: SectorTabs
   return (
     <div className="flex gap-2 overflow-x-auto border-b border-border bg-card px-4 py-3 scrollbar-hide">
       {sortedSectors.map((sector) => {
-        const Icon = iconMap[sector.icon || 'building'] || Building;
+        const Icon = SECTOR_ICON_MAP[sector.icon || 'building'] || Building;
         const isActive = activeSector === sector.id;
         
         return (
