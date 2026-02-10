@@ -22,6 +22,7 @@ import { SectorManagementSection } from '@/components/sections/SectorManagementS
  import { TaskBoardSection } from '@/components/sections/TaskBoardSection';
 import { PeopleManagementSection } from '@/components/sections/PeopleManagementSection';
 import { FeedbackEmailSection } from '@/components/sections/FeedbackEmailSection';
+import { LogsSection } from '@/components/sections/LogsSection';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
@@ -43,6 +44,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
    tasks: { title: 'Gestão de Tarefas', subtitle: 'Quadro de atividades' },
    'people-management': { title: 'Gestão de Pessoas', subtitle: 'Equipe e relatórios' },
    'feedback-email': { title: 'Disparo de Feedback', subtitle: 'E-mails de feedback mensal' },
+   'system-logs': { title: 'Logs do Sistema', subtitle: 'Auditoria e relatórios' },
 };
 
 const Index = () => {
@@ -106,6 +108,8 @@ const Index = () => {
           return <PeopleManagementSection />;
         case 'feedback-email':
           return <FeedbackEmailSection />;
+        case 'system-logs':
+          return <LogsSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
- import { Home, MessageSquare, Bell, Cake, MoreHorizontal, Settings, Camera, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail } from 'lucide-react';
+ import { Home, MessageSquare, Bell, Cake, MoreHorizontal, Settings, Camera, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -29,6 +29,7 @@ const moreNavItems = [
    { id: 'people-management', icon: UsersRound, label: 'Gestão de Pessoas', supervisorOnly: true },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
   { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
+  { id: 'system-logs', icon: FileText, label: 'Logs do Sistema', mainAdminOnly: true },
 ];
 
 export function MobileNavigation({ activeSection, onSectionChange }: MobileNavigationProps) {
@@ -37,6 +38,10 @@ export function MobileNavigation({ activeSection, onSectionChange }: MobileNavig
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const visibleMoreItems = moreNavItems.filter((item) => {
+    // Main admin only items
+    if ('mainAdminOnly' in item && item.mainAdminOnly) {
+      return isAdmin && profile?.email === 'adminservchat@servsul.com.br';
+    }
     if ('adminOnly' in item && item.adminOnly) {
       return isAdmin;
     }

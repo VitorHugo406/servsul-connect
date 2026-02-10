@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { UsersRound, Mail } from 'lucide-react';
+import { UsersRound, Mail, FileText } from 'lucide-react';
 import logoServsul from '@/assets/logo-servsul.png';
 import { 
   MessageSquare, 
@@ -40,6 +40,7 @@ const menuItems = [
    { id: 'important-announcements', icon: Sparkles, label: 'Comunicados Importantes', adminOnly: true },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
   { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
+  { id: 'system-logs', icon: FileText, label: 'Logs do Sistema', mainAdminOnly: true },
 ];
 
 const autonomyLevelLabels: Record<string, string> = {
@@ -70,6 +71,10 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
   // Filter menu items based on permissions
   const visibleMenuItems = menuItems.filter((item) => {
+    // Main admin only items (specific email)
+    if ('mainAdminOnly' in item && item.mainAdminOnly) {
+      return isAdmin && profile?.email === 'adminservchat@servsul.com.br';
+    }
     // Admin-only items
     if ('adminOnly' in item && item.adminOnly) {
       return isAdmin;
