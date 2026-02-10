@@ -93,7 +93,7 @@ interface UserRole {
 }
 
 export function ManagementSection() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, canAccess } = useAuth();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState<Profile[]>([]);
@@ -286,7 +286,7 @@ export function ManagementSection() {
     );
   };
 
-  if (!isAdmin) {
+  if (!isAdmin && !canAccess('can_access_management')) {
     return (
       <div className="flex h-full items-center justify-center">
         <Card className="max-w-md">
