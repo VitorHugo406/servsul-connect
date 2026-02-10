@@ -47,6 +47,7 @@ export function MobileNavigation({ activeSection, onSectionChange }: MobileNavig
     }
     if ('permission' in item) {
       if (isAdmin) return true;
+      if (profile?.autonomy_level === 'diretoria') return true;
       return canAccess(item.permission);
     }
     return true;

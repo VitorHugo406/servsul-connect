@@ -83,6 +83,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
     // Permission-based items
     if ('permission' in item) {
       if (isAdmin) return true;
+      if (profile?.autonomy_level === 'diretoria') return true;
       return canAccess(item.permission);
     }
     return true;
