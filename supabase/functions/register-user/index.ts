@@ -102,6 +102,17 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Map profileType to autonomy_level
+    const autonomyMap: Record<string, string> = {
+      admin: 'admin',
+      gestor: 'gestor',
+      gerente: 'gerente',
+      supervisor: 'supervisor',
+      diretoria: 'diretoria',
+      user: 'colaborador',
+    };
+    const autonomyLevel = autonomyMap[profileType] || 'colaborador';
+
     // Update the profile with all fields
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
@@ -113,6 +124,7 @@ Deno.serve(async (req) => {
         company: company || null,
         registration_number: registrationNumber || null,
         profile_type: profileType || 'user',
+        autonomy_level: autonomyLevel,
         is_active: isActive !== undefined ? isActive : true,
       })
       .eq("user_id", authData.user.id);
