@@ -71,10 +71,17 @@ export function FeedbackEmailSection() {
 
       if (targetUserId) {
         setSentUsers(prev => new Set([...prev, targetUserId]));
-        toast.success('E-mail de feedback enviado com sucesso!');
+        const parts = [];
+        if (data.emailCount > 0) parts.push('e-mail');
+        if (data.dmCount > 0) parts.push('mensagem no chat');
+        toast.success(`Feedback enviado com sucesso (${parts.join(' + ')})!`);
       } else {
         setSentUsers(new Set(users.map(u => u.id)));
-        toast.success(`E-mail de feedback enviado para ${data.count} usuário(s)!`);
+        toast.success(`Feedback enviado: ${data.emailCount} e-mail(s) + ${data.dmCount} mensagem(ns) no chat!`);
+      }
+
+      if (data?.errors && data.errors.length > 0) {
+        toast.warning(`${data.errors.length} erro(s) parcial(is). Verifique os logs.`);
       }
     } catch (error) {
       console.error('Error sending feedback:', error);
@@ -97,7 +104,7 @@ export function FeedbackEmailSection() {
         </div>
         <div>
           <h2 className="font-display text-2xl font-bold text-foreground">Disparo de Feedback</h2>
-          <p className="text-muted-foreground">Envio de e-mails de feedback mensal</p>
+          <p className="text-muted-foreground">Envio de e-mails e mensagens no chat com resumo mensal</p>
         </div>
       </div>
 
@@ -109,7 +116,7 @@ export function FeedbackEmailSection() {
             <div>
               <p className="font-medium text-foreground">Envio automático ativo</p>
               <p className="text-sm text-muted-foreground">
-                O sistema envia automaticamente o feedback mensal todo dia 1º de cada mês para todos os usuários ativos.
+                O sistema envia automaticamente o feedback mensal todo dia 1º de cada mês. Cada usuário recebe um e-mail e uma mensagem direta do 🤖 ServChat Bot com o resumo e recomendações personalizadas.
               </p>
             </div>
           </div>
