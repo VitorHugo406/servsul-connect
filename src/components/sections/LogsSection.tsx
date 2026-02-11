@@ -182,9 +182,12 @@ export function LogsSection() {
   const exportToPDF = async () => {
     setExporting(true);
     try {
-      const { default: jsPDF } = await import('jspdf');
-      await import('jspdf-autotable');
-
+      const jsPDFModule = await import('jspdf');
+      const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF;
+      const autoTableModule = await import('jspdf-autotable');
+      
+      // jspdf-autotable adds autoTable to jsPDF prototype via side-effect
+      // but we need to ensure it's properly loaded
       const doc = new jsPDF({ orientation: 'landscape' });
       doc.setFontSize(16);
       doc.text('Relatório de Logs do Sistema', 14, 15);
@@ -200,13 +203,25 @@ export function LogsSection() {
         log.performed_by_email || 'Sistema',
       ]);
 
-      (doc as any).autoTable({
-        head: [['Data/Hora', 'Ação', 'Tabela', 'Descrição', 'Executado por']],
-        body: tableData,
-        startY: 34,
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [59, 130, 246] },
-      });
+      // Use autoTable from the module or from doc prototype
+      const autoTable = (autoTableModule as any).default || (doc as any).autoTable;
+      if (typeof autoTable === 'function' && autoTable !== (doc as any).autoTable) {
+        autoTable(doc, {
+          head: [['Data/Hora', 'Ação', 'Tabela', 'Descrição', 'Executado por']],
+          body: tableData,
+          startY: 34,
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: [59, 130, 246] },
+        });
+      } else {
+        (doc as any).autoTable({
+          head: [['Data/Hora', 'Ação', 'Tabela', 'Descrição', 'Executado por']],
+          body: tableData,
+          startY: 34,
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: [59, 130, 246] },
+        });
+      }
 
       doc.save(`logs_${format(new Date(), 'yyyy-MM-dd_HHmm')}.pdf`);
       toast.success('Relatório PDF exportado com sucesso');
