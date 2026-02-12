@@ -6,43 +6,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-const SYSTEM_BOT_EMAIL = 'sistema@servchat.bot'
-const SYSTEM_BOT_NAME = 'ServChat Bot'
-
-async function getOrCreateBotProfile(supabase: any) {
-  // Check if bot profile exists
-  const { data: existing } = await supabase
+async function getAdminProfileId(supabase: any, userId: string): Promise<string> {
+  const { data, error } = await supabase
     .from('profiles')
-    .select('id, user_id')
-    .eq('email', SYSTEM_BOT_EMAIL)
-    .eq('profile_type', 'bot')
-    .single()
-
-  if (existing) return existing.id
-
-  // Create a deterministic UUID for the bot user_id
-  const botUserId = '00000000-0000-0000-0000-000000000099'
-
-  const { data: newBot, error } = await supabase
-    .from('profiles')
-    .insert({
-      user_id: botUserId,
-      name: SYSTEM_BOT_NAME,
-      display_name: '🤖 ServChat Bot',
-      email: SYSTEM_BOT_EMAIL,
-      profile_type: 'bot',
-      is_active: true,
-      autonomy_level: 'colaborador',
-    })
     .select('id')
+    .eq('user_id', userId)
     .single()
 
-  if (error) {
-    console.error('Error creating bot profile:', error)
-    throw new Error('Could not create bot profile')
+  if (error || !data) {
+    console.error('Error getting admin profile:', error)
+    throw new Error('Could not find admin profile')
   }
 
-  return newBot.id
+  return data.id
 }
 
 function generateRecommendations(stats: {
@@ -264,18 +240,13 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } }
-    })
-    const token = authHeader.replace('Bearer ', '')
-    const { data: claims, error: claimsError } = await userClient.auth.getClaims(token)
-    if (claimsError || !claims?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // Check if admin
-    const userId = claims.claims.sub as string
+    const userId = user.id
     const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', userId).eq('role', 'admin').single()
     if (!roleData) {
       return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
@@ -284,8 +255,8 @@ Deno.serve(async (req) => {
     const body = await req.json()
     const { type, targetUserId } = body
 
-    // Get or create bot profile for DMs
-    const botProfileId = await getOrCreateBotProfile(supabase)
+    // Use admin profile as DM sender
+    const senderProfileId = await getAdminProfileId(supabase, userId)
 
     // Get target profiles
     let targetProfiles: any[] = []
@@ -426,7 +397,7 @@ Deno.serve(async (req) => {
           const { error: dmError } = await supabase
             .from('direct_messages')
             .insert({
-              sender_id: botProfileId,
+              sender_id: senderProfileId,
               receiver_id: profile.id,
               content: chatMessage,
             })
