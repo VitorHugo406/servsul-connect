@@ -182,20 +182,13 @@ export function LogsSection() {
   const exportToPDF = async () => {
     setExporting(true);
     try {
-      const jsPDFModule = await import('jspdf');
-      const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF;
-      const autoTableModule = await import('jspdf-autotable');
-      
-      // jspdf-autotable adds autoTable to jsPDF prototype via side-effect
-      // but we need to ensure it's properly loaded
-      const doc = new jsPDF({ orientation: 'landscape' });
-      doc.setFontSize(16);
-      doc.text('Relatório de Logs do Sistema', 14, 15);
-      doc.setFontSize(10);
-      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 22);
-      doc.text(`Total de registros: ${filteredLogs.length}`, 14, 28);
+      // Count stats
+      const totalLogs = filteredLogs.length;
+      const deletions = filteredLogs.filter(l => l.action === 'DELETE').length;
+      const insertions = filteredLogs.filter(l => l.action === 'INSERT').length;
+      const updates = filteredLogs.filter(l => l.action === 'UPDATE').length;
 
-      const tableData = filteredLogs.map((log) => [
+      const tableRows = filteredLogs.map((log) => [
         format(new Date(log.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
         ACTION_LABELS[log.action] || log.action,
         TABLE_LABELS[log.table_name] || log.table_name,
@@ -203,28 +196,50 @@ export function LogsSection() {
         log.performed_by_email || 'Sistema',
       ]);
 
-      // Use autoTable from the module or from doc prototype
-      const autoTable = (autoTableModule as any).default || (doc as any).autoTable;
-      if (typeof autoTable === 'function' && autoTable !== (doc as any).autoTable) {
-        autoTable(doc, {
-          head: [['Data/Hora', 'Ação', 'Tabela', 'Descrição', 'Executado por']],
-          body: tableData,
-          startY: 34,
-          styles: { fontSize: 8, cellPadding: 2 },
-          headStyles: { fillColor: [59, 130, 246] },
-        });
-      } else {
-        (doc as any).autoTable({
-          head: [['Data/Hora', 'Ação', 'Tabela', 'Descrição', 'Executado por']],
-          body: tableData,
-          startY: 34,
-          styles: { fontSize: 8, cellPadding: 2 },
-          headStyles: { fillColor: [59, 130, 246] },
-        });
-      }
+      const headers = ['Data/Hora', 'Ação', 'Tabela', 'Descrição', 'Executado por'];
 
-      doc.save(`logs_${format(new Date(), 'yyyy-MM-dd_HHmm')}.pdf`);
-      toast.success('Relatório PDF exportado com sucesso');
+      let html = `<html><head><meta charset="utf-8"><title>Relatório de Logs do Sistema</title>
+      <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 40px; background: #fff; color: #1a1a1a; }
+        .header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; border-bottom: 3px solid #3b82f6; padding-bottom: 16px; }
+        .header h1 { font-size: 24px; margin: 0; color: #1e293b; }
+        .header .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
+        .stats { display: flex; gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: #f1f5f9; border-radius: 8px; padding: 12px 16px; flex: 1; text-align: center; }
+        .stat-card .number { font-size: 24px; font-weight: 700; color: #3b82f6; }
+        .stat-card .label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th { background: #1e293b; color: white; padding: 12px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
+        tr:nth-child(even) { background: #f8fafc; }
+        tr:last-child td { border-bottom: none; }
+        .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 10px; text-align: center; }
+        @media print { body { padding: 20px; } }
+      </style></head><body>`;
+
+      html += `<div class="header"><div><h1>📋 Logs do Sistema</h1><div class="subtitle">Relatório gerado em ${new Date().toLocaleString('pt-BR')}</div></div></div>`;
+      html += `<div class="stats">`;
+      html += `<div class="stat-card"><div class="number">${totalLogs}</div><div class="label">Total de Registros</div></div>`;
+      html += `<div class="stat-card"><div class="number" style="color:#ef4444">${deletions}</div><div class="label">Exclusões</div></div>`;
+      html += `<div class="stat-card"><div class="number" style="color:#22c55e">${insertions}</div><div class="label">Criações</div></div>`;
+      html += `<div class="stat-card"><div class="number" style="color:#3b82f6">${updates}</div><div class="label">Atualizações</div></div>`;
+      html += `</div>`;
+
+      html += '<table><thead><tr>';
+      headers.forEach(h => { html += `<th>${h}</th>`; });
+      html += '</tr></thead><tbody>';
+      tableRows.forEach(row => {
+        html += '<tr>';
+        row.forEach(c => { html += `<td>${c || '-'}</td>`; });
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      html += `<div class="footer">Relatório gerado automaticamente pelo ServChat • ${new Date().toLocaleDateString('pt-BR')}</div></body></html>`;
+
+      const w = window.open('', '_blank');
+      if (w) { w.document.write(html); w.document.close(); w.print(); }
+      toast.success('Relatório PDF gerado!');
     } catch (error) {
       console.error('Error exporting PDF:', error);
       toast.error('Erro ao exportar PDF');
