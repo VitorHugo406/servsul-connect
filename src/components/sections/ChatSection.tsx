@@ -18,11 +18,13 @@ import { AlertCircle, Users, MessageSquare, ArrowLeft, UsersRound, Eye, EyeOff }
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSound } from '@/hooks/useSound';
+import { useConversations } from '@/hooks/useDirectMessages';
+import { supabase } from '@/integrations/supabase/client';
 
 type ChatMode = 'sectors' | 'direct' | 'groups';
 
 export function ChatSection() {
-  const { profile, isAdmin, geralSectorId, allAccessibleSectorIds } = useAuth();
+  const { profile, isAdmin, geralSectorId, allAccessibleSectorIds, user } = useAuth();
   const { sectors, loading: sectorsLoading } = useSectors();
   const { markDirectMessagesAsRead } = useNotifications();
   const [activeSector, setActiveSector] = useState<string | null>(null);
@@ -33,6 +35,8 @@ export function ChatSection() {
   const isMobile = useIsMobile();
   const { playMessageSent } = useSound();
   const { groups } = usePrivateGroups();
+  const { conversations } = useConversations();
+  const [unreadGroupCount, setUnreadGroupCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Filter sectors user can access using the new allAccessibleSectorIds
@@ -51,6 +55,55 @@ export function ChatSection() {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  // Calculate unread DM count
+  const unreadDmCount = conversations.reduce((acc, c) => acc + c.unreadCount, 0);
+
+  // Calculate unread group messages
+  useEffect(() => {
+    if (!profile || !user) return;
+
+    const fetchGroupUnread = async () => {
+      let total = 0;
+      for (const group of groups) {
+        // Get user's last read time for this group
+        const { data: readData } = await supabase
+          .from('private_group_message_reads')
+          .select('last_read_at')
+          .eq('group_id', group.id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const lastReadAt = readData?.last_read_at || '1970-01-01T00:00:00Z';
+
+        // Count messages after last read
+        const { count } = await supabase
+          .from('private_group_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('group_id', group.id)
+          .gt('created_at', lastReadAt)
+          .neq('sender_id', profile.id);
+
+        total += count || 0;
+      }
+      setUnreadGroupCount(total);
+    };
+
+    fetchGroupUnread();
+
+    // Subscribe to group messages
+    const channel = supabase
+      .channel('chat-section-group-unread')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'private_group_messages' }, () => {
+        fetchGroupUnread();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'private_group_message_reads' }, () => {
+        fetchGroupUnread();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [profile, user, groups]);
 
   const handleSendMessage = async (content: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[]) => {
     // Play sound immediately for instant feedback
@@ -171,7 +224,7 @@ export function ChatSection() {
         <button
           onClick={() => setChatMode('sectors')}
           className={cn(
-            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
+            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors relative',
             chatMode === 'sectors'
               ? 'border-b-2 border-primary text-primary'
               : 'text-muted-foreground hover:text-foreground'
@@ -183,7 +236,7 @@ export function ChatSection() {
         <button
           onClick={() => setChatMode('direct')}
           className={cn(
-            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
+            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors relative',
             chatMode === 'direct'
               ? 'border-b-2 border-primary text-primary'
               : 'text-muted-foreground hover:text-foreground'
@@ -191,11 +244,14 @@ export function ChatSection() {
         >
           <MessageSquare className="h-4 w-4" />
           <span className={isMobile ? 'text-xs' : ''}>Individual</span>
+          {unreadDmCount > 0 && (
+            <span className="h-2.5 w-2.5 rounded-full bg-orange-500 absolute top-2 right-[calc(50%-28px)]" />
+          )}
         </button>
         <button
           onClick={() => setChatMode('groups')}
           className={cn(
-            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
+            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors relative',
             chatMode === 'groups'
               ? 'border-b-2 border-primary text-primary'
               : 'text-muted-foreground hover:text-foreground'
@@ -203,6 +259,9 @@ export function ChatSection() {
         >
           <UsersRound className="h-4 w-4" />
           <span className={isMobile ? 'text-xs' : ''}>Grupos</span>
+          {unreadGroupCount > 0 && (
+            <span className="h-2.5 w-2.5 rounded-full bg-orange-500 absolute top-2 right-[calc(50%-24px)]" />
+          )}
         </button>
       </div>
 
