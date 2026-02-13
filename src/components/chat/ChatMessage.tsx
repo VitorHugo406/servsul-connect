@@ -1,3 +1,4 @@
+import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Check, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -54,8 +55,45 @@ export function ChatMessage({ message }: ChatMessageProps) {
   // Message status - if it has an ID, it's in the database (delivered)
   const messageStatus = message.status || (message.id ? 'delivered' : 'sending');
 
+  // Format inline text: *bold*, _italic_, ~strikethrough~, [link](url)
+  const formatText = (text: string, isOwnMsg: boolean): React.ReactNode[] => {
+    const parts: React.ReactNode[] = [];
+    const regex = /(\*[^*]+\*|_[^_]+_|~[^~]+~|\[[^\]]+\]\([^)]+\))/g;
+    let lastIndex = 0;
+    let match;
+    let key = 0;
+
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(text.slice(lastIndex, match.index));
+      }
+      const m = match[0];
+      if (m.startsWith('*') && m.endsWith('*')) {
+        parts.push(<strong key={key++}>{m.slice(1, -1)}</strong>);
+      } else if (m.startsWith('_') && m.endsWith('_')) {
+        parts.push(<em key={key++}>{m.slice(1, -1)}</em>);
+      } else if (m.startsWith('~') && m.endsWith('~')) {
+        parts.push(<s key={key++}>{m.slice(1, -1)}</s>);
+      } else if (m.startsWith('[')) {
+        const linkMatch = m.match(/^\[(.+?)\]\((.+?)\)$/);
+        if (linkMatch) {
+          parts.push(
+            <a key={key++} href={linkMatch[2]} target="_blank" rel="noopener noreferrer"
+              className={cn("underline", isOwnMsg ? "text-white/90 hover:text-white" : "text-primary hover:text-primary/80")}
+            >{linkMatch[1]}</a>
+          );
+        }
+      }
+      lastIndex = match.index + m.length;
+    }
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex));
+    }
+    return parts.length > 0 ? parts : [text];
+  };
+
   // Parse content for attachment links
-  const renderContent = (content: string, isOwn: boolean) => {
+  const renderContent = (content: string, isOwnMsg: boolean) => {
     const lines = content.split('\n');
     const textLines: string[] = [];
     const attachments: { type: 'image' | 'file'; name: string; url: string }[] = [];
@@ -77,7 +115,14 @@ export function ChatMessage({ message }: ChatMessageProps) {
     return (
       <div className="space-y-2">
         {textContent && (
-          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{textContent}</p>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+            {textContent.split('\n').map((line, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <br />}
+                {formatText(line, isOwnMsg)}
+              </React.Fragment>
+            ))}
+          </p>
         )}
         {attachments.map((att, i) => (
           att.type === 'image' ? (

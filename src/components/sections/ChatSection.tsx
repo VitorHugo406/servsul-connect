@@ -64,6 +64,12 @@ export function ChatSection() {
     if (!profile || !user) return;
 
     const fetchGroupUnread = async () => {
+      // If we're currently viewing the groups tab, consider everything read
+      if (chatMode === 'groups') {
+        setUnreadGroupCount(0);
+        return;
+      }
+      
       let total = 0;
       for (const group of groups) {
         // Get user's last read time for this group
@@ -103,7 +109,7 @@ export function ChatSection() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [profile, user, groups]);
+  }, [profile, user, groups, chatMode]);
 
   const handleSendMessage = async (content: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[]) => {
     // Play sound immediately for instant feedback

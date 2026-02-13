@@ -63,7 +63,7 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
   const loading = conversationsLoading || usersLoading;
 
   return (
-    <div className="flex h-full flex-col border-r border-border bg-card">
+    <div className="flex h-full flex-col border-r border-border bg-card overflow-hidden">
       {/* Header */}
       <div className="border-b border-border p-4">
         <h3 className="mb-3 font-display text-lg font-semibold text-foreground">
@@ -166,14 +166,14 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
                           lastHeartbeat={presence.lastHeartbeat}
                         />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 overflow-hidden">
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-medium text-foreground truncate">{displayName}</span>
                           <span className="text-xs text-muted-foreground flex-shrink-0">
                             {formatTime(conv.lastMessage.created_at)}
                           </span>
                         </div>
-                        <p className="text-sm text-muted-foreground truncate max-w-full overflow-hidden">
+                        <p className="text-sm text-muted-foreground truncate">
                           {conv.lastMessage.content}
                         </p>
                       </div>

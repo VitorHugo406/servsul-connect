@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Resend } from 'npm:resend@4.0.0'
+import { jsPDF } from 'npm:jspdf@2.5.2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -79,7 +80,7 @@ function buildChatMessage(displayName: string, stats: any, recommendations: stri
   if (recommendations.length > 0) {
     msg += `📌 *Recomendações:*\n`
     recommendations.forEach(r => {
-      msg += `• ${r}\n`
+      msg += `• _${r}_\n`
     })
   }
 
@@ -142,221 +143,160 @@ function buildEmailHtml(displayName: string, stats: any, recommendations: string
 </body></html>`
 }
 
-// Build an SVG-based PDF content as HTML that we convert to a downloadable report
-function buildPdfHtml(displayName: string, stats: any, recommendations: string[], currentMonth: string, companyName: string): string {
-  const completionRate = stats.totalTasks > 0 
-    ? Math.round((stats.completedTasks / stats.totalTasks) * 100) 
-    : 0
-  const pendingTasks = stats.totalTasks - stats.completedTasks
+function generatePdfReport(displayName: string, stats: any, recommendations: string[], currentMonth: string, companyName: string): Uint8Array {
+  const doc = new jsPDF()
+  const pageW = doc.internal.pageSize.getWidth()
   
-  // SVG pie chart for task completion
-  const completedAngle = (stats.completedTasks / Math.max(stats.totalTasks, 1)) * 360
-  const completedRad = (completedAngle - 90) * Math.PI / 180
-  const largeArc = completedAngle > 180 ? 1 : 0
-  const x = 50 + 40 * Math.cos(completedRad)
-  const y = 50 + 40 * Math.sin(completedRad)
+  // Header - blue gradient background
+  doc.setFillColor(30, 64, 175)
+  doc.rect(0, 0, pageW, 48, 'F')
+  doc.setFillColor(59, 130, 246)
+  doc.rect(0, 38, pageW, 10, 'F')
   
-  const pieChart = stats.totalTasks > 0 ? `
-    <svg width="120" height="120" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="50" cy="50" r="40" fill="#e5e7eb"/>
-      ${stats.completedTasks > 0 && stats.completedTasks < stats.totalTasks ? `
-        <path d="M 50 10 A 40 40 0 ${largeArc} 1 ${x.toFixed(1)} ${y.toFixed(1)} L 50 50 Z" fill="#22c55e"/>
-      ` : stats.completedTasks >= stats.totalTasks ? `
-        <circle cx="50" cy="50" r="40" fill="#22c55e"/>
-      ` : ''}
-      <circle cx="50" cy="50" r="20" fill="white"/>
-      <text x="50" y="54" text-anchor="middle" font-size="12" font-weight="bold" fill="#1f2937">${completionRate}%</text>
-    </svg>
-  ` : '<svg width="120" height="120" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#e5e7eb"/><circle cx="50" cy="50" r="20" fill="white"/><text x="50" y="54" text-anchor="middle" font-size="10" fill="#9ca3af">N/A</text></svg>'
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(26)
+  doc.setFont('helvetica', 'bold')
+  doc.text('ServChat', 20, 20)
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'normal')
+  doc.text(companyName, 20, 28)
+  doc.setFontSize(15)
+  doc.setFont('helvetica', 'bold')
+  doc.text(`Relatório Mensal de Atividades — ${currentMonth}`, 20, 42)
 
-  // Bar chart for messages
-  const maxBar = Math.max(stats.totalMessages, stats.completedTasks, stats.lateTasks, stats.overdueTasks, 1)
-  const barHeight = (val: number) => Math.max((val / maxBar) * 80, 2)
+  // Collaborator name
+  doc.setTextColor(31, 41, 55)
+  doc.setFontSize(13)
+  doc.setFont('helvetica', 'normal')
+  doc.text(`Colaborador: `, 20, 62)
+  doc.setFont('helvetica', 'bold')
+  doc.text(displayName, 55, 62)
 
-  const barChart = `
-    <svg width="260" height="120" viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg">
-      <rect x="20" y="${120 - barHeight(stats.totalMessages)}" width="40" height="${barHeight(stats.totalMessages)}" rx="4" fill="#3b82f6"/>
-      <text x="40" y="${115 - barHeight(stats.totalMessages)}" text-anchor="middle" font-size="9" fill="#1f2937" font-weight="bold">${stats.totalMessages}</text>
-      <text x="40" y="118" text-anchor="middle" font-size="7" fill="#6b7280">Msgs</text>
-      
-      <rect x="80" y="${120 - barHeight(stats.completedTasks)}" width="40" height="${barHeight(stats.completedTasks)}" rx="4" fill="#22c55e"/>
-      <text x="100" y="${115 - barHeight(stats.completedTasks)}" text-anchor="middle" font-size="9" fill="#1f2937" font-weight="bold">${stats.completedTasks}</text>
-      <text x="100" y="118" text-anchor="middle" font-size="7" fill="#6b7280">Concluídas</text>
-      
-      <rect x="140" y="${120 - barHeight(stats.lateTasks)}" width="40" height="${barHeight(stats.lateTasks)}" rx="4" fill="#f59e0b"/>
-      <text x="160" y="${115 - barHeight(stats.lateTasks)}" text-anchor="middle" font-size="9" fill="#1f2937" font-weight="bold">${stats.lateTasks}</text>
-      <text x="160" y="118" text-anchor="middle" font-size="7" fill="#6b7280">Atrasadas</text>
-      
-      <rect x="200" y="${120 - barHeight(stats.overdueTasks)}" width="40" height="${barHeight(stats.overdueTasks)}" rx="4" fill="#ef4444"/>
-      <text x="220" y="${115 - barHeight(stats.overdueTasks)}" text-anchor="middle" font-size="9" fill="#1f2937" font-weight="bold">${stats.overdueTasks}</text>
-      <text x="220" y="118" text-anchor="middle" font-size="7" fill="#6b7280">Pendentes</text>
-    </svg>
-  `
+  // Stats cards
+  const cardY = 72
+  const cardW = 40
+  const cardH = 32
+  const cardGap = 5
+  const startX = 20
+  const completionRate = stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0
 
-  return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  @page { size: A4; margin: 0; }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: white; color: #1f2937; }
+  const cards = [
+    { value: String(stats.totalMessages), label: 'MENSAGENS', bgR: 239, bgG: 246, bgB: 255, textR: 37, textG: 99, textB: 235 },
+    { value: `${stats.completedTasks}/${stats.totalTasks}`, label: 'CONCLUÍDAS', bgR: 240, bgG: 253, bgB: 244, textR: 22, textG: 163, textB: 74 },
+    { value: String(stats.lateTasks), label: 'COM ATRASO', bgR: 255, bgG: 251, bgB: 235, textR: 217, textG: 119, textB: 6 },
+    { value: String(stats.overdueTasks), label: 'PENDENTES', bgR: 254, bgG: 242, bgB: 242, textR: 220, textG: 38, textB: 38 },
+  ]
+
+  cards.forEach((card, i) => {
+    const x = startX + i * (cardW + cardGap)
+    doc.setFillColor(card.bgR, card.bgG, card.bgB)
+    doc.roundedRect(x, cardY, cardW, cardH, 3, 3, 'F')
+    doc.setTextColor(card.textR, card.textG, card.textB)
+    doc.setFontSize(22)
+    doc.setFont('helvetica', 'bold')
+    doc.text(card.value, x + cardW / 2, cardY + 16, { align: 'center' })
+    doc.setTextColor(107, 114, 128)
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'normal')
+    doc.text(card.label, x + cardW / 2, cardY + 26, { align: 'center' })
+  })
+
+  // Completion rate bar
+  let currentY = cardY + cardH + 15
+  doc.setTextColor(31, 41, 55)
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Taxa de Conclusão de Tarefas', 20, currentY)
+  currentY += 8
   
-  .header {
-    background: linear-gradient(135deg, #1e40af, #3b82f6);
-    padding: 40px 48px;
-    color: white;
+  // Background bar
+  const barW = pageW - 40
+  doc.setFillColor(229, 231, 235)
+  doc.roundedRect(20, currentY, barW, 10, 3, 3, 'F')
+  // Progress bar
+  if (completionRate > 0) {
+    const progressW = Math.max((completionRate / 100) * barW, 6)
+    doc.setFillColor(34, 197, 94)
+    doc.roundedRect(20, currentY, progressW, 10, 3, 3, 'F')
   }
-  .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
-  .header p { opacity: 0.85; font-size: 14px; }
-  .header .subtitle { font-size: 18px; margin-top: 8px; opacity: 0.95; }
-  
-  .content { padding: 32px 48px; }
-  
-  .stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 32px;
+  // Percentage text
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'bold')
+  if (completionRate > 10) {
+    doc.text(`${completionRate}%`, 20 + Math.max((completionRate / 100) * barW, 6) / 2, currentY + 7, { align: 'center' })
   }
-  .stat-card {
-    border-radius: 12px;
-    padding: 20px 16px;
-    text-align: center;
-    border: 1px solid;
+  currentY += 20
+
+  // Activity Summary
+  doc.setTextColor(31, 41, 55)
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Resumo de Atividades', 20, currentY)
+  currentY += 8
+
+  doc.setFillColor(248, 250, 252)
+  doc.roundedRect(20, currentY, pageW - 40, 40, 3, 3, 'F')
+  doc.setDrawColor(226, 232, 240)
+  doc.roundedRect(20, currentY, pageW - 40, 40, 3, 3, 'S')
+
+  const summaryItems = [
+    { icon: '💬', text: `Mensagens enviadas no mês: ${stats.totalMessages}` },
+    { icon: '✅', text: `Tarefas concluídas: ${stats.completedTasks} de ${stats.totalTasks} (${completionRate}%)` },
+    { icon: '⏰', text: `Entregas realizadas com atraso: ${stats.lateTasks}` },
+    { icon: '🔴', text: `Tarefas pendentes e atrasadas: ${stats.overdueTasks}` },
+  ]
+
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(55, 65, 81)
+  summaryItems.forEach((item, i) => {
+    doc.text(`${item.icon}  ${item.text}`, 26, currentY + 10 + i * 8)
+  })
+  currentY += 50
+
+  // Recommendations
+  if (recommendations.length > 0) {
+    doc.setTextColor(30, 64, 175)
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('📌 Recomendações Personalizadas', 20, currentY)
+    currentY += 8
+
+    recommendations.forEach((rec, i) => {
+      // Check if we need a new page
+      if (currentY > 260) {
+        doc.addPage()
+        currentY = 20
+      }
+      
+      const recH = Math.ceil(doc.getTextWidth(rec) / (pageW - 52)) * 5 + 10
+      doc.setFillColor(248, 250, 252)
+      doc.roundedRect(20, currentY, pageW - 40, Math.max(recH, 14), 2, 2, 'F')
+      doc.setFillColor(59, 130, 246)
+      doc.rect(20, currentY, 3, Math.max(recH, 14), 'F')
+      
+      doc.setTextColor(55, 65, 81)
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      const lines = doc.splitTextToSize(rec, pageW - 52)
+      doc.text(lines, 28, currentY + 9)
+      currentY += Math.max(recH, 14) + 4
+    })
   }
-  .stat-card.green { background: #f0fdf4; border-color: #bbf7d0; }
-  .stat-card.blue { background: #eff6ff; border-color: #bfdbfe; }
-  .stat-card.yellow { background: #fffbeb; border-color: #fde68a; }
-  .stat-card.red { background: #fef2f2; border-color: #fecaca; }
-  .stat-value { font-size: 32px; font-weight: 700; }
-  .stat-card.green .stat-value { color: #16a34a; }
-  .stat-card.blue .stat-value { color: #2563eb; }
-  .stat-card.yellow .stat-value { color: #d97706; }
-  .stat-card.red .stat-value { color: #dc2626; }
-  .stat-label { font-size: 11px; color: #6b7280; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-  
-  .charts-section {
-    display: flex;
-    gap: 32px;
-    margin-bottom: 32px;
-    align-items: flex-start;
-  }
-  .chart-box {
-    flex: 1;
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 20px;
-    border: 1px solid #e2e8f0;
-    text-align: center;
-  }
-  .chart-box h3 { font-size: 14px; color: #374151; margin-bottom: 12px; font-weight: 600; }
-  
-  .recommendations {
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 24px;
-    border: 1px solid #e2e8f0;
-    margin-bottom: 32px;
-  }
-  .recommendations h3 { font-size: 16px; color: #1e40af; margin-bottom: 16px; font-weight: 600; }
-  .rec-item {
-    padding: 10px 16px;
-    background: white;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    font-size: 13px;
-    line-height: 1.6;
-    color: #374151;
-    border-left: 3px solid #3b82f6;
-  }
-  
-  .footer {
-    text-align: center;
-    padding: 24px 48px;
-    color: #9ca3af;
-    font-size: 11px;
-    border-top: 1px solid #e5e7eb;
-  }
-  
-  .legend {
-    display: flex;
-    gap: 16px;
-    justify-content: center;
-    margin-top: 8px;
-    font-size: 10px;
-    color: #6b7280;
-  }
-  .legend-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 4px;
-    vertical-align: middle;
-  }
-</style>
-</head>
-<body>
-  <div class="header">
-    <h1>ServChat</h1>
-    <p>${companyName}</p>
-    <div class="subtitle">📊 Relatório Mensal de Atividades — ${currentMonth}</div>
-  </div>
-  
-  <div class="content">
-    <p style="font-size: 16px; margin-bottom: 24px; color: #374151;">
-      Colaborador: <strong>${displayName}</strong>
-    </p>
-    
-    <div class="stats-grid">
-      <div class="stat-card blue">
-        <div class="stat-value">${stats.totalMessages}</div>
-        <div class="stat-label">Mensagens Enviadas</div>
-      </div>
-      <div class="stat-card green">
-        <div class="stat-value">${stats.completedTasks}/${stats.totalTasks}</div>
-        <div class="stat-label">Tarefas Concluídas</div>
-      </div>
-      <div class="stat-card yellow">
-        <div class="stat-value">${stats.lateTasks}</div>
-        <div class="stat-label">Entregas com Atraso</div>
-      </div>
-      <div class="stat-card red">
-        <div class="stat-value">${stats.overdueTasks}</div>
-        <div class="stat-label">Pendências Atrasadas</div>
-      </div>
-    </div>
-    
-    <div class="charts-section">
-      <div class="chart-box">
-        <h3>Taxa de Conclusão de Tarefas</h3>
-        ${pieChart}
-        <div class="legend">
-          <span><span class="legend-dot" style="background:#22c55e"></span>Concluídas (${stats.completedTasks})</span>
-          <span><span class="legend-dot" style="background:#e5e7eb"></span>Pendentes (${pendingTasks})</span>
-        </div>
-      </div>
-      <div class="chart-box">
-        <h3>Visão Geral de Atividades</h3>
-        ${barChart}
-      </div>
-    </div>
-    
-    ${recommendations.length > 0 ? `
-    <div class="recommendations">
-      <h3>📌 Recomendações Personalizadas</h3>
-      ${recommendations.map(r => `<div class="rec-item">${r}</div>`).join('')}
-    </div>
-    ` : ''}
-  </div>
-  
-  <div class="footer">
-    Relatório gerado automaticamente pelo ServChat em ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}<br>
-    © ${new Date().getFullYear()} ${companyName}. Todos os direitos reservados.
-  </div>
-</body>
-</html>`
+
+  // Footer
+  const footerY = doc.internal.pageSize.getHeight() - 15
+  doc.setDrawColor(229, 231, 235)
+  doc.line(20, footerY - 5, pageW - 20, footerY - 5)
+  doc.setTextColor(156, 163, 175)
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'normal')
+  const dateStr = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  doc.text(`Relatório gerado automaticamente pelo ServChat em ${dateStr}`, pageW / 2, footerY, { align: 'center' })
+  doc.text(`© ${new Date().getFullYear()} ${companyName}. Todos os direitos reservados.`, pageW / 2, footerY + 5, { align: 'center' })
+
+  return new Uint8Array(doc.output('arraybuffer'))
 }
 
 Deno.serve(async (req) => {
@@ -475,19 +415,17 @@ Deno.serve(async (req) => {
         const stats = { totalMessages, completedTasks, totalTasks, lateTasks, overdueTasks }
         const recommendations = generateRecommendations(stats)
 
-        // Generate PDF HTML and upload to storage
+        // Generate actual PDF and upload to storage
         let pdfUrl: string | undefined
         try {
-          const pdfHtml = buildPdfHtml(displayName, stats, recommendations, currentMonth, companyName)
+          const pdfBytes = generatePdfReport(displayName, stats, recommendations, currentMonth, companyName)
           const monthSlug = currentMonth.replace(/\s+/g, '-').toLowerCase()
-          const fileName = `feedback/${monthSlug}/${profile.id}.html`
-          
-          const htmlBlob = new Blob([pdfHtml], { type: 'text/html' })
+          const fileName = `feedback/${monthSlug}/${profile.id}.pdf`
           
           const { error: uploadError } = await supabase.storage
             .from('attachments')
-            .upload(fileName, htmlBlob, {
-              contentType: 'text/html',
+            .upload(fileName, pdfBytes, {
+              contentType: 'application/pdf',
               upsert: true,
             })
 
