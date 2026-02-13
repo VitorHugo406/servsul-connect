@@ -166,14 +166,14 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
                           lastHeartbeat={presence.lastHeartbeat}
                         />
                       </div>
-                      <div className="flex-1 min-w-0 overflow-hidden">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-medium text-foreground truncate">{displayName}</span>
                           <span className="text-xs text-muted-foreground flex-shrink-0">
                             {formatTime(conv.lastMessage.created_at)}
                           </span>
                         </div>
-                        <p className="truncate text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground truncate max-w-full overflow-hidden">
                           {conv.lastMessage.content}
                         </p>
                       </div>

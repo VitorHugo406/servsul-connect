@@ -224,7 +224,7 @@ export function ChatSection() {
         <button
           onClick={() => setChatMode('sectors')}
           className={cn(
-            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors relative',
+            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
             chatMode === 'sectors'
               ? 'border-b-2 border-primary text-primary'
               : 'text-muted-foreground hover:text-foreground'
@@ -236,7 +236,7 @@ export function ChatSection() {
         <button
           onClick={() => setChatMode('direct')}
           className={cn(
-            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors relative',
+            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
             chatMode === 'direct'
               ? 'border-b-2 border-primary text-primary'
               : 'text-muted-foreground hover:text-foreground'
@@ -244,14 +244,14 @@ export function ChatSection() {
         >
           <MessageSquare className="h-4 w-4" />
           <span className={isMobile ? 'text-xs' : ''}>Individual</span>
-          {unreadDmCount > 0 && (
-            <span className="h-2.5 w-2.5 rounded-full bg-orange-500 absolute top-2 right-[calc(50%-28px)]" />
+          {unreadDmCount > 0 && chatMode !== 'direct' && (
+            <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />
           )}
         </button>
         <button
           onClick={() => setChatMode('groups')}
           className={cn(
-            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors relative',
+            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
             chatMode === 'groups'
               ? 'border-b-2 border-primary text-primary'
               : 'text-muted-foreground hover:text-foreground'
@@ -259,8 +259,8 @@ export function ChatSection() {
         >
           <UsersRound className="h-4 w-4" />
           <span className={isMobile ? 'text-xs' : ''}>Grupos</span>
-          {unreadGroupCount > 0 && (
-            <span className="h-2.5 w-2.5 rounded-full bg-orange-500 absolute top-2 right-[calc(50%-24px)]" />
+          {unreadGroupCount > 0 && chatMode !== 'groups' && (
+            <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />
           )}
         </button>
       </div>
