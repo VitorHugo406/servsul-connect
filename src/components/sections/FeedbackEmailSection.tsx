@@ -74,10 +74,11 @@ export function FeedbackEmailSection() {
         const parts = [];
         if (data.emailCount > 0) parts.push('e-mail');
         if (data.dmCount > 0) parts.push('mensagem no chat');
+        if (data.pdfCount > 0) parts.push('PDF');
         toast.success(`Feedback enviado com sucesso (${parts.join(' + ')})!`);
       } else {
         setSentUsers(new Set(users.map(u => u.id)));
-        toast.success(`Feedback enviado: ${data.emailCount} e-mail(s) + ${data.dmCount} mensagem(ns) no chat!`);
+        toast.success(`Feedback enviado: ${data.emailCount} e-mail(s) + ${data.dmCount} chat(s) + ${data.pdfCount} PDF(s)!`);
       }
 
       if (data?.errors && data.errors.length > 0) {
