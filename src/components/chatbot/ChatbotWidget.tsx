@@ -38,6 +38,10 @@ const helpItems = [
     content: 'Quando você envia uma mensagem, aparece um ✓ indicando que foi enviada. Após ser salva e visível para outros usuários, o status muda para ✓✓ (assim como no WhatsApp).',
   },
   {
+    title: 'Formatação de Texto no Chat',
+    content: 'Você pode formatar suas mensagens! Use *texto* para negrito, _texto_ para itálico, ~texto~ para riscado e [texto](url) para criar links clicáveis. A formatação funciona em todos os chats.',
+  },
+  {
     title: 'Mensagens Diretas',
     content: 'Clique na aba "Individual" para conversar individualmente com outros colaboradores. Você pode ver quem está online (verde), inativo (vermelho) ou offline (cinza).',
   },
@@ -48,6 +52,14 @@ const helpItems = [
   {
     title: 'Menção de Cards no Chat',
     content: 'Digite "#" em qualquer chat para mencionar um card de tarefa. Selecione o mural e o card para compartilhar um resumo com título, etiquetas, prioridade e prazo.',
+  },
+  {
+    title: 'Notificações de Mensagens',
+    content: 'Uma bolinha laranja aparece nas abas do chat (Individual, Grupos, Setores) quando há mensagens não lidas. Ela desaparece automaticamente quando você visualiza o chat correspondente.',
+  },
+  {
+    title: 'Feedback Mensal com PDF',
+    content: 'Administradores podem enviar relatórios mensais de atividades para os colaboradores. O feedback inclui estatísticas, recomendações e um PDF estilizado para download.',
   },
   {
     title: 'Gestão de Tarefas',

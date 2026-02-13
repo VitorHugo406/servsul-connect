@@ -51,14 +51,14 @@ const features = [
   },
   {
     icon: BarChart3,
-    title: 'Gráficos e Dados',
-    description: 'Visualize informações importantes da empresa com gráficos interativos e dados em tempo real.',
+    title: 'Formatação de Texto',
+    description: 'Use *texto* para negrito, _texto_ para itálico, ~texto~ para riscado e [texto](url) para links nas mensagens.',
     color: 'bg-primary/10 text-primary',
   },
   {
     icon: Shield,
-    title: 'Segurança',
-    description: 'Suas mensagens privadas são protegidas. Nem administradores podem visualizá-las.',
+    title: 'Feedback Mensal com PDF',
+    description: 'Receba relatórios mensais com resumo de atividades, gráficos e recomendações em PDF para download.',
     color: 'bg-destructive/10 text-destructive',
   },
 ];
