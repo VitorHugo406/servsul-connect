@@ -143,9 +143,27 @@ function buildEmailHtml(displayName: string, stats: any, recommendations: string
 </body></html>`
 }
 
+function getBrazilDate(): Date {
+  const now = new Date()
+  // Convert to Brazil time (UTC-3)
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000
+  return new Date(utc - 3 * 3600000)
+}
+
+function sanitizeForPdf(text: string): string {
+  // Remove emojis and non-latin1 characters that jsPDF can't render
+  return text
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+    .replace(/[\u{2600}-\u{27BF}]/gu, '')
+    .replace(/[\u{FE00}-\u{FEFF}]/gu, '')
+    .replace(/[^\x00-\xFF]/g, '')
+    .trim()
+}
+
 function generatePdfReport(displayName: string, stats: any, recommendations: string[], currentMonth: string, companyName: string): Uint8Array {
   const doc = new jsPDF()
   const pageW = doc.internal.pageSize.getWidth()
+  const brDate = getBrazilDate()
   
   // Header - blue gradient background
   doc.setFillColor(30, 64, 175)
@@ -162,15 +180,15 @@ function generatePdfReport(displayName: string, stats: any, recommendations: str
   doc.text(companyName, 20, 28)
   doc.setFontSize(15)
   doc.setFont('helvetica', 'bold')
-  doc.text(`Relatório Mensal de Atividades — ${currentMonth}`, 20, 42)
+  doc.text(sanitizeForPdf(`Relatorio Mensal de Atividades - ${currentMonth}`), 20, 42)
 
   // Collaborator name
   doc.setTextColor(31, 41, 55)
   doc.setFontSize(13)
   doc.setFont('helvetica', 'normal')
-  doc.text(`Colaborador: `, 20, 62)
+  doc.text('Colaborador: ', 20, 62)
   doc.setFont('helvetica', 'bold')
-  doc.text(displayName, 55, 62)
+  doc.text(sanitizeForPdf(displayName), 55, 62)
 
   // Stats cards
   const cardY = 72
@@ -182,7 +200,7 @@ function generatePdfReport(displayName: string, stats: any, recommendations: str
 
   const cards = [
     { value: String(stats.totalMessages), label: 'MENSAGENS', bgR: 239, bgG: 246, bgB: 255, textR: 37, textG: 99, textB: 235 },
-    { value: `${stats.completedTasks}/${stats.totalTasks}`, label: 'CONCLUÍDAS', bgR: 240, bgG: 253, bgB: 244, textR: 22, textG: 163, textB: 74 },
+    { value: `${stats.completedTasks}/${stats.totalTasks}`, label: 'CONCLUIDAS', bgR: 240, bgG: 253, bgB: 244, textR: 22, textG: 163, textB: 74 },
     { value: String(stats.lateTasks), label: 'COM ATRASO', bgR: 255, bgG: 251, bgB: 235, textR: 217, textG: 119, textB: 6 },
     { value: String(stats.overdueTasks), label: 'PENDENTES', bgR: 254, bgG: 242, bgB: 242, textR: 220, textG: 38, textB: 38 },
   ]
@@ -206,20 +224,17 @@ function generatePdfReport(displayName: string, stats: any, recommendations: str
   doc.setTextColor(31, 41, 55)
   doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
-  doc.text('Taxa de Conclusão de Tarefas', 20, currentY)
+  doc.text('Taxa de Conclusao de Tarefas', 20, currentY)
   currentY += 8
   
-  // Background bar
   const barW = pageW - 40
   doc.setFillColor(229, 231, 235)
   doc.roundedRect(20, currentY, barW, 10, 3, 3, 'F')
-  // Progress bar
   if (completionRate > 0) {
     const progressW = Math.max((completionRate / 100) * barW, 6)
     doc.setFillColor(34, 197, 94)
     doc.roundedRect(20, currentY, progressW, 10, 3, 3, 'F')
   }
-  // Percentage text
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(8)
   doc.setFont('helvetica', 'bold')
@@ -241,17 +256,17 @@ function generatePdfReport(displayName: string, stats: any, recommendations: str
   doc.roundedRect(20, currentY, pageW - 40, 40, 3, 3, 'S')
 
   const summaryItems = [
-    { icon: '💬', text: `Mensagens enviadas no mês: ${stats.totalMessages}` },
-    { icon: '✅', text: `Tarefas concluídas: ${stats.completedTasks} de ${stats.totalTasks} (${completionRate}%)` },
-    { icon: '⏰', text: `Entregas realizadas com atraso: ${stats.lateTasks}` },
-    { icon: '🔴', text: `Tarefas pendentes e atrasadas: ${stats.overdueTasks}` },
+    `Mensagens enviadas no mes: ${stats.totalMessages}`,
+    `Tarefas concluidas: ${stats.completedTasks} de ${stats.totalTasks} (${completionRate}%)`,
+    `Entregas realizadas com atraso: ${stats.lateTasks}`,
+    `Tarefas pendentes e atrasadas: ${stats.overdueTasks}`,
   ]
 
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(55, 65, 81)
   summaryItems.forEach((item, i) => {
-    doc.text(`${item.icon}  ${item.text}`, 26, currentY + 10 + i * 8)
+    doc.text(`- ${item}`, 26, currentY + 10 + i * 8)
   })
   currentY += 50
 
@@ -260,17 +275,18 @@ function generatePdfReport(displayName: string, stats: any, recommendations: str
     doc.setTextColor(30, 64, 175)
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
-    doc.text('📌 Recomendações Personalizadas', 20, currentY)
+    doc.text('Recomendacoes Personalizadas', 20, currentY)
     currentY += 8
 
-    recommendations.forEach((rec, i) => {
-      // Check if we need a new page
+    recommendations.forEach((rec) => {
       if (currentY > 260) {
         doc.addPage()
         currentY = 20
       }
       
-      const recH = Math.ceil(doc.getTextWidth(rec) / (pageW - 52)) * 5 + 10
+      const cleanRec = sanitizeForPdf(rec)
+      const lines = doc.splitTextToSize(cleanRec, pageW - 52)
+      const recH = lines.length * 5 + 10
       doc.setFillColor(248, 250, 252)
       doc.roundedRect(20, currentY, pageW - 40, Math.max(recH, 14), 2, 2, 'F')
       doc.setFillColor(59, 130, 246)
@@ -279,7 +295,6 @@ function generatePdfReport(displayName: string, stats: any, recommendations: str
       doc.setTextColor(55, 65, 81)
       doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
-      const lines = doc.splitTextToSize(rec, pageW - 52)
       doc.text(lines, 28, currentY + 9)
       currentY += Math.max(recH, 14) + 4
     })
@@ -292,9 +307,9 @@ function generatePdfReport(displayName: string, stats: any, recommendations: str
   doc.setTextColor(156, 163, 175)
   doc.setFontSize(8)
   doc.setFont('helvetica', 'normal')
-  const dateStr = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-  doc.text(`Relatório gerado automaticamente pelo ServChat em ${dateStr}`, pageW / 2, footerY, { align: 'center' })
-  doc.text(`© ${new Date().getFullYear()} ${companyName}. Todos os direitos reservados.`, pageW / 2, footerY + 5, { align: 'center' })
+  const dateStr = brDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + brDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  doc.text(`Relatorio gerado automaticamente pelo ServChat em ${dateStr}`, pageW / 2, footerY, { align: 'center' })
+  doc.text(`${brDate.getFullYear()} ${companyName}. Todos os direitos reservados.`, pageW / 2, footerY + 5, { align: 'center' })
 
   return new Uint8Array(doc.output('arraybuffer'))
 }
@@ -368,7 +383,8 @@ Deno.serve(async (req) => {
     }
 
     const companyName = 'Grupo Servsul'
-    const currentMonth = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    const brNow = getBrazilDate()
+    const currentMonth = brNow.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()

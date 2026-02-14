@@ -890,7 +890,7 @@ const Auth = () => {
           </Card>
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            © 2025 ServChat - Grupo Servsul. Todos os direitos reservados.
+            © 2026 ServChat - Grupo Servsul. Todos os direitos reservados.
           </p>
         </motion.div>
       </div>
