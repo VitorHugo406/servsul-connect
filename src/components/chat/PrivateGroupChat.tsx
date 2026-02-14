@@ -1,4 +1,4 @@
- import { useEffect, useRef, useState } from 'react';
+ import React, { useEffect, useRef, useState } from 'react';
  import { motion } from 'framer-motion';
 import { Users, Settings, UserPlus, Check, CheckCheck, Crown, Loader2, Trash2, Image, Eye } from 'lucide-react';
  import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -76,6 +76,42 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
    };
  
+   const formatText = (text: string, isOwnMsg: boolean): React.ReactNode[] => {
+     const parts: React.ReactNode[] = [];
+     const regex = /(\*[^*]+\*|_[^_]+_|~[^~]+~|\[[^\]]+\]\([^)]+\))/g;
+     let lastIndex = 0;
+     let match;
+     let key = 0;
+
+     while ((match = regex.exec(text)) !== null) {
+       if (match.index > lastIndex) {
+         parts.push(text.slice(lastIndex, match.index));
+       }
+       const m = match[0];
+       if (m.startsWith('*') && m.endsWith('*')) {
+         parts.push(<strong key={key++}>{m.slice(1, -1)}</strong>);
+       } else if (m.startsWith('_') && m.endsWith('_')) {
+         parts.push(<em key={key++}>{m.slice(1, -1)}</em>);
+       } else if (m.startsWith('~') && m.endsWith('~')) {
+         parts.push(<s key={key++}>{m.slice(1, -1)}</s>);
+       } else if (m.startsWith('[')) {
+         const linkMatch = m.match(/^\[(.+?)\]\((.+?)\)$/);
+         if (linkMatch) {
+           parts.push(
+             <a key={key++} href={linkMatch[2]} target="_blank" rel="noopener noreferrer"
+               className={cn("underline", isOwnMsg ? "text-white/90 hover:text-white" : "text-primary hover:text-primary/80")}
+             >{linkMatch[1]}</a>
+           );
+         }
+       }
+       lastIndex = match.index + m.length;
+     }
+     if (lastIndex < text.length) {
+       parts.push(text.slice(lastIndex));
+     }
+     return parts.length > 0 ? parts : [text];
+   };
+
    const renderMessageContent = (content: string, isOwn: boolean) => {
      const lines = content.split('\n');
      const textLines: string[] = [];
@@ -90,7 +126,16 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
      const textContent = textLines.join('\n').trim();
      return (
        <div className="space-y-2">
-         {textContent && <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{textContent}</p>}
+         {textContent && (
+           <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+             {textContent.split('\n').map((line, i) => (
+               <React.Fragment key={i}>
+                 {i > 0 && <br />}
+                 {formatText(line, isOwn)}
+               </React.Fragment>
+             ))}
+           </p>
+         )}
          {atts.map((att, i) => att.type === 'image' ? (
            <a key={i} href={att.url} target="_blank" rel="noopener noreferrer"><img src={att.url} alt={att.name} className="max-w-full max-h-48 rounded-lg object-cover" /></a>
          ) : (

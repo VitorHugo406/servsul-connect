@@ -188,6 +188,18 @@ export function LogsSection() {
       const insertions = filteredLogs.filter(l => l.action === 'INSERT').length;
       const updates = filteredLogs.filter(l => l.action === 'UPDATE').length;
 
+      // Get current user info
+      const { data: { user } } = await supabase.auth.getUser();
+      const userEmail = user?.email || 'Desconhecido';
+
+      // Try to get IP address
+      let userIp = 'Indisponivel';
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipRes.json();
+        userIp = ipData.ip || 'Indisponivel';
+      } catch { /* ignore */ }
+
       const tableRows = filteredLogs.map((log) => [
         format(new Date(log.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
         ACTION_LABELS[log.action] || log.action,
@@ -205,6 +217,8 @@ export function LogsSection() {
         .header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; border-bottom: 3px solid #3b82f6; padding-bottom: 16px; }
         .header h1 { font-size: 24px; margin: 0; color: #1e293b; }
         .header .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
+        .meta-info { background: #f1f5f9; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 12px; color: #475569; display: flex; gap: 24px; flex-wrap: wrap; }
+        .meta-info strong { color: #1e293b; }
         .stats { display: flex; gap: 16px; margin-bottom: 24px; }
         .stat-card { background: #f1f5f9; border-radius: 8px; padding: 12px 16px; flex: 1; text-align: center; }
         .stat-card .number { font-size: 24px; font-weight: 700; color: #3b82f6; }
@@ -219,6 +233,7 @@ export function LogsSection() {
       </style></head><body>`;
 
       html += `<div class="header"><div><h1>📋 Logs do Sistema</h1><div class="subtitle">Relatório gerado em ${new Date().toLocaleString('pt-BR')}</div></div></div>`;
+      html += `<div class="meta-info"><div><strong>Gerado por:</strong> ${userEmail}</div><div><strong>IP:</strong> ${userIp}</div><div><strong>Data:</strong> ${new Date().toLocaleString('pt-BR')}</div></div>`;
       html += `<div class="stats">`;
       html += `<div class="stat-card"><div class="number">${totalLogs}</div><div class="label">Total de Registros</div></div>`;
       html += `<div class="stat-card"><div class="number" style="color:#ef4444">${deletions}</div><div class="label">Exclusões</div></div>`;

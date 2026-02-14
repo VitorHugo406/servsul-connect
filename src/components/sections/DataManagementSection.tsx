@@ -27,28 +27,31 @@
    AlertDialogTitle 
  } from '@/components/ui/alert-dialog';
  import { Input } from '@/components/ui/input';
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
  import { supabase } from '@/integrations/supabase/client';
  import { toast } from 'sonner';
  import { useAuth } from '@/contexts/AuthContext';
  
  const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
  
- interface DeletionOption {
-   id: string;
-   title: string;
-   description: string;
-   icon: typeof MessageSquare;
-   confirmText: string;
-   dangerLevel: 'medium' | 'high' | 'critical';
-   type: string;
- }
+interface DeletionOption {
+  id: string;
+  title: string;
+  description: string;
+  icon: typeof MessageSquare;
+  confirmText: string;
+  dangerLevel: 'medium' | 'high' | 'critical';
+  type: string;
+  hasPeriod?: boolean;
+}
  
  export function DataManagementSection() {
    const { isAdmin } = useAuth();
-   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-   const [selectedOption, setSelectedOption] = useState<DeletionOption | null>(null);
-   const [confirmInput, setConfirmInput] = useState('');
-   const [loading, setLoading] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<DeletionOption | null>(null);
+  const [confirmInput, setConfirmInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [deletePeriod, setDeletePeriod] = useState<'all' | '7d' | '30d' | '90d'>('all');
  
    if (!isAdmin) {
      return (
@@ -84,15 +87,16 @@
    };
  
    const deletionOptions: DeletionOption[] = [
-     {
-       id: 'messages',
-       title: 'Excluir Todas as Mensagens',
-       description: 'Remove todas as mensagens de setores, mensagens diretas e mensagens de grupos privados.',
-       icon: MessageSquare,
-       confirmText: 'EXCLUIR MENSAGENS',
-       dangerLevel: 'high',
-       type: 'messages',
-     },
+    {
+      id: 'messages',
+      title: 'Excluir Mensagens',
+      description: 'Remove mensagens de setores, mensagens diretas e mensagens de grupos privados. Você pode escolher o período.',
+      icon: MessageSquare,
+      confirmText: 'EXCLUIR MENSAGENS',
+      dangerLevel: 'high',
+      type: 'messages',
+      hasPeriod: true,
+    },
      {
        id: 'announcements',
        title: 'Excluir Todos os Avisos',
@@ -149,11 +153,12 @@
      },
    ];
  
-   const handleOptionClick = (option: DeletionOption) => {
-     setSelectedOption(option);
-     setConfirmInput('');
-     setShowConfirmDialog(true);
-   };
+  const handleOptionClick = (option: DeletionOption) => {
+    setSelectedOption(option);
+    setConfirmInput('');
+    setDeletePeriod('all');
+    setShowConfirmDialog(true);
+  };
  
    const handleConfirmDelete = async () => {
      if (!selectedOption || confirmInput !== selectedOption.confirmText) return;
@@ -264,23 +269,46 @@
                <AlertTriangle className="h-5 w-5" />
                Confirmar Ação Destrutiva
              </AlertDialogTitle>
-             <AlertDialogDescription className="space-y-4">
-               <p>
-                 Você está prestes a executar: <strong>{selectedOption?.title}</strong>
-               </p>
-               <p className="text-destructive font-semibold">
-                 Esta ação é irreversível!
-               </p>
-               <p>
-                 Para confirmar, digite exatamente: <code className="bg-muted px-2 py-1 rounded">{selectedOption?.confirmText}</code>
-               </p>
-               <Input
-                 value={confirmInput}
-                 onChange={(e) => setConfirmInput(e.target.value)}
-                 placeholder="Digite o texto de confirmação"
-                 className="mt-2"
-               />
-             </AlertDialogDescription>
+            <AlertDialogDescription className="space-y-4" asChild>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Você está prestes a executar: <strong className="text-foreground">{selectedOption?.title}</strong>
+                </p>
+                {selectedOption?.hasPeriod && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-foreground">Selecione o período:</p>
+                    <Select value={deletePeriod} onValueChange={(v: any) => setDeletePeriod(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as mensagens</SelectItem>
+                        <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                        <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                        <SelectItem value="90d">Últimos 90 dias</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {deletePeriod === 'all' 
+                        ? '⚠️ Todas as mensagens serão excluídas permanentemente.'
+                        : `Serão excluídas as mensagens dos últimos ${deletePeriod === '7d' ? '7' : deletePeriod === '30d' ? '30' : '90'} dias.`}
+                    </p>
+                  </div>
+                )}
+                <p className="text-destructive font-semibold text-sm">
+                  Esta ação é irreversível!
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Para confirmar, digite exatamente: <code className="bg-muted px-2 py-1 rounded text-foreground">{selectedOption?.confirmText}</code>
+                </p>
+                <Input
+                  value={confirmInput}
+                  onChange={(e) => setConfirmInput(e.target.value)}
+                  placeholder="Digite o texto de confirmação"
+                  className="mt-2"
+                />
+              </div>
+            </AlertDialogDescription>
            </AlertDialogHeader>
            <AlertDialogFooter>
              <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>

@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const ALLOWED_FILE_TYPES = [
   ...ALLOWED_IMAGE_TYPES,
@@ -28,6 +28,31 @@ export function useFileUpload() {
   const [progress, setProgress] = useState(0);
   const { user, profile } = useAuth();
 
+  const checkWeeklyLimit = async (): Promise<boolean> => {
+    if (!user) return false;
+    
+    // Calculate start of current week (Monday)
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - diffToMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const { count, error } = await supabase
+      .from('attachments')
+      .select('*', { count: 'exact', head: true })
+      .eq('uploaded_by', profile?.id || '')
+      .gte('created_at', startOfWeek.toISOString());
+
+    if (error) {
+      console.error('Error checking weekly limit:', error);
+      return true; // Allow on error
+    }
+
+    return (count || 0) < 5;
+  };
+
   const uploadFile = async (
     file: File,
     bucket: 'attachments' | 'avatars' = 'attachments'
@@ -37,10 +62,19 @@ export function useFileUpload() {
       return null;
     }
 
-    // Validate file size
+    // Validate file size (max 2MB)
     if (file.size > MAX_FILE_SIZE) {
-      toast.error('O arquivo é muito grande. O tamanho máximo é 10MB.');
+      toast.error('O arquivo é muito grande. O tamanho máximo é 2MB.');
       return null;
+    }
+
+    // Check weekly upload limit (5 files per week)
+    if (bucket === 'attachments') {
+      const withinLimit = await checkWeeklyLimit();
+      if (!withinLimit) {
+        toast.error('Limite semanal de 5 arquivos atingido. Tente novamente na próxima semana.');
+        return null;
+      }
     }
 
     // Validate file type
