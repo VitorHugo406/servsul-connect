@@ -9,7 +9,8 @@ import {
   Edit,
   MoreVertical,
   Power,
-  Trash2
+  Trash2,
+  Settings
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -592,7 +593,7 @@ export function ManagementSection() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-lg grid-cols-4">
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               Usuários
@@ -604,6 +605,10 @@ export function ManagementSection() {
             <TabsTrigger value="settings" className="gap-2">
               <KeyRound className="h-4 w-4" />
               Senhas
+            </TabsTrigger>
+            <TabsTrigger value="config" className="gap-2">
+              <Settings className="h-4 w-4" />
+              Config
             </TabsTrigger>
           </TabsList>
 
@@ -807,6 +812,11 @@ export function ManagementSection() {
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-4">
             <PasswordSettingsCard />
+          </TabsContent>
+
+          {/* Config Tab */}
+          <TabsContent value="config" className="space-y-4">
+            <FileUploadSettingsCard />
           </TabsContent>
         </Tabs>
 

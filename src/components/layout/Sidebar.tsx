@@ -16,6 +16,7 @@ import {
   Sparkles,
   ListTodo
 } from 'lucide-react';
+import { SeasonalEffectsButton } from '@/components/seasonal/SeasonalEffectsButton';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -182,6 +183,11 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
           );
         })}
       </nav>
+
+      {/* Seasonal Effects Button */}
+      <div className="px-3 pb-1">
+        <SeasonalEffectsButton collapsed={isCollapsed} />
+      </div>
 
       {/* User Profile */}
       <div className="border-t border-sidebar-border p-3">
