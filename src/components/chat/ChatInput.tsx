@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { CardMentionPicker, formatCardMention } from './CardMentionPicker';
+import { FormattingPreview } from './FormattingPreview';
 
 interface Attachment {
   file: File;
@@ -135,6 +136,9 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
           onClose={() => setShowCardPicker(false)}
         />
       )}
+
+      {/* Formatting Preview */}
+      <FormattingPreview text={message} />
 
       {/* Attachments preview */}
       <AnimatePresence>

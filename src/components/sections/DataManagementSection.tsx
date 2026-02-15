@@ -11,7 +11,8 @@
     Loader2,
     ScanFace,
     UserX,
-    ListTodo
+    ListTodo,
+    CalendarIcon
   } from 'lucide-react';
  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
  import { Button } from '@/components/ui/button';
@@ -28,6 +29,11 @@
  } from '@/components/ui/alert-dialog';
  import { Input } from '@/components/ui/input';
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+ import { Calendar } from '@/components/ui/calendar';
+ import { format } from 'date-fns';
+ import { ptBR } from 'date-fns/locale';
+ import { cn } from '@/lib/utils';
  import { supabase } from '@/integrations/supabase/client';
  import { toast } from 'sonner';
  import { useAuth } from '@/contexts/AuthContext';
@@ -51,7 +57,9 @@ interface DeletionOption {
   const [selectedOption, setSelectedOption] = useState<DeletionOption | null>(null);
   const [confirmInput, setConfirmInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [deletePeriod, setDeletePeriod] = useState<'all' | '7d' | '30d' | '90d'>('all');
+  const [deletePeriod, setDeletePeriod] = useState<'all' | 'custom'>('all');
+  const [dateStart, setDateStart] = useState<Date | undefined>(undefined);
+  const [dateEnd, setDateEnd] = useState<Date | undefined>(undefined);
  
    if (!isAdmin) {
      return (
@@ -65,26 +73,33 @@ interface DeletionOption {
      );
    }
  
-   const executeDelete = async (type: string) => {
-     const { data: sessionData } = await supabase.auth.getSession();
-     if (!sessionData.session) {
-       throw new Error('Sessão não encontrada');
-     }
- 
-     const response = await supabase.functions.invoke('delete-data', {
-       body: { type },
-     });
- 
-     if (response.error) {
-       throw new Error(response.error.message || 'Erro ao executar exclusão');
-     }
- 
-     if (response.data?.error) {
-       throw new Error(response.data.error);
-     }
- 
-     return response.data;
-   };
+    const executeDelete = async (type: string) => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error('Sessão não encontrada');
+      }
+  
+      const bodyPayload: any = { type };
+      // If messages with custom period, send date range
+      if (type === 'messages' && deletePeriod === 'custom' && dateStart && dateEnd) {
+        bodyPayload.startDate = dateStart.toISOString();
+        bodyPayload.endDate = dateEnd.toISOString();
+      }
+
+      const response = await supabase.functions.invoke('delete-data', {
+        body: bodyPayload,
+      });
+  
+      if (response.error) {
+        throw new Error(response.error.message || 'Erro ao executar exclusão');
+      }
+  
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+  
+      return response.data;
+    };
  
    const deletionOptions: DeletionOption[] = [
     {
@@ -153,12 +168,14 @@ interface DeletionOption {
      },
    ];
  
-  const handleOptionClick = (option: DeletionOption) => {
-    setSelectedOption(option);
-    setConfirmInput('');
-    setDeletePeriod('all');
-    setShowConfirmDialog(true);
-  };
+   const handleOptionClick = (option: DeletionOption) => {
+     setSelectedOption(option);
+     setConfirmInput('');
+     setDeletePeriod('all');
+     setDateStart(undefined);
+     setDateEnd(undefined);
+     setShowConfirmDialog(true);
+   };
  
    const handleConfirmDelete = async () => {
      if (!selectedOption || confirmInput !== selectedOption.confirmText) return;
@@ -274,27 +291,58 @@ interface DeletionOption {
                 <p className="text-sm text-muted-foreground">
                   Você está prestes a executar: <strong className="text-foreground">{selectedOption?.title}</strong>
                 </p>
-                {selectedOption?.hasPeriod && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-foreground">Selecione o período:</p>
-                    <Select value={deletePeriod} onValueChange={(v: any) => setDeletePeriod(v)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas as mensagens</SelectItem>
-                        <SelectItem value="7d">Últimos 7 dias</SelectItem>
-                        <SelectItem value="30d">Últimos 30 dias</SelectItem>
-                        <SelectItem value="90d">Últimos 90 dias</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      {deletePeriod === 'all' 
-                        ? '⚠️ Todas as mensagens serão excluídas permanentemente.'
-                        : `Serão excluídas as mensagens dos últimos ${deletePeriod === '7d' ? '7' : deletePeriod === '30d' ? '30' : '90'} dias.`}
-                    </p>
-                  </div>
-                )}
+                 {selectedOption?.hasPeriod && (
+                   <div className="space-y-3">
+                     <p className="text-sm font-medium text-foreground">Selecione o período:</p>
+                     <Select value={deletePeriod} onValueChange={(v: any) => setDeletePeriod(v)}>
+                       <SelectTrigger>
+                         <SelectValue />
+                       </SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="all">Todas as mensagens</SelectItem>
+                         <SelectItem value="custom">Período personalizado</SelectItem>
+                       </SelectContent>
+                     </Select>
+                     {deletePeriod === 'custom' && (
+                       <div className="flex flex-col gap-2">
+                         <div className="flex gap-2">
+                           <Popover>
+                             <PopoverTrigger asChild>
+                               <Button variant="outline" className={cn("flex-1 justify-start text-left font-normal", !dateStart && "text-muted-foreground")}>
+                                 <CalendarIcon className="mr-2 h-4 w-4" />
+                                 {dateStart ? format(dateStart, "dd/MM/yyyy", { locale: ptBR }) : "Data início"}
+                               </Button>
+                             </PopoverTrigger>
+                             <PopoverContent className="w-auto p-0" align="start">
+                               <Calendar mode="single" selected={dateStart} onSelect={setDateStart} initialFocus className="p-3 pointer-events-auto" locale={ptBR} />
+                             </PopoverContent>
+                           </Popover>
+                           <Popover>
+                             <PopoverTrigger asChild>
+                               <Button variant="outline" className={cn("flex-1 justify-start text-left font-normal", !dateEnd && "text-muted-foreground")}>
+                                 <CalendarIcon className="mr-2 h-4 w-4" />
+                                 {dateEnd ? format(dateEnd, "dd/MM/yyyy", { locale: ptBR }) : "Data fim"}
+                               </Button>
+                             </PopoverTrigger>
+                             <PopoverContent className="w-auto p-0" align="start">
+                               <Calendar mode="single" selected={dateEnd} onSelect={setDateEnd} initialFocus className="p-3 pointer-events-auto" locale={ptBR} />
+                             </PopoverContent>
+                           </Popover>
+                         </div>
+                         {dateStart && dateEnd && (
+                           <p className="text-xs text-muted-foreground">
+                             Serão excluídas as mensagens de {format(dateStart, "dd/MM/yyyy")} até {format(dateEnd, "dd/MM/yyyy")}.
+                           </p>
+                         )}
+                       </div>
+                     )}
+                     {deletePeriod === 'all' && (
+                       <p className="text-xs text-destructive font-medium">
+                         Todas as mensagens serão excluídas permanentemente.
+                       </p>
+                     )}
+                   </div>
+                 )}
                 <p className="text-destructive font-semibold text-sm">
                   Esta ação é irreversível!
                 </p>
