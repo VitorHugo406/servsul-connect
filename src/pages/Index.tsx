@@ -24,6 +24,7 @@ import { PeopleManagementSection } from '@/components/sections/PeopleManagementS
 import { FeedbackEmailSection } from '@/components/sections/FeedbackEmailSection';
 import { LogsSection } from '@/components/sections/LogsSection';
 import { StorageMonitoringSection } from '@/components/sections/StorageMonitoringSection';
+import { EventHistorySection } from '@/components/sections/EventHistorySection';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
@@ -47,10 +48,12 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
    'feedback-email': { title: 'Disparo de Feedback', subtitle: 'E-mails de feedback mensal' },
    'system-logs': { title: 'Logs do Sistema', subtitle: 'Auditoria e relatórios' },
    'storage': { title: 'Armazenamento', subtitle: 'Monitoramento do banco de dados' },
+   'event-history': { title: 'Eventos Mensais', subtitle: 'Histórico de campanhas' },
 };
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('home');
+  const [globalSearch, setGlobalSearch] = useState('');
   const isMobile = useIsMobile();
   const [isReady, setIsReady] = useState(false);
   const { profile } = useAuth();
@@ -89,7 +92,7 @@ const Index = () => {
       case 'home':
         return <HomeSection onNavigate={setActiveSection} />;
       case 'chat':
-        return <ChatSection />;
+        return <ChatSection globalSearch={globalSearch} />;
       case 'announcements':
         return <AnnouncementsSection />;
       case 'birthdays':
@@ -114,6 +117,8 @@ const Index = () => {
           return <LogsSection />;
         case 'storage':
           return <StorageMonitoringSection />;
+        case 'event-history':
+          return <EventHistorySection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }
@@ -197,7 +202,7 @@ const Index = () => {
       <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
       
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} />
+        <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} searchQuery={globalSearch} onSearchChange={setGlobalSearch} />
         
         <main className="flex-1 overflow-auto">
           {renderSection()}

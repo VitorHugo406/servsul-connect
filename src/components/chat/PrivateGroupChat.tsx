@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
  } from '@/components/ui/dialog';
  import { ChatInput } from '@/components/chat/ChatInput';
 import { useGroupMessages, useGroupMembers, PrivateGroup, usePrivateGroups } from '@/hooks/usePrivateGroups';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
  import { useActiveUsers } from '@/hooks/useDirectMessages';
  import { useSectors } from '@/hooks/useData';
  import { useAuth } from '@/contexts/AuthContext';
@@ -41,7 +42,7 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
    const { profile, user } = useAuth();
    const { messages, loading, sendMessage } = useGroupMessages(group?.id || null);
    const { members, addMember, removeMember, updateMemberRole, refetch: refetchMembers } = useGroupMembers(group?.id || null);
-  const { updateGroup } = usePrivateGroups();
+  const { updateGroup, deleteGroup } = usePrivateGroups();
    const { users } = useActiveUsers();
    const { sectors } = useSectors();
    const { playMessageSent } = useSound();
@@ -51,6 +52,8 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
   const [showEditAvatarDialog, setShowEditAvatarDialog] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [previewUserId, setPreviewUserId] = useState<string | null>(null);
+  const [showDeleteGroupDialog, setShowDeleteGroupDialog] = useState(false);
+  const [deletingGroup, setDeletingGroup] = useState(false);
  
    const isAdmin = members.some(m => m.user_id === user?.id && m.role === 'admin');
    const currentMember = members.find(m => m.user_id === user?.id);
@@ -202,6 +205,19 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
     } else {
       toast.success('Imagem atualizada!');
       setShowEditAvatarDialog(false);
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!group) return;
+    setDeletingGroup(true);
+    const { error } = await deleteGroup(group.id);
+    setDeletingGroup(false);
+    if (error) {
+      toast.error('Erro ao excluir grupo');
+    } else {
+      toast.success('Grupo excluído com sucesso!');
+      setShowDeleteGroupDialog(false);
     }
   };
 
@@ -402,10 +418,40 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
                      })}
                    </div>
                  </ScrollArea>
-               </div>
-             </div>
-           </SheetContent>
-         </Sheet>
+                </div>
+
+                {/* Delete Group Button */}
+                {isAdmin && (
+                  <Button
+                    variant="destructive"
+                    className="w-full gap-2"
+                    onClick={() => setShowDeleteGroupDialog(true)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Excluir Grupo
+                  </Button>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          {/* Delete Group Confirmation */}
+          <AlertDialog open={showDeleteGroupDialog} onOpenChange={setShowDeleteGroupDialog}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir Grupo</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir o grupo "{group.name}"? Todas as mensagens e membros serão removidos permanentemente.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteGroup} disabled={deletingGroup} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  {deletingGroup ? 'Excluindo...' : 'Excluir'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
        </div>
  
        {/* Messages */}
