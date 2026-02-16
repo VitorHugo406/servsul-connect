@@ -73,6 +73,20 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
     }
   }, [handleSubmit, showCardPicker]);
 
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    const lineHeight = 20;
+    const maxHeight = lineHeight * 5 + 12; // 5 lines + padding
+    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+  }, []);
+
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [message, adjustTextareaHeight]);
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setMessage(val);
@@ -237,6 +251,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
             onKeyDown={handleKeyDown}
             placeholder='Digite sua mensagem... (use # para mencionar cards)'
             rows={1}
+            style={{ overflow: 'hidden' }}
             className="w-full resize-none rounded-xl border border-border bg-muted/50 px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>

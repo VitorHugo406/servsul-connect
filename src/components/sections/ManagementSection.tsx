@@ -958,6 +958,96 @@ function PasswordSettingsCard() {
   );
 }
 
+function FileUploadSettingsCard() {
+  const [currentLimit, setCurrentLimit] = useState('5');
+  const [newLimit, setNewLimit] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchCurrentLimit();
+  }, []);
+
+  const fetchCurrentLimit = async () => {
+    const { data } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'weekly_file_limit')
+      .single();
+    if (data) {
+      setCurrentLimit(data.value);
+    }
+  };
+
+  const updateLimit = async () => {
+    const num = parseInt(newLimit);
+    if (isNaN(num) || num < 1 || num > 100) {
+      toast.error('Digite um número entre 1 e 100');
+      return;
+    }
+    setLoading(true);
+    try {
+      // Upsert - try update first, if not found, insert
+      const { data: existing } = await supabase
+        .from('system_settings')
+        .select('id')
+        .eq('key', 'weekly_file_limit')
+        .single();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('system_settings')
+          .update({ value: String(num) })
+          .eq('key', 'weekly_file_limit');
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('system_settings')
+          .insert({ key: 'weekly_file_limit', value: String(num) });
+        if (error) throw error;
+      }
+      setCurrentLimit(String(num));
+      setNewLimit('');
+      toast.success('Limite semanal de arquivos atualizado');
+    } catch (error) {
+      console.error('Error updating file limit:', error);
+      toast.error('Erro ao atualizar limite');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Limite de Arquivos por Semana</CardTitle>
+        <CardDescription>
+          Configure a quantidade máxima de arquivos que cada usuário pode enviar por semana (máx. 2MB por arquivo)
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>Limite atual</Label>
+          <Input type="text" value={`${currentLimit} arquivos/semana`} readOnly className="bg-muted" />
+        </div>
+        <div className="space-y-2">
+          <Label>Novo limite</Label>
+          <Input
+            type="number"
+            min={1}
+            max={100}
+            value={newLimit}
+            onChange={(e) => setNewLimit(e.target.value)}
+            placeholder="Ex: 5"
+          />
+        </div>
+        <Button onClick={updateLimit} disabled={loading}>
+          {loading ? 'Salvando...' : 'Atualizar Limite'}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 interface EditUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
