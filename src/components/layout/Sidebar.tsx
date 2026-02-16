@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { UsersRound, Mail, FileText } from 'lucide-react';
+import { UsersRound, Mail, FileText, HardDrive } from 'lucide-react';
 import logoServsul from '@/assets/logo-servsul.png';
 import { 
   MessageSquare, 
@@ -42,6 +42,7 @@ const menuItems = [
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
   { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
   { id: 'system-logs', icon: FileText, label: 'Logs do Sistema', mainAdminOnly: true },
+  { id: 'storage', icon: HardDrive, label: 'Armazenamento', mainAdminOnly: true },
 ];
 
 const autonomyLevelLabels: Record<string, string> = {

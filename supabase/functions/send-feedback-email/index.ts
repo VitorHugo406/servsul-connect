@@ -126,6 +126,31 @@ function buildEmailHtml(displayName: string, stats: any, recommendations: string
 </body></html>`
 }
 
+// Helper to draw rounded rectangle
+function drawRoundedRect(page: any, x: number, y: number, w: number, h: number, r: number, color: any, borderColor?: any) {
+  // Draw filled rectangle with rounded corners approximation
+  // pdf-lib doesn't natively support rounded rectangles, so we use overlapping rects + circles
+  const cr = Math.min(r, w / 2, h / 2)
+  
+  // Main body (without corners)
+  page.drawRectangle({ x: x + cr, y, width: w - 2 * cr, height: h, color })
+  page.drawRectangle({ x, y: y + cr, width: w, height: h - 2 * cr, color })
+  
+  // Corner circles
+  page.drawCircle({ x: x + cr, y: y + cr, size: cr, color })
+  page.drawCircle({ x: x + w - cr, y: y + cr, size: cr, color })
+  page.drawCircle({ x: x + cr, y: y + h - cr, size: cr, color })
+  page.drawCircle({ x: x + w - cr, y: y + h - cr, size: cr, color })
+  
+  if (borderColor) {
+    // Draw border lines
+    page.drawLine({ start: { x: x + cr, y }, end: { x: x + w - cr, y }, thickness: 1, color: borderColor })
+    page.drawLine({ start: { x: x + cr, y: y + h }, end: { x: x + w - cr, y: y + h }, thickness: 1, color: borderColor })
+    page.drawLine({ start: { x, y: y + cr }, end: { x, y: y + h - cr }, thickness: 1, color: borderColor })
+    page.drawLine({ start: { x: x + w, y: y + cr }, end: { x: x + w, y: y + h - cr }, thickness: 1, color: borderColor })
+  }
+}
+
 async function generatePdf(displayName: string, stats: any, recommendations: string[], currentMonth: string, companyName: string, dateStr: string): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create()
   const page = pdfDoc.addPage([595, 842]) // A4
@@ -138,92 +163,159 @@ async function generatePdf(displayName: string, stats: any, recommendations: str
   const month = sanitize(currentMonth)
   const company = sanitize(companyName)
 
-  // Header background
-  page.drawRectangle({ x: 0, y: height - 120, width, height: 120, color: rgb(0.12, 0.23, 0.54) })
+  // Colors
+  const headerBlue = rgb(0.09, 0.12, 0.38)
+  const accentBlue = rgb(0.24, 0.35, 0.85)
+  const white = rgb(1, 1, 1)
+  const lightGray = rgb(0.96, 0.97, 0.98)
+  const borderGray = rgb(0.88, 0.90, 0.93)
+  const darkText = rgb(0.12, 0.14, 0.18)
+  const medText = rgb(0.30, 0.34, 0.40)
+  const lightText = rgb(0.55, 0.60, 0.68)
 
-  // Header text
-  page.drawText('ServChat', { x: 40, y: height - 45, size: 28, font: helveticaBold, color: rgb(1, 1, 1) })
-  page.drawText(company, { x: 40, y: height - 65, size: 11, font: helvetica, color: rgb(0.8, 0.85, 1) })
-  page.drawText(`Relatorio Mensal - ${month}`, { x: 40, y: height - 95, size: 16, font: helveticaBold, color: rgb(1, 1, 1) })
-  page.drawText(`Gerado em: ${dateStr}`, { x: width - 200, y: height - 95, size: 9, font: helvetica, color: rgb(0.8, 0.85, 1) })
+  // === HEADER with rounded top ===
+  drawRoundedRect(page, 30, height - 140, width - 60, 110, 12, headerBlue)
 
-  let y = height - 155
+  // Header content - centered
+  const titleText = 'ServChat'
+  const titleWidth = helveticaBold.widthOfTextAtSize(titleText, 30)
+  page.drawText(titleText, { x: (width - titleWidth) / 2, y: height - 60, size: 30, font: helveticaBold, color: white })
 
-  // Collaborator
-  page.drawText(`Colaborador: ${name}`, { x: 40, y, size: 13, font: helveticaBold, color: rgb(0.1, 0.1, 0.1) })
-  y -= 35
+  const companyText = company
+  const companyWidth = helvetica.widthOfTextAtSize(companyText, 12)
+  page.drawText(companyText, { x: (width - companyWidth) / 2, y: height - 78, size: 12, font: helvetica, color: rgb(0.7, 0.75, 0.9) })
 
-  // Stats section
-  const drawStatCard = (x: number, yPos: number, value: string, label: string, r: number, g: number, b: number) => {
-    page.drawRectangle({ x, y: yPos - 5, width: 120, height: 55, color: rgb(0.96, 0.97, 0.98), borderColor: rgb(0.85, 0.87, 0.9), borderWidth: 1 })
-    page.drawText(value, { x: x + 10, y: yPos + 28, size: 22, font: helveticaBold, color: rgb(r, g, b) })
-    page.drawText(label, { x: x + 10, y: yPos + 5, size: 9, font: helvetica, color: rgb(0.4, 0.45, 0.5) })
-  }
+  const reportTitle = `Relatorio Mensal - ${month}`
+  const reportWidth = helveticaBold.widthOfTextAtSize(reportTitle, 14)
+  page.drawText(reportTitle, { x: (width - reportWidth) / 2, y: height - 105, size: 14, font: helveticaBold, color: rgb(0.85, 0.88, 1) })
 
-  drawStatCard(40, y, String(stats.totalMessages), 'Mensagens', 0.15, 0.39, 0.92)
-  drawStatCard(175, y, `${stats.completedTasks}/${stats.totalTasks}`, 'Concluidas', 0.09, 0.64, 0.25)
-  drawStatCard(310, y, String(stats.lateTasks), 'Com Atraso', 0.85, 0.46, 0.02)
-  drawStatCard(445, y, String(stats.overdueTasks), 'Pendentes', 0.86, 0.15, 0.15)
+  const dateText = `Gerado em: ${dateStr}`
+  const dateWidth = helvetica.widthOfTextAtSize(dateText, 9)
+  page.drawText(dateText, { x: (width - dateWidth) / 2, y: height - 122, size: 9, font: helvetica, color: rgb(0.65, 0.7, 0.85) })
 
-  y -= 75
+  let y = height - 175
 
-  // Progress bar section
-  page.drawText('Taxa de Conclusao', { x: 40, y, size: 13, font: helveticaBold, color: rgb(0.1, 0.15, 0.2) })
-  y -= 20
+  // === COLLABORATOR NAME ===
+  const collabText = `Colaborador: ${name}`
+  const collabWidth = helveticaBold.widthOfTextAtSize(collabText, 14)
+  page.drawText(collabText, { x: (width - collabWidth) / 2, y, size: 14, font: helveticaBold, color: darkText })
+  y -= 10
+
+  // Decorative line under name
+  const lineW = 120
+  page.drawRectangle({ x: (width - lineW) / 2, y, width: lineW, height: 2, color: accentBlue })
+  y -= 30
+
+  // === STAT CARDS - 4 cards in a row ===
+  const cardW = 115
+  const cardH = 65
+  const cardGap = 12
+  const totalCardsWidth = 4 * cardW + 3 * cardGap
+  const startX = (width - totalCardsWidth) / 2
+
+  const statCards = [
+    { value: String(stats.totalMessages), label: 'Mensagens', bg: rgb(0.94, 0.99, 0.96), accent: rgb(0.08, 0.55, 0.24), border: rgb(0.73, 0.97, 0.83) },
+    { value: `${stats.completedTasks}/${stats.totalTasks}`, label: 'Concluidas', bg: rgb(0.94, 0.96, 1), accent: rgb(0.15, 0.39, 0.92), border: rgb(0.75, 0.86, 0.99) },
+    { value: String(stats.lateTasks), label: 'Com Atraso', bg: rgb(1, 0.97, 0.93), accent: rgb(0.85, 0.46, 0.02), border: rgb(0.99, 0.84, 0.67) },
+    { value: String(stats.overdueTasks), label: 'Pendentes', bg: rgb(1, 0.95, 0.95), accent: rgb(0.86, 0.15, 0.15), border: rgb(0.99, 0.79, 0.79) },
+  ]
+
+  statCards.forEach((card, i) => {
+    const cx = startX + i * (cardW + cardGap)
+    drawRoundedRect(page, cx, y - cardH, cardW, cardH, 8, card.bg, card.border)
+    
+    const valWidth = helveticaBold.widthOfTextAtSize(card.value, 24)
+    page.drawText(card.value, { x: cx + (cardW - valWidth) / 2, y: y - 28, size: 24, font: helveticaBold, color: card.accent })
+    
+    const lblWidth = helvetica.widthOfTextAtSize(card.label, 9)
+    page.drawText(card.label, { x: cx + (cardW - lblWidth) / 2, y: y - cardH + 12, size: 9, font: helvetica, color: medText })
+  })
+
+  y -= cardH + 30
+
+  // === PROGRESS BAR ===
+  const progressTitle = 'Taxa de Conclusao'
+  const ptWidth = helveticaBold.widthOfTextAtSize(progressTitle, 13)
+  page.drawText(progressTitle, { x: (width - ptWidth) / 2, y, size: 13, font: helveticaBold, color: darkText })
+  y -= 22
+
+  const barX = 50
+  const barW = width - 100
+  const barH = 18
   // Bar background
-  page.drawRectangle({ x: 40, y: y - 2, width: width - 80, height: 16, color: rgb(0.88, 0.9, 0.92) })
+  drawRoundedRect(page, barX, y, barW, barH, 9, rgb(0.90, 0.92, 0.95))
   // Bar fill
-  const barWidth = ((width - 80) * Math.min(rate, 100)) / 100
-  if (barWidth > 0) {
-    page.drawRectangle({ x: 40, y: y - 2, width: barWidth, height: 16, color: rgb(0.13, 0.77, 0.37) })
+  const fillW = (barW * Math.min(rate, 100)) / 100
+  if (fillW > 0) {
+    drawRoundedRect(page, barX, y, Math.max(fillW, 18), barH, 9, rgb(0.15, 0.68, 0.38))
   }
-  page.drawText(`${rate}%`, { x: 45, y: y + 1, size: 9, font: helveticaBold, color: rgb(1, 1, 1) })
+  // Percentage text centered
+  const pctText = `${rate}%`
+  const pctWidth = helveticaBold.widthOfTextAtSize(pctText, 10)
+  page.drawText(pctText, { x: barX + (barW - pctWidth) / 2, y: y + 4, size: 10, font: helveticaBold, color: fillW > barW / 2 ? white : darkText })
 
   y -= 40
 
-  // Summary
-  page.drawText('Resumo de Atividades', { x: 40, y, size: 13, font: helveticaBold, color: rgb(0.1, 0.15, 0.2) })
-  y -= 5
-  page.drawRectangle({ x: 40, y: y - 85, width: width - 80, height: 85, color: rgb(0.96, 0.97, 0.98), borderColor: rgb(0.88, 0.9, 0.92), borderWidth: 1 })
-  y -= 15
+  // === ACTIVITY SUMMARY ===
+  const summTitle = 'Resumo de Atividades'
+  const stWidth = helveticaBold.widthOfTextAtSize(summTitle, 13)
+  page.drawText(summTitle, { x: (width - stWidth) / 2, y, size: 13, font: helveticaBold, color: darkText })
+  y -= 10
+
   const summaryLines = [
     `Mensagens enviadas no mes: ${stats.totalMessages}`,
     `Tarefas concluidas: ${stats.completedTasks} de ${stats.totalTasks} (${rate}%)`,
     `Entregas realizadas com atraso: ${stats.lateTasks}`,
     `Tarefas pendentes e atrasadas: ${stats.overdueTasks}`,
   ]
+  
+  const boxH = summaryLines.length * 20 + 20
+  drawRoundedRect(page, 40, y - boxH, width - 80, boxH, 10, lightGray, borderGray)
+  y -= 18
   for (const line of summaryLines) {
-    page.drawText(`  ${line}`, { x: 50, y, size: 11, font: helvetica, color: rgb(0.22, 0.26, 0.32) })
-    y -= 18
+    const lw = helvetica.widthOfTextAtSize(line, 11)
+    page.drawText(line, { x: (width - lw) / 2, y, size: 11, font: helvetica, color: medText })
+    y -= 20
   }
 
   y -= 25
 
-  // Recommendations
+  // === RECOMMENDATIONS ===
   if (recommendations.length > 0) {
-    page.drawText('Recomendacoes Personalizadas', { x: 40, y, size: 13, font: helveticaBold, color: rgb(0.1, 0.15, 0.2) })
-    y -= 20
+    const recTitle = 'Recomendacoes Personalizadas'
+    const rtWidth = helveticaBold.widthOfTextAtSize(recTitle, 13)
+    page.drawText(recTitle, { x: (width - rtWidth) / 2, y, size: 13, font: helveticaBold, color: darkText })
+    y -= 22
+
     for (const rec of recommendations) {
       const cleanRec = sanitize(rec)
-      // Wrap long text
-      const maxChars = 85
+      const maxChars = 80
       const lines: string[] = []
       for (let i = 0; i < cleanRec.length; i += maxChars) {
         lines.push(cleanRec.substring(i, i + maxChars))
       }
-      for (const line of lines) {
+      
+      // Draw a small accent dot
+      for (let li = 0; li < lines.length; li++) {
         if (y < 60) break
-        page.drawText(`  - ${line}`, { x: 50, y, size: 10, font: helvetica, color: rgb(0.22, 0.26, 0.32) })
+        const prefix = li === 0 ? '  >  ' : '     '
+        const lineText = prefix + lines[li]
+        const lineW2 = helvetica.widthOfTextAtSize(lineText, 10)
+        page.drawText(lineText, { x: (width - lineW2) / 2, y, size: 10, font: helvetica, color: medText })
         y -= 16
       }
-      y -= 4
+      y -= 6
     }
   }
 
-  // Footer
-  page.drawText(`Relatorio gerado automaticamente pelo ServChat em ${dateStr} | 2026 ${company}`, {
-    x: 40, y: 30, size: 8, font: helvetica, color: rgb(0.58, 0.64, 0.7)
-  })
+  // === FOOTER ===
+  const footerText = `Relatorio gerado automaticamente pelo ServChat em ${dateStr}`
+  const fWidth = helvetica.widthOfTextAtSize(footerText, 8)
+  page.drawText(footerText, { x: (width - fWidth) / 2, y: 40, size: 8, font: helvetica, color: lightText })
+
+  const copyrightText = `2026 ${company} - Todos os direitos reservados`
+  const cWidth = helvetica.widthOfTextAtSize(copyrightText, 8)
+  page.drawText(copyrightText, { x: (width - cWidth) / 2, y: 28, size: 8, font: helvetica, color: lightText })
 
   return await pdfDoc.save()
 }
@@ -375,8 +467,8 @@ Deno.serve(async (req) => {
           } else {
             sentDmCount++
           }
-        } catch (dmError) {
-          console.error(`DM exception for ${profile.name}:`, dmError)
+        } catch (e) {
+          console.error(`DM exception for ${profile.name}:`, e)
         }
 
         // Send email
@@ -391,42 +483,35 @@ Deno.serve(async (req) => {
               html: emailHtml,
             })
             if (emailError) {
-              console.error(`Email error for ${profile.email}:`, emailError)
-              errors.push(`Email para ${profile.email}: ${(emailError as any).message}`)
+              console.error(`Email error for ${profile.name}:`, emailError)
             } else {
               sentEmailCount++
             }
-          } catch (emailError) {
-            console.error(`Email exception for ${profile.email}:`, emailError)
+          } catch (e) {
+            console.error(`Email exception for ${profile.name}:`, e)
           }
         }
       } catch (profileError) {
         console.error(`Error processing ${profile.name}:`, profileError)
-        errors.push(`Erro ao processar ${profile.name}`)
+        errors.push(`${profile.name}: ${profileError instanceof Error ? profileError.message : 'Unknown error'}`)
       }
     }
 
-    const summary = {
+    const response = {
       success: true,
-      totalRecipients: targetProfiles.length,
-      emailsSent: sentEmailCount,
-      dmsSent: sentDmCount,
-      pdfsSent: sentPdfCount,
+      message: `Feedback enviado! Chat: ${sentDmCount}, E-mails: ${sentEmailCount}, PDFs: ${sentPdfCount}`,
+      details: { sentDmCount, sentEmailCount, sentPdfCount, totalRecipients: targetProfiles.length },
       errors: errors.length > 0 ? errors : undefined,
-      message: `Feedback enviado: ${sentDmCount} mensagens, ${sentEmailCount} e-mails, ${sentPdfCount} PDFs`,
     }
 
-    console.log('Feedback summary:', JSON.stringify(summary))
-
-    return new Response(JSON.stringify(summary), {
-      status: 200,
+    return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
     console.error('Fatal error:', error)
-    return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Internal error' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })
