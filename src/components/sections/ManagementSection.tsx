@@ -608,7 +608,7 @@ export function ManagementSection() {
             </TabsTrigger>
             <TabsTrigger value="config" className="gap-2">
               <Settings className="h-4 w-4" />
-              Config
+              Quant Arquivos
             </TabsTrigger>
           </TabsList>
 

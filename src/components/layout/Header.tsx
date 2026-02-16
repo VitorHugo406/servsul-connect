@@ -17,9 +17,11 @@ interface HeaderProps {
   title: string;
   subtitle?: string;
   hideNotifications?: boolean;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
-export function Header({ title, subtitle, hideNotifications = false }: HeaderProps) {
+export function Header({ title, subtitle, hideNotifications = false, searchQuery = '', onSearchChange }: HeaderProps) {
   const { counts } = useNotifications();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -42,6 +44,8 @@ export function Header({ title, subtitle, hideNotifications = false }: HeaderPro
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange?.(e.target.value)}
               className="w-64 bg-muted/50 pl-10 focus-visible:ring-primary"
             />
           </div>

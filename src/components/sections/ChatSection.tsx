@@ -14,7 +14,8 @@ import { usePrivateGroups } from '@/hooks/usePrivateGroups';
 import { SectorUsersList } from '@/components/sector/SectorUsersList';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Users, MessageSquare, ArrowLeft, UsersRound, Eye, EyeOff } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { AlertCircle, Users, MessageSquare, ArrowLeft, UsersRound, Eye, EyeOff, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSound } from '@/hooks/useSound';
@@ -23,7 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 type ChatMode = 'sectors' | 'direct' | 'groups';
 
-export function ChatSection() {
+export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const { profile, isAdmin, geralSectorId, allAccessibleSectorIds, user } = useAuth();
   const { sectors, loading: sectorsLoading } = useSectors();
   const { markDirectMessagesAsRead } = useNotifications();
@@ -32,6 +33,16 @@ export function ChatSection() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [showSectorUsers, setShowSectorUsers] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [messageSearchQuery, setMessageSearchQuery] = useState('');
+  
+  // Sync global search from header
+  useEffect(() => {
+    if (globalSearch) {
+      setMessageSearchQuery(globalSearch);
+      setShowSearch(true);
+    }
+  }, [globalSearch]);
   const isMobile = useIsMobile();
   const { playMessageSent } = useSound();
   const { groups } = usePrivateGroups();
@@ -296,14 +307,37 @@ export function ChatSection() {
             </div>
             <Button 
               variant="ghost" 
-              size="icon" 
-              className="ml-auto"
+              size="icon"
+              onClick={() => { setShowSearch(!showSearch); if (showSearch) setMessageSearchQuery(''); }}
+              title="Buscar mensagens"
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon"
               onClick={() => setShowSectorUsers(!showSectorUsers)}
               title={showSectorUsers ? 'Ocultar membros' : 'Ver membros do setor'}
             >
               {showSectorUsers ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </Button>
           </div>
+
+          {/* Search Bar */}
+          {showSearch && (
+            <div className="border-b border-border bg-card px-4 py-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por mensagem..."
+                  value={messageSearchQuery}
+                  onChange={(e) => setMessageSearchQuery(e.target.value)}
+                  className="pl-9"
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
 
           {/* Main Chat Area */}
           <div className="flex flex-1 overflow-hidden">
@@ -327,9 +361,14 @@ export function ChatSection() {
                     </p>
                   </div>
                 ) : (
-                  messages.map((message, index) => {
-                    // Show date separator when date changes
-                    const prevMessage = index > 0 ? messages[index - 1] : null;
+                  messages.filter(m => {
+                    if (!messageSearchQuery) return true;
+                    const q = messageSearchQuery.toLowerCase();
+                    return m.content.toLowerCase().includes(q) || 
+                      (m.author?.name || '').toLowerCase().includes(q) ||
+                      (m.author?.display_name || '').toLowerCase().includes(q);
+                  }).map((message, index, filteredArr) => {
+                    const prevMessage = index > 0 ? filteredArr[index - 1] : null;
                     const msgDate = new Date(message.created_at).toDateString();
                     const prevDate = prevMessage ? new Date(prevMessage.created_at).toDateString() : null;
                     const showDateSeparator = msgDate !== prevDate;

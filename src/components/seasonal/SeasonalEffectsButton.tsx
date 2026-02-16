@@ -20,110 +20,110 @@ function getSeasonalTheme(): SeasonalTheme {
   // Christmas: Dec 20-30
   if (month === 11 && day >= 20 && day <= 30) {
     return {
-      label: 'Feliz Natal! 🎄',
+      label: 'Feliz Natal!',
       message: 'Que o espírito natalino traga paz, amor e alegria para você e sua família!',
       colors: ['#c0392b', '#27ae60', '#f1c40f', '#ffffff'],
       effect: 'snow',
-      emoji: '🎄',
+      emoji: '',
     };
   }
 
   // New Year: Dec 31 - Jan 10
   if ((month === 11 && day === 31) || (month === 0 && day <= 10)) {
     return {
-      label: 'Feliz Ano Novo! 🎆',
+      label: 'Feliz Ano Novo!',
       message: 'Que este novo ano seja repleto de realizações, saúde e muita prosperidade!',
       colors: ['#f1c40f', '#e67e22', '#ffffff', '#3498db'],
       effect: 'fireworks',
-      emoji: '🎆',
+      emoji: '',
     };
   }
 
   // Monthly awareness themes
   const monthlyThemes: Record<number, SeasonalTheme> = {
     0: { // Janeiro Branco - Saúde Mental
-      label: 'Janeiro Branco 🤍',
+      label: 'Janeiro Branco',
       message: 'Cuide da sua saúde mental! A mente precisa de atenção e carinho tanto quanto o corpo.',
       colors: ['#ecf0f1', '#bdc3c7', '#95a5a6', '#ffffff'],
       effect: 'confetti',
-      emoji: '🤍',
+      emoji: '',
     },
     1: { // Fevereiro Roxo/Laranja
-      label: 'Fevereiro Roxo & Laranja 💜🧡',
+      label: 'Fevereiro Roxo & Laranja',
       message: 'Mês de conscientização sobre Alzheimer, Lúpus e Fibromialgia. Cuidar é um ato de amor!',
       colors: ['#8e44ad', '#e67e22', '#9b59b6', '#f39c12'],
       effect: 'confetti',
-      emoji: '💜',
+      emoji: '',
     },
     2: { // Março Lilás - Mulher
-      label: 'Março Lilás 💜',
+      label: 'Março Lilás',
       message: 'Mês da Mulher! Prevenção ao câncer de colo de útero. Cuide-se, você é importante!',
       colors: ['#8e44ad', '#9b59b6', '#d5a6e6', '#e8d5f5'],
       effect: 'confetti',
-      emoji: '💜',
+      emoji: '',
     },
     3: { // Abril Azul - Autismo
-      label: 'Abril Azul 💙',
+      label: 'Abril Azul',
       message: 'Conscientização sobre o Autismo. A inclusão começa com o respeito e a empatia!',
       colors: ['#2980b9', '#3498db', '#5dade2', '#85c1e9'],
       effect: 'confetti',
-      emoji: '💙',
+      emoji: '',
     },
     4: { // Maio Amarelo - Trânsito
-      label: 'Maio Amarelo 💛',
+      label: 'Maio Amarelo',
       message: 'Atenção pela vida! No trânsito, a responsabilidade é de todos. Dirija com prudência!',
       colors: ['#f1c40f', '#f39c12', '#e67e22', '#fdebd0'],
       effect: 'confetti',
-      emoji: '💛',
+      emoji: '',
     },
     5: { // Junho Vermelho - Doação de Sangue
-      label: 'Junho Vermelho ❤️',
+      label: 'Junho Vermelho',
       message: 'Doe sangue, doe vida! Um gesto simples que pode salvar até 4 vidas.',
       colors: ['#e74c3c', '#c0392b', '#f1948a', '#fadbd8'],
       effect: 'confetti',
-      emoji: '❤️',
+      emoji: '',
     },
     6: { // Julho Amarelo - Hepatites Virais
-      label: 'Julho Amarelo 💛',
+      label: 'Julho Amarelo',
       message: 'Prevenção contra Hepatites Virais. A informação é a melhor vacina!',
       colors: ['#f1c40f', '#f39c12', '#fad390', '#ffffff'],
       effect: 'confetti',
-      emoji: '💛',
+      emoji: '',
     },
     7: { // Agosto Dourado - Amamentação
-      label: 'Agosto Dourado 🌟',
+      label: 'Agosto Dourado',
       message: 'Aleitamento materno: o alimento mais completo e natural para o bebê!',
       colors: ['#f39c12', '#e67e22', '#f1c40f', '#fdebd0'],
       effect: 'confetti',
-      emoji: '🌟',
+      emoji: '',
     },
     8: { // Setembro Amarelo - Prevenção ao Suicídio
-      label: 'Setembro Amarelo 💛',
+      label: 'Setembro Amarelo',
       message: 'A vida é a melhor escolha! Se precisar, peça ajuda. Ligue 188 - CVV. Você não está sozinho!',
       colors: ['#f1c40f', '#f39c12', '#fad390', '#ffffff'],
       effect: 'confetti',
-      emoji: '💛',
+      emoji: '',
     },
     9: { // Outubro Rosa - Câncer de Mama
-      label: 'Outubro Rosa 🎀',
+      label: 'Outubro Rosa',
       message: 'A prevenção é o melhor caminho! Faça o autoexame e consulte seu médico regularmente.',
       colors: ['#e91e8c', '#ff69b4', '#ffb6c1', '#ffc0cb'],
       effect: 'confetti',
-      emoji: '🎀',
+      emoji: '',
     },
     10: { // Novembro Azul - Câncer de Próstata
-      label: 'Novembro Azul 💙',
+      label: 'Novembro Azul',
       message: 'Homem que se cuida vive mais! A prevenção e o diagnóstico precoce salvam vidas.',
       colors: ['#2980b9', '#3498db', '#1a5276', '#d6eaf8'],
       effect: 'confetti',
-      emoji: '💙',
+      emoji: '',
     },
     11: { // Dezembro Vermelho - AIDS
-      label: 'Dezembro Vermelho 🎗️',
+      label: 'Dezembro Vermelho',
       message: 'Prevenção ao HIV/AIDS. Informação, prevenção e respeito. Juntos somos mais fortes!',
       colors: ['#e74c3c', '#c0392b', '#f1948a', '#ffffff'],
       effect: 'confetti',
-      emoji: '🎗️',
+      emoji: '',
     },
   };
 
@@ -236,7 +236,7 @@ export function SeasonalEffectsButton({ collapsed }: { collapsed?: boolean }) {
         <Sparkles className="h-5 w-5 flex-shrink-0 text-amber-400" />
         {!collapsed && (
           <span className="overflow-hidden whitespace-nowrap font-medium text-sm">
-            {theme.emoji} Evento Mensal
+            Evento Mensal
           </span>
         )}
       </Button>
@@ -250,7 +250,6 @@ export function SeasonalEffectsButton({ collapsed }: { collapsed?: boolean }) {
             className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[9999] max-w-sm w-[90vw]"
           >
             <div className="rounded-2xl bg-card border border-border shadow-2xl p-5 text-center">
-              <p className="text-3xl mb-2">{theme.emoji}</p>
               <h3 className="text-lg font-bold text-foreground mb-1">{theme.label}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">{theme.message}</p>
             </div>
