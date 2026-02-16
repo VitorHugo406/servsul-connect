@@ -28,8 +28,22 @@ export function useFileUpload() {
   const [progress, setProgress] = useState(0);
   const { user, profile } = useAuth();
 
+  const getWeeklyLimit = async (): Promise<number> => {
+    try {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'weekly_file_limit')
+        .single();
+      if (data?.value) return parseInt(data.value) || 5;
+    } catch {
+      // ignore - use default
+    }
+    return 5;
+  };
+
   const checkWeeklyLimit = async (): Promise<boolean> => {
-    if (!user) return false;
+    if (!user || !profile) return false;
     
     // Calculate start of current week (Monday)
     const now = new Date();
@@ -39,10 +53,12 @@ export function useFileUpload() {
     startOfWeek.setDate(now.getDate() - diffToMonday);
     startOfWeek.setHours(0, 0, 0, 0);
 
+    const weeklyLimit = await getWeeklyLimit();
+
     const { count, error } = await supabase
       .from('attachments')
       .select('*', { count: 'exact', head: true })
-      .eq('uploaded_by', profile?.id || '')
+      .eq('uploaded_by', profile.id)
       .gte('created_at', startOfWeek.toISOString());
 
     if (error) {
@@ -50,7 +66,12 @@ export function useFileUpload() {
       return true; // Allow on error
     }
 
-    return (count || 0) < 5;
+    if ((count || 0) >= weeklyLimit) {
+      toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`);
+      return false;
+    }
+
+    return true;
   };
 
   const uploadFile = async (
@@ -68,11 +89,10 @@ export function useFileUpload() {
       return null;
     }
 
-    // Check weekly upload limit (5 files per week)
+    // Check weekly upload limit
     if (bucket === 'attachments') {
       const withinLimit = await checkWeeklyLimit();
       if (!withinLimit) {
-        toast.error('Limite semanal de 5 arquivos atingido. Tente novamente na próxima semana.');
         return null;
       }
     }

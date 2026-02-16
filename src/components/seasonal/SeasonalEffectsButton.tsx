@@ -236,7 +236,7 @@ export function SeasonalEffectsButton({ collapsed }: { collapsed?: boolean }) {
         <Sparkles className="h-5 w-5 flex-shrink-0 text-amber-400" />
         {!collapsed && (
           <span className="overflow-hidden whitespace-nowrap font-medium text-sm">
-            {theme.emoji} Interação
+            {theme.emoji} Evento Mensal
           </span>
         )}
       </Button>

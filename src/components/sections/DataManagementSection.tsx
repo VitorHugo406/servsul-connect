@@ -73,7 +73,7 @@ interface DeletionOption {
      );
    }
  
-    const executeDelete = async (type: string) => {
+  const executeDelete = async (type: string) => {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         throw new Error('Sessão não encontrada');
@@ -83,7 +83,10 @@ interface DeletionOption {
       // If messages with custom period, send date range
       if (type === 'messages' && deletePeriod === 'custom' && dateStart && dateEnd) {
         bodyPayload.startDate = dateStart.toISOString();
-        bodyPayload.endDate = dateEnd.toISOString();
+        // Set endDate to end of the selected day (23:59:59.999)
+        const endOfDay = new Date(dateEnd);
+        endOfDay.setHours(23, 59, 59, 999);
+        bodyPayload.endDate = endOfDay.toISOString();
       }
 
       const response = await supabase.functions.invoke('delete-data', {

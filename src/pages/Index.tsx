@@ -23,6 +23,7 @@ import { SectorManagementSection } from '@/components/sections/SectorManagementS
 import { PeopleManagementSection } from '@/components/sections/PeopleManagementSection';
 import { FeedbackEmailSection } from '@/components/sections/FeedbackEmailSection';
 import { LogsSection } from '@/components/sections/LogsSection';
+import { StorageMonitoringSection } from '@/components/sections/StorageMonitoringSection';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
@@ -45,6 +46,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
    'people-management': { title: 'Gestão de Pessoas', subtitle: 'Equipe e relatórios' },
    'feedback-email': { title: 'Disparo de Feedback', subtitle: 'E-mails de feedback mensal' },
    'system-logs': { title: 'Logs do Sistema', subtitle: 'Auditoria e relatórios' },
+   'storage': { title: 'Armazenamento', subtitle: 'Monitoramento do banco de dados' },
 };
 
 const Index = () => {
@@ -110,6 +112,8 @@ const Index = () => {
           return <FeedbackEmailSection />;
         case 'system-logs':
           return <LogsSection />;
+        case 'storage':
+          return <StorageMonitoringSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }
