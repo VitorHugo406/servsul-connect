@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, Bell, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface HeaderProps {
   title: string;
@@ -19,12 +20,46 @@ interface HeaderProps {
   hideNotifications?: boolean;
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
+  onNavigateToSection?: (section: string) => void;
 }
 
-export function Header({ title, subtitle, hideNotifications = false, searchQuery = '', onSearchChange }: HeaderProps) {
+const ALL_SECTIONS = [
+  { id: 'home', label: 'Inicio', description: 'Visao geral do ServChat' },
+  { id: 'chat', label: 'Chat por Setores', description: 'Comunicacao entre equipes' },
+  { id: 'announcements', label: 'Avisos Gerais', description: 'Comunicados oficiais' },
+  { id: 'birthdays', label: 'Aniversariantes', description: 'Mural de celebracoes' },
+  { id: 'tasks', label: 'Gestao de Tarefas', description: 'Quadro de atividades' },
+  { id: 'people-management', label: 'Gestao de Pessoas', description: 'Equipe e relatorios' },
+  { id: 'management', label: 'Gerenciamento', description: 'Administracao do sistema' },
+  { id: 'sectors', label: 'Gestao de Setores', description: 'Departamentos da empresa' },
+  { id: 'important-announcements', label: 'Comunicados Importantes', description: 'Avisos em destaque' },
+  { id: 'data-management', label: 'Exclusao de Dados', description: 'Gerenciamento de dados' },
+  { id: 'feedback-email', label: 'Disparo de Feedback', description: 'E-mails de feedback mensal' },
+  { id: 'facial', label: 'Cadastro Facial', description: 'Reconhecimento biometrico' },
+  { id: 'system-logs', label: 'Logs do Sistema', description: 'Auditoria e relatorios' },
+  { id: 'event-history', label: 'Eventos Mensais', description: 'Historico de campanhas' },
+  { id: 'storage', label: 'Armazenamento', description: 'Monitoramento do banco de dados' },
+];
+
+export function Header({ title, subtitle, hideNotifications = false, searchQuery = '', onSearchChange, onNavigateToSection }: HeaderProps) {
   const { counts } = useNotifications();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showSectionSearch, setShowSectionSearch] = useState(false);
+
+  const filteredSections = useMemo(() => {
+    if (!searchQuery) return [];
+    const q = searchQuery.toLowerCase();
+    return ALL_SECTIONS.filter(s =>
+      s.label.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)
+    );
+  }, [searchQuery]);
+
+  const handleSelectSection = (sectionId: string) => {
+    onNavigateToSection?.(sectionId);
+    onSearchChange?.('');
+    setShowSectionSearch(false);
+  };
 
   return (
     <>
@@ -39,15 +74,42 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
         </div>
         
         <div className="flex items-center gap-4">
-          {/* Search */}
+          {/* Section Search */}
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar..."
+              placeholder="Busca de Abas..."
               value={searchQuery}
-              onChange={(e) => onSearchChange?.(e.target.value)}
+              onChange={(e) => {
+                onSearchChange?.(e.target.value);
+                setShowSectionSearch(true);
+              }}
+              onFocus={() => { if (searchQuery) setShowSectionSearch(true); }}
+              onBlur={() => setTimeout(() => setShowSectionSearch(false), 200)}
               className="w-64 bg-muted/50 pl-10 focus-visible:ring-primary"
             />
+            {/* Dropdown results */}
+            {showSectionSearch && filteredSections.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-lg border border-border bg-card shadow-lg overflow-hidden">
+                {filteredSections.map(section => (
+                  <button
+                    key={section.id}
+                    onMouseDown={(e) => { e.preventDefault(); handleSelectSection(section.id); }}
+                    className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{section.label}</p>
+                      <p className="text-xs text-muted-foreground">{section.description}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {showSectionSearch && searchQuery && filteredSections.length === 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-lg border border-border bg-card shadow-lg p-4 text-center text-sm text-muted-foreground">
+                Nenhuma aba encontrada
+              </div>
+            )}
           </div>
           
           {/* Notifications - hidden on home page */}
@@ -65,7 +127,7 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
               </PopoverTrigger>
               <PopoverContent className="w-80 p-0" align="end">
                 <div className="border-b border-border p-4">
-                  <h3 className="font-semibold">Notificações</h3>
+                  <h3 className="font-semibold">Notificacoes</h3>
                 </div>
                 <ScrollArea className="h-64">
                   <div className="p-4 space-y-3">
@@ -73,7 +135,7 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                         <div className="h-2 w-2 rounded-full bg-primary" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium">Mensagens não lidas</p>
+                          <p className="text-sm font-medium">Mensagens nao lidas</p>
                           <p className="text-xs text-muted-foreground">
                             {counts.unreadMessages} {counts.unreadMessages === 1 ? 'mensagem' : 'mensagens'}
                           </p>
@@ -84,7 +146,7 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                         <div className="h-2 w-2 rounded-full bg-secondary" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium">Avisos não lidos</p>
+                          <p className="text-sm font-medium">Avisos nao lidos</p>
                           <p className="text-xs text-muted-foreground">
                             {counts.unreadAnnouncements} {counts.unreadAnnouncements === 1 ? 'aviso' : 'avisos'}
                           </p>
@@ -94,7 +156,7 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
                     {counts.total === 0 && (
                       <div className="text-center py-8 text-muted-foreground">
                         <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Nenhuma notificação</p>
+                        <p className="text-sm">Nenhuma notificacao</p>
                       </div>
                     )}
                   </div>

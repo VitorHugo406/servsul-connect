@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search } from 'lucide-react';
+import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search, CalendarDays } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -158,7 +158,8 @@ export function PeopleManagementSection() {
       <Tabs defaultValue="team" className="w-full">
         <TabsList>
           <TabsTrigger value="team" className="gap-2"><Users className="h-4 w-4" /> Equipe</TabsTrigger>
-          <TabsTrigger value="reports" className="gap-2"><BarChart3 className="h-4 w-4" /> Relatórios</TabsTrigger>
+          <TabsTrigger value="reports" className="gap-2"><BarChart3 className="h-4 w-4" /> Relatorios</TabsTrigger>
+          <TabsTrigger value="activities" className="gap-2"><CalendarDays className="h-4 w-4" /> Atividades</TabsTrigger>
         </TabsList>
 
         <TabsContent value="team" className="mt-4">
@@ -369,7 +370,11 @@ export function PeopleManagementSection() {
                 </CardContent>
               </Card>
             </>
-          )}
+        )}
+        </TabsContent>
+
+        <TabsContent value="activities" className="mt-4">
+          <ActivitiesTab memberIds={memberIds} members={members} />
         </TabsContent>
       </Tabs>
 
@@ -422,5 +427,158 @@ export function PeopleManagementSection() {
         </DialogContent>
       </Dialog>
     </motion.div>
+  );
+}
+
+// Activities Tab Component
+function ActivitiesTab({ memberIds, members }: { memberIds: string[]; members: any[] }) {
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (memberIds.length === 0) {
+      setTasks([]);
+      setLoading(false);
+      return;
+    }
+
+    const fetchTasks = async () => {
+      setLoading(true);
+      try {
+        const { data } = await supabase
+          .from('tasks')
+          .select('id, title, status, priority, due_date, assigned_to, created_at, updated_at')
+          .in('assigned_to', memberIds)
+          .order('updated_at', { ascending: false });
+        setTasks(data || []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, [memberIds]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (memberIds.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <CalendarDays className="h-12 w-12 text-muted-foreground mb-4" />
+          <h4 className="text-lg font-semibold">Nenhum colaborador adicionado</h4>
+          <p className="text-muted-foreground mt-1">Adicione membros para ver atividades.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const getMemberName = (profileId: string) => {
+    const m = members.find(mem => mem.member_profile_id === profileId);
+    return m?.profile?.display_name || m?.profile?.name || 'Desconhecido';
+  };
+
+  const getMemberAvatar = (profileId: string) => {
+    const m = members.find(mem => mem.member_profile_id === profileId);
+    return m?.profile?.avatar_url || '';
+  };
+
+  const priorityColors: Record<string, string> = {
+    high: 'bg-destructive/10 text-destructive',
+    medium: 'bg-yellow-500/10 text-yellow-600',
+    low: 'bg-green-500/10 text-green-600',
+  };
+
+  const statusLabels: Record<string, string> = {
+    todo: 'A Fazer',
+    in_progress: 'Em Andamento',
+    done: 'Concluida',
+  };
+
+  // Group tasks by member then by date
+  const tasksByMember: Record<string, Record<string, any[]>> = {};
+  
+  for (const task of tasks) {
+    const memberId = task.assigned_to;
+    if (!memberId) continue;
+    if (!tasksByMember[memberId]) tasksByMember[memberId] = {};
+    
+    const dateKey = new Date(task.updated_at).toLocaleDateString('pt-BR');
+    if (!tasksByMember[memberId][dateKey]) tasksByMember[memberId][dateKey] = [];
+    tasksByMember[memberId][dateKey].push(task);
+  }
+
+  return (
+    <ScrollArea className="h-[calc(100vh-400px)]">
+      <div className="space-y-6">
+        {Object.entries(tasksByMember).map(([memberId, dateGroups]) => (
+          <Card key={memberId}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={getMemberAvatar(memberId)} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                    {getMemberName(memberId).split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <CardTitle className="text-base">{getMemberName(memberId)}</CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    {Object.values(dateGroups).flat().length} atividades
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {Object.entries(dateGroups).map(([date, dayTasks]) => (
+                <div key={date}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs font-medium text-muted-foreground">{date}</span>
+                  </div>
+                  <div className="space-y-2 pl-5 border-l-2 border-border">
+                    {dayTasks.map((task: any) => (
+                      <div key={task.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{task.title}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              {statusLabels[task.status] || task.status}
+                            </Badge>
+                            <Badge className={`text-[10px] px-1.5 py-0 ${priorityColors[task.priority] || ''}`}>
+                              {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Media' : 'Baixa'}
+                            </Badge>
+                            {task.due_date && (
+                              <span className="text-[10px] text-muted-foreground">
+                                Prazo: {new Date(task.due_date).toLocaleDateString('pt-BR')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ))}
+        {Object.keys(tasksByMember).length === 0 && (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              Nenhuma atividade encontrada para os colaboradores da equipe.
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </ScrollArea>
   );
 }

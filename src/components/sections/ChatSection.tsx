@@ -15,7 +15,7 @@ import { SectorUsersList } from '@/components/sector/SectorUsersList';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { AlertCircle, Users, MessageSquare, ArrowLeft, UsersRound, Eye, EyeOff, Search } from 'lucide-react';
+import { AlertCircle, Users, MessageSquare, ArrowLeft, UsersRound, Eye, EyeOff, Search, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSound } from '@/hooks/useSound';
@@ -35,14 +35,9 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const [showSectorUsers, setShowSectorUsers] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
+  const [searchDate, setSearchDate] = useState<string | null>(null);
   
-  // Sync global search from header
-  useEffect(() => {
-    if (globalSearch) {
-      setMessageSearchQuery(globalSearch);
-      setShowSearch(true);
-    }
-  }, [globalSearch]);
+  // Global search no longer syncs to chat (now used for tab navigation)
   const isMobile = useIsMobile();
   const { playMessageSent } = useSound();
   const { groups } = usePrivateGroups();
@@ -299,33 +294,35 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
             >
               <span className="text-lg font-bold">{currentSector?.name.charAt(0)}</span>
             </div>
-            <div>
+            <div className="flex-1">
               <h3 className="font-display font-semibold text-foreground">{currentSector?.name}</h3>
               <p className="text-xs text-muted-foreground">
                 {messages.length} mensagens
               </p>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => { setShowSearch(!showSearch); if (showSearch) setMessageSearchQuery(''); }}
-              title="Buscar mensagens"
-            >
-              <Search className="h-5 w-5" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setShowSectorUsers(!showSectorUsers)}
-              title={showSectorUsers ? 'Ocultar membros' : 'Ver membros do setor'}
-            >
-              {showSectorUsers ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-            </Button>
+            <div className="flex items-center gap-1 ml-auto">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => setShowSectorUsers(!showSectorUsers)}
+                title={showSectorUsers ? 'Ocultar membros' : 'Ver membros do setor'}
+              >
+                {showSectorUsers ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => { setShowSearch(!showSearch); if (showSearch) { setMessageSearchQuery(''); setSearchDate(null); } }}
+                title="Buscar mensagens"
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
 
           {/* Search Bar */}
           {showSearch && (
-            <div className="border-b border-border bg-card px-4 py-2">
+            <div className="border-b border-border bg-card px-4 py-2 space-y-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -335,6 +332,21 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                   className="pl-9"
                   autoFocus
                 />
+              </div>
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="date"
+                  value={searchDate || ''}
+                  onChange={(e) => setSearchDate(e.target.value || null)}
+                  className="w-auto text-xs"
+                  placeholder="Filtrar por data"
+                />
+                {searchDate && (
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setSearchDate(null)}>
+                    Limpar
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -362,11 +374,18 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                   </div>
                 ) : (
                   messages.filter(m => {
-                    if (!messageSearchQuery) return true;
-                    const q = messageSearchQuery.toLowerCase();
-                    return m.content.toLowerCase().includes(q) || 
-                      (m.author?.name || '').toLowerCase().includes(q) ||
-                      (m.author?.display_name || '').toLowerCase().includes(q);
+                    if (messageSearchQuery) {
+                      const q = messageSearchQuery.toLowerCase();
+                      const matchText = m.content.toLowerCase().includes(q) || 
+                        (m.author?.name || '').toLowerCase().includes(q) ||
+                        (m.author?.display_name || '').toLowerCase().includes(q);
+                      if (!matchText) return false;
+                    }
+                    if (searchDate) {
+                      const msgDate = new Date(m.created_at).toISOString().split('T')[0];
+                      if (msgDate !== searchDate) return false;
+                    }
+                    return true;
                   }).map((message, index, filteredArr) => {
                     const prevMessage = index > 0 ? filteredArr[index - 1] : null;
                     const msgDate = new Date(message.created_at).toDateString();
