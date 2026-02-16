@@ -1,8 +1,14 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Calendar, Sparkles } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Calendar, Pencil, Save, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface EventInfo {
   month: string;
@@ -13,7 +19,7 @@ interface EventInfo {
   effect: string;
 }
 
-const SEASONAL_EVENTS: EventInfo[] = [
+const DEFAULT_EVENTS: EventInfo[] = [
   {
     month: 'Janeiro',
     label: 'Janeiro Branco',
@@ -114,12 +120,29 @@ const SEASONAL_EVENTS: EventInfo[] = [
 
 export function EventHistorySection() {
   const currentMonth = new Date().getMonth();
+  const [events, setEvents] = useState<EventInfo[]>(DEFAULT_EVENTS);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<EventInfo | null>(null);
+
+  const openEdit = (index: number) => {
+    setEditingIndex(index);
+    setEditForm({ ...events[index] });
+  };
+
+  const saveEdit = () => {
+    if (editingIndex === null || !editForm) return;
+    const updated = [...events];
+    updated[editingIndex] = editForm;
+    setEvents(updated);
+    setEditingIndex(null);
+    setEditForm(null);
+    toast.success('Evento atualizado com sucesso!');
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-6 space-y-6">
       <div>
         <h3 className="font-display text-2xl font-bold text-foreground flex items-center gap-2">
-          <Sparkles className="h-6 w-6 text-amber-400" />
           Eventos Mensais
         </h3>
         <p className="text-muted-foreground">Historico de campanhas de conscientizacao e datas comemorativas</p>
@@ -127,7 +150,7 @@ export function EventHistorySection() {
 
       <ScrollArea className="h-[calc(100vh-200px)]">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {SEASONAL_EVENTS.map((event, index) => {
+          {events.map((event, index) => {
             const isCurrentMonth = index === currentMonth;
             return (
               <motion.div
@@ -136,13 +159,18 @@ export function EventHistorySection() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <Card className={`hover:shadow-md transition-shadow ${isCurrentMonth ? 'ring-2 ring-primary' : ''}`}>
+                <Card className={`hover:shadow-md transition-shadow relative ${isCurrentMonth ? 'ring-[3px] ring-primary ring-offset-4 ring-offset-background' : ''}`}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">{event.label}</CardTitle>
-                      {isCurrentMonth && (
-                        <Badge variant="default" className="text-xs">Atual</Badge>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {isCurrentMonth && (
+                          <Badge variant="default" className="text-xs">Atual</Badge>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(index)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -177,6 +205,59 @@ export function EventHistorySection() {
           })}
         </div>
       </ScrollArea>
+
+      {/* Edit Dialog */}
+      <Dialog open={editingIndex !== null} onOpenChange={(open) => { if (!open) { setEditingIndex(null); setEditForm(null); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar Evento - {editForm?.month}</DialogTitle>
+          </DialogHeader>
+          {editForm && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nome do Evento</Label>
+                <Input value={editForm.label} onChange={(e) => setEditForm({ ...editForm, label: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Periodo</Label>
+                <Input value={editForm.period} onChange={(e) => setEditForm({ ...editForm, period: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Mensagem</Label>
+                <textarea
+                  value={editForm.message}
+                  onChange={(e) => setEditForm({ ...editForm, message: e.target.value })}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Efeito</Label>
+                <Input value={editForm.effect} onChange={(e) => setEditForm({ ...editForm, effect: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Cores (separadas por virgula, formato hex)</Label>
+                <Input
+                  value={editForm.colors.join(', ')}
+                  onChange={(e) => setEditForm({ ...editForm, colors: e.target.value.split(',').map(c => c.trim()).filter(Boolean) })}
+                />
+                <div className="flex gap-1.5 mt-1">
+                  {editForm.colors.map((color, i) => (
+                    <div key={i} className="h-6 w-6 rounded-full border border-border" style={{ backgroundColor: color }} />
+                  ))}
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => { setEditingIndex(null); setEditForm(null); }}>
+                  <X className="h-4 w-4 mr-1" /> Cancelar
+                </Button>
+                <Button onClick={saveEdit}>
+                  <Save className="h-4 w-4 mr-1" /> Salvar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
