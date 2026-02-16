@@ -1,32 +1,30 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Resend } from 'npm:resend@4.0.0'
+import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-const MONTH_NAMES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 const MONTH_NAMES_DISPLAY = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 function getBrazilNow() {
-  // Deno runs in UTC. Subtract 3 hours for Brazil (UTC-3)
   const now = new Date()
-  const brMs = now.getTime() - (3 * 60 * 60 * 1000)
-  return new Date(brMs)
+  return new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
 }
 
 function formatBrDate(d: Date): string {
-  const day = String(d.getUTCDate()).padStart(2, '0')
-  const month = String(d.getUTCMonth() + 1).padStart(2, '0')
-  const year = d.getUTCFullYear()
-  const hour = String(d.getUTCHours()).padStart(2, '0')
-  const min = String(d.getUTCMinutes()).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const year = d.getFullYear()
+  const hour = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
   return `${day}/${month}/${year} ${hour}:${min}`
 }
 
 function getCurrentMonthLabel(d: Date): string {
-  return `${MONTH_NAMES_DISPLAY[d.getUTCMonth()]} de ${d.getUTCFullYear()}`
+  return `${MONTH_NAMES_DISPLAY[d.getMonth()]} de ${d.getFullYear()}`
 }
 
 function sanitize(text: string): string {
@@ -41,11 +39,7 @@ function sanitize(text: string): string {
 }
 
 async function getAdminProfileId(supabase: any, userId: string): Promise<string> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('user_id', userId)
-    .single()
+  const { data, error } = await supabase.from('profiles').select('id').eq('user_id', userId).single()
   if (error || !data) throw new Error('Could not find admin profile')
   return data.id
 }
@@ -53,17 +47,17 @@ async function getAdminProfileId(supabase: any, userId: string): Promise<string>
 function generateRecommendations(stats: { totalMessages: number; completedTasks: number; totalTasks: number; lateTasks: number; overdueTasks: number }): string[] {
   const recs: string[] = []
   if (stats.totalMessages < 5) {
-    recs.push('Sua participacao nas conversas foi baixa este mes. Tente interagir mais com a equipe para manter a comunicacao fluida.')
+    recs.push('Sua participacao nas conversas foi baixa este mes. Tente interagir mais com a equipe.')
   } else if (stats.totalMessages > 50) {
-    recs.push('Excelente nivel de comunicacao! Continue mantendo esse engajamento com a equipe.')
+    recs.push('Excelente nivel de comunicacao! Continue mantendo esse engajamento.')
   }
   if (stats.totalTasks > 0) {
     const rate = stats.completedTasks / stats.totalTasks
-    if (rate >= 0.9) recs.push('Parabens! Sua taxa de conclusao de tarefas esta excelente. Continue assim!')
-    else if (rate >= 0.6) recs.push('Sua taxa de conclusao de tarefas esta boa, mas ha espaco para melhoria.')
-    else recs.push('Sua taxa de conclusao de tarefas esta abaixo do ideal. Considere revisar suas prioridades.')
+    if (rate >= 0.9) recs.push('Parabens! Sua taxa de conclusao de tarefas esta excelente.')
+    else if (rate >= 0.6) recs.push('Sua taxa de conclusao esta boa, mas ha espaco para melhoria.')
+    else recs.push('Sua taxa de conclusao esta abaixo do ideal. Revise suas prioridades.')
   } else {
-    recs.push('Nenhuma tarefa foi atribuida a voce este mes. Verifique com seu supervisor se ha atividades pendentes.')
+    recs.push('Nenhuma tarefa atribuida este mes. Verifique com seu supervisor.')
   }
   if (stats.lateTasks > 0) recs.push(`Voce teve ${stats.lateTasks} entrega(s) com atraso. Planeje melhor os prazos.`)
   if (stats.overdueTasks > 0) recs.push(`Existem ${stats.overdueTasks} tarefa(s) pendentes e atrasadas. Priorize resolve-las.`)
@@ -83,7 +77,7 @@ function buildChatMessage(displayName: string, stats: any, recommendations: stri
     msg += `*Recomendacoes:*\n`
     recommendations.forEach(r => { msg += `_${r}_\n` })
   }
-  if (pdfUrl) msg += `\n[Relatorio PDF - ${currentMonth}](${pdfUrl})`
+  if (pdfUrl) msg += `\n[Baixar Relatorio PDF](${pdfUrl})`
   msg += `\n\n_Mensagem automatica do ServChat_`
   return msg
 }
@@ -125,76 +119,113 @@ function buildEmailHtml(displayName: string, stats: any, recommendations: string
         <ul style="color:#4b5563;margin:0;padding:0 0 0 20px;line-height:1.8;">${recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
       </div>` : ''}
       <div style="text-align:center;padding:16px 0;">
-        <p style="color:#9ca3af;font-size:12px;margin:0;">Este e-mail foi enviado automaticamente pelo sistema ServChat.<br>${new Date().getFullYear()} ${companyName}.</p>
+        <p style="color:#9ca3af;font-size:12px;margin:0;">Este e-mail foi enviado automaticamente pelo sistema ServChat.<br>2026 ${companyName}.</p>
       </div>
     </div>
   </div>
 </body></html>`
 }
 
-function generatePdfHtml(displayName: string, stats: any, recommendations: string[], currentMonth: string, companyName: string, dateStr: string): string {
-  const rate = stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0
-  const barWidth = Math.max(rate, 2)
+async function generatePdf(displayName: string, stats: any, recommendations: string[], currentMonth: string, companyName: string, dateStr: string): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create()
+  const page = pdfDoc.addPage([595, 842]) // A4
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+  const { width, height } = page.getSize()
 
-  let recsHtml = ''
-  if (recommendations.length > 0) {
-    recsHtml = recommendations.map(r => `<div style="display:flex;gap:10px;margin-bottom:8px;"><div style="width:4px;background:#3b82f6;border-radius:2px;flex-shrink:0;"></div><p style="margin:0;font-size:13px;color:#374151;line-height:1.6;">${sanitize(r)}</p></div>`).join('')
+  const rate = stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0
+  const name = sanitize(displayName)
+  const month = sanitize(currentMonth)
+  const company = sanitize(companyName)
+
+  // Header background
+  page.drawRectangle({ x: 0, y: height - 120, width, height: 120, color: rgb(0.12, 0.23, 0.54) })
+
+  // Header text
+  page.drawText('ServChat', { x: 40, y: height - 45, size: 28, font: helveticaBold, color: rgb(1, 1, 1) })
+  page.drawText(company, { x: 40, y: height - 65, size: 11, font: helvetica, color: rgb(0.8, 0.85, 1) })
+  page.drawText(`Relatorio Mensal - ${month}`, { x: 40, y: height - 95, size: 16, font: helveticaBold, color: rgb(1, 1, 1) })
+  page.drawText(`Gerado em: ${dateStr}`, { x: width - 200, y: height - 95, size: 9, font: helvetica, color: rgb(0.8, 0.85, 1) })
+
+  let y = height - 155
+
+  // Collaborator
+  page.drawText(`Colaborador: ${name}`, { x: 40, y, size: 13, font: helveticaBold, color: rgb(0.1, 0.1, 0.1) })
+  y -= 35
+
+  // Stats section
+  const drawStatCard = (x: number, yPos: number, value: string, label: string, r: number, g: number, b: number) => {
+    page.drawRectangle({ x, y: yPos - 5, width: 120, height: 55, color: rgb(0.96, 0.97, 0.98), borderColor: rgb(0.85, 0.87, 0.9), borderWidth: 1 })
+    page.drawText(value, { x: x + 10, y: yPos + 28, size: 22, font: helveticaBold, color: rgb(r, g, b) })
+    page.drawText(label, { x: x + 10, y: yPos + 5, size: 9, font: helvetica, color: rgb(0.4, 0.45, 0.5) })
   }
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatorio Mensal - ${sanitize(displayName)}</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; background: #fff; color: #1a1a1a; padding: 0; }
-  .header { background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 32px 40px; color: white; }
-  .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
-  .header .subtitle { font-size: 13px; opacity: 0.85; }
-  .header .report-title { font-size: 18px; font-weight: 600; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.3); }
-  .content { padding: 32px 40px; }
-  .collaborator { font-size: 15px; color: #475569; margin-bottom: 24px; }
-  .collaborator strong { color: #1e293b; }
-  .stats-grid { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
-  .stat-card { flex: 1; min-width: 100px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; text-align: center; }
-  .stat-card .number { font-size: 28px; font-weight: 700; }
-  .stat-card .label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
-  .stat-blue .number { color: #2563eb; }
-  .stat-green .number { color: #16a34a; }
-  .stat-orange .number { color: #d97706; }
-  .stat-red .number { color: #dc2626; }
-  .section-title { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #3b82f6; display: inline-block; }
-  .progress-bar { background: #e2e8f0; border-radius: 8px; height: 14px; margin-bottom: 24px; overflow: hidden; }
-  .progress-fill { background: linear-gradient(90deg, #22c55e, #16a34a); height: 100%; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: 700; }
-  .recs { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 28px; }
-  .summary-box { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 28px; }
-  .summary-item { font-size: 13px; color: #374151; line-height: 2; }
-  .footer { border-top: 1px solid #e2e8f0; padding: 16px 40px; text-align: center; color: #94a3b8; font-size: 10px; }
-  @media print { body { padding: 0; } .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-</style></head><body>
-<div class="header">
-  <h1>ServChat</h1>
-  <div class="subtitle">${sanitize(companyName)}</div>
-  <div class="report-title">Relatorio Mensal de Atividades - ${sanitize(currentMonth)}</div>
-</div>
-<div class="content">
-  <p class="collaborator">Colaborador: <strong>${sanitize(displayName)}</strong></p>
-  <div class="stats-grid">
-    <div class="stat-card stat-blue"><div class="number">${stats.totalMessages}</div><div class="label">Mensagens</div></div>
-    <div class="stat-card stat-green"><div class="number">${stats.completedTasks}/${stats.totalTasks}</div><div class="label">Concluidas</div></div>
-    <div class="stat-card stat-orange"><div class="number">${stats.lateTasks}</div><div class="label">Com Atraso</div></div>
-    <div class="stat-card stat-red"><div class="number">${stats.overdueTasks}</div><div class="label">Pendentes</div></div>
-  </div>
-  <div class="section-title">Taxa de Conclusao</div>
-  <div class="progress-bar"><div class="progress-fill" style="width:${barWidth}%">${rate}%</div></div>
-  <div class="section-title">Resumo de Atividades</div>
-  <div class="summary-box">
-    <div class="summary-item">- Mensagens enviadas no mes: ${stats.totalMessages}</div>
-    <div class="summary-item">- Tarefas concluidas: ${stats.completedTasks} de ${stats.totalTasks} (${rate}%)</div>
-    <div class="summary-item">- Entregas realizadas com atraso: ${stats.lateTasks}</div>
-    <div class="summary-item">- Tarefas pendentes e atrasadas: ${stats.overdueTasks}</div>
-  </div>
-  ${recommendations.length > 0 ? `<div class="section-title">Recomendacoes Personalizadas</div><div class="recs">${recsHtml}</div>` : ''}
-</div>
-<div class="footer">Relatorio gerado automaticamente pelo ServChat em ${dateStr} | ${new Date().getFullYear()} ${sanitize(companyName)}</div>
-</body></html>`
+  drawStatCard(40, y, String(stats.totalMessages), 'Mensagens', 0.15, 0.39, 0.92)
+  drawStatCard(175, y, `${stats.completedTasks}/${stats.totalTasks}`, 'Concluidas', 0.09, 0.64, 0.25)
+  drawStatCard(310, y, String(stats.lateTasks), 'Com Atraso', 0.85, 0.46, 0.02)
+  drawStatCard(445, y, String(stats.overdueTasks), 'Pendentes', 0.86, 0.15, 0.15)
+
+  y -= 75
+
+  // Progress bar section
+  page.drawText('Taxa de Conclusao', { x: 40, y, size: 13, font: helveticaBold, color: rgb(0.1, 0.15, 0.2) })
+  y -= 20
+  // Bar background
+  page.drawRectangle({ x: 40, y: y - 2, width: width - 80, height: 16, color: rgb(0.88, 0.9, 0.92) })
+  // Bar fill
+  const barWidth = ((width - 80) * Math.min(rate, 100)) / 100
+  if (barWidth > 0) {
+    page.drawRectangle({ x: 40, y: y - 2, width: barWidth, height: 16, color: rgb(0.13, 0.77, 0.37) })
+  }
+  page.drawText(`${rate}%`, { x: 45, y: y + 1, size: 9, font: helveticaBold, color: rgb(1, 1, 1) })
+
+  y -= 40
+
+  // Summary
+  page.drawText('Resumo de Atividades', { x: 40, y, size: 13, font: helveticaBold, color: rgb(0.1, 0.15, 0.2) })
+  y -= 5
+  page.drawRectangle({ x: 40, y: y - 85, width: width - 80, height: 85, color: rgb(0.96, 0.97, 0.98), borderColor: rgb(0.88, 0.9, 0.92), borderWidth: 1 })
+  y -= 15
+  const summaryLines = [
+    `Mensagens enviadas no mes: ${stats.totalMessages}`,
+    `Tarefas concluidas: ${stats.completedTasks} de ${stats.totalTasks} (${rate}%)`,
+    `Entregas realizadas com atraso: ${stats.lateTasks}`,
+    `Tarefas pendentes e atrasadas: ${stats.overdueTasks}`,
+  ]
+  for (const line of summaryLines) {
+    page.drawText(`  ${line}`, { x: 50, y, size: 11, font: helvetica, color: rgb(0.22, 0.26, 0.32) })
+    y -= 18
+  }
+
+  y -= 25
+
+  // Recommendations
+  if (recommendations.length > 0) {
+    page.drawText('Recomendacoes Personalizadas', { x: 40, y, size: 13, font: helveticaBold, color: rgb(0.1, 0.15, 0.2) })
+    y -= 20
+    for (const rec of recommendations) {
+      const cleanRec = sanitize(rec)
+      // Wrap long text
+      const maxChars = 85
+      const lines: string[] = []
+      for (let i = 0; i < cleanRec.length; i += maxChars) {
+        lines.push(cleanRec.substring(i, i + maxChars))
+      }
+      for (const line of lines) {
+        if (y < 60) break
+        page.drawText(`  - ${line}`, { x: 50, y, size: 10, font: helvetica, color: rgb(0.22, 0.26, 0.32) })
+        y -= 16
+      }
+      y -= 4
+    }
+  }
+
+  // Footer
+  page.drawText(`Relatorio gerado automaticamente pelo ServChat em ${dateStr} | 2026 ${company}`, {
+    x: 40, y: 30, size: 8, font: helvetica, color: rgb(0.58, 0.64, 0.7)
+  })
+
+  return await pdfDoc.save()
 }
 
 Deno.serve(async (req) => {
@@ -305,78 +336,97 @@ Deno.serve(async (req) => {
         const stats = { totalMessages, completedTasks, totalTasks, lateTasks, overdueTasks }
         const recommendations = generateRecommendations(stats)
 
-        // Generate styled HTML PDF and upload
+        // Generate real PDF using pdf-lib
         let pdfUrl: string | undefined
         try {
-          const pdfHtml = generatePdfHtml(displayName, stats, recommendations, currentMonth, companyName, dateStr)
+          const pdfBytes = await generatePdf(displayName, stats, recommendations, currentMonth, companyName, dateStr)
           const monthSlug = currentMonth.replace(/\s+/g, '-').toLowerCase()
-          const fileName = `feedback/${monthSlug}/${profile.id}.html`
-          
+          const fileName = `feedback/${monthSlug}/${profile.id}.pdf`
+
           const { error: uploadError } = await supabase.storage
             .from('attachments')
-            .upload(fileName, new Blob([pdfHtml], { type: 'text/html' }), {
-              contentType: 'text/html',
+            .upload(fileName, pdfBytes, {
+              contentType: 'application/pdf',
               upsert: true,
             })
 
           if (uploadError) {
             console.error(`PDF upload error for ${profile.name}:`, uploadError)
           } else {
-            const { data: urlData } = supabase.storage
-              .from('attachments')
-              .getPublicUrl(fileName)
+            const { data: urlData } = supabase.storage.from('attachments').getPublicUrl(fileName)
             pdfUrl = urlData?.publicUrl
             sentPdfCount++
           }
-        } catch (pdfErr) {
-          console.error(`PDF generation error for ${profile.name}:`, pdfErr)
+        } catch (pdfError) {
+          console.error(`PDF generation error for ${profile.name}:`, pdfError)
         }
 
-        // 1. Try to send email
+        // Send DM
+        try {
+          const chatMessage = buildChatMessage(displayName, stats, recommendations, currentMonth, pdfUrl)
+          const { error: dmError } = await supabase.from('direct_messages').insert({
+            sender_id: senderProfileId,
+            receiver_id: profile.id,
+            content: chatMessage,
+          })
+          if (dmError) {
+            console.error(`DM error for ${profile.name}:`, dmError)
+            errors.push(`DM para ${profile.name}: ${dmError.message}`)
+          } else {
+            sentDmCount++
+          }
+        } catch (dmError) {
+          console.error(`DM exception for ${profile.name}:`, dmError)
+        }
+
+        // Send email
         if (resendApiKey && profile.email) {
           try {
             const resend = new Resend(resendApiKey)
             const emailHtml = buildEmailHtml(displayName, stats, recommendations, currentMonth, companyName)
-            const { error: sendError } = await resend.emails.send({
+            const { error: emailError } = await resend.emails.send({
               from: 'ServChat <onboarding@resend.dev>',
               to: [profile.email],
-              subject: `Feedback Mensal - ${currentMonth}`,
+              subject: `Feedback Mensal - ${currentMonth} | ServChat`,
               html: emailHtml,
             })
-            if (!sendError) sentEmailCount++
-            else console.error(`Email error for ${profile.email}:`, sendError)
-          } catch (emailErr) {
-            console.error(`Email exception for ${profile.email}:`, emailErr)
-          }
-        }
-
-        // 2. Always send DM
-        if (profile.id !== senderProfileId) {
-          try {
-            const chatMessage = buildChatMessage(displayName, stats, recommendations, currentMonth, pdfUrl)
-            const { error: dmError } = await supabase
-              .from('direct_messages')
-              .insert({ sender_id: senderProfileId, receiver_id: profile.id, content: chatMessage })
-            if (dmError) {
-              errors.push(`DM ${profile.name}: ${dmError.message}`)
+            if (emailError) {
+              console.error(`Email error for ${profile.email}:`, emailError)
+              errors.push(`Email para ${profile.email}: ${(emailError as any).message}`)
             } else {
-              sentDmCount++
+              sentEmailCount++
             }
-          } catch (dmErr) {
-            errors.push(`DM ${profile.name}: ${dmErr instanceof Error ? dmErr.message : 'unknown'}`)
+          } catch (emailError) {
+            console.error(`Email exception for ${profile.email}:`, emailError)
           }
         }
-      } catch (userError) {
-        errors.push(`${profile.name}: ${userError instanceof Error ? userError.message : 'unknown'}`)
+      } catch (profileError) {
+        console.error(`Error processing ${profile.name}:`, profileError)
+        errors.push(`Erro ao processar ${profile.name}`)
       }
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, emailCount: sentEmailCount, dmCount: sentDmCount, pdfCount: sentPdfCount,
-      total: targetProfiles.length, errors: errors.length > 0 ? errors : undefined
-    }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Unknown error'
-    return new Response(JSON.stringify({ error: msg }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    const summary = {
+      success: true,
+      totalRecipients: targetProfiles.length,
+      emailsSent: sentEmailCount,
+      dmsSent: sentDmCount,
+      pdfsSent: sentPdfCount,
+      errors: errors.length > 0 ? errors : undefined,
+      message: `Feedback enviado: ${sentDmCount} mensagens, ${sentEmailCount} e-mails, ${sentPdfCount} PDFs`,
+    }
+
+    console.log('Feedback summary:', JSON.stringify(summary))
+
+    return new Response(JSON.stringify(summary), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  } catch (error) {
+    console.error('Fatal error:', error)
+    return new Response(
+      JSON.stringify({ error: error.message || 'Internal server error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
 })
