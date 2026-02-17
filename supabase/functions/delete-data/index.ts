@@ -119,8 +119,11 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { type } = body;
-    console.log('Deletion type:', type);
+    const { type, clientIp } = body;
+    console.log('Deletion type:', type, 'Client IP:', clientIp);
+
+    // Record timestamp before deletion to update audit logs with IP after
+    const deletionStartTime = new Date().toISOString();
 
     const { data: mainAdminProfile } = await adminClient
       .from('profiles')
@@ -429,6 +432,19 @@ serve(async (req) => {
           JSON.stringify({ error: 'Tipo de exclusão inválido' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
+    }
+
+    // Update audit logs created during this operation with the client IP
+    if (clientIp) {
+      try {
+        await adminClient
+          .from('audit_logs')
+          .update({ ip_address: clientIp })
+          .gte('created_at', deletionStartTime)
+          .is('ip_address', null);
+      } catch (e) {
+        console.log('Could not update audit logs with IP:', e);
+      }
     }
 
     if (errors.length > 0) {

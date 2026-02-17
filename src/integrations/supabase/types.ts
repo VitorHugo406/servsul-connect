@@ -196,6 +196,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          ip_address: string | null
           performed_by: string | null
           performed_by_email: string | null
           record_data: Json | null
@@ -207,6 +208,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          ip_address?: string | null
           performed_by?: string | null
           performed_by_email?: string | null
           record_data?: Json | null
@@ -218,6 +220,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          ip_address?: string | null
           performed_by?: string | null
           performed_by_email?: string | null
           record_data?: Json | null

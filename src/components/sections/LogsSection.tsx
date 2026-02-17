@@ -61,6 +61,7 @@ interface AuditLog {
   performed_by: string | null;
   performed_by_email: string | null;
   created_at: string;
+  ip_address: string | null;
 }
 
 const TABLE_LABELS: Record<string, string> = {
@@ -164,6 +165,7 @@ export function LogsSection() {
         'Tabela': TABLE_LABELS[log.table_name] || log.table_name,
         'Descrição': log.description || '-',
         'Executado por': log.performed_by_email || 'Sistema',
+        'IP': log.ip_address || '-',
         'ID do Registro': log.record_id || '-',
       }));
       const ws = XLSX.utils.json_to_sheet(data);
@@ -206,9 +208,10 @@ export function LogsSection() {
         TABLE_LABELS[log.table_name] || log.table_name,
         (log.description || '-').substring(0, 60),
         log.performed_by_email || 'Sistema',
+        log.ip_address || '-',
       ]);
 
-      const headers = ['Data/Hora', 'Ação', 'Tabela', 'Descrição', 'Executado por'];
+      const headers = ['Data/Hora', 'Ação', 'Tabela', 'Descrição', 'Executado por', 'IP'];
 
       let html = `<html><head><meta charset="utf-8"><title>Relatório de Logs do Sistema</title>
       <style>
@@ -416,11 +419,12 @@ export function LogsSection() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[160px]">Data/Hora</TableHead>
-                      <TableHead className="w-[100px]">Ação</TableHead>
-                      <TableHead className="w-[120px]">Tabela</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead className="w-[180px]">Executado por</TableHead>
+                      <TableHead className="w-[150px]">Data/Hora</TableHead>
+                      <TableHead className="w-[90px]">Ação</TableHead>
+                      <TableHead className="w-[110px]">Tabela</TableHead>
+                      <TableHead className="min-w-[200px]">Descrição</TableHead>
+                      <TableHead className="w-[160px]">Executado por</TableHead>
+                      <TableHead className="w-[120px]">IP</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -430,25 +434,28 @@ export function LogsSection() {
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => setSelectedLog(log)}
                       >
-                        <TableCell className="text-sm">
+                        <TableCell className="text-xs whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
-                            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                            {format(new Date(log.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            <Calendar className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                            {format(new Date(log.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={ACTION_COLORS[log.action] || 'bg-muted text-muted-foreground'}>
+                          <Badge className={`text-[10px] px-1.5 py-0.5 ${ACTION_COLORS[log.action] || 'bg-muted text-muted-foreground'}`}>
                             {ACTION_LABELS[log.action] || log.action}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell className="text-xs">
                           {TABLE_LABELS[log.table_name] || log.table_name}
                         </TableCell>
-                        <TableCell className="text-sm max-w-[300px] truncate">
+                        <TableCell className="text-xs max-w-[280px] truncate">
                           {log.description || '-'}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="text-xs text-muted-foreground truncate max-w-[160px]">
                           {log.performed_by_email || 'Sistema'}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {log.ip_address || '-'}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -486,49 +493,55 @@ export function LogsSection() {
 
       {/* Log Detail Dialog */}
       <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Detalhes do Log</DialogTitle>
           </DialogHeader>
           {selectedLog && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Data/Hora</p>
-                  <p className="font-medium">
-                    {format(new Date(selectedLog.created_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
-                  </p>
+            <ScrollArea className="flex-1 overflow-auto pr-2">
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground text-xs">Data/Hora</p>
+                    <p className="font-medium text-sm">
+                      {format(new Date(selectedLog.created_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Ação</p>
+                    <Badge className={ACTION_COLORS[selectedLog.action]}>
+                      {ACTION_LABELS[selectedLog.action] || selectedLog.action}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Tabela</p>
+                    <p className="font-medium text-sm">{TABLE_LABELS[selectedLog.table_name] || selectedLog.table_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Executado por</p>
+                    <p className="font-medium text-sm">{selectedLog.performed_by_email || 'Sistema'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">IP</p>
+                    <p className="font-medium text-sm">{selectedLog.ip_address || 'Indisponível'}</p>
+                  </div>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Ação</p>
-                  <Badge className={ACTION_COLORS[selectedLog.action]}>
-                    {ACTION_LABELS[selectedLog.action] || selectedLog.action}
-                  </Badge>
+                  <p className="text-xs text-muted-foreground">Descrição</p>
+                  <p className="text-sm font-medium">{selectedLog.description || '-'}</p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Tabela</p>
-                  <p className="font-medium">{TABLE_LABELS[selectedLog.table_name] || selectedLog.table_name}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Executado por</p>
-                  <p className="font-medium">{selectedLog.performed_by_email || 'Sistema'}</p>
-                </div>
+                {selectedLog.record_data && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Dados do registro</p>
+                    <div className="max-h-[250px] overflow-auto rounded-lg border border-border">
+                      <pre className="text-xs bg-muted p-3 whitespace-pre-wrap break-all">
+                        {JSON.stringify(selectedLog.record_data, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Descrição</p>
-                <p className="text-sm font-medium">{selectedLog.description || '-'}</p>
-              </div>
-              {selectedLog.record_data && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Dados do registro</p>
-                  <ScrollArea className="h-[200px]">
-                    <pre className="text-xs bg-muted p-3 rounded-lg overflow-x-auto">
-                      {JSON.stringify(selectedLog.record_data, null, 2)}
-                    </pre>
-                  </ScrollArea>
-                </div>
-              )}
-            </div>
+            </ScrollArea>
           )}
         </DialogContent>
       </Dialog>
