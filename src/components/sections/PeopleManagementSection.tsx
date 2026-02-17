@@ -503,7 +503,7 @@ function ActivitiesTab({ memberIds, members }: { memberIds: string[]; members: a
     done: 'Concluida',
   };
 
-  // Group tasks by member then by date
+  // Group tasks by member then by due_date (or created_at as fallback)
   const tasksByMember: Record<string, Record<string, any[]>> = {};
   
   for (const task of tasks) {
@@ -511,16 +511,17 @@ function ActivitiesTab({ memberIds, members }: { memberIds: string[]; members: a
     if (!memberId) continue;
     if (!tasksByMember[memberId]) tasksByMember[memberId] = {};
     
-    const dateKey = new Date(task.updated_at).toLocaleDateString('pt-BR');
+    const taskDate = task.due_date || task.created_at;
+    const dateKey = new Date(taskDate).toLocaleDateString('pt-BR');
     if (!tasksByMember[memberId][dateKey]) tasksByMember[memberId][dateKey] = [];
     tasksByMember[memberId][dateKey].push(task);
   }
 
   return (
     <ScrollArea className="h-[calc(100vh-400px)]">
-      <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {Object.entries(tasksByMember).map(([memberId, dateGroups]) => (
-          <Card key={memberId}>
+          <Card key={memberId} className="flex flex-col">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
@@ -537,7 +538,7 @@ function ActivitiesTab({ memberIds, members }: { memberIds: string[]; members: a
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 flex-1">
               {Object.entries(dateGroups).map(([date, dayTasks]) => (
                 <div key={date}>
                   <div className="flex items-center gap-2 mb-2">
@@ -546,22 +547,20 @@ function ActivitiesTab({ memberIds, members }: { memberIds: string[]; members: a
                   </div>
                   <div className="space-y-2 pl-5 border-l-2 border-border">
                     {dayTasks.map((task: any) => (
-                      <div key={task.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{task.title}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                              {statusLabels[task.status] || task.status}
-                            </Badge>
-                            <Badge className={`text-[10px] px-1.5 py-0 ${priorityColors[task.priority] || ''}`}>
-                              {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Media' : 'Baixa'}
-                            </Badge>
-                            {task.due_date && (
-                              <span className="text-[10px] text-muted-foreground">
-                                Prazo: {new Date(task.due_date).toLocaleDateString('pt-BR')}
-                              </span>
-                            )}
-                          </div>
+                      <div key={task.id} className="p-2 rounded-lg bg-muted/50">
+                        <p className="text-sm font-medium truncate">{task.title}</p>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            {statusLabels[task.status] || task.status}
+                          </Badge>
+                          <Badge className={`text-[10px] px-1.5 py-0 ${priorityColors[task.priority] || ''}`}>
+                            {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Media' : 'Baixa'}
+                          </Badge>
+                          {task.due_date && (
+                            <span className="text-[10px] text-muted-foreground">
+                              Prazo: {new Date(task.due_date).toLocaleDateString('pt-BR')}
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -572,7 +571,7 @@ function ActivitiesTab({ memberIds, members }: { memberIds: string[]; members: a
           </Card>
         ))}
         {Object.keys(tasksByMember).length === 0 && (
-          <Card>
+          <Card className="md:col-span-2 xl:col-span-3">
             <CardContent className="py-12 text-center text-muted-foreground">
               Nenhuma atividade encontrada para os colaboradores da equipe.
             </CardContent>

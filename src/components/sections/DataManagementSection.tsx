@@ -73,13 +73,25 @@ interface DeletionOption {
      );
    }
  
+  const getClientIp = async (): Promise<string> => {
+    try {
+      const res = await fetch('https://api.ipify.org?format=json');
+      const data = await res.json();
+      return data.ip || 'Indisponivel';
+    } catch {
+      return 'Indisponivel';
+    }
+  };
+
   const executeDelete = async (type: string) => {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         throw new Error('Sessão não encontrada');
       }
+
+      const clientIp = await getClientIp();
   
-      const bodyPayload: any = { type };
+      const bodyPayload: any = { type, clientIp };
       // If messages with custom period, send date range
       if (type === 'messages' && deletePeriod === 'custom' && dateStart && dateEnd) {
         bodyPayload.startDate = dateStart.toISOString();
