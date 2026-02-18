@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Send, Smile, Paperclip, Image as ImageIcon, X, FileText } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -28,7 +29,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const { uploadFile, uploading, isImage } = useFileUpload();
+  const { uploadFile, uploading, isImage, limitReached, weeklyLimit } = useFileUpload();
 
   const handleSubmit = useCallback(async () => {
     if (isSending) return;
@@ -225,14 +226,28 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
           {!hideAttachment && (
             <>
               <Button type="button" variant="ghost" size="icon"
-                className="h-10 w-10 text-muted-foreground hover:text-foreground"
-                onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                className={`h-10 w-10 ${limitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => {
+                  if (limitReached) {
+                    toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`);
+                    return;
+                  }
+                  fileInputRef.current?.click();
+                }}
+                disabled={uploading}
               >
                 <Paperclip className="h-5 w-5" />
               </Button>
               <Button type="button" variant="ghost" size="icon"
-                className="h-10 w-10 text-muted-foreground hover:text-foreground"
-                onClick={() => imageInputRef.current?.click()} disabled={uploading}
+                className={`h-10 w-10 ${limitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => {
+                  if (limitReached) {
+                    toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`);
+                    return;
+                  }
+                  imageInputRef.current?.click();
+                }}
+                disabled={uploading}
               >
                 <ImageIcon className="h-5 w-5" />
               </Button>

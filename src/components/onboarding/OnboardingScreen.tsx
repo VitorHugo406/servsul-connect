@@ -66,7 +66,9 @@ const features = [
 export function OnboardingScreen({ userName, onComplete, onRegisterFacial }: OnboardingScreenProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const isMobile = useIsMobile();
-  const totalSteps = 3; // Welcome, Features, Finish
+  // On mobile: Welcome, Features Page 1, Features Page 2, Finish = 4 steps
+  // On desktop: Welcome, Features, Finish = 3 steps
+  const totalSteps = isMobile ? 4 : 3;
 
   const firstName = userName.split(' ')[0];
 
@@ -81,6 +83,19 @@ export function OnboardingScreen({ userName, onComplete, onRegisterFacial }: Onb
       setCurrentStep(currentStep - 1);
     }
   };
+
+  const featuresPage1 = features.slice(0, 3);
+  const featuresPage2 = features.slice(3);
+
+  // Determine which features to show based on step
+  const isFeatureStep = isMobile ? (currentStep === 1 || currentStep === 2) : currentStep === 1;
+  const isFinishStep = currentStep === totalSteps - 1;
+  const currentFeatures = isMobile 
+    ? (currentStep === 1 ? featuresPage1 : featuresPage2)
+    : features;
+  const featurePageLabel = isMobile 
+    ? (currentStep === 1 ? '1/2' : '2/2')
+    : '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
@@ -167,17 +182,17 @@ export function OnboardingScreen({ userName, onComplete, onRegisterFacial }: Onb
             </motion.div>
           )}
 
-          {/* Step 1: Features */}
-          {currentStep === 1 && (
+          {/* Features Step(s) */}
+          {isFeatureStep && !isFinishStep && (
             <motion.div
-              key="features"
+              key={`features-${currentStep}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <div className="text-center text-white mb-8">
+              <div className="text-center text-white mb-6">
                 <h2 className="font-display text-2xl md:text-3xl font-bold mb-2">
-                  O que você pode fazer
+                  O que você pode fazer {featurePageLabel && `(${featurePageLabel})`}
                 </h2>
                 <p className="text-white/70">
                   Conheça as principais funcionalidades do ServChat
@@ -188,7 +203,7 @@ export function OnboardingScreen({ userName, onComplete, onRegisterFacial }: Onb
                 "grid gap-3",
                 isMobile ? "grid-cols-1" : "grid-cols-2"
               )}>
-                {features.map((feature, index) => (
+                {currentFeatures.map((feature, index) => (
                   <motion.div
                     key={feature.title}
                     initial={{ opacity: 0, y: 20 }}
@@ -237,8 +252,8 @@ export function OnboardingScreen({ userName, onComplete, onRegisterFacial }: Onb
             </motion.div>
           )}
 
-          {/* Step 2: Finish */}
-          {currentStep === 2 && (
+          {/* Finish Step */}
+          {isFinishStep && (
             <motion.div
               key="finish"
               initial={{ opacity: 0, y: 20 }}
