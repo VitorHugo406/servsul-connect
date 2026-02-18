@@ -322,28 +322,29 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
 
           {/* Search Bar */}
           {showSearch && (
-            <div className="border-b border-border bg-card px-4 py-2 space-y-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por mensagem..."
-                  value={messageSearchQuery}
-                  onChange={(e) => setMessageSearchQuery(e.target.value)}
-                  className="pl-9"
-                  autoFocus
-                />
-              </div>
+            <div className="border-b border-border bg-card px-4 py-2">
               <div className="flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="date"
-                  value={searchDate || ''}
-                  onChange={(e) => setSearchDate(e.target.value || null)}
-                  className="w-auto text-xs"
-                  placeholder="Filtrar por data"
-                />
-                {searchDate && (
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setSearchDate(null)}>
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por mensagem..."
+                    value={messageSearchQuery}
+                    onChange={(e) => setMessageSearchQuery(e.target.value)}
+                    className="pl-9 h-9 text-sm"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="date"
+                    value={searchDate || ''}
+                    onChange={(e) => setSearchDate(e.target.value || null)}
+                    className="w-[140px] h-9 text-xs"
+                  />
+                </div>
+                {(messageSearchQuery || searchDate) && (
+                  <Button variant="ghost" size="sm" className="h-9 px-2 text-xs flex-shrink-0" onClick={() => { setMessageSearchQuery(''); setSearchDate(null); }}>
                     Limpar
                   </Button>
                 )}
@@ -382,8 +383,11 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                       if (!matchText) return false;
                     }
                     if (searchDate) {
-                      const msgDate = new Date(m.created_at).toISOString().split('T')[0];
-                      if (msgDate !== searchDate) return false;
+                      const msgDate = new Date(m.created_at);
+                      const filterDate = new Date(searchDate + 'T00:00:00');
+                      const msgDateStr = `${msgDate.getFullYear()}-${String(msgDate.getMonth() + 1).padStart(2, '0')}-${String(msgDate.getDate()).padStart(2, '0')}`;
+                      const filterDateStr = `${filterDate.getFullYear()}-${String(filterDate.getMonth() + 1).padStart(2, '0')}-${String(filterDate.getDate()).padStart(2, '0')}`;
+                      if (msgDateStr !== filterDateStr) return false;
                     }
                     return true;
                   }).map((message, index, filteredArr) => {

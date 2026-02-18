@@ -127,10 +127,12 @@
 
   const deleteGroup = async (groupId: string) => {
     try {
-      // Delete all members first
-      await supabase.from('private_group_members').delete().eq('group_id', groupId);
-      // Delete all messages
+      // Delete message reads first
+      await supabase.from('private_group_message_reads').delete().eq('group_id', groupId);
+      // Delete all messages (while user is still admin for RLS)
       await supabase.from('private_group_messages').delete().eq('group_id', groupId);
+      // Delete all members
+      await supabase.from('private_group_members').delete().eq('group_id', groupId);
       // Delete the group
       const { error } = await supabase.from('private_groups').delete().eq('id', groupId);
 

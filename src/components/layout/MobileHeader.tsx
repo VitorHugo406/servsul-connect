@@ -21,6 +21,7 @@ const autonomyLevelLabels: Record<string, string> = {
   admin: 'Administrador',
   gerente: 'Gerente',
   supervisor: 'Supervisor',
+  diretoria: 'Diretoria',
   colaborador: 'Colaborador',
 };
 

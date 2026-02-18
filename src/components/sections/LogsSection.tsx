@@ -416,51 +416,53 @@ export function LogsSection() {
               </ScrollArea>
             ) : (
               <ScrollArea className="h-[calc(100vh-340px)]">
+                <div className="min-w-[800px]">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[150px]">Data/Hora</TableHead>
-                      <TableHead className="w-[90px]">Ação</TableHead>
-                      <TableHead className="w-[110px]">Tabela</TableHead>
-                      <TableHead className="min-w-[200px]">Descrição</TableHead>
-                      <TableHead className="w-[160px]">Executado por</TableHead>
-                      <TableHead className="w-[120px]">IP</TableHead>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-[140px] text-xs font-semibold">Data/Hora</TableHead>
+                      <TableHead className="w-[100px] text-xs font-semibold">Ação</TableHead>
+                      <TableHead className="w-[110px] text-xs font-semibold">Tabela</TableHead>
+                      <TableHead className="text-xs font-semibold">Descrição</TableHead>
+                      <TableHead className="w-[150px] text-xs font-semibold">Executado por</TableHead>
+                      <TableHead className="w-[110px] text-xs font-semibold">IP</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredLogs.map((log) => (
                       <TableRow
                         key={log.id}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => setSelectedLog(log)}
                       >
-                        <TableCell className="text-xs whitespace-nowrap">
+                        <TableCell className="text-xs whitespace-nowrap py-3">
                           <div className="flex items-center gap-1.5">
                             <Calendar className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                             {format(new Date(log.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <Badge className={`text-[10px] px-1.5 py-0.5 ${ACTION_COLORS[log.action] || 'bg-muted text-muted-foreground'}`}>
+                        <TableCell className="py-3">
+                          <Badge className={`text-[10px] px-2 py-0.5 ${ACTION_COLORS[log.action] || 'bg-muted text-muted-foreground'}`}>
                             {ACTION_LABELS[log.action] || log.action}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs">
+                        <TableCell className="text-xs py-3 font-medium">
                           {TABLE_LABELS[log.table_name] || log.table_name}
                         </TableCell>
-                        <TableCell className="text-xs max-w-[280px] truncate">
+                        <TableCell className="text-xs py-3 max-w-[300px] truncate text-muted-foreground">
                           {log.description || '-'}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground truncate max-w-[160px]">
+                        <TableCell className="text-xs py-3 text-muted-foreground truncate max-w-[150px]">
                           {log.performed_by_email || 'Sistema'}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
+                        <TableCell className="text-xs py-3 text-muted-foreground font-mono">
                           {log.ip_address || '-'}
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </ScrollArea>
             )}
           </CardContent>
