@@ -126,17 +126,32 @@
   };
 
   const deleteGroup = async (groupId: string) => {
+    if (!user) return { error: new Error('Not authenticated') };
     try {
       // Delete message reads first
       await supabase.from('private_group_message_reads').delete().eq('group_id', groupId);
       // Delete all messages (while user is still admin for RLS)
       await supabase.from('private_group_messages').delete().eq('group_id', groupId);
-      // Delete all members
-      await supabase.from('private_group_members').delete().eq('group_id', groupId);
-      // Delete the group
+      // Delete members EXCEPT current user (keep admin for RLS on group delete)
+      const { data: otherMembers } = await supabase
+        .from('private_group_members')
+        .select('id')
+        .eq('group_id', groupId)
+        .neq('user_id', user.id);
+      
+      if (otherMembers) {
+        for (const m of otherMembers) {
+          await supabase.from('private_group_members').delete().eq('id', m.id);
+        }
+      }
+      
+      // Delete the group (current user is still admin member)
       const { error } = await supabase.from('private_groups').delete().eq('id', groupId);
-
       if (error) throw error;
+      
+      // Now delete current user's membership (group is gone, cascade or orphan)
+      await supabase.from('private_group_members').delete().eq('group_id', groupId).eq('user_id', user.id);
+      
       await fetchGroups();
       return { error: null };
     } catch (error) {

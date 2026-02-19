@@ -4,6 +4,7 @@ import { Check, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSectors } from '@/hooks/useData';
+import { CardMentionCard } from './CardMentionCard';
 
 interface Author {
   id: string;
@@ -92,23 +93,82 @@ export function ChatMessage({ message }: ChatMessageProps) {
     return parts.length > 0 ? parts : [text];
   };
 
-  // Parse content for attachment links
+  // Parse card mention block
+  const parseCardMention = (lines: string[]): { taskNumber: number; title: string; description?: string; labels?: string; priority: string; dueDate?: string; boardName: string } | null => {
+    if (lines.length < 2) return null;
+    const firstLine = lines[0];
+    const match = firstLine.match(/^📋 Card #(\d+) — (.+)$/);
+    if (!match) return null;
+    
+    let description: string | undefined;
+    let labels: string | undefined;
+    let priority = 'medium';
+    let dueDate: string | undefined;
+    let boardName = '';
+    
+    for (const line of lines.slice(1)) {
+      if (line.startsWith('📝 ')) description = line.slice(3);
+      else if (line.startsWith('🏷️ ')) labels = line.slice(3);
+      else if (line.startsWith('⚡ Prioridade: ')) {
+        const pLabel = line.replace('⚡ Prioridade: ', '');
+        if (pLabel === 'Baixa') priority = 'low';
+        else if (pLabel === 'Média') priority = 'medium';
+        else if (pLabel === 'Alta') priority = 'high';
+        else if (pLabel === 'Urgente') priority = 'urgent';
+      }
+      else if (line.startsWith('📅 Prazo: ')) dueDate = line.replace('📅 Prazo: ', '');
+      else if (line.startsWith('📌 Mural: ')) boardName = line.replace('📌 Mural: ', '');
+    }
+    
+    return { taskNumber: parseInt(match[1]), title: match[2], description, labels, priority, dueDate, boardName };
+  };
+
+  // Parse content for attachment links and card mentions
   const renderContent = (content: string, isOwnMsg: boolean) => {
     const lines = content.split('\n');
     const textLines: string[] = [];
     const attachments: { type: 'image' | 'file'; name: string; url: string }[] = [];
+    const elements: React.ReactNode[] = [];
+    let cardMentionLines: string[] = [];
+    let inCardMention = false;
+
+    const flushCardMention = () => {
+      if (cardMentionLines.length > 0) {
+        const card = parseCardMention(cardMentionLines);
+        if (card) {
+          elements.push(
+            <CardMentionCard key={`card-${card.taskNumber}`} {...card} isOwnMessage={isOwnMsg} />
+          );
+        } else {
+          // Not a valid card mention, treat as text
+          textLines.push(...cardMentionLines);
+        }
+        cardMentionLines = [];
+        inCardMention = false;
+      }
+    };
 
     for (const line of lines) {
-      const imageMatch = line.match(/^📷 \[(.+?)\]\((.+?)\)$/);
-      const fileMatch = line.match(/^📎 \[(.+?)\]\((.+?)\)$/);
-      if (imageMatch) {
-        attachments.push({ type: 'image', name: imageMatch[1], url: imageMatch[2] });
-      } else if (fileMatch) {
-        attachments.push({ type: 'file', name: fileMatch[1], url: fileMatch[2] });
+      if (line.startsWith('📋 Card #')) {
+        flushCardMention();
+        inCardMention = true;
+        cardMentionLines.push(line);
+      } else if (inCardMention && (line.startsWith('📝 ') || line.startsWith('🏷️ ') || line.startsWith('⚡ ') || line.startsWith('📅 ') || line.startsWith('📌 '))) {
+        cardMentionLines.push(line);
       } else {
-        textLines.push(line);
+        flushCardMention();
+        const imageMatch = line.match(/^📷 \[(.+?)\]\((.+?)\)$/);
+        const fileMatch = line.match(/^📎 \[(.+?)\]\((.+?)\)$/);
+        if (imageMatch) {
+          attachments.push({ type: 'image', name: imageMatch[1], url: imageMatch[2] });
+        } else if (fileMatch) {
+          attachments.push({ type: 'file', name: fileMatch[1], url: fileMatch[2] });
+        } else {
+          textLines.push(line);
+        }
       }
     }
+    flushCardMention();
 
     const textContent = textLines.join('\n').trim();
 
@@ -124,6 +184,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             ))}
           </p>
         )}
+        {elements}
         {attachments.map((att, i) => (
           att.type === 'image' ? (
             <a key={i} href={att.url} target="_blank" rel="noopener noreferrer">

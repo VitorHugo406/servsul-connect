@@ -41,25 +41,29 @@
      return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
    };
  
-   const handleCreateGroup = async () => {
-     if (!newName.trim()) {
-       toast.error('Digite o nome do grupo');
-       return;
-     }
- 
-     setCreating(true);
-     const { error } = await createGroup(newName.trim(), newDescription.trim() || undefined);
-     setCreating(false);
- 
-     if (error) {
-       toast.error('Erro ao criar grupo');
-     } else {
-       toast.success('Grupo criado com sucesso!');
-       setShowCreateDialog(false);
-       setNewName('');
-       setNewDescription('');
-     }
-   };
+    const handleCreateGroup = async () => {
+      if (!newName.trim()) {
+        toast.error('Digite o nome do grupo');
+        return;
+      }
+  
+      setCreating(true);
+      const { data, error } = await createGroup(newName.trim(), newDescription.trim() || undefined);
+      setCreating(false);
+  
+      if (error) {
+        toast.error('Erro ao criar grupo');
+      } else {
+        toast.success('Grupo criado com sucesso!');
+        setShowCreateDialog(false);
+        setNewName('');
+        setNewDescription('');
+        // Auto-select the new group
+        if (data?.id) {
+          onSelectGroup(data.id);
+        }
+      }
+    };
  
    return (
      <div className="flex h-full flex-col border-r border-border bg-card">
