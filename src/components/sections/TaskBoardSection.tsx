@@ -630,7 +630,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                       const dueInfo = getDueDateInfo(task.due_date);
                       const taskLabelsForCard = getTaskLabels(task.id);
                       return (
-                        <Card
+                        <div
                           key={task.id}
                           draggable
                           onDragStart={(e) => handleDragStart(e, task)}
@@ -639,138 +639,144 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                           onDrop={(e) => { e.stopPropagation(); handleDrop(e, column.id, index); }}
                           onClick={() => { setSelectedTask(task); setShowTaskDetail(true); }}
                           className={cn(
-                            'cursor-pointer hover:shadow-md transition-all',
+                            'bg-card rounded-lg shadow-sm border border-border cursor-pointer hover:shadow-md transition-all group/card',
                             draggedTask?.id === task.id && 'opacity-50 scale-95',
                             dragOverColumn === column.id && dragOverPosition === index && 'ring-2 ring-primary'
                           )}
                         >
-                          {cover.type === 'color' && <div className={cn('h-2 rounded-t-lg', cover.value)} />}
+                          {/* Cover */}
+                          {cover.type === 'color' && <div className={cn('h-8 rounded-t-lg', cover.value)} />}
                           {cover.type === 'image' && (
-                            <div className="h-24 rounded-t-lg overflow-hidden">
+                            <div className="h-28 rounded-t-lg overflow-hidden">
                               <img src={cover.value} alt="Capa" className="w-full h-full object-cover" />
                             </div>
                           )}
-                          <CardContent className="p-3">
-                            {/* Labels with hover expand */}
+
+                          <div className="px-2 py-1.5">
+                            {/* Labels */}
                             {taskLabelsForCard.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mb-1.5 group/labels">
+                              <div className="flex flex-wrap gap-1 mb-1 group/labels">
                                 {taskLabelsForCard.map(l => (
-                                  <Tooltip key={l.id}>
-                                    <TooltipTrigger asChild>
-                                      <span
-                                        className="inline-flex items-center h-2 rounded-full transition-all duration-200 cursor-default group-hover/labels:h-5 group-hover/labels:px-2"
-                                        style={{ backgroundColor: l.color, minWidth: '2.5rem' }}
-                                      >
-                                        <span className="text-[0px] group-hover/labels:text-[10px] text-white font-medium whitespace-nowrap opacity-0 group-hover/labels:opacity-100 transition-opacity duration-200">
-                                          {l.name}
-                                        </span>
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="text-xs">{l.name}</TooltipContent>
-                                  </Tooltip>
+                                  <span
+                                    key={l.id}
+                                    className="inline-block h-2 w-10 rounded-sm transition-all duration-200 cursor-default group-hover/labels:h-4 group-hover/labels:px-1.5"
+                                    style={{ backgroundColor: l.color }}
+                                    title={l.name}
+                                  >
+                                    <span className="text-[0px] group-hover/labels:text-[9px] text-white font-medium whitespace-nowrap opacity-0 group-hover/labels:opacity-100 transition-opacity duration-200 leading-4">
+                                      {l.name}
+                                    </span>
+                                  </span>
                                 ))}
                               </div>
                             )}
-                            <div className="flex items-start justify-between gap-1 mb-1">
-                              <div className="cursor-grab active:cursor-grabbing p-0.5 -ml-0.5">
-                                <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <Badge variant="outline" className="text-[9px] mb-0.5">#{task.task_number}</Badge>
-                                <h4 className="font-medium text-sm text-foreground line-clamp-2">{task.title}</h4>
-                              </div>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0">
-                                    <MoreVertical className="h-3 w-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(task); }}>
-                                    <Edit className="h-4 w-4 mr-2" /> Editar
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowLabelPicker(task.id); }}>
-                                    <Tag className="h-4 w-4 mr-2" /> Etiquetas
-                                  </DropdownMenuItem>
-                                    {columns.filter(c => c.id !== column.id).map(c => (
-                                     <DropdownMenuItem key={c.id} onClick={async (e) => {
-                                       e.stopPropagation();
-                                       await moveTask(task.id, c.id, 0);
-                                       // Apply automations from target column
-                                       const autoUpdates: Record<string, any> = {};
-                                       if (c.auto_assign_to) autoUpdates.assigned_to = c.auto_assign_to;
-                                       if (c.auto_cover) autoUpdates.cover_image = c.auto_cover;
-                                       if (c.is_conclusion) {
-                                         autoUpdates.completed_at = new Date().toISOString();
-                                         if (task.due_date) {
-                                           const due = new Date(task.due_date);
-                                           const now = new Date();
-                                           due.setHours(0, 0, 0, 0);
-                                           now.setHours(0, 0, 0, 0);
-                                           const diffDays = Math.ceil((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
-                                           autoUpdates.completed_late = diffDays > 0;
-                                           autoUpdates.delay_days = diffDays > 0 ? diffDays : 0;
-                                         } else {
-                                           autoUpdates.completed_late = false;
-                                           autoUpdates.delay_days = 0;
-                                         }
-                                       }
-                                       if (Object.keys(autoUpdates).length > 0) {
-                                         await updateTask(task.id, autoUpdates);
-                                         if (c.is_conclusion) {
-                                           toast.info(autoUpdates.completed_late ? `Concluída com ${autoUpdates.delay_days} dia(s) de atraso` : 'Concluída no prazo!');
-                                         } else {
-                                           toast.info('Automações aplicadas');
-                                         }
-                                       }
-                                     }}>
-                                       <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: c.color }} />
-                                       Mover para {c.title}
-                                     </DropdownMenuItem>
-                                   ))}
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} className="text-destructive">
-                                    <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                            {task.description && <p className="text-xs text-muted-foreground mb-1.5 line-clamp-2">{task.description}</p>}
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <Badge className={cn('text-[9px]', PRIORITIES.find(p => p.id === task.priority)?.color, 'text-white')}>
-                                {PRIORITIES.find(p => p.id === task.priority)?.label}
-                              </Badge>
+
+                            {/* Title */}
+                            <h4 className="font-normal text-sm text-foreground leading-snug mb-1.5">{task.title}</h4>
+
+                            {/* Bottom row: badges */}
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {dueInfo && (() => {
+                                const DI = dueInfo.icon;
+                                return (
+                                  <div className={cn('flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium', dueInfo.color)}>
+                                    <DI className="h-3 w-3" />
+                                    {task.due_date && new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                  </div>
+                                );
+                              })()}
+                              {task.description && (
+                                <div className="text-muted-foreground" title="Descrição">
+                                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h10M4 18h14"/></svg>
+                                </div>
+                              )}
                               {subtaskCounts[task.id] && subtaskCounts[task.id].total > 0 && (
-                                <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                                <div className={cn(
+                                  "flex items-center gap-0.5 text-[10px] px-1 py-0.5 rounded",
+                                  subtaskCounts[task.id].completed === subtaskCounts[task.id].total 
+                                    ? "bg-green-500/10 text-green-600" 
+                                    : "text-muted-foreground"
+                                )}>
                                   <CheckSquare className="h-3 w-3" />
                                   <span>{subtaskCounts[task.id].completed}/{subtaskCounts[task.id].total}</span>
                                 </div>
                               )}
+                              {/* Spacer + assignee avatar on right */}
+                              <div className="flex-1" />
+                              {task.assignee && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Avatar className="h-6 w-6 ring-1 ring-border">
+                                      <AvatarImage src={task.assignee.avatar_url || ''} />
+                                      <AvatarFallback className="text-[8px] bg-primary/80 text-primary-foreground">
+                                        {getInitials(task.assignee.display_name || task.assignee.name)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{task.assignee.display_name || task.assignee.name}</TooltipContent>
+                                </Tooltip>
+                              )}
                             </div>
-                            <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-border">
-                              {task.assignee ? (
-                                <div className="flex items-center gap-1">
-                                  <Avatar className="h-5 w-5">
-                                    <AvatarImage src={task.assignee.avatar_url || ''} />
-                                    <AvatarFallback className="text-[8px] bg-primary text-primary-foreground">
-                                      {getInitials(task.assignee.display_name || task.assignee.name)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-[10px] text-muted-foreground truncate max-w-16">{task.assignee.display_name || task.assignee.name}</span>
-                                </div>
-                              ) : <span className="text-[10px] text-muted-foreground">Sem responsável</span>}
-                              {dueInfo && (() => {
-                                const DI = dueInfo.icon;
-                                return (
-                                  <div className={cn('flex items-center gap-0.5 text-[10px] px-1 py-0.5 rounded font-medium', dueInfo.color)}>
-                                    <DI className="h-2.5 w-2.5" />
-                                    {dueInfo.label}
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          </CardContent>
-                        </Card>
+                          </div>
+
+                          {/* Quick action on hover */}
+                          <div className="absolute top-1 right-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                <Button variant="secondary" size="icon" className="h-6 w-6 rounded-full shadow-sm">
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(task); }}>
+                                  <Edit className="h-4 w-4 mr-2" /> Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowLabelPicker(task.id); }}>
+                                  <Tag className="h-4 w-4 mr-2" /> Etiquetas
+                                </DropdownMenuItem>
+                                  {columns.filter(c => c.id !== column.id).map(c => (
+                                   <DropdownMenuItem key={c.id} onClick={async (e) => {
+                                     e.stopPropagation();
+                                     await moveTask(task.id, c.id, 0);
+                                     const autoUpdates: Record<string, any> = {};
+                                     if (c.auto_assign_to) autoUpdates.assigned_to = c.auto_assign_to;
+                                     if (c.auto_cover) autoUpdates.cover_image = c.auto_cover;
+                                     if (c.is_conclusion) {
+                                       autoUpdates.completed_at = new Date().toISOString();
+                                       if (task.due_date) {
+                                         const due = new Date(task.due_date);
+                                         const now = new Date();
+                                         due.setHours(0, 0, 0, 0);
+                                         now.setHours(0, 0, 0, 0);
+                                         const diffDays = Math.ceil((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+                                         autoUpdates.completed_late = diffDays > 0;
+                                         autoUpdates.delay_days = diffDays > 0 ? diffDays : 0;
+                                       } else {
+                                         autoUpdates.completed_late = false;
+                                         autoUpdates.delay_days = 0;
+                                       }
+                                     }
+                                     if (Object.keys(autoUpdates).length > 0) {
+                                       await updateTask(task.id, autoUpdates);
+                                       if (c.is_conclusion) {
+                                         toast.info(autoUpdates.completed_late ? `Concluída com ${autoUpdates.delay_days} dia(s) de atraso` : 'Concluída no prazo!');
+                                       } else {
+                                         toast.info('Automações aplicadas');
+                                       }
+                                     }
+                                   }}>
+                                     <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: c.color }} />
+                                     Mover para {c.title}
+                                   </DropdownMenuItem>
+                                 ))}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} className="text-destructive">
+                                  <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
                       );
                     })}
                     {colTasks.length === 0 && (

@@ -27,13 +27,13 @@ export function useOnboarding() {
           return;
         }
 
-        // Check if user was created recently (within last 5 minutes = new user)
+        // Check if user was created recently (within last 60 minutes = new user)
         const createdAt = new Date(profile.created_at);
         const now = new Date();
         const diffMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
         
-        // If user was created more than 5 minutes ago, they're not new
-        if (diffMinutes > 5) {
+        // If user was created more than 60 minutes ago, they're not new
+        if (diffMinutes > 60) {
           // Mark as completed to avoid future checks
           localStorage.setItem(`${ONBOARDING_COMPLETED_KEY}_${user.id}`, 'true');
           setShowOnboarding(false);

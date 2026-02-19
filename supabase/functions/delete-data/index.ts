@@ -243,48 +243,40 @@ serve(async (req) => {
         console.log('Permanently deleting all users (except main admin)...');
         const { data: usersToDelete } = await adminClient
           .from('profiles')
-          .select('user_id')
+          .select('user_id, id')
           .neq('email', ADMIN_EMAIL);
 
-        // 1. Delete ALL content data first (no user filter needed - deleting everything)
-        await safeDelete('attachments');
-        // Messages
-        await safeDelete('private_group_messages');
-        await safeDelete('private_group_message_reads');
-        await safeDelete('private_group_members');
-        await safeDelete('private_groups');
-        await safeDelete('direct_messages');
-        await safeDelete('messages');
-        // Announcements - MUST delete before profiles (author_id FK)
-        await safeDelete('announcement_comments');
-        await safeDelete('announcement_reads');
-        await safeDelete('announcements');
-        await safeDelete('important_announcement_reads');
-        await safeDelete('important_announcements');
-        // Tasks - MUST delete before profiles (assigned_to, author_id FKs)
-        await safeDelete('task_comments');
-        await safeDelete('task_subtasks');
-        await safeDelete('task_label_assignments');
-        await safeDelete('tasks');
-        await safeDelete('task_labels');
-        await safeDelete('task_board_columns');
-        await safeDelete('task_board_members');
-        await safeDelete('task_boards');
-        // Notifications
-        await safeDelete('user_notifications', { column: 'user_id', op: 'neq', value: adminUserId });
-        // User-specific data
-        await safeDelete('supervisor_team_members', { column: 'supervisor_id', op: 'neq', value: adminUserId });
-        await safeDelete('user_permissions', { column: 'user_id', op: 'neq', value: adminUserId });
-        await safeDelete('user_roles', { column: 'user_id', op: 'neq', value: adminUserId });
-        await safeDelete('user_presence', { column: 'user_id', op: 'neq', value: adminUserId });
-        await safeDelete('user_facial_data', { column: 'user_id', op: 'neq', value: adminUserId });
-        await safeDelete('user_additional_sectors', { column: 'user_id', op: 'neq', value: adminUserId });
-        // NOW safe to delete profiles
-        await safeDelete('profiles', { column: 'email', op: 'neq', value: ADMIN_EMAIL });
+        if (usersToDelete && usersToDelete.length > 0) {
+          const profileIds = usersToDelete.map(u => u.id);
+          const userIds = usersToDelete.map(u => u.user_id);
 
-        // Delete auth users
-        let authDeleteErrors = 0;
-        if (usersToDelete) {
+          // Nullify FK references to profiles being deleted
+          await nullifyProfileReferences(adminClient, adminProfileId);
+
+          // Delete user-specific data only (NOT all content)
+          for (const uid of userIds) {
+            if (uid === adminUserId) continue;
+            await adminClient.from('supervisor_team_members').delete().eq('supervisor_id', uid);
+            await adminClient.from('user_permissions').delete().eq('user_id', uid);
+            await adminClient.from('user_roles').delete().eq('user_id', uid);
+            await adminClient.from('user_presence').delete().eq('user_id', uid);
+            await adminClient.from('user_facial_data').delete().eq('user_id', uid);
+            await adminClient.from('user_additional_sectors').delete().eq('user_id', uid);
+            await adminClient.from('user_notifications').delete().eq('user_id', uid);
+          }
+
+          // Remove group memberships for deleted users
+          for (const pid of profileIds) {
+            await adminClient.from('private_group_members').delete().eq('profile_id', pid);
+            await adminClient.from('task_board_members').delete().eq('profile_id', pid);
+            await adminClient.from('supervisor_team_members').delete().eq('member_profile_id', pid);
+          }
+
+          // Inactivate profiles (keep them for FK integrity with messages/tasks)
+          await adminClient.from('profiles').update({ is_active: false }).neq('email', ADMIN_EMAIL);
+
+          // Delete auth users (prevents login)
+          let authDeleteErrors = 0;
           for (const u of usersToDelete) {
             if (u.user_id !== adminUserId) {
               const { error } = await adminClient.auth.admin.deleteUser(u.user_id);
@@ -294,8 +286,10 @@ serve(async (req) => {
               }
             }
           }
+          result.message = `Todos os usuários foram excluídos permanentemente (perfis inativados, autenticações removidas)${authDeleteErrors > 0 ? `. ${authDeleteErrors} erros.` : ''}`;
+        } else {
+          result.message = 'Nenhum usuário para excluir';
         }
-        result.message = `Todos os usuários foram excluídos permanentemente${authDeleteErrors > 0 ? `. ${authDeleteErrors} erros ao excluir autenticações.` : ''}`;
         break;
       }
 
