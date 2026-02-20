@@ -662,6 +662,57 @@ export type Database = {
         }
         Relationships: []
       }
+      task_auto_duplications: {
+        Row: {
+          board_id: string
+          created_at: string
+          created_by: string
+          frequency: string
+          id: string
+          is_active: boolean
+          last_duplicated_at: string | null
+          target_column_id: string
+          task_id: string
+        }
+        Insert: {
+          board_id: string
+          created_at?: string
+          created_by: string
+          frequency: string
+          id?: string
+          is_active?: boolean
+          last_duplicated_at?: string | null
+          target_column_id: string
+          task_id: string
+        }
+        Update: {
+          board_id?: string
+          created_at?: string
+          created_by?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          last_duplicated_at?: string | null
+          target_column_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_auto_duplications_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "task_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_auto_duplications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_board_columns: {
         Row: {
           auto_assign_to: string | null
