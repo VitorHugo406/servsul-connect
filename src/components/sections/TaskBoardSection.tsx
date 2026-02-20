@@ -4,7 +4,7 @@ import {
   Plus, MoreVertical, Calendar, Trash2, Edit, Loader2,
   GripVertical, ListTodo, X, AlertTriangle,
   Clock4, Clock, Users, Settings, ArrowLeft,
-  PlusCircle, FileDown, Zap, Upload, Tag
+  PlusCircle, FileDown, Zap, Upload, Tag, Copy, Repeat
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { TaskDetailDialog } from '@/components/tasks/TaskDetailDialog';
 import { ReportDialog } from '@/components/tasks/ReportDialog';
 import { useSubtaskCounts } from '@/hooks/useSubtasks';
+import { useCardDuplications } from '@/hooks/useCardDuplications';
 import {
   PRIORITIES, BACKGROUND_IMAGES, CARD_COVERS,
   getBoardBg, getBoardBgStyle, getInitials, getCoverDisplay,
@@ -199,6 +200,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const { members, addMember, removeMember } = useBoardMembers(board.id);
   const { labels, getTaskLabels, createLabel, deleteLabel, assignLabel, removeLabel } = useTaskLabels(board.id);
   const { counts: subtaskCounts } = useSubtaskCounts(tasks.map(t => t.id));
+  const { createDuplication, deleteDuplication, getTaskDuplication } = useCardDuplications(board.id);
   const { users: allUsers } = useActiveUsers();
   const { uploadFile, uploading: fileUploading } = useFileUpload();
   const isMobile = useIsMobile();
@@ -207,6 +209,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
 
   const [showSettings, setShowSettings] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  const [mobileSelectedColumn, setMobileSelectedColumn] = useState<string | null>(null);
   const [showAddColumn, setShowAddColumn] = useState(false);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showTaskDetail, setShowTaskDetail] = useState(false);
@@ -219,6 +222,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const [draggedTask, setDraggedTask] = useState<BoardTask | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [dragOverPosition, setDragOverPosition] = useState<number | null>(null);
+  const [showDuplication, setShowDuplication] = useState<BoardTask | null>(null);
+  const [dupTargetColumn, setDupTargetColumn] = useState('');
+  const [dupFrequency, setDupFrequency] = useState<string>('daily');
 
   // Form state
   const [title, setTitle] = useState('');
@@ -574,12 +580,140 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
 
       {/* Board columns with horizontal scroll */}
       <div className="flex-1 overflow-hidden">
-        <div className={cn(
-          'h-full p-4 task-board-scroll',
-          isMobile ? 'overflow-y-auto space-y-4' : 'overflow-x-auto overflow-y-hidden'
-        )}>
+          <div className={cn(isMobile ? 'overflow-y-auto' : 'overflow-x-auto overflow-y-hidden h-full p-4 task-board-scroll')}>
           <TooltipProvider delayDuration={200}>
-          <div className={cn(isMobile ? '' : 'inline-flex gap-4 h-full pb-2 items-start')}>
+          {isMobile ? (
+            /* Mobile: Column selector panel */
+            mobileSelectedColumn ? (
+              <div className="p-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setMobileSelectedColumn(null)}>
+                    <ArrowLeft className="h-4 w-4 mr-1" /> Colunas
+                  </Button>
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: columns.find(c => c.id === mobileSelectedColumn)?.color }} />
+                  <span className="font-semibold text-sm">{columns.find(c => c.id === mobileSelectedColumn)?.title}</span>
+                  <Badge variant="secondary" className="text-xs">{tasks.filter(t => t.status === mobileSelectedColumn).length}</Badge>
+                </div>
+                <div className="space-y-2">
+                  {tasks.filter(t => t.status === mobileSelectedColumn).sort((a, b) => a.position - b.position).map((task) => {
+                    const cover = getCoverDisplay(task.cover_image);
+                    const dueInfo = getDueDateInfo(task.due_date);
+                    const taskLabelsForCard = getTaskLabels(task.id);
+                    return (
+                      <div key={task.id} className="bg-card rounded-lg border border-border p-3 relative"
+                        onClick={() => { setSelectedTask(task); setShowTaskDetail(true); }}
+                      >
+                        {cover.type === 'color' && <div className={cn('h-2 rounded-t-lg -mx-3 -mt-3 mb-2', cover.value)} />}
+                        {cover.type === 'image' && (
+                          <div className="h-20 rounded-t-lg -mx-3 -mt-3 mb-2 overflow-hidden">
+                            <img src={cover.value} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        {taskLabelsForCard.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-1.5">
+                            {taskLabelsForCard.map(l => (
+                              <span key={l.id} className="inline-flex items-center h-5 px-2 rounded-sm text-[10px] font-semibold text-white" style={{ backgroundColor: l.color }}>{l.name}</span>
+                            ))}
+                          </div>
+                        )}
+                        <h4 className="font-normal text-sm text-foreground mb-1.5">{task.title}</h4>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {dueInfo && (() => {
+                            const DI = dueInfo.icon;
+                            return (
+                              <div className={cn('flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium', dueInfo.color)}>
+                                <DI className="h-3 w-3" />
+                                {task.due_date && new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                              </div>
+                            );
+                          })()}
+                          {subtaskCounts[task.id] && subtaskCounts[task.id].total > 0 && (
+                            <div className={cn("flex items-center gap-0.5 text-[10px] px-1 py-0.5 rounded",
+                              subtaskCounts[task.id].completed === subtaskCounts[task.id].total ? "bg-green-500/10 text-green-600" : "text-muted-foreground"
+                            )}>
+                              <CheckSquare className="h-3 w-3" />
+                              <span>{subtaskCounts[task.id].completed}/{subtaskCounts[task.id].total}</span>
+                            </div>
+                          )}
+                          <div className="flex-1" />
+                          {task.assignee && (
+                            <Avatar className="h-6 w-6 ring-1 ring-border">
+                              <AvatarImage src={task.assignee.avatar_url || ''} />
+                              <AvatarFallback className="text-[8px] bg-primary/80 text-primary-foreground">
+                                {getInitials(task.assignee.display_name || task.assignee.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                        </div>
+                        {/* Quick actions */}
+                        <div className="absolute top-2 right-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="secondary" size="icon" className="h-6 w-6 rounded-full shadow-sm">
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(task); }}>
+                                <Edit className="h-4 w-4 mr-2" /> Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>Mover para:</DropdownMenuItem>
+                              {columns.filter(c => c.id !== mobileSelectedColumn).map(c => (
+                                <DropdownMenuItem key={c.id} onClick={async (e) => {
+                                  e.stopPropagation();
+                                  await moveTask(task.id, c.id, 0);
+                                  toast.success(`Movido para ${c.title}`);
+                                }}>
+                                  <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: c.color }} />
+                                  {c.title}
+                                </DropdownMenuItem>
+                              ))}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} className="text-destructive">
+                                <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1" onClick={() => openCreateTask(mobileSelectedColumn)}>
+                    <Plus className="h-3 w-3" /> Adicionar Tarefa
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              /* Mobile: Column list panel */
+              <div className="p-3 space-y-2">
+                {columns.map(col => {
+                  const colTasks = tasks.filter(t => t.status === col.id);
+                  return (
+                    <button
+                      key={col.id}
+                      onClick={() => setMobileSelectedColumn(col.id)}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-muted transition-colors text-left"
+                    >
+                      <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: col.color }} />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm text-foreground">{col.title}</h4>
+                        <p className="text-xs text-muted-foreground">{colTasks.length} tarefa(s)</p>
+                      </div>
+                      {col.is_conclusion && (
+                        <Badge variant="outline" className="text-[9px] border-green-500 text-green-600">✓</Badge>
+                      )}
+                    </button>
+                  );
+                })}
+                <Button variant="outline" className="w-full gap-2 mt-2" onClick={() => setShowAddColumn(true)}>
+                  <PlusCircle className="h-4 w-4" /> Nova Coluna
+                </Button>
+              </div>
+            )
+          ) : (
+            /* Desktop: horizontal scroll */
+            <div className="inline-flex gap-4 h-full pb-2 items-start">
             {columns.map((column) => {
               const colTasks = tasks.filter(t => t.status === column.id).sort((a, b) => a.position - b.position);
               return (
@@ -639,7 +773,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                           onDrop={(e) => { e.stopPropagation(); handleDrop(e, column.id, index); }}
                           onClick={() => { setSelectedTask(task); setShowTaskDetail(true); }}
                           className={cn(
-                            'bg-card rounded-lg shadow-sm border border-border cursor-pointer hover:shadow-md transition-all group/card',
+                            'bg-card rounded-lg shadow-sm border border-border cursor-pointer hover:shadow-md transition-all group/card relative',
                             draggedTask?.id === task.id && 'opacity-50 scale-95',
                             dragOverColumn === column.id && dragOverPosition === index && 'ring-2 ring-primary'
                           )}
@@ -655,17 +789,15 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                           <div className="px-2 py-1.5">
                             {/* Labels */}
                             {taskLabelsForCard.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mb-1 group/labels">
+                              <div className="flex flex-wrap gap-1 mb-1">
                                 {taskLabelsForCard.map(l => (
                                   <span
                                     key={l.id}
-                                    className="inline-block h-2 w-10 rounded-sm transition-all duration-200 cursor-default group-hover/labels:h-4 group-hover/labels:px-1.5"
+                                    className="inline-flex items-center h-5 px-2 rounded-sm text-[10px] font-semibold text-white"
                                     style={{ backgroundColor: l.color }}
                                     title={l.name}
                                   >
-                                    <span className="text-[0px] group-hover/labels:text-[9px] text-white font-medium whitespace-nowrap opacity-0 group-hover/labels:opacity-100 transition-opacity duration-200 leading-4">
-                                      {l.name}
-                                    </span>
+                                    {l.name}
                                   </span>
                                 ))}
                               </div>
@@ -734,41 +866,53 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowLabelPicker(task.id); }}>
                                   <Tag className="h-4 w-4 mr-2" /> Etiquetas
                                 </DropdownMenuItem>
-                                  {columns.filter(c => c.id !== column.id).map(c => (
-                                   <DropdownMenuItem key={c.id} onClick={async (e) => {
-                                     e.stopPropagation();
-                                     await moveTask(task.id, c.id, 0);
-                                     const autoUpdates: Record<string, any> = {};
-                                     if (c.auto_assign_to) autoUpdates.assigned_to = c.auto_assign_to;
-                                     if (c.auto_cover) autoUpdates.cover_image = c.auto_cover;
-                                     if (c.is_conclusion) {
-                                       autoUpdates.completed_at = new Date().toISOString();
-                                       if (task.due_date) {
-                                         const due = new Date(task.due_date);
-                                         const now = new Date();
-                                         due.setHours(0, 0, 0, 0);
-                                         now.setHours(0, 0, 0, 0);
-                                         const diffDays = Math.ceil((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
-                                         autoUpdates.completed_late = diffDays > 0;
-                                         autoUpdates.delay_days = diffDays > 0 ? diffDays : 0;
-                                       } else {
-                                         autoUpdates.completed_late = false;
-                                         autoUpdates.delay_days = 0;
-                                       }
-                                     }
-                                     if (Object.keys(autoUpdates).length > 0) {
-                                       await updateTask(task.id, autoUpdates);
-                                       if (c.is_conclusion) {
-                                         toast.info(autoUpdates.completed_late ? `Concluída com ${autoUpdates.delay_days} dia(s) de atraso` : 'Concluída no prazo!');
-                                       } else {
-                                         toast.info('Automações aplicadas');
-                                       }
-                                     }
-                                   }}>
-                                     <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: c.color }} />
-                                     Mover para {c.title}
-                                   </DropdownMenuItem>
-                                 ))}
+                                <DropdownMenuItem onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowDuplication(task);
+                                  setDupTargetColumn(columns[0]?.id || '');
+                                  setDupFrequency('daily');
+                                }}>
+                                  <Repeat className="h-4 w-4 mr-2" /> Auto-duplicar
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>
+                                  Mover para:
+                                </DropdownMenuItem>
+                                {columns.filter(c => c.id !== column.id).map(c => (
+                                  <DropdownMenuItem key={c.id} onClick={async (e) => {
+                                    e.stopPropagation();
+                                    await moveTask(task.id, c.id, 0);
+                                    const autoUpdates: Record<string, any> = {};
+                                    if (c.auto_assign_to) autoUpdates.assigned_to = c.auto_assign_to;
+                                    if (c.auto_cover) autoUpdates.cover_image = c.auto_cover;
+                                    if (c.is_conclusion) {
+                                      autoUpdates.completed_at = new Date().toISOString();
+                                      if (task.due_date) {
+                                        const due = new Date(task.due_date);
+                                        const now = new Date();
+                                        due.setHours(0, 0, 0, 0);
+                                        now.setHours(0, 0, 0, 0);
+                                        const diffDays = Math.ceil((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+                                        autoUpdates.completed_late = diffDays > 0;
+                                        autoUpdates.delay_days = diffDays > 0 ? diffDays : 0;
+                                      } else {
+                                        autoUpdates.completed_late = false;
+                                        autoUpdates.delay_days = 0;
+                                      }
+                                    }
+                                    if (Object.keys(autoUpdates).length > 0) {
+                                      await updateTask(task.id, autoUpdates);
+                                      if (c.is_conclusion) {
+                                        toast.info(autoUpdates.completed_late ? `Concluída com ${autoUpdates.delay_days} dia(s) de atraso` : 'Concluída no prazo!');
+                                      } else {
+                                        toast.info('Automações aplicadas');
+                                      }
+                                    }
+                                  }}>
+                                    <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: c.color }} />
+                                    {c.title}
+                                  </DropdownMenuItem>
+                                ))}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} className="text-destructive">
                                   <Trash2 className="h-4 w-4 mr-2" /> Excluir
@@ -809,6 +953,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
               )}
             </div>
           </div>
+          )}
           </TooltipProvider>
         </div>
       </div>
@@ -1186,6 +1331,98 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
             <Button variant="outline" onClick={() => setShowAutomation(null)}>Cancelar</Button>
             <Button onClick={handleSaveAutomation}>Salvar Automação</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Card Duplication Dialog */}
+      <Dialog open={!!showDuplication} onOpenChange={(o) => { if (!o) setShowDuplication(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Repeat className="h-5 w-5 text-primary" />
+              Auto-duplicar Card
+            </DialogTitle>
+            <DialogDescription>
+              Duplique automaticamente o card &quot;{showDuplication?.title}&quot; com todos os dados (exceto título com prefixo [Cópia])
+            </DialogDescription>
+          </DialogHeader>
+          {showDuplication && (() => {
+            const existing = getTaskDuplication(showDuplication.id);
+            return existing ? (
+              <div className="space-y-3 py-2">
+                <div className="rounded-lg border border-border p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Duplicação ativa</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Frequência: <span className="font-medium">{existing.frequency === 'daily' ? 'Diário' : existing.frequency === 'weekly' ? 'Semanal' : 'Mensal'}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Coluna destino: <span className="font-medium">{columns.find(c => c.id === existing.target_column_id)?.title || 'Desconhecida'}</span>
+                  </p>
+                  {existing.last_duplicated_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Última duplicação: {new Date(existing.last_duplicated_at).toLocaleDateString('pt-BR')}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={async () => {
+                    await deleteDuplication(existing.id);
+                    toast.success('Auto-duplicação removida');
+                    setShowDuplication(null);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" /> Remover Auto-duplicação
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label>Coluna destino</Label>
+                  <Select value={dupTargetColumn} onValueChange={setDupTargetColumn}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {columns.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
+                            {c.title}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Frequência</Label>
+                  <Select value={dupFrequency} onValueChange={setDupFrequency}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Diariamente</SelectItem>
+                      <SelectItem value="weekly">Semanalmente</SelectItem>
+                      <SelectItem value="monthly">Mensalmente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowDuplication(null)}>Cancelar</Button>
+                  <Button onClick={async () => {
+                    if (!dupTargetColumn) { toast.error('Selecione a coluna'); return; }
+                    const { error } = await createDuplication(showDuplication.id, dupTargetColumn, dupFrequency);
+                    if (error) { toast.error('Erro ao criar auto-duplicação'); return; }
+                    toast.success('Auto-duplicação configurada!');
+                    setShowDuplication(null);
+                  }}>
+                    Ativar Auto-duplicação
+                  </Button>
+                </DialogFooter>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

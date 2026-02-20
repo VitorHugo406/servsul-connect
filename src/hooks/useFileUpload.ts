@@ -16,6 +16,8 @@ const ALLOWED_FILE_TYPES = [
   'text/plain',
 ];
 
+const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
+
 interface UploadResult {
   url: string;
   fileName: string;
@@ -29,7 +31,10 @@ export function useFileUpload() {
   const [limitReached, setLimitReached] = useState(false);
   const [weeklyLimit, setWeeklyLimit] = useState(5);
   const [weeklyCount, setWeeklyCount] = useState(0);
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
+
+  // Admin principal is exempt from limits
+  const isMainAdmin = isAdmin && profile?.email === ADMIN_EMAIL;
 
   const getStartOfWeek = () => {
     const now = new Date();
@@ -43,14 +48,19 @@ export function useFileUpload() {
 
   const checkWeeklyStatus = useCallback(async () => {
     if (!user || !profile) return;
+    // Admin principal is exempt
+    if (isMainAdmin) {
+      setLimitReached(false);
+      return;
+    }
 
     try {
-      // Get weekly limit
+      // Get weekly limit using service-accessible query
       const { data } = await supabase
         .from('system_settings')
         .select('value')
         .eq('key', 'weekly_file_limit')
-        .single();
+        .maybeSingle();
       
       const limit = data?.value ? parseInt(data.value) || 5 : 5;
       setWeeklyLimit(limit);
@@ -71,7 +81,7 @@ export function useFileUpload() {
     } catch {
       // ignore - use defaults
     }
-  }, [user, profile]);
+  }, [user, profile, isMainAdmin]);
 
   useEffect(() => {
     checkWeeklyStatus();
@@ -91,8 +101,8 @@ export function useFileUpload() {
       return null;
     }
 
-    // Check weekly upload limit
-    if (bucket === 'attachments') {
+    // Check weekly upload limit (skip for admin principal)
+    if (bucket === 'attachments' && !isMainAdmin) {
       if (limitReached) {
         toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`);
         return null;
@@ -144,7 +154,7 @@ export function useFileUpload() {
       setProgress(100);
 
       // Refresh weekly status after successful upload
-      if (bucket === 'attachments') {
+      if (bucket === 'attachments' && !isMainAdmin) {
         const newCount = weeklyCount + 1;
         setWeeklyCount(newCount);
         if (newCount >= weeklyLimit) {
@@ -241,5 +251,6 @@ export function useFileUpload() {
     limitReached,
     weeklyLimit,
     weeklyCount,
+    isMainAdmin,
   };
 }

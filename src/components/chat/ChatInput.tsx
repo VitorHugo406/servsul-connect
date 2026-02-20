@@ -29,7 +29,8 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const { uploadFile, uploading, isImage, limitReached, weeklyLimit } = useFileUpload();
+  const { uploadFile, uploading, isImage, limitReached, weeklyLimit, isMainAdmin } = useFileUpload();
+  const effectiveLimitReached = limitReached && !isMainAdmin;
 
   const handleSubmit = useCallback(async () => {
     if (isSending) return;
@@ -226,9 +227,9 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
           {!hideAttachment && (
             <>
               <Button type="button" variant="ghost" size="icon"
-                className={`h-10 w-10 ${limitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`h-10 w-10 ${effectiveLimitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
                 onClick={() => {
-                  if (limitReached) {
+                  if (effectiveLimitReached) {
                     toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`);
                     return;
                   }
@@ -239,9 +240,9 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
                 <Paperclip className="h-5 w-5" />
               </Button>
               <Button type="button" variant="ghost" size="icon"
-                className={`h-10 w-10 ${limitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`h-10 w-10 ${effectiveLimitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
                 onClick={() => {
-                  if (limitReached) {
+                  if (effectiveLimitReached) {
                     toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`);
                     return;
                   }
