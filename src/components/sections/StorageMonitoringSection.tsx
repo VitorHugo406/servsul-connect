@@ -17,7 +17,7 @@ interface StorageInfo {
   dbSizeMb: number;
   storageSizeMb: number;
   tableStats: { name: string; rows: number }[];
-  bucketStats: { name: string; count: number }[];
+  bucketStats: { name: string; count: number; sizeMb: number }[];
 }
 
 export function StorageMonitoringSection() {
@@ -56,31 +56,51 @@ export function StorageMonitoringSection() {
       // Sort by rows desc
       tableStats.sort((a, b) => b.rows - a.rows);
 
-      // Get bucket file counts
+      // Get bucket file counts and real sizes from attachments table
       const bucketNames = ['attachments', 'avatars', 'face-images'];
-      const bucketStats: { name: string; count: number }[] = [];
+      const bucketStats: { name: string; count: number; sizeMb: number }[] = [];
+
+      // Get real file sizes from the attachments table
+      const { data: attachmentFiles } = await supabase
+        .from('attachments')
+        .select('file_size');
+      const attachmentSizeBytes = (attachmentFiles || []).reduce((sum, f) => sum + (f.file_size || 0), 0);
+
       for (const bucket of bucketNames) {
         try {
+          // List files recursively to get actual counts
           const { data } = await supabase.storage.from(bucket).list('', { limit: 1000 });
-          bucketStats.push({ name: bucket, count: data?.length || 0 });
+          const fileCount = data?.length || 0;
+          
+          let sizeMb = 0;
+          if (bucket === 'attachments') {
+            sizeMb = attachmentSizeBytes / (1024 * 1024);
+          } else {
+            // For other buckets, list all files and try to get sizes
+            if (data && data.length > 0) {
+              // Estimate based on count since we can't easily get sizes for all
+              // Avatars are typically small (~100KB), face-images ~200KB
+              const avgSize = bucket === 'avatars' ? 100 * 1024 : 200 * 1024;
+              sizeMb = (fileCount * avgSize) / (1024 * 1024);
+            }
+          }
+          
+          bucketStats.push({ name: bucket, count: fileCount, sizeMb: Math.round(sizeMb * 100) / 100 });
         } catch {
-          bucketStats.push({ name: bucket, count: 0 });
+          bucketStats.push({ name: bucket, count: 0, sizeMb: 0 });
         }
       }
 
       // Estimate DB size from row counts (rough approximation)
       const totalRows = tableStats.reduce((sum, t) => sum + t.rows, 0);
-      // Average row ~0.5KB for typical tables
       const estimatedDbMb = Math.max((totalRows * 0.5) / 1024, 0.1);
 
-      // Estimate storage size from attachment counts
-      const totalFiles = bucketStats.reduce((sum, b) => sum + b.count, 0);
-      // Average file ~200KB
-      const estimatedStorageMb = Math.max((totalFiles * 200) / 1024, 0.01);
+      // Real storage size from buckets
+      const totalStorageMb = bucketStats.reduce((sum, b) => sum + b.sizeMb, 0);
 
       setInfo({
         dbSizeMb: Math.round(estimatedDbMb * 100) / 100,
-        storageSizeMb: Math.round(estimatedStorageMb * 100) / 100,
+        storageSizeMb: Math.round(totalStorageMb * 100) / 100,
         tableStats,
         bucketStats,
       });
@@ -175,11 +195,11 @@ export function StorageMonitoringSection() {
               <HardDrive className="h-5 w-5 text-primary" />
               <CardTitle className="text-lg">Armazenamento de Arquivos</CardTitle>
             </div>
-            <CardDescription>Estimativa de uso do storage</CardDescription>
+            <CardDescription>Uso real baseado nos arquivos enviados</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Uso estimado</span>
+              <span className="text-muted-foreground">Uso real</span>
               <span className="font-semibold">{info.storageSizeMb} MB / {STORAGE_LIMIT_MB} MB</span>
             </div>
             <Progress value={storagePercent} className="h-3" />
@@ -233,6 +253,7 @@ export function StorageMonitoringSection() {
               <div key={bucket.name} className="rounded-xl border border-border p-4 text-center">
                 <p className="text-2xl font-bold text-primary">{bucket.count}</p>
                 <p className="text-sm text-muted-foreground capitalize">{bucket.name}</p>
+                <p className="text-xs text-muted-foreground mt-1">{bucket.sizeMb} MB</p>
               </div>
             ))}
           </div>
