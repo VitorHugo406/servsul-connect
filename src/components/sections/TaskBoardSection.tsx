@@ -4,7 +4,8 @@ import {
   Plus, MoreVertical, Calendar, Trash2, Edit, Loader2,
   GripVertical, ListTodo, X, AlertTriangle,
   Clock4, Clock, Users, Settings, ArrowLeft,
-  PlusCircle, FileDown, Zap, Upload, Tag, Copy, Repeat
+  PlusCircle, FileDown, Zap, Upload, Tag, Copy, Repeat,
+  Archive, ArchiveRestore, Pencil
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -196,7 +197,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
 }) {
   const { profile } = useAuth();
   const { columns, addColumn, updateColumn, deleteColumn, refetch: refetchColumns } = useBoardColumns(board.id);
-  const { tasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, refetch: refetchTasks } = useBoardTasks(board.id);
+  const { tasks, archivedTasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: refetchTasks } = useBoardTasks(board.id);
   const { members, addMember, removeMember } = useBoardMembers(board.id);
   const { labels, getTaskLabels, createLabel, deleteLabel, assignLabel, removeLabel } = useTaskLabels(board.id);
   const { counts: subtaskCounts } = useSubtaskCounts(tasks.map(t => t.id));
@@ -225,6 +226,10 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const [showDuplication, setShowDuplication] = useState<BoardTask | null>(null);
   const [dupTargetColumn, setDupTargetColumn] = useState('');
   const [dupFrequency, setDupFrequency] = useState<string>('daily');
+  const [showArchive, setShowArchive] = useState(false);
+  const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+  const [editColumnTitle, setEditColumnTitle] = useState('');
+  const [expandedLabels, setExpandedLabels] = useState(false);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -386,6 +391,37 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
     if (error) { toast.error('Erro ao excluir coluna'); return; }
     toast.success('Coluna excluída');
     await refetchColumns();
+  };
+
+  const handleArchiveTask = async (taskId: string) => {
+    const { error } = await archiveTask(taskId);
+    if (error) { toast.error('Erro ao arquivar'); return; }
+    toast.success('Card arquivado');
+  };
+
+  const handleArchiveColumn = async (colId: string) => {
+    const colTasks = tasks.filter(t => t.status === colId);
+    if (colTasks.length === 0) { toast.info('Nenhum card para arquivar'); return; }
+    if (!confirm(`Arquivar ${colTasks.length} card(s) desta coluna?`)) return;
+    const { error } = await archiveColumnTasks(colId);
+    if (error) { toast.error('Erro ao arquivar'); return; }
+    toast.success(`${colTasks.length} card(s) arquivado(s)`);
+  };
+
+  const handleUnarchiveTask = async (taskId: string) => {
+    const { error } = await unarchiveTask(taskId);
+    if (error) { toast.error('Erro ao desarquivar'); return; }
+    toast.success('Card restaurado');
+  };
+
+  const handleRenameColumn = async (colId: string) => {
+    if (!editColumnTitle.trim()) return;
+    const { error } = await updateColumn(colId, { title: editColumnTitle.trim() } as any);
+    if (error) { toast.error('Erro ao renomear'); return; }
+    toast.success('Coluna renomeada');
+    setEditingColumnId(null);
+    setEditColumnTitle('');
+    refetchColumns();
   };
 
   const handleAddMember = async (user: any) => {
@@ -571,9 +607,19 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
             <Users className="h-4 w-4" />
           </Button>
           {isOwner && (
-            <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)} title="Configurações">
-              <Settings className="h-4 w-4" />
-            </Button>
+            <>
+              <Button variant="ghost" size="icon" onClick={() => setShowArchive(true)} title="Arquivados">
+                <Archive className="h-4 w-4" />
+                {archivedTasks.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[9px] flex items-center justify-center">
+                    {archivedTasks.length}
+                  </span>
+                )}
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)} title="Configurações">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -610,9 +656,21 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                           </div>
                         )}
                         {taskLabelsForCard.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-1.5">
+                          <div className="flex flex-wrap gap-1 mb-1.5 cursor-pointer" onClick={(e) => { e.stopPropagation(); setExpandedLabels(!expandedLabels); }}>
                             {taskLabelsForCard.map(l => (
-                              <span key={l.id} className="inline-flex items-center h-5 px-2 rounded-sm text-[10px] font-semibold text-white" style={{ backgroundColor: l.color }}>{l.name}</span>
+                              <span
+                                key={l.id}
+                                className={cn(
+                                  'rounded-sm transition-all',
+                                  expandedLabels
+                                    ? 'inline-flex items-center h-5 px-2 text-[10px] font-semibold text-white'
+                                    : 'inline-block w-10 h-2'
+                                )}
+                                style={{ backgroundColor: l.color }}
+                                title={l.name}
+                              >
+                                {expandedLabels && l.name}
+                              </span>
                             ))}
                           </div>
                         )}
@@ -656,6 +714,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(task); }}>
                                 <Edit className="h-4 w-4 mr-2" /> Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchiveTask(task.id); }}>
+                                <Archive className="h-4 w-4 mr-2" /> Arquivar
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>Mover para:</DropdownMenuItem>
@@ -730,7 +791,31 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                 >
                   <div className="flex items-center gap-2 p-3 border-b border-border">
                     <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: column.color }} />
-                    <h3 className="font-semibold text-foreground text-sm flex-1 truncate">{column.title}</h3>
+                    {editingColumnId === column.id ? (
+                      <div className="flex items-center gap-1 flex-1">
+                        <Input
+                          value={editColumnTitle}
+                          onChange={(e) => setEditColumnTitle(e.target.value)}
+                          className="h-6 text-sm py-0 px-1"
+                          autoFocus
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleRenameColumn(column.id); if (e.key === 'Escape') setEditingColumnId(null); }}
+                        />
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleRenameColumn(column.id)}>
+                          <CheckSquare className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setEditingColumnId(null)}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <h3
+                        className="font-semibold text-foreground text-sm flex-1 truncate cursor-pointer hover:text-primary transition-colors"
+                        onDoubleClick={() => { setEditingColumnId(column.id); setEditColumnTitle(column.title); }}
+                        title="Clique duplo para renomear"
+                      >
+                        {column.title}
+                      </h3>
+                    )}
                     {column.is_conclusion && (
                       <Badge variant="outline" className="text-[9px] border-green-500 text-green-600">✓ Conclusão</Badge>
                     )}
@@ -743,8 +828,14 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                         <DropdownMenuItem onClick={() => openCreateTask(column.id)}>
                           <Plus className="h-4 w-4 mr-2" /> Adicionar Tarefa
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setEditingColumnId(column.id); setEditColumnTitle(column.title); }}>
+                          <Pencil className="h-4 w-4 mr-2" /> Renomear Coluna
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openAutomation(column)}>
                           <Zap className="h-4 w-4 mr-2" /> Automações
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleArchiveColumn(column.id)}>
+                          <Archive className="h-4 w-4 mr-2" /> Arquivar Todos os Cards
                         </DropdownMenuItem>
                         {isOwner && (
                           <>
@@ -789,15 +880,20 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                           <div className="px-2 py-1.5">
                             {/* Labels */}
                             {taskLabelsForCard.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mb-1">
+                              <div className="flex flex-wrap gap-1 mb-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); setExpandedLabels(!expandedLabels); }}>
                                 {taskLabelsForCard.map(l => (
                                   <span
                                     key={l.id}
-                                    className="inline-flex items-center h-5 px-2 rounded-sm text-[10px] font-semibold text-white"
+                                    className={cn(
+                                      'rounded-sm transition-all',
+                                      expandedLabels
+                                        ? 'inline-flex items-center h-5 px-2 text-[10px] font-semibold text-white'
+                                        : 'inline-block w-10 h-2'
+                                    )}
                                     style={{ backgroundColor: l.color }}
                                     title={l.name}
                                   >
-                                    {l.name}
+                                    {expandedLabels && l.name}
                                   </span>
                                 ))}
                               </div>
@@ -872,7 +968,10 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                                   setDupTargetColumn(columns[0]?.id || '');
                                   setDupFrequency('daily');
                                 }}>
-                                  <Repeat className="h-4 w-4 mr-2" /> Auto-duplicar
+                                <Repeat className="h-4 w-4 mr-2" /> Auto-duplicar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchiveTask(task.id); }}>
+                                  <Archive className="h-4 w-4 mr-2" /> Arquivar
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>
@@ -1423,6 +1522,53 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
               </div>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive Dialog */}
+      <Dialog open={showArchive} onOpenChange={setShowArchive}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5 text-primary" /> Cards Arquivados ({archivedTasks.length})
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            {archivedTasks.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Nenhum card arquivado</p>
+            ) : (
+              <div className="space-y-2 pb-4">
+                {archivedTasks.map(task => (
+                  <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">#{task.task_number} {task.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {columns.find(c => c.id === task.status)?.title || 'Sem coluna'}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleUnarchiveTask(task.id)} title="Restaurar">
+                      <ArchiveRestore className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 text-destructive" onClick={() => handleDeleteTask(task.id)} title="Excluir permanentemente">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+          {archivedTasks.length > 1 && (
+            <div className="border-t border-border pt-3">
+              <Button variant="destructive" className="w-full" onClick={async () => {
+                if (!confirm(`Excluir permanentemente ${archivedTasks.length} card(s) arquivado(s)?`)) return;
+                for (const t of archivedTasks) { await deleteTask(t.id); }
+                toast.success('Todos os cards arquivados foram excluídos');
+                await refetchTasks();
+              }}>
+                <Trash2 className="h-4 w-4 mr-2" /> Excluir Todos ({archivedTasks.length})
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

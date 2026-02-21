@@ -35,13 +35,15 @@
   profileId?: string;
  }
  
- const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; color: string }> = {
-   available: { label: 'Disponível', icon: CheckCircle, color: 'text-green-500' },
-   lunch: { label: 'Almoçando', icon: Coffee, color: 'text-orange-500' },
-   meeting: { label: 'Em reunião', icon: Briefcase, color: 'text-blue-500' },
-   busy: { label: 'Ocupado', icon: Clock, color: 'text-red-500' },
-   away: { label: 'Ausente', icon: Moon, color: 'text-muted-foreground' },
- };
+  const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; color: string }> = {
+    available: { label: 'Disponível', icon: CheckCircle, color: 'text-green-500' },
+    lunch: { label: 'Almoçando', icon: Coffee, color: 'text-orange-500' },
+    meeting: { label: 'Em reunião', icon: Briefcase, color: 'text-blue-500' },
+    busy: { label: 'Ocupado', icon: Clock, color: 'text-red-500' },
+    away: { label: 'Fora de expediente', icon: Moon, color: 'text-muted-foreground' },
+    vacation: { label: 'De férias', icon: Moon, color: 'text-blue-500' },
+    leave: { label: 'De afastamento', icon: Clock, color: 'text-red-500' },
+  };
  
  const AUTONOMY_LABELS: Record<string, string> = {
    admin: 'Administrador',

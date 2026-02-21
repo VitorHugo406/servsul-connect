@@ -16,6 +16,7 @@ export interface BoardTask {
   cover_image: string | null;
   due_date: string | null;
   position: number;
+  is_archived: boolean;
   created_at: string;
   updated_at: string;
   assignee?: {
@@ -40,7 +41,7 @@ export function useBoardTasks(boardId: string | null) {
         .eq('board_id', boardId)
         .order('position', { ascending: true });
       if (error) throw error;
-      setTasks((data || []) as BoardTask[]);
+      setTasks((data || []).map(t => ({ ...t, is_archived: t.is_archived ?? false })) as BoardTask[]);
     } catch (error) {
       console.error('Error fetching board tasks:', error);
     } finally {
@@ -146,5 +147,40 @@ export function useBoardTasks(boardId: string | null) {
     });
   };
 
-  return { tasks, loading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, refetch: fetchTasks };
+  const archiveTask = async (id: string) => {
+    try {
+      const { error } = await supabase.from('tasks').update({ is_archived: true }).eq('id', id);
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const unarchiveTask = async (id: string) => {
+    try {
+      const { error } = await supabase.from('tasks').update({ is_archived: false }).eq('id', id);
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const archiveColumnTasks = async (columnId: string) => {
+    try {
+      const colTaskIds = tasks.filter(t => t.status === columnId && !t.is_archived).map(t => t.id);
+      if (colTaskIds.length === 0) return { error: null };
+      const { error } = await supabase.from('tasks').update({ is_archived: true }).in('id', colTaskIds);
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const activeTasks = tasks.filter(t => !t.is_archived);
+  const archivedTasks = tasks.filter(t => t.is_archived);
+
+  return { tasks: activeTasks, allTasks: tasks, archivedTasks, loading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: fetchTasks };
 }

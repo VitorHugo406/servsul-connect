@@ -31,13 +31,15 @@ interface SectorUser {
   inline?: boolean;
  }
  
- const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; color: string }> = {
-   available: { label: 'Disponível', icon: CheckCircle, color: 'text-green-500' },
-   lunch: { label: 'Almoçando', icon: Coffee, color: 'text-orange-500' },
-   meeting: { label: 'Em reunião', icon: Briefcase, color: 'text-blue-500' },
-   busy: { label: 'Ocupado', icon: Clock, color: 'text-red-500' },
-   away: { label: 'Ausente', icon: Moon, color: 'text-gray-500' },
- };
+  const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; color: string }> = {
+    available: { label: 'Disponível', icon: CheckCircle, color: 'text-green-500' },
+    lunch: { label: 'Almoçando', icon: Coffee, color: 'text-orange-500' },
+    meeting: { label: 'Em reunião', icon: Briefcase, color: 'text-blue-500' },
+    busy: { label: 'Ocupado', icon: Clock, color: 'text-red-500' },
+    away: { label: 'Fora de expediente', icon: Moon, color: 'text-gray-500' },
+    vacation: { label: 'De férias', icon: Moon, color: 'text-blue-500' },
+    leave: { label: 'De afastamento', icon: Clock, color: 'text-red-500' },
+  };
  
 export function SectorUsersList({ sectorId, sectorName, sectorColor, isOpen = true, onClose, inline = false }: SectorUsersListProps) {
    const [users, setUsers] = useState<SectorUser[]>([]);

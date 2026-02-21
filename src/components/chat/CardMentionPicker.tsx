@@ -58,8 +58,9 @@ export function CardMentionPicker({ query, onSelect, onClose }: CardMentionPicke
       const board = boards.find(b => b.id === selectedBoardId);
       const { data: tasksData } = await supabase
         .from('tasks')
-        .select('id, task_number, title, description, priority, due_date')
+        .select('id, task_number, title, description, priority, due_date, is_archived')
         .eq('board_id', selectedBoardId)
+        .eq('is_archived', false)
         .order('task_number', { ascending: true });
 
       if (!tasksData) { setLoading(false); return; }
