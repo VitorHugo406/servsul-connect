@@ -984,6 +984,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          is_archived: boolean
           position: number
           priority: string
           sector_id: string | null
@@ -1004,6 +1005,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          is_archived?: boolean
           position?: number
           priority?: string
           sector_id?: string | null
@@ -1024,6 +1026,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          is_archived?: boolean
           position?: number
           priority?: string
           sector_id?: string | null

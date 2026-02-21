@@ -56,35 +56,40 @@ export function StorageMonitoringSection() {
       // Sort by rows desc
       tableStats.sort((a, b) => b.rows - a.rows);
 
-      // Get bucket file counts and real sizes from attachments table
+      // Get bucket file counts and real sizes
       const bucketNames = ['attachments', 'avatars', 'face-images'];
       const bucketStats: { name: string; count: number; sizeMb: number }[] = [];
 
-      // Get real file sizes from the attachments table
-      const { data: attachmentFiles } = await supabase
-        .from('attachments')
-        .select('file_size');
-      const attachmentSizeBytes = (attachmentFiles || []).reduce((sum, f) => sum + (f.file_size || 0), 0);
-
       for (const bucket of bucketNames) {
         try {
-          // List files recursively to get actual counts
+          // List all files recursively
           const { data } = await supabase.storage.from(bucket).list('', { limit: 1000 });
-          const fileCount = data?.length || 0;
+          let totalSize = 0;
+          let fileCount = 0;
           
-          let sizeMb = 0;
-          if (bucket === 'attachments') {
-            sizeMb = attachmentSizeBytes / (1024 * 1024);
-          } else {
-            // For other buckets, list all files and try to get sizes
-            if (data && data.length > 0) {
-              // Estimate based on count since we can't easily get sizes for all
-              // Avatars are typically small (~100KB), face-images ~200KB
-              const avgSize = bucket === 'avatars' ? 100 * 1024 : 200 * 1024;
-              sizeMb = (fileCount * avgSize) / (1024 * 1024);
+          if (data && data.length > 0) {
+            // For each top-level item, if it's a folder list its contents
+            for (const item of data) {
+              if (item.id) {
+                // It's a file at root level
+                totalSize += (item.metadata?.size || 0);
+                fileCount++;
+              } else {
+                // It's a folder - list its contents
+                const { data: subFiles } = await supabase.storage.from(bucket).list(item.name, { limit: 1000 });
+                if (subFiles) {
+                  for (const subFile of subFiles) {
+                    if (subFile.id) {
+                      totalSize += (subFile.metadata?.size || 0);
+                      fileCount++;
+                    }
+                  }
+                }
+              }
             }
           }
           
+          const sizeMb = totalSize / (1024 * 1024);
           bucketStats.push({ name: bucket, count: fileCount, sizeMb: Math.round(sizeMb * 100) / 100 });
         } catch {
           bucketStats.push({ name: bucket, count: 0, sizeMb: 0 });

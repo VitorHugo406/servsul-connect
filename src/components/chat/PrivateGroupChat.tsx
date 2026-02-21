@@ -233,7 +233,9 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
       case 'lunch': return 'Almoçando';
       case 'meeting': return 'Em reunião';
       case 'busy': return 'Ocupado';
-      case 'away': return 'Ausente';
+      case 'away': return 'Fora de expediente';
+      case 'vacation': return 'De férias';
+      case 'leave': return 'De afastamento';
       case 'working': return 'Trabalhando';
       default: return 'Disponível';
     }
@@ -245,7 +247,9 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
       case 'lunch': return 'text-orange-500';
       case 'meeting': return 'text-blue-500';
       case 'busy': return 'text-red-500';
-      case 'away': return 'text-yellow-500';
+      case 'away': return 'text-gray-500';
+      case 'vacation': return 'text-blue-500';
+      case 'leave': return 'text-red-500';
       case 'working': return 'text-emerald-500';
       default: return 'text-green-500';
     }
