@@ -5,7 +5,7 @@ import {
   GripVertical, ListTodo, X, AlertTriangle,
   Clock4, Clock, Users, Settings, ArrowLeft,
   PlusCircle, FileDown, Zap, Upload, Tag, Copy, Repeat,
-  Archive, ArchiveRestore, Pencil
+  Archive, ArchiveRestore, Pencil, Activity
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { TaskDetailDialog } from '@/components/tasks/TaskDetailDialog';
 import { ReportDialog } from '@/components/tasks/ReportDialog';
+import { AutomationRulesPanel } from '@/components/tasks/AutomationRulesPanel';
+import { OperationModePanel } from '@/components/tasks/OperationModePanel';
 import { useSubtaskCounts } from '@/hooks/useSubtasks';
 import { useCardDuplications } from '@/hooks/useCardDuplications';
 import {
@@ -231,6 +233,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [editColumnTitle, setEditColumnTitle] = useState('');
   const [expandedLabels, setExpandedLabels] = useState(false);
+  const [showAutomationRules, setShowAutomationRules] = useState(false);
+  const [automationTaskId, setAutomationTaskId] = useState<string | undefined>(undefined);
+  const [showOperationMode, setShowOperationMode] = useState(false);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -598,6 +603,12 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         </TooltipProvider>
 
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={() => { setAutomationTaskId(undefined); setShowAutomationRules(true); }} title="Automações do Board">
+            <Zap className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => setShowOperationMode(true)} title="Modo Operação" className="text-orange-500 hover:text-orange-600">
+            <Activity className="h-4 w-4" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => setShowLabelsManager(true)} title="Etiquetas">
             <Tag className="h-4 w-4" />
           </Button>
@@ -718,6 +729,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchiveTask(task.id); }}>
                                 <Archive className="h-4 w-4 mr-2" /> Arquivar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setAutomationTaskId(task.id); setShowAutomationRules(true); }}>
+                                <Zap className="h-4 w-4 mr-2" /> Automações
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>Mover para:</DropdownMenuItem>
@@ -973,6 +987,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchiveTask(task.id); }}>
                                   <Archive className="h-4 w-4 mr-2" /> Arquivar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setAutomationTaskId(task.id); setShowAutomationRules(true); }}>
+                                  <Zap className="h-4 w-4 mr-2" /> Automações
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>
@@ -1582,6 +1599,26 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
 
       {/* Report Dialog */}
       <ReportDialog open={showReport} onOpenChange={setShowReport} tasks={tasks} columns={columns} boardName={board.name} />
+
+      {/* Automation Rules Panel */}
+      <AutomationRulesPanel
+        open={showAutomationRules}
+        onOpenChange={setShowAutomationRules}
+        boardId={board.id}
+        taskId={automationTaskId}
+        columns={columns}
+      />
+
+      {/* Operation Mode Panel */}
+      <OperationModePanel
+        open={showOperationMode}
+        onOpenChange={setShowOperationMode}
+        tasks={tasks}
+        columns={columns}
+        members={members}
+        onUpdateTask={updateTask}
+        onMoveTask={moveTask}
+      />
     </div>
   );
 }

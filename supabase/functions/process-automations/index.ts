@@ -1,0 +1,208 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    // Fetch all active automation rules
+    const { data: rules, error: rulesError } = await adminClient
+      .from('task_automation_rules')
+      .select('*')
+      .eq('is_active', true);
+
+    if (rulesError) throw rulesError;
+    if (!rules || rules.length === 0) {
+      return new Response(JSON.stringify({ processed: 0 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    let processed = 0;
+    const alerts: any[] = [];
+    const now = new Date();
+
+    for (const rule of rules) {
+      const taskFilter = rule.task_id
+        ? adminClient.from('tasks').select('*').eq('id', rule.task_id).eq('is_archived', false)
+        : adminClient.from('tasks').select('*').eq('board_id', rule.board_id).eq('is_archived', false);
+
+      const { data: tasks } = await taskFilter;
+      if (!tasks || tasks.length === 0) continue;
+
+      for (const task of tasks) {
+        let triggered = false;
+
+        // Evaluate trigger
+        switch (rule.trigger_type) {
+          case 'deadline_approaching': {
+            if (!task.due_date) break;
+            const due = new Date(task.due_date);
+            const hoursLeft = (due.getTime() - now.getTime()) / (1000 * 60 * 60);
+            const threshold = rule.trigger_config?.hours || 24;
+            triggered = hoursLeft > 0 && hoursLeft <= threshold;
+            break;
+          }
+          case 'stuck_days': {
+            const updated = new Date(task.updated_at);
+            const daysSinceUpdate = (now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24);
+            const threshold = rule.trigger_config?.days || 3;
+            triggered = daysSinceUpdate >= threshold;
+            break;
+          }
+          case 'checklist_complete': {
+            const { data: subtasks } = await adminClient
+              .from('task_subtasks')
+              .select('is_completed')
+              .eq('task_id', task.id);
+            if (subtasks && subtasks.length > 0) {
+              triggered = subtasks.every(s => s.is_completed);
+            }
+            break;
+          }
+          case 'label_urgent': {
+            const { data: labelAssignments } = await adminClient
+              .from('task_label_assignments')
+              .select('label_id, task_labels(name)')
+              .eq('task_id', task.id);
+            if (labelAssignments) {
+              triggered = labelAssignments.some((la: any) =>
+                la.task_labels?.name?.toLowerCase().includes('urgent') ||
+                la.task_labels?.name?.toLowerCase().includes('urgente')
+              );
+            }
+            break;
+          }
+        }
+
+        if (!triggered) continue;
+
+        // Execute action
+        switch (rule.action_type) {
+          case 'notify': {
+            if (task.assigned_to) {
+              // Get profile's user_id for notification
+              const { data: profile } = await adminClient
+                .from('profiles')
+                .select('user_id, display_name, name')
+                .eq('id', task.assigned_to)
+                .single();
+              
+              if (profile) {
+                await adminClient.from('user_notifications').insert({
+                  user_id: profile.user_id,
+                  type: 'automation',
+                  title: 'Automação ativada',
+                  message: `Regra ativada no card #${task.task_number} "${task.title}"`,
+                  reference_id: task.id,
+                });
+                processed++;
+              }
+            }
+            break;
+          }
+          case 'move_column': {
+            const targetCol = rule.action_config?.column_id;
+            if (targetCol && task.status !== targetCol) {
+              await adminClient.from('tasks').update({ status: targetCol, position: 0 }).eq('id', task.id);
+              processed++;
+            }
+            break;
+          }
+          case 'set_priority': {
+            const newPriority = rule.action_config?.priority;
+            if (newPriority && task.priority !== newPriority) {
+              await adminClient.from('tasks').update({ priority: newPriority }).eq('id', task.id);
+              processed++;
+            }
+            break;
+          }
+          case 'alert': {
+            if (task.assigned_to) {
+              alerts.push({
+                profile_id: task.assigned_to,
+                board_id: rule.board_id,
+                alert_type: rule.trigger_type === 'deadline_approaching' ? 'deadline_risk' :
+                            rule.trigger_type === 'stuck_days' ? 'stuck_task' : 'late_task',
+                message: `Card #${task.task_number} "${task.title}" - ${
+                  rule.trigger_type === 'deadline_approaching' ? 'Prazo se aproximando' :
+                  rule.trigger_type === 'stuck_days' ? 'Card parado por muito tempo' :
+                  'Ação necessária'
+                }`,
+                task_id: task.id,
+              });
+              processed++;
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    // Workload check: detect overloaded users across all boards
+    const { data: allActiveTasks } = await adminClient
+      .from('tasks')
+      .select('assigned_to, board_id')
+      .eq('is_archived', false)
+      .not('assigned_to', 'is', null);
+
+    if (allActiveTasks) {
+      const userTaskCounts: Record<string, { count: number; boards: Set<string> }> = {};
+      for (const t of allActiveTasks) {
+        if (!t.assigned_to) continue;
+        if (!userTaskCounts[t.assigned_to]) userTaskCounts[t.assigned_to] = { count: 0, boards: new Set() };
+        userTaskCounts[t.assigned_to].count++;
+        if (t.board_id) userTaskCounts[t.assigned_to].boards.add(t.board_id);
+      }
+
+      // Alert if user has more than 10 active cards
+      for (const [profileId, data] of Object.entries(userTaskCounts)) {
+        if (data.count >= 10) {
+          alerts.push({
+            profile_id: profileId,
+            board_id: [...data.boards][0] || null,
+            alert_type: 'overloaded',
+            message: `Colaborador com ${data.count} cards ativos — possível sobrecarga`,
+            task_id: null,
+          });
+        }
+      }
+    }
+
+    // Insert alerts (deduplicate by checking recent)
+    for (const alert of alerts) {
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+      const { data: existing } = await adminClient
+        .from('workload_alerts')
+        .select('id')
+        .eq('profile_id', alert.profile_id)
+        .eq('alert_type', alert.alert_type)
+        .eq('task_id', alert.task_id || '')
+        .gte('created_at', oneHourAgo)
+        .limit(1);
+
+      if (!existing || existing.length === 0) {
+        await adminClient.from('workload_alerts').insert(alert);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ processed, alerts: alerts.length }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.error('Error processing automations:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
