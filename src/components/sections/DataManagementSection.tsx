@@ -12,7 +12,8 @@
     ScanFace,
     UserX,
     ListTodo,
-    CalendarIcon
+    CalendarIcon,
+    Paperclip
   } from 'lucide-react';
  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
  import { Button } from '@/components/ui/button';
@@ -144,6 +145,15 @@ interface DeletionOption {
        confirmText: 'EXCLUIR FACIAIS',
        dangerLevel: 'high',
        type: 'facial',
+      },
+      {
+        id: 'attachments',
+        title: 'Excluir Arquivos Enviados',
+        description: 'Remove todos os arquivos enviados no chat (fotos, PDFs, documentos) e libera o espaço de armazenamento.',
+        icon: Paperclip,
+        confirmText: 'EXCLUIR ARQUIVOS',
+        dangerLevel: 'high',
+        type: 'attachments-files',
       },
       {
         id: 'tasks',
