@@ -713,6 +713,60 @@ export type Database = {
           },
         ]
       }
+      task_automation_rules: {
+        Row: {
+          action_config: Json
+          action_type: string
+          board_id: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          task_id: string | null
+          trigger_config: Json
+          trigger_type: string
+        }
+        Insert: {
+          action_config?: Json
+          action_type: string
+          board_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          task_id?: string | null
+          trigger_config?: Json
+          trigger_type: string
+        }
+        Update: {
+          action_config?: Json
+          action_type?: string
+          board_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          task_id?: string | null
+          trigger_config?: Json
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_automation_rules_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "task_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_automation_rules_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_board_columns: {
         Row: {
           auto_assign_to: string | null
@@ -1231,6 +1285,54 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      workload_alerts: {
+        Row: {
+          alert_type: string
+          board_id: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          profile_id: string
+          task_id: string | null
+        }
+        Insert: {
+          alert_type: string
+          board_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          profile_id: string
+          task_id?: string | null
+        }
+        Update: {
+          alert_type?: string
+          board_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          profile_id?: string
+          task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workload_alerts_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "task_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workload_alerts_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search, CalendarDays } from 'lucide-react';
+import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search, CalendarDays, AlertTriangle, Bell, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupervisorTeam } from '@/hooks/useSupervisorTeam';
 import { useTeamAnalytics } from '@/hooks/useTeamAnalytics';
+import { useWorkloadAlerts } from '@/hooks/useWorkloadAlerts';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -33,6 +34,7 @@ export function PeopleManagementSection() {
   const { members, loading, addMember, removeMember } = useSupervisorTeam();
   const memberIds = members.map(m => m.member_profile_id);
   const { analytics, loading: analyticsLoading } = useTeamAnalytics(memberIds);
+  const { alerts, unreadCount, markAsRead, dismissAlert } = useWorkloadAlerts(memberIds);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
@@ -156,9 +158,17 @@ export function PeopleManagementSection() {
       </div>
 
       <Tabs defaultValue="team" className="w-full">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="team" className="gap-2"><Users className="h-4 w-4" /> Equipe</TabsTrigger>
-          <TabsTrigger value="reports" className="gap-2"><BarChart3 className="h-4 w-4" /> Relatorios</TabsTrigger>
+          <TabsTrigger value="alerts" className="gap-2 relative">
+            <AlertTriangle className="h-4 w-4" /> Alertas
+            {unreadCount > 0 && (
+              <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-[9px] bg-destructive text-destructive-foreground">
+                {unreadCount}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="gap-2"><BarChart3 className="h-4 w-4" /> Relatórios</TabsTrigger>
           <TabsTrigger value="activities" className="gap-2"><CalendarDays className="h-4 w-4" /> Atividades</TabsTrigger>
         </TabsList>
 
@@ -226,6 +236,61 @@ export function PeopleManagementSection() {
                       </CardContent>
                     </Card>
                   </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="alerts" className="mt-4">
+          {alerts.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <Bell className="h-12 w-12 text-muted-foreground mb-4" />
+                <h4 className="text-lg font-semibold">Nenhum alerta</h4>
+                <p className="text-muted-foreground mt-1">Alertas de sobrecarga, atrasos e cards parados aparecerão aqui.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {alerts.map(alert => {
+                const member = analytics.find(a => a.profileId === alert.profile_id);
+                return (
+                  <Card key={alert.id} className={alert.is_read ? 'opacity-60' : ''}>
+                    <CardContent className="p-3 flex items-start gap-3">
+                      <div className={`mt-0.5 rounded-full p-1.5 ${
+                        alert.alert_type === 'overloaded' ? 'bg-destructive/10 text-destructive' :
+                        alert.alert_type === 'deadline_risk' ? 'bg-orange-500/10 text-orange-500' :
+                        'bg-yellow-500/10 text-yellow-500'
+                      }`}>
+                        <AlertTriangle className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <Badge variant="outline" className="text-[10px]">
+                            {alert.alert_type === 'overloaded' ? 'Sobrecarga' :
+                             alert.alert_type === 'deadline_risk' ? 'Prazo' :
+                             alert.alert_type === 'stuck_task' ? 'Parado' : 'Atraso'}
+                          </Badge>
+                          {member && <span className="text-xs text-muted-foreground">{member.displayName || member.name}</span>}
+                        </div>
+                        <p className="text-sm">{alert.message}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {new Date(alert.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <div className="flex gap-1">
+                        {!alert.is_read && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => markAsRead(alert.id)} title="Marcar como lido">
+                            <Bell className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => dismissAlert(alert.id)} title="Dispensar">
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                 );
               })}
             </div>
