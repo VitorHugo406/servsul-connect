@@ -207,6 +207,51 @@ serve(async (req) => {
         break;
       }
 
+      case 'attachments-files': {
+        console.log('Deleting all attachment files from storage and DB...');
+        
+        // Get all attachments to find storage paths
+        const { data: allAttachments } = await adminClient
+          .from('attachments')
+          .select('id, file_url, file_name')
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+        
+        if (allAttachments && allAttachments.length > 0) {
+          // Extract storage paths from file URLs and delete from storage
+          const storagePaths: string[] = [];
+          for (const att of allAttachments) {
+            if (att.file_url) {
+              const match = att.file_url.match(/\/storage\/v1\/object\/public\/attachments\/(.+)/);
+              if (match) {
+                storagePaths.push(match[1]);
+              }
+            }
+          }
+          
+          // Delete files from storage in batches
+          if (storagePaths.length > 0) {
+            const batchSize = 100;
+            for (let i = 0; i < storagePaths.length; i += batchSize) {
+              const batch = storagePaths.slice(i, i + batchSize);
+              const { error: storageErr } = await adminClient.storage
+                .from('attachments')
+                .remove(batch);
+              if (storageErr) {
+                console.error('Error deleting storage batch:', storageErr.message);
+              }
+            }
+          }
+          
+          console.log(`Deleted ${storagePaths.length} files from storage`);
+        }
+        
+        // Delete all attachment records from DB
+        await safeDelete('attachments');
+        
+        result.message = `Todos os arquivos foram excluídos (${allAttachments?.length || 0} arquivos removidos do armazenamento)`;
+        break;
+      }
+
       case 'tasks': {
         console.log('Deleting all task data...');
         await safeDelete('task_comments');

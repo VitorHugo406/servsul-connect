@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -1525,21 +1526,40 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         </DialogContent>
       </Dialog>
 
-      {/* Archive Dialog */}
-      <Dialog open={showArchive} onOpenChange={setShowArchive}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Archive className="h-5 w-5 text-primary" /> Cards Arquivados ({archivedTasks.length})
-            </DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="flex-1 -mx-6 px-6">
+      {/* Archive Sidebar */}
+      <Sheet open={showArchive} onOpenChange={setShowArchive}>
+        <SheetContent side="left" className="w-[320px] sm:w-[360px] p-0 flex flex-col">
+          <SheetHeader className="p-4 border-b border-border">
+            <SheetTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5 text-primary" /> Arquivados ({archivedTasks.length})
+            </SheetTitle>
+          </SheetHeader>
+          {archivedTasks.length > 0 && (
+            <div className="px-4 pt-3">
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full gap-2"
+                onClick={async () => {
+                  if (!confirm(`Excluir permanentemente ${archivedTasks.length} card(s) arquivado(s)?`)) return;
+                  for (const task of archivedTasks) {
+                    await deleteTask(task.id);
+                  }
+                  await refetchTasks();
+                  toast.success('Todos os cards arquivados foram excluídos');
+                }}
+              >
+                <Trash2 className="h-4 w-4" /> Excluir Todos ({archivedTasks.length})
+              </Button>
+            </div>
+          )}
+          <ScrollArea className="flex-1 px-4 py-3">
             {archivedTasks.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Nenhum card arquivado</p>
             ) : (
-              <div className="space-y-2 pb-4">
+              <div className="space-y-2">
                 {archivedTasks.map(task => (
-                  <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                  <div key={task.id} className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/30">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">#{task.task_number} {task.title}</p>
                       <p className="text-xs text-muted-foreground">
@@ -1557,20 +1577,8 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
               </div>
             )}
           </ScrollArea>
-          {archivedTasks.length > 1 && (
-            <div className="border-t border-border pt-3">
-              <Button variant="destructive" className="w-full" onClick={async () => {
-                if (!confirm(`Excluir permanentemente ${archivedTasks.length} card(s) arquivado(s)?`)) return;
-                for (const t of archivedTasks) { await deleteTask(t.id); }
-                toast.success('Todos os cards arquivados foram excluídos');
-                await refetchTasks();
-              }}>
-                <Trash2 className="h-4 w-4 mr-2" /> Excluir Todos ({archivedTasks.length})
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* Report Dialog */}
       <ReportDialog open={showReport} onOpenChange={setShowReport} tasks={tasks} columns={columns} boardName={board.name} />
