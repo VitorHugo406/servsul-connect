@@ -15,22 +15,20 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Fetch all active automation rules
+    let processed = 0;
+    const alerts: any[] = [];
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+
+    // ===== PART 1: Process automation rules (SE → ENTÃO) =====
     const { data: rules, error: rulesError } = await adminClient
       .from('task_automation_rules')
       .select('*')
       .eq('is_active', true);
 
     if (rulesError) throw rulesError;
-    if (!rules || rules.length === 0) {
-      return new Response(JSON.stringify({ processed: 0 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
 
-    let processed = 0;
-    const alerts: any[] = [];
-    const now = new Date();
-
-    for (const rule of rules) {
+    for (const rule of (rules || [])) {
       const taskFilter = rule.task_id
         ? adminClient.from('tasks').select('*').eq('id', rule.task_id).eq('is_archived', false)
         : adminClient.from('tasks').select('*').eq('board_id', rule.board_id).eq('is_archived', false);
@@ -41,7 +39,6 @@ Deno.serve(async (req) => {
       for (const task of tasks) {
         let triggered = false;
 
-        // Evaluate trigger
         switch (rule.trigger_type) {
           case 'deadline_approaching': {
             if (!task.due_date) break;
@@ -89,7 +86,6 @@ Deno.serve(async (req) => {
         switch (rule.action_type) {
           case 'notify': {
             if (task.assigned_to) {
-              // Get profile's user_id for notification
               const { data: profile } = await adminClient
                 .from('profiles')
                 .select('user_id, display_name, name')
@@ -101,7 +97,7 @@ Deno.serve(async (req) => {
                   user_id: profile.user_id,
                   type: 'automation',
                   title: 'Automação ativada',
-                  message: `Regra ativada no card #${task.task_number} "${task.title}"`,
+                  message: `Regra "${rule.trigger_type}" ativada no card #${task.task_number} "${task.title}"`,
                   reference_id: task.id,
                 });
                 processed++;
@@ -147,25 +143,68 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Workload check: detect overloaded users across all boards
+    // ===== PART 2: Auto-detect overdue and approaching deadline tasks =====
     const { data: allActiveTasks } = await adminClient
       .from('tasks')
-      .select('assigned_to, board_id')
+      .select('id, title, task_number, assigned_to, board_id, due_date, updated_at, status')
       .eq('is_archived', false)
       .not('assigned_to', 'is', null);
 
     if (allActiveTasks) {
       const userTaskCounts: Record<string, { count: number; boards: Set<string> }> = {};
+
       for (const t of allActiveTasks) {
         if (!t.assigned_to) continue;
+        
+        // Count tasks per user for overload detection
         if (!userTaskCounts[t.assigned_to]) userTaskCounts[t.assigned_to] = { count: 0, boards: new Set() };
         userTaskCounts[t.assigned_to].count++;
         if (t.board_id) userTaskCounts[t.assigned_to].boards.add(t.board_id);
+
+        // Check overdue tasks (due_date in the past)
+        if (t.due_date) {
+          const due = new Date(t.due_date);
+          const hoursOverdue = (now.getTime() - due.getTime()) / (1000 * 60 * 60);
+          
+          if (hoursOverdue > 0) {
+            // Task is overdue
+            const daysOverdue = Math.ceil(hoursOverdue / 24);
+            alerts.push({
+              profile_id: t.assigned_to,
+              board_id: t.board_id,
+              alert_type: 'late_task',
+              message: `Card #${t.task_number} "${t.title}" está atrasado há ${daysOverdue} dia(s)`,
+              task_id: t.id,
+            });
+          } else if (hoursOverdue > -48) {
+            // Task approaching deadline (within 48h)
+            const hoursLeft = Math.ceil(Math.abs(hoursOverdue));
+            alerts.push({
+              profile_id: t.assigned_to,
+              board_id: t.board_id,
+              alert_type: 'deadline_risk',
+              message: `Card #${t.task_number} "${t.title}" vence em ${hoursLeft}h`,
+              task_id: t.id,
+            });
+          }
+        }
+
+        // Check stuck tasks (not updated in 3+ days)
+        const daysSinceUpdate = (now.getTime() - new Date(t.updated_at).getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSinceUpdate >= 3) {
+          alerts.push({
+            profile_id: t.assigned_to,
+            board_id: t.board_id,
+            alert_type: 'stuck_task',
+            message: `Card #${t.task_number} "${t.title}" está parado há ${Math.floor(daysSinceUpdate)} dia(s)`,
+            task_id: t.id,
+          });
+        }
       }
 
-      // Alert if user has more than 10 active cards
+      // Overload detection (5+ active cards per user)
       for (const [profileId, data] of Object.entries(userTaskCounts)) {
-        if (data.count >= 10) {
+        if (data.count >= 5) {
           alerts.push({
             profile_id: profileId,
             board_id: [...data.boards][0] || null,
@@ -177,9 +216,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Insert alerts (deduplicate by checking recent)
+    // ===== PART 3: Insert alerts (deduplicate by checking recent) =====
     for (const alert of alerts) {
-      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
       let query = adminClient
         .from('workload_alerts')
         .select('id')
