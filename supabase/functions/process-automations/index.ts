@@ -180,14 +180,21 @@ Deno.serve(async (req) => {
     // Insert alerts (deduplicate by checking recent)
     for (const alert of alerts) {
       const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
-      const { data: existing } = await adminClient
+      let query = adminClient
         .from('workload_alerts')
         .select('id')
         .eq('profile_id', alert.profile_id)
         .eq('alert_type', alert.alert_type)
-        .eq('task_id', alert.task_id || '')
         .gte('created_at', oneHourAgo)
         .limit(1);
+      
+      if (alert.task_id) {
+        query = query.eq('task_id', alert.task_id);
+      } else {
+        query = query.is('task_id', null);
+      }
+      
+      const { data: existing } = await query;
 
       if (!existing || existing.length === 0) {
         await adminClient.from('workload_alerts').insert(alert);

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Plus, MoreVertical, Calendar, Trash2, Edit, Loader2,
   GripVertical, ListTodo, X, AlertTriangle,
-  Clock4, Clock, Users, Settings, ArrowLeft,
+  Clock4, Clock, Users, Settings, ArrowLeft, MoveRight,
   PlusCircle, FileDown, Zap, Upload, Tag, Copy, Repeat,
   Archive, ArchiveRestore, Pencil, Activity
 } from 'lucide-react';
@@ -430,6 +430,21 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
     refetchColumns();
   };
 
+  const handleMoveColumn = async (colId: string, direction: 'left' | 'right') => {
+    const idx = columns.findIndex(c => c.id === colId);
+    if (idx < 0) return;
+    const swapIdx = direction === 'left' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= columns.length) return;
+    const colA = columns[idx];
+    const colB = columns[swapIdx];
+    await Promise.all([
+      updateColumn(colA.id, { position: colB.position } as any),
+      updateColumn(colB.id, { position: colA.position } as any),
+    ]);
+    toast.success('Coluna movida');
+    refetchColumns();
+  };
+
   const handleAddMember = async (user: any) => {
     const { error } = await addMember(user.user_id, user.id);
     if (error) toast.error('Erro ao adicionar');
@@ -603,15 +618,19 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         </TooltipProvider>
 
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => { setAutomationTaskId(undefined); setShowAutomationRules(true); }} title="Automações do Board">
-            <Zap className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => setShowOperationMode(true)} title="Modo Operação" className="text-orange-500 hover:text-orange-600">
-            <Activity className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => setShowLabelsManager(true)} title="Etiquetas">
-            <Tag className="h-4 w-4" />
-          </Button>
+          {!isMobile && (
+            <>
+              <Button variant="ghost" size="icon" onClick={() => { setAutomationTaskId(undefined); setShowAutomationRules(true); }} title="Automações do Board">
+                <Zap className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setShowOperationMode(true)} title="Modo Operação" className="text-orange-500 hover:text-orange-600">
+                <Activity className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setShowLabelsManager(true)} title="Etiquetas">
+                <Tag className="h-4 w-4" />
+              </Button>
+            </>
+          )}
           <Button variant="ghost" size="icon" onClick={() => setShowReport(true)} title="Relatório">
             <FileDown className="h-4 w-4" />
           </Button>
@@ -622,11 +641,6 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
             <>
               <Button variant="ghost" size="icon" onClick={() => setShowArchive(true)} title="Arquivados">
                 <Archive className="h-4 w-4" />
-                {archivedTasks.length > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[9px] flex items-center justify-center">
-                    {archivedTasks.length}
-                  </span>
-                )}
               </Button>
               <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)} title="Configurações">
                 <Settings className="h-4 w-4" />
@@ -852,6 +866,16 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                         <DropdownMenuItem onClick={() => handleArchiveColumn(column.id)}>
                           <Archive className="h-4 w-4 mr-2" /> Arquivar Todos os Cards
                         </DropdownMenuItem>
+                        {columns.indexOf(column) > 0 && (
+                          <DropdownMenuItem onClick={() => handleMoveColumn(column.id, 'left')}>
+                            <ArrowLeft className="h-4 w-4 mr-2" /> Mover para Esquerda
+                          </DropdownMenuItem>
+                        )}
+                        {columns.indexOf(column) < columns.length - 1 && (
+                          <DropdownMenuItem onClick={() => handleMoveColumn(column.id, 'right')}>
+                            <MoveRight className="h-4 w-4 mr-2" /> Mover para Direita
+                          </DropdownMenuItem>
+                        )}
                         {isOwner && (
                           <>
                             <DropdownMenuSeparator />
@@ -1545,10 +1569,10 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
 
       {/* Archive Sidebar */}
       <Sheet open={showArchive} onOpenChange={setShowArchive}>
-        <SheetContent side="left" className="w-[320px] sm:w-[360px] p-0 flex flex-col">
+        <SheetContent side="right" className="w-[320px] sm:w-[360px] p-0 flex flex-col">
           <SheetHeader className="p-4 border-b border-border">
             <SheetTitle className="flex items-center gap-2">
-              <Archive className="h-5 w-5 text-primary" /> Arquivados ({archivedTasks.length})
+              <Archive className="h-5 w-5 text-primary" /> Arquivados
             </SheetTitle>
           </SheetHeader>
           {archivedTasks.length > 0 && (
