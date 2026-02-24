@@ -15,7 +15,7 @@ import { TaskLabel } from '@/hooks/useTaskLabels';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
 import { cn } from '@/lib/utils';
 
-export function TaskDetailDialog({ task, open, onOpenChange, onEdit, taskLabels, allLabels, onToggleLabel }: {
+export function TaskDetailDialog({ task, open, onOpenChange, onEdit, taskLabels, allLabels, onToggleLabel, boardId }: {
   task: BoardTask | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -23,9 +23,10 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, taskLabels,
   taskLabels?: TaskLabel[];
   allLabels?: TaskLabel[];
   onToggleLabel?: (taskId: string, labelId: string) => void;
+  boardId?: string | null;
 }) {
   const { comments, addComment, loading: commentsLoading } = useTaskComments(task?.id || null);
-  const { subtasks, addSubtask, toggleSubtask, deleteSubtask, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null);
+  const { subtasks, addSubtask, toggleSubtask, deleteSubtask, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null, boardId);
   const [newComment, setNewComment] = useState('');
   const [newSubtask, setNewSubtask] = useState('');
   const [sending, setSending] = useState(false);

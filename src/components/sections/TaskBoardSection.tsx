@@ -1214,6 +1214,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         taskLabels={selectedTask ? getTaskLabels(selectedTask.id) : []}
         allLabels={labels}
         onToggleLabel={handleToggleLabel}
+        boardId={board.id}
       />
 
       {/* Label Picker Dialog */}
@@ -1642,6 +1643,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         members={members}
         onUpdateTask={updateTask}
         onMoveTask={moveTask}
+        onRefetch={refetchTasks}
       />
     </div>
   );
