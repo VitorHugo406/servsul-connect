@@ -15,16 +15,29 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // Accept optional board_id filter for instant processing
+    let filterBoardId: string | null = null;
+    try {
+      const body = await req.json();
+      filterBoardId = body?.board_id || null;
+    } catch { /* no body = process all */ }
+
     let processed = 0;
     const alerts: any[] = [];
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
 
     // ===== PART 1: Process automation rules (SE → ENTÃO) =====
-    const { data: rules, error: rulesError } = await adminClient
+    let rulesQuery = adminClient
       .from('task_automation_rules')
       .select('*')
       .eq('is_active', true);
+    
+    if (filterBoardId) {
+      rulesQuery = rulesQuery.eq('board_id', filterBoardId);
+    }
+
+    const { data: rules, error: rulesError } = await rulesQuery;
 
     if (rulesError) throw rulesError;
 
@@ -144,11 +157,17 @@ Deno.serve(async (req) => {
     }
 
     // ===== PART 2: Auto-detect overdue and approaching deadline tasks =====
-    const { data: allActiveTasks } = await adminClient
+    let activeTasksQuery = adminClient
       .from('tasks')
       .select('id, title, task_number, assigned_to, board_id, due_date, updated_at, status')
       .eq('is_archived', false)
       .not('assigned_to', 'is', null);
+    
+    if (filterBoardId) {
+      activeTasksQuery = activeTasksQuery.eq('board_id', filterBoardId);
+    }
+
+    const { data: allActiveTasks } = await activeTasksQuery;
 
     if (allActiveTasks) {
       const userTaskCounts: Record<string, { count: number; boards: Set<string> }> = {};

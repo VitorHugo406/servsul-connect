@@ -27,6 +27,16 @@ export interface BoardTask {
   };
 }
 
+const triggerAutomations = async (boardId: string) => {
+  try {
+    await supabase.functions.invoke('process-automations', {
+      body: { board_id: boardId },
+    });
+  } catch (err) {
+    console.error('Error triggering automations:', err);
+  }
+};
+
 export function useBoardTasks(boardId: string | null) {
   const { profile } = useAuth();
   const [tasks, setTasks] = useState<BoardTask[]>([]);
@@ -83,6 +93,7 @@ export function useBoardTasks(boardId: string | null) {
         .select()
         .single();
       if (error) throw error;
+      if (boardId) triggerAutomations(boardId);
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
@@ -93,6 +104,7 @@ export function useBoardTasks(boardId: string | null) {
     try {
       const { error } = await supabase.from('tasks').update(updates).eq('id', id);
       if (error) throw error;
+      if (boardId) triggerAutomations(boardId);
       return { error: null };
     } catch (error) {
       return { error };
@@ -119,6 +131,7 @@ export function useBoardTasks(boardId: string | null) {
       setTasks(prev => prev.map(t =>
         t.id === taskId ? { ...t, status: newStatus, position: newPosition } : t
       ));
+      if (boardId) triggerAutomations(boardId);
       return { error: null };
     } catch (error) {
       return { error };

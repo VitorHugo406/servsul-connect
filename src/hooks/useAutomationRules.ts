@@ -79,6 +79,8 @@ export function useAutomationRules(boardId: string | null) {
         .single();
       if (error) throw error;
       await fetchRules();
+      // Trigger automations immediately after creating a rule
+      supabase.functions.invoke('process-automations', { body: { board_id: boardId } }).catch(console.error);
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
