@@ -582,10 +582,22 @@ function ActivitiesTab({ memberIds, members }: { memberIds: string[]; members: a
     tasksByMember[memberId][dateKey].push(task);
   }
 
+  // Sort date groups ascending (oldest to newest)
+  const sortedTasksByMember: Record<string, [string, any[]][]> = {};
+  for (const [memberId, dateGroups] of Object.entries(tasksByMember)) {
+    sortedTasksByMember[memberId] = Object.entries(dateGroups).sort((a, b) => {
+      const parseDate = (dateStr: string) => {
+        const [day, month, year] = dateStr.split('/').map(Number);
+        return new Date(year, month - 1, day).getTime();
+      };
+      return parseDate(a[0]) - parseDate(b[0]);
+    });
+  }
+
   return (
     <ScrollArea className="h-[calc(100vh-400px)]">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {Object.entries(tasksByMember).map(([memberId, dateGroups]) => (
+        {Object.entries(sortedTasksByMember).map(([memberId, sortedDateGroups]) => (
           <Card key={memberId} className="flex flex-col">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-3">
@@ -598,13 +610,13 @@ function ActivitiesTab({ memberIds, members }: { memberIds: string[]; members: a
                 <div>
                   <CardTitle className="text-base">{getMemberName(memberId)}</CardTitle>
                   <p className="text-xs text-muted-foreground">
-                    {Object.values(dateGroups).flat().length} atividades
+                    {sortedDateGroups.reduce((sum, [, tasks]) => sum + tasks.length, 0)} atividades
                   </p>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4 flex-1">
-              {Object.entries(dateGroups).map(([date, dayTasks]) => (
+              {sortedDateGroups.map(([date, dayTasks]) => (
                 <div key={date}>
                   <div className="flex items-center gap-2 mb-2">
                     <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
@@ -635,7 +647,7 @@ function ActivitiesTab({ memberIds, members }: { memberIds: string[]; members: a
             </CardContent>
           </Card>
         ))}
-        {Object.keys(tasksByMember).length === 0 && (
+        {Object.keys(sortedTasksByMember).length === 0 && (
           <Card className="md:col-span-2 xl:col-span-3">
             <CardContent className="py-12 text-center text-muted-foreground">
               Nenhuma atividade encontrada para os colaboradores da equipe.

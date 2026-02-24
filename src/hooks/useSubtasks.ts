@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Subtask {
@@ -10,9 +10,23 @@ export interface Subtask {
   created_at: string;
 }
 
-export function useSubtasks(taskId: string | null) {
+export function useSubtasks(taskId: string | null, boardId?: string | null) {
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [loading, setLoading] = useState(true);
+  const boardIdRef = useRef(boardId);
+  boardIdRef.current = boardId;
+
+  const triggerAutomationsForBoard = useCallback(async () => {
+    const bid = boardIdRef.current;
+    if (!bid) return;
+    try {
+      await supabase.functions.invoke('process-automations', {
+        body: { board_id: bid },
+      });
+    } catch (err) {
+      console.error('Error triggering automations from subtask:', err);
+    }
+  }, []);
 
   const fetchSubtasks = useCallback(async () => {
     if (!taskId) { setSubtasks([]); setLoading(false); return; }
@@ -43,6 +57,7 @@ export function useSubtasks(taskId: string | null) {
       });
       if (error) throw error;
       await fetchSubtasks();
+      triggerAutomationsForBoard();
       return { error: null };
     } catch (error) {
       return { error };
@@ -57,6 +72,8 @@ export function useSubtasks(taskId: string | null) {
         .eq('id', id);
       if (error) throw error;
       setSubtasks(prev => prev.map(s => s.id === id ? { ...s, is_completed: completed } : s));
+      // Trigger automations immediately after checklist change
+      triggerAutomationsForBoard();
       return { error: null };
     } catch (error) {
       return { error };
@@ -68,6 +85,7 @@ export function useSubtasks(taskId: string | null) {
       const { error } = await supabase.from('task_subtasks').delete().eq('id', id);
       if (error) throw error;
       await fetchSubtasks();
+      triggerAutomationsForBoard();
       return { error: null };
     } catch (error) {
       return { error };

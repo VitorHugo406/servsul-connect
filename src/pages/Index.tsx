@@ -25,6 +25,7 @@ import { FeedbackEmailSection } from '@/components/sections/FeedbackEmailSection
 import { LogsSection } from '@/components/sections/LogsSection';
 import { StorageMonitoringSection } from '@/components/sections/StorageMonitoringSection';
 import { EventHistorySection } from '@/components/sections/EventHistorySection';
+import { CalendarSection } from '@/components/sections/CalendarSection';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
@@ -46,6 +47,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
    tasks: { title: 'Gestão de Tarefas', subtitle: 'Quadro de atividades' },
    'people-management': { title: 'Gestão de Pessoas', subtitle: 'Equipe e relatórios' },
    'feedback-email': { title: 'Disparo de Feedback', subtitle: 'E-mails de feedback mensal' },
+   'calendar': { title: 'Calendário', subtitle: 'Reuniões, lembretes e prazos' },
    'system-logs': { title: 'Logs do Sistema', subtitle: 'Auditoria e relatórios' },
    'storage': { title: 'Armazenamento', subtitle: 'Monitoramento do banco de dados' },
    'event-history': { title: 'Eventos Mensais', subtitle: 'Histórico de campanhas' },
@@ -113,6 +115,8 @@ const Index = () => {
           return <PeopleManagementSection />;
         case 'feedback-email':
           return <FeedbackEmailSection />;
+        case 'calendar':
+          return <CalendarSection />;
         case 'system-logs':
           return <LogsSection />;
         case 'storage':

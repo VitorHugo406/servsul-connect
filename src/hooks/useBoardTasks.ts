@@ -66,7 +66,16 @@ export function useBoardTasks(boardId: string | null) {
       .channel(`board-tasks-${boardId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `board_id=eq.${boardId}` }, () => fetchTasks())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    // Poll automations every 2 seconds
+    const pollInterval = setInterval(() => {
+      triggerAutomations(boardId);
+    }, 2000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(pollInterval);
+    };
   }, [fetchTasks, boardId]);
 
   const createTask = async (task: {

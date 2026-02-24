@@ -17,9 +17,10 @@ interface OperationModeProps {
   members: any[];
   onUpdateTask: (id: string, updates: any) => Promise<any>;
   onMoveTask: (id: string, status: string, position: number) => Promise<any>;
+  onRefetch: () => Promise<void>;
 }
 
-export function OperationModePanel({ open, onOpenChange, tasks, columns, members, onUpdateTask, onMoveTask }: OperationModeProps) {
+export function OperationModePanel({ open, onOpenChange, tasks, columns, members, onUpdateTask, onMoveTask, onRefetch }: OperationModeProps) {
   const [criteria, setCriteria] = useState({
     priority: true,
     deadline: true,
@@ -103,6 +104,8 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
             actions.push(`Coluna "${col.title}" reorganizada por prioridade/prazo`);
           }
         }
+        // Refetch tasks to reflect new order
+        await onRefetch();
       }
 
       // 4. Workload balancing
