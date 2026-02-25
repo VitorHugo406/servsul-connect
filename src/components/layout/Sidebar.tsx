@@ -41,7 +41,7 @@ const menuItems = [
    { id: 'important-announcements', icon: Sparkles, label: 'Comunicados Importantes', adminOnly: true },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
   { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
-  { id: 'calendar', icon: CalendarDays, label: 'Calendário', mainAdminOnly: true },
+  { id: 'calendar', icon: CalendarDays, label: 'Calendário' },
   { id: 'system-logs', icon: FileText, label: 'Logs do Sistema', mainAdminOnly: true },
   { id: 'event-history', icon: Sparkles, label: 'Eventos Mensais', adminOnly: true },
   { id: 'storage', icon: HardDrive, label: 'Armazenamento', mainAdminOnly: true },

@@ -239,6 +239,7 @@ export type Database = {
           end_date: string | null
           event_type: string
           id: string
+          meeting_link: string | null
           reminder_minutes: number | null
           start_date: string
           task_id: string | null
@@ -254,6 +255,7 @@ export type Database = {
           end_date?: string | null
           event_type?: string
           id?: string
+          meeting_link?: string | null
           reminder_minutes?: number | null
           start_date: string
           task_id?: string | null
@@ -269,6 +271,7 @@ export type Database = {
           end_date?: string | null
           event_type?: string
           id?: string
+          meeting_link?: string | null
           reminder_minutes?: number | null
           start_date?: string
           task_id?: string | null
@@ -391,6 +394,48 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      meeting_participants: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          profile_id: string
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          profile_id: string
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          profile_id?: string
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -916,6 +961,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          overload_threshold: number
           owner_id: string
           updated_at: string
         }
@@ -925,6 +971,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          overload_threshold?: number
           owner_id: string
           updated_at?: string
         }
@@ -934,6 +981,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          overload_threshold?: number
           owner_id?: string
           updated_at?: string
         }
