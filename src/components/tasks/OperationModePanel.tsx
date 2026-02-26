@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { BoardTask } from '@/hooks/useBoardTasks';
 import { TaskBoardColumn } from '@/hooks/useTaskBoards';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface OperationModeProps {
   open: boolean;
@@ -40,15 +40,32 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
     const actions: string[] = [];
 
     try {
-      // 1. Priority: set urgent cards to highest priority
+      const priorityOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+
+      // 1. Priority: reorder all columns by priority (urgent first)
       if (criteria.priority) {
-        const urgentLabelTasks = tasks.filter(t => t.priority === 'urgent');
-        if (urgentLabelTasks.length > 0) {
-          actions.push(`${urgentLabelTasks.length} card(s) urgente(s) identificado(s)`);
+        for (const col of columns) {
+          const colTasks = [...tasks.filter(t => t.status === col.id)];
+          colTasks.sort((a, b) => {
+            const pa = priorityOrder[a.priority] ?? 2;
+            const pb = priorityOrder[b.priority] ?? 2;
+            return pa - pb;
+          });
+
+          let reordered = false;
+          for (let i = 0; i < colTasks.length; i++) {
+            if (colTasks[i].position !== i) {
+              await supabase.from('tasks').update({ position: i }).eq('id', colTasks[i].id);
+              reordered = true;
+            }
+          }
+          if (reordered) {
+            actions.push(`Coluna "${col.title}" reorganizada por PRIORIDADE`);
+          }
         }
       }
 
-      // 2. Deadline: identify overdue and at-risk cards
+      // 2. Deadline: bump overdue to urgent, at-risk to high
       if (criteria.deadline) {
         const now = new Date();
         const overdue = tasks.filter(t => t.due_date && new Date(t.due_date) < now);
@@ -59,53 +76,80 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
           return hoursLeft > 0 && hoursLeft <= 48;
         });
 
-        // Bump priority on overdue cards
         for (const task of overdue) {
           if (task.priority !== 'urgent') {
-            await onUpdateTask(task.id, { priority: 'urgent' });
-            actions.push(`Card #${task.task_number} "${task.title}" → prioridade URGENTE (atrasado)`);
+            await supabase.from('tasks').update({ priority: 'urgent' }).eq('id', task.id);
+            actions.push(`Card #${task.task_number} "${task.title}" → URGENTE (atrasado)`);
           }
         }
 
-        // Bump at-risk to high
         for (const task of atRisk) {
           if (task.priority !== 'urgent' && task.priority !== 'high') {
-            await onUpdateTask(task.id, { priority: 'high' });
-            actions.push(`Card #${task.task_number} "${task.title}" → prioridade ALTA (prazo próximo)`);
+            await supabase.from('tasks').update({ priority: 'high' }).eq('id', task.id);
+            actions.push(`Card #${task.task_number} "${task.title}" → ALTA (prazo próximo)`);
           }
+        }
+
+        // After changing priorities, re-sort columns by priority + due date
+        for (const col of columns) {
+          // Re-fetch latest data for this column
+          const { data: freshTasks } = await supabase
+            .from('tasks')
+            .select('id, position, priority, due_date, task_number, title')
+            .eq('board_id', col.board_id)
+            .eq('status', col.id)
+            .eq('is_archived', false)
+            .order('position', { ascending: true });
+
+          if (!freshTasks || freshTasks.length === 0) continue;
+
+          const sorted = [...freshTasks].sort((a, b) => {
+            const pa = priorityOrder[a.priority] ?? 2;
+            const pb = priorityOrder[b.priority] ?? 2;
+            if (pa !== pb) return pa - pb;
+            if (a.due_date && b.due_date) return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+            if (a.due_date) return -1;
+            if (b.due_date) return 1;
+            return 0;
+          });
+
+          for (let i = 0; i < sorted.length; i++) {
+            if (sorted[i].position !== i) {
+              await supabase.from('tasks').update({ position: i }).eq('id', sorted[i].id);
+            }
+          }
+          actions.push(`Coluna "${col.title}" reordenada por PRAZO`);
         }
       }
 
-      // 3. Urgency: reorganize positions within columns by priority
-      if (criteria.urgency) {
-        const priorityOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+      // 3. Urgency: sort by priority then due date within each column
+      if (criteria.urgency && !criteria.deadline && !criteria.priority) {
+        // Only if other criteria didn't already sort
         for (const col of columns) {
-          const colTasks = tasks
-            .filter(t => t.status === col.id)
-            .sort((a, b) => {
-              const pa = priorityOrder[a.priority] ?? 2;
-              const pb = priorityOrder[b.priority] ?? 2;
-              if (pa !== pb) return pa - pb;
-              // Secondary sort by due date
-              if (a.due_date && b.due_date) return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-              if (a.due_date) return -1;
-              if (b.due_date) return 1;
-              return 0;
-            });
+          const colTasks = [...tasks.filter(t => t.status === col.id)];
+          colTasks.sort((a, b) => {
+            const pa = priorityOrder[a.priority] ?? 2;
+            const pb = priorityOrder[b.priority] ?? 2;
+            if (pa !== pb) return pa - pb;
+            if (a.due_date && b.due_date) return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+            if (a.due_date) return -1;
+            if (b.due_date) return 1;
+            return 0;
+          });
 
-          // Check if reorder is needed
-          const needsReorder = colTasks.some((t, i) => t.position !== i);
-          if (needsReorder && colTasks.length > 0) {
-            for (let i = 0; i < colTasks.length; i++) {
-              if (colTasks[i].position !== i) {
-                await onUpdateTask(colTasks[i].id, { position: i });
-              }
+          let reordered = false;
+          for (let i = 0; i < colTasks.length; i++) {
+            if (colTasks[i].position !== i) {
+              await supabase.from('tasks').update({ position: i }).eq('id', colTasks[i].id);
+              reordered = true;
             }
-            actions.push(`Coluna "${col.title}" reorganizada por prioridade/prazo`);
+          }
+          if (reordered) {
+            actions.push(`Coluna "${col.title}" reorganizada por URGÊNCIA`);
           }
         }
-        // Refetch tasks to reflect new order
-        await onRefetch();
+      } else if (criteria.urgency) {
+        actions.push('✅ Urgência já aplicada via critérios de prioridade/prazo');
       }
 
       // 4. Workload balancing
@@ -134,9 +178,9 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
 
             for (let i = 0; i < overTasks.length && i < underloaded.length; i++) {
               const [targetProfileId] = underloaded[i];
-              await onUpdateTask(overTasks[i].id, { assigned_to: targetProfileId });
-              const overMember = members.find(m => m.profile_id === overProfileId);
-              const underMember = members.find(m => m.profile_id === targetProfileId);
+              await supabase.from('tasks').update({ assigned_to: targetProfileId }).eq('id', overTasks[i].id);
+              const overMember = members.find((m: any) => m.profile_id === overProfileId);
+              const underMember = members.find((m: any) => m.profile_id === targetProfileId);
               actions.push(
                 `Card #${overTasks[i].task_number} redistribuído: ${overMember?.profile?.display_name || 'Sobrecarregado'} → ${underMember?.profile?.display_name || 'Disponível'}`
               );
@@ -144,11 +188,14 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
           }
         } else if (overloaded.length > 0) {
           for (const [pid] of overloaded) {
-            const m = members.find(m => m.profile_id === pid);
+            const m = members.find((m: any) => m.profile_id === pid);
             actions.push(`⚠️ ${m?.profile?.display_name || 'Membro'} está sobrecarregado (${memberTaskCounts[pid]} cards)`);
           }
         }
       }
+
+      // Always refetch to reflect all changes
+      await onRefetch();
 
       if (actions.length === 0) {
         actions.push('✅ Nenhuma ação necessária — o board já está otimizado!');
@@ -186,7 +233,7 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
                   <p className="text-sm font-medium flex items-center gap-1.5">
                     <AlertTriangle className="h-3.5 w-3.5 text-red-500" /> Por Prioridade
                   </p>
-                  <p className="text-xs text-muted-foreground">Priorizar cards urgentes e reorganizar filas</p>
+                  <p className="text-xs text-muted-foreground">Reorganizar cards dentro de cada coluna por prioridade (urgente → baixo)</p>
                 </div>
               </label>
 
@@ -196,7 +243,7 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
                   <p className="text-sm font-medium flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5 text-orange-500" /> Por Prazo
                   </p>
-                  <p className="text-xs text-muted-foreground">Elevar prioridade de cards atrasados ou com prazo próximo</p>
+                  <p className="text-xs text-muted-foreground">Elevar prioridade de cards atrasados/próximos e reordenar por data</p>
                 </div>
               </label>
 
@@ -206,7 +253,7 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
                   <p className="text-sm font-medium flex items-center gap-1.5">
                     <Zap className="h-3.5 w-3.5 text-yellow-500" /> Por Urgência
                   </p>
-                  <p className="text-xs text-muted-foreground">Reorganizar posição dos cards por prioridade e prazo</p>
+                  <p className="text-xs text-muted-foreground">Combinar prioridade + prazo para ordenação final</p>
                 </div>
               </label>
 
