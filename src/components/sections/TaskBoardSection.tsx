@@ -313,7 +313,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
     setDescription(task.description || '');
     setPriority(task.priority);
     setAssignedTo(task.assigned_to || 'none');
-    setDueDate(task.due_date ? task.due_date.split('T')[0] : '');
+    setDueDate(task.due_date ? (() => { const d = new Date(task.due_date); return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}T${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`; })() : '');
     const cover = getCoverDisplay(task.cover_image);
     if (cover.type === 'image') {
       setCoverImage('custom');
@@ -708,6 +708,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                               <div className={cn('flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium', dueInfo.color)}>
                                 <DI className="h-3 w-3" />
                                 {task.due_date && new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                {task.due_date && (() => { const d = new Date(task.due_date); return d.getHours() !== 0 || d.getMinutes() !== 0 ? ` ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''; })()}
                               </div>
                             );
                           })()}
@@ -949,6 +950,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                                   <div className={cn('flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium', dueInfo.color)}>
                                     <DI className="h-3 w-3" />
                                     {task.due_date && new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                    {task.due_date && (() => { const d = new Date(task.due_date); return d.getHours() !== 0 || d.getMinutes() !== 0 ? ` ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''; })()}
                                   </div>
                                 );
                               })()}
@@ -1146,9 +1148,21 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Data de Entrega</Label>
-              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Data de Entrega</Label>
+                <Input type="date" value={dueDate.split('T')[0] || dueDate} onChange={(e) => {
+                  const time = dueDate.includes('T') ? dueDate.split('T')[1] : '';
+                  setDueDate(time ? `${e.target.value}T${time}` : e.target.value);
+                }} />
+              </div>
+              <div className="space-y-2">
+                <Label>Hora de Entrega</Label>
+                <Input type="time" value={dueDate.includes('T') ? dueDate.split('T')[1] : ''} onChange={(e) => {
+                  const date = dueDate.split('T')[0] || dueDate;
+                  setDueDate(date ? `${date}T${e.target.value}` : '');
+                }} />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Capa do Card</Label>

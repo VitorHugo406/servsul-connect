@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usePresence } from '@/hooks/usePresence';
+import { useMeetingStatus } from '@/hooks/useMeetingStatus';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useBirthdayCelebration } from '@/hooks/useBirthdayCelebration';
@@ -65,6 +66,9 @@ const Index = () => {
   
   // Initialize presence tracking
   usePresence();
+  
+  // Auto-set "Em Reunião" status during scheduled meetings
+  useMeetingStatus();
   
   // Ensure we're ready to render after hydration
   useEffect(() => {
