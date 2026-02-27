@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus, MoreVertical, Calendar, Trash2, Edit, Loader2,
-  GripVertical, ListTodo, X, AlertTriangle,
+  GripVertical, ListTodo, X, AlertTriangle, Search,
   Clock4, Clock, Users, Settings, ArrowLeft, MoveRight,
   PlusCircle, FileDown, Zap, Upload, Tag, Copy, Repeat,
   Archive, ArchiveRestore, Pencil, Activity
@@ -34,7 +34,7 @@ import { OperationModePanel } from '@/components/tasks/OperationModePanel';
 import { useSubtaskCounts } from '@/hooks/useSubtasks';
 import { useCardDuplications } from '@/hooks/useCardDuplications';
 import {
-  PRIORITIES, BACKGROUND_IMAGES, CARD_COVERS,
+  PRIORITIES, BACKGROUND_IMAGES, BACKGROUND_GROUPS, CARD_COVERS,
   getBoardBg, getBoardBgStyle, getInitials, getCoverDisplay,
 } from '@/components/tasks/taskConstants';
 import { cn } from '@/lib/utils';
@@ -236,6 +236,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const [showAutomationRules, setShowAutomationRules] = useState(false);
   const [automationTaskId, setAutomationTaskId] = useState<string | undefined>(undefined);
   const [showOperationMode, setShowOperationMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [bgCategory, setBgCategory] = useState('color');
 
   // Form state
   const [title, setTitle] = useState('');
@@ -583,6 +586,52 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
 
   return (
     <div className={cn('flex flex-col h-full', boardBg)} style={boardBgStyle}>
+      {/* Search overlay */}
+      {showSearch && (
+        <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col">
+          <div className="flex items-center gap-2 p-3 border-b border-border">
+            <Button variant="ghost" size="icon" onClick={() => { setShowSearch(false); setSearchQuery(''); }}><ArrowLeft className="h-5 w-5" /></Button>
+            <Input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Pesquisar cards ativos e arquivados..."
+              className="flex-1"
+              autoFocus
+            />
+          </div>
+          <ScrollArea className="flex-1 p-3">
+            {(() => {
+              const q = searchQuery.toLowerCase().trim();
+              if (!q) return <p className="text-sm text-muted-foreground text-center py-8">Digite para pesquisar...</p>;
+              const allSearchTasks = [...tasks, ...archivedTasks].filter(t =>
+                t.title.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q) || `#${t.task_number}`.includes(q)
+              );
+              if (allSearchTasks.length === 0) return <p className="text-sm text-muted-foreground text-center py-8">Nenhum resultado</p>;
+              return (
+                <div className="space-y-1">
+                  {allSearchTasks.map(t => {
+                    const col = columns.find(c => c.id === t.status);
+                    return (
+                      <button key={t.id} onClick={() => { setSelectedTask(t); setShowTaskDetail(true); setShowSearch(false); setSearchQuery(''); }}
+                        className="w-full text-left p-3 rounded-lg hover:bg-muted flex items-center gap-3 border border-border">
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: col?.color || '#888' }} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">#{t.task_number} {t.title}</p>
+                          <p className="text-[10px] text-muted-foreground">{col?.title || 'Sem coluna'} {t.is_archived ? '• Arquivado' : ''}</p>
+                        </div>
+                        <Badge className={cn('text-[9px] text-white flex-shrink-0', PRIORITIES.find(p => p.id === t.priority)?.color)}>
+                          {PRIORITIES.find(p => p.id === t.priority)?.label}
+                        </Badge>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </ScrollArea>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-2 p-3 border-b border-border bg-background/80 backdrop-blur-sm">
         <Button variant="ghost" size="icon" onClick={onBack}><ArrowLeft className="h-5 w-5" /></Button>
@@ -618,6 +667,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         </TooltipProvider>
 
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={() => setShowSearch(true)} title="Pesquisar">
+            <Search className="h-4 w-4" />
+          </Button>
           {!isMobile && (
             <>
               <Button variant="ghost" size="icon" onClick={() => { setAutomationTaskId(undefined); setShowAutomationRules(true); }} title="Automações do Board">
@@ -1401,16 +1453,25 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
               </div>
             )}
             <div>
-              <Label className="mb-2 block">Imagem de Fundo</Label>
+              <Label className="mb-2 block">Estilo de Fundo</Label>
+              <div className="flex gap-2 mb-3">
+                {BACKGROUND_GROUPS.map(g => (
+                  <Button key={g.id} variant={bgCategory === g.id ? 'default' : 'outline'} size="sm" onClick={() => setBgCategory(g.id)}>
+                    {g.name}
+                  </Button>
+                ))}
+              </div>
               <div className="grid grid-cols-4 gap-2">
-                {BACKGROUND_IMAGES.map(bg => (
+                {BACKGROUND_GROUPS.find(g => g.id === bgCategory)?.items.map(bg => (
                   <button
                     key={bg.id}
                     onClick={() => handleChangeBg(bg.id)}
                     className={cn(
-                      'h-16 rounded-lg border-2 transition-all', bg.preview,
+                      'h-16 rounded-lg border-2 transition-all overflow-hidden',
+                      bg.preview || '',
                       board.background_image === bg.id ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/50'
                     )}
+                    style={bg.id.startsWith('http') ? { backgroundImage: `url(${bg.id})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
                   >
                     <span className="text-[9px] text-foreground/70">{bg.name}</span>
                   </button>
