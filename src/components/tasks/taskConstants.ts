@@ -110,6 +110,18 @@ export function getBoardBgStyle(bg: string): React.CSSProperties {
   return {};
 }
 
+/**
+ * Determines if a board background is "dark" so text should be light.
+ * Checks for dark gradients, dark images (corporate/abstract tend to be dark), etc.
+ */
+export function isBoardBgDark(bg: string | null): boolean {
+  if (!bg) return false;
+  if (bg === 'gradient-dark') return true;
+  // Image backgrounds get an overlay, so they need light text
+  if (bg.startsWith('http')) return true;
+  return false;
+}
+
 export function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
 }

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Bell, LogOut, Mail, Building2, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bell, LogOut, Mail, Building2, Calendar, Moon, Sun } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,27 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
   const { sectors } = useSectors();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark');
+      setIsDark(true);
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    const next = !isDark;
+    setIsDark(next);
+    if (next) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   const getInitials = (name: string) => {
     return name
@@ -63,7 +84,14 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              className="p-2 rounded-full hover:bg-accent"
+              onClick={toggleDarkMode}
+              title={isDark ? 'Modo Claro' : 'Modo Noturno'}
+            >
+              {isDark ? <Sun className="h-5 w-5 text-muted-foreground" /> : <Moon className="h-5 w-5 text-muted-foreground" />}
+            </button>
             <button 
               className="relative p-2 rounded-full hover:bg-accent"
               onClick={() => setShowNotifications(true)}
@@ -88,7 +116,7 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
               </Avatar>
             </button>
           </div>
-        </div>
+          </div>
       </header>
 
       {/* Profile Sheet */}
