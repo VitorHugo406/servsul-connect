@@ -349,10 +349,10 @@ export function CalendarSection() {
 
         <ScrollArea className="flex-1">
           {isMeeting ? (
-            /* =================== GOOGLE CALENDAR STYLE MEETING FORM =================== */
-            <div className="max-w-4xl mx-auto p-4 md:p-6">
-              {/* Title */}
-              <div className="mb-6">
+            /* =================== MEETING FORM - FULL WIDTH LAYOUT =================== */
+            <div className="h-full">
+              {/* Title - full width */}
+              <div className="px-4 md:px-6 pt-4 md:pt-6 pb-2">
                 <Input
                   value={title}
                   onChange={e => { setTitle(e.target.value); setHasUnsavedChanges(true); }}
@@ -361,9 +361,9 @@ export function CalendarSection() {
                 />
               </div>
 
-              <div className={cn('gap-6', isMobile ? 'space-y-6' : 'flex')}>
+              <div className={cn('gap-0', isMobile ? 'flex flex-col' : 'flex h-[calc(100vh-180px)]')}>
                 {/* Left side - Form */}
-                <div className={cn('space-y-5', isMobile ? 'w-full' : 'w-1/2')}>
+                <div className={cn('space-y-5 overflow-y-auto p-4 md:p-6', isMobile ? 'w-full' : 'w-[420px] flex-shrink-0 border-r border-border')}>
                   {/* Date and time */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -469,95 +469,97 @@ export function CalendarSection() {
                   </div>
                 </div>
 
-                {/* Right side - Availability Grid (Google Calendar style) */}
-                {selectedParticipants.length > 0 && (
-                  <div className={cn('border border-border rounded-lg overflow-hidden', isMobile ? 'w-full' : 'w-1/2')}>
-                    <div className="bg-muted/30 px-4 py-3 border-b border-border">
-                      <h3 className="text-sm font-semibold">Selecione um horário</h3>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Horários de 60 min</p>
+                {/* Right side - Availability Grid (always visible) */}
+                <div className={cn('flex-1 overflow-hidden flex flex-col', isMobile ? 'border-t border-border' : '')}>
+                  <div className="bg-muted/30 px-4 py-3 border-b border-border">
+                    <h3 className="text-sm font-semibold">Disponibilidade de Horários</h3>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {selectedParticipants.length > 0 
+                        ? `${selectedParticipants.length} participante(s) selecionado(s)` 
+                        : 'Selecione participantes para verificar disponibilidade'}
+                    </p>
+                  </div>
+                  
+                  <div className="flex-1 overflow-auto p-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setMeetingScheduleDate(prev => addDays(prev, -7))}>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-xs font-medium">
+                        {format(scheduleWeekStart, 'dd MMM', { locale: ptBR })} - {format(addDays(scheduleWeekStart, 6), 'dd MMM', { locale: ptBR })}
+                      </span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setMeetingScheduleDate(prev => addDays(prev, 7))}>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
                     </div>
-                    
-                    {/* Mini calendar + week grid */}
-                    <div className="p-3">
-                      <div className="flex items-center justify-between mb-3">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setMeetingScheduleDate(prev => addDays(prev, -7))}>
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-xs font-medium">
-                          {format(scheduleWeekStart, 'dd MMM', { locale: ptBR })} - {format(addDays(scheduleWeekStart, 6), 'dd MMM', { locale: ptBR })}
-                        </span>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setMeetingScheduleDate(prev => addDays(prev, 7))}>
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
 
-                      {/* Day headers */}
-                      <div className="overflow-x-auto">
-                        <div className="grid gap-1" style={{ gridTemplateColumns: `50px repeat(${scheduleBusinessDays.length}, minmax(70px, 1fr))` }}>
-                          <div />
-                          {scheduleBusinessDays.map(day => (
-                            <div key={day.toISOString()} className="text-center">
-                              <p className="text-[9px] text-muted-foreground uppercase">{format(day, 'EEE', { locale: ptBR })}</p>
-                              <p className={cn(
-                                'text-sm font-bold mx-auto w-7 h-7 rounded-full flex items-center justify-center',
-                                isToday(day) ? 'bg-primary text-primary-foreground' : ''
-                              )}>
-                                {format(day, 'd')}
-                              </p>
-                            </div>
-                          ))}
+                    {/* Day headers */}
+                    <div className="overflow-x-auto">
+                      <div className="grid gap-1" style={{ gridTemplateColumns: `50px repeat(${scheduleBusinessDays.length}, minmax(70px, 1fr))` }}>
+                        <div />
+                        {scheduleBusinessDays.map(day => (
+                          <div key={day.toISOString()} className="text-center">
+                            <p className="text-[9px] text-muted-foreground uppercase">{format(day, 'EEE', { locale: ptBR })}</p>
+                            <p className={cn(
+                              'text-sm font-bold mx-auto w-7 h-7 rounded-full flex items-center justify-center',
+                              isToday(day) ? 'bg-primary text-primary-foreground' : ''
+                            )}>
+                              {format(day, 'd')}
+                            </p>
+                          </div>
+                        ))}
 
-                          {/* Time slots */}
-                          {WORK_HOURS.map(hour => {
-                            const timeStr = `${hour.toString().padStart(2, '0')}:00`;
-                            return (
-                              <React.Fragment key={hour}>
-                                <div className="text-[10px] text-muted-foreground py-1 text-right pr-1">{timeStr}</div>
-                                {scheduleBusinessDays.map(day => {
-                                  const dateStr = format(day, 'yyyy-MM-dd');
-                                  // Check all selected participants + self
-                                  const myBusy = isUserBusyAtHour(user?.id, profile?.id, dateStr, hour);
-                                  const anyParticipantBusy = selectedParticipants.some(pid => {
-                                    const u = allUsers.find(u => u.id === pid);
-                                    return isUserBusyAtHour(u?.user_id, pid, dateStr, hour);
-                                  });
-                                  const isBusy = myBusy || anyParticipantBusy;
-                                  const isSelected = startDate === dateStr && startTime === timeStr;
+                        {/* Time slots */}
+                        {WORK_HOURS.map(hour => {
+                          const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+                          return (
+                            <React.Fragment key={hour}>
+                              <div className="text-[10px] text-muted-foreground py-1 text-right pr-1">{timeStr}</div>
+                              {scheduleBusinessDays.map(day => {
+                                const dateStr = format(day, 'yyyy-MM-dd');
+                                const myBusy = isUserBusyAtHour(user?.id, profile?.id, dateStr, hour);
+                                const anyParticipantBusy = selectedParticipants.length > 0 && selectedParticipants.some(pid => {
+                                  const u = allUsers.find(u => u.id === pid);
+                                  return isUserBusyAtHour(u?.user_id, pid, dateStr, hour);
+                                });
+                                const isBusy = myBusy || anyParticipantBusy;
+                                const isSelected = startDate === dateStr && startTime === timeStr;
 
-                                  return (
-                                    <div key={day.toISOString()} className="flex justify-center py-0.5">
-                                      {isBusy ? (
-                                        <span className="text-[10px] text-muted-foreground">—</span>
-                                      ) : (
-                                        <button
-                                          onClick={() => {
-                                            setStartDate(dateStr);
-                                            setStartTime(timeStr);
-                                            setEndDate(dateStr);
-                                            setEndTime(`${(hour + 1).toString().padStart(2, '0')}:00`);
-                                            setHasUnsavedChanges(true);
-                                          }}
-                                          className={cn(
-                                            'text-[10px] font-medium px-2 py-1 rounded-md transition-all w-full',
-                                            isSelected
-                                              ? 'bg-primary text-primary-foreground'
-                                              : 'bg-primary/10 text-primary hover:bg-primary/20'
-                                          )}
-                                        >
-                                          {timeStr}
-                                        </button>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </React.Fragment>
-                            );
-                          })}
-                        </div>
+                                return (
+                                  <div key={day.toISOString()} className="flex justify-center py-0.5">
+                                    {isBusy ? (
+                                      <div className="w-full text-center text-[10px] text-destructive/60 bg-destructive/5 rounded py-1 font-medium">
+                                        Ocupado
+                                      </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => {
+                                          setStartDate(dateStr);
+                                          setStartTime(timeStr);
+                                          setEndDate(dateStr);
+                                          setEndTime(`${(hour + 1).toString().padStart(2, '0')}:00`);
+                                          setHasUnsavedChanges(true);
+                                        }}
+                                        className={cn(
+                                          'text-[10px] font-medium px-2 py-1 rounded-md transition-all w-full',
+                                          isSelected
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'bg-primary/10 text-primary hover:bg-primary/20'
+                                        )}
+                                      >
+                                        {timeStr}
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </React.Fragment>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           ) : (

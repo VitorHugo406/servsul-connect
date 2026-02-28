@@ -35,7 +35,7 @@ import { useSubtaskCounts } from '@/hooks/useSubtasks';
 import { useCardDuplications } from '@/hooks/useCardDuplications';
 import {
   PRIORITIES, BACKGROUND_IMAGES, BACKGROUND_GROUPS, CARD_COVERS,
-  getBoardBg, getBoardBgStyle, getInitials, getCoverDisplay,
+  getBoardBg, getBoardBgStyle, getInitials, getCoverDisplay, isBoardBgDark,
 } from '@/components/tasks/taskConstants';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -583,17 +583,20 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
 
   const boardBg = getBoardBg(board.background_image);
   const boardBgStyle = getBoardBgStyle(board.background_image);
+  const isDarkBg = isBoardBgDark(board.background_image);
 
   return (
-    <div className={cn('flex flex-col h-full', boardBg)} style={boardBgStyle}>
+    <div className={cn('flex flex-col h-full relative', boardBg)} style={boardBgStyle}>
+      {/* Dark overlay for image backgrounds to improve readability */}
+      {isDarkBg && <div className="absolute inset-0 bg-black/40 pointer-events-none z-0" />}
       {/* Search is now inline in header */}
 
       {/* Header */}
-      <div className="flex items-center gap-2 p-3 border-b border-border bg-background/80 backdrop-blur-sm">
-        <Button variant="ghost" size="icon" onClick={onBack}><ArrowLeft className="h-5 w-5" /></Button>
+      <div className={cn("flex items-center gap-2 p-3 border-b border-border backdrop-blur-sm relative z-10", isDarkBg ? "bg-black/50 text-white" : "bg-background/80")}>
+        <Button variant="ghost" size="icon" onClick={onBack} className={isDarkBg ? "text-white hover:bg-white/20" : ""}><ArrowLeft className="h-5 w-5" /></Button>
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-foreground truncate">{board.name}</h2>
-          <p className="text-xs text-muted-foreground">{tasks.length} tarefas</p>
+          <h2 className={cn("font-semibold truncate", isDarkBg ? "text-white" : "text-foreground")}>{board.name}</h2>
+          <p className={cn("text-xs", isDarkBg ? "text-white/70" : "text-muted-foreground")}>{tasks.length} tarefas</p>
         </div>
 
         {/* Member avatars */}
@@ -705,7 +708,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
       </div>
 
       {/* Board columns with horizontal scroll */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative z-10">
           <div className={cn(isMobile ? 'overflow-y-auto' : 'overflow-x-auto overflow-y-hidden h-full p-4 task-board-scroll')}>
           <TooltipProvider delayDuration={200}>
           {isMobile ? (

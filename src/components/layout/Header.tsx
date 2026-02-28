@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Search, Bell, User } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Search, Bell, User, Moon, Sun } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,6 +46,27 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showSectionSearch, setShowSectionSearch] = useState(false);
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark');
+      setIsDark(true);
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    const next = !isDark;
+    setIsDark(next);
+    if (next) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   const filteredSections = useMemo(() => {
     if (!searchQuery) return [];
@@ -164,6 +185,11 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
               </PopoverContent>
             </Popover>
           )}
+
+          {/* Dark Mode Toggle */}
+          <Button variant="ghost" size="icon" onClick={toggleDarkMode} title={isDark ? 'Modo Claro' : 'Modo Noturno'}>
+            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
 
           {/* Profile button */}
           <Button variant="ghost" size="icon" onClick={() => setShowProfile(true)}>
