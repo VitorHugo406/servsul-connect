@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { UsersRound, Mail, FileText, HardDrive, CalendarDays } from 'lucide-react';
+import { UsersRound, Mail, FileText, HardDrive, CalendarDays, Moon, Sun } from 'lucide-react';
 import logoServsul from '@/assets/logo-servsul.png';
 import { 
   MessageSquare, 
@@ -60,6 +60,29 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { profile, signOut, isAdmin, canAccess } = useAuth();
   const { counts } = useNotifications();
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+
+  const isMainAdmin = isAdmin && profile?.email === 'adminservchat@servsul.com.br';
+
+  const toggleDarkMode = () => {
+    const next = !isDark;
+    setIsDark(next);
+    if (next) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark');
+      setIsDark(true);
+    }
+  }, []);
 
   const getInitials = (name: string) => {
     return name
@@ -186,6 +209,30 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
           );
         })}
       </nav>
+
+      {/* Dark Mode Toggle - Main Admin Only */}
+      {isMainAdmin && (
+        <div className="px-3 pb-1">
+          <motion.button
+            onClick={toggleDarkMode}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className={cn(
+              'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-all duration-200',
+              'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+            )}
+          >
+            {isDark ? <Sun className="h-5 w-5 flex-shrink-0" /> : <Moon className="h-5 w-5 flex-shrink-0" />}
+            <motion.span
+              initial={false}
+              animate={{ opacity: isCollapsed ? 0 : 1, width: isCollapsed ? 0 : 'auto' }}
+              className="overflow-hidden whitespace-nowrap font-medium"
+            >
+              {isDark ? 'Modo Claro' : 'Modo Noturno'}
+            </motion.span>
+          </motion.button>
+        </div>
+      )}
 
       {/* Seasonal Effects Button */}
       <div className="px-3 pb-1">

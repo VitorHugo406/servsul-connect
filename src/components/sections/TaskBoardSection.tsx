@@ -586,51 +586,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
 
   return (
     <div className={cn('flex flex-col h-full', boardBg)} style={boardBgStyle}>
-      {/* Search overlay */}
-      {showSearch && (
-        <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col">
-          <div className="flex items-center gap-2 p-3 border-b border-border">
-            <Button variant="ghost" size="icon" onClick={() => { setShowSearch(false); setSearchQuery(''); }}><ArrowLeft className="h-5 w-5" /></Button>
-            <Input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Pesquisar cards ativos e arquivados..."
-              className="flex-1"
-              autoFocus
-            />
-          </div>
-          <ScrollArea className="flex-1 p-3">
-            {(() => {
-              const q = searchQuery.toLowerCase().trim();
-              if (!q) return <p className="text-sm text-muted-foreground text-center py-8">Digite para pesquisar...</p>;
-              const allSearchTasks = [...tasks, ...archivedTasks].filter(t =>
-                t.title.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q) || `#${t.task_number}`.includes(q)
-              );
-              if (allSearchTasks.length === 0) return <p className="text-sm text-muted-foreground text-center py-8">Nenhum resultado</p>;
-              return (
-                <div className="space-y-1">
-                  {allSearchTasks.map(t => {
-                    const col = columns.find(c => c.id === t.status);
-                    return (
-                      <button key={t.id} onClick={() => { setSelectedTask(t); setShowTaskDetail(true); setShowSearch(false); setSearchQuery(''); }}
-                        className="w-full text-left p-3 rounded-lg hover:bg-muted flex items-center gap-3 border border-border">
-                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: col?.color || '#888' }} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">#{t.task_number} {t.title}</p>
-                          <p className="text-[10px] text-muted-foreground">{col?.title || 'Sem coluna'} {t.is_archived ? '• Arquivado' : ''}</p>
-                        </div>
-                        <Badge className={cn('text-[9px] text-white flex-shrink-0', PRIORITIES.find(p => p.id === t.priority)?.color)}>
-                          {PRIORITIES.find(p => p.id === t.priority)?.label}
-                        </Badge>
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-          </ScrollArea>
-        </div>
-      )}
+      {/* Search is now inline in header */}
 
       {/* Header */}
       <div className="flex items-center gap-2 p-3 border-b border-border bg-background/80 backdrop-blur-sm">
@@ -667,9 +623,55 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         </TooltipProvider>
 
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setShowSearch(true)} title="Pesquisar">
-            <Search className="h-4 w-4" />
-          </Button>
+          {/* Inline search - matches Header tab search style */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar cards..."
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setShowSearch(true); }}
+              onFocus={() => { if (searchQuery) setShowSearch(true); }}
+              onBlur={() => setTimeout(() => setShowSearch(false), 200)}
+              className={cn("pl-8 h-8 text-xs bg-muted/50 focus-visible:ring-primary", isMobile ? "w-36" : "w-52")}
+            />
+            {/* Dropdown results */}
+            {showSearch && searchQuery.trim() && (() => {
+              const q = searchQuery.toLowerCase().trim();
+              const allSearchTasks = [...tasks, ...archivedTasks].filter(t =>
+                t.title.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q) || `#${t.task_number}`.includes(q)
+              );
+              return (
+                <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-lg border border-border bg-card shadow-lg overflow-hidden max-h-72 overflow-y-auto">
+                  {allSearchTasks.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">Nenhum card encontrado</div>
+                  ) : (
+                    allSearchTasks.slice(0, 10).map(t => {
+                      const col = columns.find(c => c.id === t.status);
+                      return (
+                        <button
+                          key={t.id}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setSelectedTask(t); setShowTaskDetail(true); setShowSearch(false); setSearchQuery('');
+                          }}
+                          className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors border-b border-border last:border-b-0"
+                        >
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: col?.color || 'hsl(var(--muted-foreground))' }} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">#{t.task_number} {t.title}</p>
+                            <p className="text-xs text-muted-foreground">{col?.title || 'Sem coluna'}{t.is_archived ? ' • Arquivado' : ''}</p>
+                          </div>
+                          <Badge className={cn('text-[9px] text-white flex-shrink-0 mt-0.5', PRIORITIES.find(p => p.id === t.priority)?.color)}>
+                            {PRIORITIES.find(p => p.id === t.priority)?.label}
+                          </Badge>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              );
+            })()}
+          </div>
           {!isMobile && (
             <>
               <Button variant="ghost" size="icon" onClick={() => { setAutomationTaskId(undefined); setShowAutomationRules(true); }} title="Automações do Board">
