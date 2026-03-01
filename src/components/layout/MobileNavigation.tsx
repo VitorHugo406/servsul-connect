@@ -133,12 +133,12 @@ export function MobileNavigation({ activeSection, onSectionChange }: MobileNavig
 
       {/* More Menu Sheet */}
       <Sheet open={showMoreMenu} onOpenChange={setShowMoreMenu}>
-        <SheetContent side="bottom" className="rounded-t-2xl">
+        <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh]">
           <SheetHeader className="pb-4">
             <SheetTitle>Mais opções</SheetTitle>
           </SheetHeader>
-           <ScrollArea className="max-h-[70vh]">
-             <div className="space-y-2 pb-6 pr-4">
+           <ScrollArea className="max-h-[60vh]">
+              <div className="space-y-2 pb-6 pr-4">
             {visibleMoreItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeSection === item.id;

@@ -229,6 +229,8 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const [showDuplication, setShowDuplication] = useState<BoardTask | null>(null);
   const [dupTargetColumn, setDupTargetColumn] = useState('');
   const [dupFrequency, setDupFrequency] = useState<string>('daily');
+  const [dupWeekdays, setDupWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [dupMonthDay, setDupMonthDay] = useState<number>(1);
   const [showArchive, setShowArchive] = useState(false);
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [editColumnTitle, setEditColumnTitle] = useState('');
@@ -638,7 +640,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
               className={cn("pl-8 h-8 text-xs bg-muted/50 focus-visible:ring-primary", isMobile ? "w-36" : "w-52")}
             />
             {/* Dropdown results */}
-            {showSearch && searchQuery.trim() && (() => {
+            {showSearch && searchQuery.trim() && !isMobile && (() => {
               const q = searchQuery.toLowerCase().trim();
               const allSearchTasks = [...tasks, ...archivedTasks].filter(t =>
                 t.title.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q) || `#${t.task_number}`.includes(q)
@@ -834,7 +836,44 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
               </div>
             ) : (
               /* Mobile: Column list panel */
-              <div className="p-3 space-y-2">
+              <div className="p-3 space-y-2 relative">
+                {/* Search results overlay - above columns */}
+                {showSearch && searchQuery.trim() && (() => {
+                  const q = searchQuery.toLowerCase().trim();
+                  const allSearchTasks = [...tasks, ...archivedTasks].filter(t =>
+                    t.title.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q) || `#${t.task_number}`.includes(q)
+                  );
+                  return (
+                    <div className="rounded-lg border border-border bg-card shadow-lg overflow-hidden max-h-72 overflow-y-auto mb-3">
+                      {allSearchTasks.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">Nenhum card encontrado</div>
+                      ) : (
+                        allSearchTasks.slice(0, 10).map(t => {
+                          const col = columns.find(c => c.id === t.status);
+                          return (
+                            <button
+                              key={t.id}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                setSelectedTask(t); setShowTaskDetail(true); setShowSearch(false); setSearchQuery('');
+                              }}
+                              className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors border-b border-border last:border-b-0"
+                            >
+                              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: col?.color || 'hsl(var(--muted-foreground))' }} />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">#{t.task_number} {t.title}</p>
+                                <p className="text-xs text-muted-foreground">{col?.title || 'Sem coluna'}{t.is_archived ? ' • Arquivado' : ''}</p>
+                              </div>
+                              <Badge className={cn('text-[9px] text-white flex-shrink-0 mt-0.5', PRIORITIES.find(p => p.id === t.priority)?.color)}>
+                                {PRIORITIES.find(p => p.id === t.priority)?.label}
+                              </Badge>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  );
+                })()}
                 {columns.map(col => {
                   const colTasks = tasks.filter(t => t.status === col.id);
                   return (
@@ -1605,6 +1644,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
           </DialogHeader>
           {showDuplication && (() => {
             const existing = getTaskDuplication(showDuplication.id);
+            const WEEKDAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
             return existing ? (
               <div className="space-y-3 py-2">
                 <div className="rounded-lg border border-border p-3 space-y-2">
@@ -1615,6 +1655,16 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                   <p className="text-xs text-muted-foreground">
                     Frequência: <span className="font-medium">{existing.frequency === 'daily' ? 'Diário' : existing.frequency === 'weekly' ? 'Semanal' : 'Mensal'}</span>
                   </p>
+                  {existing.frequency === 'daily' && (existing as any).weekdays && (
+                    <p className="text-xs text-muted-foreground">
+                      Dias: <span className="font-medium">{((existing as any).weekdays as number[]).map(d => WEEKDAY_NAMES[d]).join(', ')}</span>
+                    </p>
+                  )}
+                  {existing.frequency === 'monthly' && (existing as any).month_day && (
+                    <p className="text-xs text-muted-foreground">
+                      Dia do mês: <span className="font-medium">{(existing as any).month_day}</span>
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     Coluna destino: <span className="font-medium">{columns.find(c => c.id === existing.target_column_id)?.title || 'Desconhecida'}</span>
                   </p>
@@ -1665,11 +1715,54 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                     </SelectContent>
                   </Select>
                 </div>
+                {/* Weekday selector for daily */}
+                {dupFrequency === 'daily' && (
+                  <div className="space-y-2">
+                    <Label>Dias da semana</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {WEEKDAY_NAMES.map((name, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setDupWeekdays(prev => prev.includes(idx) ? prev.filter(d => d !== idx) : [...prev, idx].sort())}
+                          className={cn(
+                            'w-10 h-8 rounded-lg text-xs font-medium border transition-all',
+                            dupWeekdays.includes(idx) 
+                              ? 'bg-primary text-primary-foreground border-primary' 
+                              : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
+                          )}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Selecione os dias em que o card será duplicado</p>
+                  </div>
+                )}
+                {/* Month day selector for monthly */}
+                {dupFrequency === 'monthly' && (
+                  <div className="space-y-2">
+                    <Label>Dia do mês</Label>
+                    <Select value={dupMonthDay.toString()} onValueChange={v => setDupMonthDay(parseInt(v))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
+                          <SelectItem key={d} value={d.toString()}>Dia {d}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-muted-foreground">O card será duplicado neste dia de cada mês</p>
+                  </div>
+                )}
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setShowDuplication(null)}>Cancelar</Button>
                   <Button onClick={async () => {
                     if (!dupTargetColumn) { toast.error('Selecione a coluna'); return; }
-                    const { error } = await createDuplication(showDuplication.id, dupTargetColumn, dupFrequency);
+                    if (dupFrequency === 'daily' && dupWeekdays.length === 0) { toast.error('Selecione ao menos um dia'); return; }
+                    const { error } = await createDuplication(
+                      showDuplication.id, dupTargetColumn, dupFrequency,
+                      dupFrequency === 'daily' ? dupWeekdays : undefined,
+                      dupFrequency === 'monthly' ? dupMonthDay : undefined
+                    );
                     if (error) { toast.error('Erro ao criar auto-duplicação'); return; }
                     toast.success('Auto-duplicação configurada!');
                     setShowDuplication(null);

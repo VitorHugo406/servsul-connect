@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, Plus, Trash2, Clock, Bell, ListTodo, Edit, X, Users, Link2, ChevronLeft, ChevronRight, Video, ArrowLeft, Check } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Trash2, Clock, Bell, ListTodo, Edit, X, Users, Link2, ChevronLeft, ChevronRight, Video, ArrowLeft, Check, FileDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -296,6 +296,89 @@ export function CalendarSection() {
   const selectedDateEvents = getEventsForDate(selectedDate);
   const selectedDateTasks = getTasksForDate(selectedDate);
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+
+  const generateDailyReport = async (date: Date) => {
+    try {
+      const { default: jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+      const dateStr = format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+      const dayEvents = getEventsForDate(date);
+      const dayTasks = getTasksForDate(date);
+
+      doc.setFontSize(18);
+      doc.text('Relatório do Dia', 14, 20);
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      doc.text(dateStr, 14, 28);
+      
+      let y = 40;
+
+      // Events section
+      if (dayEvents.length > 0) {
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text('Eventos e Reuniões', 14, y);
+        y += 8;
+        doc.setFontSize(10);
+        for (const e of dayEvents) {
+          const typeLabel = ALL_EVENT_TYPES.find(t => t.id === e.event_type)?.label || e.event_type;
+          const timeStr = e.all_day ? 'Dia inteiro' : `${format(new Date(e.start_date), 'HH:mm')}${e.end_date ? ' - ' + format(new Date(e.end_date), 'HH:mm') : ''}`;
+          doc.setTextColor(60);
+          doc.text(`• [${typeLabel}] ${e.title} — ${timeStr}`, 18, y);
+          y += 6;
+          if (e.description) {
+            doc.setTextColor(120);
+            const descLines = doc.splitTextToSize(`  ${e.description}`, 170);
+            doc.text(descLines, 22, y);
+            y += descLines.length * 5;
+          }
+          if (e.participants && e.participants.length > 0) {
+            doc.setTextColor(120);
+            const names = e.participants.map(p => p.profile?.display_name || p.profile?.name || 'Participante').join(', ');
+            doc.text(`  Participantes: ${names}`, 22, y);
+            y += 6;
+          }
+          if (y > 270) { doc.addPage(); y = 20; }
+        }
+        y += 4;
+      }
+
+      // Tasks section
+      if (dayTasks.length > 0) {
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text('Tarefas com Prazo', 14, y);
+        y += 8;
+        doc.setFontSize(10);
+        for (const t of dayTasks) {
+          const prioLabel = t.priority === 'urgent' ? 'Urgente' : t.priority === 'high' ? 'Alta' : t.priority === 'medium' ? 'Média' : 'Baixa';
+          const timeStr = format(new Date(t.due_date), 'HH:mm');
+          doc.setTextColor(60);
+          doc.text(`• #${t.task_number} ${t.title} — ${timeStr} [${prioLabel}]`, 18, y);
+          y += 6;
+          if (y > 270) { doc.addPage(); y = 20; }
+        }
+        y += 4;
+      }
+
+      if (dayEvents.length === 0 && dayTasks.length === 0) {
+        doc.setFontSize(12);
+        doc.setTextColor(150);
+        doc.text('Nenhum evento ou tarefa para este dia.', 14, y);
+      }
+
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(180);
+      doc.text(`Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`, 14, 285);
+
+      doc.save(`relatorio-${format(date, 'yyyy-MM-dd')}.pdf`);
+      toast.success('Relatório gerado!');
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao gerar relatório');
+    }
+  };
 
   // Check if a user is busy at a specific hour on a date (includes tasks with due_date at that hour)
   const isUserBusyAtHour = (userId: string | undefined, profileId: string | undefined, date: string, hour: number) => {
@@ -719,10 +802,15 @@ export function CalendarSection() {
             <div className={cn(isMobile ? 'w-full' : 'w-[320px] flex-shrink-0 overflow-y-auto')}>
               <Card className="h-full">
                 <CardHeader className="pb-2 pt-3 px-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <CalendarIcon className="h-3.5 w-3.5 text-primary" />
-                    {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <CalendarIcon className="h-3.5 w-3.5 text-primary" />
+                      {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
+                    </CardTitle>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Relatório do dia" onClick={() => generateDailyReport(selectedDate)}>
+                      <FileDown className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="px-3 pb-3">
                   {selectedDateEvents.length === 0 && selectedDateTasks.length === 0 ? (

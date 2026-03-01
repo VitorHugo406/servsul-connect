@@ -12,6 +12,8 @@ export interface CardDuplication {
   is_active: boolean;
   created_by: string;
   created_at: string;
+  weekdays: number[] | null;
+  month_day: number | null;
 }
 
 export function useCardDuplications(boardId: string | null) {
@@ -29,17 +31,20 @@ export function useCardDuplications(boardId: string | null) {
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  const createDuplication = async (taskId: string, targetColumnId: string, frequency: string) => {
+  const createDuplication = async (taskId: string, targetColumnId: string, frequency: string, weekdays?: number[], monthDay?: number) => {
     if (!profile || !boardId) return { error: new Error('Not ready') };
+    const insertData: any = {
+      task_id: taskId,
+      board_id: boardId,
+      target_column_id: targetColumnId,
+      frequency,
+      created_by: profile.id,
+    };
+    if (weekdays) insertData.weekdays = weekdays;
+    if (monthDay) insertData.month_day = monthDay;
     const { error } = await supabase
       .from('task_auto_duplications' as any)
-      .insert({
-        task_id: taskId,
-        board_id: boardId,
-        target_column_id: targetColumnId,
-        frequency,
-        created_by: profile.id,
-      } as any);
+      .insert(insertData as any);
     if (!error) fetch();
     return { error };
   };
