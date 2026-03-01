@@ -772,8 +772,10 @@ export type Database = {
           id: string
           is_active: boolean
           last_duplicated_at: string | null
+          month_day: number | null
           target_column_id: string
           task_id: string
+          weekdays: number[] | null
         }
         Insert: {
           board_id: string
@@ -783,8 +785,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_duplicated_at?: string | null
+          month_day?: number | null
           target_column_id: string
           task_id: string
+          weekdays?: number[] | null
         }
         Update: {
           board_id?: string
@@ -794,8 +798,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_duplicated_at?: string | null
+          month_day?: number | null
           target_column_id?: string
           task_id?: string
+          weekdays?: number[] | null
         }
         Relationships: [
           {

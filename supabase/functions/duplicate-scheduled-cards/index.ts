@@ -24,6 +24,8 @@ Deno.serve(async (req) => {
     if (dupError) throw dupError
 
     const now = new Date()
+    const currentDayOfWeek = now.getDay() // 0=Sun, 1=Mon, ...
+    const currentDayOfMonth = now.getDate()
     let duplicated = 0
 
     for (const dup of duplications || []) {
@@ -48,6 +50,20 @@ Deno.serve(async (req) => {
         }
       }
 
+      // For daily frequency, check if current weekday is in the allowed list
+      if (shouldDuplicate && dup.frequency === 'daily' && dup.weekdays && dup.weekdays.length > 0) {
+        if (!dup.weekdays.includes(currentDayOfWeek)) {
+          shouldDuplicate = false
+        }
+      }
+
+      // For monthly frequency, check if current day matches the specified month_day
+      if (shouldDuplicate && dup.frequency === 'monthly' && dup.month_day) {
+        if (currentDayOfMonth !== dup.month_day) {
+          shouldDuplicate = false
+        }
+      }
+
       if (shouldDuplicate) {
         const task = dup.task
         // Get count of tasks in target column for position
@@ -57,10 +73,20 @@ Deno.serve(async (req) => {
           .eq('board_id', dup.board_id)
           .eq('status', dup.target_column_id)
 
+        // Build title with date info
+        let titlePrefix = '[Cópia]'
+        if (dup.frequency === 'daily') {
+          const dateStr = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+          titlePrefix = `[Cópia ${dateStr}]`
+        } else if (dup.frequency === 'monthly') {
+          const monthStr = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+          titlePrefix = `[Cópia ${monthStr}]`
+        }
+
         const { error: insertError } = await supabase
           .from('tasks')
           .insert({
-            title: `[Cópia] ${task.title}`,
+            title: `${titlePrefix} ${task.title}`,
             description: task.description,
             status: dup.target_column_id,
             priority: task.priority,
