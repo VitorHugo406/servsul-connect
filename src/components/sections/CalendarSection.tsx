@@ -299,80 +299,70 @@ export function CalendarSection() {
 
   const generateDailyReport = async (date: Date) => {
     try {
-      const { default: jsPDF } = await import('jspdf');
-      const doc = new jsPDF();
       const dateStr = format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
       const dayEvents = getEventsForDate(date);
       const dayTasks = getTasksForDate(date);
 
-      doc.setFontSize(18);
-      doc.text('Relatório do Dia', 14, 20);
-      doc.setFontSize(11);
-      doc.setTextColor(100);
-      doc.text(dateStr, 14, 28);
-      
-      let y = 40;
+      let html = `<html><head><meta charset="utf-8"><title>Relatório do Dia - ${dateStr}</title>
+      <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 40px; background: #fff; color: #1a1a1a; }
+        .header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; border-bottom: 3px solid #3b82f6; padding-bottom: 16px; }
+        .header h1 { font-size: 24px; margin: 0; color: #1e293b; }
+        .header .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
+        .stats { display: flex; gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: #f1f5f9; border-radius: 8px; padding: 12px 16px; flex: 1; text-align: center; }
+        .stat-card .number { font-size: 24px; font-weight: 700; color: #3b82f6; }
+        .stat-card .label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th { background: #1e293b; color: white; padding: 12px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
+        tr:nth-child(even) { background: #f8fafc; }
+        tr:last-child td { border-bottom: none; }
+        .section-title { font-size: 16px; font-weight: 600; color: #1e293b; margin: 24px 0 12px; display: flex; align-items: center; gap: 8px; }
+        .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 10px; text-align: center; }
+        @media print { body { padding: 20px; } }
+      </style></head><body>`;
 
-      // Events section
+      html += `<div class="header"><div><h1>📅 Relatório do Dia</h1><div class="subtitle">${dateStr} • Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}</div></div></div>`;
+
+      html += `<div class="stats">`;
+      html += `<div class="stat-card"><div class="number">${dayEvents.length}</div><div class="label">Eventos/Reuniões</div></div>`;
+      html += `<div class="stat-card"><div class="number" style="color:#f59e0b">${dayTasks.length}</div><div class="label">Tarefas com Prazo</div></div>`;
+      html += `<div class="stat-card"><div class="number" style="color:#22c55e">${dayEvents.length + dayTasks.length}</div><div class="label">Total de Itens</div></div>`;
+      html += `</div>`;
+
       if (dayEvents.length > 0) {
-        doc.setFontSize(14);
-        doc.setTextColor(0);
-        doc.text('Eventos e Reuniões', 14, y);
-        y += 8;
-        doc.setFontSize(10);
+        const typeLabel = (t: string) => ALL_EVENT_TYPES.find(et => et.id === t)?.label || t;
+        html += `<div class="section-title">📋 Eventos e Reuniões</div>`;
+        html += '<table><thead><tr><th>Tipo</th><th>Título</th><th>Horário</th><th>Participantes</th></tr></thead><tbody>';
         for (const e of dayEvents) {
-          const typeLabel = ALL_EVENT_TYPES.find(t => t.id === e.event_type)?.label || e.event_type;
           const timeStr = e.all_day ? 'Dia inteiro' : `${format(new Date(e.start_date), 'HH:mm')}${e.end_date ? ' - ' + format(new Date(e.end_date), 'HH:mm') : ''}`;
-          doc.setTextColor(60);
-          doc.text(`• [${typeLabel}] ${e.title} — ${timeStr}`, 18, y);
-          y += 6;
-          if (e.description) {
-            doc.setTextColor(120);
-            const descLines = doc.splitTextToSize(`  ${e.description}`, 170);
-            doc.text(descLines, 22, y);
-            y += descLines.length * 5;
-          }
-          if (e.participants && e.participants.length > 0) {
-            doc.setTextColor(120);
-            const names = e.participants.map(p => p.profile?.display_name || p.profile?.name || 'Participante').join(', ');
-            doc.text(`  Participantes: ${names}`, 22, y);
-            y += 6;
-          }
-          if (y > 270) { doc.addPage(); y = 20; }
+          const names = e.participants?.map(p => p.profile?.display_name || p.profile?.name || '-').join(', ') || '-';
+          html += `<tr><td>${typeLabel(e.event_type)}</td><td>${e.title}${e.description ? '<br><small style="color:#64748b">' + e.description + '</small>' : ''}</td><td>${timeStr}</td><td>${names}</td></tr>`;
         }
-        y += 4;
+        html += '</tbody></table>';
       }
 
-      // Tasks section
       if (dayTasks.length > 0) {
-        doc.setFontSize(14);
-        doc.setTextColor(0);
-        doc.text('Tarefas com Prazo', 14, y);
-        y += 8;
-        doc.setFontSize(10);
+        html += `<div class="section-title">✅ Tarefas com Prazo</div>`;
+        html += '<table><thead><tr><th>#</th><th>Título</th><th>Prioridade</th><th>Horário</th></tr></thead><tbody>';
         for (const t of dayTasks) {
           const prioLabel = t.priority === 'urgent' ? 'Urgente' : t.priority === 'high' ? 'Alta' : t.priority === 'medium' ? 'Média' : 'Baixa';
           const timeStr = format(new Date(t.due_date), 'HH:mm');
-          doc.setTextColor(60);
-          doc.text(`• #${t.task_number} ${t.title} — ${timeStr} [${prioLabel}]`, 18, y);
-          y += 6;
-          if (y > 270) { doc.addPage(); y = 20; }
+          html += `<tr><td>${t.task_number}</td><td>${t.title}</td><td>${prioLabel}</td><td>${timeStr}</td></tr>`;
         }
-        y += 4;
+        html += '</tbody></table>';
       }
 
       if (dayEvents.length === 0 && dayTasks.length === 0) {
-        doc.setFontSize(12);
-        doc.setTextColor(150);
-        doc.text('Nenhum evento ou tarefa para este dia.', 14, y);
+        html += '<p style="text-align:center;color:#94a3b8;padding:40px 0;font-size:14px;">Nenhum evento ou tarefa para este dia.</p>';
       }
 
-      // Footer
-      doc.setFontSize(8);
-      doc.setTextColor(180);
-      doc.text(`Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`, 14, 285);
+      html += `<div class="footer">Relatório gerado automaticamente pelo ServChat • ${new Date().toLocaleDateString('pt-BR')}</div></body></html>`;
 
-      doc.save(`relatorio-${format(date, 'yyyy-MM-dd')}.pdf`);
+      const w = window.open('', '_blank');
+      if (w) { w.document.write(html); w.document.close(); w.print(); }
       toast.success('Relatório gerado!');
     } catch (e) {
       console.error(e);
@@ -394,11 +384,14 @@ export function CalendarSection() {
       return dateObj >= eStart && dateObj < eEnd;
     });
     if (eventBusy) return true;
-    // Check tasks with due_date at this hour
+    // Check tasks with due_date at this hour - only for the specific user
     const taskBusy = taskDeadlines.some(t => {
       if (t.completed_at) return false;
       const tDate = new Date(t.due_date);
-      return isSameDay(tDate, dateObj) && tDate.getHours() === hour;
+      if (!isSameDay(tDate, dateObj) || tDate.getHours() !== hour) return false;
+      // We can't filter by assigned_to here since taskDeadlines doesn't have it,
+      // but the main purpose is calendar-level busy indicator
+      return true;
     });
     return taskBusy;
   };

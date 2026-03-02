@@ -241,6 +241,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [bgCategory, setBgCategory] = useState('color');
+  const boardScrollRef = useRef<HTMLDivElement>(null);
+  const [isDraggingBoard, setIsDraggingBoard] = useState(false);
+  const dragStartRef = useRef<{ x: number; scrollLeft: number } | null>(null);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -587,6 +590,26 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const boardBgStyle = getBoardBgStyle(board.background_image);
   const isDarkBg = isBoardBgDark(board.background_image);
 
+  // Drag-to-scroll handlers for desktop board
+  const handleBoardMouseDown = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    // Only drag on empty space, not on cards/buttons
+    if (target.closest('.bg-card, button, [draggable], input, textarea, [role="dialog"]')) return;
+    if (!boardScrollRef.current) return;
+    setIsDraggingBoard(true);
+    dragStartRef.current = { x: e.clientX, scrollLeft: boardScrollRef.current.scrollLeft };
+    e.preventDefault();
+  };
+  const handleBoardMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingBoard || !dragStartRef.current || !boardScrollRef.current) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    boardScrollRef.current.scrollLeft = dragStartRef.current.scrollLeft - dx;
+  };
+  const handleBoardMouseUp = () => {
+    setIsDraggingBoard(false);
+    dragStartRef.current = null;
+  };
+
   return (
     <div className={cn('flex flex-col h-full relative', boardBg)} style={boardBgStyle}>
       {/* Dark overlay for image backgrounds to improve readability */}
@@ -709,9 +732,17 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         </div>
       </div>
 
-      {/* Board columns with horizontal scroll */}
+      {/* Board columns with horizontal scroll - drag to scroll on desktop */}
       <div className="flex-1 overflow-hidden relative z-10">
-          <div className={cn(isMobile ? 'overflow-y-auto' : 'overflow-x-auto overflow-y-hidden h-full p-4 task-board-scroll')}>
+          <div
+            ref={boardScrollRef}
+            className={cn(isMobile ? 'overflow-y-auto' : 'overflow-x-auto overflow-y-hidden h-full p-4 task-board-scroll')}
+            onMouseDown={!isMobile ? handleBoardMouseDown : undefined}
+            onMouseMove={!isMobile ? handleBoardMouseMove : undefined}
+            onMouseUp={!isMobile ? handleBoardMouseUp : undefined}
+            onMouseLeave={!isMobile ? handleBoardMouseUp : undefined}
+            style={!isMobile ? { cursor: isDraggingBoard ? 'grabbing' : 'grab' } : undefined}
+          >
           <TooltipProvider delayDuration={200}>
           {isMobile ? (
             /* Mobile: Column selector panel */

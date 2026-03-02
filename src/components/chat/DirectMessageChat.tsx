@@ -4,12 +4,14 @@ import { MessageCircle, Check, CheckCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatInput } from '@/components/chat/ChatInput';
+import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { useDirectMessages, useActiveUsers } from '@/hooks/useDirectMessages';
 import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSound } from '@/hooks/useSound';
 import { useAllUsersPresence } from '@/hooks/usePresence';
 import { PresenceIndicator } from '@/components/user/PresenceIndicator';
+import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 import { cn } from '@/lib/utils';
 
 interface DirectMessageChatProps {
@@ -24,6 +26,8 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
   const { playMessageSent } = useSound();
   const { getUserPresence } = useAllUsersPresence();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const channelId = partnerId && profile ? [profile.id, partnerId].sort().join('-') : '';
+  const { typingUsers, sendTyping } = useTypingIndicator(`dm-${channelId}`);
 
   const partner = users.find(u => u.id === partnerId);
   const partnerSector = sectors.find(s => s.id === partner?.sector_id);
@@ -269,8 +273,11 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
         )}
       </ScrollArea>
 
+      {/* Typing Indicator */}
+      <TypingIndicator typingUsers={typingUsers} />
+
       {/* Input */}
-      <ChatInput onSendMessage={handleSendMessage} />
+      <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} />
     </div>
   );
 }

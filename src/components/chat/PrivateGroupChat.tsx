@@ -1,6 +1,8 @@
  import React, { useEffect, useRef, useState } from 'react';
  import { motion } from 'framer-motion';
 import { Users, Settings, UserPlus, Check, CheckCheck, Crown, Loader2, Trash2, Image, Eye } from 'lucide-react';
+import { TypingIndicator } from '@/components/chat/TypingIndicator';
+import { useTypingIndicator } from '@/hooks/useTypingIndicator';
  import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
  import { Button } from '@/components/ui/button';
  import { ScrollArea } from '@/components/ui/scroll-area';
@@ -46,13 +48,14 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
    const { users } = useActiveUsers();
    const { sectors } = useSectors();
    const { playMessageSent } = useSound();
-   const scrollRef = useRef<HTMLDivElement>(null);
-   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
-   const [addingMember, setAddingMember] = useState<string | null>(null);
-  const [showEditAvatarDialog, setShowEditAvatarDialog] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [previewUserId, setPreviewUserId] = useState<string | null>(null);
-  const [showDeleteGroupDialog, setShowDeleteGroupDialog] = useState(false);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const { typingUsers, sendTyping } = useTypingIndicator(`group-${group?.id || 'none'}`);
+    const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+    const [addingMember, setAddingMember] = useState<string | null>(null);
+   const [showEditAvatarDialog, setShowEditAvatarDialog] = useState(false);
+   const [avatarUrl, setAvatarUrl] = useState('');
+   const [previewUserId, setPreviewUserId] = useState<string | null>(null);
+   const [showDeleteGroupDialog, setShowDeleteGroupDialog] = useState(false);
   const [deletingGroup, setDeletingGroup] = useState(false);
  
    const isAdmin = members.some(m => m.user_id === user?.id && m.role === 'admin');
@@ -537,8 +540,11 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
          )}
        </ScrollArea>
  
+       {/* Typing Indicator */}
+       <TypingIndicator typingUsers={typingUsers} />
+
        {/* Input */}
-       {currentMember && <ChatInput onSendMessage={handleSendMessage} />}
+       {currentMember && <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} />}
  
        {/* Add Member Dialog */}
        <Dialog open={showAddMemberDialog} onOpenChange={setShowAddMemberDialog}>
