@@ -15,11 +15,12 @@ interface Attachment {
 interface ChatInputProps {
   onSendMessage: (message: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[]) => void;
   hideAttachment?: boolean;
+  onTyping?: () => void;
 }
 
 const EMOJI_LIST = ['😀', '😂', '😍', '🤔', '👍', '👏', '🎉', '🔥', '❤️', '✅', '🚀', '💪', '😊', '👋', '🙏', '💡'];
 
-export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputProps) {
+export function ChatInput({ onSendMessage, hideAttachment = false, onTyping }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -92,6 +93,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false }: ChatInputPr
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setMessage(val);
+    onTyping?.();
 
     // Detect # trigger
     const cursorPos = e.target.selectionStart;

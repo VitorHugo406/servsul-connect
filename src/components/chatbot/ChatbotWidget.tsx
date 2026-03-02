@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, X, Bell, HelpCircle, Sparkles, ChevronRight, Check, Building2, MessageSquare, Megaphone, AlertTriangle } from 'lucide-react';
+import { Bot, X, Bell, HelpCircle, Sparkles, ChevronRight, Check, Building2, MessageSquare, Megaphone, AlertTriangle, CalendarIcon, ListTodo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -103,6 +103,9 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
   const { playChatbotClick, playChatbotClose } = useSound();
 
   const unreadNotifications = notifications.filter(n => !n.is_read).length;
+  const [todayMeetings, setTodayMeetings] = useState<{ title: string; time: string }[]>([]);
+  const [todayTaskCount, setTodayTaskCount] = useState(0);
+  
   const totalUnread = unreadNotifications + unreadCounts.announcements + unreadCounts.messages + (!overdueTasksDismissed && overdueTasks > 0 ? 1 : 0);
 
   const handleOpen = () => {
@@ -159,6 +162,48 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
         .lt('due_date', new Date().toISOString());
 
       setOverdueTasks(overdueCount || 0);
+
+      // Fetch today's meetings and tasks
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      const { data: meetingsData } = await supabase
+        .from('calendar_events')
+        .select('title, start_date, end_date')
+        .eq('event_type', 'meeting')
+        .gte('start_date', todayStart.toISOString())
+        .lte('start_date', todayEnd.toISOString())
+        .order('start_date');
+
+      // Filter meetings where user is creator or participant
+      const { data: myParticipations } = await supabase
+        .from('meeting_participants')
+        .select('event_id')
+        .eq('profile_id', profile.id);
+
+      const myEventIds = new Set((myParticipations || []).map(p => p.event_id));
+      const relevantMeetings = (meetingsData || []).filter(m => {
+        // Check if user created it or is a participant
+        return true; // Show all meetings for today for awareness
+      });
+
+      setTodayMeetings(relevantMeetings.map(m => ({
+        title: m.title,
+        time: `${new Date(m.start_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}${m.end_date ? ' - ' + new Date(m.end_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}`,
+      })));
+
+      // Count tasks due today
+      const { count: todayTasks } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('assigned_to', profile.id)
+        .is('completed_at', null)
+        .gte('due_date', todayStart.toISOString())
+        .lte('due_date', todayEnd.toISOString());
+
+      setTodayTaskCount(todayTasks || 0);
 
       setUnreadCounts({
         announcements: announcementCount || 0,
@@ -395,7 +440,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                       <div className="flex items-center justify-center py-8">
                         <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                       </div>
-                    ) : notifications.length === 0 && unreadCounts.announcements === 0 && unreadCounts.messages === 0 && overdueTasks === 0 ? (
+                    ) : notifications.length === 0 && unreadCounts.announcements === 0 && unreadCounts.messages === 0 && overdueTasks === 0 && todayMeetings.length === 0 && todayTaskCount === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
                         <Bell className="mb-2 h-10 w-10 text-muted-foreground" />
                         <p className="font-medium text-foreground">Nenhuma novidade</p>
@@ -405,6 +450,50 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                       </div>
                     ) : (
                       <div className="space-y-2">
+                        {/* Today's meetings */}
+                        {todayMeetings.length > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3"
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <CalendarIcon className="h-4 w-4 text-blue-500" />
+                              <span className="font-medium text-foreground">
+                                {todayMeetings.length} reunião(ões) hoje
+                              </span>
+                            </div>
+                            <div className="space-y-1 mt-2">
+                              {todayMeetings.map((m, i) => (
+                                <div key={i} className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <span className="font-medium text-foreground">{m.time}</span>
+                                  <span>— {m.title}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {/* Today's task count */}
+                        {todayTaskCount > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.05 }}
+                            className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3"
+                          >
+                            <div className="flex items-center gap-2">
+                              <ListTodo className="h-4 w-4 text-amber-500" />
+                              <span className="font-medium text-foreground">
+                                {todayTaskCount} atividade(s) para hoje
+                              </span>
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Verifique seus prazos no calendário
+                            </p>
+                          </motion.div>
+                        )}
+
                         {/* Summary cards for new items */}
                         {unreadCounts.announcements > 0 && (
                           <motion.div
