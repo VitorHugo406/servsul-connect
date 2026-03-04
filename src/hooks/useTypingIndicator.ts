@@ -12,11 +12,14 @@ export function useTypingIndicator(channelName: string) {
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const typingTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
   const lastSentRef = useRef<number>(0);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
     if (!profile || !channelName) return;
 
-    const channel = supabase.channel(`typing-${channelName}`)
+    const channel = supabase.channel(`typing-${channelName}`, {
+      config: { broadcast: { self: false } },
+    })
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (payload.profileId === profile.id) return;
         
@@ -26,12 +29,10 @@ export function useTypingIndicator(channelName: string) {
           return prev;
         });
 
-        // Clear previous timeout for this user
         if (typingTimeoutRef.current[payload.profileId]) {
           clearTimeout(typingTimeoutRef.current[payload.profileId]);
         }
         
-        // Remove after 3 seconds of no typing
         typingTimeoutRef.current[payload.profileId] = setTimeout(() => {
           setTypingUsers(prev => prev.filter(u => u.profileId !== payload.profileId));
           delete typingTimeoutRef.current[payload.profileId];
@@ -39,19 +40,22 @@ export function useTypingIndicator(channelName: string) {
       })
       .subscribe();
 
+    channelRef.current = channel;
+
     return () => {
       supabase.removeChannel(channel);
+      channelRef.current = null;
       Object.values(typingTimeoutRef.current).forEach(clearTimeout);
     };
   }, [profile, channelName]);
 
   const sendTyping = useCallback(() => {
-    if (!profile || !channelName) return;
+    if (!profile || !channelName || !channelRef.current) return;
     const now = Date.now();
-    if (now - lastSentRef.current < 2000) return; // Throttle to every 2s
+    if (now - lastSentRef.current < 2000) return;
     lastSentRef.current = now;
 
-    supabase.channel(`typing-${channelName}`).send({
+    channelRef.current.send({
       type: 'broadcast',
       event: 'typing',
       payload: {
