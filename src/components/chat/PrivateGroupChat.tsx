@@ -1,4 +1,4 @@
- import React, { useEffect, useRef, useState } from 'react';
+ import React, { useEffect, useRef, useState, useCallback } from 'react';
  import { motion } from 'framer-motion';
 import { Users, Settings, UserPlus, Check, CheckCheck, Crown, Loader2, Trash2, Image, Eye } from 'lucide-react';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
@@ -32,8 +32,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
  import { useSectors } from '@/hooks/useData';
  import { useAuth } from '@/contexts/AuthContext';
  import { useSound } from '@/hooks/useSound';
-import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
+ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
+ import { formatText } from '@/lib/chatFormatUtils';
  import { cn } from '@/lib/utils';
+ import { supabase } from '@/integrations/supabase/client';
  import { toast } from 'sonner';
  
  interface PrivateGroupChatProps {
@@ -48,7 +50,8 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
    const { users } = useActiveUsers();
    const { sectors } = useSectors();
    const { playMessageSent } = useSound();
-    const scrollRef = useRef<HTMLDivElement>(null);
+     const scrollRef = useRef<HTMLDivElement>(null);
+     const mentionedUsersRef = useRef<{id: string; name: string}[]>([]);
     const { typingUsers, sendTyping } = useTypingIndicator(`group-${group?.id || 'none'}`);
     const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
     const [addingMember, setAddingMember] = useState<string | null>(null);
@@ -82,41 +85,7 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
    };
  
-   const formatText = (text: string, isOwnMsg: boolean): React.ReactNode[] => {
-     const parts: React.ReactNode[] = [];
-     const regex = /(\*[^*]+\*|_[^_]+_|~[^~]+~|\[[^\]]+\]\([^)]+\))/g;
-     let lastIndex = 0;
-     let match;
-     let key = 0;
-
-     while ((match = regex.exec(text)) !== null) {
-       if (match.index > lastIndex) {
-         parts.push(text.slice(lastIndex, match.index));
-       }
-       const m = match[0];
-       if (m.startsWith('*') && m.endsWith('*')) {
-         parts.push(<strong key={key++}>{m.slice(1, -1)}</strong>);
-       } else if (m.startsWith('_') && m.endsWith('_')) {
-         parts.push(<em key={key++}>{m.slice(1, -1)}</em>);
-       } else if (m.startsWith('~') && m.endsWith('~')) {
-         parts.push(<s key={key++}>{m.slice(1, -1)}</s>);
-       } else if (m.startsWith('[')) {
-         const linkMatch = m.match(/^\[(.+?)\]\((.+?)\)$/);
-         if (linkMatch) {
-           parts.push(
-             <a key={key++} href={linkMatch[2]} target="_blank" rel="noopener noreferrer"
-               className={cn("underline", isOwnMsg ? "text-white/90 hover:text-white" : "text-primary hover:text-primary/80")}
-             >{linkMatch[1]}</a>
-           );
-         }
-       }
-       lastIndex = match.index + m.length;
-     }
-     if (lastIndex < text.length) {
-       parts.push(text.slice(lastIndex));
-     }
-     return parts.length > 0 ? parts : [text];
-   };
+    // formatText is now imported from shared util
 
    const renderMessageContent = (content: string, isOwn: boolean) => {
      const lines = content.split('\n');
@@ -153,20 +122,43 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
      );
    };
 
+   const handleMention = useCallback((userId: string, userName: string) => {
+     mentionedUsersRef.current.push({ id: userId, name: userName });
+   }, []);
+
+   const sendMentionNotifications = useCallback(async (content: string) => {
+     if (!profile || mentionedUsersRef.current.length === 0) return;
+     const mentioned = [...mentionedUsersRef.current];
+     mentionedUsersRef.current = [];
+     for (const m of mentioned) {
+       if (!content.includes(`@${m.name}`)) continue;
+       const { data: mp } = await supabase.from('profiles').select('user_id').eq('id', m.id).single();
+       if (!mp) continue;
+       await supabase.from('user_notifications').insert({
+         user_id: mp.user_id,
+         type: 'mention',
+         title: 'Você foi mencionado',
+         message: `${profile.display_name || profile.name} mencionou você em ${group?.name || 'grupo'}: "${content.substring(0, 80)}${content.length > 80 ? '...' : ''}"`,
+       });
+     }
+   }, [profile, group]);
+
    const handleSendMessage = async (content: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[]) => {
-     playMessageSent();
-     let fullContent = content;
-     if (attachments && attachments.length > 0) {
-       const attachmentLinks = attachments.map(a => {
-         if (a.fileType.startsWith('image/')) return `\n📷 [${a.fileName}](${a.url})`;
-         return `\n📎 [${a.fileName}](${a.url})`;
-       }).join('');
-       fullContent = content + attachmentLinks;
-     }
-     const { error } = await sendMessage(fullContent);
-     if (error) {
-       console.error('Error sending message:', error);
-     }
+      playMessageSent();
+      let fullContent = content;
+      if (attachments && attachments.length > 0) {
+        const attachmentLinks = attachments.map(a => {
+          if (a.fileType.startsWith('image/')) return `\n📷 [${a.fileName}](${a.url})`;
+          return `\n📎 [${a.fileName}](${a.url})`;
+        }).join('');
+        fullContent = content + attachmentLinks;
+      }
+      const { error } = await sendMessage(fullContent);
+      if (error) {
+        console.error('Error sending message:', error);
+      } else {
+        await sendMentionNotifications(fullContent);
+      }
    };
  
    const handleAddMember = async (userId: string, profileId: string) => {
@@ -544,7 +536,7 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
        <TypingIndicator typingUsers={typingUsers} />
 
        {/* Input */}
-       {currentMember && <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} />}
+       {currentMember && <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} onMention={handleMention} />}
  
        {/* Add Member Dialog */}
        <Dialog open={showAddMemberDialog} onOpenChange={setShowAddMemberDialog}>

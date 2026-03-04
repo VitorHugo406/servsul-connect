@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { CardMentionPicker, formatCardMention } from './CardMentionPicker';
+import { UserMentionPicker } from './UserMentionPicker';
 import { FormattingPreview } from './FormattingPreview';
 
 interface Attachment {
@@ -16,17 +17,20 @@ interface ChatInputProps {
   onSendMessage: (message: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[]) => void;
   hideAttachment?: boolean;
   onTyping?: () => void;
+  onMention?: (userId: string, userName: string) => void;
 }
 
 const EMOJI_LIST = ['😀', '😂', '😍', '🤔', '👍', '👏', '🎉', '🔥', '❤️', '✅', '🚀', '💪', '😊', '👋', '🙏', '💡'];
 
-export function ChatInput({ onSendMessage, hideAttachment = false, onTyping }: ChatInputProps) {
+export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onMention }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [showCardPicker, setShowCardPicker] = useState(false);
   const [cardQuery, setCardQuery] = useState('');
+  const [showUserPicker, setShowUserPicker] = useState(false);
+  const [userQuery, setUserQuery] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -95,7 +99,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping }: C
     setMessage(val);
     onTyping?.();
 
-    // Detect # trigger
+    // Detect # trigger for cards
     const cursorPos = e.target.selectionStart;
     const textBeforeCursor = val.substring(0, cursorPos);
     const hashMatch = textBeforeCursor.match(/#(\w*)$/);
@@ -106,6 +110,30 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping }: C
       setShowCardPicker(false);
       setCardQuery('');
     }
+
+    // Detect @ trigger for user mentions
+    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    if (atMatch) {
+      setShowUserPicker(true);
+      setUserQuery(atMatch[1]);
+    } else {
+      setShowUserPicker(false);
+      setUserQuery('');
+    }
+  };
+
+  const handleUserSelect = (user: { id: string; name: string; display_name: string | null }) => {
+    const displayName = user.display_name || user.name;
+    const cursorPos = inputRef.current?.selectionStart || message.length;
+    const textBeforeCursor = message.substring(0, cursorPos);
+    const atIndex = textBeforeCursor.lastIndexOf('@');
+    const before = message.substring(0, atIndex);
+    const after = message.substring(cursorPos);
+    setMessage(before + `@${displayName} ` + after);
+    setShowUserPicker(false);
+    setUserQuery('');
+    inputRef.current?.focus();
+    onMention?.(user.id, displayName);
   };
 
   const handleCardSelect = (task: any) => {
@@ -152,6 +180,15 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping }: C
           query={cardQuery}
           onSelect={handleCardSelect}
           onClose={() => setShowCardPicker(false)}
+        />
+      )}
+
+      {/* User Mention Picker */}
+      {showUserPicker && (
+        <UserMentionPicker
+          query={userQuery}
+          onSelect={handleUserSelect}
+          onClose={() => setShowUserPicker(false)}
         />
       )}
 
@@ -267,7 +304,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping }: C
             value={message}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            placeholder='Digite sua mensagem... (use # para mencionar cards)'
+            placeholder='Digite sua mensagem... (# cards, @ pessoas)'
             rows={1}
             style={{ overflow: 'hidden' }}
             className="w-full resize-none rounded-xl border border-border bg-muted/50 px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"

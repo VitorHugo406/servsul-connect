@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useMessages, useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,7 +10,9 @@ import { DirectMessageList } from '@/components/chat/DirectMessageList';
 import { DirectMessageChat } from '@/components/chat/DirectMessageChat';
 import { PrivateGroupList } from '@/components/chat/PrivateGroupList';
 import { PrivateGroupChat } from '@/components/chat/PrivateGroupChat';
+import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { usePrivateGroups } from '@/hooks/usePrivateGroups';
+import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 import { SectorUsersList } from '@/components/sector/SectorUsersList';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -21,6 +23,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useSound } from '@/hooks/useSound';
 import { useConversations } from '@/hooks/useDirectMessages';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 type ChatMode = 'sectors' | 'direct' | 'groups';
 
@@ -44,6 +47,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const { conversations } = useConversations();
   const [unreadGroupCount, setUnreadGroupCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const mentionedUsersRef = useRef<{id: string; name: string}[]>([]);
 
   // Filter sectors user can access using the new allAccessibleSectorIds
   const accessibleSectors = isAdmin 
@@ -52,6 +56,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
 
   // Set initial sector based on user's sector or first available
   const effectiveSector = activeSector || profile?.sector_id || geralSectorId;
+  const { typingUsers, sendTyping } = useTypingIndicator(`sector-${effectiveSector || 'none'}`);
   
   const { messages, loading: messagesLoading, sendMessage, canSendMessages } = useMessages(effectiveSector);
 
@@ -117,6 +122,39 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     return () => { supabase.removeChannel(channel); };
   }, [profile, user, groups, chatMode]);
 
+  const handleMention = useCallback((userId: string, userName: string) => {
+    mentionedUsersRef.current.push({ id: userId, name: userName });
+  }, []);
+
+  const sendMentionNotifications = useCallback(async (content: string) => {
+    if (!profile || mentionedUsersRef.current.length === 0) return;
+    const mentioned = [...mentionedUsersRef.current];
+    mentionedUsersRef.current = [];
+    
+    for (const mentionedUser of mentioned) {
+      // Check if the mention is actually in the content
+      if (!content.includes(`@${mentionedUser.name}`)) continue;
+      
+      // Get mentioned user's user_id from profiles
+      const { data: mentionedProfile } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('id', mentionedUser.id)
+        .single();
+      
+      if (!mentionedProfile) continue;
+      
+      // Insert notification
+      await supabase.from('user_notifications').insert({
+        user_id: mentionedProfile.user_id,
+        type: 'mention',
+        title: 'Você foi mencionado',
+        message: `${profile.display_name || profile.name} mencionou você no chat: "${content.substring(0, 80)}${content.length > 80 ? '...' : ''}"`,
+        reference_id: null,
+      });
+    }
+  }, [profile]);
+
   const handleSendMessage = async (content: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[]) => {
     // Play sound immediately for instant feedback
     playMessageSent();
@@ -136,6 +174,9 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     const { error } = await sendMessage(fullContent);
     if (error) {
       console.error('Error sending message:', error);
+    } else {
+      // Send mention notifications after successful message send
+      await sendMentionNotifications(fullContent);
     }
   };
 
@@ -429,9 +470,12 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
             </div>
           )}
 
+          {/* Typing Indicator */}
+          <TypingIndicator typingUsers={typingUsers} />
+
           {/* Input */}
           {canSendMessages ? (
-            <ChatInput onSendMessage={handleSendMessage} />
+            <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} onMention={handleMention} />
           ) : (
             <div className="border-t border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">
               Você só pode enviar mensagens no seu próprio setor

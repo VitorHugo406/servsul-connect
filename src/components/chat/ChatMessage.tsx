@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSectors } from '@/hooks/useData';
 import { CardMentionCard } from './CardMentionCard';
+import { formatText } from '@/lib/chatFormatUtils';
 
 interface Author {
   id: string;
@@ -56,42 +57,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
   // Message status - if it has an ID, it's in the database (delivered)
   const messageStatus = message.status || (message.id ? 'delivered' : 'sending');
 
-  // Format inline text: *bold*, _italic_, ~strikethrough~, [link](url)
-  const formatText = (text: string, isOwnMsg: boolean): React.ReactNode[] => {
-    const parts: React.ReactNode[] = [];
-    const regex = /(\*[^*]+\*|_[^_]+_|~[^~]+~|\[[^\]]+\]\([^)]+\))/g;
-    let lastIndex = 0;
-    let match;
-    let key = 0;
-
-    while ((match = regex.exec(text)) !== null) {
-      if (match.index > lastIndex) {
-        parts.push(text.slice(lastIndex, match.index));
-      }
-      const m = match[0];
-      if (m.startsWith('*') && m.endsWith('*')) {
-        parts.push(<strong key={key++}>{m.slice(1, -1)}</strong>);
-      } else if (m.startsWith('_') && m.endsWith('_')) {
-        parts.push(<em key={key++}>{m.slice(1, -1)}</em>);
-      } else if (m.startsWith('~') && m.endsWith('~')) {
-        parts.push(<s key={key++}>{m.slice(1, -1)}</s>);
-      } else if (m.startsWith('[')) {
-        const linkMatch = m.match(/^\[(.+?)\]\((.+?)\)$/);
-        if (linkMatch) {
-          parts.push(
-            <a key={key++} href={linkMatch[2]} target="_blank" rel="noopener noreferrer"
-              className={cn("underline", isOwnMsg ? "text-white/90 hover:text-white" : "text-primary hover:text-primary/80")}
-            >{linkMatch[1]}</a>
-          );
-        }
-      }
-      lastIndex = match.index + m.length;
-    }
-    if (lastIndex < text.length) {
-      parts.push(text.slice(lastIndex));
-    }
-    return parts.length > 0 ? parts : [text];
-  };
+  // formatText is now imported from shared util
 
   // Parse card mention block
   const parseCardMention = (lines: string[]): { taskNumber: number; title: string; description?: string; labels?: string; priority: string; dueDate?: string; boardName: string } | null => {
