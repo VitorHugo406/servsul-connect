@@ -5,9 +5,10 @@ import {
   GripVertical, ListTodo, X, AlertTriangle, Search,
   Clock4, Clock, Users, Settings, ArrowLeft, MoveRight,
   PlusCircle, FileDown, Zap, Upload, Tag, Copy, Repeat,
-  Archive, ArchiveRestore, Pencil, Activity
+  Archive, ArchiveRestore, Pencil, Activity, Menu, Shield
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -32,6 +33,7 @@ import { ReportDialog } from '@/components/tasks/ReportDialog';
 import { AutomationRulesPanel } from '@/components/tasks/AutomationRulesPanel';
 import { OperationModePanel } from '@/components/tasks/OperationModePanel';
 import { useSubtaskCounts } from '@/hooks/useSubtasks';
+import { useTaskAssignees } from '@/hooks/useTaskAssignees';
 import { useCardDuplications } from '@/hooks/useCardDuplications';
 import {
   PRIORITIES, BACKGROUND_IMAGES, BACKGROUND_GROUPS, CARD_COVERS,
@@ -122,7 +124,9 @@ export function TaskBoardSection() {
           </div>
         ) : (
           <div className={cn('grid gap-4', isMobile ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-3')}>
-            {boards.map((board) => (
+            {boards.map((board) => {
+              const isDark = isBoardBgDark(board.background_image);
+              return (
               <Card
                 key={board.id}
                 className={cn('cursor-pointer hover:shadow-lg transition-all overflow-hidden', getBoardBg(board.background_image))}
@@ -132,32 +136,45 @@ export function TaskBoardSection() {
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-foreground truncate">{board.name}</h3>
+                      <h3 className={cn("font-semibold truncate", isDark ? "text-white" : "text-foreground")}>{board.name}</h3>
                       {board.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{board.description}</p>
+                        <p className={cn("text-sm line-clamp-2 mt-1", isDark ? "text-white/70" : "text-muted-foreground")}>{board.description}</p>
                       )}
-                      <p className="text-xs text-muted-foreground mt-2">
+                      <p className={cn("text-xs mt-2", isDark ? "text-white/60" : "text-muted-foreground")}>
                         {new Date(board.created_at).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                        <Button variant="ghost" size="icon" className={cn("h-8 w-8 flex-shrink-0", isDark && "text-white hover:bg-white/20")}>
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={() => {
+                          const newName = prompt('Novo nome do mural:', board.name);
+                          if (newName && newName.trim()) {
+                            updateBoard(board.id, { name: newName.trim() });
+                            toast.success('Nome atualizado!');
+                          }
+                        }}>
+                          <Edit className="h-4 w-4 mr-2" /> Renomear
+                        </DropdownMenuItem>
                         {board.owner_id === user?.id && (
-                          <DropdownMenuItem onClick={() => handleDeleteBoard(board.id)} className="text-destructive">
-                            <Trash2 className="h-4 w-4 mr-2" /> Excluir Mural
-                          </DropdownMenuItem>
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleDeleteBoard(board.id)} className="text-destructive">
+                              <Trash2 className="h-4 w-4 mr-2" /> Excluir Mural
+                            </DropdownMenuItem>
+                          </>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </ScrollArea>
@@ -201,9 +218,10 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const { profile } = useAuth();
   const { columns, addColumn, updateColumn, deleteColumn, refetch: refetchColumns } = useBoardColumns(board.id);
   const { tasks, archivedTasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: refetchTasks } = useBoardTasks(board.id);
-  const { members, addMember, removeMember } = useBoardMembers(board.id);
+  const { members, addMember, removeMember, updateMemberRole } = useBoardMembers(board.id);
   const { labels, getTaskLabels, createLabel, deleteLabel, assignLabel, removeLabel } = useTaskLabels(board.id);
   const { counts: subtaskCounts } = useSubtaskCounts(tasks.map(t => t.id));
+  const { getTaskAssignees, setTaskAssignees: setTaskAssigneesDb } = useTaskAssignees(board.id);
   const { createDuplication, deleteDuplication, getTaskDuplication } = useCardDuplications(board.id);
   const { users: allUsers } = useActiveUsers();
   const { uploadFile, uploading: fileUploading } = useFileUpload();
@@ -261,6 +279,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const [autoConclusion, setAutoConclusion] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState('#6366f1');
+  const [additionalAssignees, setAdditionalAssignees] = useState<string[]>([]);
 
   const [creating, setCreating] = useState(false);
   const [editingTask, setEditingTask] = useState<BoardTask | null>(null);
@@ -284,6 +303,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const resetForm = () => {
     setTitle(''); setDescription(''); setPriority('medium');
     setAssignedTo('none'); setDueDate(''); setCoverImage('none'); setCoverImageUrl('');
+    setAdditionalAssignees([]);
   };
 
   const openCreateTask = (columnId: string) => {
@@ -624,43 +644,45 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
           <p className={cn("text-xs", isDarkBg ? "text-white/70" : "text-muted-foreground")}>{tasks.length} tarefas</p>
         </div>
 
-        {/* Member avatars */}
-        <TooltipProvider>
-          <div className="flex items-center -space-x-2 mr-1">
-            {members.slice(0, 5).map(m => (
-              <Tooltip key={m.id}>
-                <TooltipTrigger asChild>
-                  <Avatar className="h-7 w-7 border-2 border-background">
-                    <AvatarImage src={m.profile?.avatar_url || ''} />
-                    <AvatarFallback className="text-[9px] bg-primary text-primary-foreground">
-                      {getInitials(m.profile?.display_name || m.profile?.name || 'U')}
-                    </AvatarFallback>
-                  </Avatar>
-                </TooltipTrigger>
-                <TooltipContent>{m.profile?.display_name || m.profile?.name}</TooltipContent>
-              </Tooltip>
-            ))}
-            {members.length > 5 && (
-              <Avatar className="h-7 w-7 border-2 border-background">
-                <AvatarFallback className="text-[9px] bg-muted text-muted-foreground">
-                  +{members.length - 5}
-                </AvatarFallback>
-              </Avatar>
-            )}
-          </div>
-        </TooltipProvider>
+        {/* Member avatars - only on desktop */}
+        {!isMobile && (
+          <TooltipProvider>
+            <div className="flex items-center -space-x-2 mr-1">
+              {members.slice(0, 5).map(m => (
+                <Tooltip key={m.id}>
+                  <TooltipTrigger asChild>
+                    <Avatar className="h-7 w-7 border-2 border-background">
+                      <AvatarImage src={m.profile?.avatar_url || ''} />
+                      <AvatarFallback className="text-[9px] bg-primary text-primary-foreground">
+                        {getInitials(m.profile?.display_name || m.profile?.name || 'U')}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>{m.profile?.display_name || m.profile?.name}</TooltipContent>
+                </Tooltip>
+              ))}
+              {members.length > 5 && (
+                <Avatar className="h-7 w-7 border-2 border-background">
+                  <AvatarFallback className="text-[9px] bg-muted text-muted-foreground">
+                    +{members.length - 5}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+            </div>
+          </TooltipProvider>
+        )}
 
         <div className="flex items-center gap-1">
-          {/* Inline search - matches Header tab search style */}
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Pesquisar cards..."
+              placeholder="Pesquisar..."
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setShowSearch(true); }}
               onFocus={() => { if (searchQuery) setShowSearch(true); }}
               onBlur={() => setTimeout(() => setShowSearch(false), 200)}
-              className={cn("pl-8 h-8 text-xs bg-muted/50 focus-visible:ring-primary", isMobile ? "w-36" : "w-52")}
+              className={cn("pl-8 h-8 text-xs bg-muted/50 focus-visible:ring-primary", isMobile ? "w-28" : "w-52")}
             />
             {/* Dropdown results */}
             {showSearch && searchQuery.trim() && !isMobile && (() => {
@@ -700,7 +722,35 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
               );
             })()}
           </div>
-          {!isMobile && (
+
+          {isMobile ? (
+            /* Mobile: Hamburger menu for all options */
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className={isDarkBg ? "text-white hover:bg-white/20" : ""}>
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setShowReport(true)}>
+                  <FileDown className="h-4 w-4 mr-2" /> Relatório
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowMembers(true)}>
+                  <Users className="h-4 w-4 mr-2" /> Membros
+                </DropdownMenuItem>
+                {isOwner && (
+                  <>
+                    <DropdownMenuItem onClick={() => setShowArchive(true)}>
+                      <Archive className="h-4 w-4 mr-2" /> Arquivados
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowSettings(true)}>
+                      <Settings className="h-4 w-4 mr-2" /> Configurações
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
             <>
               <Button variant="ghost" size="icon" onClick={() => { setAutomationTaskId(undefined); setShowAutomationRules(true); }} title="Automações do Board">
                 <Zap className="h-4 w-4" />
@@ -711,22 +761,22 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
               <Button variant="ghost" size="icon" onClick={() => setShowLabelsManager(true)} title="Etiquetas">
                 <Tag className="h-4 w-4" />
               </Button>
-            </>
-          )}
-          <Button variant="ghost" size="icon" onClick={() => setShowReport(true)} title="Relatório">
-            <FileDown className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => setShowMembers(true)} title="Membros">
-            <Users className="h-4 w-4" />
-          </Button>
-          {isOwner && (
-            <>
-              <Button variant="ghost" size="icon" onClick={() => setShowArchive(true)} title="Arquivados">
-                <Archive className="h-4 w-4" />
+              <Button variant="ghost" size="icon" onClick={() => setShowReport(true)} title="Relatório">
+                <FileDown className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)} title="Configurações">
-                <Settings className="h-4 w-4" />
+              <Button variant="ghost" size="icon" onClick={() => setShowMembers(true)} title="Membros">
+                <Users className="h-4 w-4" />
               </Button>
+              {isOwner && (
+                <>
+                  <Button variant="ghost" size="icon" onClick={() => setShowArchive(true)} title="Arquivados">
+                    <Archive className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)} title="Configurações">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
             </>
           )}
         </div>
@@ -1275,6 +1325,28 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                 </Select>
               </div>
             </div>
+            {/* Additional assignees */}
+            <div className="space-y-2">
+              <Label>Responsáveis adicionais</Label>
+              <div className="border border-border rounded-lg max-h-[120px] overflow-y-auto">
+                {members.filter(m => m.profile_id !== assignedTo).map(m => (
+                  <label key={m.profile_id} className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-muted/50 border-b border-border last:border-0">
+                    <Checkbox
+                      checked={additionalAssignees.includes(m.profile_id)}
+                      onCheckedChange={(checked) => {
+                        setAdditionalAssignees(prev => checked ? [...prev, m.profile_id] : prev.filter(id => id !== m.profile_id));
+                      }}
+                    />
+                    <Avatar className="h-5 w-5">
+                      <AvatarImage src={m.profile?.avatar_url || ''} />
+                      <AvatarFallback className="text-[8px] bg-primary text-primary-foreground">{getInitials(m.profile?.display_name || m.profile?.name || 'U')}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-xs truncate">{m.profile?.display_name || m.profile?.name}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground">Selecione colaboradores adicionais para acompanhar esta tarefa</p>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Data de Entrega</Label>
@@ -1454,12 +1526,37 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{m.profile?.display_name || m.profile?.name}</p>
-                    <p className="text-xs text-muted-foreground">{m.role === 'owner' ? 'Dono' : 'Membro'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {m.role === 'owner' ? 'Dono' : m.role === 'admin' ? '⭐ Administrador' : 'Membro'}
+                    </p>
                   </div>
                   {isOwner && m.role !== 'owner' && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveMember(m.id)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant={m.role === 'admin' ? 'default' : 'outline'}
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={async () => {
+                                const newRole = m.role === 'admin' ? 'member' : 'admin';
+                                await updateMemberRole(m.id, newRole);
+                                toast.success(newRole === 'admin' ? 'Promovido a administrador!' : 'Rebaixado a membro');
+                              }}
+                            >
+                              <Shield className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {m.role === 'admin' ? 'Remover admin' : 'Promover a administrador'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveMember(m.id)}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               ))}

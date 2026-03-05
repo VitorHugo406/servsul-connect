@@ -117,9 +117,12 @@ export function CalendarSection() {
   }, []);
 
   const fetchEvents = useCallback(async () => {
+    if (!user) return;
     try {
       const start = startOfMonth(subMonths(currentMonth, 1));
       const end = endOfMonth(addMonths(currentMonth, 1));
+      
+      // Fetch events created by current user OR where user is a participant
       const { data, error } = await supabase
         .from('calendar_events')
         .select('*')
@@ -146,30 +149,40 @@ export function CalendarSection() {
         }
       }
 
-      setEvents((data || []).map(e => ({ ...e, participants: participantsMap[e.id] || [] })) as CalendarEvent[]);
+      // Filter to only show events created by or involving the current user
+      const allEventsWithParticipants = (data || []).map(e => ({ ...e, participants: participantsMap[e.id] || [] })) as CalendarEvent[];
+      const myEvents = allEventsWithParticipants.filter(e => 
+        e.created_by === user?.id || 
+        e.participants?.some(p => p.profile_id === profile?.id)
+      );
+      setEvents(myEvents);
     } catch (e) {
       console.error('Error fetching events:', e);
     } finally {
       setLoading(false);
     }
-  }, [currentMonth]);
+  }, [currentMonth, user, profile]);
 
   const fetchTaskDeadlines = useCallback(async () => {
+    if (!profile) return;
     try {
       const start = startOfMonth(subMonths(currentMonth, 1));
       const end = endOfMonth(addMonths(currentMonth, 1));
+      
+      // Fetch tasks assigned to current user OR created by current user
       const { data } = await supabase
         .from('tasks')
-        .select('id, title, due_date, priority, task_number, status, completed_at')
+        .select('id, title, due_date, priority, task_number, status, completed_at, assigned_to, created_by')
         .not('due_date', 'is', null)
         .gte('due_date', start.toISOString())
         .lte('due_date', end.toISOString())
+        .or(`assigned_to.eq.${profile.id},created_by.eq.${profile.id}`)
         .order('due_date', { ascending: true });
       setTaskDeadlines((data || []) as TaskDeadline[]);
     } catch (e) {
       console.error('Error fetching task deadlines:', e);
     }
-  }, [currentMonth]);
+  }, [currentMonth, profile]);
 
   useEffect(() => { fetchEvents(); fetchTaskDeadlines(); }, [fetchEvents, fetchTaskDeadlines]);
 
@@ -370,11 +383,47 @@ export function CalendarSection() {
     }
   };
 
-  // Check if a user is busy at a specific hour on a date (includes tasks with due_date at that hour)
+  // Check if a specific user is busy at a given hour - uses all events (not filtered)
+  const [allEventsForSchedule, setAllEventsForSchedule] = useState<CalendarEvent[]>([]);
+  const [allTasksForSchedule, setAllTasksForSchedule] = useState<TaskDeadline[]>([]);
+
+  // Fetch ALL events/tasks for meeting schedule availability (not just the user's)
+  useEffect(() => {
+    const fetchAll = async () => {
+      const start = startOfMonth(subMonths(currentMonth, 1));
+      const end = endOfMonth(addMonths(currentMonth, 1));
+      const { data: evData } = await supabase.from('calendar_events').select('*')
+        .gte('start_date', start.toISOString()).lte('start_date', end.toISOString());
+      
+      const eventIds = (evData || []).map(e => e.id);
+      let pMap: Record<string, Participant[]> = {};
+      if (eventIds.length > 0) {
+        const { data: parts } = await supabase.from('meeting_participants').select('*').in('event_id', eventIds);
+        if (parts) {
+          const pIds = [...new Set(parts.map(p => p.profile_id))];
+          const { data: profiles } = pIds.length > 0 ? await supabase.from('profiles').select('id, name, display_name, avatar_url').in('id', pIds) : { data: [] };
+          const profMap = new Map((profiles || []).map(p => [p.id, p]));
+          for (const p of parts) {
+            if (!pMap[p.event_id]) pMap[p.event_id] = [];
+            pMap[p.event_id].push({ ...p, profile: profMap.get(p.profile_id) } as Participant);
+          }
+        }
+      }
+      setAllEventsForSchedule((evData || []).map(e => ({ ...e, participants: pMap[e.id] || [] })) as CalendarEvent[]);
+      
+      const { data: taskData } = await supabase.from('tasks')
+        .select('id, title, due_date, priority, task_number, status, completed_at, assigned_to')
+        .not('due_date', 'is', null)
+        .gte('due_date', start.toISOString()).lte('due_date', end.toISOString());
+      setAllTasksForSchedule((taskData || []) as any[]);
+    };
+    if (showCreatePage === 'meeting') fetchAll();
+  }, [showCreatePage, currentMonth]);
+
   const isUserBusyAtHour = (userId: string | undefined, profileId: string | undefined, date: string, hour: number) => {
     const dateObj = new Date(`${date}T${hour.toString().padStart(2, '0')}:00:00`);
-    // Check calendar events
-    const eventBusy = events.some(e => {
+    // Check calendar events from ALL events
+    const eventBusy = allEventsForSchedule.some(e => {
       const isParticipant = e.participants?.some(p => p.profile_id === profileId);
       const isCreator = allUsers.find(u => u.id === profileId)?.user_id === e.created_by;
       const isMyEvent = e.created_by === userId;
@@ -384,13 +433,12 @@ export function CalendarSection() {
       return dateObj >= eStart && dateObj < eEnd;
     });
     if (eventBusy) return true;
-    // Check tasks with due_date at this hour - only for the specific user
-    const taskBusy = taskDeadlines.some(t => {
-      if (t.completed_at) return false;
+    // Check tasks assigned to THIS specific user
+    const taskBusy = allTasksForSchedule.some(t => {
+      if ((t as any).completed_at) return false;
+      if ((t as any).assigned_to !== profileId) return false;
       const tDate = new Date(t.due_date);
       if (!isSameDay(tDate, dateObj) || tDate.getHours() !== hour) return false;
-      // We can't filter by assigned_to here since taskDeadlines doesn't have it,
-      // but the main purpose is calendar-level busy indicator
       return true;
     });
     return taskBusy;
@@ -594,7 +642,8 @@ export function CalendarSection() {
                               {scheduleBusinessDays.map(day => {
                                 const dateStr = format(day, 'yyyy-MM-dd');
                                 const myBusy = isUserBusyAtHour(user?.id, profile?.id, dateStr, hour);
-                                const anyParticipantBusy = selectedParticipants.length > 0 && selectedParticipants.some(pid => {
+                                // Only show busy for participants that are currently selected
+                                const anyParticipantBusy = selectedParticipants.some(pid => {
                                   const u = allUsers.find(u => u.id === pid);
                                   return isUserBusyAtHour(u?.user_id, pid, dateStr, hour);
                                 });

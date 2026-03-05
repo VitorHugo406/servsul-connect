@@ -6,8 +6,8 @@ import { cn } from '@/lib/utils';
  */
 export function formatText(text: string, isOwnMsg: boolean): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
-  // Match formatting, markdown links, @mentions, and bare URLs
-  const regex = /(\*[^*]+\*|_[^_]+_|~[^~]+~|\[[^\]]+\]\([^)]+\)|@\w[\w\s]*(?=\s|$)|https?:\/\/[^\s<]+)/g;
+  // Match formatting, markdown links, @mentions (only the @Name part), and bare URLs
+  const regex = /(\*[^*]+\*|_[^_]+_|~[^~]+~|\[[^\]]+\]\([^)]+\)|@[\wÀ-ÿ][\wÀ-ÿ\s]*?(?=\s@|\s[^À-ÿ\w]|$)|https?:\/\/[^\s<]+)/g;
   let lastIndex = 0;
   let match;
   let key = 0;
@@ -35,11 +35,10 @@ export function formatText(text: string, isOwnMsg: boolean): React.ReactNode[] {
     } else if (m.startsWith('@')) {
       parts.push(
         <span key={key++} className={cn("font-semibold", isOwnMsg ? "text-blue-200" : "text-blue-600 dark:text-blue-400")}>
-          {m}
+          {m.trim()}
         </span>
       );
     } else if (m.startsWith('http')) {
-      // Bare URL - make it a clickable link
       parts.push(
         <a key={key++} href={m} target="_blank" rel="noopener noreferrer"
           className={cn("underline font-medium break-all", isOwnMsg ? "text-blue-200 hover:text-white" : "text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300")}
