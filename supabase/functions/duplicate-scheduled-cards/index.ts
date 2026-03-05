@@ -73,6 +73,13 @@ Deno.serve(async (req) => {
           .eq('board_id', dup.board_id)
           .eq('status', dup.target_column_id)
 
+        // Check if target column has auto-assign automation
+        const { data: targetColumn } = await supabase
+          .from('task_board_columns')
+          .select('auto_assign_to, auto_cover, is_conclusion')
+          .eq('id', dup.target_column_id)
+          .single()
+
         // Build title with date info
         let titlePrefix = '[Cópia]'
         if (dup.frequency === 'daily') {
@@ -83,22 +90,52 @@ Deno.serve(async (req) => {
           titlePrefix = `[Cópia ${monthStr}]`
         }
 
-        const { error: insertError } = await supabase
+        // Apply column automation for assigned_to if available
+        const assignedTo = targetColumn?.auto_assign_to || task.assigned_to
+        const coverImage = targetColumn?.auto_cover || task.cover_image
+
+        const { data: newTask, error: insertError } = await supabase
           .from('tasks')
           .insert({
             title: `${titlePrefix} ${task.title}`,
             description: task.description,
             status: dup.target_column_id,
             priority: task.priority,
-            assigned_to: task.assigned_to,
+            assigned_to: assignedTo,
             board_id: dup.board_id,
             created_by: dup.created_by,
-            cover_image: task.cover_image,
+            cover_image: coverImage,
             due_date: task.due_date,
             position: count || 0,
           })
+          .select('id')
+          .single()
 
-        if (!insertError) {
+        if (!insertError && newTask) {
+          // Copy subtasks
+          const { data: subtasks } = await supabase
+            .from('task_subtasks')
+            .select('title, position')
+            .eq('task_id', task.id)
+          
+          if (subtasks && subtasks.length > 0) {
+            await supabase.from('task_subtasks').insert(
+              subtasks.map((s: any) => ({ task_id: newTask.id, title: s.title, position: s.position }))
+            )
+          }
+
+          // Copy task assignees
+          const { data: assignees } = await supabase
+            .from('task_assignees')
+            .select('profile_id')
+            .eq('task_id', task.id)
+          
+          if (assignees && assignees.length > 0) {
+            await supabase.from('task_assignees').insert(
+              assignees.map((a: any) => ({ task_id: newTask.id, profile_id: a.profile_id }))
+            )
+          }
+
           await supabase
             .from('task_auto_duplications')
             .update({ last_duplicated_at: now.toISOString() })

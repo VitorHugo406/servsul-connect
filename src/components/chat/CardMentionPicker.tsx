@@ -145,7 +145,7 @@ export function CardMentionPicker({ query, onSelect, onClose }: CardMentionPicke
               {boards.find(b => b.id === selectedBoardId)?.name}
             </span>
           </div>
-          <ScrollArea className="max-h-[250px]">
+          <ScrollArea className="max-h-[250px] overflow-y-auto">
             <div className="p-1">
               {loading ? (
                 <div className="text-center py-4 text-sm text-muted-foreground">Carregando...</div>

@@ -512,10 +512,11 @@ function ActivitiesTab({ memberIds, members }: { memberIds: string[]; members: a
       try {
         const { data } = await supabase
           .from('tasks')
-          .select('id, title, status, priority, due_date, assigned_to, created_at, updated_at')
+          .select('id, title, status, priority, due_date, assigned_to, created_at, updated_at, completed_at')
           .in('assigned_to', memberIds)
           .order('updated_at', { ascending: false });
-        setTasks(data || []);
+        // Filter out completed tasks
+        setTasks((data || []).filter((t: any) => !t.completed_at));
       } catch (e) {
         console.error(e);
       } finally {

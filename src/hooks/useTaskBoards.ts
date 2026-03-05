@@ -193,7 +193,18 @@ export function useBoardMembers(boardId: string | null) {
     }
   };
 
-  return { members, loading, addMember, removeMember, refetch: fetchMembers };
+  const updateMemberRole = async (memberId: string, role: string) => {
+    try {
+      const { error } = await supabase.from('task_board_members').update({ role }).eq('id', memberId);
+      if (error) throw error;
+      await fetchMembers();
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  return { members, loading, addMember, removeMember, updateMemberRole, refetch: fetchMembers };
 }
 
 export function useBoardColumns(boardId: string | null) {
