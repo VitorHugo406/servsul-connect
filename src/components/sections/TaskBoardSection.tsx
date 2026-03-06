@@ -35,13 +35,15 @@ import { OperationModePanel } from '@/components/tasks/OperationModePanel';
 import { useSubtaskCounts } from '@/hooks/useSubtasks';
 import { useTaskAssignees } from '@/hooks/useTaskAssignees';
 import { useCardDuplications } from '@/hooks/useCardDuplications';
+import { useWorkflowRules } from '@/hooks/useWorkflowRules';
+import { useColumnAutoSubtasks } from '@/hooks/useColumnAutoSubtasks';
 import {
   PRIORITIES, BACKGROUND_IMAGES, BACKGROUND_GROUPS, CARD_COVERS,
   getBoardBg, getBoardBgStyle, getInitials, getCoverDisplay, isBoardBgDark,
 } from '@/components/tasks/taskConstants';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { CheckSquare } from 'lucide-react';
+import { CheckSquare, CheckCircle2 } from 'lucide-react';
 
 export function TaskBoardSection() {
   const { user } = useAuth();
@@ -88,6 +90,7 @@ export function TaskBoardSection() {
         onBack={() => setSelectedBoardId(null)}
         onUpdateBoard={updateBoard}
         isOwner={board.owner_id === user?.id}
+        currentUserId={user?.id || ''}
       />
     );
   }
@@ -151,15 +154,17 @@ export function TaskBoardSection() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuItem onClick={() => {
-                          const newName = prompt('Novo nome do mural:', board.name);
-                          if (newName && newName.trim()) {
-                            updateBoard(board.id, { name: newName.trim() });
-                            toast.success('Nome atualizado!');
-                          }
-                        }}>
-                          <Edit className="h-4 w-4 mr-2" /> Renomear
-                        </DropdownMenuItem>
+                        {board.owner_id === user?.id && (
+                          <DropdownMenuItem onClick={() => {
+                            const newName = prompt('Novo nome do mural:', board.name);
+                            if (newName && newName.trim()) {
+                              updateBoard(board.id, { name: newName.trim() });
+                              toast.success('Nome atualizado!');
+                            }
+                          }}>
+                            <Edit className="h-4 w-4 mr-2" /> Renomear
+                          </DropdownMenuItem>
+                        )}
                         {board.owner_id === user?.id && (
                           <>
                             <DropdownMenuSeparator />
@@ -209,11 +214,12 @@ export function TaskBoardSection() {
 }
 
 // ============ Board View ============
-function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
+function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
   board: any;
   onBack: () => void;
   onUpdateBoard: (id: string, updates: any) => Promise<any>;
   isOwner: boolean;
+  currentUserId: string;
 }) {
   const { profile } = useAuth();
   const { columns, addColumn, updateColumn, deleteColumn, refetch: refetchColumns } = useBoardColumns(board.id);
@@ -223,11 +229,16 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
   const { counts: subtaskCounts } = useSubtaskCounts(tasks.map(t => t.id));
   const { getTaskAssignees, setTaskAssignees: setTaskAssigneesDb } = useTaskAssignees(board.id);
   const { createDuplication, deleteDuplication, getTaskDuplication } = useCardDuplications(board.id);
+  const { rules: workflowRules, canMoveToColumn } = useWorkflowRules(board.id);
   const { users: allUsers } = useActiveUsers();
   const { uploadFile, uploading: fileUploading } = useFileUpload();
   const isMobile = useIsMobile();
   const coverInputRef = useRef<HTMLInputElement>(null);
   const autoCoverInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if current user is admin of this board
+  const currentMember = members.find(m => m.user_id === currentUserId);
+  const isAdminOrOwner = isOwner || currentMember?.role === 'admin';
 
   const [showSettings, setShowSettings] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
@@ -350,6 +361,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
       setCoverImage(task.cover_image || 'none');
       setCoverImageUrl('');
     }
+    // Load existing additional assignees
+    const existingAssignees = getTaskAssignees(task.id);
+    setAdditionalAssignees(existingAssignees.map(a => a.profile_id));
     setTargetColumn(task.status);
     setEditingTask(task);
     setShowCreateTask(true);
@@ -382,6 +396,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
     };
 
     let result;
+    let taskId: string | null = null;
     if (editingTask) {
       result = await updateTask(editingTask.id, {
         ...taskData,
@@ -390,12 +405,22 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         cover_image: finalCover || null,
         description: description.trim() || null,
       } as any);
+      taskId = editingTask.id;
     } else {
       result = await createTask(taskData);
+      taskId = result.data?.id || null;
     }
 
     setCreating(false);
     if (result.error) { toast.error('Erro ao salvar tarefa'); return; }
+
+    // Save additional assignees
+    if (taskId && additionalAssignees.length > 0) {
+      await setTaskAssigneesDb(taskId, additionalAssignees);
+    } else if (taskId && additionalAssignees.length === 0) {
+      await setTaskAssigneesDb(taskId, []);
+    }
+
     toast.success(editingTask ? 'Tarefa atualizada!' : 'Tarefa criada!');
     resetForm();
     setShowCreateTask(false);
@@ -564,6 +589,13 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
     if (draggedTask.status === colId && position !== undefined) {
       await reorderInColumn(draggedTask.id, position);
     } else if (draggedTask.status !== colId) {
+      // Workflow rule check
+      const moveCheck = canMoveToColumn(draggedTask.status, colId);
+      if (!moveCheck.allowed) {
+        toast.error(moveCheck.reason || 'Movimento bloqueado por regra de workflow');
+        setDraggedTask(null);
+        return;
+      }
       const colTasks = tasks.filter(t => t.status === colId);
       await moveTask(draggedTask.id, colId, position ?? colTasks.length);
       
@@ -738,7 +770,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                 <DropdownMenuItem onClick={() => setShowMembers(true)}>
                   <Users className="h-4 w-4 mr-2" /> Membros
                 </DropdownMenuItem>
-                {isOwner && (
+                {isAdminOrOwner && (
                   <>
                     <DropdownMenuItem onClick={() => setShowArchive(true)}>
                       <Archive className="h-4 w-4 mr-2" /> Arquivados
@@ -767,7 +799,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
               <Button variant="ghost" size="icon" onClick={() => setShowMembers(true)} title="Membros">
                 <Users className="h-4 w-4" />
               </Button>
-              {isOwner && (
+              {isAdminOrOwner && (
                 <>
                   <Button variant="ghost" size="icon" onClick={() => setShowArchive(true)} title="Arquivados">
                     <Archive className="h-4 w-4" />
@@ -1016,9 +1048,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                       </div>
                     ) : (
                       <h3
-                        className="font-semibold text-foreground text-sm flex-1 truncate cursor-pointer hover:text-primary transition-colors"
-                        onDoubleClick={() => { setEditingColumnId(column.id); setEditColumnTitle(column.title); }}
-                        title="Clique duplo para renomear"
+                        className={cn("font-semibold text-foreground text-sm flex-1 truncate transition-colors", isAdminOrOwner && "cursor-pointer hover:text-primary")}
+                        onDoubleClick={() => { if (isAdminOrOwner) { setEditingColumnId(column.id); setEditColumnTitle(column.title); } }}
+                        title={isAdminOrOwner ? "Clique duplo para renomear" : column.title}
                       >
                         {column.title}
                       </h3>
@@ -1054,7 +1086,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                             <MoveRight className="h-4 w-4 mr-2" /> Mover para Direita
                           </DropdownMenuItem>
                         )}
-                        {isOwner && (
+                        {isAdminOrOwner && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleDeleteColumn(column.id)} className="text-destructive">
@@ -1121,7 +1153,13 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
 
                             {/* Bottom row: badges */}
                             <div className="flex items-center gap-1 flex-wrap">
-                              {dueInfo && (() => {
+                              {/* Conclusion column: green date with check */}
+                              {column.is_conclusion && task.completed_at ? (
+                                <div className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium bg-green-500/20 text-green-600">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  {task.due_date ? new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : new Date(task.completed_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                </div>
+                              ) : dueInfo && (() => {
                                 const DI = dueInfo.icon;
                                 return (
                                   <div className={cn('flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium', dueInfo.color)}>
@@ -1147,8 +1185,34 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                                   <span>{subtaskCounts[task.id].completed}/{subtaskCounts[task.id].total}</span>
                                 </div>
                               )}
-                              {/* Spacer + assignee avatar on right */}
+                              {/* Spacer + assignee avatars on right */}
                               <div className="flex-1" />
+                              {/* Additional assignees */}
+                              {(() => {
+                                const extraAssignees = getTaskAssignees(task.id);
+                                return extraAssignees.length > 0 && (
+                                  <div className="flex -space-x-1.5">
+                                    {extraAssignees.slice(0, 2).map(a => (
+                                      <Tooltip key={a.id}>
+                                        <TooltipTrigger asChild>
+                                          <Avatar className="h-5 w-5 ring-1 ring-background">
+                                            <AvatarImage src={a.profile?.avatar_url || ''} />
+                                            <AvatarFallback className="text-[7px] bg-muted text-muted-foreground">
+                                              {getInitials(a.profile?.display_name || a.profile?.name || 'U')}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="text-xs">{a.profile?.display_name || a.profile?.name}</TooltipContent>
+                                      </Tooltip>
+                                    ))}
+                                    {extraAssignees.length > 2 && (
+                                      <Avatar className="h-5 w-5 ring-1 ring-background">
+                                        <AvatarFallback className="text-[7px] bg-muted text-muted-foreground">+{extraAssignees.length - 2}</AvatarFallback>
+                                      </Avatar>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                               {task.assignee && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
@@ -1325,26 +1389,27 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                 </Select>
               </div>
             </div>
-            {/* Additional assignees */}
             <div className="space-y-2">
               <Label>Responsáveis adicionais</Label>
-              <div className="border border-border rounded-lg max-h-[120px] overflow-y-auto">
-                {members.filter(m => m.profile_id !== assignedTo).map(m => (
-                  <label key={m.profile_id} className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-muted/50 border-b border-border last:border-0">
-                    <Checkbox
-                      checked={additionalAssignees.includes(m.profile_id)}
-                      onCheckedChange={(checked) => {
-                        setAdditionalAssignees(prev => checked ? [...prev, m.profile_id] : prev.filter(id => id !== m.profile_id));
-                      }}
-                    />
-                    <Avatar className="h-5 w-5">
-                      <AvatarImage src={m.profile?.avatar_url || ''} />
-                      <AvatarFallback className="text-[8px] bg-primary text-primary-foreground">{getInitials(m.profile?.display_name || m.profile?.name || 'U')}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs truncate">{m.profile?.display_name || m.profile?.name}</span>
-                  </label>
-                ))}
-              </div>
+              <ScrollArea className="border border-border rounded-lg max-h-[120px]">
+                <div className="p-1">
+                  {members.filter(m => m.profile_id !== assignedTo).map(m => (
+                    <label key={m.profile_id} className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-muted/50 border-b border-border last:border-0">
+                      <Checkbox
+                        checked={additionalAssignees.includes(m.profile_id)}
+                        onCheckedChange={(checked) => {
+                          setAdditionalAssignees(prev => checked ? [...prev, m.profile_id] : prev.filter(id => id !== m.profile_id));
+                        }}
+                      />
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={m.profile?.avatar_url || ''} />
+                        <AvatarFallback className="text-[8px] bg-primary text-primary-foreground">{getInitials(m.profile?.display_name || m.profile?.name || 'U')}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs truncate">{m.profile?.display_name || m.profile?.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </ScrollArea>
               <p className="text-[10px] text-muted-foreground">Selecione colaboradores adicionais para acompanhar esta tarefa</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -1530,7 +1595,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                       {m.role === 'owner' ? 'Dono' : m.role === 'admin' ? '⭐ Administrador' : 'Membro'}
                     </p>
                   </div>
-                  {isOwner && m.role !== 'owner' && (
+                  {isAdminOrOwner && m.role !== 'owner' && (
                     <div className="flex items-center gap-1">
                       <TooltipProvider>
                         <Tooltip>
@@ -1561,7 +1626,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
                 </div>
               ))}
             </div>
-            {isOwner && nonMembers.length > 0 && (
+            {isAdminOrOwner && nonMembers.length > 0 && (
               <div className="border-t border-border pt-3">
                 <h4 className="text-xs font-medium text-muted-foreground mb-2">Adicionar Colaboradores</h4>
                 <div className="space-y-1">
@@ -1589,7 +1654,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner }: {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Configurações do Mural</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
-            {isOwner && (
+            {isAdminOrOwner && (
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-orange-500" />

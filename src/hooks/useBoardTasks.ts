@@ -17,6 +17,9 @@ export interface BoardTask {
   due_date: string | null;
   position: number;
   is_archived: boolean;
+  completed_at: string | null;
+  completed_late: boolean | null;
+  delay_days: number | null;
   created_at: string;
   updated_at: string;
   assignee?: {

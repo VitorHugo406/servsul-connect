@@ -288,6 +288,106 @@ export type Database = {
           },
         ]
       }
+      column_auto_subtasks: {
+        Row: {
+          column_id: string
+          created_at: string
+          group_title: string
+          id: string
+          position: number
+          title: string
+        }
+        Insert: {
+          column_id: string
+          created_at?: string
+          group_title?: string
+          id?: string
+          position?: number
+          title: string
+        }
+        Update: {
+          column_id?: string
+          created_at?: string
+          group_title?: string
+          id?: string
+          position?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "column_auto_subtasks_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "task_board_columns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      column_workflow_rules: {
+        Row: {
+          board_id: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          required_column_id: string | null
+          rule_type: string
+          source_column_id: string | null
+          target_column_id: string
+        }
+        Insert: {
+          board_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          required_column_id?: string | null
+          rule_type?: string
+          source_column_id?: string | null
+          target_column_id: string
+        }
+        Update: {
+          board_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          required_column_id?: string | null
+          rule_type?: string
+          source_column_id?: string | null
+          target_column_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "column_workflow_rules_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "task_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "column_workflow_rules_required_column_id_fkey"
+            columns: ["required_column_id"]
+            isOneToOne: false
+            referencedRelation: "task_board_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "column_workflow_rules_source_column_id_fkey"
+            columns: ["source_column_id"]
+            isOneToOne: false
+            referencedRelation: "task_board_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "column_workflow_rules_target_column_id_fkey"
+            columns: ["target_column_id"]
+            isOneToOne: false
+            referencedRelation: "task_board_columns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       direct_messages: {
         Row: {
           content: string
@@ -709,6 +809,38 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      subtask_groups: {
+        Row: {
+          created_at: string
+          id: string
+          position: number
+          task_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position?: number
+          task_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position?: number
+          task_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subtask_groups_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       supervisor_team_members: {
         Row: {
@@ -1139,6 +1271,7 @@ export type Database = {
       task_subtasks: {
         Row: {
           created_at: string
+          group_id: string | null
           id: string
           is_completed: boolean
           position: number
@@ -1147,6 +1280,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          group_id?: string | null
           id?: string
           is_completed?: boolean
           position?: number
@@ -1155,6 +1289,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          group_id?: string | null
           id?: string
           is_completed?: boolean
           position?: number
@@ -1162,6 +1297,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "task_subtasks_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "subtask_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "task_subtasks_task_id_fkey"
             columns: ["task_id"]
@@ -1498,6 +1640,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_board_admin_or_owner: {
+        Args: { check_board_id: string }
+        Returns: boolean
+      }
       is_board_member: { Args: { check_board_id: string }; Returns: boolean }
       is_board_owner: { Args: { check_board_id: string }; Returns: boolean }
       is_group_admin: { Args: { check_group_id: string }; Returns: boolean }
