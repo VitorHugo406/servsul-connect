@@ -25,7 +25,6 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
     priority: true,
     deadline: true,
     urgency: true,
-    workload: false,
   });
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<string[]>([]);
@@ -152,48 +151,6 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
         actions.push('✅ Urgência já aplicada via critérios de prioridade/prazo');
       }
 
-      // 4. Workload balancing
-      if (criteria.workload && members.length > 0) {
-        const memberTaskCounts: Record<string, number> = {};
-        for (const m of members) {
-          memberTaskCounts[m.profile_id] = tasks.filter(t => t.assigned_to === m.profile_id).length;
-        }
-
-        const avgTasks = Object.values(memberTaskCounts).reduce((a, b) => a + b, 0) / members.length;
-        const overloaded = Object.entries(memberTaskCounts)
-          .filter(([, count]) => count > avgTasks * 1.5 && count > 3);
-        const underloaded = Object.entries(memberTaskCounts)
-          .filter(([, count]) => count < avgTasks * 0.5);
-
-        if (overloaded.length > 0 && underloaded.length > 0) {
-          for (const [overProfileId, overCount] of overloaded) {
-            const excess = Math.floor(overCount - avgTasks);
-            const overTasks = tasks
-              .filter(t => t.assigned_to === overProfileId && t.priority !== 'urgent')
-              .sort((a, b) => {
-                const po: Record<string, number> = { low: 0, medium: 1, high: 2, urgent: 3 };
-                return (po[a.priority] ?? 1) - (po[b.priority] ?? 1);
-              })
-              .slice(0, Math.min(excess, underloaded.length));
-
-            for (let i = 0; i < overTasks.length && i < underloaded.length; i++) {
-              const [targetProfileId] = underloaded[i];
-              await supabase.from('tasks').update({ assigned_to: targetProfileId }).eq('id', overTasks[i].id);
-              const overMember = members.find((m: any) => m.profile_id === overProfileId);
-              const underMember = members.find((m: any) => m.profile_id === targetProfileId);
-              actions.push(
-                `Card #${overTasks[i].task_number} redistribuído: ${overMember?.profile?.display_name || 'Sobrecarregado'} → ${underMember?.profile?.display_name || 'Disponível'}`
-              );
-            }
-          }
-        } else if (overloaded.length > 0) {
-          for (const [pid] of overloaded) {
-            const m = members.find((m: any) => m.profile_id === pid);
-            actions.push(`⚠️ ${m?.profile?.display_name || 'Membro'} está sobrecarregado (${memberTaskCounts[pid]} cards)`);
-          }
-        }
-      }
-
       // Always refetch to reflect all changes
       await onRefetch();
 
@@ -225,7 +182,7 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
 
         {!showResults ? (
           <div className="space-y-4 py-2">
-            <p className="text-sm font-medium">Selecione os critérios de otimização:</p>
+            <p className="text-sm font-medium">Selecione os critérios de reorganização das colunas:</p>
             <div className="space-y-3">
               <label className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
                 <Checkbox checked={criteria.priority} onCheckedChange={() => toggleCriteria('priority')} className="mt-0.5" />
@@ -257,15 +214,6 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
-                <Checkbox checked={criteria.workload} onCheckedChange={() => toggleCriteria('workload')} className="mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium flex items-center gap-1.5">
-                    <BarChart3 className="h-3.5 w-3.5 text-blue-500" /> Balanceamento de Carga
-                  </p>
-                  <p className="text-xs text-muted-foreground">Redistribuir tarefas automaticamente entre membros</p>
-                </div>
-              </label>
             </div>
           </div>
         ) : (

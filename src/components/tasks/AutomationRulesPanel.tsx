@@ -34,7 +34,9 @@ export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, colu
   columns: TaskBoardColumn[];
 }) {
   const { rules, createRule, deleteRule, toggleRule } = useAutomationRules(boardId);
-  const taskRules = taskId ? rules.filter(r => r.task_id === taskId) : rules.filter(r => !r.task_id);
+  const boardRules = rules.filter(r => !r.task_id);
+  const cardRules = rules.filter(r => !!r.task_id);
+  const displayRules = taskId ? rules.filter(r => r.task_id === taskId) : rules;
 
   const [showCreate, setShowCreate] = useState(false);
   const [triggerType, setTriggerType] = useState('deadline_approaching');
@@ -101,24 +103,30 @@ export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, colu
                 <Plus className="h-4 w-4" /> Nova Regra SE → ENTÃO
               </Button>
 
-              {taskRules.length === 0 ? (
+              {displayRules.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
                   Nenhuma automação configurada.
                   <br />Crie regras para automatizar ações.
                 </p>
               ) : (
-                taskRules.map(rule => {
+                displayRules.map(rule => {
                   const TIcon = TRIGGER_ICONS[rule.trigger_type] || Zap;
                   const AIcon = ACTION_ICONS[rule.action_type] || Zap;
+                  const isCardRule = !!rule.task_id;
                   return (
                     <div key={rule.id} className={cn(
                       'border border-border rounded-lg p-3 space-y-2',
                       !rule.is_active && 'opacity-50'
                     )}>
                       <div className="flex items-center justify-between">
-                        <Badge variant={rule.is_active ? 'default' : 'secondary'} className="text-[10px]">
-                          {rule.is_active ? 'Ativa' : 'Inativa'}
-                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant={rule.is_active ? 'default' : 'secondary'} className="text-[10px]">
+                            {rule.is_active ? 'Ativa' : 'Inativa'}
+                          </Badge>
+                          <Badge variant="outline" className="text-[9px]">
+                            {isCardRule ? '📋 Card' : '📊 Mural'}
+                          </Badge>
+                        </div>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleRule(rule.id, !rule.is_active)}>
                             <Zap className={cn('h-3 w-3', rule.is_active ? 'text-yellow-500' : 'text-muted-foreground')} />
