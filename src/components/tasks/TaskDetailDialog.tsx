@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, CheckSquare, Edit, Loader2, MessageSquare, Plus, Tag, Trash2, X } from 'lucide-react';
+import { Calendar, CheckSquare, Edit, Loader2, MessageSquare, Plus, Tag, Trash2, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,6 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { BoardTask } from '@/hooks/useBoardTasks';
 import { useTaskComments } from '@/hooks/useTasks';
 import { useSubtasks } from '@/hooks/useSubtasks';
+import { useSubtaskGroups } from '@/hooks/useSubtaskGroups';
 import { TaskLabel } from '@/hooks/useTaskLabels';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
 import { cn } from '@/lib/utils';
@@ -27,10 +28,17 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, taskLabels,
 }) {
   const { comments, addComment, loading: commentsLoading } = useTaskComments(task?.id || null);
   const { subtasks, addSubtask, toggleSubtask, deleteSubtask, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null, boardId);
+  const { groups, addGroup, deleteGroup, updateGroup, loading: groupsLoading } = useSubtaskGroups(task?.id || null);
   const [newComment, setNewComment] = useState('');
   const [newSubtask, setNewSubtask] = useState('');
+  const [newGroupSubtask, setNewGroupSubtask] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
+  const [showAddGroup, setShowAddGroup] = useState(false);
+  const [newGroupTitle, setNewGroupTitle] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [activeAddItem, setActiveAddItem] = useState<string | null>(null); // group id or 'ungrouped'
+
   if (!task) return null;
 
   const handleAddComment = async () => {
@@ -41,26 +49,51 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, taskLabels,
     setSending(false);
   };
 
-  const handleAddSubtask = async () => {
-    if (!newSubtask.trim()) return;
-    await addSubtask(newSubtask.trim());
-    setNewSubtask('');
+  const handleAddSubtask = async (groupId?: string | null) => {
+    const text = groupId ? (newGroupSubtask[groupId] || '') : newSubtask;
+    if (!text.trim()) return;
+    await addSubtask(text.trim(), groupId);
+    if (groupId) {
+      setNewGroupSubtask(prev => ({ ...prev, [groupId]: '' }));
+    } else {
+      setNewSubtask('');
+    }
+  };
+
+  const handleAddGroup = async () => {
+    if (!newGroupTitle.trim()) return;
+    await addGroup(newGroupTitle.trim());
+    setNewGroupTitle('');
+    setShowAddGroup(false);
+  };
+
+  const toggleGroupCollapse = (groupId: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
   };
 
   const cover = getCoverDisplay(task.cover_image);
-  const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const ungroupedSubtasks = subtasks.filter(s => !s.group_id);
+  const overallProgress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        {cover.type === 'color' && <div className={cn('h-3 -mx-6 -mt-6 mb-2 rounded-t-lg', cover.value)} />}
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+        {/* Cover */}
+        {cover.type === 'color' && <div className={cn('h-3 rounded-t-lg', cover.value)} />}
         {cover.type === 'image' && (
-          <div className="-mx-6 -mt-6 mb-2 h-40 rounded-t-lg overflow-hidden">
+          <div className="h-40 rounded-t-lg overflow-hidden">
             <img src={cover.value} alt="Capa" className="w-full h-full object-cover" />
           </div>
         )}
-        <DialogHeader>
-          <div className="flex items-center gap-2 flex-wrap">
+
+        {/* Header */}
+        <div className="px-6 pt-4 pb-2">
+          <div className="flex items-center gap-2 flex-wrap mb-2">
             <Badge variant="outline">#{task.task_number}</Badge>
             <Badge className={cn(
               task.priority === 'urgent' && 'bg-red-500',
@@ -70,7 +103,6 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, taskLabels,
             )}>
               {PRIORITIES.find(p => p.id === task.priority)?.label}
             </Badge>
-            {/* Labels on card detail */}
             {taskLabels && taskLabels.length > 0 && taskLabels.map(l => (
               <Badge key={l.id} className="text-white text-[10px]" style={{ backgroundColor: l.color }}>
                 {l.name}
@@ -82,9 +114,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, taskLabels,
               </Button>
             )}
           </div>
-          {/* Inline label picker */}
           {showLabelPicker && allLabels && onToggleLabel && (
-            <div className="flex flex-wrap gap-1.5 pt-1">
+            <div className="flex flex-wrap gap-1.5 pb-2">
               {allLabels.map(l => {
                 const isAssigned = taskLabels?.some(tl => tl.id === l.id);
                 return (
@@ -104,99 +135,264 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, taskLabels,
             </div>
           )}
           <DialogTitle className="text-xl">{task.title}</DialogTitle>
-        </DialogHeader>
-        <ScrollArea className="flex-1 -mx-6 px-6">
-          <div className="space-y-4 pb-4">
-            {task.description && <p className="text-foreground">{task.description}</p>}
-            <div className="grid grid-cols-2 gap-4">
-              {task.assignee && (
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={task.assignee.avatar_url || ''} />
-                    <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                      {getInitials(task.assignee.display_name || task.assignee.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Responsável</p>
-                    <p className="text-sm font-medium">{task.assignee.display_name || task.assignee.name}</p>
-                  </div>
-                </div>
-              )}
-              {task.due_date && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Entrega</p>
-                    <p className="text-sm font-medium">{new Date(task.due_date).toLocaleDateString('pt-BR')}</p>
-                  </div>
-                </div>
-              )}
-            </div>
+        </div>
 
-            {/* Subtasks / Checklist */}
-            <div className="border-t border-border pt-4">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckSquare className="h-4 w-4" />
-                <h4 className="font-medium">Subtarefas</h4>
-                {total > 0 && (
-                  <span className="text-xs text-muted-foreground ml-auto">{completed}/{total}</span>
+        {/* Two-column Trello-style layout */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left: Details, Subtasks */}
+          <ScrollArea className="flex-1 border-r border-border">
+            <div className="px-6 pb-6 space-y-5">
+              {/* Info row */}
+              <div className="grid grid-cols-2 gap-4">
+                {task.assignee && (
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={task.assignee.avatar_url || ''} />
+                      <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                        {getInitials(task.assignee.display_name || task.assignee.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Responsável</p>
+                      <p className="text-sm font-medium">{task.assignee.display_name || task.assignee.name}</p>
+                    </div>
+                  </div>
+                )}
+                {task.due_date && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Entrega</p>
+                      <p className="text-sm font-medium">{new Date(task.due_date).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                  </div>
                 )}
               </div>
-              {total > 0 && (
-                <Progress value={progress} className="h-1.5 mb-3" />
-              )}
-              {subtasksLoading ? (
-                <div className="flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
-              ) : (
-                <div className="space-y-1 mb-2">
-                  {subtasks.map(s => (
-                    <div key={s.id} className="flex items-center gap-2 group py-0.5">
-                      <Checkbox
-                        checked={s.is_completed}
-                        onCheckedChange={(checked) => toggleSubtask(s.id, !!checked)}
-                      />
-                      <span className={cn('text-sm flex-1', s.is_completed && 'line-through text-muted-foreground')}>{s.title}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => deleteSubtask(s.id)}
-                      >
-                        <X className="h-3 w-3 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
+
+              {/* Description */}
+              {task.description && (
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Descrição</h4>
+                  <p className="text-foreground text-sm whitespace-pre-wrap">{task.description}</p>
                 </div>
               )}
-              <div className="flex gap-2">
-                <Input
-                  value={newSubtask}
-                  onChange={(e) => setNewSubtask(e.target.value)}
-                  placeholder="Nova subtarefa..."
-                  className="h-8 text-sm"
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
-                />
-                <Button onClick={handleAddSubtask} disabled={!newSubtask.trim()} size="sm" variant="outline" className="h-8">
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
 
-            {/* Comments */}
-            <div className="border-t border-border pt-4">
-              <div className="flex items-center gap-2 mb-3">
-                <MessageSquare className="h-4 w-4" />
-                <h4 className="font-medium">Comentários</h4>
-              </div>
-              {commentsLoading ? (
-                <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-              ) : comments.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-3">Nenhum comentário</p>
+              {/* Overall subtask progress */}
+              {total > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-muted-foreground">Progresso geral</span>
+                    <span className="text-xs font-medium">{completed}/{total} ({overallProgress}%)</span>
+                  </div>
+                  <Progress value={overallProgress} className="h-1.5" />
+                </div>
+              )}
+
+              {/* Subtask Groups */}
+              {!groupsLoading && groups.map(group => {
+                const groupSubtasks = subtasks.filter(s => s.group_id === group.id);
+                const groupCompleted = groupSubtasks.filter(s => s.is_completed).length;
+                const groupTotal = groupSubtasks.length;
+                const groupProgress = groupTotal > 0 ? Math.round((groupCompleted / groupTotal) * 100) : 0;
+                const isCollapsed = collapsedGroups.has(group.id);
+
+                return (
+                  <div key={group.id} className="border border-border rounded-lg overflow-hidden">
+                    {/* Group header */}
+                    <div className="flex items-center gap-2 px-3 py-2.5 bg-muted/50">
+                      <button onClick={() => toggleGroupCollapse(group.id)} className="p-0.5">
+                        {isCollapsed ? <ChevronRight className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                      </button>
+                      <CheckSquare className="h-4 w-4 text-primary" />
+                      <h4 className="font-semibold text-sm flex-1">{group.title}</h4>
+                      {groupTotal > 0 && (
+                        <span className="text-xs text-muted-foreground">{groupCompleted}/{groupTotal}</span>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteGroup(group.id)}>
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                    {/* Group progress */}
+                    {groupTotal > 0 && !isCollapsed && (
+                      <div className="px-3 pt-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground w-8">{groupProgress}%</span>
+                          <Progress value={groupProgress} className="h-1.5 flex-1" />
+                        </div>
+                      </div>
+                    )}
+                    {/* Group subtasks */}
+                    {!isCollapsed && (
+                      <div className="px-3 py-2 space-y-1">
+                        {groupSubtasks.map(s => (
+                          <div key={s.id} className="flex items-center gap-2 group py-0.5">
+                            <Checkbox
+                              checked={s.is_completed}
+                              onCheckedChange={(checked) => toggleSubtask(s.id, !!checked)}
+                            />
+                            <span className={cn('text-sm flex-1', s.is_completed && 'line-through text-muted-foreground')}>{s.title}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => deleteSubtask(s.id)}
+                            >
+                              <X className="h-3 w-3 text-destructive" />
+                            </Button>
+                          </div>
+                        ))}
+                        {/* Add item to group */}
+                        {activeAddItem === group.id ? (
+                          <div className="pt-1 space-y-2">
+                            <Input
+                              value={newGroupSubtask[group.id] || ''}
+                              onChange={(e) => setNewGroupSubtask(prev => ({ ...prev, [group.id]: e.target.value }))}
+                              placeholder="Adicionar um item"
+                              className="h-8 text-sm"
+                              autoFocus
+                              onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask(group.id)}
+                            />
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" onClick={() => handleAddSubtask(group.id)} disabled={!(newGroupSubtask[group.id] || '').trim()}>
+                                Adicionar
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => setActiveAddItem(null)}>
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1 justify-start text-muted-foreground" onClick={() => setActiveAddItem(group.id)}>
+                            Adicionar um item
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Ungrouped subtasks */}
+              {!subtasksLoading && ungroupedSubtasks.length > 0 && (
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <div className="flex items-center gap-2 px-3 py-2.5 bg-muted/50">
+                    <CheckSquare className="h-4 w-4 text-primary" />
+                    <h4 className="font-semibold text-sm flex-1">Subtarefas</h4>
+                    <span className="text-xs text-muted-foreground">
+                      {ungroupedSubtasks.filter(s => s.is_completed).length}/{ungroupedSubtasks.length}
+                    </span>
+                  </div>
+                  {ungroupedSubtasks.length > 0 && (
+                    <div className="px-3 pt-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground w-8">
+                          {Math.round((ungroupedSubtasks.filter(s => s.is_completed).length / ungroupedSubtasks.length) * 100)}%
+                        </span>
+                        <Progress value={Math.round((ungroupedSubtasks.filter(s => s.is_completed).length / ungroupedSubtasks.length) * 100)} className="h-1.5 flex-1" />
+                      </div>
+                    </div>
+                  )}
+                  <div className="px-3 py-2 space-y-1">
+                    {ungroupedSubtasks.map(s => (
+                      <div key={s.id} className="flex items-center gap-2 group py-0.5">
+                        <Checkbox
+                          checked={s.is_completed}
+                          onCheckedChange={(checked) => toggleSubtask(s.id, !!checked)}
+                        />
+                        <span className={cn('text-sm flex-1', s.is_completed && 'line-through text-muted-foreground')}>{s.title}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => deleteSubtask(s.id)}
+                        >
+                          <X className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                    {activeAddItem === 'ungrouped' ? (
+                      <div className="pt-1 space-y-2">
+                        <Input
+                          value={newSubtask}
+                          onChange={(e) => setNewSubtask(e.target.value)}
+                          placeholder="Adicionar um item"
+                          className="h-8 text-sm"
+                          autoFocus
+                          onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask(null)}
+                        />
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" onClick={() => handleAddSubtask(null)} disabled={!newSubtask.trim()}>
+                            Adicionar
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setActiveAddItem(null)}>
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1 justify-start text-muted-foreground" onClick={() => setActiveAddItem('ungrouped')}>
+                        Adicionar um item
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Add new checklist group button */}
+              {showAddGroup ? (
+                <div className="border border-border rounded-lg p-3 space-y-2">
+                  <h4 className="font-medium text-sm">Adicionar Checklist</h4>
+                  <Input
+                    value={newGroupTitle}
+                    onChange={(e) => setNewGroupTitle(e.target.value)}
+                    placeholder="Título"
+                    className="h-8 text-sm"
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()}
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleAddGroup} disabled={!newGroupTitle.trim()}>
+                      Adicionar
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => { setShowAddGroup(false); setNewGroupTitle(''); }}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
               ) : (
-                <div className="space-y-3 mb-4">
-                  {comments.map(c => (
-                    <div key={c.id} className="flex gap-3">
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowAddGroup(true)}>
+                    <CheckSquare className="h-3.5 w-3.5" /> Checklist
+                  </Button>
+                  {groups.length === 0 && ungroupedSubtasks.length === 0 && (
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setActiveAddItem('ungrouped')}>
+                      <Plus className="h-3.5 w-3.5" /> Subtarefa
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {subtasksLoading && (
+                <div className="flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+              )}
+            </div>
+          </ScrollArea>
+
+          {/* Right: Comments */}
+          <div className="w-[320px] flex-shrink-0 flex flex-col max-h-full">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30">
+              <MessageSquare className="h-4 w-4" />
+              <h4 className="font-semibold text-sm">Comentários e atividade</h4>
+            </div>
+            <ScrollArea className="flex-1 px-4">
+              <div className="py-3 space-y-3">
+                {commentsLoading ? (
+                  <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                ) : comments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">Nenhum comentário</p>
+                ) : (
+                  comments.map(c => (
+                    <div key={c.id} className="flex gap-2">
                       <Avatar className="h-7 w-7 flex-shrink-0">
                         <AvatarImage src={c.author?.avatar_url || ''} />
                         <AvatarFallback className="text-[9px] bg-muted">{getInitials(c.author?.display_name || c.author?.name || 'U')}</AvatarFallback>
@@ -211,19 +407,29 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, taskLabels,
                         <p className="text-sm">{c.content}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+            <div className="p-3 border-t border-border">
               <div className="flex gap-2">
-                <Input value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Comentar..." onKeyDown={(e) => e.key === 'Enter' && handleAddComment()} />
+                <Input
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Escrever um comentário..."
+                  className="text-sm"
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+                />
                 <Button onClick={handleAddComment} disabled={sending || !newComment.trim()} size="sm">
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar'}
                 </Button>
               </div>
             </div>
           </div>
-        </ScrollArea>
-        <DialogFooter className="border-t border-border pt-3">
+        </div>
+
+        {/* Footer */}
+        <DialogFooter className="border-t border-border p-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
           <Button onClick={() => onEdit(task)}><Edit className="h-4 w-4 mr-2" /> Editar</Button>
         </DialogFooter>

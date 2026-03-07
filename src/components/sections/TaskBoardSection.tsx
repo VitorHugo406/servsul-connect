@@ -1,11 +1,12 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus, MoreVertical, Calendar, Trash2, Edit, Loader2,
   GripVertical, ListTodo, X, AlertTriangle, Search,
   Clock4, Clock, Users, Settings, ArrowLeft, MoveRight,
   PlusCircle, FileDown, Zap, Upload, Tag, Copy, Repeat,
-  Archive, ArchiveRestore, Pencil, Activity, Menu, Shield
+  Archive, ArchiveRestore, Pencil, Activity, Menu, Shield,
+  Filter
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -32,6 +33,8 @@ import { TaskDetailDialog } from '@/components/tasks/TaskDetailDialog';
 import { ReportDialog } from '@/components/tasks/ReportDialog';
 import { AutomationRulesPanel } from '@/components/tasks/AutomationRulesPanel';
 import { OperationModePanel } from '@/components/tasks/OperationModePanel';
+import { TaskFilterPanel, TaskFilter, emptyFilter, isFilterActive, applyFilter } from '@/components/tasks/TaskFilterPanel';
+import { AutoSubtasksConfig } from '@/components/tasks/AutoSubtasksConfig';
 import { useSubtaskCounts } from '@/hooks/useSubtasks';
 import { useTaskAssignees } from '@/hooks/useTaskAssignees';
 import { useCardDuplications } from '@/hooks/useCardDuplications';
@@ -273,6 +276,8 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
   const boardScrollRef = useRef<HTMLDivElement>(null);
   const [isDraggingBoard, setIsDraggingBoard] = useState(false);
   const dragStartRef = useRef<{ x: number; scrollLeft: number } | null>(null);
+  const [taskFilter, setTaskFilter] = useState<TaskFilter>(emptyFilter);
+  const [showFilter, setShowFilter] = useState(false);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -297,6 +302,26 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
 
   const memberUserIds = new Set(members.map(m => m.user_id));
   const nonMembers = allUsers.filter(u => !memberUserIds.has(u.user_id));
+
+  // Dynamic browser tab title
+  useEffect(() => {
+    const originalTitle = document.title;
+    document.title = `${board.name} | Tarefas`;
+    return () => { document.title = originalTitle; };
+  }, [board.name]);
+
+  // Update tab title when viewing a card
+  useEffect(() => {
+    if (showTaskDetail && selectedTask) {
+      document.title = `${selectedTask.title} | ${board.name}`;
+    } else {
+      document.title = `${board.name} | Tarefas`;
+    }
+  }, [showTaskDetail, selectedTask, board.name]);
+
+  // Apply filter to tasks
+  const conclusionColumnIds = columns.filter(c => c.is_conclusion).map(c => c.id);
+  const filteredTasks = applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels);
 
   const getDueDateInfo = (dueDateStr: string | null) => {
     if (!dueDateStr) return null;
@@ -764,6 +789,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setShowFilter(true)}>
+                  <Filter className="h-4 w-4 mr-2" /> Filtro {isFilterActive(taskFilter) && '●'}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowReport(true)}>
                   <FileDown className="h-4 w-4 mr-2" /> Relatório
                 </DropdownMenuItem>
@@ -784,6 +812,16 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
             </DropdownMenu>
           ) : (
             <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowFilter(true)}
+                title="Filtro"
+                className={cn(isFilterActive(taskFilter) && "text-primary")}
+              >
+                <Filter className="h-4 w-4" />
+                {isFilterActive(taskFilter) && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />}
+              </Button>
               <Button variant="ghost" size="icon" onClick={() => { setAutomationTaskId(undefined); setShowAutomationRules(true); }} title="Automações do Board">
                 <Zap className="h-4 w-4" />
               </Button>
@@ -836,10 +874,10 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
                   </Button>
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: columns.find(c => c.id === mobileSelectedColumn)?.color }} />
                   <span className="font-semibold text-sm">{columns.find(c => c.id === mobileSelectedColumn)?.title}</span>
-                  <Badge variant="secondary" className="text-xs">{tasks.filter(t => t.status === mobileSelectedColumn).length}</Badge>
+                  <Badge variant="secondary" className="text-xs">{filteredTasks.filter(t => t.status === mobileSelectedColumn).length}</Badge>
                 </div>
                 <div className="space-y-2">
-                  {tasks.filter(t => t.status === mobileSelectedColumn).sort((a, b) => a.position - b.position).map((task) => {
+                  {filteredTasks.filter(t => t.status === mobileSelectedColumn).sort((a, b) => a.position - b.position).map((task) => {
                     const cover = getCoverDisplay(task.cover_image);
                     const dueInfo = getDueDateInfo(task.due_date);
                     const taskLabelsForCard = getTaskLabels(task.id);
@@ -988,7 +1026,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
                   );
                 })()}
                 {columns.map(col => {
-                  const colTasks = tasks.filter(t => t.status === col.id);
+                  const colTasks = filteredTasks.filter(t => t.status === col.id);
                   return (
                     <button
                       key={col.id}
@@ -1015,7 +1053,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
             /* Desktop: horizontal scroll */
             <div className="inline-flex gap-4 h-full pb-2 items-start">
             {columns.map((column) => {
-              const colTasks = tasks.filter(t => t.status === column.id).sort((a, b) => a.position - b.position);
+              const colTasks = filteredTasks.filter(t => t.status === column.id).sort((a, b) => a.position - b.position);
               return (
                 <div
                   key={column.id}
@@ -1815,6 +1853,10 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
                 </button>
               </div>
             </div>
+            {/* Auto-subtasks section */}
+            {showAutomation && (
+              <AutoSubtasksConfig columnId={showAutomation.id} />
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAutomation(null)}>Cancelar</Button>
@@ -2045,6 +2087,17 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
         onUpdateTask={updateTask}
         onMoveTask={moveTask}
         onRefetch={refetchTasks}
+      />
+
+      {/* Filter Panel */}
+      <TaskFilterPanel
+        open={showFilter}
+        onOpenChange={setShowFilter}
+        filter={taskFilter}
+        onFilterChange={setTaskFilter}
+        members={members}
+        labels={labels}
+        currentProfileId={profile?.id}
       />
     </div>
   );
