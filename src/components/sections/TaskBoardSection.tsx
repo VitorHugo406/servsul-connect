@@ -322,6 +322,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
   const conclusionColumnIds = columns.filter(c => c.is_conclusion).map(c => c.id);
   const filteredTasks = applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels);
 
+  const getDueDateInfo = (dueDateStr: string | null) => {
     if (!dueDateStr) return null;
     const due = new Date(dueDateStr);
     const today = new Date();
