@@ -1022,7 +1022,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
                   );
                 })()}
                 {columns.map(col => {
-                  const colTasks = tasks.filter(t => t.status === col.id);
+                  const colTasks = filteredTasks.filter(t => t.status === col.id);
                   return (
                     <button
                       key={col.id}
