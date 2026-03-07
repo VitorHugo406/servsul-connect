@@ -8,6 +8,7 @@ export interface Subtask {
   is_completed: boolean;
   position: number;
   created_at: string;
+  group_id: string | null;
 }
 
 export function useSubtasks(taskId: string | null, boardId?: string | null) {
@@ -47,13 +48,15 @@ export function useSubtasks(taskId: string | null, boardId?: string | null) {
 
   useEffect(() => { fetchSubtasks(); }, [fetchSubtasks]);
 
-  const addSubtask = async (title: string) => {
+  const addSubtask = async (title: string, groupId?: string | null) => {
     if (!taskId) return { error: new Error('No task') };
     try {
+      const sameGroup = subtasks.filter(s => s.group_id === (groupId || null));
       const { error } = await supabase.from('task_subtasks').insert({
         task_id: taskId,
         title,
-        position: subtasks.length,
+        position: sameGroup.length,
+        group_id: groupId || null,
       });
       if (error) throw error;
       await fetchSubtasks();
@@ -72,7 +75,6 @@ export function useSubtasks(taskId: string | null, boardId?: string | null) {
         .eq('id', id);
       if (error) throw error;
       setSubtasks(prev => prev.map(s => s.id === id ? { ...s, is_completed: completed } : s));
-      // Trigger automations immediately after checklist change
       triggerAutomationsForBoard();
       return { error: null };
     } catch (error) {
