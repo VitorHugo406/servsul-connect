@@ -870,10 +870,10 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
                   </Button>
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: columns.find(c => c.id === mobileSelectedColumn)?.color }} />
                   <span className="font-semibold text-sm">{columns.find(c => c.id === mobileSelectedColumn)?.title}</span>
-                  <Badge variant="secondary" className="text-xs">{tasks.filter(t => t.status === mobileSelectedColumn).length}</Badge>
+                  <Badge variant="secondary" className="text-xs">{filteredTasks.filter(t => t.status === mobileSelectedColumn).length}</Badge>
                 </div>
                 <div className="space-y-2">
-                  {tasks.filter(t => t.status === mobileSelectedColumn).sort((a, b) => a.position - b.position).map((task) => {
+                  {filteredTasks.filter(t => t.status === mobileSelectedColumn).sort((a, b) => a.position - b.position).map((task) => {
                     const cover = getCoverDisplay(task.cover_image);
                     const dueInfo = getDueDateInfo(task.due_date);
                     const taskLabelsForCard = getTaskLabels(task.id);
