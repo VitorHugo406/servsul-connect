@@ -302,7 +302,26 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
   const memberUserIds = new Set(members.map(m => m.user_id));
   const nonMembers = allUsers.filter(u => !memberUserIds.has(u.user_id));
 
-  const getDueDateInfo = (dueDateStr: string | null) => {
+  // Dynamic browser tab title
+  useEffect(() => {
+    const originalTitle = document.title;
+    document.title = `${board.name} | Tarefas`;
+    return () => { document.title = originalTitle; };
+  }, [board.name]);
+
+  // Update tab title when viewing a card
+  useEffect(() => {
+    if (showTaskDetail && selectedTask) {
+      document.title = `${selectedTask.title} | ${board.name}`;
+    } else {
+      document.title = `${board.name} | Tarefas`;
+    }
+  }, [showTaskDetail, selectedTask, board.name]);
+
+  // Apply filter to tasks
+  const conclusionColumnIds = columns.filter(c => c.is_conclusion).map(c => c.id);
+  const filteredTasks = applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels);
+
     if (!dueDateStr) return null;
     const due = new Date(dueDateStr);
     const today = new Date();
