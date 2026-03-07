@@ -788,6 +788,9 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setShowFilter(true)}>
+                  <Filter className="h-4 w-4 mr-2" /> Filtro {isFilterActive(taskFilter) && '●'}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowReport(true)}>
                   <FileDown className="h-4 w-4 mr-2" /> Relatório
                 </DropdownMenuItem>
