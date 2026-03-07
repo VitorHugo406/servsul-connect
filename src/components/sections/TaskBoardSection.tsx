@@ -34,6 +34,7 @@ import { ReportDialog } from '@/components/tasks/ReportDialog';
 import { AutomationRulesPanel } from '@/components/tasks/AutomationRulesPanel';
 import { OperationModePanel } from '@/components/tasks/OperationModePanel';
 import { TaskFilterPanel, TaskFilter, emptyFilter, isFilterActive, applyFilter } from '@/components/tasks/TaskFilterPanel';
+import { AutoSubtasksConfig } from '@/components/tasks/AutoSubtasksConfig';
 import { useSubtaskCounts } from '@/hooks/useSubtasks';
 import { useTaskAssignees } from '@/hooks/useTaskAssignees';
 import { useCardDuplications } from '@/hooks/useCardDuplications';
