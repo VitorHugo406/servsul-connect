@@ -2083,6 +2083,17 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
         onMoveTask={moveTask}
         onRefetch={refetchTasks}
       />
+
+      {/* Filter Panel */}
+      <TaskFilterPanel
+        open={showFilter}
+        onOpenChange={setShowFilter}
+        filter={taskFilter}
+        onFilterChange={setTaskFilter}
+        members={members}
+        labels={labels}
+        currentProfileId={profile?.id}
+      />
     </div>
   );
 }
