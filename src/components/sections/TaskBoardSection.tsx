@@ -1049,7 +1049,7 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
             /* Desktop: horizontal scroll */
             <div className="inline-flex gap-4 h-full pb-2 items-start">
             {columns.map((column) => {
-              const colTasks = tasks.filter(t => t.status === column.id).sort((a, b) => a.position - b.position);
+              const colTasks = filteredTasks.filter(t => t.status === column.id).sort((a, b) => a.position - b.position);
               return (
                 <div
                   key={column.id}
