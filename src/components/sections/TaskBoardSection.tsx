@@ -1852,6 +1852,10 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
                 </button>
               </div>
             </div>
+            {/* Auto-subtasks section */}
+            {showAutomation && (
+              <AutoSubtasksConfig columnId={showAutomation.id} />
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAutomation(null)}>Cancelar</Button>
