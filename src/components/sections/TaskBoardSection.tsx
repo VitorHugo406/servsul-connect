@@ -808,6 +808,16 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
             </DropdownMenu>
           ) : (
             <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowFilter(true)}
+                title="Filtro"
+                className={cn(isFilterActive(taskFilter) && "text-primary")}
+              >
+                <Filter className="h-4 w-4" />
+                {isFilterActive(taskFilter) && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />}
+              </Button>
               <Button variant="ghost" size="icon" onClick={() => { setAutomationTaskId(undefined); setShowAutomationRules(true); }} title="Automações do Board">
                 <Zap className="h-4 w-4" />
               </Button>
