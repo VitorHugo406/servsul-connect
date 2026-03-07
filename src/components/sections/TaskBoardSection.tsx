@@ -275,6 +275,8 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
   const boardScrollRef = useRef<HTMLDivElement>(null);
   const [isDraggingBoard, setIsDraggingBoard] = useState(false);
   const dragStartRef = useRef<{ x: number; scrollLeft: number } | null>(null);
+  const [taskFilter, setTaskFilter] = useState<TaskFilter>(emptyFilter);
+  const [showFilter, setShowFilter] = useState(false);
 
   // Form state
   const [title, setTitle] = useState('');
