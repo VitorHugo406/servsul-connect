@@ -1,11 +1,12 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus, MoreVertical, Calendar, Trash2, Edit, Loader2,
   GripVertical, ListTodo, X, AlertTriangle, Search,
   Clock4, Clock, Users, Settings, ArrowLeft, MoveRight,
   PlusCircle, FileDown, Zap, Upload, Tag, Copy, Repeat,
-  Archive, ArchiveRestore, Pencil, Activity, Menu, Shield
+  Archive, ArchiveRestore, Pencil, Activity, Menu, Shield,
+  Filter
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -32,6 +33,7 @@ import { TaskDetailDialog } from '@/components/tasks/TaskDetailDialog';
 import { ReportDialog } from '@/components/tasks/ReportDialog';
 import { AutomationRulesPanel } from '@/components/tasks/AutomationRulesPanel';
 import { OperationModePanel } from '@/components/tasks/OperationModePanel';
+import { TaskFilterPanel, TaskFilter, emptyFilter, isFilterActive, applyFilter } from '@/components/tasks/TaskFilterPanel';
 import { useSubtaskCounts } from '@/hooks/useSubtasks';
 import { useTaskAssignees } from '@/hooks/useTaskAssignees';
 import { useCardDuplications } from '@/hooks/useCardDuplications';
