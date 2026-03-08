@@ -1547,7 +1547,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                       <Badge variant="outline" className="text-[9px] border-green-500 text-green-600">✓ Conclusão</Badge>
                     )}
                     {(column as any).is_template_column && (
-                      <Badge variant="outline" className="text-[9px] border-amber-500 text-amber-600">🔧 Template</Badge>
+                      <Badge variant="outline" className="text-[9px] border-amber-500 text-amber-600">Template</Badge>
                     )}
                     <Badge variant="secondary" className="text-xs">{colTasks.length}</Badge>
                     <DropdownMenu>
@@ -1796,7 +1796,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                         </div>
                       );
                     })}
-                    {colTasks.length === 0 && (
+                    {colTasks.length === 0 && !(column as any).is_template_column && (
                       <div className="text-center py-6 text-muted-foreground text-xs">Nenhuma tarefa</div>
                     )}
                   {/* Template cards */}
@@ -1812,14 +1812,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                         {colTemplates.map(template => (
                           <div
                             key={template.id}
-                            className="mx-2 mb-1.5 bg-card/60 rounded-lg border border-dashed border-primary/30 cursor-pointer hover:shadow-md transition-all group/tpl relative"
+                            className="mx-2 mb-1.5 rounded border border-dashed border-blue-400/50 cursor-pointer hover:shadow-md transition-all group/tpl relative bg-blue-600"
                             onClick={() => { setSelectedTask(template); setShowTaskDetail(true); }}
                           >
-                            <div className="px-2 py-1.5">
-                              <Badge className="bg-primary/10 text-primary border-primary/20 text-[9px] h-4 mb-1">
-                                <Copy className="h-2.5 w-2.5 mr-0.5" /> Este cartão é um template
-                              </Badge>
-                              <h4 className="font-normal text-sm text-foreground leading-snug">{template.title}</h4>
+                            <div className="px-2.5 py-2">
+                              <h4 className="font-normal text-sm text-white leading-snug">{template.title}</h4>
+                              <div className="flex items-center gap-1 mt-1">
+                                <span className="bg-blue-500/60 text-white/90 text-[9px] px-1.5 py-0.5 rounded font-medium">Este cartão é um template.</span>
+                              </div>
                             </div>
                             <div className="absolute top-1 right-1 opacity-0 group-hover/tpl:opacity-100 transition-opacity">
                               <DropdownMenu>
@@ -1863,21 +1863,23 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   })()}
                   </div>
                   {/* Fixed add button at bottom of column */}
-                  <div className="p-2 pt-0 border-t border-border">
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" className="flex-1 text-xs gap-1" onClick={() => openCreateTask(column.id)}>
-                        <Plus className="h-3 w-3" /> Adicionar
-                      </Button>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openCreateTemplate(column.id)}>
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Criar template</TooltipContent>
-                      </Tooltip>
+                  {!(column as any).is_template_column && (
+                    <div className="p-2 pt-0 border-t border-border">
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" className="flex-1 text-xs gap-1" onClick={() => openCreateTask(column.id)}>
+                          <Plus className="h-3 w-3" /> Adicionar um cartão
+                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openCreateTemplate(column.id)}>
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Criar template</TooltipContent>
+                        </Tooltip>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
@@ -1961,7 +1963,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
            <DialogTitle>
-              {isCreatingTemplate ? '🔧 Novo Template' : editingTask?.is_template ? `Editar Template #${editingTask.task_number}` : editingTask ? `Editar Tarefa #${editingTask.task_number}` : 'Nova Tarefa'}
+              {isCreatingTemplate ? 'Novo Template' : editingTask?.is_template ? `Editar Template #${editingTask.task_number}` : editingTask ? `Editar Tarefa #${editingTask.task_number}` : 'Nova Tarefa'}
             </DialogTitle>
             {isCreatingTemplate && (
               <DialogDescription className="text-xs">
@@ -2379,9 +2381,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
           {/* Tab buttons */}
           <div className="flex gap-1 border-b border-border pb-0">
             {[
-              { id: 'appearance', label: 'Capa e Responsável', icon: '🎨' },
-              { id: 'config', label: 'Configuração', icon: '⚙️' },
-              { id: 'subtasks', label: 'Subtarefas', icon: '☑️' },
+              { id: 'appearance', label: 'Capa e Responsável' },
+              { id: 'config', label: 'Configuração' },
+              { id: 'subtasks', label: 'Subtarefas' },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -2393,7 +2395,6 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 )}
               >
-                <span>{tab.icon}</span>
                 {tab.label}
               </button>
             ))}
