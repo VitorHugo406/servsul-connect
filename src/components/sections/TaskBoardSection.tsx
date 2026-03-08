@@ -1108,11 +1108,11 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             animate={{ width: showBoard ? 300 : '100%', opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="overflow-hidden flex-shrink-0"
+            className="overflow-hidden flex-shrink-0 py-3 pl-3"
           >
             <div className={cn(
-              "h-full overflow-y-auto p-4 space-y-3 border-r border-border",
-              "bg-sidebar text-sidebar-foreground"
+              "h-full overflow-y-auto p-4 space-y-3 rounded-xl",
+              "bg-muted text-foreground"
             )}>
               <h3 className="font-display font-semibold text-sm">
                 Planejador
