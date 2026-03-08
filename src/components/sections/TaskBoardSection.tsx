@@ -1723,11 +1723,68 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     {colTasks.length === 0 && (
                       <div className="text-center py-6 text-muted-foreground text-xs">Nenhuma tarefa</div>
                     )}
+                  {/* Template cards */}
+                  {(() => {
+                    const colTemplates = templateTasks.filter(t => t.status === column.id);
+                    if (colTemplates.length === 0) return null;
+                    return (
+                      <>
+                        <div className="px-2 pt-1">
+                          <div className="h-px bg-border my-1" />
+                          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-1">Templates</p>
+                        </div>
+                        {colTemplates.map(template => (
+                          <div
+                            key={template.id}
+                            className="mx-2 mb-1.5 bg-card/60 rounded-lg border border-dashed border-primary/30 cursor-pointer hover:shadow-md transition-all group/tpl relative"
+                            onClick={() => { setSelectedTask(template); setShowTaskDetail(true); }}
+                          >
+                            <div className="px-2 py-1.5">
+                              <Badge className="bg-primary/10 text-primary border-primary/20 text-[9px] h-4 mb-1">
+                                <Copy className="h-2.5 w-2.5 mr-0.5" /> Este cartão é um template
+                              </Badge>
+                              <h4 className="font-normal text-sm text-foreground leading-snug">{template.title}</h4>
+                            </div>
+                            <div className="absolute top-1 right-1 opacity-0 group-hover/tpl:opacity-100 transition-opacity">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                  <Button variant="secondary" size="icon" className="h-6 w-6 rounded-full shadow-sm">
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>
+                                    Duplicar como card em:
+                                  </DropdownMenuItem>
+                                  {columns.map(c => (
+                                    <DropdownMenuItem key={c.id} onClick={(e) => { e.stopPropagation(); duplicateTemplateAsCard(template, c.id); }}>
+                                      <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: c.color }} />
+                                      {c.title}
+                                    </DropdownMenuItem>
+                                  ))}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(template); }}>
+                                    <Edit className="h-4 w-4 mr-2" /> Editar Template
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteTask(template.id); }} className="text-destructive">
+                                    <Trash2 className="h-4 w-4 mr-2" /> Excluir Template
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    );
+                  })()}
                   </div>
                   {/* Fixed add button at bottom of column */}
-                  <div className="p-2 pt-0 border-t border-border">
+                  <div className="p-2 pt-0 border-t border-border space-y-1">
                     <Button variant="ghost" size="sm" className="w-full text-xs gap-1" onClick={() => openCreateTask(column.id)}>
                       <Plus className="h-3 w-3" /> Adicionar
+                    </Button>
+                    <Button variant="ghost" size="sm" className="w-full text-xs gap-1 text-muted-foreground" onClick={() => openCreateTemplate(column.id)}>
+                      <Copy className="h-3 w-3" /> Criar template
                     </Button>
                   </div>
                 </div>
