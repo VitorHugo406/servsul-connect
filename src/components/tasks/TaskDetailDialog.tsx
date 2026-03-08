@@ -613,6 +613,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
         {renderCover()}
+        {renderTemplateBanner()}
         {renderHeader()}
         <div className="h-px bg-border mx-4" />
         {renderActionButtons()}
@@ -622,7 +623,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
           {/* Left: Details & Subtasks */}
           <ScrollArea className="flex-1 border-r border-border">
             <div className="pb-6">
-              {renderInfoRow()}
+              {!task.is_template && renderInfoRow()}
               {renderDescription()}
               {renderProgress()}
               {renderSubtasks()}
