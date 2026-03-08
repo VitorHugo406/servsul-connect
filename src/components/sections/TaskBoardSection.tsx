@@ -349,7 +349,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     if (!request) return;
     
     if (approve) {
-      await addMember(request.user_id, request.profile_id, 'member');
+      await addMember(request.user_id, request.profile_id);
     }
     
     await (supabase as any)
