@@ -1059,6 +1059,22 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               </Button>
               {isAdminOrOwner && (
                 <>
+                  <Button variant="ghost" size="icon" onClick={() => setShowDistribution(true)} title="Auto-distribuição" className="text-secondary hover:text-secondary/80">
+                    <Shuffle className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setShowShareDialog(true)} title="Compartilhar quadro">
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                  <div className="relative">
+                    <Button variant="ghost" size="icon" onClick={() => setShowJoinRequests(true)} title="Solicitações">
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
+                    {joinRequests.length > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] flex items-center justify-center font-bold">
+                        {joinRequests.length}
+                      </span>
+                    )}
+                  </div>
                   <Button variant="ghost" size="icon" onClick={() => setShowArchive(true)} title="Arquivados">
                     <Archive className="h-4 w-4" />
                   </Button>
