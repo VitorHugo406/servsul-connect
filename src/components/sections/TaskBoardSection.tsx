@@ -1108,19 +1108,19 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             animate={{ width: showBoard ? 300 : '100%', opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="overflow-hidden flex-shrink-0 p-2"
+            className="overflow-hidden flex-shrink-0"
           >
             <div className={cn(
-              "h-full overflow-y-auto rounded-xl p-4 space-y-3",
-              "bg-muted/80 dark:bg-muted/40 border border-border"
+              "h-full overflow-y-auto p-4 space-y-3 border-r border-border",
+              "bg-sidebar text-sidebar-foreground"
             )}>
-              <h3 className="font-display font-semibold text-sm text-foreground">
-                📋 Planejador
+              <h3 className="font-display font-semibold text-sm">
+                Planejador
               </h3>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-sidebar-foreground/60">
                 {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
-              <div className="h-px bg-border" />
+              <div className="h-px bg-sidebar-border" />
               {(() => {
                 const todayTasks = tasks.filter(t => {
                   if (!t.due_date) return false;
@@ -1128,25 +1128,25 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 }).sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
                 return todayTasks.length === 0 ? (
                   <div className="flex flex-col items-center py-8 text-center">
-                    <div className="mb-3 rounded-full bg-background p-3">
-                      <Calendar className="h-6 w-6 text-muted-foreground" />
+                    <div className="mb-3 rounded-full bg-sidebar-accent p-3">
+                      <Calendar className="h-6 w-6 text-sidebar-foreground/50" />
                     </div>
-                    <p className="text-sm text-muted-foreground">Nenhuma tarefa para hoje</p>
+                    <p className="text-sm text-sidebar-foreground/60">Nenhuma tarefa para hoje</p>
                   </div>
                 ) : todayTasks.map(t => {
                   const col = columns.find(c => c.id === t.status);
                   return (
-                    <div key={t.id} className="p-3 rounded-lg border border-border bg-card cursor-pointer hover:shadow-md transition-all"
+                    <div key={t.id} className="p-3 rounded-lg bg-sidebar-accent cursor-pointer hover:bg-sidebar-accent/80 transition-all"
                       onClick={() => { setSelectedTask(t); setShowTaskDetail(true); }}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col?.color }} />
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-sidebar-foreground/60">
                           {new Date(t.due_date!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <p className="text-sm font-medium text-foreground">{t.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{col?.title}</p>
+                      <p className="text-sm font-medium text-sidebar-foreground">{t.title}</p>
+                      <p className="text-xs text-sidebar-foreground/50 mt-0.5">{col?.title}</p>
                     </div>
                   );
                 });
@@ -1693,31 +1693,31 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
       {/* Bottom bar: Planner / Board / Switch - Trello style */}
       {!isMobile && (
-        <div className="flex items-center justify-center py-1.5 relative z-10 border-t border-border bg-sidebar">
-          <div className="flex items-center bg-sidebar-accent rounded-lg p-0.5">
+        <div className="flex items-center justify-center py-1.5 relative z-10">
+          <div className="flex items-center bg-sidebar rounded-lg p-0.5">
             <button
               onClick={togglePlanner}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-                showPlanner ? "bg-primary text-primary-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/80"
+                showPlanner ? "bg-sidebar-accent text-sidebar-foreground" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
               )}
             >
-              📋 Planejador
+              Planejador
             </button>
             <button
               onClick={toggleBoard}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-                showBoard && !showPlanner ? "bg-primary text-primary-foreground" : showBoard ? "bg-muted text-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/80"
+                showBoard && !showPlanner ? "bg-sidebar-accent text-sidebar-foreground" : showBoard ? "bg-sidebar-accent/50 text-sidebar-foreground" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
               )}
             >
-              📊 Quadro
+              Quadro
             </button>
             <div className="w-px h-5 bg-sidebar-border mx-0.5" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-sidebar-foreground hover:bg-sidebar-accent/80 transition-colors">
-                  🔄 Mudar de quadro
+                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors">
+                  Mudar de quadro
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-64">
