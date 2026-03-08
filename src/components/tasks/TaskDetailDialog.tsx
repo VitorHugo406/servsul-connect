@@ -601,7 +601,6 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
       </div>
     </div>
   ) : null;
-  );
 
   const renderSubtasks = () => (
     <div className="px-4 py-2 space-y-3">
