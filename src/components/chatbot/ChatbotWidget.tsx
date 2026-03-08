@@ -603,6 +603,38 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                           </motion.div>
                         )}
 
+                        {/* Score feedback on 1st of month */}
+                        {scoreFeedback && (
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className={`rounded-lg border p-3 ${
+                              scoreFeedback.trend === 'up'
+                                ? 'border-green-500/30 bg-green-500/5'
+                                : scoreFeedback.trend === 'down'
+                                ? 'border-destructive/30 bg-destructive/5'
+                                : 'border-primary/30 bg-primary/5'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-lg">
+                                {scoreFeedback.trend === 'up' ? '📈' : scoreFeedback.trend === 'down' ? '📉' : '📊'}
+                              </span>
+                              <span className="font-medium text-foreground">
+                                Score Mensal: {scoreFeedback.current}/1000
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {scoreFeedback.trend === 'up'
+                                ? `Parabéns! Seu score subiu de ${scoreFeedback.previous} para ${scoreFeedback.current}. Continue assim! 🎉`
+                                : scoreFeedback.trend === 'down'
+                                ? `Seu score caiu de ${scoreFeedback.previous} para ${scoreFeedback.current}. Vamos melhorar este mês! 💪`
+                                : `Seu score se manteve em ${scoreFeedback.current}. Vamos buscar a excelência!`}
+                            </p>
+                          </motion.div>
+                        )}
+
                         {notifications.map((notification) => (
                           <motion.div
                             key={notification.id}
