@@ -159,22 +159,15 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
 
             {/* Content area */}
             <div className="flex flex-col md:flex-row gap-6 p-6 min-h-[340px]">
-              {/* Mascot */}
-              <div className="flex flex-col items-center justify-center md:w-1/3 shrink-0">
-                <motion.div
-                  key={currentStep}
-                  animate={mascotVariants[step.mascotAction as keyof typeof mascotVariants]}
-                  className="relative"
-                >
-                  <motion.img
-                    src={mascotImg}
-                    alt="Mascote ServChat"
-                    className="w-32 h-32 md:w-44 md:h-44 object-contain drop-shadow-lg"
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.15, duration: 0.4 }}
-                  />
-                </motion.div>
+              {/* 3D Robot Mascot */}
+              <div className="flex flex-col items-center justify-center md:w-1/3 shrink-0 h-[200px] md:h-auto">
+                <Suspense fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                  </div>
+                }>
+                  <Robot3D action={step.mascotAction as 'wave' | 'point' | 'thumbsup'} />
+                </Suspense>
               </div>
 
               {/* Whiteboard / Lousa */}
