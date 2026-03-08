@@ -1114,10 +1114,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       </div>
 
       {/* Board area with optional planner */}
-      <div className={cn(
-        "flex-1 overflow-hidden relative z-10 flex transition-all duration-300",
-        showPlanner && "mx-3 mb-1 rounded-xl border-2 border-sidebar shadow-lg"
-      )}>
+      <div className="flex-1 overflow-hidden relative z-10 flex transition-all duration-300">
         {/* Planner sidebar - Trello style */}
         <AnimatePresence>
         {showPlanner && (
