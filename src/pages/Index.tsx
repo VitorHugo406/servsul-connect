@@ -58,7 +58,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
 const Index = () => {
   const [activeSection, setActiveSection] = useState('home');
   const [globalSearch, setGlobalSearch] = useState('');
-  const [showTutorial, setShowTutorial] = useState(false);
+  
   const isMobile = useIsMobile();
   const [isReady, setIsReady] = useState(false);
   const { profile } = useAuth();
