@@ -710,6 +710,12 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     toast.success('Card arquivado');
   };
 
+  const handleToggleEmergency = async (taskId: string, currentState: boolean) => {
+    const { error } = await updateTask(taskId, { is_emergency: !currentState } as any);
+    if (error) { toast.error('Erro ao alterar modo emergente'); return; }
+    toast.success(!currentState ? '🚨 Modo Emergente ativado!' : 'Modo Emergente desativado');
+  };
+
   const handleMakeTemplate = async (taskId: string) => {
     if (!confirm('Tornar este card um template?')) return;
     const { error } = await updateTask(taskId, { is_template: true } as any);
