@@ -518,7 +518,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
                   className="w-full text-xs text-muted-foreground"
                   onClick={() => setColorblindMode(!colorblindMode)}
                 >
-                  {colorblindMode ? 'Desabilitar' : 'Habilitar'} o modo compatível para usuários com daltonismo
+                  <Eye className="h-3 w-3 mr-1" />
+                  {colorblindMode ? 'Desativar' : 'Modo daltônico'}
                 </Button>
               </div>
             )}
