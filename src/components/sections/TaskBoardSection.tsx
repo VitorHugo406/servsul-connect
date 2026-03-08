@@ -335,6 +335,32 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     }
   }, [showTaskDetail, selectedTask, board.name]);
 
+  // Dynamic favicon based on board background
+  useEffect(() => {
+    const bgStyle = getBoardBgStyle(board.background_image);
+    if (bgStyle?.backgroundImage) {
+      const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (link) {
+        const originalHref = link.href;
+        const urlMatch = (bgStyle.backgroundImage as string).match(/url\(["']?([^"')]+)/);
+        if (urlMatch?.[1]) {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = 32; canvas.height = 32;
+              const ctx = canvas.getContext('2d');
+              if (ctx) { ctx.drawImage(img, 0, 0, 32, 32); link.href = canvas.toDataURL('image/png'); }
+            } catch (e) { /* CORS */ }
+          };
+          img.src = urlMatch[1];
+        }
+        return () => { link.href = originalHref; };
+      }
+    }
+  }, [board.background_image]);
+
   // Apply filter to tasks
   const conclusionColumnIds = columns.filter(c => c.is_conclusion).map(c => c.id);
   const filteredTasks = applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels);
