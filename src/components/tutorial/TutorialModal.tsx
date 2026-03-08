@@ -86,20 +86,7 @@ const steps = [
   },
 ];
 
-const mascotVariants = {
-  wave: {
-    rotate: [0, -10, 10, -10, 0],
-    transition: { duration: 1.2, repeat: Infinity, repeatDelay: 2 },
-  },
-  point: {
-    x: [0, 10, 10, 0],
-    transition: { duration: 0.8, repeat: Infinity, repeatDelay: 3 },
-  },
-  thumbsup: {
-    scale: [1, 1.1, 1],
-    transition: { duration: 0.6, repeat: Infinity, repeatDelay: 2 },
-  },
-};
+// Removed 2D mascot variants - using 3D robot now
 
 export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
   const [currentStep, setCurrentStep] = useState(0);
