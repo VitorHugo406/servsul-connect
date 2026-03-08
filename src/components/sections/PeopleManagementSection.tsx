@@ -540,6 +540,9 @@ function ScoreTabContent({ scores, monthlyHistory, loading }: {
   monthlyHistory: MonthlyScoreEntry[];
   loading: boolean;
 }) {
+  const isMobile = useIsMobile();
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+
   const MONTH_LABELS: Record<string, string> = {
     '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr',
     '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago',
@@ -570,10 +573,13 @@ function ScoreTabContent({ scores, monthlyHistory, loading }: {
   const profileNames: Record<string, string> = {};
   monthlyHistory.forEach(h => { profileNames[h.profileId] = h.name; });
 
+  // Filter profiles for chart
+  const filteredProfiles = selectedMembers.length > 0 ? uniqueProfiles.filter(p => selectedMembers.includes(p)) : uniqueProfiles;
+
   const chartData = uniqueMonths.map(ym => {
     const [year, month] = ym.split('-');
     const entry: any = { month: `${MONTH_LABELS[month]}/${year.slice(2)}` };
-    uniqueProfiles.forEach(pid => {
+    filteredProfiles.forEach(pid => {
       const record = monthlyHistory.find(h => h.yearMonth === ym && h.profileId === pid);
       entry[pid] = record?.score || 0;
     });
@@ -601,58 +607,127 @@ function ScoreTabContent({ scores, monthlyHistory, loading }: {
   }
 
   const top3 = scores.slice(0, 3);
+  const toggleMemberFilter = (pid: string) => {
+    setSelectedMembers(prev => prev.includes(pid) ? prev.filter(p => p !== pid) : [...prev, pid]);
+  };
 
   return (
     <div className="space-y-4">
-      {/* Podium */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Award className="h-5 w-5 text-yellow-500" />
-            Pódio - Score Global
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-end justify-center gap-4 pt-4">
-            {top3.length >= 2 && (
-              <div className="flex flex-col items-center gap-2 w-20">
-                <Avatar className="h-10 w-10 border-2 border-gray-400">
-                  <AvatarImage src={top3[1].avatarUrl || ''} />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">{getInitials(top3[1].displayName || top3[1].name)}</AvatarFallback>
-                </Avatar>
-                <p className="text-xs font-medium text-center truncate w-full">{(top3[1].displayName || top3[1].name).split(' ')[0]}</p>
-                <div className="w-full h-16 rounded-t-lg bg-muted flex items-end justify-center pb-2">
-                  <span className={`text-sm font-bold ${getScoreColor(top3[1].score)}`}>{top3[1].score}</span>
+      {/* Top row: Podium + Ranking side by side on desktop */}
+      <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "grid-cols-2")}>
+        {/* Podium */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Award className="h-5 w-5 text-yellow-500" />
+              Pódio - Score Global
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={cn("flex items-end justify-center gap-3 pt-4", isMobile && "gap-2")}>
+              {top3.length >= 2 && (
+                <div className={cn("flex flex-col items-center gap-2", isMobile ? "w-16" : "w-20")}>
+                  <Avatar className={cn("border-2 border-gray-400", isMobile ? "h-8 w-8" : "h-10 w-10")}>
+                    <AvatarImage src={top3[1].avatarUrl || ''} />
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">{getInitials(top3[1].displayName || top3[1].name)}</AvatarFallback>
+                  </Avatar>
+                  <p className="text-[10px] font-medium text-center truncate w-full">{(top3[1].displayName || top3[1].name).split(' ')[0]}</p>
+                  <div className="w-full h-16 rounded-t-lg bg-muted flex items-end justify-center pb-2">
+                    <span className={cn("text-xs font-bold", getScoreColor(top3[1].score))}>{top3[1].score}</span>
+                  </div>
                 </div>
-              </div>
-            )}
-            {top3.length >= 1 && (
-              <div className="flex flex-col items-center gap-2 w-20">
-                <Avatar className="h-12 w-12 border-2 border-yellow-500">
-                  <AvatarImage src={top3[0].avatarUrl || ''} />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">{getInitials(top3[0].displayName || top3[0].name)}</AvatarFallback>
-                </Avatar>
-                <p className="text-xs font-medium text-center truncate w-full">{(top3[0].displayName || top3[0].name).split(' ')[0]}</p>
-                <div className="w-full h-24 rounded-t-lg bg-yellow-500/10 flex items-end justify-center pb-2">
-                  <span className={`text-sm font-bold ${getScoreColor(top3[0].score)}`}>{top3[0].score}</span>
+              )}
+              {top3.length >= 1 && (
+                <div className={cn("flex flex-col items-center gap-2", isMobile ? "w-18" : "w-20")}>
+                  <Avatar className={cn("border-2 border-yellow-500", isMobile ? "h-10 w-10" : "h-12 w-12")}>
+                    <AvatarImage src={top3[0].avatarUrl || ''} />
+                    <AvatarFallback className="bg-primary text-primary-foreground text-sm">{getInitials(top3[0].displayName || top3[0].name)}</AvatarFallback>
+                  </Avatar>
+                  <p className="text-[10px] font-medium text-center truncate w-full">{(top3[0].displayName || top3[0].name).split(' ')[0]}</p>
+                  <div className="w-full h-24 rounded-t-lg bg-yellow-500/10 flex items-end justify-center pb-2">
+                    <span className={cn("text-sm font-bold", getScoreColor(top3[0].score))}>{top3[0].score}</span>
+                  </div>
                 </div>
-              </div>
-            )}
-            {top3.length >= 3 && (
-              <div className="flex flex-col items-center gap-2 w-20">
-                <Avatar className="h-10 w-10 border-2 border-amber-700">
-                  <AvatarImage src={top3[2].avatarUrl || ''} />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">{getInitials(top3[2].displayName || top3[2].name)}</AvatarFallback>
-                </Avatar>
-                <p className="text-xs font-medium text-center truncate w-full">{(top3[2].displayName || top3[2].name).split(' ')[0]}</p>
-                <div className="w-full h-12 rounded-t-lg bg-amber-700/10 flex items-end justify-center pb-2">
-                  <span className={`text-sm font-bold ${getScoreColor(top3[2].score)}`}>{top3[2].score}</span>
+              )}
+              {top3.length >= 3 && (
+                <div className={cn("flex flex-col items-center gap-2", isMobile ? "w-16" : "w-20")}>
+                  <Avatar className={cn("border-2 border-amber-700", isMobile ? "h-8 w-8" : "h-10 w-10")}>
+                    <AvatarImage src={top3[2].avatarUrl || ''} />
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">{getInitials(top3[2].displayName || top3[2].name)}</AvatarFallback>
+                  </Avatar>
+                  <p className="text-[10px] font-medium text-center truncate w-full">{(top3[2].displayName || top3[2].name).split(' ')[0]}</p>
+                  <div className="w-full h-12 rounded-t-lg bg-amber-700/10 flex items-end justify-center pb-2">
+                    <span className={cn("text-xs font-bold", getScoreColor(top3[2].score))}>{top3[2].score}</span>
+                  </div>
                 </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Monthly chart */}
+        {chartData.length > 0 && filteredProfiles.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Evolução Mensal
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Member filter chips */}
+              <div className="flex flex-wrap gap-1 mb-3">
+                {scores.map((s, i) => (
+                  <button
+                    key={s.profileId}
+                    onClick={() => toggleMemberFilter(s.profileId)}
+                    className={cn(
+                      "text-[10px] px-2 py-0.5 rounded-full border transition-colors",
+                      selectedMembers.length === 0 || selectedMembers.includes(s.profileId)
+                        ? "bg-primary/10 border-primary/30 text-foreground"
+                        : "bg-muted/30 border-transparent text-muted-foreground"
+                    )}
+                  >
+                    {(s.displayName || s.name).split(' ')[0]}
+                  </button>
+                ))}
+                {selectedMembers.length > 0 && (
+                  <button onClick={() => setSelectedMembers([])} className="text-[10px] px-2 py-0.5 rounded-full border border-dashed text-muted-foreground hover:text-foreground">
+                    Limpar filtro
+                  </button>
+                )}
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              <div className={cn(isMobile ? "h-48" : "h-56")}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                    <YAxis domain={[0, 1000]} stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        fontSize: '11px',
+                      }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: '10px' }} />
+                    {filteredProfiles.slice(0, 6).map((pid, i) => (
+                      <Bar
+                        key={pid}
+                        dataKey={pid}
+                        name={profileNames[pid] || 'Usuário'}
+                        fill={LINE_COLORS[i % LINE_COLORS.length]}
+                        radius={[4, 4, 0, 0]}
+                      />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Ranking */}
       <Card>
@@ -661,64 +736,27 @@ function ScoreTabContent({ scores, monthlyHistory, loading }: {
         </CardHeader>
         <CardContent className="space-y-2">
           {scores.map((member, i) => (
-            <div key={member.profileId} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+            <div key={member.profileId} className={cn("flex items-center gap-2 rounded-lg bg-muted/50", isMobile ? "p-2 gap-2" : "p-2 gap-3")}>
               <span className="font-bold text-lg text-muted-foreground w-6 text-center">{i + 1}</span>
-              <Avatar className="h-8 w-8">
+              <Avatar className={cn(isMobile ? "h-7 w-7" : "h-8 w-8")}>
                 <AvatarImage src={member.avatarUrl || ''} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">{getInitials(member.displayName || member.name)}</AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <p className="font-medium text-sm">{member.displayName || member.name}</p>
-                <div className="flex gap-2 text-[10px] text-muted-foreground">
+              <div className="flex-1 min-w-0">
+                <p className={cn("font-medium truncate", isMobile ? "text-xs" : "text-sm")}>{member.displayName || member.name}</p>
+                <div className={cn("flex gap-2 text-muted-foreground", isMobile ? "text-[9px]" : "text-[10px]")}>
                   <span>{member.totalTasks} tarefas</span>
                   <span>•</span>
-                  <span>{member.completedTasks} concluídas</span>
+                  <span>{member.completedTasks} ok</span>
                   <span>•</span>
-                  <span>{member.lateTasks} atrasadas</span>
+                  <span>{member.lateTasks} atraso</span>
                 </div>
               </div>
-              <span className={`text-sm font-bold ${getScoreColor(member.score)}`}>{member.score}/1000</span>
+              <span className={cn("font-bold", isMobile ? "text-xs" : "text-sm", getScoreColor(member.score))}>{member.score}/1000</span>
             </div>
           ))}
         </CardContent>
       </Card>
-
-      {/* Monthly chart */}
-      {chartData.length > 0 && uniqueProfiles.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Evolução Mensal</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                  <YAxis domain={[0, 1000]} stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Legend />
-                  {uniqueProfiles.slice(0, 6).map((pid, i) => (
-                    <Bar
-                      key={pid}
-                      dataKey={pid}
-                      name={profileNames[pid] || 'Usuário'}
-                      fill={LINE_COLORS[i % LINE_COLORS.length]}
-                      radius={[4, 4, 0, 0]}
-                    />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
