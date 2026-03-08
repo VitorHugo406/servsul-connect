@@ -141,34 +141,34 @@ export function ScorePanel({ open, onClose, scores, monthlyHistory, loading, tit
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.05 }}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
+                      className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-muted/50"
                     >
-                      <span className="font-bold text-lg text-muted-foreground w-6 text-center">
+                      <span className="font-bold text-sm sm:text-lg text-muted-foreground w-5 sm:w-6 text-center">
                         {i + 1}
                       </span>
-                      <Avatar className="h-9 w-9">
+                      <Avatar className="h-7 w-7 sm:h-9 sm:w-9">
                         <AvatarImage src={member.avatarUrl || ''} />
-                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                        <AvatarFallback className="bg-primary text-primary-foreground text-[10px] sm:text-xs">
                           {getInitials(member.displayName || member.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{member.displayName || member.name}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Progress value={member.score / 10} className="h-1.5 flex-1" />
-                          <span className={cn('text-xs font-bold', getScoreColor(member.score))}>
+                        <p className="font-medium text-xs sm:text-sm truncate">{member.displayName || member.name}</p>
+                        <div className="flex items-center gap-1 sm:gap-2 mt-1">
+                          <Progress value={member.score / 10} className="h-1 sm:h-1.5 flex-1" />
+                          <span className={cn('text-[10px] sm:text-xs font-bold whitespace-nowrap', getScoreColor(member.score))}>
                             {member.score}/1000
                           </span>
                         </div>
-                        <div className="flex gap-2 mt-1 text-[10px] text-muted-foreground">
+                        <div className="flex gap-1 sm:gap-2 mt-1 text-[9px] sm:text-[10px] text-muted-foreground flex-wrap">
                           <span>{member.totalTasks} tarefas</span>
                           <span>•</span>
-                          <span>{member.completedTasks} concluídas</span>
+                          <span>{member.completedTasks} ok</span>
                           <span>•</span>
-                          <span>{member.lateTasks} atrasadas</span>
+                          <span>{member.lateTasks} atraso</span>
                         </div>
                       </div>
-                      <Badge variant="outline" className={cn('text-xs', getScoreColor(member.score))}>
+                      <Badge variant="outline" className={cn('text-[10px] sm:text-xs', getScoreColor(member.score))}>
                         {getScoreLabel(member.score)}
                       </Badge>
                     </motion.div>

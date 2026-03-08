@@ -1760,6 +1760,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedTask(task); setShowTaskDetail(true); }}>
                                   <Edit className="h-4 w-4 mr-2" /> Abrir
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); duplicateTemplateAsCard(task, task.status); }}>
+                                  <Copy className="h-4 w-4 mr-2" /> Duplicar Card
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowLabelPicker(task.id); }}>
                                   <Tag className="h-4 w-4 mr-2" /> Etiquetas
                                 </DropdownMenuItem>
