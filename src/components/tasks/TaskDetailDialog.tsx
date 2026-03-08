@@ -188,6 +188,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
   const [activeAddItem, setActiveAddItem] = useState<string | null>(null);
   const [showActivity, setShowActivity] = useState(true);
   const [reminderValue, setReminderValue] = useState<string>('none');
+  const [editingDescription, setEditingDescription] = useState(false);
 
   if (!task) return null;
 
