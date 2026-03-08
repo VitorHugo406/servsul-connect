@@ -2567,7 +2567,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             <DialogTitle className="flex items-center gap-2">
               <Shuffle className="h-5 w-5 text-orange-500" /> Auto-distribuição de Tarefas
             </DialogTitle>
-            <DialogDescription>Recomendações de redistribuição baseadas na carga de trabalho</DialogDescription>
+            <DialogDescription>Recomendações de redistribuição baseadas na carga de trabalho. Você pode escolher para qual coluna mover cada tarefa.</DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh]">
             {(() => {
@@ -2579,37 +2579,63 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 </div>
               ) : (
                 <div className="space-y-3 pr-2">
-                  {recs.map((rec, i) => (
-                    <div key={i} className="p-3 rounded-lg border border-border bg-card space-y-2 overflow-hidden">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: columns.find(c => c.id === rec.targetColumnId)?.color }} />
-                        <p className="text-sm font-medium text-foreground line-clamp-1" title={rec.taskTitle}>{rec.taskTitle}</p>
+                  {recs.map((rec, i) => {
+                    const [selectedColumnId, setSelectedColumnId] = React.useState(rec.targetColumnId);
+                    const selectedCol = columns.find(c => c.id === selectedColumnId);
+                    return (
+                      <div key={i} className="p-3 rounded-lg border border-border bg-card space-y-2 overflow-hidden">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: selectedCol?.color }} />
+                          <p className="text-sm font-medium text-foreground line-clamp-1" title={rec.taskTitle}>{rec.taskTitle}</p>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed bg-muted/50 rounded-md p-2 break-words">
+                          💡 {rec.reason}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                          <span className="truncate max-w-[80px]" title={rec.fromName}>{rec.fromName}</span>
+                          <MoveRight className="h-3 w-3 flex-shrink-0 text-orange-500" />
+                          <span className="font-medium text-foreground truncate max-w-[80px]" title={rec.toName}>{rec.toName}</span>
+                        </div>
+                        <div className="pt-1">
+                          <label className="text-xs text-muted-foreground mb-1 block">Mover para coluna:</label>
+                          <Select value={selectedColumnId} onValueChange={setSelectedColumnId}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {columns.map(col => (
+                                <SelectItem key={col.id} value={col.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: col.color }} />
+                                    {col.title}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-2 pt-1">
+                          <Button size="sm" className="h-7 text-xs flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
+                            const updates: any = { assigned_to: rec.toProfileId };
+                            if (selectedColumnId !== rec.targetColumnId) {
+                              updates.status = selectedColumnId;
+                            }
+                            await updateTask(rec.taskId, updates);
+                            const colName = columns.find(c => c.id === selectedColumnId)?.title || '';
+                            toast.success(`Tarefa reatribuída para ${rec.toName}${selectedColumnId !== rec.targetColumnId ? ` e movida para "${colName}"` : ''}`);
+                            setShowDistribution(false);
+                          }}>
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> Aprovar
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => {
+                            toast.info('Redistribuição recusada');
+                          }}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed bg-muted/50 rounded-md p-2 break-words">
-                        💡 {rec.reason}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                        <span className="truncate max-w-[80px]" title={rec.fromName}>{rec.fromName}</span>
-                        <MoveRight className="h-3 w-3 flex-shrink-0 text-orange-500" />
-                        <span className="font-medium text-foreground truncate max-w-[80px]" title={rec.toName}>{rec.toName}</span>
-                        <Badge variant="outline" className="text-[10px] h-5 flex-shrink-0 ml-auto">{rec.targetColumn}</Badge>
-                      </div>
-                      <div className="flex items-center gap-2 pt-1">
-                        <Button size="sm" className="h-7 text-xs flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
-                          await updateTask(rec.taskId, { assigned_to: rec.toProfileId });
-                          toast.success(`Tarefa reatribuída para ${rec.toName}`);
-                          setShowDistribution(false);
-                        }}>
-                          <CheckCircle2 className="h-3 w-3 mr-1" /> Aprovar
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => {
-                          toast.info('Redistribuição recusada');
-                        }}>
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })()}
