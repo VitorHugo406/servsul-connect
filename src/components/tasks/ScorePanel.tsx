@@ -112,18 +112,15 @@ export function ScorePanel({ open, onClose, scores, monthlyHistory, loading, tit
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pb-4">
-                  <div className="flex items-end justify-center gap-3 pt-4">
-                    {/* 2nd place */}
+                  <div className="flex items-end justify-center gap-2 sm:gap-3 pt-4">
                     {top3.length >= 2 && (
-                      <PodiumPlace member={top3[1]} place={2} height="h-20" />
+                      <PodiumPlace member={top3[1]} place={2} height="h-16 sm:h-20" />
                     )}
-                    {/* 1st place */}
                     {top3.length >= 1 && (
-                      <PodiumPlace member={top3[0]} place={1} height="h-28" />
+                      <PodiumPlace member={top3[0]} place={1} height="h-24 sm:h-28" />
                     )}
-                    {/* 3rd place */}
                     {top3.length >= 3 && (
-                      <PodiumPlace member={top3[2]} place={3} height="h-14" />
+                      <PodiumPlace member={top3[2]} place={3} height="h-12 sm:h-14" />
                     )}
                   </div>
                 </CardContent>
