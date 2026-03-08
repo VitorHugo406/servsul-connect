@@ -110,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           can_delete_messages: permData.can_delete_messages,
           can_access_management: permData.can_access_management,
           can_access_password_change: permData.can_access_password_change,
+          can_create_war_room: permData.can_create_war_room,
         });
       } else {
         setPermissions(defaultPermissions);
