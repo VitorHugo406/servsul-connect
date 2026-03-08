@@ -174,6 +174,7 @@ export function PeopleManagementSection() {
           </TabsTrigger>
           <TabsTrigger value="reports" className="gap-2"><BarChart3 className="h-4 w-4" /> Relatórios</TabsTrigger>
           <TabsTrigger value="activities" className="gap-2"><CalendarDays className="h-4 w-4" /> Atividades</TabsTrigger>
+          <TabsTrigger value="score" className="gap-2"><Trophy className="h-4 w-4" /> Score</TabsTrigger>
         </TabsList>
 
         <TabsContent value="team" className="mt-4">
