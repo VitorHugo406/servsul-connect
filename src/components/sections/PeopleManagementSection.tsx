@@ -259,47 +259,70 @@ export function PeopleManagementSection() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-2">
-              {alerts.map(alert => {
-                const member = analytics.find(a => a.profileId === alert.profile_id);
-                return (
-                  <Card key={alert.id} className={alert.is_read ? 'opacity-60' : ''}>
-                    <CardContent className="p-3 flex items-start gap-3">
-                      <div className={`mt-0.5 rounded-full p-1.5 ${
-                        alert.alert_type === 'overloaded' ? 'bg-destructive/10 text-destructive' :
-                        alert.alert_type === 'deadline_risk' ? 'bg-orange-500/10 text-orange-500' :
-                        'bg-yellow-500/10 text-yellow-500'
-                      }`}>
-                        <AlertTriangle className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <Badge variant="outline" className="text-[10px]">
-                            {alert.alert_type === 'overloaded' ? 'Sobrecarga' :
-                             alert.alert_type === 'deadline_risk' ? 'Prazo' :
-                             alert.alert_type === 'stuck_task' ? 'Parado' : 'Atraso'}
-                          </Badge>
-                          {member && <span className="text-xs text-muted-foreground">{member.displayName || member.name}</span>}
+            <div className="space-y-3">
+              {/* Bulk actions */}
+              <div className={cn("flex gap-2", isMobile ? "flex-col" : "flex-row items-center justify-between")}>
+                <p className="text-sm text-muted-foreground">{alerts.length} alerta(s) • {unreadCount} não lido(s)</p>
+                <div className="flex gap-2">
+                  {unreadCount > 0 && (
+                    <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
+                      alerts.filter(a => !a.is_read).forEach(a => markAsRead(a.id));
+                    }}>
+                      <CheckCheck className="h-3.5 w-3.5" /> Ler tudo
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs text-destructive hover:text-destructive" onClick={() => {
+                    if (confirm(`Excluir todos os ${alerts.length} alertas?`)) {
+                      alerts.forEach(a => dismissAlert(a.id));
+                    }
+                  }}>
+                    <Trash2 className="h-3.5 w-3.5" /> Excluir tudo
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {alerts.map(alert => {
+                  const member = analytics.find(a => a.profileId === alert.profile_id);
+                  return (
+                    <Card key={alert.id} className={alert.is_read ? 'opacity-60' : ''}>
+                      <CardContent className={cn("flex items-start gap-3", isMobile ? "p-2" : "p-3")}>
+                        <div className={`mt-0.5 rounded-full p-1.5 flex-shrink-0 ${
+                          alert.alert_type === 'overloaded' ? 'bg-destructive/10 text-destructive' :
+                          alert.alert_type === 'deadline_risk' ? 'bg-orange-500/10 text-orange-500' :
+                          'bg-yellow-500/10 text-yellow-500'
+                        }`}>
+                          <AlertTriangle className="h-4 w-4" />
                         </div>
-                        <p className="text-sm">{alert.message}</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          {new Date(alert.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                      <div className="flex gap-1">
-                        {!alert.is_read && (
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => markAsRead(alert.id)} title="Marcar como lido">
-                            <Bell className="h-3.5 w-3.5" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                            <Badge variant="outline" className="text-[10px]">
+                              {alert.alert_type === 'overloaded' ? 'Sobrecarga' :
+                               alert.alert_type === 'deadline_risk' ? 'Prazo' :
+                               alert.alert_type === 'stuck_task' ? 'Parado' : 'Atraso'}
+                            </Badge>
+                            {member && <span className="text-xs text-muted-foreground">{member.displayName || member.name}</span>}
+                          </div>
+                          <p className="text-sm">{alert.message}</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            {new Date(alert.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          {!alert.is_read && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => markAsRead(alert.id)} title="Marcar como lido">
+                              <Bell className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => dismissAlert(alert.id)} title="Dispensar">
+                            <X className="h-3.5 w-3.5" />
                           </Button>
-                        )}
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => dismissAlert(alert.id)} title="Dispensar">
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
           )}
         </TabsContent>
