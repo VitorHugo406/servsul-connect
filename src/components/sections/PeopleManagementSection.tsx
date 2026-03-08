@@ -542,6 +542,8 @@ function ScoreTabContent({ scores, monthlyHistory, loading }: {
 }) {
   const isMobile = useIsMobile();
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [startMonth, setStartMonth] = useState('');
+  const [endMonth, setEndMonth] = useState('');
 
   const MONTH_LABELS: Record<string, string> = {
     '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr',
@@ -568,10 +570,17 @@ function ScoreTabContent({ scores, monthlyHistory, loading }: {
   const getInitials = (name: string) =>
     name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
 
-  const uniqueMonths = [...new Set(monthlyHistory.map(h => h.yearMonth))].sort();
+  const allUniqueMonths = [...new Set(monthlyHistory.map(h => h.yearMonth))].sort();
   const uniqueProfiles = [...new Set(monthlyHistory.map(h => h.profileId))];
   const profileNames: Record<string, string> = {};
   monthlyHistory.forEach(h => { profileNames[h.profileId] = h.name; });
+
+  // Filter months by period
+  const uniqueMonths = allUniqueMonths.filter(ym => {
+    if (startMonth && ym < startMonth) return false;
+    if (endMonth && ym > endMonth) return false;
+    return true;
+  });
 
   // Filter profiles for chart
   const filteredProfiles = selectedMembers.length > 0 ? uniqueProfiles.filter(p => selectedMembers.includes(p)) : uniqueProfiles;
