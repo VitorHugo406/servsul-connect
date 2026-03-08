@@ -18,6 +18,11 @@ export function BoardJoinDialog({ token, onClose, onNavigateToTasks }: BoardJoin
   const [submitting, setSubmitting] = useState(false);
   const [boardInfo, setBoardInfo] = useState<{ id: string; name: string; description: string | null } | null>(null);
   const [status, setStatus] = useState<'idle' | 'already_member' | 'pending' | 'sent' | 'error'>('idle');
+  const normalizedToken = useMemo(() => {
+    if (!token) return null;
+    const sanitized = token.trim().split(/[?#&]/)[0];
+    return sanitized || null;
+  }, [token]);
 
   useEffect(() => {
     if (!token || !user) return;
