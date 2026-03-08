@@ -26,21 +26,36 @@ export function TaskCompletionReport({ task, activities, columns, subtasks, comm
     const dueDate = task.due_date ? new Date(task.due_date) : null;
 
     // Calculate time in each column from activities
-    const moveActivities = activities.filter(a => a.action_type === 'move' || a.action_type === 'create');
     const columnDurations: { column: string; duration: string; enteredAt: string }[] = [];
     
     // Build column timeline from activities
     const sortedActivities = [...activities].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     
-    let currentColumn = colMap.get(task.status) || task.status;
+    // Find initial column from create activity or fallback to current status
+    let currentColumn = '';
     let lastMoveTime = createdAt;
     
-    for (const act of sortedActivities) {
-      if (act.action_type === 'create') {
-        const match = act.description.match(/coluna "(.+?)"/);
-        if (match) currentColumn = match[1];
-        lastMoveTime = new Date(act.created_at);
+    // First pass: find the create activity to get initial column
+    const createAct = sortedActivities.find(a => a.action_type === 'create');
+    if (createAct) {
+      const match = createAct.description.match(/coluna "(.+?)"/);
+      if (match) currentColumn = match[1];
+      lastMoveTime = new Date(createAct.created_at);
+    }
+    
+    // If no create activity found, try to determine from first move or use current column name
+    if (!currentColumn) {
+      const firstMove = sortedActivities.find(a => a.action_type === 'move');
+      if (firstMove) {
+        const moveMatch = firstMove.description.match(/de "(.+?)" para "(.+?)"/);
+        if (moveMatch) currentColumn = moveMatch[1];
       }
+      if (!currentColumn) {
+        currentColumn = colMap.get(task.status) || task.status;
+      }
+    }
+    
+    for (const act of sortedActivities) {
       if (act.action_type === 'move') {
         const moveMatch = act.description.match(/de "(.+?)" para "(.+?)"/);
         if (moveMatch) {

@@ -165,19 +165,19 @@ export function PeopleManagementSection() {
       </div>
 
       <Tabs defaultValue="team" className="w-full">
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="team" className="gap-2"><Users className="h-4 w-4" /> Equipe</TabsTrigger>
-          <TabsTrigger value="alerts" className="gap-2 relative">
-            <AlertTriangle className="h-4 w-4" /> Alertas
+        <TabsList className={cn("flex-wrap", isMobile && "grid grid-cols-3 h-auto gap-1")}>
+          <TabsTrigger value="team" className={cn("gap-1.5", isMobile && "text-[11px] px-2 py-1.5")}><Users className={cn(isMobile ? "h-3 w-3" : "h-4 w-4")} /> Equipe</TabsTrigger>
+          <TabsTrigger value="alerts" className={cn("gap-1.5 relative", isMobile && "text-[11px] px-2 py-1.5")}>
+            <AlertTriangle className={cn(isMobile ? "h-3 w-3" : "h-4 w-4")} /> Alertas
             {unreadCount > 0 && (
-              <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-[9px] bg-destructive text-destructive-foreground">
+              <Badge className="ml-0.5 h-4 w-4 p-0 flex items-center justify-center text-[8px] bg-destructive text-destructive-foreground">
                 {unreadCount}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="reports" className="gap-2"><BarChart3 className="h-4 w-4" /> Relatórios</TabsTrigger>
-          <TabsTrigger value="activities" className="gap-2"><CalendarDays className="h-4 w-4" /> Atividades</TabsTrigger>
-          <TabsTrigger value="score" className="gap-2"><Trophy className="h-4 w-4" /> Score</TabsTrigger>
+          <TabsTrigger value="reports" className={cn("gap-1.5", isMobile && "text-[11px] px-2 py-1.5")}><BarChart3 className={cn(isMobile ? "h-3 w-3" : "h-4 w-4")} /> Relatórios</TabsTrigger>
+          <TabsTrigger value="activities" className={cn("gap-1.5", isMobile && "text-[11px] px-2 py-1.5")}><CalendarDays className={cn(isMobile ? "h-3 w-3" : "h-4 w-4")} /> Atividades</TabsTrigger>
+          <TabsTrigger value="score" className={cn("gap-1.5", isMobile && "text-[11px] px-2 py-1.5")}><Trophy className={cn(isMobile ? "h-3 w-3" : "h-4 w-4")} /> Score</TabsTrigger>
         </TabsList>
 
         <TabsContent value="team" className="mt-4">

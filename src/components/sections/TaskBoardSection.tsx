@@ -1029,7 +1029,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         <Button variant="ghost" size="icon" onClick={onBack} className={isDarkBg ? "text-white hover:bg-white/20" : ""}><ArrowLeft className="h-5 w-5" /></Button>
         <div className="flex-1 min-w-0">
           <h2 className={cn("font-semibold truncate", isDarkBg ? "text-white" : "text-foreground")}>{board.name}</h2>
-          <p className={cn("text-xs", isDarkBg ? "text-white/70" : "text-muted-foreground")}>{tasks.length} tarefas</p>
+          <p className={cn("text-xs", isDarkBg ? "text-white/70" : "text-muted-foreground")}>{tasks.filter(t => !t.is_template).length} tarefas</p>
         </div>
 
         {/* Member avatars - only on desktop */}
@@ -1394,6 +1394,12 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedTask(task); setShowTaskDetail(true); }}>
                                 <Edit className="h-4 w-4 mr-2" /> Abrir
                               </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); duplicateTemplateAsCard(task, task.status); }}>
+                                  <Copy className="h-4 w-4 mr-2" /> Duplicar Card
+                                </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); duplicateTemplateAsCard(task, task.status); }}>
+                                <Copy className="h-4 w-4 mr-2" /> Duplicar Card
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchiveTask(task.id); }}>
                                 <Archive className="h-4 w-4 mr-2" /> Arquivar
                               </DropdownMenuItem>
@@ -1753,6 +1759,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedTask(task); setShowTaskDetail(true); }}>
                                   <Edit className="h-4 w-4 mr-2" /> Abrir
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); duplicateTemplateAsCard(task, task.status); }}>
+                                  <Copy className="h-4 w-4 mr-2" /> Duplicar Card
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowLabelPicker(task.id); }}>
                                   <Tag className="h-4 w-4 mr-2" /> Etiquetas
