@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, MoreVertical, Calendar, Trash2, Edit, Loader2,
   GripVertical, ListTodo, X, AlertTriangle, Search,
@@ -1104,10 +1104,11 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
       {/* Board area with optional planner */}
       <div className={cn(
-        "flex-1 overflow-hidden relative z-10 flex",
-        showPlanner && "mx-3 mb-1 rounded-xl border border-border/40 bg-background/5"
+        "flex-1 overflow-hidden relative z-10 flex transition-all duration-300",
+        showPlanner && "mx-3 mb-1 rounded-xl border-2 border-primary/20 bg-primary/5 shadow-md"
       )}>
         {/* Planner sidebar - Trello style */}
+        <AnimatePresence>
         {showPlanner && (
           <motion.div
             initial={{ width: 0, opacity: 0 }}
@@ -1160,6 +1161,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             </div>
           </motion.div>
         )}
+        </AnimatePresence>
         {showBoard && (
         <div className="flex-1 overflow-hidden">
           <div
