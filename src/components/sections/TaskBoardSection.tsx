@@ -2099,6 +2099,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         taskLabels={selectedTask ? getTaskLabels(selectedTask.id) : []}
         allLabels={labels}
         onToggleLabel={handleToggleLabel}
+        onCreateLabel={createLabel}
+        onDeleteLabel={deleteLabel}
         boardId={board.id}
         onOpenAutomation={(id) => { setShowTaskDetail(false); setAutomationTaskId(id); setShowAutomationRules(true); }}
         columns={columns.map(c => ({ id: c.id, title: c.title, color: c.color }))}
