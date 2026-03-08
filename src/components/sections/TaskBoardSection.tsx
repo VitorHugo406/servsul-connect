@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import plannerEmptyIllustration from '@/assets/planner-empty-illustration.png';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, MoreVertical, Calendar, Trash2, Edit, Loader2,
@@ -370,8 +371,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     const avg = memberWorkloads.reduce((s, m) => s + m.taskCount, 0) / Math.max(memberWorkloads.length, 1);
     const overloaded = memberWorkloads.filter(m => m.taskCount > avg + 1);
     const underloaded = memberWorkloads.filter(m => m.taskCount < avg);
+    const threshold = board.overload_threshold || 5;
     
-    const recommendations: { taskId: string; taskTitle: string; fromName: string; toName: string; toProfileId: string }[] = [];
+    const recommendations: { taskId: string; taskTitle: string; fromName: string; toName: string; toProfileId: string; reason: string; targetColumn: string; targetColumnId: string }[] = [];
     for (const over of overloaded) {
       const excess = over.tasks.slice(Math.ceil(avg));
       for (const task of excess) {
@@ -379,12 +381,19 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         if (target) {
           const fromProfile = allUsers.find(u => u.id === over.profile_id);
           const toProfile = allUsers.find(u => u.id === target.profile_id);
+          const col = columns.find(c => c.id === task.status);
+          const reason = over.taskCount > threshold
+            ? `${fromProfile?.display_name || fromProfile?.name} está sobrecarregado(a) com ${over.taskCount} cards (limite: ${threshold}). ${toProfile?.display_name || toProfile?.name} possui apenas ${target.taskCount} cards ativos.`
+            : `Redistribuição para equilibrar a carga: ${fromProfile?.display_name || fromProfile?.name} (${over.taskCount} cards) → ${toProfile?.display_name || toProfile?.name} (${target.taskCount} cards).`;
           recommendations.push({
             taskId: task.id,
             taskTitle: task.title,
             fromName: fromProfile?.display_name || fromProfile?.name || 'Sem nome',
             toName: toProfile?.display_name || toProfile?.name || 'Sem nome',
             toProfileId: target.profile_id,
+            reason,
+            targetColumn: col?.title || 'Mesma coluna',
+            targetColumnId: task.status,
           });
           target.taskCount++;
         }
@@ -1046,6 +1055,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             </DropdownMenu>
           ) : (
             <>
+              <Button variant="ghost" size="icon" onClick={() => setShowOperationMode(true)} title="Modo Operação" className="text-orange-500 hover:text-orange-600">
+                <Activity className="h-4 w-4" />
+              </Button>
+              {isAdminOrOwner && (
+                <Button variant="ghost" size="icon" onClick={() => setShowDistribution(true)} title="Auto-distribuição" className="text-orange-500 hover:text-orange-600">
+                  <Shuffle className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -1059,9 +1076,6 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               <Button variant="ghost" size="icon" onClick={() => { setAutomationTaskId(undefined); setShowAutomationRules(true); }} title="Automações do Board">
                 <Zap className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => setShowOperationMode(true)} title="Modo Operação" className="text-orange-500 hover:text-orange-600">
-                <Activity className="h-4 w-4" />
-              </Button>
               <Button variant="ghost" size="icon" onClick={() => setShowLabelsManager(true)} title="Etiquetas">
                 <Tag className="h-4 w-4" />
               </Button>
@@ -1073,9 +1087,6 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               </Button>
               {isAdminOrOwner && (
                 <>
-                  <Button variant="ghost" size="icon" onClick={() => setShowDistribution(true)} title="Auto-distribuição" className="text-secondary hover:text-secondary/80">
-                    <Shuffle className="h-4 w-4" />
-                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => setShowShareDialog(true)} title="Compartilhar quadro">
                     <Share2 className="h-4 w-4" />
                   </Button>
@@ -1105,7 +1116,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       {/* Board area with optional planner */}
       <div className={cn(
         "flex-1 overflow-hidden relative z-10 flex transition-all duration-300",
-        showPlanner && "mx-3 mb-1 rounded-xl border-2 border-primary/20 bg-primary/5 shadow-md"
+        showPlanner && "mx-3 mb-1 rounded-xl border-2 border-sidebar shadow-lg"
       )}>
         {/* Planner sidebar - Trello style */}
         <AnimatePresence>
@@ -1134,11 +1145,27 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   return new Date(t.due_date).toDateString() === new Date().toDateString();
                 }).sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
                 return todayTasks.length === 0 ? (
-                  <div className="flex flex-col items-center py-8 text-center">
-                    <div className="mb-3 rounded-full bg-background p-3">
-                      <Calendar className="h-6 w-6 text-muted-foreground" />
+                  <div className="flex flex-col items-center py-6 text-center px-4">
+                    <img src={plannerEmptyIllustration} alt="Planejador" className="w-36 h-auto mb-4 opacity-80 rounded-lg" />
+                    <h4 className="text-sm font-semibold text-foreground mb-2">📋 Seu Planejador Diário</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+                      Aqui você visualiza todas as tarefas programadas para o dia de hoje, organizadas por horário.
+                    </p>
+                    <div className="space-y-1.5 text-left w-full">
+                      <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <Clock4 className="h-3.5 w-3.5 mt-0.5 text-orange-400 flex-shrink-0" />
+                        <span>Defina <strong className="text-foreground">datas de entrega</strong> nos cards para que apareçam aqui</span>
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <ListTodo className="h-3.5 w-3.5 mt-0.5 text-primary flex-shrink-0" />
+                        <span>Veja suas tarefas do dia em <strong className="text-foreground">uma única visão</strong></span>
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <Activity className="h-3.5 w-3.5 mt-0.5 text-green-500 flex-shrink-0" />
+                        <span>Clique em qualquer card para abrir os <strong className="text-foreground">detalhes</strong></span>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">Nenhuma tarefa para hoje</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-4">Nenhuma tarefa agendada para hoje</p>
                   </div>
                 ) : todayTasks.map(t => {
                   const col = columns.find(c => c.id === t.status);
@@ -2541,11 +2568,11 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Shuffle className="h-5 w-5 text-secondary" /> Auto-distribuição de Tarefas
+              <Shuffle className="h-5 w-5 text-orange-500" /> Auto-distribuição de Tarefas
             </DialogTitle>
             <DialogDescription>Recomendações de redistribuição baseadas na carga de trabalho</DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[400px]">
+          <ScrollArea className="max-h-[450px]">
             {(() => {
               const recs = getDistributionRecommendations();
               return recs.length === 0 ? (
@@ -2556,20 +2583,35 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               ) : (
                 <div className="space-y-3">
                   {recs.map((rec, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{rec.taskTitle}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {rec.fromName} → {rec.toName}
-                        </p>
+                    <div key={i} className="p-3 rounded-lg border border-border bg-card space-y-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: columns.find(c => c.id === rec.targetColumnId)?.color }} />
+                        <p className="text-sm font-medium text-foreground truncate flex-1" title={rec.taskTitle}>{rec.taskTitle}</p>
                       </div>
-                      <Button size="sm" className="h-7 text-xs" onClick={async () => {
-                        await updateTask(rec.taskId, { assigned_to: rec.toProfileId });
-                        toast.success(`Tarefa reatribuída para ${rec.toName}`);
-                        setShowDistribution(false);
-                      }}>
-                        Aprovar
-                      </Button>
+                      <p className="text-xs text-muted-foreground leading-relaxed bg-muted/50 rounded-md p-2">
+                        💡 {rec.reason}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="truncate max-w-[100px]" title={rec.fromName}>{rec.fromName}</span>
+                        <MoveRight className="h-3 w-3 flex-shrink-0 text-orange-500" />
+                        <span className="font-medium text-foreground truncate max-w-[100px]" title={rec.toName}>{rec.toName}</span>
+                        <span className="text-muted-foreground">•</span>
+                        <Badge variant="outline" className="text-[10px] h-5 flex-shrink-0">{rec.targetColumn}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <Button size="sm" className="h-7 text-xs flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
+                          await updateTask(rec.taskId, { assigned_to: rec.toProfileId });
+                          toast.success(`Tarefa reatribuída para ${rec.toName}`);
+                          setShowDistribution(false);
+                        }}>
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> Aprovar
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 text-xs flex-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => {
+                          toast.info('Redistribuição recusada');
+                        }}>
+                          <X className="h-3 w-3 mr-1" /> Recusar
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
