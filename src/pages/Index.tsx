@@ -33,7 +33,7 @@ import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { BirthdayCelebrationModal } from '@/components/birthday/BirthdayCelebrationModal';
 import { ImportantAnnouncementModal } from '@/components/announcements/ImportantAnnouncementModal';
-import { TutorialModal } from '@/components/tutorial/TutorialModal';
+
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
