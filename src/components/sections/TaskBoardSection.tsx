@@ -1128,25 +1128,25 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 }).sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
                 return todayTasks.length === 0 ? (
                   <div className="flex flex-col items-center py-8 text-center">
-                    <div className="mb-3 rounded-full bg-background p-3">
-                      <Calendar className="h-6 w-6 text-muted-foreground" />
+                    <div className="mb-3 rounded-full bg-sidebar-accent p-3">
+                      <Calendar className="h-6 w-6 text-sidebar-foreground/50" />
                     </div>
-                    <p className="text-sm text-muted-foreground">Nenhuma tarefa para hoje</p>
+                    <p className="text-sm text-sidebar-foreground/60">Nenhuma tarefa para hoje</p>
                   </div>
                 ) : todayTasks.map(t => {
                   const col = columns.find(c => c.id === t.status);
                   return (
-                    <div key={t.id} className="p-3 rounded-lg border border-border bg-card cursor-pointer hover:shadow-md transition-all"
+                    <div key={t.id} className="p-3 rounded-lg bg-sidebar-accent cursor-pointer hover:bg-sidebar-accent/80 transition-all"
                       onClick={() => { setSelectedTask(t); setShowTaskDetail(true); }}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col?.color }} />
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-sidebar-foreground/60">
                           {new Date(t.due_date!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <p className="text-sm font-medium text-foreground">{t.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{col?.title}</p>
+                      <p className="text-sm font-medium text-sidebar-foreground">{t.title}</p>
+                      <p className="text-xs text-sidebar-foreground/50 mt-0.5">{col?.title}</p>
                     </div>
                   );
                 });
