@@ -1378,12 +1378,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                       </div>
                     </div>
                   ))}
-                  <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1" onClick={() => openCreateTask(mobileSelectedColumn)}>
-                    <Plus className="h-3 w-3" /> Adicionar Tarefa
-                  </Button>
-                  <Button variant="ghost" size="sm" className="w-full text-xs gap-1 text-muted-foreground" onClick={() => openCreateTemplate(mobileSelectedColumn)}>
-                    <Copy className="h-3 w-3" /> Criar template
-                  </Button>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Button variant="ghost" size="sm" className="flex-1 text-xs gap-1" onClick={() => openCreateTask(mobileSelectedColumn)}>
+                      <Plus className="h-3 w-3" /> Adicionar Tarefa
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => openCreateTemplate(mobileSelectedColumn)}>
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : (
