@@ -1451,6 +1451,7 @@ export type Database = {
           due_date: string | null
           id: string
           is_archived: boolean
+          is_template: boolean
           position: number
           priority: string
           reminder_minutes: number | null
@@ -1473,6 +1474,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           is_archived?: boolean
+          is_template?: boolean
           position?: number
           priority?: string
           reminder_minutes?: number | null
@@ -1495,6 +1497,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           is_archived?: boolean
+          is_template?: boolean
           position?: number
           priority?: string
           reminder_minutes?: number | null
