@@ -1393,8 +1393,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                               }}>
                                 <Repeat className="h-4 w-4 mr-2" /> Auto-duplicar
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleEmergency(task.id, task.is_emergency); }}>
+                                <Siren className="h-4 w-4 mr-2" /> {task.is_emergency ? 'Desativar Emergente' : 'Ativar Modo Emergente'}
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>Mover para:</DropdownMenuItem>
                               {columns.filter(c => c.id !== mobileSelectedColumn).map(c => (
                                 <DropdownMenuItem key={c.id} onClick={async (e) => {
                                   e.stopPropagation();
