@@ -1339,6 +1339,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setAutomationTaskId(task.id); setShowAutomationRules(true); }}>
                                 <Zap className="h-4 w-4 mr-2" /> Automações
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMakeTemplate(task.id); }}>
+                                <Copy className="h-4 w-4 mr-2" /> Tornar Template
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>Mover para:</DropdownMenuItem>
                               {columns.filter(c => c.id !== mobileSelectedColumn).map(c => (
