@@ -884,78 +884,87 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
     }
   };
 
-  const renderDecisions = () => !showDecisions ? null : (
-    <div className="px-4 py-2 space-y-3">
-      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Decisões</h4>
-      {/* Form to add new decision */}
-      <div className="border border-border rounded-lg p-3 space-y-2 bg-muted/20">
-        <Input
-          value={newDecisionText}
-          onChange={(e) => setNewDecisionText(e.target.value)}
-          placeholder="Qual decisão se refere?"
-          className="h-8 text-sm"
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <Input
-            value={newDecisionResponsible}
-            onChange={(e) => setNewDecisionResponsible(e.target.value)}
-            placeholder="Responsável pela decisão"
-            className="h-8 text-sm"
-          />
-          <Input
-            type="date"
-            value={newDecisionDate}
-            onChange={(e) => setNewDecisionDate(e.target.value)}
-            className="h-8 text-sm"
-          />
-        </div>
-        <Button
-          size="sm"
-          onClick={handleAddDecision}
-          disabled={!newDecisionText.trim() || !newDecisionResponsible.trim() || !newDecisionDate}
-        >
-          Registrar Decisão
-        </Button>
-      </div>
-      {/* List existing decisions */}
-      {decisionsLoading ? (
-        <div className="flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
-      ) : decisions.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-2">Nenhuma decisão registrada</p>
-      ) : (
-        <div className="space-y-2">
-          {decisions.map(d => (
-            <div key={d.id} className="border border-border rounded-lg p-3 bg-background group">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">{d.decision_text}</p>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3" /> {d.responsible_name}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <CalendarIcon className="h-3 w-3" /> {new Date(d.decision_date).toLocaleDateString('pt-BR')}
+  const renderDecisions = () => {
+    const hasDecisions = decisions.length > 0;
+    // Always show decisions list if there are any; only show form when toggled
+    if (!showDecisions && !hasDecisions) return null;
+
+    return (
+      <div className="px-4 py-2 space-y-3">
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Decisões {hasDecisions && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{decisions.length}</Badge>}
+        </h4>
+        {/* Form to add new decision - only when toggled */}
+        {showDecisions && (
+          <div className="border border-border rounded-lg p-3 space-y-2 bg-muted/20">
+            <Input
+              value={newDecisionText}
+              onChange={(e) => setNewDecisionText(e.target.value)}
+              placeholder="Qual decisão se refere?"
+              className="h-8 text-sm"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                value={newDecisionResponsible}
+                onChange={(e) => setNewDecisionResponsible(e.target.value)}
+                placeholder="Responsável pela decisão"
+                className="h-8 text-sm"
+              />
+              <Input
+                type="date"
+                value={newDecisionDate}
+                onChange={(e) => setNewDecisionDate(e.target.value)}
+                className="h-8 text-sm"
+              />
+            </div>
+            <Button
+              size="sm"
+              onClick={handleAddDecision}
+              disabled={!newDecisionText.trim() || !newDecisionResponsible.trim() || !newDecisionDate}
+            >
+              Registrar Decisão
+            </Button>
+          </div>
+        )}
+        {/* List existing decisions - always visible when there are any */}
+        {decisionsLoading ? (
+          <div className="flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+        ) : hasDecisions ? (
+          <div className="space-y-2">
+            {decisions.map(d => (
+              <div key={d.id} className="border border-border rounded-lg p-3 bg-background group">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">{d.decision_text}</p>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3 w-3" /> {d.responsible_name}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <CalendarIcon className="h-3 w-3" /> {new Date(d.decision_date).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">
+                      Registrado em {new Date(d.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <span className="text-[10px] text-muted-foreground">
-                    Registrado em {new Date(d.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 flex-shrink-0"
+                    onClick={() => deleteDecision(d.id)}
+                  >
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 flex-shrink-0"
-                  onClick={() => deleteDecision(d.id)}
-                >
-                  <Trash2 className="h-3 w-3 text-destructive" />
-                </Button>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   const renderProgress = () => total > 0 ? (
     <div className="px-4 py-1">
@@ -1191,13 +1200,13 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
       )}
       {/* Duplicar Card com seleção de coluna */}
       {columns && onDuplicateTemplate && !task.is_template && (
-        <Popover>
+        <Popover modal={true}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="gap-2 rounded-md">
               <Copy className="h-4 w-4" /> Duplicar Card
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-48 p-1" align="start">
+          <PopoverContent className="w-48 p-1 z-[9999]" align="start" side="top">
             <p className="text-xs font-semibold text-muted-foreground px-3 py-1.5">Duplicar para:</p>
             {columns.map(c => (
               <button

@@ -542,6 +542,8 @@ function ScoreTabContent({ scores, monthlyHistory, loading }: {
 }) {
   const isMobile = useIsMobile();
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [startMonth, setStartMonth] = useState('');
+  const [endMonth, setEndMonth] = useState('');
 
   const MONTH_LABELS: Record<string, string> = {
     '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr',
@@ -568,10 +570,17 @@ function ScoreTabContent({ scores, monthlyHistory, loading }: {
   const getInitials = (name: string) =>
     name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
 
-  const uniqueMonths = [...new Set(monthlyHistory.map(h => h.yearMonth))].sort();
+  const allUniqueMonths = [...new Set(monthlyHistory.map(h => h.yearMonth))].sort();
   const uniqueProfiles = [...new Set(monthlyHistory.map(h => h.profileId))];
   const profileNames: Record<string, string> = {};
   monthlyHistory.forEach(h => { profileNames[h.profileId] = h.name; });
+
+  // Filter months by period
+  const uniqueMonths = allUniqueMonths.filter(ym => {
+    if (startMonth && ym < startMonth) return false;
+    if (endMonth && ym > endMonth) return false;
+    return true;
+  });
 
   // Filter profiles for chart
   const filteredProfiles = selectedMembers.length > 0 ? uniqueProfiles.filter(p => selectedMembers.includes(p)) : uniqueProfiles;
@@ -676,7 +685,7 @@ function ScoreTabContent({ scores, monthlyHistory, loading }: {
             </CardHeader>
             <CardContent>
               {/* Member filter chips */}
-              <div className="flex flex-wrap gap-1 mb-3">
+              <div className="flex flex-wrap gap-1 mb-2">
                 {scores.map((s, i) => (
                   <button
                     key={s.profileId}
@@ -694,6 +703,33 @@ function ScoreTabContent({ scores, monthlyHistory, loading }: {
                 {selectedMembers.length > 0 && (
                   <button onClick={() => setSelectedMembers([])} className="text-[10px] px-2 py-0.5 rounded-full border border-dashed text-muted-foreground hover:text-foreground">
                     Limpar filtro
+                  </button>
+                )}
+              </div>
+              {/* Period filter */}
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <span className="text-[10px] text-muted-foreground font-medium">Período:</span>
+                <input
+                  type="month"
+                  value={startMonth}
+                  onChange={(e) => setStartMonth(e.target.value)}
+                  className="h-7 text-[10px] px-2 rounded-md border border-input bg-background"
+                  placeholder="De"
+                />
+                <span className="text-[10px] text-muted-foreground">até</span>
+                <input
+                  type="month"
+                  value={endMonth}
+                  onChange={(e) => setEndMonth(e.target.value)}
+                  className="h-7 text-[10px] px-2 rounded-md border border-input bg-background"
+                  placeholder="Até"
+                />
+                {(startMonth || endMonth) && (
+                  <button
+                    onClick={() => { setStartMonth(''); setEndMonth(''); }}
+                    className="text-[10px] px-2 py-0.5 rounded-full border border-dashed text-muted-foreground hover:text-foreground"
+                  >
+                    Limpar
                   </button>
                 )}
               </div>
