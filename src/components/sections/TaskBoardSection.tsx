@@ -1164,7 +1164,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         <div className="flex-1 overflow-hidden">
           <div
             ref={boardScrollRef}
-            className={cn(isMobile ? 'overflow-y-auto' : 'overflow-x-auto overflow-y-hidden h-full p-4 task-board-scroll')}
+            className={cn(isMobile ? 'overflow-y-auto' : 'overflow-x-auto overflow-y-hidden h-full p-4 scrollbar-none')}
             onMouseDown={!isMobile ? handleBoardMouseDown : undefined}
             onMouseMove={!isMobile ? handleBoardMouseMove : undefined}
             onMouseUp={!isMobile ? handleBoardMouseUp : undefined}
