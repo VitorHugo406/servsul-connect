@@ -8,8 +8,8 @@ import {
   Clock4, Clock, Users, Settings, ArrowLeft, MoveRight,
   PlusCircle, FileDown, Zap, Upload, Tag, Copy, Repeat,
   Archive, ArchiveRestore, Pencil, Activity, Menu, Shield,
-  Filter, Share2, UserPlus, Link2, Shuffle, Bell,
-  Siren
+   Filter, Share2, UserPlus, Link2, Shuffle, Bell,
+  Siren, Trophy
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
