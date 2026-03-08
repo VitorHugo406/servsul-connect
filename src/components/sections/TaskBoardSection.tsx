@@ -666,7 +666,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     setShowTemplatePicker(null);
   };
 
-
+  const handleDeleteTask = async (taskId: string) => {
     if (!confirm('Excluir esta tarefa?')) return;
     const { error } = await deleteTask(taskId);
     if (error) { toast.error('Erro ao excluir tarefa'); return; }
