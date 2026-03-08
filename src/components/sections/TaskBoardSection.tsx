@@ -1616,7 +1616,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                           className={cn(
                             'bg-card rounded-lg shadow-sm border border-border cursor-pointer hover:shadow-md transition-all group/card relative',
                             draggedTask?.id === task.id && 'opacity-50 scale-95',
-                            dragOverColumn === column.id && dragOverPosition === index && 'ring-2 ring-primary'
+                            dragOverColumn === column.id && dragOverPosition === index && 'ring-2 ring-primary',
+                            task.is_emergency && 'emergency-card'
                           )}
                         >
                           {/* Cover */}
