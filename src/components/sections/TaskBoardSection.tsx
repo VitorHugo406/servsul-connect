@@ -1135,6 +1135,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     <DropdownMenuItem onClick={() => setShowDistribution(true)}>
                       <Shuffle className="h-4 w-4 mr-2" /> Auto-distribuição
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowScore(true)}>
+                      <Trophy className="h-4 w-4 mr-2" /> Score
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setShowShareDialog(true)}>
                       <Share2 className="h-4 w-4 mr-2" /> Compartilhar
                     </DropdownMenuItem>
