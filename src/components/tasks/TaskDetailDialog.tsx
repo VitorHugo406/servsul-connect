@@ -342,7 +342,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
   const renderDescription = () => task.description ? (
     <div className="px-4 py-2">
       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Descrição</h4>
-      <p className="text-foreground text-sm whitespace-pre-wrap">{task.description}</p>
+      <RichDescription text={task.description} />
     </div>
   ) : null;
 
