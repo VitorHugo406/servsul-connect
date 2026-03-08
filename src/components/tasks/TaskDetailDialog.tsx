@@ -24,6 +24,7 @@ import { useSubtasks } from '@/hooks/useSubtasks';
 import { useSubtaskGroups } from '@/hooks/useSubtaskGroups';
 import { useTaskActivities, TaskActivity } from '@/hooks/useTaskActivities';
 import { TaskLabel } from '@/hooks/useTaskLabels';
+import { useTaskDecisions } from '@/hooks/useTaskDecisions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
 import { TaskCompletionReport } from './TaskCompletionReport';
