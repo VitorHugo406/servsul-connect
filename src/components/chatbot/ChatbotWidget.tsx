@@ -97,6 +97,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCounts, setUnreadCounts] = useState<UnreadCounts>({ announcements: 0, messages: 0 });
   const [overdueTasks, setOverdueTasks] = useState(0);
+  const [scoreFeedback, setScoreFeedback] = useState<{ current: number; previous: number; trend: 'up' | 'down' | 'same' } | null>(null);
   const [overdueTasksDismissed, setOverdueTasksDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user, profile, sector, additionalSectors, isAdmin } = useAuth();
