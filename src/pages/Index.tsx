@@ -240,6 +240,7 @@ const Index = () => {
   // Desktop Layout
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} />
       <OfflineIndicator />
       <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
       
