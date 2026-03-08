@@ -1,9 +1,12 @@
 import { useState, useRef, useCallback } from 'react';
 import {
-  ArrowRight, Calendar, CheckCircle2, CheckSquare, ChevronDown, ChevronRight,
+  ArrowRight, Calendar as CalendarIcon, CheckCircle2, CheckSquare, ChevronDown, ChevronRight,
   Eye, EyeOff, Loader2, MessageSquare, Plus, Tag, Trash2, Users, X, Zap, Bell, Move, Copy, Layout,
   Bold, Italic, Strikethrough, List, Type, Minus
 } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -79,10 +82,11 @@ function RichDescription({ text }: { text: string }) {
   );
 }
 
-// Trello-style description editor with toolbar
+// Trello-style description editor with toolbar and live preview
 function DescriptionEditor({ value, onSave, onCancel }: { value: string; onSave: (v: string) => void; onCancel: () => void }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState(value);
+  const [showPreview, setShowPreview] = useState(false);
 
   const wrapSelection = useCallback((before: string, after: string) => {
     const ta = textareaRef.current;
@@ -110,14 +114,22 @@ function DescriptionEditor({ value, onSave, onCancel }: { value: string; onSave:
     }, 0);
   }, [text]);
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'b') { e.preventDefault(); wrapSelection('**', '**'); }
+      else if (e.key === 'i') { e.preventDefault(); wrapSelection('*', '*'); }
+      else if (e.key === 's') { e.preventDefault(); onSave(text); }
+    }
+  }, [wrapSelection, text, onSave]);
+
   return (
     <div className="border border-border rounded-lg overflow-hidden bg-background">
       {/* Toolbar */}
       <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border bg-muted/40 flex-wrap">
-        <Button variant="ghost" size="icon" className="h-7 w-7" title="Negrito" onClick={() => wrapSelection('**', '**')}>
+        <Button variant="ghost" size="icon" className="h-7 w-7" title="Negrito (Ctrl+B)" onClick={() => wrapSelection('**', '**')}>
           <Bold className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7" title="Itálico" onClick={() => wrapSelection('*', '*')}>
+        <Button variant="ghost" size="icon" className="h-7 w-7" title="Itálico (Ctrl+I)" onClick={() => wrapSelection('*', '*')}>
           <Italic className="h-3.5 w-3.5" />
         </Button>
         <Button variant="ghost" size="icon" className="h-7 w-7" title="Tachado" onClick={() => wrapSelection('~~', '~~')}>
@@ -133,22 +145,36 @@ function DescriptionEditor({ value, onSave, onCancel }: { value: string; onSave:
         <Button variant="ghost" size="icon" className="h-7 w-7" title="Linha" onClick={() => insertAtCursor('\n---\n')}>
           <Minus className="h-3.5 w-3.5" />
         </Button>
+        <div className="w-px h-5 bg-border mx-1" />
+        <Button
+          variant={showPreview ? "secondary" : "ghost"}
+          size="sm"
+          className="h-7 text-xs px-2"
+          onClick={() => setShowPreview(!showPreview)}
+        >
+          <Eye className="h-3.5 w-3.5 mr-1" /> Pré-visualizar
+        </Button>
       </div>
-      {/* Textarea */}
-      <textarea
-        ref={textareaRef}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        className="w-full min-h-[160px] p-3 text-[15px] leading-relaxed bg-background text-foreground resize-y outline-none placeholder:text-muted-foreground"
-        placeholder="Adicione uma descrição mais detalhada..."
-        autoFocus
-      />
+      {/* Editor or Preview */}
+      {showPreview ? (
+        <div className="w-full min-h-[160px] p-3 text-[15px] leading-relaxed bg-background">
+          <RichDescription text={text || 'Nada para visualizar...'} />
+        </div>
+      ) : (
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="w-full min-h-[160px] p-3 text-[15px] leading-relaxed bg-background text-foreground resize-y outline-none placeholder:text-muted-foreground"
+          placeholder="Adicione uma descrição mais detalhada..."
+          autoFocus
+        />
+      )}
       {/* Actions */}
       <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-muted/20">
         <Button size="sm" onClick={() => onSave(text)}>Salvar</Button>
         <Button variant="ghost" size="sm" onClick={onCancel}>Cancelar</Button>
-        <div className="flex-1" />
-        <span className="text-[11px] text-muted-foreground">Ajuda para formatação</span>
       </div>
     </div>
   );
@@ -326,24 +352,29 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs">
-              <Calendar className="h-3.5 w-3.5" /> Datas
+              <CalendarIcon className="h-3.5 w-3.5" /> Datas
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-72 space-y-3">
-            <h4 className="font-semibold text-sm">Datas</h4>
+          <PopoverContent className="w-auto space-y-3 p-3" align="start">
+            <h4 className="font-semibold text-sm">Data de término</h4>
+            <Calendar
+              mode="single"
+              selected={task.due_date ? new Date(task.due_date) : undefined}
+              onSelect={async (date) => {
+                if (onUpdateTask && task) {
+                  await onUpdateTask(task.id, { due_date: date ? date.toISOString() : null });
+                }
+              }}
+              locale={ptBR}
+              className="pointer-events-auto"
+              initialFocus
+            />
             {task.due_date && (
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Data de entrega</p>
-                <p className="text-sm font-medium">
-                  {new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                  {(() => { const d = new Date(task.due_date); return d.getHours() !== 0 || d.getMinutes() !== 0 ? ` às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''; })()}
-                </p>
+              <div className="text-xs text-muted-foreground text-center">
+                Selecionada: {new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
               </div>
             )}
-            {!task.due_date && (
-              <p className="text-sm text-muted-foreground">Nenhuma data definida. Edite o card para adicionar.</p>
-            )}
-            <div className="space-y-1.5">
+            <div className="border-t border-border pt-3 space-y-1.5">
               <div className="flex items-center gap-2">
                 <Bell className="h-3.5 w-3.5 text-muted-foreground" />
                 <p className="text-xs font-medium">Definir lembrete</p>
@@ -409,7 +440,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
         )}
         {task.due_date && (
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
             <div>
               <p className="text-xs text-muted-foreground">Entrega</p>
               <p className="text-sm font-medium">{new Date(task.due_date).toLocaleDateString('pt-BR')}</p>
@@ -569,15 +600,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
         <Button variant="ghost" size="sm" onClick={() => { setShowAddGroup(false); setNewGroupTitle(''); }}>Cancelar</Button>
       </div>
     </div>
-  ) : (
-    <div className="flex gap-2">
-      {groups.length === 0 && ungroupedSubtasks.length === 0 && (
-        <Button variant="outline" size="sm" className="gap-1.5 rounded-md" onClick={() => setActiveAddItem('ungrouped')}>
-          <Plus className="h-3.5 w-3.5" /> Subtarefa
-        </Button>
-      )}
-    </div>
-  );
+  ) : null;
 
   const renderSubtasks = () => (
     <div className="px-4 py-2 space-y-3">
