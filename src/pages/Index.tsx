@@ -37,6 +37,8 @@ import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { BirthdayCelebrationModal } from '@/components/birthday/BirthdayCelebrationModal';
 import { ImportantAnnouncementModal } from '@/components/announcements/ImportantAnnouncementModal';
 import { BoardJoinDialog } from '@/components/tasks/BoardJoinDialog';
+import { useWarRoomAlarm } from '@/hooks/useWarRoomAlarm';
+import { WarRoomAlarmOverlay } from '@/components/warroom/WarRoomAlarmOverlay';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
@@ -81,6 +83,12 @@ const Index = () => {
   const { showOnboarding, completeOnboarding } = useOnboarding();
   const { showCelebration, closeCelebration, userName } = useBirthdayCelebration();
   const { pendingAnnouncement, dismissAnnouncement } = useImportantAnnouncements();
+  const { isAlarming, pendingWarRoomId, dismissAlarm } = useWarRoomAlarm();
+
+  const handleOpenWarRoom = () => {
+    setActiveSection('war-room');
+    dismissAlarm();
+  };
   
   // Initialize presence tracking
   usePresence();
@@ -184,6 +192,7 @@ const Index = () => {
   if (isMobile) {
     return (
       <div className="flex flex-col h-screen overflow-hidden bg-background">
+        <WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} />
         <OfflineIndicator />
         <MobileHeader 
           title={currentSection.title} 
@@ -231,6 +240,7 @@ const Index = () => {
   // Desktop Layout
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} />
       <OfflineIndicator />
       <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
       

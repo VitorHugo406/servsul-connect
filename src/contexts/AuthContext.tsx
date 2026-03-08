@@ -39,6 +39,7 @@ interface UserPermissions {
   can_delete_messages: boolean;
   can_access_management: boolean;
   can_access_password_change: boolean;
+  can_create_war_room: boolean;
 }
 
 interface AuthContextType {
@@ -66,6 +67,7 @@ const defaultPermissions: UserPermissions = {
   can_delete_messages: false,
   can_access_management: false,
   can_access_password_change: false,
+  can_create_war_room: false,
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -108,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           can_delete_messages: permData.can_delete_messages,
           can_access_management: permData.can_access_management,
           can_access_password_change: permData.can_access_password_change,
+          can_create_war_room: permData.can_create_war_room,
         });
       } else {
         setPermissions(defaultPermissions);

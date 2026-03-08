@@ -85,6 +85,7 @@ interface UserPermission {
   can_delete_messages: boolean;
   can_access_management: boolean;
   can_access_password_change: boolean;
+  can_create_war_room: boolean;
 }
 
 interface UserRole {
@@ -213,6 +214,7 @@ export function ManagementSection() {
         can_delete_messages: 'canDeleteMessages',
         can_access_management: 'canAccessManagement',
         can_access_password_change: 'canAccessPasswordChange',
+        can_create_war_room: 'canCreateWarRoom',
       };
 
       // Build the full permissions object
@@ -222,6 +224,7 @@ export function ManagementSection() {
         canDeleteMessages: permission === 'can_delete_messages' ? value : (currentPerm.can_delete_messages ?? false),
         canAccessManagement: permission === 'can_access_management' ? value : (currentPerm.can_access_management ?? false),
         canAccessPasswordChange: permission === 'can_access_password_change' ? value : (currentPerm.can_access_password_change ?? false),
+        canCreateWarRoom: permission === 'can_create_war_room' ? value : (currentPerm.can_create_war_room ?? false),
       };
 
       // Call the edge function to update permissions
@@ -748,6 +751,7 @@ export function ManagementSection() {
                         <TableHead className="text-center">Excluir Mensagens</TableHead>
                         <TableHead className="text-center">Gerenciamento</TableHead>
                         <TableHead className="text-center">Alterar Senhas</TableHead>
+                        <TableHead className="text-center">War Room</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -796,6 +800,15 @@ export function ManagementSection() {
                                 disabled={isUserAdmin}
                                 onCheckedChange={(checked) => 
                                   updatePermission(user.user_id, 'can_access_password_change', checked)
+                                }
+                              />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Switch
+                                checked={isUserAdmin || userPerm.can_create_war_room || false}
+                                disabled={isUserAdmin}
+                                onCheckedChange={(checked) => 
+                                  updatePermission(user.user_id, 'can_create_war_room', checked)
                                 }
                               />
                             </TableCell>
@@ -1344,6 +1357,14 @@ function MobilePermissionsDialog({ open, onOpenChange, user, permissions, isUser
               checked={isUserAdmin || userPerm.can_access_password_change || false}
               disabled={isUserAdmin}
               onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_access_password_change', checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Criar War Room</Label>
+            <Switch
+              checked={isUserAdmin || userPerm.can_create_war_room || false}
+              disabled={isUserAdmin}
+              onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_create_war_room', checked)}
             />
           </div>
         </div>
