@@ -2393,7 +2393,6 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 )}
               >
-                <span>{tab.icon}</span>
                 {tab.label}
               </button>
             ))}
