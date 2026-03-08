@@ -562,6 +562,11 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
           <Zap className="h-4 w-4" /> Automações
         </Button>
       )}
+      {!task.is_template && onMakeTemplate && (
+        <Button variant="outline" className="gap-2 rounded-md" onClick={() => { onMakeTemplate(task.id); onOpenChange(false); }}>
+          <Copy className="h-4 w-4" /> Tornar Template
+        </Button>
+      )}
       <div className="flex-1" />
       <Button variant="outline" className="rounded-md" onClick={() => onOpenChange(false)}>Fechar</Button>
     </DialogFooter>
