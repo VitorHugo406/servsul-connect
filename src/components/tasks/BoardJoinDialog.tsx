@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -18,18 +18,22 @@ export function BoardJoinDialog({ token, onClose, onNavigateToTasks }: BoardJoin
   const [submitting, setSubmitting] = useState(false);
   const [boardInfo, setBoardInfo] = useState<{ id: string; name: string; description: string | null } | null>(null);
   const [status, setStatus] = useState<'idle' | 'already_member' | 'pending' | 'sent' | 'error'>('idle');
+  const normalizedToken = useMemo(() => {
+    if (!token) return null;
+    const sanitized = token.trim().split(/[?#&]/)[0];
+    return sanitized || null;
+  }, [token]);
 
   useEffect(() => {
-    if (!token || !user) return;
-    
+    if (!normalizedToken || !user) return;
+
     const lookupBoard = async () => {
       setLoading(true);
       try {
-        // Look up the share link
         const { data: link, error: linkErr } = await (supabase as any)
           .from('board_share_links')
           .select('board_id, is_active')
-          .eq('share_token', token)
+          .eq('share_token', normalizedToken)
           .eq('is_active', true)
           .maybeSingle();
 
@@ -39,26 +43,24 @@ export function BoardJoinDialog({ token, onClose, onNavigateToTasks }: BoardJoin
           return;
         }
 
-        // Get board info
+        const boardId = link.board_id;
+
         const { data: board } = await (supabase as any)
           .from('task_boards')
           .select('id, name, description')
-          .eq('id', link.board_id)
+          .eq('id', boardId)
           .maybeSingle();
 
-        if (!board) {
-          setStatus('error');
-          setLoading(false);
-          return;
-        }
+        setBoardInfo({
+          id: boardId,
+          name: board?.name || 'Quadro compartilhado',
+          description: board?.description ?? null,
+        });
 
-        setBoardInfo(board);
-
-        // Check if already a member
         const { data: membership } = await (supabase as any)
           .from('task_board_members')
           .select('id')
-          .eq('board_id', board.id)
+          .eq('board_id', boardId)
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -68,11 +70,10 @@ export function BoardJoinDialog({ token, onClose, onNavigateToTasks }: BoardJoin
           return;
         }
 
-        // Check if owner
         const { data: ownerBoard } = await (supabase as any)
           .from('task_boards')
           .select('id')
-          .eq('id', board.id)
+          .eq('id', boardId)
           .eq('owner_id', user.id)
           .maybeSingle();
 
@@ -82,11 +83,10 @@ export function BoardJoinDialog({ token, onClose, onNavigateToTasks }: BoardJoin
           return;
         }
 
-        // Check if there's already a pending request
         const { data: existingReq } = await (supabase as any)
           .from('board_join_requests')
           .select('id, status')
-          .eq('board_id', board.id)
+          .eq('board_id', boardId)
           .eq('user_id', user.id)
           .eq('status', 'pending')
           .maybeSingle();
@@ -106,7 +106,7 @@ export function BoardJoinDialog({ token, onClose, onNavigateToTasks }: BoardJoin
     };
 
     lookupBoard();
-  }, [token, user]);
+  }, [normalizedToken, user]);
 
   const handleSendRequest = async () => {
     if (!boardInfo || !user || !profile) return;
@@ -139,10 +139,10 @@ export function BoardJoinDialog({ token, onClose, onNavigateToTasks }: BoardJoin
     onNavigateToTasks();
   };
 
-  if (!token) return null;
+  if (!normalizedToken) return null;
 
   return (
-    <Dialog open={!!token} onOpenChange={() => onClose()}>
+    <Dialog open={!!normalizedToken} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

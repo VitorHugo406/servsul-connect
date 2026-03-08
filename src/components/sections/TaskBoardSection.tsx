@@ -2764,7 +2764,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
       {/* Share Dialog */}
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Share2 className="h-5 w-5 text-primary" /> Compartilhar Quadro
@@ -2774,9 +2774,16 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
           <div className="space-y-4 py-2">
             {shareLink ? (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted border border-border">
-                  <Link2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <p className="text-xs text-foreground truncate flex-1 font-mono">{shareLink}</p>
+                <div className="space-y-2 rounded-lg border border-border bg-muted p-3">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Link2 className="h-4 w-4 flex-shrink-0" />
+                    <span>Link de convite</span>
+                  </div>
+                  <Textarea
+                    value={shareLink}
+                    readOnly
+                    className="min-h-[96px] resize-none break-all font-mono text-xs leading-relaxed"
+                  />
                 </div>
                 <Button className="w-full" onClick={() => { navigator.clipboard.writeText(shareLink); toast.success('Link copiado!'); }}>
                   <Copy className="h-4 w-4 mr-2" /> Copiar Link
