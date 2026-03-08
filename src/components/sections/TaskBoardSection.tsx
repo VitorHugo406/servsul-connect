@@ -717,15 +717,25 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       }
       const colTasks = tasks.filter(t => t.status === colId);
       await moveTask(draggedTask.id, colId, position ?? colTasks.length);
-      
-      // Apply column automations on drag
+
+      // Log activity
+      const sourceCol = columns.find(c => c.id === draggedTask.status);
       const targetCol = columns.find(c => c.id === colId);
+      if (profile && targetCol) {
+        await (supabase as any).from('task_activities').insert({
+          task_id: draggedTask.id, user_id: profile.id,
+          user_name: profile.display_name || profile.name,
+          action_type: 'move',
+          description: `moveu de "${sourceCol?.title || '?'}" para "${targetCol.title}"`,
+        });
+      }
+
+      // Apply column automations on drag
       if (targetCol) {
         const autoUpdates: Record<string, any> = {};
         if (targetCol.auto_assign_to) autoUpdates.assigned_to = targetCol.auto_assign_to;
         if (targetCol.auto_cover) autoUpdates.cover_image = targetCol.auto_cover;
-        
-        // Conclusion automation
+
         if (targetCol.is_conclusion) {
           autoUpdates.completed_at = new Date().toISOString();
           if (draggedTask.due_date) {
@@ -741,16 +751,18 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             autoUpdates.delay_days = 0;
           }
         }
-        
+
         if (Object.keys(autoUpdates).length > 0) {
           await updateTask(draggedTask.id, autoUpdates);
           if (targetCol.is_conclusion) {
-            const late = autoUpdates.completed_late;
-            toast.info(late ? `Tarefa concluída com ${autoUpdates.delay_days} dia(s) de atraso` : 'Tarefa concluída no prazo!');
+            toast.info(autoUpdates.completed_late ? `Concluída com ${autoUpdates.delay_days} dia(s) de atraso` : 'Concluída no prazo!');
           } else {
             toast.info('Automações da coluna aplicadas');
           }
         }
+
+        // Apply auto-subtasks
+        await applyColumnAutoSubtasks(draggedTask.id, colId);
       }
     }
     setDraggedTask(null);
