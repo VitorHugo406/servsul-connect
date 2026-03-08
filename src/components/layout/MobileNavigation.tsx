@@ -1,5 +1,5 @@
 import { useState } from 'react';
- import { Home, MessageSquare, Bell, Cake, MoreHorizontal, Settings, Camera, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, FileText, CalendarDays } from 'lucide-react';
+ import { Home, MessageSquare, Bell, Cake, MoreHorizontal, Settings, Camera, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, FileText, CalendarDays, GraduationCap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -31,6 +31,7 @@ const moreNavItems = [
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
   { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
   { id: 'system-logs', icon: FileText, label: 'Logs do Sistema', mainAdminOnly: true },
+  { id: 'tutorial', icon: GraduationCap, label: 'Tutorial', mainAdminOnly: true },
 ];
 
 export function MobileNavigation({ activeSection, onSectionChange }: MobileNavigationProps) {
