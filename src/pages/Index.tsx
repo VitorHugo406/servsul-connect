@@ -54,6 +54,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
    'system-logs': { title: 'Logs do Sistema', subtitle: 'Auditoria e relatórios' },
    'storage': { title: 'Armazenamento', subtitle: 'Monitoramento do banco de dados' },
    'event-history': { title: 'Eventos Mensais', subtitle: 'Histórico de campanhas' },
+   'documentation': { title: 'Documentação', subtitle: 'Documentação técnica do sistema' },
 };
 
 const Index = () => {
