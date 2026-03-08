@@ -1818,7 +1818,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                             <div className="px-2.5 py-2">
                               <h4 className="font-normal text-sm text-foreground leading-snug">{template.title}</h4>
                               <div className="flex items-center gap-1 mt-1">
-                                <span className="bg-muted-foreground/20 text-muted-foreground text-[9px] px-1.5 py-0.5 rounded font-medium">Este cartão é um template.</span>
+                                <span className="flex items-center gap-1 text-blue-400 text-[9px] font-medium"><ListTodo className="h-3 w-3" />Este cartão é um template.</span>
                               </div>
                             </div>
                             <div className="absolute top-1 right-1 opacity-0 group-hover/tpl:opacity-100 transition-opacity">
