@@ -600,14 +600,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
         <Button variant="ghost" size="sm" onClick={() => { setShowAddGroup(false); setNewGroupTitle(''); }}>Cancelar</Button>
       </div>
     </div>
-  ) : (
-    <div className="flex gap-2">
-      {groups.length === 0 && ungroupedSubtasks.length === 0 && (
-        <Button variant="outline" size="sm" className="gap-1.5 rounded-md" onClick={() => setActiveAddItem('ungrouped')}>
-          <Plus className="h-3.5 w-3.5" /> Subtarefa
-        </Button>
-      )}
-    </div>
+  ) : null;
   );
 
   const renderSubtasks = () => (
