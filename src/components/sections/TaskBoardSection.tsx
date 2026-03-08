@@ -91,7 +91,9 @@ export function TaskBoardSection() {
     return (
       <BoardView
         board={board}
+        boards={boards}
         onBack={() => setSelectedBoardId(null)}
+        onSelectBoard={(id: string) => setSelectedBoardId(id)}
         onUpdateBoard={updateBoard}
         isOwner={board.owner_id === user?.id}
         currentUserId={user?.id || ''}
