@@ -16,6 +16,7 @@ import { useTeamAnalytics } from '@/hooks/useTeamAnalytics';
 import { useWorkloadAlerts } from '@/hooks/useWorkloadAlerts';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import { useGlobalScores } from '@/hooks/useBoardScores';
 import type { MemberScore, MonthlyScoreEntry } from '@/hooks/useBoardScores';
 import {
