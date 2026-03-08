@@ -293,6 +293,16 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [showDistribution, setShowDistribution] = useState(false);
   const [distributionColumnOverrides, setDistributionColumnOverrides] = useState<Record<string, string>>({});
 
+  // Sync selectedTask with latest tasks data after refetch
+  React.useEffect(() => {
+    if (selectedTask) {
+      const updated = tasks.find(t => t.id === selectedTask.id);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedTask)) {
+        setSelectedTask(updated);
+      }
+    }
+  }, [tasks, selectedTask]);
+
   const togglePlanner = () => {
     if (showPlanner) { setShowPlanner(false); setShowBoard(true); }
     else setShowPlanner(true);
