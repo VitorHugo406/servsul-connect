@@ -1046,6 +1046,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             </DropdownMenu>
           ) : (
             <>
+              <Button variant="ghost" size="icon" onClick={() => setShowOperationMode(true)} title="Modo Operação" className="text-orange-500 hover:text-orange-600">
+                <Activity className="h-4 w-4" />
+              </Button>
+              {isAdminOrOwner && (
+                <Button variant="ghost" size="icon" onClick={() => setShowDistribution(true)} title="Auto-distribuição" className="text-orange-500 hover:text-orange-600">
+                  <Shuffle className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -1059,9 +1067,6 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               <Button variant="ghost" size="icon" onClick={() => { setAutomationTaskId(undefined); setShowAutomationRules(true); }} title="Automações do Board">
                 <Zap className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => setShowOperationMode(true)} title="Modo Operação" className="text-orange-500 hover:text-orange-600">
-                <Activity className="h-4 w-4" />
-              </Button>
               <Button variant="ghost" size="icon" onClick={() => setShowLabelsManager(true)} title="Etiquetas">
                 <Tag className="h-4 w-4" />
               </Button>
@@ -1073,9 +1078,6 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               </Button>
               {isAdminOrOwner && (
                 <>
-                  <Button variant="ghost" size="icon" onClick={() => setShowDistribution(true)} title="Auto-distribuição" className="text-secondary hover:text-secondary/80">
-                    <Shuffle className="h-4 w-4" />
-                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => setShowShareDialog(true)} title="Compartilhar quadro">
                     <Share2 className="h-4 w-4" />
                   </Button>
