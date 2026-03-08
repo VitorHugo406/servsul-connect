@@ -83,6 +83,12 @@ const Index = () => {
   const { showOnboarding, completeOnboarding } = useOnboarding();
   const { showCelebration, closeCelebration, userName } = useBirthdayCelebration();
   const { pendingAnnouncement, dismissAnnouncement } = useImportantAnnouncements();
+  const { isAlarming, pendingWarRoomId, dismissAlarm } = useWarRoomAlarm();
+
+  const handleOpenWarRoom = () => {
+    setActiveSection('war-room');
+    dismissAlarm();
+  };
   
   // Initialize presence tracking
   usePresence();
