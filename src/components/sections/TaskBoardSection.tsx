@@ -488,6 +488,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   }, [board.background_image]);
 
   // Apply filter to tasks
+  const conclusionColumnIds = columns.filter(c => c.is_conclusion).map(c => c.id);
   const filteredTasks = applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels).filter(t => !t.is_template);
   const templateTasks = tasks.filter(t => t.is_template && !t.is_archived);
 
