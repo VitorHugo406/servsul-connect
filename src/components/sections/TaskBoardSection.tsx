@@ -697,6 +697,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     toast.success('Card arquivado');
   };
 
+  const handleMakeTemplate = async (taskId: string) => {
+    if (!confirm('Tornar este card um template? Ele perderá responsável e data de entrega.')) return;
+    const { error } = await updateTask(taskId, { is_template: true, assigned_to: null, due_date: null } as any);
+    if (error) { toast.error('Erro ao converter'); return; }
+    toast.success('Card convertido em template!');
+  };
+
+
   const handleArchiveColumn = async (colId: string) => {
     const colTasks = tasks.filter(t => t.status === colId);
     if (colTasks.length === 0) { toast.info('Nenhum card para arquivar'); return; }
