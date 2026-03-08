@@ -1108,19 +1108,19 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             animate={{ width: showBoard ? 300 : '100%', opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="overflow-hidden flex-shrink-0"
+            className="overflow-hidden flex-shrink-0 py-3 pl-3"
           >
             <div className={cn(
-              "h-full overflow-y-auto p-4 space-y-3 border-r border-border",
-              "bg-sidebar text-sidebar-foreground"
+              "h-full overflow-y-auto p-4 space-y-3 rounded-xl",
+              "bg-muted text-foreground"
             )}>
-              <h3 className="font-display font-semibold text-sm">
+              <h3 className="font-display font-semibold text-sm text-foreground">
                 Planejador
               </h3>
-              <p className="text-xs text-sidebar-foreground/60">
+              <p className="text-xs text-muted-foreground">
                 {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
-              <div className="h-px bg-sidebar-border" />
+              <div className="h-px bg-border" />
               {(() => {
                 const todayTasks = tasks.filter(t => {
                   if (!t.due_date) return false;
@@ -1128,25 +1128,25 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 }).sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
                 return todayTasks.length === 0 ? (
                   <div className="flex flex-col items-center py-8 text-center">
-                    <div className="mb-3 rounded-full bg-sidebar-accent p-3">
-                      <Calendar className="h-6 w-6 text-sidebar-foreground/50" />
+                    <div className="mb-3 rounded-full bg-background p-3">
+                      <Calendar className="h-6 w-6 text-muted-foreground" />
                     </div>
-                    <p className="text-sm text-sidebar-foreground/60">Nenhuma tarefa para hoje</p>
+                    <p className="text-sm text-muted-foreground">Nenhuma tarefa para hoje</p>
                   </div>
                 ) : todayTasks.map(t => {
                   const col = columns.find(c => c.id === t.status);
                   return (
-                    <div key={t.id} className="p-3 rounded-lg bg-sidebar-accent cursor-pointer hover:bg-sidebar-accent/80 transition-all"
+                    <div key={t.id} className="p-3 rounded-lg bg-background cursor-pointer hover:bg-background/80 transition-all shadow-sm"
                       onClick={() => { setSelectedTask(t); setShowTaskDetail(true); }}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col?.color }} />
-                        <span className="text-xs text-sidebar-foreground/60">
+                        <span className="text-xs text-muted-foreground">
                           {new Date(t.due_date!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <p className="text-sm font-medium text-sidebar-foreground">{t.title}</p>
-                      <p className="text-xs text-sidebar-foreground/50 mt-0.5">{col?.title}</p>
+                      <p className="text-sm font-medium text-foreground">{t.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{col?.title}</p>
                     </div>
                   );
                 });
@@ -1438,7 +1438,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     </DropdownMenu>
                   </div>
 
-                  <div className="p-2 space-y-2 min-h-[60px] flex-1 overflow-y-auto max-h-[calc(100vh-220px)] task-col-scroll">
+                  <div className="p-2 space-y-2 min-h-[60px] flex-1 overflow-y-auto max-h-[calc(100vh-300px)] task-col-scroll">
                     {colTasks.map((task, index) => {
                       const cover = getCoverDisplay(task.cover_image);
                       const dueInfo = getDueDateInfo(task.due_date);
@@ -1498,53 +1498,33 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                               <h4 className="font-normal text-sm text-foreground leading-snug">{task.title}</h4>
                             </div>
 
-                            {/* Bottom row: badges */}
+                            {/* Bottom row: badges + avatar */}
                             <div className="flex items-center gap-1 flex-wrap">
-                              {/* Conclusion column: green date with check */}
-                              {column.is_conclusion && task.completed_at ? (
-                                <div className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium bg-green-500/20 text-green-600">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  {task.due_date ? new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : new Date(task.completed_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                                </div>
-                              ) : dueInfo && (() => {
-                                const DI = dueInfo.icon;
-                                return (
-                                  <div className={cn('flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium', dueInfo.color)}>
-                                    <DI className="h-3 w-3" />
-                                    {task.due_date && new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                                    {task.due_date && (() => { const d = new Date(task.due_date); return d.getHours() !== 0 || d.getMinutes() !== 0 ? ` ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''; })()}
-                                  </div>
-                                );
-                              })()}
-                              {task.description && (
-                                <div className="text-muted-foreground" title="Descrição">
-                                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h10M4 18h14"/></svg>
-                                </div>
+                              <span className="text-[10px] text-muted-foreground font-medium">#{task.task_number}</span>
+                              {dueInfo && (
+                                <span className={cn('inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium', dueInfo.color)}>
+                                  <dueInfo.icon className="h-2.5 w-2.5" />
+                                  {dueInfo.label}
+                                </span>
                               )}
-                              {subtaskCounts[task.id] && subtaskCounts[task.id].total > 0 && (
-                                <div className={cn(
-                                  "flex items-center gap-0.5 text-[10px] px-1 py-0.5 rounded",
-                                  subtaskCounts[task.id].completed === subtaskCounts[task.id].total 
-                                    ? "bg-green-500/10 text-green-600" 
-                                    : "text-muted-foreground"
-                                )}>
-                                  <CheckSquare className="h-3 w-3" />
-                                  <span>{subtaskCounts[task.id].completed}/{subtaskCounts[task.id].total}</span>
-                                </div>
-                              )}
-                              {/* Spacer + assignee avatars on right */}
+                              {(() => { const sc = subtaskCounts[task.id]; return sc && sc.total > 0 ? (
+                                <span className={cn('inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium', sc.completed === sc.total ? 'text-green-600 bg-green-500/10' : 'text-muted-foreground bg-muted')}>
+                                  <CheckCircle2 className="h-2.5 w-2.5" /> {sc.completed}/{sc.total}
+                                </span>
+                              ) : null; })()}
                               <div className="flex-1" />
-                              {/* Additional assignees */}
+                              {/* Additional Assignees */}
                               {(() => {
                                 const extraAssignees = getTaskAssignees(task.id);
-                                return extraAssignees.length > 0 && (
-                                  <div className="flex -space-x-1.5">
+                                if (extraAssignees.length === 0) return null;
+                                return (
+                                  <div className="flex -space-x-1">
                                     {extraAssignees.slice(0, 2).map(a => (
                                       <Tooltip key={a.id}>
                                         <TooltipTrigger asChild>
                                           <Avatar className="h-5 w-5 ring-1 ring-background">
                                             <AvatarImage src={a.profile?.avatar_url || ''} />
-                                            <AvatarFallback className="text-[7px] bg-muted text-muted-foreground">
+                                            <AvatarFallback className="text-[7px] bg-primary/80 text-primary-foreground">
                                               {getInitials(a.profile?.display_name || a.profile?.name || 'U')}
                                             </AvatarFallback>
                                           </Avatar>
@@ -1657,7 +1637,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     {colTasks.length === 0 && (
                       <div className="text-center py-6 text-muted-foreground text-xs">Nenhuma tarefa</div>
                     )}
-                    <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1" onClick={() => openCreateTask(column.id)}>
+                  </div>
+                  {/* Fixed add button at bottom of column */}
+                  <div className="p-2 pt-0 border-t border-border">
+                    <Button variant="ghost" size="sm" className="w-full text-xs gap-1" onClick={() => openCreateTask(column.id)}>
                       <Plus className="h-3 w-3" /> Adicionar
                     </Button>
                   </div>
@@ -1693,12 +1676,12 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
       {/* Bottom bar: Planner / Board / Switch - Trello style */}
       {!isMobile && (
-        <div className="flex items-center justify-center py-1.5 relative z-10">
-          <div className="flex items-center bg-sidebar rounded-lg p-0.5">
+        <div className="flex items-center justify-center py-2.5 relative z-10">
+          <div className="flex items-center bg-sidebar rounded-lg p-1">
             <button
               onClick={togglePlanner}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                "flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors",
                 showPlanner ? "bg-sidebar-accent text-sidebar-foreground" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
               )}
             >
@@ -1707,16 +1690,16 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             <button
               onClick={toggleBoard}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                "flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors",
                 showBoard && !showPlanner ? "bg-sidebar-accent text-sidebar-foreground" : showBoard ? "bg-sidebar-accent/50 text-sidebar-foreground" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
               )}
             >
               Quadro
             </button>
-            <div className="w-px h-5 bg-sidebar-border mx-0.5" />
+            <div className="w-px h-6 bg-sidebar-border mx-1" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors">
+                <button className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors">
                   Mudar de quadro
                 </button>
               </DropdownMenuTrigger>
