@@ -229,6 +229,89 @@ export type Database = {
         }
         Relationships: []
       }
+      board_join_requests: {
+        Row: {
+          board_id: string
+          created_at: string
+          id: string
+          profile_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          board_id: string
+          created_at?: string
+          id?: string
+          profile_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          board_id?: string
+          created_at?: string
+          id?: string
+          profile_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_join_requests_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "task_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_join_requests_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      board_share_links: {
+        Row: {
+          board_id: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean | null
+          share_token: string
+        }
+        Insert: {
+          board_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean | null
+          share_token?: string
+        }
+        Update: {
+          board_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean | null
+          share_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_share_links_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "task_boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_events: {
         Row: {
           all_day: boolean

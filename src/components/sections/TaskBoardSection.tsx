@@ -7,7 +7,7 @@ import {
   Clock4, Clock, Users, Settings, ArrowLeft, MoveRight,
   PlusCircle, FileDown, Zap, Upload, Tag, Copy, Repeat,
   Archive, ArchiveRestore, Pencil, Activity, Menu, Shield,
-  Filter
+  Filter, Share2, UserPlus, Link2, Shuffle, Bell
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -285,6 +285,11 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [showFilter, setShowFilter] = useState(false);
   const [showPlanner, setShowPlanner] = useState(false);
   const [showBoard, setShowBoard] = useState(true);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showJoinRequests, setShowJoinRequests] = useState(false);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [joinRequests, setJoinRequests] = useState<any[]>([]);
+  const [showDistribution, setShowDistribution] = useState(false);
 
   const togglePlanner = () => {
     if (showPlanner) { setShowPlanner(false); setShowBoard(true); }
@@ -293,6 +298,99 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const toggleBoard = () => {
     if (showBoard) { if (!showPlanner) return; setShowBoard(false); }
     else setShowBoard(true);
+  };
+
+  // Fetch share link and join requests
+  useEffect(() => {
+    if (!isAdminOrOwner) return;
+    const fetchShareData = async () => {
+      const { data: links } = await (supabase as any)
+        .from('board_share_links')
+        .select('*')
+        .eq('board_id', board.id)
+        .eq('is_active', true)
+        .limit(1);
+      if (links && links.length > 0) {
+        setShareLink(`${window.location.origin}?join=${links[0].share_token}`);
+      }
+      
+      const { data: requests } = await (supabase as any)
+        .from('board_join_requests')
+        .select('*, profile:profiles!board_join_requests_profile_id_fkey(id, name, display_name, avatar_url, email)')
+        .eq('board_id', board.id)
+        .eq('status', 'pending');
+      setJoinRequests(requests || []);
+    };
+    fetchShareData();
+
+    const channel = supabase
+      .channel(`board-requests-${board.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'board_join_requests', filter: `board_id=eq.${board.id}` }, () => fetchShareData())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [board.id, isAdminOrOwner]);
+
+  const generateShareLink = async () => {
+    const { data, error } = await (supabase as any)
+      .from('board_share_links')
+      .insert({ board_id: board.id, created_by: currentUserId })
+      .select()
+      .single();
+    if (!error && data) {
+      const link = `${window.location.origin}?join=${data.share_token}`;
+      setShareLink(link);
+      navigator.clipboard.writeText(link);
+      toast.success('Link copiado para a área de transferência!');
+    }
+  };
+
+  const handleJoinRequest = async (requestId: string, approve: boolean) => {
+    const request = joinRequests.find(r => r.id === requestId);
+    if (!request) return;
+    
+    if (approve) {
+      await addMember(request.user_id, request.profile_id);
+    }
+    
+    await (supabase as any)
+      .from('board_join_requests')
+      .update({ status: approve ? 'approved' : 'rejected', resolved_at: new Date().toISOString(), resolved_by: currentUserId })
+      .eq('id', requestId);
+    
+    setJoinRequests(prev => prev.filter(r => r.id !== requestId));
+    toast.success(approve ? 'Usuário aprovado!' : 'Solicitação recusada');
+  };
+
+  // Auto-distribution recommendations
+  const getDistributionRecommendations = () => {
+    const memberWorkloads = members.map(m => {
+      const memberTasks = tasks.filter(t => t.assigned_to === m.profile_id && !columns.find(c => c.id === t.status)?.is_conclusion);
+      return { ...m, taskCount: memberTasks.length, tasks: memberTasks };
+    });
+    const avg = memberWorkloads.reduce((s, m) => s + m.taskCount, 0) / Math.max(memberWorkloads.length, 1);
+    const overloaded = memberWorkloads.filter(m => m.taskCount > avg + 1);
+    const underloaded = memberWorkloads.filter(m => m.taskCount < avg);
+    
+    const recommendations: { taskId: string; taskTitle: string; fromName: string; toName: string; toProfileId: string }[] = [];
+    for (const over of overloaded) {
+      const excess = over.tasks.slice(Math.ceil(avg));
+      for (const task of excess) {
+        const target = underloaded.find(u => u.taskCount < avg);
+        if (target) {
+          const fromProfile = allUsers.find(u => u.id === over.profile_id);
+          const toProfile = allUsers.find(u => u.id === target.profile_id);
+          recommendations.push({
+            taskId: task.id,
+            taskTitle: task.title,
+            fromName: fromProfile?.display_name || fromProfile?.name || 'Sem nome',
+            toName: toProfile?.display_name || toProfile?.name || 'Sem nome',
+            toProfileId: target.profile_id,
+          });
+          target.taskCount++;
+        }
+      }
+    }
+    return recommendations;
   };
 
   // Form state
@@ -922,6 +1020,17 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 </DropdownMenuItem>
                 {isAdminOrOwner && (
                   <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setShowDistribution(true)}>
+                      <Shuffle className="h-4 w-4 mr-2" /> Auto-distribuição
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowShareDialog(true)}>
+                      <Share2 className="h-4 w-4 mr-2" /> Compartilhar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowJoinRequests(true)}>
+                      <UserPlus className="h-4 w-4 mr-2" /> Solicitações {joinRequests.length > 0 && `(${joinRequests.length})`}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setShowArchive(true)}>
                       <Archive className="h-4 w-4 mr-2" /> Arquivados
                     </DropdownMenuItem>
@@ -961,6 +1070,22 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               </Button>
               {isAdminOrOwner && (
                 <>
+                  <Button variant="ghost" size="icon" onClick={() => setShowDistribution(true)} title="Auto-distribuição" className="text-secondary hover:text-secondary/80">
+                    <Shuffle className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setShowShareDialog(true)} title="Compartilhar quadro">
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                  <div className="relative">
+                    <Button variant="ghost" size="icon" onClick={() => setShowJoinRequests(true)} title="Solicitações">
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
+                    {joinRequests.length > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] flex items-center justify-center font-bold">
+                        {joinRequests.length}
+                      </span>
+                    )}
+                  </div>
                   <Button variant="ghost" size="icon" onClick={() => setShowArchive(true)} title="Arquivados">
                     <Archive className="h-4 w-4" />
                   </Button>
@@ -976,43 +1101,58 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
       {/* Board area with optional planner */}
       <div className="flex-1 overflow-hidden relative z-10 flex">
-        {/* Planner sidebar */}
+        {/* Planner sidebar - Trello style */}
         {showPlanner && (
-          <div className={cn(
-            "overflow-y-auto border-r border-border backdrop-blur-sm flex-shrink-0 p-4 space-y-3",
-            isDarkBg ? "bg-black/60 text-white" : "bg-background/90",
-            showBoard ? "w-[280px]" : "flex-1"
-          )}>
-            <h3 className={cn("font-semibold text-sm", isDarkBg && "text-white")}>
-              📋 {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </h3>
-            <div className="h-px bg-border" />
-            {(() => {
-              const todayTasks = tasks.filter(t => {
-                if (!t.due_date) return false;
-                return new Date(t.due_date).toDateString() === new Date().toDateString();
-              }).sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
-              return todayTasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">Nenhuma tarefa para hoje</p>
-              ) : todayTasks.map(t => {
-                const col = columns.find(c => c.id === t.status);
-                return (
-                  <div key={t.id} className="p-3 rounded-lg border border-border bg-card/50 cursor-pointer hover:bg-card/80 transition-colors"
-                    onClick={() => { setSelectedTask(t); setShowTaskDetail(true); }}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col?.color }} />
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(t.due_date!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: showBoard ? 300 : '100%', opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="overflow-hidden flex-shrink-0 p-2"
+          >
+            <div className={cn(
+              "h-full overflow-y-auto rounded-xl p-4 space-y-3",
+              "bg-muted/80 dark:bg-muted/40 border border-border"
+            )}>
+              <h3 className="font-display font-semibold text-sm text-foreground">
+                📋 Planejador
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </p>
+              <div className="h-px bg-border" />
+              {(() => {
+                const todayTasks = tasks.filter(t => {
+                  if (!t.due_date) return false;
+                  return new Date(t.due_date).toDateString() === new Date().toDateString();
+                }).sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
+                return todayTasks.length === 0 ? (
+                  <div className="flex flex-col items-center py-8 text-center">
+                    <div className="mb-3 rounded-full bg-background p-3">
+                      <Calendar className="h-6 w-6 text-muted-foreground" />
                     </div>
-                    <p className="text-sm font-medium">{t.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{col?.title}</p>
+                    <p className="text-sm text-muted-foreground">Nenhuma tarefa para hoje</p>
                   </div>
-                );
-              });
-            })()}
-          </div>
+                ) : todayTasks.map(t => {
+                  const col = columns.find(c => c.id === t.status);
+                  return (
+                    <div key={t.id} className="p-3 rounded-lg border border-border bg-card cursor-pointer hover:shadow-md transition-all"
+                      onClick={() => { setSelectedTask(t); setShowTaskDetail(true); }}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col?.color }} />
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(t.due_date!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium text-foreground">{t.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{col?.title}</p>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </motion.div>
         )}
         {showBoard && (
         <div className="flex-1 overflow-hidden">
@@ -1551,36 +1691,51 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         )}
       </div>
 
-      {/* Bottom bar: Planner / Board / Switch */}
+      {/* Bottom bar: Planner / Board / Switch - Trello style */}
       {!isMobile && (
-        <div className={cn("flex items-center justify-center gap-1 px-4 py-2 border-t border-border backdrop-blur-sm relative z-10", isDarkBg ? "bg-black/50" : "bg-background/80")}>
-          <Button variant={showPlanner ? "default" : "ghost"} size="sm" className="gap-1.5 rounded-md text-xs" onClick={togglePlanner}>
-            📋 Planejador
-          </Button>
-          <Button variant={showBoard ? "default" : "ghost"} size="sm" className="gap-1.5 rounded-md text-xs" onClick={toggleBoard}>
-            📊 Quadro
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-1.5 rounded-md text-xs">
-                🔄 Mudar de quadro
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-64">
-              {boards.filter(b => b.id !== board.id).map(b => (
-                <DropdownMenuItem key={b.id} onClick={() => onSelectBoard(b.id)} className="flex items-center gap-3 p-2">
-                  <div
-                    className={cn("w-12 h-8 rounded flex-shrink-0 border border-border", getBoardBg(b.background_image))}
-                    style={getBoardBgStyle(b.background_image)}
-                  />
-                  <span className="text-sm font-medium truncate">{b.name}</span>
-                </DropdownMenuItem>
-              ))}
-              {boards.filter(b => b.id !== board.id).length === 0 && (
-                <div className="p-3 text-sm text-muted-foreground text-center">Nenhum outro quadro</div>
+        <div className="flex items-center justify-center py-1.5 relative z-10 border-t border-border bg-sidebar">
+          <div className="flex items-center bg-sidebar-accent rounded-lg p-0.5">
+            <button
+              onClick={togglePlanner}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                showPlanner ? "bg-primary text-primary-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/80"
               )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            >
+              📋 Planejador
+            </button>
+            <button
+              onClick={toggleBoard}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                showBoard && !showPlanner ? "bg-primary text-primary-foreground" : showBoard ? "bg-muted text-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/80"
+              )}
+            >
+              📊 Quadro
+            </button>
+            <div className="w-px h-5 bg-sidebar-border mx-0.5" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-sidebar-foreground hover:bg-sidebar-accent/80 transition-colors">
+                  🔄 Mudar de quadro
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-64">
+                {boards.filter(b => b.id !== board.id).map(b => (
+                  <DropdownMenuItem key={b.id} onClick={() => onSelectBoard(b.id)} className="flex items-center gap-3 p-2">
+                    <div
+                      className={cn("w-12 h-8 rounded flex-shrink-0 border border-border", getBoardBg(b.background_image))}
+                      style={getBoardBgStyle(b.background_image)}
+                    />
+                    <span className="text-sm font-medium truncate">{b.name}</span>
+                  </DropdownMenuItem>
+                ))}
+                {boards.filter(b => b.id !== board.id).length === 0 && (
+                  <div className="p-3 text-sm text-muted-foreground text-center">Nenhum outro quadro</div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       )}
 
@@ -2305,6 +2460,125 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         labels={labels}
         currentProfileId={profile?.id}
       />
+
+      {/* Share Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="h-5 w-5 text-primary" /> Compartilhar Quadro
+            </DialogTitle>
+            <DialogDescription>Gere um link para convidar pessoas ao quadro</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {shareLink ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted border border-border">
+                  <Link2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <p className="text-xs text-foreground truncate flex-1 font-mono">{shareLink}</p>
+                </div>
+                <Button className="w-full" onClick={() => { navigator.clipboard.writeText(shareLink); toast.success('Link copiado!'); }}>
+                  <Copy className="h-4 w-4 mr-2" /> Copiar Link
+                </Button>
+              </div>
+            ) : (
+              <Button className="w-full" onClick={generateShareLink}>
+                <Link2 className="h-4 w-4 mr-2" /> Gerar Link de Convite
+              </Button>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Pessoas que acessarem o link poderão solicitar participação. Você precisará aprovar cada solicitação.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Join Requests Dialog */}
+      <Dialog open={showJoinRequests} onOpenChange={setShowJoinRequests}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-primary" /> Solicitações de Participação
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[400px]">
+            {joinRequests.length === 0 ? (
+              <div className="py-8 text-center">
+                <UserPlus className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">Nenhuma solicitação pendente</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {joinRequests.map(req => (
+                  <div key={req.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={req.profile?.avatar_url || ''} />
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {getInitials(req.profile?.display_name || req.profile?.name || '?')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{req.profile?.display_name || req.profile?.name}</p>
+                      <p className="text-xs text-muted-foreground">{req.profile?.email}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="default" className="h-7 text-xs" onClick={() => handleJoinRequest(req.id, true)}>
+                        Aprovar
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleJoinRequest(req.id, false)}>
+                        Recusar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Distribution Dialog */}
+      <Dialog open={showDistribution} onOpenChange={setShowDistribution}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shuffle className="h-5 w-5 text-secondary" /> Auto-distribuição de Tarefas
+            </DialogTitle>
+            <DialogDescription>Recomendações de redistribuição baseadas na carga de trabalho</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[400px]">
+            {(() => {
+              const recs = getDistributionRecommendations();
+              return recs.length === 0 ? (
+                <div className="py-8 text-center">
+                  <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">As tarefas estão bem distribuídas!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recs.map((rec, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{rec.taskTitle}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {rec.fromName} → {rec.toName}
+                        </p>
+                      </div>
+                      <Button size="sm" className="h-7 text-xs" onClick={async () => {
+                        await updateTask(rec.taskId, { assigned_to: rec.toProfileId });
+                        toast.success(`Tarefa reatribuída para ${rec.toName}`);
+                        setShowDistribution(false);
+                      }}>
+                        Aprovar
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
