@@ -2616,18 +2616,6 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
           </ScrollArea>
         </DialogContent>
       </Dialog>
-                        }}>
-                          <X className="h-3 w-3 mr-1" /> Recusar
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
