@@ -627,13 +627,65 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   };
 
   const handleToggleLabel = async (taskId: string, labelId: string) => {
-    const taskLabels = getTaskLabels(taskId);
-    const hasLabel = taskLabels.some(l => l.id === labelId);
+    const tLabels = getTaskLabels(taskId);
+    const hasLabel = tLabels.some(l => l.id === labelId);
+    const label = labels.find(l => l.id === labelId);
     if (hasLabel) {
       await removeLabel(taskId, labelId);
     } else {
       await assignLabel(taskId, labelId);
     }
+    if (profile && label) {
+      await (supabase as any).from('task_activities').insert({
+        task_id: taskId, user_id: profile.id,
+        user_name: profile.display_name || profile.name,
+        action_type: 'label',
+        description: hasLabel ? `removeu a etiqueta "${label.name}"` : `adicionou a etiqueta "${label.name}"`,
+      });
+    }
+  };
+
+  const handleQuickComplete = async (task: BoardTask) => {
+    const conclusionCol = columns.find(c => c.is_conclusion);
+    if (!conclusionCol) { toast.error('Nenhuma coluna de conclusão configurada'); return; }
+    const moveCheck = canMoveToColumn(task.status, conclusionCol.id);
+    if (!moveCheck.allowed) { toast.error(moveCheck.reason || 'Movimento bloqueado'); return; }
+    await moveTask(task.id, conclusionCol.id, 0);
+    await updateTask(task.id, {
+      completed_at: new Date().toISOString(),
+      completed_late: task.due_date ? new Date() > new Date(task.due_date) : false,
+      delay_days: task.due_date ? Math.max(0, Math.ceil((new Date().getTime() - new Date(task.due_date).getTime()) / (1000 * 60 * 60 * 24))) : 0,
+    });
+    toast.success('Tarefa concluída!');
+    if (profile) {
+      await (supabase as any).from('task_activities').insert({
+        task_id: task.id, user_id: profile.id,
+        user_name: profile.display_name || profile.name,
+        action_type: 'complete', description: 'marcou como concluída',
+      });
+    }
+  };
+
+  const applyColumnAutoSubtasks = async (taskId: string, columnId: string) => {
+    try {
+      const { data: autoSubs } = await supabase.from('column_auto_subtasks').select('*').eq('column_id', columnId).order('group_title').order('position');
+      if (!autoSubs || autoSubs.length === 0) return;
+      const { data: existing } = await supabase.from('task_subtasks').select('id').eq('task_id', taskId).limit(1);
+      if (existing && existing.length > 0) return;
+      const groupMap = new Map<string, any[]>();
+      autoSubs.forEach((s: any) => {
+        if (!groupMap.has(s.group_title)) groupMap.set(s.group_title, []);
+        groupMap.get(s.group_title)!.push(s);
+      });
+      let pos = 0;
+      for (const [title, items] of groupMap) {
+        const { data: group } = await supabase.from('subtask_groups').insert({ task_id: taskId, title, position: pos++ }).select().single();
+        if (group) {
+          await supabase.from('task_subtasks').insert(items.map((item: any, idx: number) => ({ task_id: taskId, title: item.title, position: idx, group_id: group.id })));
+        }
+      }
+      toast.info('Subtarefas automáticas aplicadas');
+    } catch (err) { console.error('Error applying auto subtasks:', err); }
   };
 
   // Drag and drop
