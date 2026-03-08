@@ -1948,7 +1948,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   </SelectContent>
                 </Select>
               </div>
-              {!isCreatingTemplate && (
+              {!isCreatingTemplate && !editingTask?.is_template && (
               <div className="space-y-2">
                 <Label>Responsável</Label>
                 <Select value={assignedTo} onValueChange={setAssignedTo}>
