@@ -43,6 +43,7 @@ import { useTaskAssignees } from '@/hooks/useTaskAssignees';
 import { useCardDuplications } from '@/hooks/useCardDuplications';
 import { useWorkflowRules } from '@/hooks/useWorkflowRules';
 import { useColumnAutoSubtasks } from '@/hooks/useColumnAutoSubtasks';
+import { logTaskActivity } from '@/hooks/useTaskActivities';
 import {
   PRIORITIES, BACKGROUND_IMAGES, BACKGROUND_GROUPS, CARD_COVERS,
   getBoardBg, getBoardBgStyle, getInitials, getCoverDisplay, isBoardBgDark,
@@ -540,6 +541,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     const result = await createTask(taskData);
     if (result.error) { toast.error('Erro ao criar tarefa'); return; }
     if (result.data) {
+      const colName = col?.title || 'coluna';
+      const userName = profile?.display_name || profile?.name || 'Usuário';
+      await logTaskActivity(result.data.id, profile?.id || '', userName, 'create', `${userName} criou este card na coluna "${colName}"`);
       setSelectedTask(result.data as any);
       setShowTaskDetail(true);
     }
@@ -636,6 +640,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     const result = await createTask(taskData);
     if (result.error) { toast.error('Erro ao criar template'); return; }
     if (result.data) {
+      const col = columns.find(c => c.id === columnId);
+      const userName = profile?.display_name || profile?.name || 'Usuário';
+      await logTaskActivity(result.data.id, profile?.id || '', userName, 'create', `${userName} criou este template na coluna "${col?.title || 'coluna'}"`);
       setSelectedTask(result.data as any);
       setShowTaskDetail(true);
     }
