@@ -79,10 +79,11 @@ function RichDescription({ text }: { text: string }) {
   );
 }
 
-// Trello-style description editor with toolbar
+// Trello-style description editor with toolbar and live preview
 function DescriptionEditor({ value, onSave, onCancel }: { value: string; onSave: (v: string) => void; onCancel: () => void }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState(value);
+  const [showPreview, setShowPreview] = useState(false);
 
   const wrapSelection = useCallback((before: string, after: string) => {
     const ta = textareaRef.current;
@@ -110,14 +111,22 @@ function DescriptionEditor({ value, onSave, onCancel }: { value: string; onSave:
     }, 0);
   }, [text]);
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'b') { e.preventDefault(); wrapSelection('**', '**'); }
+      else if (e.key === 'i') { e.preventDefault(); wrapSelection('*', '*'); }
+      else if (e.key === 's') { e.preventDefault(); onSave(text); }
+    }
+  }, [wrapSelection, text, onSave]);
+
   return (
     <div className="border border-border rounded-lg overflow-hidden bg-background">
       {/* Toolbar */}
       <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border bg-muted/40 flex-wrap">
-        <Button variant="ghost" size="icon" className="h-7 w-7" title="Negrito" onClick={() => wrapSelection('**', '**')}>
+        <Button variant="ghost" size="icon" className="h-7 w-7" title="Negrito (Ctrl+B)" onClick={() => wrapSelection('**', '**')}>
           <Bold className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7" title="Itálico" onClick={() => wrapSelection('*', '*')}>
+        <Button variant="ghost" size="icon" className="h-7 w-7" title="Itálico (Ctrl+I)" onClick={() => wrapSelection('*', '*')}>
           <Italic className="h-3.5 w-3.5" />
         </Button>
         <Button variant="ghost" size="icon" className="h-7 w-7" title="Tachado" onClick={() => wrapSelection('~~', '~~')}>
@@ -133,22 +142,36 @@ function DescriptionEditor({ value, onSave, onCancel }: { value: string; onSave:
         <Button variant="ghost" size="icon" className="h-7 w-7" title="Linha" onClick={() => insertAtCursor('\n---\n')}>
           <Minus className="h-3.5 w-3.5" />
         </Button>
+        <div className="w-px h-5 bg-border mx-1" />
+        <Button
+          variant={showPreview ? "secondary" : "ghost"}
+          size="sm"
+          className="h-7 text-xs px-2"
+          onClick={() => setShowPreview(!showPreview)}
+        >
+          <Eye className="h-3.5 w-3.5 mr-1" /> Pré-visualizar
+        </Button>
       </div>
-      {/* Textarea */}
-      <textarea
-        ref={textareaRef}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        className="w-full min-h-[160px] p-3 text-[15px] leading-relaxed bg-background text-foreground resize-y outline-none placeholder:text-muted-foreground"
-        placeholder="Adicione uma descrição mais detalhada..."
-        autoFocus
-      />
+      {/* Editor or Preview */}
+      {showPreview ? (
+        <div className="w-full min-h-[160px] p-3 text-[15px] leading-relaxed bg-background">
+          <RichDescription text={text || 'Nada para visualizar...'} />
+        </div>
+      ) : (
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="w-full min-h-[160px] p-3 text-[15px] leading-relaxed bg-background text-foreground resize-y outline-none placeholder:text-muted-foreground"
+          placeholder="Adicione uma descrição mais detalhada..."
+          autoFocus
+        />
+      )}
       {/* Actions */}
       <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-muted/20">
         <Button size="sm" onClick={() => onSave(text)}>Salvar</Button>
         <Button variant="ghost" size="sm" onClick={onCancel}>Cancelar</Button>
-        <div className="flex-1" />
-        <span className="text-[11px] text-muted-foreground">Ajuda para formatação</span>
       </div>
     </div>
   );
