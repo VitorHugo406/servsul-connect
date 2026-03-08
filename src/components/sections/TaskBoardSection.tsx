@@ -1802,6 +1802,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(template); }}>
                                     <Edit className="h-4 w-4 mr-2" /> Editar Template
                                   </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowDuplication(template);
+                                    setDupTargetColumn(columns[0]?.id || '');
+                                    setDupFrequency('daily');
+                                  }}>
+                                    <Repeat className="h-4 w-4 mr-2" /> Auto-duplicar
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteTask(template.id); }} className="text-destructive">
                                     <Trash2 className="h-4 w-4 mr-2" /> Excluir Template
                                   </DropdownMenuItem>
