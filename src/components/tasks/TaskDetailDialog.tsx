@@ -287,9 +287,11 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
         <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => setShowAddGroup(true)}>
           <CheckSquare className="h-3.5 w-3.5" /> Checklist
         </Button>
-        <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => onEdit(task)}>
-          <Users className="h-3.5 w-3.5" /> Membros
-        </Button>
+        {!task.is_template && (
+          <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => onEdit(task)}>
+            <Users className="h-3.5 w-3.5" /> Membros
+          </Button>
+        )}
       </div>
       {/* Label picker */}
       {showLabelPicker && allLabels && onToggleLabel && (
