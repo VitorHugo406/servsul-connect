@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
 import {
   Plus, MoreVertical, Calendar, Trash2, Edit, Loader2,
@@ -90,7 +91,9 @@ export function TaskBoardSection() {
     return (
       <BoardView
         board={board}
+        boards={boards}
         onBack={() => setSelectedBoardId(null)}
+        onSelectBoard={(id: string) => setSelectedBoardId(id)}
         onUpdateBoard={updateBoard}
         isOwner={board.owner_id === user?.id}
         currentUserId={user?.id || ''}
@@ -217,9 +220,11 @@ export function TaskBoardSection() {
 }
 
 // ============ Board View ============
-function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
+function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwner, currentUserId }: {
   board: any;
+  boards: any[];
   onBack: () => void;
+  onSelectBoard: (id: string) => void;
   onUpdateBoard: (id: string, updates: any) => Promise<any>;
   isOwner: boolean;
   currentUserId: string;
@@ -278,6 +283,17 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
   const dragStartRef = useRef<{ x: number; scrollLeft: number } | null>(null);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>(emptyFilter);
   const [showFilter, setShowFilter] = useState(false);
+  const [showPlanner, setShowPlanner] = useState(false);
+  const [showBoard, setShowBoard] = useState(true);
+
+  const togglePlanner = () => {
+    if (showPlanner) { setShowPlanner(false); setShowBoard(true); }
+    else setShowPlanner(true);
+  };
+  const toggleBoard = () => {
+    if (showBoard) { if (!showPlanner) return; setShowBoard(false); }
+    else setShowBoard(true);
+  };
 
   // Form state
   const [title, setTitle] = useState('');
@@ -318,6 +334,32 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
       document.title = `${board.name} | Tarefas`;
     }
   }, [showTaskDetail, selectedTask, board.name]);
+
+  // Dynamic favicon based on board background
+  useEffect(() => {
+    const bgStyle = getBoardBgStyle(board.background_image);
+    if (bgStyle?.backgroundImage) {
+      const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (link) {
+        const originalHref = link.href;
+        const urlMatch = (bgStyle.backgroundImage as string).match(/url\(["']?([^"')]+)/);
+        if (urlMatch?.[1]) {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = 32; canvas.height = 32;
+              const ctx = canvas.getContext('2d');
+              if (ctx) { ctx.drawImage(img, 0, 0, 32, 32); link.href = canvas.toDataURL('image/png'); }
+            } catch (e) { /* CORS */ }
+          };
+          img.src = urlMatch[1];
+        }
+        return () => { link.href = originalHref; };
+      }
+    }
+  }, [board.background_image]);
 
   // Apply filter to tasks
   const conclusionColumnIds = columns.filter(c => c.is_conclusion).map(c => c.id);
@@ -585,13 +627,65 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
   };
 
   const handleToggleLabel = async (taskId: string, labelId: string) => {
-    const taskLabels = getTaskLabels(taskId);
-    const hasLabel = taskLabels.some(l => l.id === labelId);
+    const tLabels = getTaskLabels(taskId);
+    const hasLabel = tLabels.some(l => l.id === labelId);
+    const label = labels.find(l => l.id === labelId);
     if (hasLabel) {
       await removeLabel(taskId, labelId);
     } else {
       await assignLabel(taskId, labelId);
     }
+    if (profile && label) {
+      await (supabase as any).from('task_activities').insert({
+        task_id: taskId, user_id: profile.id,
+        user_name: profile.display_name || profile.name,
+        action_type: 'label',
+        description: hasLabel ? `removeu a etiqueta "${label.name}"` : `adicionou a etiqueta "${label.name}"`,
+      });
+    }
+  };
+
+  const handleQuickComplete = async (task: BoardTask) => {
+    const conclusionCol = columns.find(c => c.is_conclusion);
+    if (!conclusionCol) { toast.error('Nenhuma coluna de conclusão configurada'); return; }
+    const moveCheck = canMoveToColumn(task.status, conclusionCol.id);
+    if (!moveCheck.allowed) { toast.error(moveCheck.reason || 'Movimento bloqueado'); return; }
+    await moveTask(task.id, conclusionCol.id, 0);
+    await updateTask(task.id, {
+      completed_at: new Date().toISOString(),
+      completed_late: task.due_date ? new Date() > new Date(task.due_date) : false,
+      delay_days: task.due_date ? Math.max(0, Math.ceil((new Date().getTime() - new Date(task.due_date).getTime()) / (1000 * 60 * 60 * 24))) : 0,
+    });
+    toast.success('Tarefa concluída!');
+    if (profile) {
+      await (supabase as any).from('task_activities').insert({
+        task_id: task.id, user_id: profile.id,
+        user_name: profile.display_name || profile.name,
+        action_type: 'complete', description: 'marcou como concluída',
+      });
+    }
+  };
+
+  const applyColumnAutoSubtasks = async (taskId: string, columnId: string) => {
+    try {
+      const { data: autoSubs } = await supabase.from('column_auto_subtasks').select('*').eq('column_id', columnId).order('group_title').order('position');
+      if (!autoSubs || autoSubs.length === 0) return;
+      const { data: existing } = await supabase.from('task_subtasks').select('id').eq('task_id', taskId).limit(1);
+      if (existing && existing.length > 0) return;
+      const groupMap = new Map<string, any[]>();
+      autoSubs.forEach((s: any) => {
+        if (!groupMap.has(s.group_title)) groupMap.set(s.group_title, []);
+        groupMap.get(s.group_title)!.push(s);
+      });
+      let pos = 0;
+      for (const [title, items] of groupMap) {
+        const { data: group } = await supabase.from('subtask_groups').insert({ task_id: taskId, title, position: pos++ }).select().single();
+        if (group) {
+          await supabase.from('task_subtasks').insert(items.map((item: any, idx: number) => ({ task_id: taskId, title: item.title, position: idx, group_id: group.id })));
+        }
+      }
+      toast.info('Subtarefas automáticas aplicadas');
+    } catch (err) { console.error('Error applying auto subtasks:', err); }
   };
 
   // Drag and drop
@@ -623,15 +717,25 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
       }
       const colTasks = tasks.filter(t => t.status === colId);
       await moveTask(draggedTask.id, colId, position ?? colTasks.length);
-      
-      // Apply column automations on drag
+
+      // Log activity
+      const sourceCol = columns.find(c => c.id === draggedTask.status);
       const targetCol = columns.find(c => c.id === colId);
+      if (profile && targetCol) {
+        await (supabase as any).from('task_activities').insert({
+          task_id: draggedTask.id, user_id: profile.id,
+          user_name: profile.display_name || profile.name,
+          action_type: 'move',
+          description: `moveu de "${sourceCol?.title || '?'}" para "${targetCol.title}"`,
+        });
+      }
+
+      // Apply column automations on drag
       if (targetCol) {
         const autoUpdates: Record<string, any> = {};
         if (targetCol.auto_assign_to) autoUpdates.assigned_to = targetCol.auto_assign_to;
         if (targetCol.auto_cover) autoUpdates.cover_image = targetCol.auto_cover;
-        
-        // Conclusion automation
+
         if (targetCol.is_conclusion) {
           autoUpdates.completed_at = new Date().toISOString();
           if (draggedTask.due_date) {
@@ -647,16 +751,18 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
             autoUpdates.delay_days = 0;
           }
         }
-        
+
         if (Object.keys(autoUpdates).length > 0) {
           await updateTask(draggedTask.id, autoUpdates);
           if (targetCol.is_conclusion) {
-            const late = autoUpdates.completed_late;
-            toast.info(late ? `Tarefa concluída com ${autoUpdates.delay_days} dia(s) de atraso` : 'Tarefa concluída no prazo!');
+            toast.info(autoUpdates.completed_late ? `Concluída com ${autoUpdates.delay_days} dia(s) de atraso` : 'Concluída no prazo!');
           } else {
             toast.info('Automações da coluna aplicadas');
           }
         }
+
+        // Apply auto-subtasks
+        await applyColumnAutoSubtasks(draggedTask.id, colId);
       }
     }
     setDraggedTask(null);
@@ -852,8 +958,48 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
         </div>
       </div>
 
-      {/* Board columns with horizontal scroll - drag to scroll on desktop */}
-      <div className="flex-1 overflow-hidden relative z-10">
+      {/* Board area with optional planner */}
+      <div className="flex-1 overflow-hidden relative z-10 flex">
+        {/* Planner sidebar */}
+        {showPlanner && (
+          <div className={cn(
+            "overflow-y-auto border-r border-border backdrop-blur-sm flex-shrink-0 p-4 space-y-3",
+            isDarkBg ? "bg-black/60 text-white" : "bg-background/90",
+            showBoard ? "w-[280px]" : "flex-1"
+          )}>
+            <h3 className={cn("font-semibold text-sm", isDarkBg && "text-white")}>
+              📋 {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </h3>
+            <div className="h-px bg-border" />
+            {(() => {
+              const todayTasks = tasks.filter(t => {
+                if (!t.due_date) return false;
+                return new Date(t.due_date).toDateString() === new Date().toDateString();
+              }).sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
+              return todayTasks.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">Nenhuma tarefa para hoje</p>
+              ) : todayTasks.map(t => {
+                const col = columns.find(c => c.id === t.status);
+                return (
+                  <div key={t.id} className="p-3 rounded-lg border border-border bg-card/50 cursor-pointer hover:bg-card/80 transition-colors"
+                    onClick={() => { setSelectedTask(t); setShowTaskDetail(true); }}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col?.color }} />
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(t.due_date!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium">{t.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{col?.title}</p>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        )}
+        {showBoard && (
+        <div className="flex-1 overflow-hidden">
           <div
             ref={boardScrollRef}
             className={cn(isMobile ? 'overflow-y-auto' : 'overflow-x-auto overflow-y-hidden h-full p-4 task-board-scroll')}
@@ -1186,8 +1332,15 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
                               </div>
                             )}
 
-                            {/* Title */}
-                            <h4 className="font-normal text-sm text-foreground leading-snug mb-1.5">{task.title}</h4>
+                            {/* Title with hover completion dot */}
+                            <div className="flex items-start gap-0 group-hover/card:gap-1.5 transition-all duration-200 mb-1.5">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleQuickComplete(task); }}
+                                className="w-0 h-4 mt-0.5 group-hover/card:w-4 min-w-0 group-hover/card:min-w-[16px] opacity-0 group-hover/card:opacity-100 transition-all duration-200 rounded-full border-2 border-muted-foreground/30 flex-shrink-0 hover:!border-green-500 hover:!bg-green-500/20"
+                                title="Marcar como concluída"
+                              />
+                              <h4 className="font-normal text-sm text-foreground leading-snug">{task.title}</h4>
+                            </div>
 
                             {/* Bottom row: badges */}
                             <div className="flex items-center gap-1 flex-wrap">
@@ -1378,7 +1531,42 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
           )}
           </TooltipProvider>
         </div>
+        </div>
+        )}
       </div>
+
+      {/* Bottom bar: Planner / Board / Switch */}
+      {!isMobile && (
+        <div className={cn("flex items-center justify-center gap-1 px-4 py-2 border-t border-border backdrop-blur-sm relative z-10", isDarkBg ? "bg-black/50" : "bg-background/80")}>
+          <Button variant={showPlanner ? "default" : "ghost"} size="sm" className="gap-1.5 rounded-md text-xs" onClick={togglePlanner}>
+            📋 Planejador
+          </Button>
+          <Button variant={showBoard ? "default" : "ghost"} size="sm" className="gap-1.5 rounded-md text-xs" onClick={toggleBoard}>
+            📊 Quadro
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-1.5 rounded-md text-xs">
+                🔄 Mudar de quadro
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-64">
+              {boards.filter(b => b.id !== board.id).map(b => (
+                <DropdownMenuItem key={b.id} onClick={() => onSelectBoard(b.id)} className="flex items-center gap-3 p-2">
+                  <div
+                    className={cn("w-12 h-8 rounded flex-shrink-0 border border-border", getBoardBg(b.background_image))}
+                    style={getBoardBgStyle(b.background_image)}
+                  />
+                  <span className="text-sm font-medium truncate">{b.name}</span>
+                </DropdownMenuItem>
+              ))}
+              {boards.filter(b => b.id !== board.id).length === 0 && (
+                <div className="p-3 text-sm text-muted-foreground text-center">Nenhum outro quadro</div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
 
       {/* Create/Edit Task Dialog */}
       <Dialog open={showCreateTask} onOpenChange={(o) => { if (!o) { setShowCreateTask(false); setEditingTask(null); resetForm(); } }}>
@@ -1527,10 +1715,12 @@ function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
         open={showTaskDetail}
         onOpenChange={(o) => { setShowTaskDetail(o); if (!o) setSelectedTask(null); }}
         onEdit={(t) => { setShowTaskDetail(false); openEditTask(t); }}
+        onUpdateTask={async (id, updates) => { await updateTask(id, updates); await refetchTasks(); }}
         taskLabels={selectedTask ? getTaskLabels(selectedTask.id) : []}
         allLabels={labels}
         onToggleLabel={handleToggleLabel}
         boardId={board.id}
+        onOpenAutomation={(id) => { setShowTaskDetail(false); setAutomationTaskId(id); setShowAutomationRules(true); }}
       />
 
       {/* Label Picker Dialog */}

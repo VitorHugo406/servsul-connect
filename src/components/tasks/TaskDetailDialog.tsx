@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { Calendar, CheckSquare, Edit, Loader2, MessageSquare, Plus, Tag, Trash2, X, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  ArrowRight, Calendar, CheckCircle2, CheckSquare, ChevronDown, ChevronRight,
+  Eye, EyeOff, Loader2, MessageSquare, Plus, Tag, Trash2, Users, X, Zap, Bell, Move
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
@@ -12,32 +17,63 @@ import { BoardTask } from '@/hooks/useBoardTasks';
 import { useTaskComments } from '@/hooks/useTasks';
 import { useSubtasks } from '@/hooks/useSubtasks';
 import { useSubtaskGroups } from '@/hooks/useSubtaskGroups';
+import { useTaskActivities, TaskActivity } from '@/hooks/useTaskActivities';
 import { TaskLabel } from '@/hooks/useTaskLabels';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
 import { cn } from '@/lib/utils';
 
-export function TaskDetailDialog({ task, open, onOpenChange, onEdit, taskLabels, allLabels, onToggleLabel, boardId }: {
+const REMINDER_OPTIONS = [
+  { value: 'none', label: 'Sem lembrete' },
+  { value: '5', label: '5 minutos antes' },
+  { value: '15', label: '15 minutos antes' },
+  { value: '30', label: '30 minutos antes' },
+  { value: '60', label: '1 hora antes' },
+  { value: '120', label: '2 horas antes' },
+  { value: '1440', label: '1 dia antes' },
+  { value: '2880', label: '2 dias antes' },
+];
+
+const ACTIVITY_ICONS: Record<string, any> = {
+  move: Move,
+  complete: CheckCircle2,
+  label: Tag,
+  assign: Users,
+  create: Plus,
+  automation: Zap,
+};
+
+interface TaskDetailDialogProps {
   task: BoardTask | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onEdit: (t: BoardTask) => void;
+  onUpdateTask?: (taskId: string, updates: Record<string, any>) => Promise<any>;
   taskLabels?: TaskLabel[];
   allLabels?: TaskLabel[];
   onToggleLabel?: (taskId: string, labelId: string) => void;
   boardId?: string | null;
-}) {
+  onOpenAutomation?: (taskId: string) => void;
+}
+
+export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTask, taskLabels, allLabels, onToggleLabel, boardId, onOpenAutomation }: TaskDetailDialogProps) {
+  const isMobile = useIsMobile();
   const { comments, addComment, loading: commentsLoading } = useTaskComments(task?.id || null);
   const { subtasks, addSubtask, toggleSubtask, deleteSubtask, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null, boardId);
-  const { groups, addGroup, deleteGroup, updateGroup, loading: groupsLoading } = useSubtaskGroups(task?.id || null);
+  const { groups, addGroup, deleteGroup, loading: groupsLoading } = useSubtaskGroups(task?.id || null);
+  const { activities, loading: activitiesLoading } = useTaskActivities(task?.id || null);
+
   const [newComment, setNewComment] = useState('');
-  const [newSubtask, setNewSubtask] = useState('');
   const [newGroupSubtask, setNewGroupSubtask] = useState<Record<string, string>>({});
+  const [newSubtask, setNewSubtask] = useState('');
   const [sending, setSending] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [showAddGroup, setShowAddGroup] = useState(false);
   const [newGroupTitle, setNewGroupTitle] = useState('');
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const [activeAddItem, setActiveAddItem] = useState<string | null>(null); // group id or 'ungrouped'
+  const [activeAddItem, setActiveAddItem] = useState<string | null>(null);
+  const [showActivity, setShowActivity] = useState(true);
+  const [reminderValue, setReminderValue] = useState<string>('none');
 
   if (!task) return null;
 
@@ -76,363 +112,460 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, taskLabels,
     });
   };
 
+  const handleSaveReminder = async (minutes: string) => {
+    setReminderValue(minutes);
+    if (onUpdateTask && task) {
+      await onUpdateTask(task.id, { reminder_minutes: minutes === 'none' ? null : parseInt(minutes) });
+    }
+  };
+
   const cover = getCoverDisplay(task.cover_image);
   const ungroupedSubtasks = subtasks.filter(s => !s.group_id);
   const overallProgress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-        {/* Cover */}
-        {cover.type === 'color' && <div className={cn('h-3 rounded-t-lg', cover.value)} />}
-        {cover.type === 'image' && (
-          <div className="h-40 rounded-t-lg overflow-hidden">
-            <img src={cover.value} alt="Capa" className="w-full h-full object-cover" />
+  // Merge comments and activities into timeline
+  type TimelineItem =
+    | { kind: 'comment'; id: string; content: string; created_at: string; author?: any }
+    | { kind: 'activity'; id: string; description: string; created_at: string; user_name: string; action_type: string };
+
+  const timeline: TimelineItem[] = [
+    ...comments.map(c => ({ kind: 'comment' as const, ...c })),
+    ...(showActivity ? activities.map(a => ({ kind: 'activity' as const, ...a })) : []),
+  ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+  // ===== Shared render sections =====
+
+  const renderCover = () => (
+    <>
+      {cover.type === 'color' && <div className={cn('h-3 rounded-t-lg', cover.value)} />}
+      {cover.type === 'image' && (
+        <div className={cn(isMobile ? 'h-28' : 'h-40', 'rounded-t-lg overflow-hidden')}>
+          <img src={cover.value} alt="Capa" className="w-full h-full object-cover" />
+        </div>
+      )}
+    </>
+  );
+
+  const renderHeader = () => (
+    <div className="px-4 pt-3 pb-2">
+      <div className="flex items-center gap-2 flex-wrap mb-2">
+        <Badge variant="outline">#{task.task_number}</Badge>
+        <Badge className={cn(
+          task.priority === 'urgent' && 'bg-red-500',
+          task.priority === 'high' && 'bg-orange-500',
+          task.priority === 'medium' && 'bg-blue-500',
+          task.priority === 'low' && 'bg-gray-500', 'text-white'
+        )}>
+          {PRIORITIES.find(p => p.id === task.priority)?.label}
+        </Badge>
+        {taskLabels && taskLabels.map(l => (
+          <Badge key={l.id} className="text-white text-[10px]" style={{ backgroundColor: l.color }}>{l.name}</Badge>
+        ))}
+      </div>
+      <h2 className="text-lg font-semibold text-foreground">{task.title}</h2>
+    </div>
+  );
+
+  const renderActionButtons = () => (
+    <div className="px-4 py-2">
+      <div className="flex flex-wrap gap-1.5">
+        {allLabels && allLabels.length > 0 && (
+          <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => setShowLabelPicker(!showLabelPicker)}>
+            <Tag className="h-3.5 w-3.5" /> Etiquetas
+          </Button>
+        )}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs">
+              <Calendar className="h-3.5 w-3.5" /> Datas
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 space-y-3">
+            <h4 className="font-semibold text-sm">Datas</h4>
+            {task.due_date && (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Data de entrega</p>
+                <p className="text-sm font-medium">
+                  {new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                  {(() => { const d = new Date(task.due_date); return d.getHours() !== 0 || d.getMinutes() !== 0 ? ` às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''; })()}
+                </p>
+              </div>
+            )}
+            {!task.due_date && (
+              <p className="text-sm text-muted-foreground">Nenhuma data definida. Edite o card para adicionar.</p>
+            )}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Bell className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-xs font-medium">Definir lembrete</p>
+              </div>
+              <Select value={reminderValue} onValueChange={handleSaveReminder}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {REMINDER_OPTIONS.map(o => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground">Lembretes serão enviados a todos os membros deste cartão</p>
+            </div>
+          </PopoverContent>
+        </Popover>
+        <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => setShowAddGroup(true)}>
+          <CheckSquare className="h-3.5 w-3.5" /> Checklist
+        </Button>
+        <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => onEdit(task)}>
+          <Users className="h-3.5 w-3.5" /> Membros
+        </Button>
+      </div>
+      {/* Label picker */}
+      {showLabelPicker && allLabels && onToggleLabel && (
+        <div className="flex flex-wrap gap-1.5 pt-2">
+          {allLabels.map(l => {
+            const isAssigned = taskLabels?.some(tl => tl.id === l.id);
+            return (
+              <button
+                key={l.id}
+                onClick={() => onToggleLabel(task.id, l.id)}
+                className={cn(
+                  'px-2 py-0.5 rounded-full text-[10px] font-medium text-white border-2 transition-all',
+                  isAssigned ? 'border-foreground/50 ring-1 ring-foreground/20' : 'border-transparent opacity-60 hover:opacity-100'
+                )}
+                style={{ backgroundColor: l.color }}
+              >{l.name}</button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderInfoRow = () => (
+    <div className="px-4 py-2">
+      <div className="grid grid-cols-2 gap-4">
+        {task.assignee && (
+          <div className="flex items-center gap-2">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={task.assignee.avatar_url || ''} />
+              <AvatarFallback className="text-xs bg-primary text-primary-foreground">{getInitials(task.assignee.display_name || task.assignee.name)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-xs text-muted-foreground">Responsável</p>
+              <p className="text-sm font-medium">{task.assignee.display_name || task.assignee.name}</p>
+            </div>
           </div>
         )}
+        {task.due_date && (
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-xs text-muted-foreground">Entrega</p>
+              <p className="text-sm font-medium">{new Date(task.due_date).toLocaleDateString('pt-BR')}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
-        {/* Header */}
-        <div className="px-6 pt-4 pb-2">
-          <div className="flex items-center gap-2 flex-wrap mb-2">
-            <Badge variant="outline">#{task.task_number}</Badge>
-            <Badge className={cn(
-              task.priority === 'urgent' && 'bg-red-500',
-              task.priority === 'high' && 'bg-orange-500',
-              task.priority === 'medium' && 'bg-blue-500',
-              task.priority === 'low' && 'bg-gray-500', 'text-white'
-            )}>
-              {PRIORITIES.find(p => p.id === task.priority)?.label}
-            </Badge>
-            {taskLabels && taskLabels.length > 0 && taskLabels.map(l => (
-              <Badge key={l.id} className="text-white text-[10px]" style={{ backgroundColor: l.color }}>
-                {l.name}
-              </Badge>
+  const renderDescription = () => task.description ? (
+    <div className="px-4 py-2">
+      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Descrição</h4>
+      <p className="text-foreground text-sm whitespace-pre-wrap">{task.description}</p>
+    </div>
+  ) : null;
+
+  const renderProgress = () => total > 0 ? (
+    <div className="px-4 py-1">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs text-muted-foreground">Progresso geral</span>
+        <span className="text-xs font-medium">{completed}/{total} ({overallProgress}%)</span>
+      </div>
+      <Progress value={overallProgress} className="h-1.5" />
+    </div>
+  ) : null;
+
+  const renderSubtaskGroup = (group: any) => {
+    const groupSubtasks = subtasks.filter(s => s.group_id === group.id);
+    const gCompleted = groupSubtasks.filter(s => s.is_completed).length;
+    const gTotal = groupSubtasks.length;
+    const gProgress = gTotal > 0 ? Math.round((gCompleted / gTotal) * 100) : 0;
+    const isCollapsed = collapsedGroups.has(group.id);
+
+    return (
+      <div key={group.id} className="border border-border rounded-lg overflow-hidden">
+        <div className="flex items-center gap-2 px-3 py-2.5 bg-muted/50">
+          <button onClick={() => toggleGroupCollapse(group.id)} className="p-0.5">
+            {isCollapsed ? <ChevronRight className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </button>
+          <CheckSquare className="h-4 w-4 text-primary" />
+          <h4 className="font-semibold text-sm flex-1">{group.title}</h4>
+          {gTotal > 0 && <span className="text-xs text-muted-foreground">{gCompleted}/{gTotal}</span>}
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteGroup(group.id)}>
+            <Trash2 className="h-3 w-3 text-destructive" />
+          </Button>
+        </div>
+        {gTotal > 0 && !isCollapsed && (
+          <div className="px-3 pt-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground w-8">{gProgress}%</span>
+              <Progress value={gProgress} className="h-1.5 flex-1" />
+            </div>
+          </div>
+        )}
+        {!isCollapsed && (
+          <div className="px-3 py-2 space-y-1">
+            {groupSubtasks.map(s => (
+              <div key={s.id} className="flex items-center gap-2 group py-0.5">
+                <Checkbox checked={s.is_completed} onCheckedChange={(checked) => toggleSubtask(s.id, !!checked)} />
+                <span className={cn('text-sm flex-1', s.is_completed && 'line-through text-muted-foreground')}>{s.title}</span>
+                <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteSubtask(s.id)}>
+                  <X className="h-3 w-3 text-destructive" />
+                </Button>
+              </div>
             ))}
-            {allLabels && allLabels.length > 0 && (
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowLabelPicker(!showLabelPicker)}>
-                <Tag className="h-3.5 w-3.5" />
+            {activeAddItem === group.id ? (
+              <div className="pt-1 space-y-2">
+                <Input
+                  value={newGroupSubtask[group.id] || ''}
+                  onChange={(e) => setNewGroupSubtask(prev => ({ ...prev, [group.id]: e.target.value }))}
+                  placeholder="Adicionar um item"
+                  className="h-8 text-sm"
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask(group.id)}
+                />
+                <div className="flex items-center gap-2">
+                  <Button size="sm" onClick={() => handleAddSubtask(group.id)} disabled={!(newGroupSubtask[group.id] || '').trim()}>Adicionar</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setActiveAddItem(null)}>Cancelar</Button>
+                </div>
+              </div>
+            ) : (
+              <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1 justify-start text-muted-foreground" onClick={() => setActiveAddItem(group.id)}>
+                Adicionar um item
               </Button>
             )}
           </div>
-          {showLabelPicker && allLabels && onToggleLabel && (
-            <div className="flex flex-wrap gap-1.5 pb-2">
-              {allLabels.map(l => {
-                const isAssigned = taskLabels?.some(tl => tl.id === l.id);
-                return (
-                  <button
-                    key={l.id}
-                    onClick={() => onToggleLabel(task.id, l.id)}
-                    className={cn(
-                      'px-2 py-0.5 rounded-full text-[10px] font-medium text-white border-2 transition-all',
-                      isAssigned ? 'border-foreground/50 ring-1 ring-foreground/20' : 'border-transparent opacity-60 hover:opacity-100'
-                    )}
-                    style={{ backgroundColor: l.color }}
-                  >
-                    {l.name}
-                  </button>
-                );
-              })}
+        )}
+      </div>
+    );
+  };
+
+  const renderUngroupedSubtasks = () => ungroupedSubtasks.length > 0 ? (
+    <div className="border border-border rounded-lg overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2.5 bg-muted/50">
+        <CheckSquare className="h-4 w-4 text-primary" />
+        <h4 className="font-semibold text-sm flex-1">Subtarefas</h4>
+        <span className="text-xs text-muted-foreground">{ungroupedSubtasks.filter(s => s.is_completed).length}/{ungroupedSubtasks.length}</span>
+      </div>
+      <div className="px-3 py-2 space-y-1">
+        {ungroupedSubtasks.map(s => (
+          <div key={s.id} className="flex items-center gap-2 group py-0.5">
+            <Checkbox checked={s.is_completed} onCheckedChange={(checked) => toggleSubtask(s.id, !!checked)} />
+            <span className={cn('text-sm flex-1', s.is_completed && 'line-through text-muted-foreground')}>{s.title}</span>
+            <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteSubtask(s.id)}>
+              <X className="h-3 w-3 text-destructive" />
+            </Button>
+          </div>
+        ))}
+        {activeAddItem === 'ungrouped' ? (
+          <div className="pt-1 space-y-2">
+            <Input value={newSubtask} onChange={(e) => setNewSubtask(e.target.value)} placeholder="Adicionar um item" className="h-8 text-sm" autoFocus onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask(null)} />
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={() => handleAddSubtask(null)} disabled={!newSubtask.trim()}>Adicionar</Button>
+              <Button variant="ghost" size="sm" onClick={() => setActiveAddItem(null)}>Cancelar</Button>
             </div>
-          )}
-          <DialogTitle className="text-xl">{task.title}</DialogTitle>
-        </div>
+          </div>
+        ) : (
+          <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1 justify-start text-muted-foreground" onClick={() => setActiveAddItem('ungrouped')}>
+            Adicionar um item
+          </Button>
+        )}
+      </div>
+    </div>
+  ) : null;
 
-        {/* Two-column Trello-style layout */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left: Details, Subtasks */}
-          <ScrollArea className="flex-1 border-r border-border">
-            <div className="px-6 pb-6 space-y-5">
-              {/* Info row */}
-              <div className="grid grid-cols-2 gap-4">
-                {task.assignee && (
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={task.assignee.avatar_url || ''} />
-                      <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                        {getInitials(task.assignee.display_name || task.assignee.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Responsável</p>
-                      <p className="text-sm font-medium">{task.assignee.display_name || task.assignee.name}</p>
-                    </div>
-                  </div>
-                )}
-                {task.due_date && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Entrega</p>
-                      <p className="text-sm font-medium">{new Date(task.due_date).toLocaleDateString('pt-BR')}</p>
-                    </div>
-                  </div>
-                )}
+  const renderAddChecklist = () => showAddGroup ? (
+    <div className="border border-border rounded-lg p-3 space-y-2">
+      <h4 className="font-medium text-sm">Adicionar Checklist</h4>
+      <Input value={newGroupTitle} onChange={(e) => setNewGroupTitle(e.target.value)} placeholder="Título" className="h-8 text-sm" autoFocus onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()} />
+      <div className="flex gap-2">
+        <Button size="sm" onClick={handleAddGroup} disabled={!newGroupTitle.trim()}>Adicionar</Button>
+        <Button variant="ghost" size="sm" onClick={() => { setShowAddGroup(false); setNewGroupTitle(''); }}>Cancelar</Button>
+      </div>
+    </div>
+  ) : (
+    <div className="flex gap-2">
+      {groups.length === 0 && ungroupedSubtasks.length === 0 && (
+        <Button variant="outline" size="sm" className="gap-1.5 rounded-md" onClick={() => setActiveAddItem('ungrouped')}>
+          <Plus className="h-3.5 w-3.5" /> Subtarefa
+        </Button>
+      )}
+    </div>
+  );
+
+  const renderSubtasks = () => (
+    <div className="px-4 py-2 space-y-3">
+      {!groupsLoading && groups.map(renderSubtaskGroup)}
+      {!subtasksLoading && renderUngroupedSubtasks()}
+      {renderAddChecklist()}
+      {subtasksLoading && <div className="flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>}
+    </div>
+  );
+
+  const renderTimeline = () => (
+    <div className="py-3 space-y-3">
+      {commentsLoading || activitiesLoading ? (
+        <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+      ) : timeline.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-6">Nenhum comentário</p>
+      ) : timeline.map(item => {
+        if (item.kind === 'comment') {
+          return (
+            <div key={item.id} className="flex gap-2 px-4">
+              <Avatar className="h-7 w-7 flex-shrink-0">
+                <AvatarImage src={item.author?.avatar_url || ''} />
+                <AvatarFallback className="text-[9px] bg-muted">{getInitials(item.author?.display_name || item.author?.name || 'U')}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 bg-muted rounded-lg p-2.5">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-xs font-medium">{item.author?.display_name || item.author?.name}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {new Date(item.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <p className="text-sm">{item.content}</p>
               </div>
+            </div>
+          );
+        } else {
+          const Icon = ACTIVITY_ICONS[item.action_type] || ArrowRight;
+          return (
+            <div key={item.id} className="flex items-start gap-2 px-4 py-1">
+              <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs">
+                  <span className="font-medium">{item.user_name}</span>{' '}
+                  <span className="text-muted-foreground">{item.description}</span>
+                </p>
+                <span className="text-[10px] text-muted-foreground">
+                  {new Date(item.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            </div>
+          );
+        }
+      })}
+    </div>
+  );
 
-              {/* Description */}
-              {task.description && (
-                <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Descrição</h4>
-                  <p className="text-foreground text-sm whitespace-pre-wrap">{task.description}</p>
-                </div>
-              )}
+  const renderCommentInput = () => (
+    <div className="p-3 border-t border-border">
+      <div className="flex gap-2">
+        <Input
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          placeholder="Escrever um comentário..."
+          className="text-sm"
+          onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+        />
+        <Button onClick={handleAddComment} disabled={sending || !newComment.trim()} size="sm" className="rounded-md">
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar'}
+        </Button>
+      </div>
+    </div>
+  );
 
-              {/* Overall subtask progress */}
-              {total > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-muted-foreground">Progresso geral</span>
-                    <span className="text-xs font-medium">{completed}/{total} ({overallProgress}%)</span>
-                  </div>
-                  <Progress value={overallProgress} className="h-1.5" />
-                </div>
-              )}
+  const renderFooter = () => (
+    <DialogFooter className="border-t border-border p-4 gap-2">
+      {onOpenAutomation && (
+        <Button variant="outline" className="gap-2 rounded-md" onClick={() => onOpenAutomation(task.id)}>
+          <Zap className="h-4 w-4" /> Automações
+        </Button>
+      )}
+      <div className="flex-1" />
+      <Button variant="outline" className="rounded-md" onClick={() => onOpenChange(false)}>Fechar</Button>
+    </DialogFooter>
+  );
 
-              {/* Subtask Groups */}
-              {!groupsLoading && groups.map(group => {
-                const groupSubtasks = subtasks.filter(s => s.group_id === group.id);
-                const groupCompleted = groupSubtasks.filter(s => s.is_completed).length;
-                const groupTotal = groupSubtasks.length;
-                const groupProgress = groupTotal > 0 ? Math.round((groupCompleted / groupTotal) * 100) : 0;
-                const isCollapsed = collapsedGroups.has(group.id);
+  const commentsHeader = (
+    <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+      <div className="flex items-center gap-2">
+        <MessageSquare className="h-4 w-4" />
+        <h4 className="font-semibold text-sm">Comentários e atividade</h4>
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 text-xs gap-1 rounded-md"
+        onClick={() => setShowActivity(!showActivity)}
+      >
+        {showActivity ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+        {showActivity ? 'Ocultar detalhes' : 'Mostrar detalhes'}
+      </Button>
+    </div>
+  );
 
-                return (
-                  <div key={group.id} className="border border-border rounded-lg overflow-hidden">
-                    {/* Group header */}
-                    <div className="flex items-center gap-2 px-3 py-2.5 bg-muted/50">
-                      <button onClick={() => toggleGroupCollapse(group.id)} className="p-0.5">
-                        {isCollapsed ? <ChevronRight className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                      </button>
-                      <CheckSquare className="h-4 w-4 text-primary" />
-                      <h4 className="font-semibold text-sm flex-1">{group.title}</h4>
-                      {groupTotal > 0 && (
-                        <span className="text-xs text-muted-foreground">{groupCompleted}/{groupTotal}</span>
-                      )}
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteGroup(group.id)}>
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
-                    </div>
-                    {/* Group progress */}
-                    {groupTotal > 0 && !isCollapsed && (
-                      <div className="px-3 pt-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground w-8">{groupProgress}%</span>
-                          <Progress value={groupProgress} className="h-1.5 flex-1" />
-                        </div>
-                      </div>
-                    )}
-                    {/* Group subtasks */}
-                    {!isCollapsed && (
-                      <div className="px-3 py-2 space-y-1">
-                        {groupSubtasks.map(s => (
-                          <div key={s.id} className="flex items-center gap-2 group py-0.5">
-                            <Checkbox
-                              checked={s.is_completed}
-                              onCheckedChange={(checked) => toggleSubtask(s.id, !!checked)}
-                            />
-                            <span className={cn('text-sm flex-1', s.is_completed && 'line-through text-muted-foreground')}>{s.title}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => deleteSubtask(s.id)}
-                            >
-                              <X className="h-3 w-3 text-destructive" />
-                            </Button>
-                          </div>
-                        ))}
-                        {/* Add item to group */}
-                        {activeAddItem === group.id ? (
-                          <div className="pt-1 space-y-2">
-                            <Input
-                              value={newGroupSubtask[group.id] || ''}
-                              onChange={(e) => setNewGroupSubtask(prev => ({ ...prev, [group.id]: e.target.value }))}
-                              placeholder="Adicionar um item"
-                              className="h-8 text-sm"
-                              autoFocus
-                              onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask(group.id)}
-                            />
-                            <div className="flex items-center gap-2">
-                              <Button size="sm" onClick={() => handleAddSubtask(group.id)} disabled={!(newGroupSubtask[group.id] || '').trim()}>
-                                Adicionar
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => setActiveAddItem(null)}>
-                                Cancelar
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1 justify-start text-muted-foreground" onClick={() => setActiveAddItem(group.id)}>
-                            Adicionar um item
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+  // ===== MOBILE LAYOUT =====
+  if (isMobile) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-full w-full h-[95vh] max-h-[95vh] overflow-hidden flex flex-col p-0 gap-0">
+          {renderCover()}
+          <ScrollArea className="flex-1">
+            {renderHeader()}
+            <div className="h-px bg-border mx-4" />
+            {renderActionButtons()}
+            <div className="h-px bg-border mx-4" />
+            {renderInfoRow()}
+            {renderDescription()}
+            <div className="h-px bg-border mx-4" />
+            {renderProgress()}
+            {renderSubtasks()}
+            <div className="h-px bg-border mx-4 my-2" />
+            {commentsHeader}
+            {renderTimeline()}
+            {renderCommentInput()}
+          </ScrollArea>
+          {renderFooter()}
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
-              {/* Ungrouped subtasks */}
-              {!subtasksLoading && ungroupedSubtasks.length > 0 && (
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <div className="flex items-center gap-2 px-3 py-2.5 bg-muted/50">
-                    <CheckSquare className="h-4 w-4 text-primary" />
-                    <h4 className="font-semibold text-sm flex-1">Subtarefas</h4>
-                    <span className="text-xs text-muted-foreground">
-                      {ungroupedSubtasks.filter(s => s.is_completed).length}/{ungroupedSubtasks.length}
-                    </span>
-                  </div>
-                  {ungroupedSubtasks.length > 0 && (
-                    <div className="px-3 pt-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted-foreground w-8">
-                          {Math.round((ungroupedSubtasks.filter(s => s.is_completed).length / ungroupedSubtasks.length) * 100)}%
-                        </span>
-                        <Progress value={Math.round((ungroupedSubtasks.filter(s => s.is_completed).length / ungroupedSubtasks.length) * 100)} className="h-1.5 flex-1" />
-                      </div>
-                    </div>
-                  )}
-                  <div className="px-3 py-2 space-y-1">
-                    {ungroupedSubtasks.map(s => (
-                      <div key={s.id} className="flex items-center gap-2 group py-0.5">
-                        <Checkbox
-                          checked={s.is_completed}
-                          onCheckedChange={(checked) => toggleSubtask(s.id, !!checked)}
-                        />
-                        <span className={cn('text-sm flex-1', s.is_completed && 'line-through text-muted-foreground')}>{s.title}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => deleteSubtask(s.id)}
-                        >
-                          <X className="h-3 w-3 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                    {activeAddItem === 'ungrouped' ? (
-                      <div className="pt-1 space-y-2">
-                        <Input
-                          value={newSubtask}
-                          onChange={(e) => setNewSubtask(e.target.value)}
-                          placeholder="Adicionar um item"
-                          className="h-8 text-sm"
-                          autoFocus
-                          onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask(null)}
-                        />
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" onClick={() => handleAddSubtask(null)} disabled={!newSubtask.trim()}>
-                            Adicionar
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setActiveAddItem(null)}>
-                            Cancelar
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1 justify-start text-muted-foreground" onClick={() => setActiveAddItem('ungrouped')}>
-                        Adicionar um item
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
+  // ===== DESKTOP LAYOUT =====
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
+        {renderCover()}
+        {renderHeader()}
+        <div className="h-px bg-border mx-4" />
+        {renderActionButtons()}
+        <div className="h-px bg-border mx-4" />
 
-              {/* Add new checklist group button */}
-              {showAddGroup ? (
-                <div className="border border-border rounded-lg p-3 space-y-2">
-                  <h4 className="font-medium text-sm">Adicionar Checklist</h4>
-                  <Input
-                    value={newGroupTitle}
-                    onChange={(e) => setNewGroupTitle(e.target.value)}
-                    placeholder="Título"
-                    className="h-8 text-sm"
-                    autoFocus
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()}
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleAddGroup} disabled={!newGroupTitle.trim()}>
-                      Adicionar
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => { setShowAddGroup(false); setNewGroupTitle(''); }}>
-                      Cancelar
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowAddGroup(true)}>
-                    <CheckSquare className="h-3.5 w-3.5" /> Checklist
-                  </Button>
-                  {groups.length === 0 && ungroupedSubtasks.length === 0 && (
-                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setActiveAddItem('ungrouped')}>
-                      <Plus className="h-3.5 w-3.5" /> Subtarefa
-                    </Button>
-                  )}
-                </div>
-              )}
-
-              {subtasksLoading && (
-                <div className="flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
-              )}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left: Details & Subtasks */}
+          <ScrollArea className="flex-1 border-r border-border">
+            <div className="pb-6">
+              {renderInfoRow()}
+              {renderDescription()}
+              {renderProgress()}
+              {renderSubtasks()}
             </div>
           </ScrollArea>
 
-          {/* Right: Comments */}
+          {/* Right: Comments & Activity */}
           <div className="w-[320px] flex-shrink-0 flex flex-col max-h-full">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30">
-              <MessageSquare className="h-4 w-4" />
-              <h4 className="font-semibold text-sm">Comentários e atividade</h4>
-            </div>
-            <ScrollArea className="flex-1 px-4">
-              <div className="py-3 space-y-3">
-                {commentsLoading ? (
-                  <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-                ) : comments.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">Nenhum comentário</p>
-                ) : (
-                  comments.map(c => (
-                    <div key={c.id} className="flex gap-2">
-                      <Avatar className="h-7 w-7 flex-shrink-0">
-                        <AvatarImage src={c.author?.avatar_url || ''} />
-                        <AvatarFallback className="text-[9px] bg-muted">{getInitials(c.author?.display_name || c.author?.name || 'U')}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 bg-muted rounded-lg p-2.5">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-xs font-medium">{c.author?.display_name || c.author?.name}</span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {new Date(c.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <p className="text-sm">{c.content}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+            {commentsHeader}
+            <ScrollArea className="flex-1">
+              {renderTimeline()}
             </ScrollArea>
-            <div className="p-3 border-t border-border">
-              <div className="flex gap-2">
-                <Input
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Escrever um comentário..."
-                  className="text-sm"
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
-                />
-                <Button onClick={handleAddComment} disabled={sending || !newComment.trim()} size="sm">
-                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar'}
-                </Button>
-              </div>
-            </div>
+            {renderCommentInput()}
           </div>
         </div>
 
-        {/* Footer */}
-        <DialogFooter className="border-t border-border p-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
-          <Button onClick={() => onEdit(task)}><Edit className="h-4 w-4 mr-2" /> Editar</Button>
-        </DialogFooter>
+        {renderFooter()}
       </DialogContent>
     </Dialog>
   );

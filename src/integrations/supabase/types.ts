@@ -895,6 +895,47 @@ export type Database = {
         }
         Relationships: []
       }
+      task_activities: {
+        Row: {
+          action_type: string
+          created_at: string
+          description: string
+          id: string
+          metadata: Json | null
+          task_id: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          description: string
+          id?: string
+          metadata?: Json | null
+          task_id: string
+          user_id: string
+          user_name?: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          metadata?: Json | null
+          task_id?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_activities_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_assignees: {
         Row: {
           created_at: string
@@ -1329,6 +1370,7 @@ export type Database = {
           is_archived: boolean
           position: number
           priority: string
+          reminder_minutes: number | null
           sector_id: string | null
           status: string
           task_number: number
@@ -1350,6 +1392,7 @@ export type Database = {
           is_archived?: boolean
           position?: number
           priority?: string
+          reminder_minutes?: number | null
           sector_id?: string | null
           status?: string
           task_number?: number
@@ -1371,6 +1414,7 @@ export type Database = {
           is_archived?: boolean
           position?: number
           priority?: string
+          reminder_minutes?: number | null
           sector_id?: string | null
           status?: string
           task_number?: number
