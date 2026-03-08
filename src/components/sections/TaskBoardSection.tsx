@@ -1796,7 +1796,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                         </div>
                       );
                     })}
-                    {colTasks.length === 0 && (
+                    {colTasks.length === 0 && !(column as any).is_template_column && (
                       <div className="text-center py-6 text-muted-foreground text-xs">Nenhuma tarefa</div>
                     )}
                   {/* Template cards */}
