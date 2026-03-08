@@ -46,7 +46,6 @@ const ACTIVITY_ICONS: Record<string, any> = {
 
 // Simple rich text renderer for descriptions
 function RichDescription({ text }: { text: string }) {
-  // Process markdown-like formatting: **bold**, *italic*, ~~strikethrough~~, `code`
   const processLine = (line: string, idx: number) => {
     const parts: React.ReactNode[] = [];
     let remaining = line;
@@ -70,12 +69,87 @@ function RichDescription({ text }: { text: string }) {
       parts.push(<span key={key++}>{remaining.slice(lastIndex)}</span>);
     }
     
-    return <p key={idx} className="min-h-[1.25em]">{parts.length > 0 ? parts : line}</p>;
+    return <p key={idx} className="min-h-[1.5em]">{parts.length > 0 ? parts : line || '\u00A0'}</p>;
   };
 
   return (
-    <div className="text-foreground text-sm leading-relaxed space-y-1.5">
+    <div className="text-foreground text-[15px] leading-relaxed space-y-1.5">
       {text.split('\n').map((line, idx) => processLine(line, idx))}
+    </div>
+  );
+}
+
+// Trello-style description editor with toolbar
+function DescriptionEditor({ value, onSave, onCancel }: { value: string; onSave: (v: string) => void; onCancel: () => void }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [text, setText] = useState(value);
+
+  const wrapSelection = useCallback((before: string, after: string) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = text.slice(start, end);
+    const newText = text.slice(0, start) + before + selected + after + text.slice(end);
+    setText(newText);
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(start + before.length, end + before.length);
+    }, 0);
+  }, [text]);
+
+  const insertAtCursor = useCallback((insert: string) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const newText = text.slice(0, start) + insert + text.slice(start);
+    setText(newText);
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(start + insert.length, start + insert.length);
+    }, 0);
+  }, [text]);
+
+  return (
+    <div className="border border-border rounded-lg overflow-hidden bg-background">
+      {/* Toolbar */}
+      <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border bg-muted/40 flex-wrap">
+        <Button variant="ghost" size="icon" className="h-7 w-7" title="Negrito" onClick={() => wrapSelection('**', '**')}>
+          <Bold className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" title="Itálico" onClick={() => wrapSelection('*', '*')}>
+          <Italic className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" title="Tachado" onClick={() => wrapSelection('~~', '~~')}>
+          <Strikethrough className="h-3.5 w-3.5" />
+        </Button>
+        <div className="w-px h-5 bg-border mx-1" />
+        <Button variant="ghost" size="icon" className="h-7 w-7" title="Lista" onClick={() => insertAtCursor('\n- ')}>
+          <List className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" title="Código" onClick={() => wrapSelection('`', '`')}>
+          <Type className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" title="Linha" onClick={() => insertAtCursor('\n---\n')}>
+          <Minus className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      {/* Textarea */}
+      <textarea
+        ref={textareaRef}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        className="w-full min-h-[160px] p-3 text-[15px] leading-relaxed bg-background text-foreground resize-y outline-none placeholder:text-muted-foreground"
+        placeholder="Adicione uma descrição mais detalhada..."
+        autoFocus
+      />
+      {/* Actions */}
+      <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-muted/20">
+        <Button size="sm" onClick={() => onSave(text)}>Salvar</Button>
+        <Button variant="ghost" size="sm" onClick={onCancel}>Cancelar</Button>
+        <div className="flex-1" />
+        <span className="text-[11px] text-muted-foreground">Ajuda para formatação</span>
+      </div>
     </div>
   );
 }
