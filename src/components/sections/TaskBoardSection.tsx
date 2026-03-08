@@ -293,6 +293,16 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [showDistribution, setShowDistribution] = useState(false);
   const [distributionColumnOverrides, setDistributionColumnOverrides] = useState<Record<string, string>>({});
 
+  // Sync selectedTask with latest tasks data after refetch
+  useEffect(() => {
+    if (selectedTask) {
+      const updated = tasks.find(t => t.id === selectedTask.id);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedTask)) {
+        setSelectedTask(updated);
+      }
+    }
+  }, [tasks, selectedTask]);
+
   const togglePlanner = () => {
     if (showPlanner) { setShowPlanner(false); setShowBoard(true); }
     else setShowPlanner(true);
@@ -2089,6 +2099,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         taskLabels={selectedTask ? getTaskLabels(selectedTask.id) : []}
         allLabels={labels}
         onToggleLabel={handleToggleLabel}
+        onCreateLabel={createLabel}
+        onDeleteLabel={deleteLabel}
         boardId={board.id}
         onOpenAutomation={(id) => { setShowTaskDetail(false); setAutomationTaskId(id); setShowAutomationRules(true); }}
         columns={columns.map(c => ({ id: c.id, title: c.title, color: c.color }))}
