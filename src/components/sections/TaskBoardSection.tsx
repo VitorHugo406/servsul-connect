@@ -1963,7 +1963,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
            <DialogTitle>
-              {isCreatingTemplate ? '🔧 Novo Template' : editingTask?.is_template ? `Editar Template #${editingTask.task_number}` : editingTask ? `Editar Tarefa #${editingTask.task_number}` : 'Nova Tarefa'}
+              {isCreatingTemplate ? 'Novo Template' : editingTask?.is_template ? `Editar Template #${editingTask.task_number}` : editingTask ? `Editar Tarefa #${editingTask.task_number}` : 'Nova Tarefa'}
             </DialogTitle>
             {isCreatingTemplate && (
               <DialogDescription className="text-xs">
