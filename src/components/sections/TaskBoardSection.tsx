@@ -1676,12 +1676,12 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
       {/* Bottom bar: Planner / Board / Switch - Trello style */}
       {!isMobile && (
-        <div className="flex items-center justify-center py-1.5 relative z-10">
-          <div className="flex items-center bg-sidebar rounded-lg p-0.5">
+        <div className="flex items-center justify-center py-2.5 relative z-10">
+          <div className="flex items-center bg-sidebar rounded-lg p-1">
             <button
               onClick={togglePlanner}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                "flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors",
                 showPlanner ? "bg-sidebar-accent text-sidebar-foreground" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
               )}
             >
@@ -1690,16 +1690,16 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             <button
               onClick={toggleBoard}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                "flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors",
                 showBoard && !showPlanner ? "bg-sidebar-accent text-sidebar-foreground" : showBoard ? "bg-sidebar-accent/50 text-sidebar-foreground" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
               )}
             >
               Quadro
             </button>
-            <div className="w-px h-5 bg-sidebar-border mx-0.5" />
+            <div className="w-px h-6 bg-sidebar-border mx-1" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors">
+                <button className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors">
                   Mudar de quadro
                 </button>
               </DropdownMenuTrigger>
