@@ -446,6 +446,14 @@ export function PeopleManagementSection() {
         <TabsContent value="activities" className="mt-4">
           <ActivitiesTab memberIds={memberIds} members={members} />
         </TabsContent>
+
+        <TabsContent value="score" className="mt-4">
+          <ScoreTabContent
+            scores={globalScores}
+            monthlyHistory={globalScoreHistory}
+            loading={globalScoresLoading}
+          />
+        </TabsContent>
       </Tabs>
 
       {/* Add Member Dialog */}
