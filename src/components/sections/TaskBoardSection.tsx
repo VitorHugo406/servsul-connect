@@ -297,6 +297,11 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
   const [showDistribution, setShowDistribution] = useState(false);
   const [distributionColumnOverrides, setDistributionColumnOverrides] = useState<Record<string, string>>({});
+  const [showScore, setShowScore] = useState(false);
+
+  // Score system
+  const memberProfileIds = members.map(m => m.profile_id);
+  const { scores: boardScores, monthlyHistory: boardScoreHistory, loading: scoresLoading } = useBoardScores(board.id, memberProfileIds);
 
   // Sync selectedTask with latest tasks data after refetch
   useEffect(() => {
