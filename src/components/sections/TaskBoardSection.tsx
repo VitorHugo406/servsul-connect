@@ -2581,7 +2581,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               ) : (
                 <div className="space-y-3 pr-2">
                   {recs.map((rec, i) => {
-                    const [selectedColumnId, setSelectedColumnId] = React.useState(rec.targetColumnId);
+                    const selectedColumnId = distributionColumnOverrides[rec.taskId] || rec.targetColumnId;
                     const selectedCol = columns.find(c => c.id === selectedColumnId);
                     return (
                       <div key={i} className="p-3 rounded-lg border border-border bg-card space-y-2 overflow-hidden">
@@ -2599,7 +2599,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                         </div>
                         <div className="pt-1">
                           <label className="text-xs text-muted-foreground mb-1 block">Mover para coluna:</label>
-                          <Select value={selectedColumnId} onValueChange={setSelectedColumnId}>
+                          <Select value={selectedColumnId} onValueChange={(val) => setDistributionColumnOverrides(prev => ({ ...prev, [rec.taskId]: val }))}>
                             <SelectTrigger className="h-8 text-xs">
                               <SelectValue />
                             </SelectTrigger>
