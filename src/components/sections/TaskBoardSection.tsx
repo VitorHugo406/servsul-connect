@@ -1161,6 +1161,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             </div>
           </motion.div>
         )}
+        </AnimatePresence>
         {showBoard && (
         <div className="flex-1 overflow-hidden">
           <div
