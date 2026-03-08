@@ -95,7 +95,7 @@ interface TaskDetailDialogProps {
   onMakeTemplate?: (taskId: string) => void;
 }
 
-export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTask, taskLabels, allLabels, onToggleLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTask, taskLabels, allLabels, onToggleLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate, onMakeTemplate }: TaskDetailDialogProps) {
   const isMobile = useIsMobile();
   const { comments, addComment, loading: commentsLoading } = useTaskComments(task?.id || null);
   const { subtasks, addSubtask, toggleSubtask, deleteSubtask, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null, boardId);
