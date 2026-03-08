@@ -2094,7 +2094,6 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         task={selectedTask}
         open={showTaskDetail}
         onOpenChange={(o) => { setShowTaskDetail(o); if (!o) setSelectedTask(null); }}
-        onEdit={(t) => { setShowTaskDetail(false); openEditTask(t); }}
         onUpdateTask={async (id, updates) => { await updateTask(id, updates); await refetchTasks(); }}
         taskLabels={selectedTask ? getTaskLabels(selectedTask.id) : []}
         allLabels={labels}
@@ -2106,6 +2105,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         columns={columns.map(c => ({ id: c.id, title: c.title, color: c.color }))}
         onDuplicateTemplate={duplicateTemplateAsCard}
         onMakeTemplate={handleMakeTemplate}
+        boardMembers={members}
+        getTaskAssignees={getTaskAssignees}
+        onSetTaskAssignees={setTaskAssigneesDb}
+        allUsers={allUsers}
       />
 
       {/* Label Picker Dialog */}
