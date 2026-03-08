@@ -257,6 +257,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [showTaskDetail, setShowTaskDetail] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showAutomation, setShowAutomation] = useState<TaskBoardColumn | null>(null);
+  const [autoTab, setAutoTab] = useState<'appearance' | 'config' | 'subtasks'>('appearance');
   const [showLabelsManager, setShowLabelsManager] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState<string | null>(null); // task id
   const [selectedTask, setSelectedTask] = useState<BoardTask | null>(null);
