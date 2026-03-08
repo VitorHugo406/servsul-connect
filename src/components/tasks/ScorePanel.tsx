@@ -82,7 +82,7 @@ export function ScorePanel({ open, onClose, scores, monthlyHistory, loading, tit
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-lg overflow-hidden flex flex-col">
+      <SheetContent className="w-full sm:max-w-lg overflow-hidden flex flex-col p-4 sm:p-6">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-yellow-500" />
