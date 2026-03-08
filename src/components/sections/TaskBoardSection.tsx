@@ -1117,10 +1117,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               <h3 className="font-display font-semibold text-sm">
                 Planejador
               </h3>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-sidebar-foreground/60">
                 {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
-              <div className="h-px bg-border" />
+              <div className="h-px bg-sidebar-border" />
               {(() => {
                 const todayTasks = tasks.filter(t => {
                   if (!t.due_date) return false;
