@@ -1361,8 +1361,28 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                       </div>
                     );
                   })}
+                  {/* Mobile template cards */}
+                  {templateTasks.filter(t => t.status === mobileSelectedColumn).map(template => (
+                    <div key={template.id} className="bg-card/60 rounded-lg border border-dashed border-primary/30 p-3 relative">
+                      <Badge className="bg-primary/10 text-primary border-primary/20 text-[9px] h-4 mb-1">
+                        <Copy className="h-2.5 w-2.5 mr-0.5" /> Template
+                      </Badge>
+                      <h4 className="font-normal text-sm text-foreground">{template.title}</h4>
+                      <div className="flex gap-1 mt-2">
+                        {columns.map(c => (
+                          <Button key={c.id} size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => duplicateTemplateAsCard(template, c.id)}>
+                            <div className="w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: c.color }} />
+                            {c.title}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                   <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1" onClick={() => openCreateTask(mobileSelectedColumn)}>
                     <Plus className="h-3 w-3" /> Adicionar Tarefa
+                  </Button>
+                  <Button variant="ghost" size="sm" className="w-full text-xs gap-1 text-muted-foreground" onClick={() => openCreateTemplate(mobileSelectedColumn)}>
+                    <Copy className="h-3 w-3" /> Criar template
                   </Button>
                 </div>
               </div>
