@@ -479,17 +479,20 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const conclusionColumnIds = columns.filter(c => c.is_conclusion).map(c => c.id);
   const filteredTasks = applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels);
 
-  const getDueDateInfo = (dueDateStr: string | null) => {
+  const getDueDateInfo = (dueDateStr: string | null, isCompleted?: boolean) => {
     if (!dueDateStr) return null;
     const due = new Date(dueDateStr);
+    if (isCompleted) {
+      return { label: due.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), color: 'text-green-600 bg-green-500/10', icon: CheckCircle2 };
+    }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     due.setHours(0, 0, 0, 0);
     const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return { label: 'Atrasado', color: 'text-red-500 bg-red-500/10', icon: AlertTriangle };
-    if (diffDays === 0) return { label: 'Hoje', color: 'text-orange-500 bg-orange-500/10', icon: Clock4 };
-    if (diffDays <= 2) return { label: `${diffDays}d`, color: 'text-yellow-500 bg-yellow-500/10', icon: Clock };
-    return { label: `${diffDays}d`, color: 'text-muted-foreground bg-muted', icon: Calendar };
+    if (diffDays < 0) return { label: due.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), color: 'text-red-500 bg-red-500/10', icon: AlertTriangle };
+    if (diffDays === 0) return { label: due.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), color: 'text-orange-500 bg-orange-500/10', icon: Clock4 };
+    if (diffDays <= 2) return { label: due.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), color: 'text-yellow-500 bg-yellow-500/10', icon: Clock };
+    return { label: due.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), color: 'text-muted-foreground bg-muted', icon: Calendar };
   };
 
   const resetForm = () => {
@@ -1181,7 +1184,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 <div className="space-y-2">
                   {filteredTasks.filter(t => t.status === mobileSelectedColumn).sort((a, b) => a.position - b.position).map((task) => {
                     const cover = getCoverDisplay(task.cover_image);
-                    const dueInfo = getDueDateInfo(task.due_date);
+                    const isTaskCompleted = !!task.completed_at || conclusionColumnIds.includes(task.status);
+                    const dueInfo = getDueDateInfo(task.due_date, isTaskCompleted);
                     const taskLabelsForCard = getTaskLabels(task.id);
                     return (
                       <div key={task.id} className="bg-card rounded-lg border border-border p-3 relative"
@@ -1441,7 +1445,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   <div className="p-2 space-y-2 min-h-[60px] flex-1 overflow-y-auto max-h-[calc(100vh-300px)] task-col-scroll">
                     {colTasks.map((task, index) => {
                       const cover = getCoverDisplay(task.cover_image);
-                      const dueInfo = getDueDateInfo(task.due_date);
+                      const isTaskCompleted = !!task.completed_at || conclusionColumnIds.includes(task.status);
+                      const dueInfo = getDueDateInfo(task.due_date, isTaskCompleted);
                       const taskLabelsForCard = getTaskLabels(task.id);
                       return (
                         <div
@@ -1490,11 +1495,17 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
                             {/* Title with hover completion dot */}
                             <div className="flex items-start gap-0 group-hover/card:gap-1.5 transition-all duration-200 mb-1.5">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleQuickComplete(task); }}
-                                className="w-0 h-4 mt-0.5 group-hover/card:w-4 min-w-0 group-hover/card:min-w-[16px] opacity-0 group-hover/card:opacity-100 transition-all duration-200 rounded-full border-2 border-muted-foreground/30 flex-shrink-0 hover:!border-green-500 hover:!bg-green-500/20"
-                                title="Marcar como concluída"
-                              />
+                              {isTaskCompleted ? (
+                                <div className="w-4 h-4 mt-0.5 min-w-[16px] rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 opacity-0 group-hover/card:opacity-100 transition-all duration-200">
+                                  <CheckCircle2 className="h-3 w-3 text-white" />
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleQuickComplete(task); }}
+                                  className="w-0 h-4 mt-0.5 group-hover/card:w-4 min-w-0 group-hover/card:min-w-[16px] opacity-0 group-hover/card:opacity-100 transition-all duration-200 rounded-full border-2 border-muted-foreground/30 flex-shrink-0 hover:!border-green-500 hover:!bg-green-500/20"
+                                  title="Marcar como concluída"
+                                />
+                              )}
                               <h4 className="font-normal text-sm text-foreground leading-snug">{task.title}</h4>
                             </div>
 
