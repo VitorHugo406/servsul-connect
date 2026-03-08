@@ -587,9 +587,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       description: description.trim() || undefined,
       status: targetColumn,
       priority,
-      assigned_to: assignedTo !== 'none' ? assignedTo : undefined,
-      due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
+      assigned_to: isCreatingTemplate ? undefined : (assignedTo !== 'none' ? assignedTo : undefined),
+      due_date: isCreatingTemplate ? undefined : (dueDate ? new Date(dueDate).toISOString() : undefined),
       cover_image: finalCover,
+      is_template: isCreatingTemplate,
     };
 
     let result;
