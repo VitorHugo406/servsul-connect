@@ -382,7 +382,41 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
           <Badge key={l.id} className="text-white text-[10px]" style={{ backgroundColor: l.color }}>{l.name}</Badge>
         ))}
       </div>
-      <h2 className="text-xl font-bold text-foreground">{task.title}</h2>
+      {editingTitle ? (
+        <div className="flex items-center gap-2">
+          <Input
+            value={titleValue}
+            onChange={e => setTitleValue(e.target.value)}
+            className="text-xl font-bold"
+            autoFocus
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                if (titleValue.trim() && titleValue !== task.title) {
+                  onUpdateTask?.(task.id, { title: titleValue.trim() });
+                }
+                setEditingTitle(false);
+              }
+              if (e.key === 'Escape') {
+                setTitleValue(task.title);
+                setEditingTitle(false);
+              }
+            }}
+            onBlur={() => {
+              if (titleValue.trim() && titleValue !== task.title) {
+                onUpdateTask?.(task.id, { title: titleValue.trim() });
+              }
+              setEditingTitle(false);
+            }}
+          />
+        </div>
+      ) : (
+        <h2
+          className="text-xl font-bold text-foreground cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 transition-colors"
+          onDoubleClick={() => { setTitleValue(task.title); setEditingTitle(true); }}
+        >
+          {task.title}
+        </h2>
+      )}
     </div>
   );
 
