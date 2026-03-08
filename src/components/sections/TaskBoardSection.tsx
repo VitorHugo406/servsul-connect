@@ -44,6 +44,8 @@ import { useCardDuplications } from '@/hooks/useCardDuplications';
 import { useWorkflowRules } from '@/hooks/useWorkflowRules';
 import { useColumnAutoSubtasks } from '@/hooks/useColumnAutoSubtasks';
 import { logTaskActivity } from '@/hooks/useTaskActivities';
+import { useBoardScores } from '@/hooks/useBoardScores';
+import { ScorePanel } from '@/components/tasks/ScorePanel';
 import {
   PRIORITIES, BACKGROUND_IMAGES, BACKGROUND_GROUPS, CARD_COVERS,
   getBoardBg, getBoardBgStyle, getInitials, getCoverDisplay, isBoardBgDark,
