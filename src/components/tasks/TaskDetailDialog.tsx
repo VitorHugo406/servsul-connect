@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { toast } from 'sonner';
 import {
   ArrowRight, Calendar as CalendarIcon, CheckCircle2, CheckSquare, ChevronDown, ChevronRight,
   Eye, EyeOff, Image, Loader2, MessageSquare, Palette, Plus, Tag, Trash2, Users, X, Zap, Bell, Move, Copy, Layout,
@@ -25,6 +26,7 @@ import { useTaskActivities, TaskActivity } from '@/hooks/useTaskActivities';
 import { TaskLabel } from '@/hooks/useTaskLabels';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
+import { TaskCompletionReport } from './TaskCompletionReport';
 import { cn } from '@/lib/utils';
 
 // Colorblind patterns as SVG data URIs
@@ -1055,7 +1057,33 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
   );
 
   const renderFooter = () => (
-    <DialogFooter className="border-t border-border p-4 gap-2">
+    <DialogFooter className="border-t border-border p-4 gap-2 flex-wrap">
+      {/* PDF Report - always available */}
+      <TaskCompletionReport
+        task={task}
+        activities={activities}
+        columns={columns}
+        subtasks={subtasks}
+        comments={comments}
+        boardName={boardId ? undefined : undefined}
+      />
+      {/* Undo completion */}
+      {task.completed_at && onUpdateTask && (
+        <Button
+          variant="outline"
+          className="gap-2 rounded-md text-orange-500 hover:text-orange-600"
+          onClick={async () => {
+            await onUpdateTask(task.id, {
+              completed_at: null,
+              completed_late: false,
+              delay_days: 0,
+            });
+            toast.success('Conclusão desfeita!');
+          }}
+        >
+          <ArrowRight className="h-4 w-4 rotate-180" /> Desfazer Conclusão
+        </Button>
+      )}
       {onOpenAutomation && (
         <Button variant="outline" className="gap-2 rounded-md" onClick={() => onOpenAutomation(task.id)}>
           <Zap className="h-4 w-4" /> Automações
