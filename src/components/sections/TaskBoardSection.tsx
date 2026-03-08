@@ -257,6 +257,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [showTaskDetail, setShowTaskDetail] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showAutomation, setShowAutomation] = useState<TaskBoardColumn | null>(null);
+  const [autoTab, setAutoTab] = useState<'appearance' | 'config' | 'subtasks'>('appearance');
   const [showLabelsManager, setShowLabelsManager] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState<string | null>(null); // task id
   const [selectedTask, setSelectedTask] = useState<BoardTask | null>(null);
@@ -812,6 +813,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     setAutoCover(col.auto_cover || 'none');
     setAutoConclusion(col.is_conclusion || false);
     setAutoTemplate((col as any).is_template_column || false);
+    setAutoTab('appearance');
     setShowAutomation(col);
   };
 
@@ -2364,118 +2366,153 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
       {/* Automation Dialog */}
       <Dialog open={!!showAutomation} onOpenChange={(o) => { if (!o) setShowAutomation(null); }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Zap className="h-5 w-5 text-primary" />
               Automações: {showAutomation?.title}
             </DialogTitle>
             <DialogDescription>
-              Configure ações automáticas para novos cards nesta coluna
+              Configure ações automáticas para esta coluna
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Auto-atribuir responsável</Label>
-              <Select value={autoAssign} onValueChange={setAutoAssign}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhum</SelectItem>
-                  {members.map(m => (
-                    <SelectItem key={m.profile_id} value={m.profile_id}>
-                      {m.profile?.display_name || m.profile?.name || 'Membro'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">Novos cards nesta coluna terão este responsável automaticamente</p>
-            </div>
-            <div className="space-y-2">
-              <Label>Auto-capa padrão</Label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setAutoCover('none')}
-                  className={cn('w-10 h-6 rounded border-2 bg-muted border-dashed', autoCover === 'none' && 'border-primary ring-2 ring-primary/30')}
-                  title="Nenhuma"
-                />
-                {CARD_COVERS.filter(c => c.id !== 'none').map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => setAutoCover(c.id)}
-                    className={cn('w-10 h-6 rounded border-2 transition-all', c.color, autoCover === c.id ? 'border-primary ring-2 ring-primary/30' : 'border-transparent')}
-                    title={c.name}
-                  />
-                ))}
-                <button
-                  onClick={() => autoCoverInputRef.current?.click()}
-                  className={cn(
-                    'w-10 h-6 rounded border-2 border-dashed flex items-center justify-center transition-all',
-                    autoCover.startsWith('http') ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/50'
-                  )}
-                  title="Enviar imagem"
-                >
-                  <Upload className="h-3 w-3 text-muted-foreground" />
-                </button>
-              </div>
-              <input
-                ref={autoCoverInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAutoCoverUpload}
-              />
-              {autoCover.startsWith('http') && (
-                <div className="mt-2 rounded-lg overflow-hidden h-16">
-                  <img src={autoCover} alt="Auto-capa preview" className="w-full h-full object-cover" />
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">Novos cards nesta coluna terão esta capa automaticamente</p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Coluna de Conclusão</Label>
-                  <p className="text-xs text-muted-foreground">Marca tarefas como concluídas e registra atrasos</p>
-                </div>
-                <button
-                  onClick={() => setAutoConclusion(!autoConclusion)}
-                  className={cn(
-                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                    autoConclusion ? 'bg-primary' : 'bg-muted'
-                  )}
-                >
-                  <span className={cn(
-                    'inline-block h-4 w-4 rounded-full bg-white transition-transform',
-                    autoConclusion ? 'translate-x-6' : 'translate-x-1'
-                  )} />
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Coluna de Template</Label>
-                  <p className="text-xs text-muted-foreground">Todos os cards desta coluna serão marcados como template. Automações e duplicações existentes serão preservadas.</p>
-                </div>
-                <button
-                  onClick={() => setAutoTemplate(!autoTemplate)}
-                  className={cn(
-                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0',
-                    autoTemplate ? 'bg-primary' : 'bg-muted'
-                  )}
-                >
-                  <span className={cn(
-                    'inline-block h-4 w-4 rounded-full bg-white transition-transform',
-                    autoTemplate ? 'translate-x-6' : 'translate-x-1'
-                  )} />
-                </button>
-              </div>
-            </div>
-            {/* Auto-subtasks section */}
-            {showAutomation && (
-              <AutoSubtasksConfig columnId={showAutomation.id} />
-            )}
+          {/* Tab buttons */}
+          <div className="flex gap-1 border-b border-border pb-0">
+            {[
+              { id: 'appearance', label: 'Capa e Responsável', icon: '🎨' },
+              { id: 'config', label: 'Configuração', icon: '⚙️' },
+              { id: 'subtasks', label: 'Subtarefas', icon: '☑️' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setAutoTab(tab.id as any)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-t-md transition-colors border-b-2 -mb-[1px]',
+                  autoTab === tab.id
+                    ? 'border-primary text-primary bg-primary/5'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                )}
+              >
+                <span>{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
           </div>
+          {/* Tab content with scroll */}
+          <ScrollArea className="flex-1 max-h-[50vh]">
+            <div className="space-y-4 py-2 pr-2">
+              {/* Tab: Capa e Responsável */}
+              {autoTab === 'appearance' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Auto-atribuir responsável</Label>
+                    <Select value={autoAssign} onValueChange={setAutoAssign}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {members.map(m => (
+                          <SelectItem key={m.profile_id} value={m.profile_id}>
+                            {m.profile?.display_name || m.profile?.name || 'Membro'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Novos cards nesta coluna terão este responsável automaticamente</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Auto-capa padrão</Label>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setAutoCover('none')}
+                        className={cn('w-10 h-6 rounded border-2 bg-muted border-dashed', autoCover === 'none' && 'border-primary ring-2 ring-primary/30')}
+                        title="Nenhuma"
+                      />
+                      {CARD_COVERS.filter(c => c.id !== 'none').map(c => (
+                        <button
+                          key={c.id}
+                          onClick={() => setAutoCover(c.id)}
+                          className={cn('w-10 h-6 rounded border-2 transition-all', c.color, autoCover === c.id ? 'border-primary ring-2 ring-primary/30' : 'border-transparent')}
+                          title={c.name}
+                        />
+                      ))}
+                      <button
+                        onClick={() => autoCoverInputRef.current?.click()}
+                        className={cn(
+                          'w-10 h-6 rounded border-2 border-dashed flex items-center justify-center transition-all',
+                          autoCover.startsWith('http') ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/50'
+                        )}
+                        title="Enviar imagem"
+                      >
+                        <Upload className="h-3 w-3 text-muted-foreground" />
+                      </button>
+                    </div>
+                    <input
+                      ref={autoCoverInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAutoCoverUpload}
+                    />
+                    {autoCover.startsWith('http') && (
+                      <div className="mt-2 rounded-lg overflow-hidden h-16">
+                        <img src={autoCover} alt="Auto-capa preview" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">Novos cards nesta coluna terão esta capa automaticamente</p>
+                  </div>
+                </>
+              )}
+              {/* Tab: Configuração */}
+              {autoTab === 'config' && (
+                <>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Coluna de Conclusão</Label>
+                        <p className="text-xs text-muted-foreground">Marca tarefas como concluídas e registra atrasos</p>
+                      </div>
+                      <button
+                        onClick={() => setAutoConclusion(!autoConclusion)}
+                        className={cn(
+                          'relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0',
+                          autoConclusion ? 'bg-primary' : 'bg-muted'
+                        )}
+                      >
+                        <span className={cn(
+                          'inline-block h-4 w-4 rounded-full bg-white transition-transform',
+                          autoConclusion ? 'translate-x-6' : 'translate-x-1'
+                        )} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Coluna de Template</Label>
+                        <p className="text-xs text-muted-foreground">Todos os cards desta coluna serão marcados como template. Automações e duplicações existentes serão preservadas.</p>
+                      </div>
+                      <button
+                        onClick={() => setAutoTemplate(!autoTemplate)}
+                        className={cn(
+                          'relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0',
+                          autoTemplate ? 'bg-primary' : 'bg-muted'
+                        )}
+                      >
+                        <span className={cn(
+                          'inline-block h-4 w-4 rounded-full bg-white transition-transform',
+                          autoTemplate ? 'translate-x-6' : 'translate-x-1'
+                        )} />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+              {/* Tab: Subtarefas */}
+              {autoTab === 'subtasks' && showAutomation && (
+                <AutoSubtasksConfig columnId={showAutomation.id} />
+              )}
+            </div>
+          </ScrollArea>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAutomation(null)}>Cancelar</Button>
             <Button onClick={handleSaveAutomation}>Salvar Automação</Button>
