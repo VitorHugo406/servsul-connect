@@ -352,24 +352,29 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs">
-              <Calendar className="h-3.5 w-3.5" /> Datas
+              <CalendarIcon className="h-3.5 w-3.5" /> Datas
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-72 space-y-3">
-            <h4 className="font-semibold text-sm">Datas</h4>
+          <PopoverContent className="w-auto space-y-3 p-3" align="start">
+            <h4 className="font-semibold text-sm">Data de término</h4>
+            <Calendar
+              mode="single"
+              selected={task.due_date ? new Date(task.due_date) : undefined}
+              onSelect={async (date) => {
+                if (onUpdateTask && task) {
+                  await onUpdateTask(task.id, { due_date: date ? date.toISOString() : null });
+                }
+              }}
+              locale={ptBR}
+              className="pointer-events-auto"
+              initialFocus
+            />
             {task.due_date && (
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Data de entrega</p>
-                <p className="text-sm font-medium">
-                  {new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                  {(() => { const d = new Date(task.due_date); return d.getHours() !== 0 || d.getMinutes() !== 0 ? ` às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''; })()}
-                </p>
+              <div className="text-xs text-muted-foreground text-center">
+                Selecionada: {new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
               </div>
             )}
-            {!task.due_date && (
-              <p className="text-sm text-muted-foreground">Nenhuma data definida. Edite o card para adicionar.</p>
-            )}
-            <div className="space-y-1.5">
+            <div className="border-t border-border pt-3 space-y-1.5">
               <div className="flex items-center gap-2">
                 <Bell className="h-3.5 w-3.5 text-muted-foreground" />
                 <p className="text-xs font-medium">Definir lembrete</p>
