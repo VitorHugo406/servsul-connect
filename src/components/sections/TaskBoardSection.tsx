@@ -351,7 +351,23 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               const canvas = document.createElement('canvas');
               canvas.width = 32; canvas.height = 32;
               const ctx = canvas.getContext('2d');
-              if (ctx) { ctx.drawImage(img, 0, 0, 32, 32); link.href = canvas.toDataURL('image/png'); }
+              if (ctx) {
+                const r = 8;
+                ctx.beginPath();
+                ctx.moveTo(r, 0);
+                ctx.lineTo(32 - r, 0);
+                ctx.quadraticCurveTo(32, 0, 32, r);
+                ctx.lineTo(32, 32 - r);
+                ctx.quadraticCurveTo(32, 32, 32 - r, 32);
+                ctx.lineTo(r, 32);
+                ctx.quadraticCurveTo(0, 32, 0, 32 - r);
+                ctx.lineTo(0, r);
+                ctx.quadraticCurveTo(0, 0, r, 0);
+                ctx.closePath();
+                ctx.clip();
+                ctx.drawImage(img, 0, 0, 32, 32);
+                link.href = canvas.toDataURL('image/png');
+              }
             } catch (e) { /* CORS */ }
           };
           img.src = urlMatch[1];
