@@ -81,6 +81,15 @@ const Index = () => {
     return () => cancelAnimationFrame(timer);
   }, []);
 
+  // Handle section changes - intercept tutorial
+  const handleSectionChange = (section: string) => {
+    if (section === 'tutorial') {
+      setShowTutorial(true);
+      return;
+    }
+    setActiveSection(section);
+  };
+
   // Navigation handlers for notifications
   const handleNavigateToChat = () => {
     setActiveSection('chat');
