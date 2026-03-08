@@ -2562,7 +2562,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       </Dialog>
 
       {/* Distribution Dialog */}
-      <Dialog open={showDistribution} onOpenChange={setShowDistribution}>
+      <Dialog open={showDistribution} onOpenChange={(o) => { setShowDistribution(o); if (!o) setDistributionColumnOverrides({}); }}>
         <DialogContent className="max-w-md w-[95vw]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
