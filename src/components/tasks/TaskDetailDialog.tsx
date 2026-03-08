@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   ArrowRight, Calendar, CheckCircle2, CheckSquare, ChevronDown, ChevronRight,
-  Eye, EyeOff, Loader2, MessageSquare, Plus, Tag, Trash2, Users, X, Zap, Bell, Move
+  Eye, EyeOff, Loader2, MessageSquare, Plus, Tag, Trash2, Users, X, Zap, Bell, Move, Copy, Layout
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,42 @@ const ACTIVITY_ICONS: Record<string, any> = {
   automation: Zap,
 };
 
+// Simple rich text renderer for descriptions
+function RichDescription({ text }: { text: string }) {
+  // Process markdown-like formatting: **bold**, *italic*, ~~strikethrough~~, `code`
+  const processLine = (line: string, idx: number) => {
+    const parts: React.ReactNode[] = [];
+    let remaining = line;
+    let key = 0;
+    
+    const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|~~(.+?)~~|`(.+?)`)/g;
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = regex.exec(remaining)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(<span key={key++}>{remaining.slice(lastIndex, match.index)}</span>);
+      }
+      if (match[2]) parts.push(<strong key={key++} className="font-bold">{match[2]}</strong>);
+      else if (match[3]) parts.push(<em key={key++} className="italic">{match[3]}</em>);
+      else if (match[4]) parts.push(<span key={key++} className="line-through text-muted-foreground">{match[4]}</span>);
+      else if (match[5]) parts.push(<code key={key++} className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{match[5]}</code>);
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < remaining.length) {
+      parts.push(<span key={key++}>{remaining.slice(lastIndex)}</span>);
+    }
+    
+    return <p key={idx} className="min-h-[1.25em]">{parts.length > 0 ? parts : line}</p>;
+  };
+
+  return (
+    <div className="text-foreground text-sm leading-relaxed space-y-1">
+      {text.split('\n').map((line, idx) => processLine(line, idx))}
+    </div>
+  );
+}
+
 interface TaskDetailDialogProps {
   task: BoardTask | null;
   open: boolean;
@@ -54,9 +90,11 @@ interface TaskDetailDialogProps {
   onToggleLabel?: (taskId: string, labelId: string) => void;
   boardId?: string | null;
   onOpenAutomation?: (taskId: string) => void;
+  columns?: { id: string; title: string; color: string }[];
+  onDuplicateTemplate?: (template: BoardTask, targetColumnId: string) => void;
 }
 
-export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTask, taskLabels, allLabels, onToggleLabel, boardId, onOpenAutomation }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTask, taskLabels, allLabels, onToggleLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate }: TaskDetailDialogProps) {
   const isMobile = useIsMobile();
   const { comments, addComment, loading: commentsLoading } = useTaskComments(task?.id || null);
   const { subtasks, addSubtask, toggleSubtask, deleteSubtask, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null, boardId);
