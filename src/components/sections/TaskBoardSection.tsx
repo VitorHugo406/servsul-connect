@@ -1445,7 +1445,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   <div className="p-2 space-y-2 min-h-[60px] flex-1 overflow-y-auto max-h-[calc(100vh-300px)] task-col-scroll">
                     {colTasks.map((task, index) => {
                       const cover = getCoverDisplay(task.cover_image);
-                      const dueInfo = getDueDateInfo(task.due_date);
+                      const isTaskCompleted = !!task.completed_at || conclusionColumnIds.includes(task.status);
+                      const dueInfo = getDueDateInfo(task.due_date, isTaskCompleted);
                       const taskLabelsForCard = getTaskLabels(task.id);
                       return (
                         <div
