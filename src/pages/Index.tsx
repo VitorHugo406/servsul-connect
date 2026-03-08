@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { usePresence } from '@/hooks/usePresence';
 import { useMeetingStatus } from '@/hooks/useMeetingStatus';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -34,7 +35,7 @@ import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { BirthdayCelebrationModal } from '@/components/birthday/BirthdayCelebrationModal';
 import { ImportantAnnouncementModal } from '@/components/announcements/ImportantAnnouncementModal';
-
+import { BoardJoinDialog } from '@/components/tasks/BoardJoinDialog';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
@@ -60,7 +61,18 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
 const Index = () => {
   const [activeSection, setActiveSection] = useState('home');
   const [globalSearch, setGlobalSearch] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
   
+  const joinToken = searchParams.get('join');
+  
+  const handleCloseJoinDialog = () => {
+    searchParams.delete('join');
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const handleNavigateToTasks = () => {
+    setActiveSection('tasks');
+  };
   const isMobile = useIsMobile();
   const [isReady, setIsReady] = useState(false);
   const { profile } = useAuth();
@@ -205,6 +217,9 @@ const Index = () => {
           borderStyle={pendingAnnouncement.border_style}
         />
       )}
+
+      {/* Board Join Dialog */}
+      <BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} />
       </div>
     );
   }
@@ -245,6 +260,9 @@ const Index = () => {
           borderStyle={pendingAnnouncement.border_style}
         />
       )}
+
+      {/* Board Join Dialog */}
+      <BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} />
       
     </div>
   );
