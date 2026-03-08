@@ -1360,6 +1360,14 @@ function MobilePermissionsDialog({ open, onOpenChange, user, permissions, isUser
               onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_access_password_change', checked)}
             />
           </div>
+          <div className="flex items-center justify-between">
+            <Label>Criar War Room</Label>
+            <Switch
+              checked={isUserAdmin || userPerm.can_create_war_room || false}
+              disabled={isUserAdmin}
+              onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_create_war_room', checked)}
+            />
+          </div>
         </div>
       </DialogContent>
     </Dialog>
