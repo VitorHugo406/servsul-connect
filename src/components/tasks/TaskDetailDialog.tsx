@@ -485,7 +485,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
                           onCheckedChange={() => onToggleLabel?.(task.id, l.id)}
                           className="h-4 w-4"
                         />
-                        <button
+                       <button
                           onClick={() => onToggleLabel?.(task.id, l.id)}
                           className="flex-1 h-8 rounded-md flex items-center px-2.5 relative overflow-hidden transition-all hover:opacity-80"
                           style={{ backgroundColor: l.color }}
@@ -498,10 +498,11 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 flex-shrink-0"
-                          onClick={(e) => { e.stopPropagation(); /* could open edit in future */ }}
+                          className="h-7 w-7 flex-shrink-0 text-destructive hover:text-destructive"
+                          onClick={(e) => { e.stopPropagation(); onDeleteLabel?.(l.id); }}
+                          title="Excluir etiqueta"
                         >
-                          <Pencil className="h-3 w-3 text-muted-foreground" />
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     );
@@ -518,11 +519,11 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full text-xs text-muted-foreground"
+                  className="w-full text-xs text-muted-foreground gap-1.5"
                   onClick={() => setColorblindMode(!colorblindMode)}
                 >
-                  <Eye className="h-3 w-3 mr-1" />
-                  {colorblindMode ? 'Desativar' : 'Modo daltônico'}
+                  <Eye className="h-3 w-3" />
+                  {colorblindMode ? 'Desativar modo daltônico' : 'Ativar modo daltônico'}
                 </Button>
               </div>
             )}
