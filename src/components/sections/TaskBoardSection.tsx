@@ -1157,7 +1157,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     t.title.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q) || `#${t.task_number}`.includes(q)
                   );
                   return (
-                    <div className="rounded-lg border border-border bg-card shadow-lg overflow-hidden max-h-72 overflow-y-auto mb-3">
+                    <div className="absolute left-3 right-3 top-0 z-50 rounded-lg border border-border bg-card shadow-lg overflow-hidden max-h-72 overflow-y-auto">
                       {allSearchTasks.length === 0 ? (
                         <div className="p-4 text-center text-sm text-muted-foreground">Nenhum card encontrado</div>
                       ) : (
