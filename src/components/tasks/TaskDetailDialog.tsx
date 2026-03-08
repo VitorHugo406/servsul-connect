@@ -215,6 +215,8 @@ interface TaskDetailDialogProps {
   taskLabels?: TaskLabel[];
   allLabels?: TaskLabel[];
   onToggleLabel?: (taskId: string, labelId: string) => void;
+  onCreateLabel?: (name: string, color: string) => Promise<any>;
+  onDeleteLabel?: (labelId: string) => Promise<any>;
   boardId?: string | null;
   onOpenAutomation?: (taskId: string) => void;
   columns?: { id: string; title: string; color: string }[];
@@ -222,7 +224,7 @@ interface TaskDetailDialogProps {
   onMakeTemplate?: (taskId: string) => void;
 }
 
-export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTask, taskLabels, allLabels, onToggleLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate, onMakeTemplate }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTask, taskLabels, allLabels, onToggleLabel, onCreateLabel, onDeleteLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate, onMakeTemplate }: TaskDetailDialogProps) {
   const isMobile = useIsMobile();
   const { comments, addComment, loading: commentsLoading } = useTaskComments(task?.id || null);
   const { subtasks, addSubtask, toggleSubtask, deleteSubtask, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null, boardId);
