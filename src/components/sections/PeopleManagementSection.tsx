@@ -510,8 +510,8 @@ export function PeopleManagementSection() {
 
 // Score Tab Content
 function ScoreTabContent({ scores, monthlyHistory, loading }: {
-  scores: import('@/hooks/useBoardScores').MemberScore[];
-  monthlyHistory: import('@/hooks/useBoardScores').MonthlyScoreEntry[];
+  scores: MemberScore[];
+  monthlyHistory: MonthlyScoreEntry[];
   loading: boolean;
 }) {
   const MONTH_LABELS: Record<string, string> = {
