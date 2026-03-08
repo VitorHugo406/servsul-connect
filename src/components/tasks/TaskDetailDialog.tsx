@@ -24,6 +24,7 @@ import { useSubtasks } from '@/hooks/useSubtasks';
 import { useSubtaskGroups } from '@/hooks/useSubtaskGroups';
 import { useTaskActivities, TaskActivity } from '@/hooks/useTaskActivities';
 import { TaskLabel } from '@/hooks/useTaskLabels';
+import { useTaskDecisions } from '@/hooks/useTaskDecisions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
 import { TaskCompletionReport } from './TaskCompletionReport';
@@ -265,6 +266,12 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
   const [creatingLabel, setCreatingLabel] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState('#22c55e');
+  const [showDecisions, setShowDecisions] = useState(false);
+  const [newDecisionText, setNewDecisionText] = useState('');
+  const [newDecisionResponsible, setNewDecisionResponsible] = useState('');
+  const [newDecisionDate, setNewDecisionDate] = useState('');
+
+  const { decisions, addDecision, deleteDecision, loading: decisionsLoading } = useTaskDecisions(task?.id || null);
 
   if (!task) return null;
 
@@ -789,15 +796,15 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
           </PopoverContent>
         </Popover>
 
-        {/* Emergency Toggle */}
+        {/* Decisões Button */}
         <Button
-          variant={(task as any).is_emergency ? "destructive" : "outline"}
+          variant={showDecisions ? "default" : "outline"}
           size="sm"
           className="gap-1.5 rounded-md h-8 text-xs"
-          onClick={() => onUpdateTask?.(task.id, { is_emergency: !(task as any).is_emergency })}
+          onClick={() => setShowDecisions(!showDecisions)}
         >
-          <Siren className="h-3.5 w-3.5" />
-          {(task as any).is_emergency ? 'Emergente ✓' : 'Emergência'}
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Decisões {decisions.length > 0 && `(${decisions.length})`}
         </Button>
       </div>
     </div>
@@ -857,6 +864,94 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
           ) : (
             <p className="text-[15px] text-muted-foreground">Clique duas vezes para adicionar uma descrição...</p>
           )}
+        </div>
+      )}
+    </div>
+  );
+
+  const handleAddDecision = async () => {
+    if (!newDecisionText.trim() || !newDecisionResponsible.trim() || !newDecisionDate) return;
+    const result = await addDecision({
+      decision_text: newDecisionText.trim(),
+      responsible_name: newDecisionResponsible.trim(),
+      decision_date: newDecisionDate,
+    });
+    if (!result.error) {
+      setNewDecisionText('');
+      setNewDecisionResponsible('');
+      setNewDecisionDate('');
+      toast.success('Decisão registrada!');
+    }
+  };
+
+  const renderDecisions = () => !showDecisions ? null : (
+    <div className="px-4 py-2 space-y-3">
+      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Decisões</h4>
+      {/* Form to add new decision */}
+      <div className="border border-border rounded-lg p-3 space-y-2 bg-muted/20">
+        <Input
+          value={newDecisionText}
+          onChange={(e) => setNewDecisionText(e.target.value)}
+          placeholder="Qual decisão se refere?"
+          className="h-8 text-sm"
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <Input
+            value={newDecisionResponsible}
+            onChange={(e) => setNewDecisionResponsible(e.target.value)}
+            placeholder="Responsável pela decisão"
+            className="h-8 text-sm"
+          />
+          <Input
+            type="date"
+            value={newDecisionDate}
+            onChange={(e) => setNewDecisionDate(e.target.value)}
+            className="h-8 text-sm"
+          />
+        </div>
+        <Button
+          size="sm"
+          onClick={handleAddDecision}
+          disabled={!newDecisionText.trim() || !newDecisionResponsible.trim() || !newDecisionDate}
+        >
+          Registrar Decisão
+        </Button>
+      </div>
+      {/* List existing decisions */}
+      {decisionsLoading ? (
+        <div className="flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+      ) : decisions.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-2">Nenhuma decisão registrada</p>
+      ) : (
+        <div className="space-y-2">
+          {decisions.map(d => (
+            <div key={d.id} className="border border-border rounded-lg p-3 bg-background group">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">{d.decision_text}</p>
+                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3 w-3" /> {d.responsible_name}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <CalendarIcon className="h-3 w-3" /> {new Date(d.decision_date).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    Registrado em {new Date(d.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 flex-shrink-0"
+                  onClick={() => deleteDecision(d.id)}
+                >
+                  <Trash2 className="h-3 w-3 text-destructive" />
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -1131,6 +1226,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
             <div className="h-px bg-border mx-4" />
             {!task.is_template && renderInfoRow()}
             {renderDescription()}
+            {renderDecisions()}
             <div className="h-px bg-border mx-4" />
             {renderProgress()}
             {renderSubtasks()}
@@ -1162,6 +1258,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
             <div className="pb-6">
               {!task.is_template && renderInfoRow()}
               {renderDescription()}
+              {renderDecisions()}
               {renderProgress()}
               {renderSubtasks()}
             </div>
