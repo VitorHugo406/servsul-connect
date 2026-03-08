@@ -61,7 +61,18 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
 const Index = () => {
   const [activeSection, setActiveSection] = useState('home');
   const [globalSearch, setGlobalSearch] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
   
+  const joinToken = searchParams.get('join');
+  
+  const handleCloseJoinDialog = () => {
+    searchParams.delete('join');
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const handleNavigateToTasks = () => {
+    setActiveSection('tasks');
+  };
   const isMobile = useIsMobile();
   const [isReady, setIsReady] = useState(false);
   const { profile } = useAuth();
