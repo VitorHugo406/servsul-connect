@@ -35,7 +35,7 @@ import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { BirthdayCelebrationModal } from '@/components/birthday/BirthdayCelebrationModal';
 import { ImportantAnnouncementModal } from '@/components/announcements/ImportantAnnouncementModal';
-
+import { BoardJoinDialog } from '@/components/tasks/BoardJoinDialog';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
