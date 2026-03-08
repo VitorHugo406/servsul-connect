@@ -1495,11 +1495,17 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
                             {/* Title with hover completion dot */}
                             <div className="flex items-start gap-0 group-hover/card:gap-1.5 transition-all duration-200 mb-1.5">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleQuickComplete(task); }}
-                                className="w-0 h-4 mt-0.5 group-hover/card:w-4 min-w-0 group-hover/card:min-w-[16px] opacity-0 group-hover/card:opacity-100 transition-all duration-200 rounded-full border-2 border-muted-foreground/30 flex-shrink-0 hover:!border-green-500 hover:!bg-green-500/20"
-                                title="Marcar como concluída"
-                              />
+                              {isTaskCompleted ? (
+                                <div className="w-4 h-4 mt-0.5 min-w-[16px] rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 opacity-0 group-hover/card:opacity-100 transition-all duration-200">
+                                  <CheckCircle2 className="h-3 w-3 text-white" />
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleQuickComplete(task); }}
+                                  className="w-0 h-4 mt-0.5 group-hover/card:w-4 min-w-0 group-hover/card:min-w-[16px] opacity-0 group-hover/card:opacity-100 transition-all duration-200 rounded-full border-2 border-muted-foreground/30 flex-shrink-0 hover:!border-green-500 hover:!bg-green-500/20"
+                                  title="Marcar como concluída"
+                                />
+                              )}
                               <h4 className="font-normal text-sm text-foreground leading-snug">{task.title}</h4>
                             </div>
 
