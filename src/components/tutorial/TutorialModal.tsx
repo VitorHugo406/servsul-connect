@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, X, Rocket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import mascotImg from '@/assets/mascot-robot.png';
+import { Robot3D } from './Robot3D';
 
 interface TutorialModalProps {
   isOpen: boolean;
