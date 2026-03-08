@@ -1200,13 +1200,13 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
       )}
       {/* Duplicar Card com seleção de coluna */}
       {columns && onDuplicateTemplate && !task.is_template && (
-        <Popover>
+        <Popover modal={true}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="gap-2 rounded-md">
               <Copy className="h-4 w-4" /> Duplicar Card
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-48 p-1" align="start">
+          <PopoverContent className="w-48 p-1 z-[9999]" align="start" side="top">
             <p className="text-xs font-semibold text-muted-foreground px-3 py-1.5">Duplicar para:</p>
             {columns.map(c => (
               <button
