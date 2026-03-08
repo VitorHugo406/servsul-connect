@@ -185,7 +185,10 @@ const Index = () => {
           {renderSection()}
         </main>
 
-        <MobileNavigation activeSection={activeSection} onSectionChange={setActiveSection} />
+        <MobileNavigation activeSection={activeSection} onSectionChange={handleSectionChange} />
+        
+        {/* Tutorial Modal */}
+        <TutorialModal isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
         
         {/* PWA Install Prompt */}
         <InstallPrompt />
