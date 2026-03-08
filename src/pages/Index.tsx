@@ -27,6 +27,7 @@ import { LogsSection } from '@/components/sections/LogsSection';
 import { StorageMonitoringSection } from '@/components/sections/StorageMonitoringSection';
 import { EventHistorySection } from '@/components/sections/EventHistorySection';
 import { CalendarSection } from '@/components/sections/CalendarSection';
+import { DocumentationSection } from '@/components/sections/DocumentationSection';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
