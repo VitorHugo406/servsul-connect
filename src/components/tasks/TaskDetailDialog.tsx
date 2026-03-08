@@ -256,6 +256,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
   const [showActivity, setShowActivity] = useState(true);
   const [reminderValue, setReminderValue] = useState<string>('none');
   const [editingDescription, setEditingDescription] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleValue, setTitleValue] = useState('');
   const [labelSearch, setLabelSearch] = useState('');
   const [colorblindMode, setColorblindMode] = useState(false);
   const [creatingLabel, setCreatingLabel] = useState(false);
