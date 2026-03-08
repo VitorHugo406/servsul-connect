@@ -65,7 +65,7 @@ export function useWarRooms() {
     profile?.autonomy_level === 'gerente' || 
     profile?.autonomy_level === 'gestor' || 
     profile?.autonomy_level === 'diretoria' || 
-    canAccess('can_access_management');
+    canAccess('can_create_war_room');
 
   const fetchWarRooms = useCallback(async () => {
     const { data, error } = await supabase
