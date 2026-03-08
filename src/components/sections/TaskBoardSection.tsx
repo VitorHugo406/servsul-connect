@@ -2586,7 +2586,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       </Sheet>
 
       {/* Report Dialog */}
-      <ReportDialog open={showReport} onOpenChange={setShowReport} tasks={tasks} columns={columns} boardName={board.name} />
+      <ReportDialog open={showReport} onOpenChange={setShowReport} tasks={tasks.filter(t => !t.is_template)} columns={columns} boardName={board.name} />
 
       {/* Automation Rules Panel */}
       <AutomationRulesPanel
