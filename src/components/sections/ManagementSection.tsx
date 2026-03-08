@@ -803,6 +803,16 @@ export function ManagementSection() {
                                 }
                               />
                             </TableCell>
+                            <TableCell className="text-center">
+                              <Switch
+                                checked={isUserAdmin || userPerm.can_create_war_room || false}
+                                disabled={isUserAdmin}
+                                onCheckedChange={(checked) => 
+                                  updatePermission(user.user_id, 'can_create_war_room', checked)
+                                }
+                              />
+                            </TableCell>
+                            </TableCell>
                           </TableRow>
                         );
                       })}
