@@ -626,11 +626,19 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     setEditingTask(null);
   };
 
-  const openCreateTemplate = (columnId: string) => {
-    resetForm();
-    setIsCreatingTemplate(true);
-    setTargetColumn(columnId);
-    setShowCreateTask(true);
+  const openCreateTemplate = async (columnId: string) => {
+    const taskData: any = {
+      title: 'Escreva um Título...',
+      status: columnId,
+      priority: 'medium' as const,
+      is_template: true,
+    };
+    const result = await createTask(taskData);
+    if (result.error) { toast.error('Erro ao criar template'); return; }
+    if (result.data) {
+      setSelectedTask(result.data as any);
+      setShowTaskDetail(true);
+    }
   };
 
   const duplicateTemplateAsCard = async (template: BoardTask, targetColumnId: string) => {
