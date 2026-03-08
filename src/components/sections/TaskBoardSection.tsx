@@ -220,9 +220,11 @@ export function TaskBoardSection() {
 }
 
 // ============ Board View ============
-function BoardView({ board, onBack, onUpdateBoard, isOwner, currentUserId }: {
+function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwner, currentUserId }: {
   board: any;
+  boards: any[];
   onBack: () => void;
+  onSelectBoard: (id: string) => void;
   onUpdateBoard: (id: string, updates: any) => Promise<any>;
   isOwner: boolean;
   currentUserId: string;
