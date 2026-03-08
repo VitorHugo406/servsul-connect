@@ -1965,7 +1965,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               </div>
               )}
             </div>
-            {!isCreatingTemplate && (
+            {!isCreatingTemplate && !editingTask?.is_template && (
             <>
             <div className="space-y-2">
               <Label>Responsáveis adicionais</Label>
