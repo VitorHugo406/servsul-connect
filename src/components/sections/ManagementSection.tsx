@@ -85,6 +85,7 @@ interface UserPermission {
   can_delete_messages: boolean;
   can_access_management: boolean;
   can_access_password_change: boolean;
+  can_create_war_room: boolean;
 }
 
 interface UserRole {
