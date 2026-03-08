@@ -373,14 +373,155 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
     </div>
   );
 
+  const filteredLabels = (allLabels || []).filter(l =>
+    !labelSearch || l.name.toLowerCase().includes(labelSearch.toLowerCase())
+  );
+
+  const handleCreateNewLabel = async () => {
+    if (!newLabelName.trim() || !onCreateLabel) return;
+    await onCreateLabel(newLabelName.trim(), newLabelColor);
+    setNewLabelName('');
+    setCreatingLabel(false);
+  };
+
   const renderActionButtons = () => (
     <div className="px-4 py-2">
       <div className="flex flex-wrap gap-1.5">
-        {allLabels && allLabels.length > 0 && (
-          <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => setShowLabelPicker(!showLabelPicker)}>
-            <Tag className="h-3.5 w-3.5" /> Etiquetas
-          </Button>
-        )}
+        {/* Etiquetas Popover - Trello style */}
+        <Popover open={showLabelPicker} onOpenChange={(o) => { setShowLabelPicker(o); if (!o) { setCreatingLabel(false); setLabelSearch(''); } }}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs">
+              <Tag className="h-3.5 w-3.5" /> Etiquetas
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-0" align="start" sideOffset={8}>
+            {creatingLabel ? (
+              /* Create new label view */
+              <div className="p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setCreatingLabel(false)}>
+                    <ChevronDown className="h-3.5 w-3.5 rotate-90" />
+                  </Button>
+                  <h4 className="text-sm font-semibold">Criar uma nova etiqueta</h4>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setShowLabelPicker(false); setCreatingLabel(false); }}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                {/* Preview */}
+                <div
+                  className="h-10 rounded-md flex items-center px-3 relative overflow-hidden"
+                  style={{ backgroundColor: newLabelColor }}
+                >
+                  {colorblindMode && (
+                    <div className="absolute inset-0 opacity-60" style={{ backgroundImage: getPatternForColor(newLabelColor), backgroundSize: '8px 8px' }} />
+                  )}
+                  <span className="text-white text-sm font-medium relative z-10">{newLabelName || 'Pré-visualização'}</span>
+                </div>
+                <Input
+                  value={newLabelName}
+                  onChange={(e) => setNewLabelName(e.target.value)}
+                  placeholder="Nome da etiqueta"
+                  className="h-8 text-sm"
+                  onKeyDown={(e) => e.key === 'Enter' && handleCreateNewLabel()}
+                />
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Selecione uma cor</p>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {LABEL_COLORS.map(c => (
+                      <button
+                        key={c}
+                        onClick={() => setNewLabelColor(c)}
+                        className={cn(
+                          'h-7 rounded-md transition-all relative overflow-hidden',
+                          newLabelColor === c && 'ring-2 ring-foreground ring-offset-2 ring-offset-background'
+                        )}
+                        style={{ backgroundColor: c }}
+                      >
+                        {colorblindMode && (
+                          <div className="absolute inset-0 opacity-60" style={{ backgroundImage: getPatternForColor(c), backgroundSize: '8px 8px' }} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <Button size="sm" className="w-full" onClick={handleCreateNewLabel} disabled={!newLabelName.trim()}>
+                  Criar
+                </Button>
+              </div>
+            ) : (
+              /* Label list view */
+              <div className="p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold">Etiquetas</h4>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowLabelPicker(false)}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    value={labelSearch}
+                    onChange={(e) => setLabelSearch(e.target.value)}
+                    placeholder="Buscar etiquetas..."
+                    className="h-8 text-sm pl-8"
+                  />
+                </div>
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Etiquetas</div>
+                <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                  {filteredLabels.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-2">Nenhuma etiqueta encontrada</p>
+                  ) : filteredLabels.map(l => {
+                    const isAssigned = taskLabels?.some(tl => tl.id === l.id);
+                    return (
+                      <div key={l.id} className="flex items-center gap-1.5">
+                        <Checkbox
+                          checked={isAssigned}
+                          onCheckedChange={() => onToggleLabel?.(task.id, l.id)}
+                          className="h-4 w-4"
+                        />
+                        <button
+                          onClick={() => onToggleLabel?.(task.id, l.id)}
+                          className="flex-1 h-8 rounded-md flex items-center px-2.5 relative overflow-hidden transition-all hover:opacity-80"
+                          style={{ backgroundColor: l.color }}
+                        >
+                          {colorblindMode && (
+                            <div className="absolute inset-0 opacity-60" style={{ backgroundImage: getPatternForColor(l.color), backgroundSize: '8px 8px' }} />
+                          )}
+                          <span className="text-white text-xs font-medium relative z-10">{l.name}</span>
+                        </button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 flex-shrink-0"
+                          onClick={(e) => { e.stopPropagation(); /* could open edit in future */ }}
+                        >
+                          <Pencil className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={() => setCreatingLabel(true)}
+                >
+                  Criar uma nova etiqueta
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs text-muted-foreground"
+                  onClick={() => setColorblindMode(!colorblindMode)}
+                >
+                  {colorblindMode ? 'Desabilitar' : 'Habilitar'} o modo compatível para usuários com daltonismo
+                </Button>
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
+
         {!task.is_template && (
         <Popover>
           <PopoverTrigger asChild>
@@ -434,25 +575,6 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
           </Button>
         )}
       </div>
-      {/* Label picker */}
-      {showLabelPicker && allLabels && onToggleLabel && (
-        <div className="flex flex-wrap gap-1.5 pt-2">
-          {allLabels.map(l => {
-            const isAssigned = taskLabels?.some(tl => tl.id === l.id);
-            return (
-              <button
-                key={l.id}
-                onClick={() => onToggleLabel(task.id, l.id)}
-                className={cn(
-                  'px-2 py-0.5 rounded-full text-[10px] font-medium text-white border-2 transition-all',
-                  isAssigned ? 'border-foreground/50 ring-1 ring-foreground/20' : 'border-transparent opacity-60 hover:opacity-100'
-                )}
-                style={{ backgroundColor: l.color }}
-              >{l.name}</button>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 
