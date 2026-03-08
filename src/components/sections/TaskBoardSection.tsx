@@ -1029,7 +1029,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         <Button variant="ghost" size="icon" onClick={onBack} className={isDarkBg ? "text-white hover:bg-white/20" : ""}><ArrowLeft className="h-5 w-5" /></Button>
         <div className="flex-1 min-w-0">
           <h2 className={cn("font-semibold truncate", isDarkBg ? "text-white" : "text-foreground")}>{board.name}</h2>
-          <p className={cn("text-xs", isDarkBg ? "text-white/70" : "text-muted-foreground")}>{tasks.length} tarefas</p>
+          <p className={cn("text-xs", isDarkBg ? "text-white/70" : "text-muted-foreground")}>{tasks.filter(t => !t.is_template).length} tarefas</p>
         </div>
 
         {/* Member avatars - only on desktop */}
