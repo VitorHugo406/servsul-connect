@@ -38,7 +38,7 @@ export function PeopleManagementSection() {
   const { analytics, loading: analyticsLoading } = useTeamAnalytics(memberIds);
   const { alerts, unreadCount, markAsRead, dismissAlert } = useWorkloadAlerts(memberIds);
   const { scores: globalScores, monthlyHistory: globalScoreHistory, loading: globalScoresLoading } = useGlobalScores(memberIds);
-  const [showScorePanel, setShowScorePanel] = useState(false);
+  
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
