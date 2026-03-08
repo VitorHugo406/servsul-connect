@@ -541,6 +541,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     const result = await createTask(taskData);
     if (result.error) { toast.error('Erro ao criar tarefa'); return; }
     if (result.data) {
+      const colName = col?.title || 'coluna';
+      const userName = profile?.display_name || profile?.name || 'Usuário';
+      await logTaskActivity(result.data.id, profile?.id || '', userName, 'create', `${userName} criou este card na coluna "${colName}"`);
       setSelectedTask(result.data as any);
       setShowTaskDetail(true);
     }
