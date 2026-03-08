@@ -2782,6 +2782,16 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         onRefetch={refetchTasks}
       />
 
+      {/* Score Panel */}
+      <ScorePanel
+        open={showScore}
+        onClose={() => setShowScore(false)}
+        scores={boardScores}
+        monthlyHistory={boardScoreHistory}
+        loading={scoresLoading}
+        title={`Score - ${board.name}`}
+      />
+
       {/* Filter Panel */}
       <TaskFilterPanel
         open={showFilter}
