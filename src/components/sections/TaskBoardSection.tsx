@@ -479,17 +479,20 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const conclusionColumnIds = columns.filter(c => c.is_conclusion).map(c => c.id);
   const filteredTasks = applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels);
 
-  const getDueDateInfo = (dueDateStr: string | null) => {
+  const getDueDateInfo = (dueDateStr: string | null, isCompleted?: boolean) => {
     if (!dueDateStr) return null;
     const due = new Date(dueDateStr);
+    if (isCompleted) {
+      return { label: due.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), color: 'text-green-600 bg-green-500/10', icon: CheckCircle2 };
+    }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     due.setHours(0, 0, 0, 0);
     const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return { label: 'Atrasado', color: 'text-red-500 bg-red-500/10', icon: AlertTriangle };
-    if (diffDays === 0) return { label: 'Hoje', color: 'text-orange-500 bg-orange-500/10', icon: Clock4 };
-    if (diffDays <= 2) return { label: `${diffDays}d`, color: 'text-yellow-500 bg-yellow-500/10', icon: Clock };
-    return { label: `${diffDays}d`, color: 'text-muted-foreground bg-muted', icon: Calendar };
+    if (diffDays < 0) return { label: due.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), color: 'text-red-500 bg-red-500/10', icon: AlertTriangle };
+    if (diffDays === 0) return { label: due.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), color: 'text-orange-500 bg-orange-500/10', icon: Clock4 };
+    if (diffDays <= 2) return { label: due.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), color: 'text-yellow-500 bg-yellow-500/10', icon: Clock };
+    return { label: due.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), color: 'text-muted-foreground bg-muted', icon: Calendar };
   };
 
   const resetForm = () => {
