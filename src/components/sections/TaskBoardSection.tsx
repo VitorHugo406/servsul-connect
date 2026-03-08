@@ -2446,6 +2446,26 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 </button>
               </div>
             </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Coluna de Template</Label>
+                  <p className="text-xs text-muted-foreground">Todos os cards desta coluna serão marcados como template. Automações e duplicações existentes serão preservadas.</p>
+                </div>
+                <button
+                  onClick={() => setAutoTemplate(!autoTemplate)}
+                  className={cn(
+                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0',
+                    autoTemplate ? 'bg-primary' : 'bg-muted'
+                  )}
+                >
+                  <span className={cn(
+                    'inline-block h-4 w-4 rounded-full bg-white transition-transform',
+                    autoTemplate ? 'translate-x-6' : 'translate-x-1'
+                  )} />
+                </button>
+              </div>
+            </div>
             {/* Auto-subtasks section */}
             {showAutomation && (
               <AutoSubtasksConfig columnId={showAutomation.id} />
