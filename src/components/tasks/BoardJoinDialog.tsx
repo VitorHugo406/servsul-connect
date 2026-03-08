@@ -139,10 +139,10 @@ export function BoardJoinDialog({ token, onClose, onNavigateToTasks }: BoardJoin
     onNavigateToTasks();
   };
 
-  if (!token) return null;
+  if (!normalizedToken) return null;
 
   return (
-    <Dialog open={!!token} onOpenChange={() => onClose()}>
+    <Dialog open={!!normalizedToken} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
