@@ -95,7 +95,7 @@ interface UserRole {
 }
 
 export function ManagementSection() {
-  const { isAdmin, canAccess, profile } = useAuth();
+  const { isAdmin, canAccess, profile, refreshPermissions } = useAuth();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState<Profile[]>([]);
@@ -192,7 +192,7 @@ export function ManagementSection() {
   };
 
   const updatePermission = async (
-    userId: string, 
+    userId: string,
     permission: keyof Omit<UserPermission, 'id' | 'user_id' | 'created_at' | 'updated_at'>,
     value: boolean
   ) => {
@@ -208,7 +208,6 @@ export function ManagementSection() {
     });
 
     try {
-      // Map frontend permission names to backend format
       const permissionMap: Record<string, string> = {
         can_post_announcements: 'canPostAnnouncements',
         can_delete_messages: 'canDeleteMessages',
@@ -217,21 +216,14 @@ export function ManagementSection() {
         can_create_war_room: 'canCreateWarRoom',
       };
 
-      // Build the full permissions object
-      const currentPerm = permissions[userId] as Partial<UserPermission> || {};
-      const updatedPermissions = {
-        canPostAnnouncements: permission === 'can_post_announcements' ? value : (currentPerm.can_post_announcements ?? false),
-        canDeleteMessages: permission === 'can_delete_messages' ? value : (currentPerm.can_delete_messages ?? false),
-        canAccessManagement: permission === 'can_access_management' ? value : (currentPerm.can_access_management ?? false),
-        canAccessPasswordChange: permission === 'can_access_password_change' ? value : (currentPerm.can_access_password_change ?? false),
-        canCreateWarRoom: permission === 'can_create_war_room' ? value : (currentPerm.can_create_war_room ?? false),
-      };
+      const backendPermissionKey = permissionMap[permission];
 
-      // Call the edge function to update permissions
       const response = await supabase.functions.invoke('update-user-permissions', {
         body: {
           userId,
-          permissions: updatedPermissions,
+          permissions: {
+            [backendPermissionKey]: value,
+          },
         },
       });
 
@@ -242,7 +234,11 @@ export function ManagementSection() {
       if (response.data?.error) {
         throw new Error(response.data.error);
       }
-      
+
+      if (userId === profile?.user_id) {
+        await refreshPermissions();
+      }
+
       toast.success('Permissão salva com sucesso');
     } catch (error) {
       console.error('Error updating permission:', error);
