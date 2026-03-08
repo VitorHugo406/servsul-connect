@@ -940,6 +940,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         const autoUpdates: Record<string, any> = {};
         if (targetCol.auto_assign_to) autoUpdates.assigned_to = targetCol.auto_assign_to;
         if (targetCol.auto_cover) autoUpdates.cover_image = targetCol.auto_cover;
+        if ((targetCol as any).is_template_column) autoUpdates.is_template = true;
 
         if (targetCol.is_conclusion) {
           autoUpdates.completed_at = new Date().toISOString();
