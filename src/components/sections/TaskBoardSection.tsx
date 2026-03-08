@@ -1184,7 +1184,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 <div className="space-y-2">
                   {filteredTasks.filter(t => t.status === mobileSelectedColumn).sort((a, b) => a.position - b.position).map((task) => {
                     const cover = getCoverDisplay(task.cover_image);
-                    const dueInfo = getDueDateInfo(task.due_date);
+                    const isTaskCompleted = !!task.completed_at || conclusionColumnIds.includes(task.status);
+                    const dueInfo = getDueDateInfo(task.due_date, isTaskCompleted);
                     const taskLabelsForCard = getTaskLabels(task.id);
                     return (
                       <div key={task.id} className="bg-card rounded-lg border border-border p-3 relative"
