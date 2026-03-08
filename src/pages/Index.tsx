@@ -33,7 +33,7 @@ import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { BirthdayCelebrationModal } from '@/components/birthday/BirthdayCelebrationModal';
 import { ImportantAnnouncementModal } from '@/components/announcements/ImportantAnnouncementModal';
-import { TutorialModal } from '@/components/tutorial/TutorialModal';
+
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
@@ -58,7 +58,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
 const Index = () => {
   const [activeSection, setActiveSection] = useState('home');
   const [globalSearch, setGlobalSearch] = useState('');
-  const [showTutorial, setShowTutorial] = useState(false);
+  
   const isMobile = useIsMobile();
   const [isReady, setIsReady] = useState(false);
   const { profile } = useAuth();
@@ -80,15 +80,6 @@ const Index = () => {
     });
     return () => cancelAnimationFrame(timer);
   }, []);
-
-  // Handle section changes - intercept tutorial
-  const handleSectionChange = (section: string) => {
-    if (section === 'tutorial') {
-      setShowTutorial(true);
-      return;
-    }
-    setActiveSection(section);
-  };
 
   // Navigation handlers for notifications
   const handleNavigateToChat = () => {
@@ -185,10 +176,7 @@ const Index = () => {
           {renderSection()}
         </main>
 
-        <MobileNavigation activeSection={activeSection} onSectionChange={handleSectionChange} />
-        
-        {/* Tutorial Modal */}
-        <TutorialModal isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
+        <MobileNavigation activeSection={activeSection} onSectionChange={setActiveSection} />
         
         {/* PWA Install Prompt */}
         <InstallPrompt />
@@ -221,10 +209,10 @@ const Index = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <OfflineIndicator />
-      <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
+      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
       
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} />
+        <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={setActiveSection} />
         
         <main className="flex-1 overflow-auto">
           {renderSection()}
@@ -254,8 +242,6 @@ const Index = () => {
         />
       )}
       
-      {/* Tutorial Modal */}
-      <TutorialModal isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
     </div>
   );
 };
