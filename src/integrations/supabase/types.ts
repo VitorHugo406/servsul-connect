@@ -1731,6 +1731,7 @@ export type Database = {
         Row: {
           can_access_management: boolean
           can_access_password_change: boolean
+          can_create_war_room: boolean
           can_delete_messages: boolean
           can_post_announcements: boolean
           created_at: string
@@ -1741,6 +1742,7 @@ export type Database = {
         Insert: {
           can_access_management?: boolean
           can_access_password_change?: boolean
+          can_create_war_room?: boolean
           can_delete_messages?: boolean
           can_post_announcements?: boolean
           created_at?: string
@@ -1751,6 +1753,7 @@ export type Database = {
         Update: {
           can_access_management?: boolean
           can_access_password_change?: boolean
+          can_create_war_room?: boolean
           can_delete_messages?: boolean
           can_post_announcements?: boolean
           created_at?: string
