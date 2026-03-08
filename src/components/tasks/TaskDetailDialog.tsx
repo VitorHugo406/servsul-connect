@@ -1,9 +1,12 @@
 import { useState, useRef, useCallback } from 'react';
 import {
-  ArrowRight, Calendar, CheckCircle2, CheckSquare, ChevronDown, ChevronRight,
+  ArrowRight, Calendar as CalendarIcon, CheckCircle2, CheckSquare, ChevronDown, ChevronRight,
   Eye, EyeOff, Loader2, MessageSquare, Plus, Tag, Trash2, Users, X, Zap, Bell, Move, Copy, Layout,
   Bold, Italic, Strikethrough, List, Type, Minus
 } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
