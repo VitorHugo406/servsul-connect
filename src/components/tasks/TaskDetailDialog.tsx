@@ -173,6 +173,39 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
 
   // ===== Shared render sections =====
 
+  const renderTemplateBanner = () => task.is_template ? (
+    <div className="mx-4 mt-3 mb-1 rounded-lg bg-primary/5 border border-primary/20 p-3 flex items-center gap-3">
+      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+        <Layout className="h-5 w-5 text-primary" />
+      </div>
+      <div className="flex-1">
+        <p className="text-sm font-medium text-foreground">Este é um template de cartão.</p>
+        <p className="text-xs text-muted-foreground">Use-o como base para criar novos cartões.</p>
+      </div>
+      {columns && onDuplicateTemplate && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" className="gap-1.5 rounded-md text-xs bg-primary text-primary-foreground hover:bg-primary/90">
+              <Copy className="h-3.5 w-3.5" /> Criar cartão com base em template
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-1" align="end">
+            {columns.map(c => (
+              <button
+                key={c.id}
+                onClick={() => { onDuplicateTemplate(task, c.id); onOpenChange(false); }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted rounded-md transition-colors"
+              >
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                {c.title}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
+      )}
+    </div>
+  ) : null;
+
   const renderCover = () => (
     <>
       {cover.type === 'color' && <div className={cn('h-3 rounded-t-lg', cover.value)} />}
