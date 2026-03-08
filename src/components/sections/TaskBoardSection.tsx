@@ -1812,13 +1812,13 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                         {colTemplates.map(template => (
                           <div
                             key={template.id}
-                            className="mx-2 mb-1.5 rounded border border-dashed border-blue-400/50 cursor-pointer hover:shadow-md transition-all group/tpl relative bg-blue-600"
+                            className="mx-2 mb-1.5 rounded-lg border border-dashed border-muted-foreground/30 cursor-pointer hover:shadow-md transition-all group/tpl relative bg-muted"
                             onClick={() => { setSelectedTask(template); setShowTaskDetail(true); }}
                           >
                             <div className="px-2.5 py-2">
-                              <h4 className="font-normal text-sm text-white leading-snug">{template.title}</h4>
+                              <h4 className="font-normal text-sm text-foreground leading-snug">{template.title}</h4>
                               <div className="flex items-center gap-1 mt-1">
-                                <span className="bg-blue-500/60 text-white/90 text-[9px] px-1.5 py-0.5 rounded font-medium">Este cartão é um template.</span>
+                                <span className="bg-muted-foreground/20 text-muted-foreground text-[9px] px-1.5 py-0.5 rounded font-medium">Este cartão é um template.</span>
                               </div>
                             </div>
                             <div className="absolute top-1 right-1 opacity-0 group-hover/tpl:opacity-100 transition-opacity">
