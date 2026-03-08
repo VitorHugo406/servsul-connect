@@ -192,6 +192,7 @@ const Index = () => {
   if (isMobile) {
     return (
       <div className="flex flex-col h-screen overflow-hidden bg-background">
+        <WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} />
         <OfflineIndicator />
         <MobileHeader 
           title={currentSection.title} 
