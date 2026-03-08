@@ -1306,7 +1306,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     const dueInfo = getDueDateInfo(task.due_date, isTaskCompleted);
                     const taskLabelsForCard = getTaskLabels(task.id);
                     return (
-                      <div key={task.id} className="bg-card rounded-lg border border-border p-3 relative"
+                      <div key={task.id} className={cn("bg-card rounded-lg border border-border p-3 relative", task.is_emergency && "emergency-card")}
                         onClick={() => { setSelectedTask(task); setShowTaskDetail(true); }}
                       >
                         {cover.type === 'color' && <div className={cn('h-2 rounded-t-lg -mx-3 -mt-3 mb-2', cover.value)} />}
