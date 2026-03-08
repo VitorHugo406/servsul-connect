@@ -1175,6 +1175,7 @@ export type Database = {
           created_at: string
           id: string
           is_conclusion: boolean | null
+          is_template_column: boolean
           position: number
           title: string
         }
@@ -1186,6 +1187,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_conclusion?: boolean | null
+          is_template_column?: boolean
           position?: number
           title: string
         }
@@ -1197,6 +1199,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_conclusion?: boolean | null
+          is_template_column?: boolean
           position?: number
           title?: string
         }

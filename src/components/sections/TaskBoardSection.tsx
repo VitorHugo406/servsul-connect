@@ -427,6 +427,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [autoAssign, setAutoAssign] = useState('none');
   const [autoCover, setAutoCover] = useState('none');
   const [autoConclusion, setAutoConclusion] = useState(false);
+  const [autoTemplate, setAutoTemplate] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState('#6366f1');
   const [additionalAssignees, setAdditionalAssignees] = useState<string[]>([]);
@@ -600,7 +601,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       assigned_to: isCreatingTemplate ? undefined : (assignedTo !== 'none' ? assignedTo : undefined),
       due_date: isCreatingTemplate ? undefined : (dueDate ? new Date(dueDate).toISOString() : undefined),
       cover_image: finalCover,
-      is_template: isCreatingTemplate,
+      is_template: isCreatingTemplate || !!(columns.find(c => c.id === targetColumn) as any)?.is_template_column,
     };
 
     let result;
@@ -785,18 +786,32 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       auto_assign_to: autoAssign !== 'none' ? autoAssign : null,
       auto_cover: autoCover !== 'none' ? autoCover : null,
       is_conclusion: autoConclusion,
+      is_template_column: autoTemplate,
     };
     const { error } = await updateColumn(showAutomation.id, updates as any);
     if (error) { toast.error('Erro ao salvar automação'); return; }
+
+    // If template column is toggled, update all existing cards in this column
+    const colTasks = tasks.filter(t => t.status === showAutomation.id);
+    if (colTasks.length > 0) {
+      for (const t of colTasks) {
+        if (t.is_template !== autoTemplate) {
+          await updateTask(t.id, { is_template: autoTemplate } as any);
+        }
+      }
+    }
+
     toast.success('Automação salva!');
     setShowAutomation(null);
     refetchColumns();
+    refetchTasks();
   };
 
   const openAutomation = (col: TaskBoardColumn) => {
     setAutoAssign(col.auto_assign_to || 'none');
     setAutoCover(col.auto_cover || 'none');
     setAutoConclusion(col.is_conclusion || false);
+    setAutoTemplate((col as any).is_template_column || false);
     setShowAutomation(col);
   };
 
@@ -925,6 +940,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         const autoUpdates: Record<string, any> = {};
         if (targetCol.auto_assign_to) autoUpdates.assigned_to = targetCol.auto_assign_to;
         if (targetCol.auto_cover) autoUpdates.cover_image = targetCol.auto_cover;
+        if ((targetCol as any).is_template_column) autoUpdates.is_template = true;
 
         if (targetCol.is_conclusion) {
           autoUpdates.completed_at = new Date().toISOString();
@@ -1528,6 +1544,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     {column.is_conclusion && (
                       <Badge variant="outline" className="text-[9px] border-green-500 text-green-600">✓ Conclusão</Badge>
                     )}
+                    {(column as any).is_template_column && (
+                      <Badge variant="outline" className="text-[9px] border-amber-500 text-amber-600">🔧 Template</Badge>
+                    )}
                     <Badge variant="secondary" className="text-xs">{colTasks.length}</Badge>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -1736,6 +1755,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                                     const autoUpdates: Record<string, any> = {};
                                     if (c.auto_assign_to) autoUpdates.assigned_to = c.auto_assign_to;
                                     if (c.auto_cover) autoUpdates.cover_image = c.auto_cover;
+                                    if ((c as any).is_template_column) autoUpdates.is_template = true;
                                     if (c.is_conclusion) {
                                       autoUpdates.completed_at = new Date().toISOString();
                                       if (task.due_date) {
@@ -2427,6 +2447,26 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   <span className={cn(
                     'inline-block h-4 w-4 rounded-full bg-white transition-transform',
                     autoConclusion ? 'translate-x-6' : 'translate-x-1'
+                  )} />
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Coluna de Template</Label>
+                  <p className="text-xs text-muted-foreground">Todos os cards desta coluna serão marcados como template. Automações e duplicações existentes serão preservadas.</p>
+                </div>
+                <button
+                  onClick={() => setAutoTemplate(!autoTemplate)}
+                  className={cn(
+                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0',
+                    autoTemplate ? 'bg-primary' : 'bg-muted'
+                  )}
+                >
+                  <span className={cn(
+                    'inline-block h-4 w-4 rounded-full bg-white transition-transform',
+                    autoTemplate ? 'translate-x-6' : 'translate-x-1'
                   )} />
                 </button>
               </div>
