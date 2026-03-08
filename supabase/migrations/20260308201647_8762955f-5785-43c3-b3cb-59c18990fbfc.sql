@@ -1,0 +1,1 @@
+ALTER TABLE public.task_board_columns ADD COLUMN is_template_column boolean NOT NULL DEFAULT false;
