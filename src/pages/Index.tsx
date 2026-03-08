@@ -37,6 +37,8 @@ import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { BirthdayCelebrationModal } from '@/components/birthday/BirthdayCelebrationModal';
 import { ImportantAnnouncementModal } from '@/components/announcements/ImportantAnnouncementModal';
 import { BoardJoinDialog } from '@/components/tasks/BoardJoinDialog';
+import { useWarRoomAlarm } from '@/hooks/useWarRoomAlarm';
+import { WarRoomAlarmOverlay } from '@/components/warroom/WarRoomAlarmOverlay';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
