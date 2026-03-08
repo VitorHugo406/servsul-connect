@@ -1454,6 +1454,7 @@ export type Database = {
           due_date: string | null
           id: string
           is_archived: boolean
+          is_emergency: boolean
           is_template: boolean
           position: number
           priority: string
@@ -1477,6 +1478,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           is_archived?: boolean
+          is_emergency?: boolean
           is_template?: boolean
           position?: number
           priority?: string
@@ -1500,6 +1502,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           is_archived?: boolean
+          is_emergency?: boolean
           is_template?: boolean
           position?: number
           priority?: string

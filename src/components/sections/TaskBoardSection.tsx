@@ -8,7 +8,8 @@ import {
   Clock4, Clock, Users, Settings, ArrowLeft, MoveRight,
   PlusCircle, FileDown, Zap, Upload, Tag, Copy, Repeat,
   Archive, ArchiveRestore, Pencil, Activity, Menu, Shield,
-  Filter, Share2, UserPlus, Link2, Shuffle, Bell
+  Filter, Share2, UserPlus, Link2, Shuffle, Bell,
+  Siren
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -709,6 +710,12 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     toast.success('Card arquivado');
   };
 
+  const handleToggleEmergency = async (taskId: string, currentState: boolean) => {
+    const { error } = await updateTask(taskId, { is_emergency: !currentState } as any);
+    if (error) { toast.error('Erro ao alterar modo emergente'); return; }
+    toast.success(!currentState ? '🚨 Modo Emergente ativado!' : 'Modo Emergente desativado');
+  };
+
   const handleMakeTemplate = async (taskId: string) => {
     if (!confirm('Tornar este card um template?')) return;
     const { error } = await updateTask(taskId, { is_template: true } as any);
@@ -1299,7 +1306,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     const dueInfo = getDueDateInfo(task.due_date, isTaskCompleted);
                     const taskLabelsForCard = getTaskLabels(task.id);
                     return (
-                      <div key={task.id} className="bg-card rounded-lg border border-border p-3 relative"
+                      <div key={task.id} className={cn("bg-card rounded-lg border border-border p-3 relative", task.is_emergency && "emergency-card")}
                         onClick={() => { setSelectedTask(task); setShowTaskDetail(true); }}
                       >
                         {cover.type === 'color' && <div className={cn('h-2 rounded-t-lg -mx-3 -mt-3 mb-2', cover.value)} />}
@@ -1386,8 +1393,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                               }}>
                                 <Repeat className="h-4 w-4 mr-2" /> Auto-duplicar
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleEmergency(task.id, task.is_emergency); }}>
+                                <Siren className="h-4 w-4 mr-2" /> {task.is_emergency ? 'Desativar Emergente' : 'Ativar Modo Emergente'}
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>Mover para:</DropdownMenuItem>
                               {columns.filter(c => c.id !== mobileSelectedColumn).map(c => (
                                 <DropdownMenuItem key={c.id} onClick={async (e) => {
                                   e.stopPropagation();
@@ -1607,7 +1616,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                           className={cn(
                             'bg-card rounded-lg shadow-sm border border-border cursor-pointer hover:shadow-md transition-all group/card relative',
                             draggedTask?.id === task.id && 'opacity-50 scale-95',
-                            dragOverColumn === column.id && dragOverPosition === index && 'ring-2 ring-primary'
+                            dragOverColumn === column.id && dragOverPosition === index && 'ring-2 ring-primary',
+                            task.is_emergency && 'emergency-card'
                           )}
                         >
                           {/* Cover */}
@@ -1745,6 +1755,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMakeTemplate(task.id); }}>
                                   <Copy className="h-4 w-4 mr-2" /> Tornar Template
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleEmergency(task.id, task.is_emergency); }}>
+                                  <Siren className="h-4 w-4 mr-2" /> {task.is_emergency ? 'Desativar Emergente' : 'Ativar Modo Emergente'}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>

@@ -228,4 +228,30 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Emergency Mode - Marching border animation */
+  @keyframes emergency-border-march {
+    0% { background-position: 0 0, 100% 0, 100% 100%, 0 100%; }
+    100% { background-position: 200px 0, calc(100% - 200px) 0, calc(100% - 200px) 100%, 200px 100%; }
+  }
+
+  .emergency-card {
+    position: relative;
+    background:
+      linear-gradient(90deg, hsl(0 80% 55%) 50%, transparent 50%) top / 12px 3px repeat-x,
+      linear-gradient(90deg, transparent 50%, hsl(0 80% 55%) 50%) bottom / 12px 3px repeat-x,
+      linear-gradient(0deg, hsl(0 80% 55%) 50%, transparent 50%) left / 3px 12px repeat-y,
+      linear-gradient(0deg, transparent 50%, hsl(0 80% 55%) 50%) right / 3px 12px repeat-y;
+    animation: emergency-border-march 1.5s linear infinite;
+    box-shadow: 0 0 12px hsl(0 80% 55% / 0.35), inset 0 0 8px hsl(0 80% 55% / 0.08);
+  }
+
+  @keyframes emergency-pulse-glow {
+    0%, 100% { box-shadow: 0 0 12px hsl(0 80% 55% / 0.35), inset 0 0 8px hsl(0 80% 55% / 0.08); }
+    50% { box-shadow: 0 0 20px hsl(0 80% 55% / 0.55), inset 0 0 12px hsl(0 80% 55% / 0.15); }
+  }
+
+  .emergency-card {
+    animation: emergency-border-march 1.5s linear infinite, emergency-pulse-glow 2s ease-in-out infinite;
+  }
 }
