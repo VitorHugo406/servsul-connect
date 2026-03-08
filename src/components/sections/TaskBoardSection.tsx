@@ -1144,11 +1144,27 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   return new Date(t.due_date).toDateString() === new Date().toDateString();
                 }).sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
                 return todayTasks.length === 0 ? (
-                  <div className="flex flex-col items-center py-8 text-center">
-                    <div className="mb-3 rounded-full bg-background p-3">
-                      <Calendar className="h-6 w-6 text-muted-foreground" />
+                  <div className="flex flex-col items-center py-6 text-center px-4">
+                    <img src={plannerEmptyIllustration} alt="Planejador" className="w-36 h-auto mb-4 opacity-80 rounded-lg" />
+                    <h4 className="text-sm font-semibold text-foreground mb-2">📋 Seu Planejador Diário</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+                      Aqui você visualiza todas as tarefas programadas para o dia de hoje, organizadas por horário.
+                    </p>
+                    <div className="space-y-1.5 text-left w-full">
+                      <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <Clock4 className="h-3.5 w-3.5 mt-0.5 text-orange-400 flex-shrink-0" />
+                        <span>Defina <strong className="text-foreground">datas de entrega</strong> nos cards para que apareçam aqui</span>
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <ListTodo className="h-3.5 w-3.5 mt-0.5 text-primary flex-shrink-0" />
+                        <span>Veja suas tarefas do dia em <strong className="text-foreground">uma única visão</strong></span>
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <Activity className="h-3.5 w-3.5 mt-0.5 text-green-500 flex-shrink-0" />
+                        <span>Clique em qualquer card para abrir os <strong className="text-foreground">detalhes</strong></span>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">Nenhuma tarefa para hoje</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-4">Nenhuma tarefa agendada para hoje</p>
                   </div>
                 ) : todayTasks.map(t => {
                   const col = columns.find(c => c.id === t.status);
