@@ -1904,6 +1904,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   </SelectContent>
                 </Select>
               </div>
+              {!isCreatingTemplate && (
               <div className="space-y-2">
                 <Label>Responsável</Label>
                 <Select value={assignedTo} onValueChange={setAssignedTo}>
@@ -1918,7 +1919,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   </SelectContent>
                 </Select>
               </div>
+              )}
             </div>
+            {!isCreatingTemplate && (
+            <>
             <div className="space-y-2">
               <Label>Responsáveis adicionais</Label>
               <ScrollArea className="border border-border rounded-lg max-h-[120px]">
@@ -1958,6 +1962,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 }} />
               </div>
             </div>
+            </>
+            )}
             <div className="space-y-2">
               <Label>Capa do Card</Label>
               <div className="flex flex-wrap gap-2">
