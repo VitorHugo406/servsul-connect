@@ -698,8 +698,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   };
 
   const handleMakeTemplate = async (taskId: string) => {
-    if (!confirm('Tornar este card um template? Ele perderá responsável e data de entrega.')) return;
-    const { error } = await updateTask(taskId, { is_template: true, assigned_to: null, due_date: null } as any);
+    if (!confirm('Tornar este card um template?')) return;
+    const { error } = await updateTask(taskId, { is_template: true } as any);
     if (error) { toast.error('Erro ao converter'); return; }
     toast.success('Card convertido em template!');
   };
