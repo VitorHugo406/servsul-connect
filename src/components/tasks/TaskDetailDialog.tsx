@@ -243,6 +243,11 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
   const [showActivity, setShowActivity] = useState(true);
   const [reminderValue, setReminderValue] = useState<string>('none');
   const [editingDescription, setEditingDescription] = useState(false);
+  const [labelSearch, setLabelSearch] = useState('');
+  const [colorblindMode, setColorblindMode] = useState(false);
+  const [creatingLabel, setCreatingLabel] = useState(false);
+  const [newLabelName, setNewLabelName] = useState('');
+  const [newLabelColor, setNewLabelColor] = useState('#22c55e');
 
   if (!task) return null;
 
