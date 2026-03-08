@@ -44,7 +44,6 @@ const menuItems = [
   { id: 'calendar', icon: CalendarDays, label: 'Calendário' },
   { id: 'system-logs', icon: FileText, label: 'Logs do Sistema', mainAdminOnly: true },
   { id: 'event-history', icon: Sparkles, label: 'Eventos Mensais', adminOnly: true },
-  { id: 'tutorial', icon: GraduationCap, label: 'Tutorial', mainAdminOnly: true },
   { id: 'storage', icon: HardDrive, label: 'Armazenamento', mainAdminOnly: true },
 ];
 
