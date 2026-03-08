@@ -1189,6 +1189,29 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
           <Copy className="h-4 w-4" /> Tornar Template
         </Button>
       )}
+      {/* Duplicar Card com seleção de coluna */}
+      {columns && onDuplicateTemplate && !task.is_template && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="gap-2 rounded-md">
+              <Copy className="h-4 w-4" /> Duplicar Card
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-1" align="start">
+            <p className="text-xs font-semibold text-muted-foreground px-3 py-1.5">Duplicar para:</p>
+            {columns.map(c => (
+              <button
+                key={c.id}
+                onClick={() => { onDuplicateTemplate(task, c.id); onOpenChange(false); toast.success('Card duplicado!'); }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted rounded-md transition-colors"
+              >
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                {c.title}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
+      )}
       <div className="flex-1" />
       <Button variant="outline" className="rounded-md" onClick={() => onOpenChange(false)}>Fechar</Button>
     </DialogFooter>
