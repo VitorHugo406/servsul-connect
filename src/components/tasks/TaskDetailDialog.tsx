@@ -73,7 +73,7 @@ function RichDescription({ text }: { text: string }) {
   };
 
   return (
-    <div className="text-foreground text-sm leading-relaxed space-y-1">
+    <div className="text-foreground text-sm leading-relaxed space-y-1.5">
       {text.split('\n').map((line, idx) => processLine(line, idx))}
     </div>
   );
