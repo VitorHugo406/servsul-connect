@@ -1438,7 +1438,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     </DropdownMenu>
                   </div>
 
-                  <div className="p-2 space-y-2 min-h-[60px] flex-1 overflow-y-auto max-h-[calc(100vh-220px)] task-col-scroll">
+                  <div className="p-2 space-y-2 min-h-[60px] flex-1 overflow-y-auto max-h-[calc(100vh-300px)] task-col-scroll">
                     {colTasks.map((task, index) => {
                       const cover = getCoverDisplay(task.cover_image);
                       const dueInfo = getDueDateInfo(task.due_date);
@@ -1498,53 +1498,33 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                               <h4 className="font-normal text-sm text-foreground leading-snug">{task.title}</h4>
                             </div>
 
-                            {/* Bottom row: badges */}
+                            {/* Bottom row: badges + avatar */}
                             <div className="flex items-center gap-1 flex-wrap">
-                              {/* Conclusion column: green date with check */}
-                              {column.is_conclusion && task.completed_at ? (
-                                <div className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium bg-green-500/20 text-green-600">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  {task.due_date ? new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : new Date(task.completed_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                                </div>
-                              ) : dueInfo && (() => {
-                                const DI = dueInfo.icon;
-                                return (
-                                  <div className={cn('flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium', dueInfo.color)}>
-                                    <DI className="h-3 w-3" />
-                                    {task.due_date && new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                                    {task.due_date && (() => { const d = new Date(task.due_date); return d.getHours() !== 0 || d.getMinutes() !== 0 ? ` ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''; })()}
-                                  </div>
-                                );
-                              })()}
-                              {task.description && (
-                                <div className="text-muted-foreground" title="Descrição">
-                                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h10M4 18h14"/></svg>
-                                </div>
+                              <span className="text-[10px] text-muted-foreground font-medium">#{task.task_number}</span>
+                              {dueInfo && (
+                                <span className={cn('inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium', dueInfo.color)}>
+                                  <dueInfo.icon className="h-2.5 w-2.5" />
+                                  {dueInfo.label}
+                                </span>
                               )}
-                              {subtaskCounts[task.id] && subtaskCounts[task.id].total > 0 && (
-                                <div className={cn(
-                                  "flex items-center gap-0.5 text-[10px] px-1 py-0.5 rounded",
-                                  subtaskCounts[task.id].completed === subtaskCounts[task.id].total 
-                                    ? "bg-green-500/10 text-green-600" 
-                                    : "text-muted-foreground"
-                                )}>
-                                  <CheckSquare className="h-3 w-3" />
-                                  <span>{subtaskCounts[task.id].completed}/{subtaskCounts[task.id].total}</span>
-                                </div>
-                              )}
-                              {/* Spacer + assignee avatars on right */}
+                              {(() => { const sc = subtaskCounts[task.id]; return sc && sc.total > 0 ? (
+                                <span className={cn('inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium', sc.completed === sc.total ? 'text-green-600 bg-green-500/10' : 'text-muted-foreground bg-muted')}>
+                                  <CheckCircle2 className="h-2.5 w-2.5" /> {sc.completed}/{sc.total}
+                                </span>
+                              ) : null; })()}
                               <div className="flex-1" />
-                              {/* Additional assignees */}
+                              {/* Additional Assignees */}
                               {(() => {
                                 const extraAssignees = getTaskAssignees(task.id);
-                                return extraAssignees.length > 0 && (
-                                  <div className="flex -space-x-1.5">
+                                if (extraAssignees.length === 0) return null;
+                                return (
+                                  <div className="flex -space-x-1">
                                     {extraAssignees.slice(0, 2).map(a => (
                                       <Tooltip key={a.id}>
                                         <TooltipTrigger asChild>
                                           <Avatar className="h-5 w-5 ring-1 ring-background">
                                             <AvatarImage src={a.profile?.avatar_url || ''} />
-                                            <AvatarFallback className="text-[7px] bg-muted text-muted-foreground">
+                                            <AvatarFallback className="text-[7px] bg-primary/80 text-primary-foreground">
                                               {getInitials(a.profile?.display_name || a.profile?.name || 'U')}
                                             </AvatarFallback>
                                           </Avatar>
@@ -1657,7 +1637,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     {colTasks.length === 0 && (
                       <div className="text-center py-6 text-muted-foreground text-xs">Nenhuma tarefa</div>
                     )}
-                    <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1" onClick={() => openCreateTask(column.id)}>
+                  </div>
+                  {/* Fixed add button at bottom of column */}
+                  <div className="p-2 pt-0 border-t border-border">
+                    <Button variant="ghost" size="sm" className="w-full text-xs gap-1" onClick={() => openCreateTask(column.id)}>
                       <Plus className="h-3 w-3" /> Adicionar
                     </Button>
                   </div>
