@@ -1108,14 +1108,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             animate={{ width: showBoard ? 300 : '100%', opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="overflow-hidden flex-shrink-0 p-2"
+            className="overflow-hidden flex-shrink-0"
           >
             <div className={cn(
-              "h-full overflow-y-auto rounded-xl p-4 space-y-3",
-              "bg-muted/80 dark:bg-muted/40 border border-border"
+              "h-full overflow-y-auto p-4 space-y-3 border-r border-border",
+              "bg-sidebar text-sidebar-foreground"
             )}>
-              <h3 className="font-display font-semibold text-sm text-foreground">
-                📋 Planejador
+              <h3 className="font-display font-semibold text-sm">
+                Planejador
               </h3>
               <p className="text-xs text-muted-foreground">
                 {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
