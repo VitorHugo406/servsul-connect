@@ -1384,6 +1384,44 @@ export type Database = {
           },
         ]
       }
+      task_decisions: {
+        Row: {
+          created_at: string
+          created_by: string
+          decision_date: string
+          decision_text: string
+          id: string
+          responsible_name: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          decision_date: string
+          decision_text: string
+          id?: string
+          responsible_name: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          decision_date?: string
+          decision_text?: string
+          id?: string
+          responsible_name?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_decisions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_label_assignments: {
         Row: {
           created_at: string
