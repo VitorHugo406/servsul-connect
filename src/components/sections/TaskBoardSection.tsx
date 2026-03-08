@@ -1348,8 +1348,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(task); }}>
-                                <Edit className="h-4 w-4 mr-2" /> Editar
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedTask(task); setShowTaskDetail(true); }}>
+                                <Edit className="h-4 w-4 mr-2" /> Abrir
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchiveTask(task.id); }}>
                                 <Archive className="h-4 w-4 mr-2" /> Arquivar
