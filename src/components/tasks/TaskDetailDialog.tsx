@@ -266,6 +266,12 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
   const [creatingLabel, setCreatingLabel] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState('#22c55e');
+  const [showDecisions, setShowDecisions] = useState(false);
+  const [newDecisionText, setNewDecisionText] = useState('');
+  const [newDecisionResponsible, setNewDecisionResponsible] = useState('');
+  const [newDecisionDate, setNewDecisionDate] = useState('');
+
+  const { decisions, addDecision, deleteDecision, loading: decisionsLoading } = useTaskDecisions(task?.id || null);
 
   if (!task) return null;
 
