@@ -2379,9 +2379,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
           {/* Tab buttons */}
           <div className="flex gap-1 border-b border-border pb-0">
             {[
-              { id: 'appearance', label: 'Capa e Responsável', icon: '🎨' },
-              { id: 'config', label: 'Configuração', icon: '⚙️' },
-              { id: 'subtasks', label: 'Subtarefas', icon: '☑️' },
+              { id: 'appearance', label: 'Capa e Responsável' },
+              { id: 'config', label: 'Configuração' },
+              { id: 'subtasks', label: 'Subtarefas' },
             ].map(tab => (
               <button
                 key={tab.id}
