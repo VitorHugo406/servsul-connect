@@ -527,34 +527,22 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     setAdditionalAssignees([]); setIsCreatingTemplate(false);
   };
 
-  const openCreateTask = (columnId: string) => {
+  const openCreateTask = async (columnId: string) => {
     const col = columns.find(c => c.id === columnId);
-    setTitle(''); setDescription(''); setPriority('medium');
-    setDueDate('');
-    setEditingTask(null);
-    setTargetColumn(columnId);
-    
-    // Apply column automations
-    if (col?.auto_assign_to) {
-      setAssignedTo(col.auto_assign_to);
-    } else {
-      setAssignedTo('none');
+    const taskData: any = {
+      title: 'Escreva um Título...',
+      status: columnId,
+      priority: 'medium' as const,
+      assigned_to: col?.auto_assign_to || undefined,
+      cover_image: col?.auto_cover || undefined,
+      is_template: !!(col as any)?.is_template_column,
+    };
+    const result = await createTask(taskData);
+    if (result.error) { toast.error('Erro ao criar tarefa'); return; }
+    if (result.data) {
+      setSelectedTask(result.data as any);
+      setShowTaskDetail(true);
     }
-    if (col?.auto_cover) {
-      // Check if auto_cover is an image URL
-      if (col.auto_cover.startsWith('http')) {
-        setCoverImage('custom');
-        setCoverImageUrl(col.auto_cover);
-      } else {
-        setCoverImage(col.auto_cover);
-        setCoverImageUrl('');
-      }
-    } else {
-      setCoverImage('none');
-      setCoverImageUrl('');
-    }
-    
-    setShowCreateTask(true);
   };
 
   const openEditTask = (task: BoardTask) => {
