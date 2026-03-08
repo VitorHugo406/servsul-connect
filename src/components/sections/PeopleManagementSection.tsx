@@ -33,7 +33,7 @@ const CHART_COLORS = [
 ];
 
 export function PeopleManagementSection() {
-  const { profile } = useAuth();
+  const isMobile = useIsMobile();
   const { members, loading, addMember, removeMember } = useSupervisorTeam();
   const memberIds = members.map(m => m.member_profile_id);
   const { analytics, loading: analyticsLoading } = useTeamAnalytics(memberIds);
