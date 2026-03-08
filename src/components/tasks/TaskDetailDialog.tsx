@@ -234,7 +234,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
           <Badge key={l.id} className="text-white text-[10px]" style={{ backgroundColor: l.color }}>{l.name}</Badge>
         ))}
       </div>
-      <h2 className="text-lg font-semibold text-foreground">{task.title}</h2>
+      <h2 className="text-xl font-bold text-foreground">{task.title}</h2>
     </div>
   );
 
