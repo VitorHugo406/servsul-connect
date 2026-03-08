@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, X, Rocket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import mascotImg from '@/assets/mascot-robot.png';
+import { Robot3D } from './Robot3D';
 
 interface TutorialModalProps {
   isOpen: boolean;
@@ -86,20 +86,7 @@ const steps = [
   },
 ];
 
-const mascotVariants = {
-  wave: {
-    rotate: [0, -10, 10, -10, 0],
-    transition: { duration: 1.2, repeat: Infinity, repeatDelay: 2 },
-  },
-  point: {
-    x: [0, 10, 10, 0],
-    transition: { duration: 0.8, repeat: Infinity, repeatDelay: 3 },
-  },
-  thumbsup: {
-    scale: [1, 1.1, 1],
-    transition: { duration: 0.6, repeat: Infinity, repeatDelay: 2 },
-  },
-};
+// Removed 2D mascot variants - using 3D robot now
 
 export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
   const [currentStep, setCurrentStep] = useState(0);
@@ -172,22 +159,15 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
 
             {/* Content area */}
             <div className="flex flex-col md:flex-row gap-6 p-6 min-h-[340px]">
-              {/* Mascot */}
-              <div className="flex flex-col items-center justify-center md:w-1/3 shrink-0">
-                <motion.div
-                  key={currentStep}
-                  animate={mascotVariants[step.mascotAction as keyof typeof mascotVariants]}
-                  className="relative"
-                >
-                  <motion.img
-                    src={mascotImg}
-                    alt="Mascote ServChat"
-                    className="w-32 h-32 md:w-44 md:h-44 object-contain drop-shadow-lg"
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.15, duration: 0.4 }}
-                  />
-                </motion.div>
+              {/* 3D Robot Mascot */}
+              <div className="flex flex-col items-center justify-center md:w-1/3 shrink-0 h-[200px] md:h-auto">
+                <Suspense fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                  </div>
+                }>
+                  <Robot3D action={step.mascotAction as 'wave' | 'point' | 'thumbsup'} />
+                </Suspense>
               </div>
 
               {/* Whiteboard / Lousa */}
