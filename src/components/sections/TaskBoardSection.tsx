@@ -1551,36 +1551,51 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         )}
       </div>
 
-      {/* Bottom bar: Planner / Board / Switch */}
+      {/* Bottom bar: Planner / Board / Switch - Trello style */}
       {!isMobile && (
-        <div className={cn("flex items-center justify-center gap-1 px-4 py-2 border-t border-border backdrop-blur-sm relative z-10", isDarkBg ? "bg-black/50" : "bg-background/80")}>
-          <Button variant={showPlanner ? "default" : "ghost"} size="sm" className="gap-1.5 rounded-md text-xs" onClick={togglePlanner}>
-            📋 Planejador
-          </Button>
-          <Button variant={showBoard ? "default" : "ghost"} size="sm" className="gap-1.5 rounded-md text-xs" onClick={toggleBoard}>
-            📊 Quadro
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-1.5 rounded-md text-xs">
-                🔄 Mudar de quadro
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-64">
-              {boards.filter(b => b.id !== board.id).map(b => (
-                <DropdownMenuItem key={b.id} onClick={() => onSelectBoard(b.id)} className="flex items-center gap-3 p-2">
-                  <div
-                    className={cn("w-12 h-8 rounded flex-shrink-0 border border-border", getBoardBg(b.background_image))}
-                    style={getBoardBgStyle(b.background_image)}
-                  />
-                  <span className="text-sm font-medium truncate">{b.name}</span>
-                </DropdownMenuItem>
-              ))}
-              {boards.filter(b => b.id !== board.id).length === 0 && (
-                <div className="p-3 text-sm text-muted-foreground text-center">Nenhum outro quadro</div>
+        <div className="flex items-center justify-center py-1.5 relative z-10 border-t border-border bg-sidebar">
+          <div className="flex items-center bg-sidebar-accent rounded-lg p-0.5">
+            <button
+              onClick={togglePlanner}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                showPlanner ? "bg-primary text-primary-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/80"
               )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            >
+              📋 Planejador
+            </button>
+            <button
+              onClick={toggleBoard}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                showBoard && !showPlanner ? "bg-primary text-primary-foreground" : showBoard ? "bg-muted text-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/80"
+              )}
+            >
+              📊 Quadro
+            </button>
+            <div className="w-px h-5 bg-sidebar-border mx-0.5" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-sidebar-foreground hover:bg-sidebar-accent/80 transition-colors">
+                  🔄 Mudar de quadro
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-64">
+                {boards.filter(b => b.id !== board.id).map(b => (
+                  <DropdownMenuItem key={b.id} onClick={() => onSelectBoard(b.id)} className="flex items-center gap-3 p-2">
+                    <div
+                      className={cn("w-12 h-8 rounded flex-shrink-0 border border-border", getBoardBg(b.background_image))}
+                      style={getBoardBgStyle(b.background_image)}
+                    />
+                    <span className="text-sm font-medium truncate">{b.name}</span>
+                  </DropdownMenuItem>
+                ))}
+                {boards.filter(b => b.id !== board.id).length === 0 && (
+                  <div className="p-3 text-sm text-muted-foreground text-center">Nenhum outro quadro</div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       )}
 

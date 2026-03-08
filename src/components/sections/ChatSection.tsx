@@ -60,6 +60,24 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   
   const { messages, loading: messagesLoading, sendMessage, canSendMessages } = useMessages(effectiveSector);
 
+  // Mark mention notifications as read when viewing a sector chat
+  useEffect(() => {
+    if (!user || !effectiveSector) return;
+    const markMentionsRead = async () => {
+      try {
+        await supabase
+          .from('user_notifications')
+          .update({ is_read: true })
+          .eq('user_id', user.id)
+          .eq('type', 'mention')
+          .eq('is_read', false);
+      } catch (e) {
+        // silently ignore
+      }
+    };
+    markMentionsRead();
+  }, [user, effectiveSector, messages]);
+
   // Scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
