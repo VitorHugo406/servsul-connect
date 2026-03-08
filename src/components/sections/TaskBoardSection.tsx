@@ -1812,14 +1812,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                         {colTemplates.map(template => (
                           <div
                             key={template.id}
-                            className="mx-2 mb-1.5 bg-card/60 rounded-lg border border-dashed border-primary/30 cursor-pointer hover:shadow-md transition-all group/tpl relative"
+                            className="mx-2 mb-1.5 rounded border border-dashed border-blue-400/50 cursor-pointer hover:shadow-md transition-all group/tpl relative bg-blue-600"
                             onClick={() => { setSelectedTask(template); setShowTaskDetail(true); }}
                           >
-                            <div className="px-2 py-1.5">
-                              <Badge className="bg-primary/10 text-primary border-primary/20 text-[9px] h-4 mb-1">
-                                <Copy className="h-2.5 w-2.5 mr-0.5" /> Este cartão é um template
-                              </Badge>
-                              <h4 className="font-normal text-sm text-foreground leading-snug">{template.title}</h4>
+                            <div className="px-2.5 py-2">
+                              <h4 className="font-normal text-sm text-white leading-snug">{template.title}</h4>
+                              <div className="flex items-center gap-1 mt-1">
+                                <span className="bg-blue-500/60 text-white/90 text-[9px] px-1.5 py-0.5 rounded font-medium">Este cartão é um template.</span>
+                              </div>
                             </div>
                             <div className="absolute top-1 right-1 opacity-0 group-hover/tpl:opacity-100 transition-opacity">
                               <DropdownMenu>
