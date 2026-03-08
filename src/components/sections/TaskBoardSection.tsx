@@ -511,7 +511,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const resetForm = () => {
     setTitle(''); setDescription(''); setPriority('medium');
     setAssignedTo('none'); setDueDate(''); setCoverImage('none'); setCoverImageUrl('');
-    setAdditionalAssignees([]);
+    setAdditionalAssignees([]); setIsCreatingTemplate(false);
   };
 
   const openCreateTask = (columnId: string) => {
