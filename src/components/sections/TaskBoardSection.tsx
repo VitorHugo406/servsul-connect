@@ -698,8 +698,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   };
 
   const handleMakeTemplate = async (taskId: string) => {
-    if (!confirm('Tornar este card um template? Ele perderá responsável e data de entrega.')) return;
-    const { error } = await updateTask(taskId, { is_template: true, assigned_to: null, due_date: null } as any);
+    if (!confirm('Tornar este card um template?')) return;
+    const { error } = await updateTask(taskId, { is_template: true } as any);
     if (error) { toast.error('Erro ao converter'); return; }
     toast.success('Card convertido em template!');
   };
@@ -1350,6 +1350,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMakeTemplate(task.id); }}>
                                 <Copy className="h-4 w-4 mr-2" /> Tornar Template
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setShowDuplication(task);
+                                setDupTargetColumn(columns[0]?.id || '');
+                                setDupFrequency('daily');
+                              }}>
+                                <Repeat className="h-4 w-4 mr-2" /> Auto-duplicar
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>Mover para:</DropdownMenuItem>
                               {columns.filter(c => c.id !== mobileSelectedColumn).map(c => (
@@ -1802,6 +1810,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(template); }}>
                                     <Edit className="h-4 w-4 mr-2" /> Editar Template
                                   </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowDuplication(template);
+                                    setDupTargetColumn(columns[0]?.id || '');
+                                    setDupFrequency('daily');
+                                  }}>
+                                    <Repeat className="h-4 w-4 mr-2" /> Auto-duplicar
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteTask(template.id); }} className="text-destructive">
                                     <Trash2 className="h-4 w-4 mr-2" /> Excluir Template
                                   </DropdownMenuItem>
@@ -1913,7 +1929,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
            <DialogTitle>
-              {isCreatingTemplate ? '🔧 Novo Template' : editingTask ? `Editar Tarefa #${editingTask.task_number}` : 'Nova Tarefa'}
+              {isCreatingTemplate ? '🔧 Novo Template' : editingTask?.is_template ? `Editar Template #${editingTask.task_number}` : editingTask ? `Editar Tarefa #${editingTask.task_number}` : 'Nova Tarefa'}
             </DialogTitle>
             {isCreatingTemplate && (
               <DialogDescription className="text-xs">
@@ -1928,8 +1944,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             </div>
             <div className="space-y-2">
               <Label>Descrição</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descreva a tarefa... Use **negrito**, *itálico*, ~~riscado~~" rows={5} className="min-h-[120px]" />
-              <p className="text-[10px] text-muted-foreground">Formatação: **negrito**, *itálico*, ~~riscado~~, `código`</p>
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Adicione uma descrição mais detalhada..." rows={6} className="min-h-[140px] text-sm" />
+
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -1948,7 +1964,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   </SelectContent>
                 </Select>
               </div>
-              {!isCreatingTemplate && (
+              {!isCreatingTemplate && !editingTask?.is_template && (
               <div className="space-y-2">
                 <Label>Responsável</Label>
                 <Select value={assignedTo} onValueChange={setAssignedTo}>
@@ -1965,7 +1981,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               </div>
               )}
             </div>
-            {!isCreatingTemplate && (
+            {!isCreatingTemplate && !editingTask?.is_template && (
             <>
             <div className="space-y-2">
               <Label>Responsáveis adicionais</Label>
@@ -2077,6 +2093,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         onOpenAutomation={(id) => { setShowTaskDetail(false); setAutomationTaskId(id); setShowAutomationRules(true); }}
         columns={columns.map(c => ({ id: c.id, title: c.title, color: c.color }))}
         onDuplicateTemplate={duplicateTemplateAsCard}
+        onMakeTemplate={handleMakeTemplate}
       />
 
       {/* Label Picker Dialog */}

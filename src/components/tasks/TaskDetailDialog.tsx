@@ -73,7 +73,7 @@ function RichDescription({ text }: { text: string }) {
   };
 
   return (
-    <div className="text-foreground text-sm leading-relaxed space-y-1">
+    <div className="text-foreground text-sm leading-relaxed space-y-1.5">
       {text.split('\n').map((line, idx) => processLine(line, idx))}
     </div>
   );
@@ -92,9 +92,10 @@ interface TaskDetailDialogProps {
   onOpenAutomation?: (taskId: string) => void;
   columns?: { id: string; title: string; color: string }[];
   onDuplicateTemplate?: (template: BoardTask, targetColumnId: string) => void;
+  onMakeTemplate?: (taskId: string) => void;
 }
 
-export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTask, taskLabels, allLabels, onToggleLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTask, taskLabels, allLabels, onToggleLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate, onMakeTemplate }: TaskDetailDialogProps) {
   const isMobile = useIsMobile();
   const { comments, addComment, loading: commentsLoading } = useTaskComments(task?.id || null);
   const { subtasks, addSubtask, toggleSubtask, deleteSubtask, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null, boardId);
@@ -233,7 +234,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
           <Badge key={l.id} className="text-white text-[10px]" style={{ backgroundColor: l.color }}>{l.name}</Badge>
         ))}
       </div>
-      <h2 className="text-lg font-semibold text-foreground">{task.title}</h2>
+      <h2 className="text-xl font-bold text-foreground">{task.title}</h2>
     </div>
   );
 
@@ -346,7 +347,9 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
   const renderDescription = () => task.description ? (
     <div className="px-4 py-2">
       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Descrição</h4>
-      <RichDescription text={task.description} />
+      <div className="bg-muted/30 border border-border rounded-lg p-3">
+        <RichDescription text={task.description} />
+      </div>
     </div>
   ) : null;
 
@@ -557,6 +560,11 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
       {onOpenAutomation && (
         <Button variant="outline" className="gap-2 rounded-md" onClick={() => onOpenAutomation(task.id)}>
           <Zap className="h-4 w-4" /> Automações
+        </Button>
+      )}
+      {!task.is_template && onMakeTemplate && (
+        <Button variant="outline" className="gap-2 rounded-md" onClick={() => { onMakeTemplate(task.id); onOpenChange(false); }}>
+          <Copy className="h-4 w-4" /> Tornar Template
         </Button>
       )}
       <div className="flex-1" />
