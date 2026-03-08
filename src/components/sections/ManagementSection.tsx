@@ -95,7 +95,7 @@ interface UserRole {
 }
 
 export function ManagementSection() {
-  const { isAdmin, canAccess, profile } = useAuth();
+  const { isAdmin, canAccess, profile, refreshPermissions } = useAuth();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState<Profile[]>([]);
