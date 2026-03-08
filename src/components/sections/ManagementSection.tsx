@@ -751,6 +751,7 @@ export function ManagementSection() {
                         <TableHead className="text-center">Excluir Mensagens</TableHead>
                         <TableHead className="text-center">Gerenciamento</TableHead>
                         <TableHead className="text-center">Alterar Senhas</TableHead>
+                        <TableHead className="text-center">War Room</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
