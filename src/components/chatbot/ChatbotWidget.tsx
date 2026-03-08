@@ -232,6 +232,47 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
         }
       }
 
+      // Score feedback on 1st of month
+      const today2 = new Date();
+      if (today2.getDate() === 1) {
+        const scoreKey = `score-feedback-${today2.getFullYear()}-${today2.getMonth()}`;
+        if (!localStorage.getItem(scoreKey)) {
+          try {
+            const now = new Date();
+            const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const prevYM = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+            const { data: currentScores } = await supabase
+              .from('monthly_scores')
+              .select('score')
+              .eq('profile_id', profile.id)
+              .eq('year_month', currentYM);
+
+            const { data: prevScores } = await supabase
+              .from('monthly_scores')
+              .select('score')
+              .eq('profile_id', profile.id)
+              .eq('year_month', prevYM);
+
+            const currentAvg = currentScores && currentScores.length > 0
+              ? Math.round(currentScores.reduce((s: number, r: any) => s + r.score, 0) / currentScores.length)
+              : 0;
+            const prevAvg = prevScores && prevScores.length > 0
+              ? Math.round(prevScores.reduce((s: number, r: any) => s + r.score, 0) / prevScores.length)
+              : 0;
+
+            if (prevAvg > 0 || currentAvg > 0) {
+              const trend = currentAvg > prevAvg ? 'up' : currentAvg < prevAvg ? 'down' : 'same';
+              setScoreFeedback({ current: currentAvg, previous: prevAvg, trend });
+              localStorage.setItem(scoreKey, 'true');
+            }
+          } catch (e) {
+            console.error('Score feedback error:', e);
+          }
+        }
+      }
+
       setLoading(false);
     };
 
