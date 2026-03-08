@@ -366,7 +366,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   // Auto-distribution recommendations
   const getDistributionRecommendations = () => {
     const memberWorkloads = members.map(m => {
-      const memberTasks = tasks.filter(t => t.assigned_to === m.profile_id && !columns.find(c => c.id === t.status)?.is_conclusion);
+      const memberTasks = tasks.filter(t => t.assigned_to === m.profile_id && !t.is_template && !columns.find(c => c.id === t.status)?.is_conclusion);
       return { ...m, taskCount: memberTasks.length, tasks: memberTasks };
     });
     const avg = memberWorkloads.reduce((s, m) => s + m.taskCount, 0) / Math.max(memberWorkloads.length, 1);
