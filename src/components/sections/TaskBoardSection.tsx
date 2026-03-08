@@ -1103,7 +1103,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       </div>
 
       {/* Board area with optional planner */}
-      <div className="flex-1 overflow-hidden relative z-10 flex">
+      <div className={cn(
+        "flex-1 overflow-hidden relative z-10 flex",
+        showPlanner && "mx-3 mb-1 rounded-xl border border-border/40 bg-background/5"
+      )}>
         {/* Planner sidebar - Trello style */}
         {showPlanner && (
           <motion.div
@@ -1111,7 +1114,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             animate={{ width: showBoard ? 300 : '100%', opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="overflow-hidden flex-shrink-0 py-3 pl-3"
+            className="overflow-hidden flex-shrink-0 p-2"
           >
             <div className={cn(
               "h-full overflow-y-auto p-4 space-y-3 rounded-xl",
@@ -1161,7 +1164,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         <div className="flex-1 overflow-hidden">
           <div
             ref={boardScrollRef}
-            className={cn(isMobile ? 'overflow-y-auto' : 'overflow-x-auto overflow-y-hidden h-full p-4 task-board-scroll')}
+            className={cn(isMobile ? 'overflow-y-auto' : 'overflow-x-auto overflow-y-hidden h-full p-4 scrollbar-none')}
             onMouseDown={!isMobile ? handleBoardMouseDown : undefined}
             onMouseMove={!isMobile ? handleBoardMouseMove : undefined}
             onMouseUp={!isMobile ? handleBoardMouseUp : undefined}
@@ -1687,7 +1690,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
       {/* Bottom bar: Planner / Board / Switch - Trello style */}
       {!isMobile && (
-        <div className="flex items-center justify-center py-2.5 relative z-10">
+        <div className="flex items-center justify-center py-1 relative z-10">
           <div className="flex items-center bg-sidebar rounded-lg p-1">
             <button
               onClick={togglePlanner}

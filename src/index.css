@@ -220,4 +220,12 @@
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted-foreground) / 0.15) transparent;
   }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
