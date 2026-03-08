@@ -796,15 +796,15 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
           </PopoverContent>
         </Popover>
 
-        {/* Emergency Toggle */}
+        {/* Decisões Button */}
         <Button
-          variant={(task as any).is_emergency ? "destructive" : "outline"}
+          variant={showDecisions ? "default" : "outline"}
           size="sm"
           className="gap-1.5 rounded-md h-8 text-xs"
-          onClick={() => onUpdateTask?.(task.id, { is_emergency: !(task as any).is_emergency })}
+          onClick={() => setShowDecisions(!showDecisions)}
         >
-          <Siren className="h-3.5 w-3.5" />
-          {(task as any).is_emergency ? 'Emergente ✓' : 'Emergência'}
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Decisões {decisions.length > 0 && `(${decisions.length})`}
         </Button>
       </div>
     </div>
