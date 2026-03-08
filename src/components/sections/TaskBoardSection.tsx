@@ -2074,6 +2074,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         onToggleLabel={handleToggleLabel}
         boardId={board.id}
         onOpenAutomation={(id) => { setShowTaskDetail(false); setAutomationTaskId(id); setShowAutomationRules(true); }}
+        columns={columns.map(c => ({ id: c.id, title: c.title, color: c.color }))}
+        onDuplicateTemplate={duplicateTemplateAsCard}
       />
 
       {/* Label Picker Dialog */}
