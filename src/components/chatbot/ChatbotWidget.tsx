@@ -97,6 +97,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCounts, setUnreadCounts] = useState<UnreadCounts>({ announcements: 0, messages: 0 });
   const [overdueTasks, setOverdueTasks] = useState(0);
+  const [scoreFeedback, setScoreFeedback] = useState<{ current: number; previous: number; trend: 'up' | 'down' | 'same' } | null>(null);
   const [overdueTasksDismissed, setOverdueTasksDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user, profile, sector, additionalSectors, isAdmin } = useAuth();
@@ -228,6 +229,47 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
             if (res.error) console.error('Auto feedback email error:', res.error);
             else console.log('Monthly feedback email sent automatically');
           });
+        }
+      }
+
+      // Score feedback on 1st of month
+      const today2 = new Date();
+      if (today2.getDate() === 1) {
+        const scoreKey = `score-feedback-${today2.getFullYear()}-${today2.getMonth()}`;
+        if (!localStorage.getItem(scoreKey)) {
+          try {
+            const now = new Date();
+            const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const prevYM = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+            const { data: currentScores } = await supabase
+              .from('monthly_scores')
+              .select('score')
+              .eq('profile_id', profile.id)
+              .eq('year_month', currentYM);
+
+            const { data: prevScores } = await supabase
+              .from('monthly_scores')
+              .select('score')
+              .eq('profile_id', profile.id)
+              .eq('year_month', prevYM);
+
+            const currentAvg = currentScores && currentScores.length > 0
+              ? Math.round(currentScores.reduce((s: number, r: any) => s + r.score, 0) / currentScores.length)
+              : 0;
+            const prevAvg = prevScores && prevScores.length > 0
+              ? Math.round(prevScores.reduce((s: number, r: any) => s + r.score, 0) / prevScores.length)
+              : 0;
+
+            if (prevAvg > 0 || currentAvg > 0) {
+              const trend = currentAvg > prevAvg ? 'up' : currentAvg < prevAvg ? 'down' : 'same';
+              setScoreFeedback({ current: currentAvg, previous: prevAvg, trend });
+              localStorage.setItem(scoreKey, 'true');
+            }
+          } catch (e) {
+            console.error('Score feedback error:', e);
+          }
         }
       }
 
@@ -557,6 +599,38 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                             </div>
                             <p className="mt-1 text-sm text-muted-foreground">
                               Você possui tarefas com prazo vencido. Acesse "Tarefas" para verificar.
+                            </p>
+                          </motion.div>
+                        )}
+
+                        {/* Score feedback on 1st of month */}
+                        {scoreFeedback && (
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className={`rounded-lg border p-3 ${
+                              scoreFeedback.trend === 'up'
+                                ? 'border-green-500/30 bg-green-500/5'
+                                : scoreFeedback.trend === 'down'
+                                ? 'border-destructive/30 bg-destructive/5'
+                                : 'border-primary/30 bg-primary/5'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-lg">
+                                {scoreFeedback.trend === 'up' ? '📈' : scoreFeedback.trend === 'down' ? '📉' : '📊'}
+                              </span>
+                              <span className="font-medium text-foreground">
+                                Score Mensal: {scoreFeedback.current}/1000
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {scoreFeedback.trend === 'up'
+                                ? `Parabéns! Seu score subiu de ${scoreFeedback.previous} para ${scoreFeedback.current}. Continue assim! 🎉`
+                                : scoreFeedback.trend === 'down'
+                                ? `Seu score caiu de ${scoreFeedback.previous} para ${scoreFeedback.current}. Vamos melhorar este mês! 💪`
+                                : `Seu score se manteve em ${scoreFeedback.current}. Vamos buscar a excelência!`}
                             </p>
                           </motion.div>
                         )}

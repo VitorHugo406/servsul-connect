@@ -659,6 +659,63 @@ export type Database = {
           },
         ]
       }
+      monthly_scores: {
+        Row: {
+          board_id: string | null
+          completed_tasks: number
+          created_at: string
+          id: string
+          late_tasks: number
+          on_time_tasks: number
+          profile_id: string
+          score: number
+          total_tasks: number
+          updated_at: string
+          year_month: string
+        }
+        Insert: {
+          board_id?: string | null
+          completed_tasks?: number
+          created_at?: string
+          id?: string
+          late_tasks?: number
+          on_time_tasks?: number
+          profile_id: string
+          score?: number
+          total_tasks?: number
+          updated_at?: string
+          year_month: string
+        }
+        Update: {
+          board_id?: string | null
+          completed_tasks?: number
+          created_at?: string
+          id?: string
+          late_tasks?: number
+          on_time_tasks?: number
+          profile_id?: string
+          score?: number
+          total_tasks?: number
+          updated_at?: string
+          year_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_scores_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "task_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_scores_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       private_group_members: {
         Row: {
           group_id: string

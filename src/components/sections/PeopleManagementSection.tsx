@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search, CalendarDays, AlertTriangle, Bell, X } from 'lucide-react';
+import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search, CalendarDays, AlertTriangle, Bell, X, Trophy } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,8 @@ import { useTeamAnalytics } from '@/hooks/useTeamAnalytics';
 import { useWorkloadAlerts } from '@/hooks/useWorkloadAlerts';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useGlobalScores } from '@/hooks/useBoardScores';
+import type { MemberScore, MonthlyScoreEntry } from '@/hooks/useBoardScores';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -35,6 +37,8 @@ export function PeopleManagementSection() {
   const memberIds = members.map(m => m.member_profile_id);
   const { analytics, loading: analyticsLoading } = useTeamAnalytics(memberIds);
   const { alerts, unreadCount, markAsRead, dismissAlert } = useWorkloadAlerts(memberIds);
+  const { scores: globalScores, monthlyHistory: globalScoreHistory, loading: globalScoresLoading } = useGlobalScores(memberIds);
+  
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
@@ -170,6 +174,7 @@ export function PeopleManagementSection() {
           </TabsTrigger>
           <TabsTrigger value="reports" className="gap-2"><BarChart3 className="h-4 w-4" /> Relatórios</TabsTrigger>
           <TabsTrigger value="activities" className="gap-2"><CalendarDays className="h-4 w-4" /> Atividades</TabsTrigger>
+          <TabsTrigger value="score" className="gap-2"><Trophy className="h-4 w-4" /> Score</TabsTrigger>
         </TabsList>
 
         <TabsContent value="team" className="mt-4">
@@ -441,6 +446,14 @@ export function PeopleManagementSection() {
         <TabsContent value="activities" className="mt-4">
           <ActivitiesTab memberIds={memberIds} members={members} />
         </TabsContent>
+
+        <TabsContent value="score" className="mt-4">
+          <ScoreTabContent
+            scores={globalScores}
+            monthlyHistory={globalScoreHistory}
+            loading={globalScoresLoading}
+          />
+        </TabsContent>
       </Tabs>
 
       {/* Add Member Dialog */}
@@ -492,6 +505,195 @@ export function PeopleManagementSection() {
         </DialogContent>
       </Dialog>
     </motion.div>
+  );
+}
+
+// Score Tab Content
+function ScoreTabContent({ scores, monthlyHistory, loading }: {
+  scores: MemberScore[];
+  monthlyHistory: MonthlyScoreEntry[];
+  loading: boolean;
+}) {
+  const MONTH_LABELS: Record<string, string> = {
+    '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr',
+    '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago',
+    '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez',
+  };
+
+  const LINE_COLORS = [
+    'hsl(var(--primary))',
+    'hsl(38, 92%, 50%)',
+    'hsl(142, 76%, 36%)',
+    'hsl(270, 76%, 55%)',
+    'hsl(0, 72%, 51%)',
+    'hsl(200, 80%, 50%)',
+  ];
+
+  const getScoreColor = (score: number) => {
+    if (score >= 800) return 'text-green-500';
+    if (score >= 600) return 'text-yellow-500';
+    if (score >= 400) return 'text-orange-500';
+    return 'text-destructive';
+  };
+
+  const getInitials = (name: string) =>
+    name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+
+  const uniqueMonths = [...new Set(monthlyHistory.map(h => h.yearMonth))].sort();
+  const uniqueProfiles = [...new Set(monthlyHistory.map(h => h.profileId))];
+  const profileNames: Record<string, string> = {};
+  monthlyHistory.forEach(h => { profileNames[h.profileId] = h.name; });
+
+  const chartData = uniqueMonths.map(ym => {
+    const [year, month] = ym.split('-');
+    const entry: any = { month: `${MONTH_LABELS[month]}/${year.slice(2)}` };
+    uniqueProfiles.forEach(pid => {
+      const record = monthlyHistory.find(h => h.yearMonth === ym && h.profileId === pid);
+      entry[pid] = record?.score || 0;
+    });
+    return entry;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (scores.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <Trophy className="h-12 w-12 text-muted-foreground mb-4" />
+          <h4 className="text-lg font-semibold">Sem dados de score</h4>
+          <p className="text-muted-foreground mt-1">Adicione membros com tarefas para ver scores.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const top3 = scores.slice(0, 3);
+
+  return (
+    <div className="space-y-4">
+      {/* Podium */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Award className="h-5 w-5 text-yellow-500" />
+            Pódio - Score Global
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-end justify-center gap-4 pt-4">
+            {top3.length >= 2 && (
+              <div className="flex flex-col items-center gap-2 w-20">
+                <Avatar className="h-10 w-10 border-2 border-gray-400">
+                  <AvatarImage src={top3[1].avatarUrl || ''} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">{getInitials(top3[1].displayName || top3[1].name)}</AvatarFallback>
+                </Avatar>
+                <p className="text-xs font-medium text-center truncate w-full">{(top3[1].displayName || top3[1].name).split(' ')[0]}</p>
+                <div className="w-full h-16 rounded-t-lg bg-muted flex items-end justify-center pb-2">
+                  <span className={`text-sm font-bold ${getScoreColor(top3[1].score)}`}>{top3[1].score}</span>
+                </div>
+              </div>
+            )}
+            {top3.length >= 1 && (
+              <div className="flex flex-col items-center gap-2 w-20">
+                <Avatar className="h-12 w-12 border-2 border-yellow-500">
+                  <AvatarImage src={top3[0].avatarUrl || ''} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">{getInitials(top3[0].displayName || top3[0].name)}</AvatarFallback>
+                </Avatar>
+                <p className="text-xs font-medium text-center truncate w-full">{(top3[0].displayName || top3[0].name).split(' ')[0]}</p>
+                <div className="w-full h-24 rounded-t-lg bg-yellow-500/10 flex items-end justify-center pb-2">
+                  <span className={`text-sm font-bold ${getScoreColor(top3[0].score)}`}>{top3[0].score}</span>
+                </div>
+              </div>
+            )}
+            {top3.length >= 3 && (
+              <div className="flex flex-col items-center gap-2 w-20">
+                <Avatar className="h-10 w-10 border-2 border-amber-700">
+                  <AvatarImage src={top3[2].avatarUrl || ''} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">{getInitials(top3[2].displayName || top3[2].name)}</AvatarFallback>
+                </Avatar>
+                <p className="text-xs font-medium text-center truncate w-full">{(top3[2].displayName || top3[2].name).split(' ')[0]}</p>
+                <div className="w-full h-12 rounded-t-lg bg-amber-700/10 flex items-end justify-center pb-2">
+                  <span className={`text-sm font-bold ${getScoreColor(top3[2].score)}`}>{top3[2].score}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Ranking */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Ranking Completo</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {scores.map((member, i) => (
+            <div key={member.profileId} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+              <span className="font-bold text-lg text-muted-foreground w-6 text-center">{i + 1}</span>
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={member.avatarUrl || ''} />
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs">{getInitials(member.displayName || member.name)}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <p className="font-medium text-sm">{member.displayName || member.name}</p>
+                <div className="flex gap-2 text-[10px] text-muted-foreground">
+                  <span>{member.totalTasks} tarefas</span>
+                  <span>•</span>
+                  <span>{member.completedTasks} concluídas</span>
+                  <span>•</span>
+                  <span>{member.lateTasks} atrasadas</span>
+                </div>
+              </div>
+              <span className={`text-sm font-bold ${getScoreColor(member.score)}`}>{member.score}/1000</span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Monthly chart */}
+      {chartData.length > 0 && uniqueProfiles.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Evolução Mensal</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <YAxis domain={[0, 1000]} stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Legend />
+                  {uniqueProfiles.slice(0, 6).map((pid, i) => (
+                    <Bar
+                      key={pid}
+                      dataKey={pid}
+                      name={profileNames[pid] || 'Usuário'}
+                      fill={LINE_COLORS[i % LINE_COLORS.length]}
+                      radius={[4, 4, 0, 0]}
+                    />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
 

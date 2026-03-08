@@ -8,8 +8,8 @@ import {
   Clock4, Clock, Users, Settings, ArrowLeft, MoveRight,
   PlusCircle, FileDown, Zap, Upload, Tag, Copy, Repeat,
   Archive, ArchiveRestore, Pencil, Activity, Menu, Shield,
-  Filter, Share2, UserPlus, Link2, Shuffle, Bell,
-  Siren
+   Filter, Share2, UserPlus, Link2, Shuffle, Bell,
+  Siren, Trophy
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -44,6 +44,8 @@ import { useCardDuplications } from '@/hooks/useCardDuplications';
 import { useWorkflowRules } from '@/hooks/useWorkflowRules';
 import { useColumnAutoSubtasks } from '@/hooks/useColumnAutoSubtasks';
 import { logTaskActivity } from '@/hooks/useTaskActivities';
+import { useBoardScores } from '@/hooks/useBoardScores';
+import { ScorePanel } from '@/components/tasks/ScorePanel';
 import {
   PRIORITIES, BACKGROUND_IMAGES, BACKGROUND_GROUPS, CARD_COVERS,
   getBoardBg, getBoardBgStyle, getInitials, getCoverDisplay, isBoardBgDark,
@@ -295,6 +297,11 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
   const [showDistribution, setShowDistribution] = useState(false);
   const [distributionColumnOverrides, setDistributionColumnOverrides] = useState<Record<string, string>>({});
+  const [showScore, setShowScore] = useState(false);
+
+  // Score system
+  const memberProfileIds = members.map(m => m.profile_id);
+  const { scores: boardScores, monthlyHistory: boardScoreHistory, loading: scoresLoading } = useBoardScores(board.id, memberProfileIds);
 
   // Sync selectedTask with latest tasks data after refetch
   useEffect(() => {
@@ -1128,6 +1135,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     <DropdownMenuItem onClick={() => setShowDistribution(true)}>
                       <Shuffle className="h-4 w-4 mr-2" /> Auto-distribuição
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowScore(true)}>
+                      <Trophy className="h-4 w-4 mr-2" /> Score
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setShowShareDialog(true)}>
                       <Share2 className="h-4 w-4 mr-2" /> Compartilhar
                     </DropdownMenuItem>
@@ -1153,6 +1163,11 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               {isAdminOrOwner && (
                 <Button variant="ghost" size="icon" onClick={() => setShowDistribution(true)} title="Auto-distribuição" className="text-orange-500 hover:text-orange-600">
                   <Shuffle className="h-4 w-4" />
+                </Button>
+               )}
+              {isAdminOrOwner && (
+                <Button variant="ghost" size="icon" onClick={() => setShowScore(true)} title="Score" className="text-yellow-500 hover:text-yellow-600">
+                  <Trophy className="h-4 w-4" />
                 </Button>
               )}
               <Button
@@ -2765,6 +2780,16 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         onUpdateTask={updateTask}
         onMoveTask={moveTask}
         onRefetch={refetchTasks}
+      />
+
+      {/* Score Panel */}
+      <ScorePanel
+        open={showScore}
+        onClose={() => setShowScore(false)}
+        scores={boardScores}
+        monthlyHistory={boardScoreHistory}
+        loading={scoresLoading}
+        title={`Score - ${board.name}`}
       />
 
       {/* Filter Panel */}
