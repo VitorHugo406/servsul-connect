@@ -17,6 +17,7 @@ export interface BoardTask {
   due_date: string | null;
   position: number;
   is_archived: boolean;
+  is_template: boolean;
   completed_at: string | null;
   completed_late: boolean | null;
   delay_days: number | null;
@@ -54,7 +55,7 @@ export function useBoardTasks(boardId: string | null) {
         .eq('board_id', boardId)
         .order('position', { ascending: true });
       if (error) throw error;
-      setTasks((data || []).map(t => ({ ...t, is_archived: t.is_archived ?? false })) as BoardTask[]);
+      setTasks((data || []).map(t => ({ ...t, is_archived: t.is_archived ?? false, is_template: t.is_template ?? false })) as BoardTask[]);
     } catch (error) {
       console.error('Error fetching board tasks:', error);
     } finally {

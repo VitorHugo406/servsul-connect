@@ -366,7 +366,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   // Auto-distribution recommendations
   const getDistributionRecommendations = () => {
     const memberWorkloads = members.map(m => {
-      const memberTasks = tasks.filter(t => t.assigned_to === m.profile_id && !columns.find(c => c.id === t.status)?.is_conclusion);
+      const memberTasks = tasks.filter(t => t.assigned_to === m.profile_id && !t.is_template && !columns.find(c => c.id === t.status)?.is_conclusion);
       return { ...m, taskCount: memberTasks.length, tasks: memberTasks };
     });
     const avg = memberWorkloads.reduce((s, m) => s + m.taskCount, 0) / Math.max(memberWorkloads.length, 1);
@@ -420,6 +420,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState('#6366f1');
   const [additionalAssignees, setAdditionalAssignees] = useState<string[]>([]);
+  const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
+  const [showTemplatePicker, setShowTemplatePicker] = useState<string | null>(null);
 
   const [creating, setCreating] = useState(false);
   const [editingTask, setEditingTask] = useState<BoardTask | null>(null);
@@ -487,7 +489,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
   // Apply filter to tasks
   const conclusionColumnIds = columns.filter(c => c.is_conclusion).map(c => c.id);
-  const filteredTasks = applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels);
+  const filteredTasks = applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels).filter(t => !t.is_template);
+  const templateTasks = tasks.filter(t => t.is_template && !t.is_archived);
 
   const getDueDateInfo = (dueDateStr: string | null, isCompleted?: boolean) => {
     if (!dueDateStr) return null;
@@ -508,7 +511,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const resetForm = () => {
     setTitle(''); setDescription(''); setPriority('medium');
     setAssignedTo('none'); setDueDate(''); setCoverImage('none'); setCoverImageUrl('');
-    setAdditionalAssignees([]);
+    setAdditionalAssignees([]); setIsCreatingTemplate(false);
   };
 
   const openCreateTask = (columnId: string) => {
@@ -584,9 +587,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       description: description.trim() || undefined,
       status: targetColumn,
       priority,
-      assigned_to: assignedTo !== 'none' ? assignedTo : undefined,
-      due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
+      assigned_to: isCreatingTemplate ? undefined : (assignedTo !== 'none' ? assignedTo : undefined),
+      due_date: isCreatingTemplate ? undefined : (dueDate ? new Date(dueDate).toISOString() : undefined),
       cover_image: finalCover,
+      is_template: isCreatingTemplate,
     };
 
     let result;
@@ -619,6 +623,47 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     resetForm();
     setShowCreateTask(false);
     setEditingTask(null);
+  };
+
+  const openCreateTemplate = (columnId: string) => {
+    resetForm();
+    setIsCreatingTemplate(true);
+    setTargetColumn(columnId);
+    setShowCreateTask(true);
+  };
+
+  const duplicateTemplateAsCard = async (template: BoardTask, targetColumnId: string) => {
+    const taskData = {
+      title: template.title,
+      description: template.description || undefined,
+      status: targetColumnId,
+      priority: template.priority,
+      cover_image: template.cover_image || undefined,
+      is_template: false,
+    };
+    const result = await createTask(taskData);
+    if (result.error) {
+      toast.error('Erro ao criar card a partir do template');
+    } else {
+      // Copy subtasks from template
+      const { data: subtasks } = await supabase
+        .from('task_subtasks')
+        .select('*')
+        .eq('task_id', template.id)
+        .order('position');
+      if (subtasks && subtasks.length > 0 && result.data) {
+        for (const st of subtasks) {
+          await supabase.from('task_subtasks').insert({
+            task_id: result.data.id,
+            title: st.title,
+            position: st.position,
+            group_id: st.group_id,
+          });
+        }
+      }
+      toast.success('Card criado a partir do template!');
+    }
+    setShowTemplatePicker(null);
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -1316,8 +1361,28 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                       </div>
                     );
                   })}
+                  {/* Mobile template cards */}
+                  {templateTasks.filter(t => t.status === mobileSelectedColumn).map(template => (
+                    <div key={template.id} className="bg-card/60 rounded-lg border border-dashed border-primary/30 p-3 relative">
+                      <Badge className="bg-primary/10 text-primary border-primary/20 text-[9px] h-4 mb-1">
+                        <Copy className="h-2.5 w-2.5 mr-0.5" /> Template
+                      </Badge>
+                      <h4 className="font-normal text-sm text-foreground">{template.title}</h4>
+                      <div className="flex gap-1 mt-2">
+                        {columns.map(c => (
+                          <Button key={c.id} size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => duplicateTemplateAsCard(template, c.id)}>
+                            <div className="w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: c.color }} />
+                            {c.title}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                   <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1" onClick={() => openCreateTask(mobileSelectedColumn)}>
                     <Plus className="h-3 w-3" /> Adicionar Tarefa
+                  </Button>
+                  <Button variant="ghost" size="sm" className="w-full text-xs gap-1 text-muted-foreground" onClick={() => openCreateTemplate(mobileSelectedColumn)}>
+                    <Copy className="h-3 w-3" /> Criar template
                   </Button>
                 </div>
               </div>
@@ -1678,11 +1743,68 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     {colTasks.length === 0 && (
                       <div className="text-center py-6 text-muted-foreground text-xs">Nenhuma tarefa</div>
                     )}
+                  {/* Template cards */}
+                  {(() => {
+                    const colTemplates = templateTasks.filter(t => t.status === column.id);
+                    if (colTemplates.length === 0) return null;
+                    return (
+                      <>
+                        <div className="px-2 pt-1">
+                          <div className="h-px bg-border my-1" />
+                          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-1">Templates</p>
+                        </div>
+                        {colTemplates.map(template => (
+                          <div
+                            key={template.id}
+                            className="mx-2 mb-1.5 bg-card/60 rounded-lg border border-dashed border-primary/30 cursor-pointer hover:shadow-md transition-all group/tpl relative"
+                            onClick={() => { setSelectedTask(template); setShowTaskDetail(true); }}
+                          >
+                            <div className="px-2 py-1.5">
+                              <Badge className="bg-primary/10 text-primary border-primary/20 text-[9px] h-4 mb-1">
+                                <Copy className="h-2.5 w-2.5 mr-0.5" /> Este cartão é um template
+                              </Badge>
+                              <h4 className="font-normal text-sm text-foreground leading-snug">{template.title}</h4>
+                            </div>
+                            <div className="absolute top-1 right-1 opacity-0 group-hover/tpl:opacity-100 transition-opacity">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                  <Button variant="secondary" size="icon" className="h-6 w-6 rounded-full shadow-sm">
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>
+                                    Duplicar como card em:
+                                  </DropdownMenuItem>
+                                  {columns.map(c => (
+                                    <DropdownMenuItem key={c.id} onClick={(e) => { e.stopPropagation(); duplicateTemplateAsCard(template, c.id); }}>
+                                      <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: c.color }} />
+                                      {c.title}
+                                    </DropdownMenuItem>
+                                  ))}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(template); }}>
+                                    <Edit className="h-4 w-4 mr-2" /> Editar Template
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteTask(template.id); }} className="text-destructive">
+                                    <Trash2 className="h-4 w-4 mr-2" /> Excluir Template
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    );
+                  })()}
                   </div>
                   {/* Fixed add button at bottom of column */}
-                  <div className="p-2 pt-0 border-t border-border">
+                  <div className="p-2 pt-0 border-t border-border space-y-1">
                     <Button variant="ghost" size="sm" className="w-full text-xs gap-1" onClick={() => openCreateTask(column.id)}>
                       <Plus className="h-3 w-3" /> Adicionar
+                    </Button>
+                    <Button variant="ghost" size="sm" className="w-full text-xs gap-1 text-muted-foreground" onClick={() => openCreateTemplate(column.id)}>
+                      <Copy className="h-3 w-3" /> Criar template
                     </Button>
                   </div>
                 </div>
@@ -1767,7 +1889,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       <Dialog open={showCreateTask} onOpenChange={(o) => { if (!o) { setShowCreateTask(false); setEditingTask(null); resetForm(); } }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingTask ? `Editar Tarefa #${editingTask.task_number}` : 'Nova Tarefa'}</DialogTitle>
+           <DialogTitle>
+              {isCreatingTemplate ? '🔧 Novo Template' : editingTask ? `Editar Tarefa #${editingTask.task_number}` : 'Nova Tarefa'}
+            </DialogTitle>
+            {isCreatingTemplate && (
+              <DialogDescription className="text-xs">
+                Templates não possuem responsável nem data de entrega. Duplique-os como cards normais.
+              </DialogDescription>
+            )}
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -1795,6 +1924,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   </SelectContent>
                 </Select>
               </div>
+              {!isCreatingTemplate && (
               <div className="space-y-2">
                 <Label>Responsável</Label>
                 <Select value={assignedTo} onValueChange={setAssignedTo}>
@@ -1809,7 +1939,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   </SelectContent>
                 </Select>
               </div>
+              )}
             </div>
+            {!isCreatingTemplate && (
+            <>
             <div className="space-y-2">
               <Label>Responsáveis adicionais</Label>
               <ScrollArea className="border border-border rounded-lg max-h-[120px]">
@@ -1849,6 +1982,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 }} />
               </div>
             </div>
+            </>
+            )}
             <div className="space-y-2">
               <Label>Capa do Card</Label>
               <div className="flex flex-wrap gap-2">
@@ -2451,7 +2586,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       </Sheet>
 
       {/* Report Dialog */}
-      <ReportDialog open={showReport} onOpenChange={setShowReport} tasks={tasks} columns={columns} boardName={board.name} />
+      <ReportDialog open={showReport} onOpenChange={setShowReport} tasks={tasks.filter(t => !t.is_template)} columns={columns} boardName={board.name} />
 
       {/* Automation Rules Panel */}
       <AutomationRulesPanel
