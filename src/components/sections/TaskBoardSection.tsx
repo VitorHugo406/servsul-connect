@@ -1752,6 +1752,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                                     const autoUpdates: Record<string, any> = {};
                                     if (c.auto_assign_to) autoUpdates.assigned_to = c.auto_assign_to;
                                     if (c.auto_cover) autoUpdates.cover_image = c.auto_cover;
+                                    if ((c as any).is_template_column) autoUpdates.is_template = true;
                                     if (c.is_conclusion) {
                                       autoUpdates.completed_at = new Date().toISOString();
                                       if (task.due_date) {
