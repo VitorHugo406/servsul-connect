@@ -420,6 +420,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState('#6366f1');
   const [additionalAssignees, setAdditionalAssignees] = useState<string[]>([]);
+  const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
+  const [showTemplatePicker, setShowTemplatePicker] = useState<string | null>(null);
 
   const [creating, setCreating] = useState(false);
   const [editingTask, setEditingTask] = useState<BoardTask | null>(null);
