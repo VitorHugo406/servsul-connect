@@ -1348,8 +1348,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(task); }}>
-                                <Edit className="h-4 w-4 mr-2" /> Editar
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedTask(task); setShowTaskDetail(true); }}>
+                                <Edit className="h-4 w-4 mr-2" /> Abrir
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchiveTask(task.id); }}>
                                 <Archive className="h-4 w-4 mr-2" /> Arquivar
@@ -1702,8 +1702,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(task); }}>
-                                  <Edit className="h-4 w-4 mr-2" /> Editar
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedTask(task); setShowTaskDetail(true); }}>
+                                  <Edit className="h-4 w-4 mr-2" /> Abrir
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowLabelPicker(task.id); }}>
                                   <Tag className="h-4 w-4 mr-2" /> Etiquetas
@@ -1817,8 +1817,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                                     </DropdownMenuItem>
                                   ))}
                                   <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(template); }}>
-                                    <Edit className="h-4 w-4 mr-2" /> Editar Template
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedTask(template as any); setShowTaskDetail(true); }}>
+                                    <Edit className="h-4 w-4 mr-2" /> Abrir Template
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={(e) => {
                                     e.stopPropagation();
@@ -2094,7 +2094,6 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         task={selectedTask}
         open={showTaskDetail}
         onOpenChange={(o) => { setShowTaskDetail(o); if (!o) setSelectedTask(null); }}
-        onEdit={(t) => { setShowTaskDetail(false); openEditTask(t); }}
         onUpdateTask={async (id, updates) => { await updateTask(id, updates); await refetchTasks(); }}
         taskLabels={selectedTask ? getTaskLabels(selectedTask.id) : []}
         allLabels={labels}
@@ -2106,6 +2105,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         columns={columns.map(c => ({ id: c.id, title: c.title, color: c.color }))}
         onDuplicateTemplate={duplicateTemplateAsCard}
         onMakeTemplate={handleMakeTemplate}
+        boardMembers={members}
+        getTaskAssignees={getTaskAssignees}
+        onSetTaskAssignees={setTaskAssigneesDb}
+        allUsers={allUsers}
       />
 
       {/* Label Picker Dialog */}

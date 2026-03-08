@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import {
   ArrowRight, Calendar as CalendarIcon, CheckCircle2, CheckSquare, ChevronDown, ChevronRight,
-  Eye, EyeOff, Loader2, MessageSquare, Plus, Tag, Trash2, Users, X, Zap, Bell, Move, Copy, Layout,
-  Bold, Italic, Strikethrough, List, Type, Minus, Search, Pencil
+  Eye, EyeOff, Image, Loader2, MessageSquare, Palette, Plus, Tag, Trash2, Users, X, Zap, Bell, Move, Copy, Layout,
+  Bold, Italic, Strikethrough, List, Type, Minus, Search, Upload
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -51,6 +51,16 @@ function hashCode(s: string): number {
 const LABEL_COLORS = [
   '#22c55e', '#a3a306', '#f97316', '#ef4444', '#8b5cf6', '#3b82f6',
   '#ec4899', '#14b8a6', '#64748b', '#000000',
+];
+
+const COVER_COLORS = [
+  { id: 'blue', color: 'bg-blue-500' },
+  { id: 'green', color: 'bg-green-500' },
+  { id: 'yellow', color: 'bg-yellow-500' },
+  { id: 'red', color: 'bg-red-500' },
+  { id: 'purple', color: 'bg-purple-500' },
+  { id: 'pink', color: 'bg-pink-500' },
+  { id: 'orange', color: 'bg-orange-500' },
 ];
 
 const REMINDER_OPTIONS = [
@@ -210,7 +220,6 @@ interface TaskDetailDialogProps {
   task: BoardTask | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  onEdit: (t: BoardTask) => void;
   onUpdateTask?: (taskId: string, updates: Record<string, any>) => Promise<any>;
   taskLabels?: TaskLabel[];
   allLabels?: TaskLabel[];
@@ -222,9 +231,13 @@ interface TaskDetailDialogProps {
   columns?: { id: string; title: string; color: string }[];
   onDuplicateTemplate?: (template: BoardTask, targetColumnId: string) => void;
   onMakeTemplate?: (taskId: string) => void;
+  boardMembers?: { id: string; user_id: string; profile_id: string; role: string; profile?: any }[];
+  getTaskAssignees?: (taskId: string) => any[];
+  onSetTaskAssignees?: (taskId: string, profileIds: string[]) => Promise<any>;
+  allUsers?: { id: string; name: string; display_name: string | null; avatar_url: string | null }[];
 }
 
-export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTask, taskLabels, allLabels, onToggleLabel, onCreateLabel, onDeleteLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate, onMakeTemplate }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskLabels, allLabels, onToggleLabel, onCreateLabel, onDeleteLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate, onMakeTemplate, boardMembers, getTaskAssignees, onSetTaskAssignees, allUsers }: TaskDetailDialogProps) {
   const isMobile = useIsMobile();
   const { comments, addComment, loading: commentsLoading } = useTaskComments(task?.id || null);
   const { subtasks, addSubtask, toggleSubtask, deleteSubtask, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null, boardId);
@@ -482,7 +495,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
                           onCheckedChange={() => onToggleLabel?.(task.id, l.id)}
                           className="h-4 w-4"
                         />
-                        <button
+                       <button
                           onClick={() => onToggleLabel?.(task.id, l.id)}
                           className="flex-1 h-8 rounded-md flex items-center px-2.5 relative overflow-hidden transition-all hover:opacity-80"
                           style={{ backgroundColor: l.color }}
@@ -495,10 +508,11 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 flex-shrink-0"
-                          onClick={(e) => { e.stopPropagation(); /* could open edit in future */ }}
+                          className="h-7 w-7 flex-shrink-0 text-destructive hover:text-destructive"
+                          onClick={(e) => { e.stopPropagation(); onDeleteLabel?.(l.id); }}
+                          title="Excluir etiqueta"
                         >
-                          <Pencil className="h-3 w-3 text-muted-foreground" />
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     );
@@ -515,11 +529,11 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full text-xs text-muted-foreground"
+                  className="w-full text-xs text-muted-foreground gap-1.5"
                   onClick={() => setColorblindMode(!colorblindMode)}
                 >
-                  <Eye className="h-3 w-3 mr-1" />
-                  {colorblindMode ? 'Desativar' : 'Modo daltônico'}
+                  <Eye className="h-3 w-3" />
+                  {colorblindMode ? 'Desativar modo daltônico' : 'Ativar modo daltônico'}
                 </Button>
               </div>
             )}
@@ -573,11 +587,142 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
         <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => setShowAddGroup(true)}>
           <CheckSquare className="h-3.5 w-3.5" /> Checklist
         </Button>
-        {!task.is_template && (
-          <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => onEdit(task)}>
-            <Users className="h-3.5 w-3.5" /> Membros
-          </Button>
+
+        {/* Membros Popover */}
+        {!task.is_template && boardMembers && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs">
+                <Users className="h-3.5 w-3.5" /> Membros
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-0" align="start" sideOffset={8}>
+              <div className="p-3 space-y-2">
+                <h4 className="text-sm font-semibold">Membros</h4>
+                {/* Responsável padrão */}
+                {task.assignee && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Responsável padrão</p>
+                    <div className="flex items-center gap-2 p-1.5 rounded-md bg-muted/50">
+                      <Avatar className="h-7 w-7">
+                        <AvatarImage src={task.assignee.avatar_url || ''} />
+                        <AvatarFallback className="text-[9px] bg-primary text-primary-foreground">{getInitials(task.assignee.display_name || task.assignee.name)}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">{task.assignee.display_name || task.assignee.name}</span>
+                    </div>
+                  </div>
+                )}
+                {/* Sub-responsáveis */}
+                {(() => {
+                  const extras = getTaskAssignees ? getTaskAssignees(task.id) : [];
+                  return (
+                    <div>
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Sub-responsáveis</p>
+                      {extras.length === 0 ? (
+                        <p className="text-xs text-muted-foreground py-1">Nenhum sub-responsável</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {extras.map((a: any) => (
+                            <div key={a.id} className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted/50 group">
+                              <Avatar className="h-7 w-7">
+                                <AvatarImage src={a.profile?.avatar_url || ''} />
+                                <AvatarFallback className="text-[9px] bg-muted">{getInitials(a.profile?.display_name || a.profile?.name || '?')}</AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm flex-1">{a.profile?.display_name || a.profile?.name}</span>
+                              <Button
+                                variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                                onClick={() => onSetTaskAssignees?.(task.id, extras.filter((e: any) => e.profile_id !== a.profile_id).map((e: any) => e.profile_id))}
+                              >
+                                <X className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+                {/* Adicionar membro */}
+                {allUsers && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 mt-2">Adicionar membro</p>
+                    <ScrollArea className="max-h-[150px]">
+                      <div className="space-y-0.5">
+                        {allUsers.filter(u => {
+                          const extras = getTaskAssignees ? getTaskAssignees(task.id) : [];
+                          return u.id !== task.assigned_to && !extras.some((e: any) => e.profile_id === u.id);
+                        }).map(u => (
+                          <button
+                            key={u.id}
+                            className="flex items-center gap-2 w-full p-1.5 rounded-md hover:bg-muted/50 text-left"
+                            onClick={() => {
+                              const extras = getTaskAssignees ? getTaskAssignees(task.id) : [];
+                              onSetTaskAssignees?.(task.id, [...extras.map((e: any) => e.profile_id), u.id]);
+                            }}
+                          >
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={u.avatar_url || ''} />
+                              <AvatarFallback className="text-[8px] bg-muted">{getInitials(u.display_name || u.name)}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs">{u.display_name || u.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         )}
+
+        {/* Capa Popover */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs">
+              <Palette className="h-3.5 w-3.5" /> Capa
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-3" align="start" sideOffset={8}>
+            <h4 className="text-sm font-semibold mb-2">Cor da capa</h4>
+            <div className="grid grid-cols-4 gap-1.5 mb-3">
+              <button
+                onClick={() => onUpdateTask?.(task.id, { cover_image: null })}
+                className={cn('h-8 rounded-md border-2 border-dashed border-border flex items-center justify-center text-[10px] text-muted-foreground', !task.cover_image && 'ring-2 ring-foreground ring-offset-2 ring-offset-background')}
+              >
+                <X className="h-3 w-3" />
+              </button>
+              {COVER_COLORS.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => onUpdateTask?.(task.id, { cover_image: c.id })}
+                  className={cn('h-8 rounded-md transition-all', c.color, task.cover_image === c.id && 'ring-2 ring-foreground ring-offset-2 ring-offset-background')}
+                />
+              ))}
+            </div>
+            <h4 className="text-sm font-semibold mb-2">Imagem de capa</h4>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="text-xs gap-1.5 flex-1" onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = async (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = async (ev) => {
+                    const dataUrl = ev.target?.result as string;
+                    await onUpdateTask?.(task.id, { cover_image: dataUrl });
+                  };
+                  reader.readAsDataURL(file);
+                };
+                input.click();
+              }}>
+                <Upload className="h-3 w-3" /> Enviar imagem
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );
