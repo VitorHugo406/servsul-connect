@@ -1756,6 +1756,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMakeTemplate(task.id); }}>
                                   <Copy className="h-4 w-4 mr-2" /> Tornar Template
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleEmergency(task.id, task.is_emergency); }}>
+                                  <Siren className="h-4 w-4 mr-2" /> {task.is_emergency ? 'Desativar Emergente' : 'Ativar Modo Emergente'}
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>
                                   Mover para:
