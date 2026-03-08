@@ -239,9 +239,9 @@ function PodiumPlace({ member, place, height }: { member: MemberScore; place: nu
       className="flex flex-col items-center gap-1.5 sm:gap-2 w-18 sm:w-24"
     >
       <div className="relative">
-        <Avatar className={cn('h-12 w-12 border-2', borderColors[place - 1])}>
+        <Avatar className={cn('h-10 w-10 sm:h-12 sm:w-12 border-2', borderColors[place - 1])}>
           <AvatarImage src={member.avatarUrl || ''} />
-          <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+          <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
             {getInitials(member.displayName || member.name)}
           </AvatarFallback>
         </Avatar>

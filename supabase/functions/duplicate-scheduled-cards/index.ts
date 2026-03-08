@@ -94,6 +94,15 @@ Deno.serve(async (req) => {
         const assignedTo = targetColumn?.auto_assign_to || task.assigned_to
         const coverImage = targetColumn?.auto_cover || task.cover_image
 
+        // For daily frequency, set due_date to today with the original task's time
+        let newDueDate = task.due_date
+        if (dup.frequency === 'daily' && task.due_date) {
+          const originalDue = new Date(task.due_date)
+          const todayDue = new Date(now)
+          todayDue.setHours(originalDue.getHours(), originalDue.getMinutes(), originalDue.getSeconds(), 0)
+          newDueDate = todayDue.toISOString()
+        }
+
         const { data: newTask, error: insertError } = await supabase
           .from('tasks')
           .insert({
@@ -105,7 +114,7 @@ Deno.serve(async (req) => {
             board_id: dup.board_id,
             created_by: dup.created_by,
             cover_image: coverImage,
-            due_date: task.due_date,
+            due_date: newDueDate,
             position: count || 0,
           })
           .select('id')
