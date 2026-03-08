@@ -1544,6 +1544,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     {column.is_conclusion && (
                       <Badge variant="outline" className="text-[9px] border-green-500 text-green-600">✓ Conclusão</Badge>
                     )}
+                    {(column as any).is_template_column && (
+                      <Badge variant="outline" className="text-[9px] border-amber-500 text-amber-600">🔧 Template</Badge>
+                    )}
                     <Badge variant="secondary" className="text-xs">{colTasks.length}</Badge>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
