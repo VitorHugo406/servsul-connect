@@ -1690,7 +1690,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
       {/* Bottom bar: Planner / Board / Switch - Trello style */}
       {!isMobile && (
-        <div className="flex items-center justify-center py-2.5 relative z-10">
+        <div className="flex items-center justify-center py-1 relative z-10">
           <div className="flex items-center bg-sidebar rounded-lg p-1">
             <button
               onClick={togglePlanner}
