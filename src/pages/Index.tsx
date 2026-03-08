@@ -27,6 +27,7 @@ import { LogsSection } from '@/components/sections/LogsSection';
 import { StorageMonitoringSection } from '@/components/sections/StorageMonitoringSection';
 import { EventHistorySection } from '@/components/sections/EventHistorySection';
 import { CalendarSection } from '@/components/sections/CalendarSection';
+import { DocumentationSection } from '@/components/sections/DocumentationSection';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
@@ -53,6 +54,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
    'system-logs': { title: 'Logs do Sistema', subtitle: 'Auditoria e relatórios' },
    'storage': { title: 'Armazenamento', subtitle: 'Monitoramento do banco de dados' },
    'event-history': { title: 'Eventos Mensais', subtitle: 'Histórico de campanhas' },
+   'documentation': { title: 'Documentação', subtitle: 'Documentação técnica do sistema' },
 };
 
 const Index = () => {
@@ -129,6 +131,8 @@ const Index = () => {
           return <StorageMonitoringSection />;
         case 'event-history':
           return <EventHistorySection />;
+        case 'documentation':
+          return <DocumentationSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }
