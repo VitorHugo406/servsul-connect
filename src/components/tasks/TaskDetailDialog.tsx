@@ -53,6 +53,16 @@ const LABEL_COLORS = [
   '#ec4899', '#14b8a6', '#64748b', '#000000',
 ];
 
+const COVER_COLORS = [
+  { id: 'blue', color: 'bg-blue-500' },
+  { id: 'green', color: 'bg-green-500' },
+  { id: 'yellow', color: 'bg-yellow-500' },
+  { id: 'red', color: 'bg-red-500' },
+  { id: 'purple', color: 'bg-purple-500' },
+  { id: 'pink', color: 'bg-pink-500' },
+  { id: 'orange', color: 'bg-orange-500' },
+];
+
 const REMINDER_OPTIONS = [
   { value: 'none', label: 'Sem lembrete' },
   { value: '5', label: '5 minutos antes' },
