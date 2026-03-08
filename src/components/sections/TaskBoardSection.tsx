@@ -2551,11 +2551,11 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Shuffle className="h-5 w-5 text-secondary" /> Auto-distribuição de Tarefas
+              <Shuffle className="h-5 w-5 text-orange-500" /> Auto-distribuição de Tarefas
             </DialogTitle>
             <DialogDescription>Recomendações de redistribuição baseadas na carga de trabalho</DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[400px]">
+          <ScrollArea className="max-h-[450px]">
             {(() => {
               const recs = getDistributionRecommendations();
               return recs.length === 0 ? (
@@ -2566,20 +2566,35 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               ) : (
                 <div className="space-y-3">
                   {recs.map((rec, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{rec.taskTitle}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {rec.fromName} → {rec.toName}
-                        </p>
+                    <div key={i} className="p-3 rounded-lg border border-border bg-card space-y-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: columns.find(c => c.id === rec.targetColumnId)?.color }} />
+                        <p className="text-sm font-medium text-foreground truncate flex-1" title={rec.taskTitle}>{rec.taskTitle}</p>
                       </div>
-                      <Button size="sm" className="h-7 text-xs" onClick={async () => {
-                        await updateTask(rec.taskId, { assigned_to: rec.toProfileId });
-                        toast.success(`Tarefa reatribuída para ${rec.toName}`);
-                        setShowDistribution(false);
-                      }}>
-                        Aprovar
-                      </Button>
+                      <p className="text-xs text-muted-foreground leading-relaxed bg-muted/50 rounded-md p-2">
+                        💡 {rec.reason}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="truncate max-w-[100px]" title={rec.fromName}>{rec.fromName}</span>
+                        <MoveRight className="h-3 w-3 flex-shrink-0 text-orange-500" />
+                        <span className="font-medium text-foreground truncate max-w-[100px]" title={rec.toName}>{rec.toName}</span>
+                        <span className="text-muted-foreground">•</span>
+                        <Badge variant="outline" className="text-[10px] h-5 flex-shrink-0">{rec.targetColumn}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <Button size="sm" className="h-7 text-xs flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
+                          await updateTask(rec.taskId, { assigned_to: rec.toProfileId });
+                          toast.success(`Tarefa reatribuída para ${rec.toName}`);
+                          setShowDistribution(false);
+                        }}>
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> Aprovar
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 text-xs flex-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => {
+                          toast.info('Redistribuição recusada');
+                        }}>
+                          <X className="h-3 w-3 mr-1" /> Recusar
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
