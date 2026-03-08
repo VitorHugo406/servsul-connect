@@ -370,8 +370,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     const avg = memberWorkloads.reduce((s, m) => s + m.taskCount, 0) / Math.max(memberWorkloads.length, 1);
     const overloaded = memberWorkloads.filter(m => m.taskCount > avg + 1);
     const underloaded = memberWorkloads.filter(m => m.taskCount < avg);
+    const threshold = board.overload_threshold || 5;
     
-    const recommendations: { taskId: string; taskTitle: string; fromName: string; toName: string; toProfileId: string }[] = [];
+    const recommendations: { taskId: string; taskTitle: string; fromName: string; toName: string; toProfileId: string; reason: string; targetColumn: string; targetColumnId: string }[] = [];
     for (const over of overloaded) {
       const excess = over.tasks.slice(Math.ceil(avg));
       for (const task of excess) {
@@ -379,12 +380,19 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         if (target) {
           const fromProfile = allUsers.find(u => u.id === over.profile_id);
           const toProfile = allUsers.find(u => u.id === target.profile_id);
+          const col = columns.find(c => c.id === task.status);
+          const reason = over.taskCount > threshold
+            ? `${fromProfile?.display_name || fromProfile?.name} está sobrecarregado(a) com ${over.taskCount} cards (limite: ${threshold}). ${toProfile?.display_name || toProfile?.name} possui apenas ${target.taskCount} cards ativos.`
+            : `Redistribuição para equilibrar a carga: ${fromProfile?.display_name || fromProfile?.name} (${over.taskCount} cards) → ${toProfile?.display_name || toProfile?.name} (${target.taskCount} cards).`;
           recommendations.push({
             taskId: task.id,
             taskTitle: task.title,
             fromName: fromProfile?.display_name || fromProfile?.name || 'Sem nome',
             toName: toProfile?.display_name || toProfile?.name || 'Sem nome',
             toProfileId: target.profile_id,
+            reason,
+            targetColumn: col?.title || 'Mesma coluna',
+            targetColumnId: task.status,
           });
           target.taskCount++;
         }
