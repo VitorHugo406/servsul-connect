@@ -812,7 +812,6 @@ export function ManagementSection() {
                                 }
                               />
                             </TableCell>
-                            </TableCell>
                           </TableRow>
                         );
                       })}
