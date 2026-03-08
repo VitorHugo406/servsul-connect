@@ -291,6 +291,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
   const [showDistribution, setShowDistribution] = useState(false);
+  const [distributionColumnOverrides, setDistributionColumnOverrides] = useState<Record<string, string>>({});
 
   const togglePlanner = () => {
     if (showPlanner) { setShowPlanner(false); setShowBoard(true); }
