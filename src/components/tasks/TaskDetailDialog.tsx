@@ -420,14 +420,36 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
     </div>
   );
 
-  const renderDescription = () => task.description ? (
+  const handleSaveDescription = async (newDesc: string) => {
+    if (onUpdateTask && task) {
+      await onUpdateTask(task.id, { description: newDesc || null });
+    }
+    setEditingDescription(false);
+  };
+
+  const renderDescription = () => (
     <div className="px-4 py-2">
       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Descrição</h4>
-      <div className="bg-muted/30 border border-border rounded-lg p-3">
-        <RichDescription text={task.description} />
-      </div>
+      {editingDescription ? (
+        <DescriptionEditor
+          value={task.description || ''}
+          onSave={handleSaveDescription}
+          onCancel={() => setEditingDescription(false)}
+        />
+      ) : (
+        <div
+          className="bg-muted/30 border border-border rounded-lg p-3 cursor-pointer hover:bg-muted/50 transition-colors min-h-[60px]"
+          onDoubleClick={() => setEditingDescription(true)}
+        >
+          {task.description ? (
+            <RichDescription text={task.description} />
+          ) : (
+            <p className="text-[15px] text-muted-foreground">Clique duas vezes para adicionar uma descrição...</p>
+          )}
+        </div>
+      )}
     </div>
-  ) : null;
+  );
 
   const renderProgress = () => total > 0 ? (
     <div className="px-4 py-1">
