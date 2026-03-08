@@ -1,5 +1,5 @@
 import { useState } from 'react';
- import { Home, MessageSquare, Bell, Cake, MoreHorizontal, Settings, Camera, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, FileText, CalendarDays } from 'lucide-react';
+ import { Home, MessageSquare, Bell, Cake, MoreHorizontal, Settings, Camera, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, FileText, CalendarDays, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
