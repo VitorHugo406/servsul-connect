@@ -1161,6 +1161,11 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 <Button variant="ghost" size="icon" onClick={() => setShowDistribution(true)} title="Auto-distribuição" className="text-orange-500 hover:text-orange-600">
                   <Shuffle className="h-4 w-4" />
                 </Button>
+               )}
+              {isAdminOrOwner && (
+                <Button variant="ghost" size="icon" onClick={() => setShowScore(true)} title="Score" className="text-yellow-500 hover:text-yellow-600">
+                  <Trophy className="h-4 w-4" />
+                </Button>
               )}
               <Button
                 variant="ghost"
