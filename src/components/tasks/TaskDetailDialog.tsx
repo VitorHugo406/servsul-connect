@@ -577,11 +577,142 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
         <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => setShowAddGroup(true)}>
           <CheckSquare className="h-3.5 w-3.5" /> Checklist
         </Button>
-        {!task.is_template && (
-          <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => onEdit(task)}>
-            <Users className="h-3.5 w-3.5" /> Membros
-          </Button>
+
+        {/* Membros Popover */}
+        {!task.is_template && boardMembers && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs">
+                <Users className="h-3.5 w-3.5" /> Membros
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-0" align="start" sideOffset={8}>
+              <div className="p-3 space-y-2">
+                <h4 className="text-sm font-semibold">Membros</h4>
+                {/* Responsável padrão */}
+                {task.assignee && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Responsável padrão</p>
+                    <div className="flex items-center gap-2 p-1.5 rounded-md bg-muted/50">
+                      <Avatar className="h-7 w-7">
+                        <AvatarImage src={task.assignee.avatar_url || ''} />
+                        <AvatarFallback className="text-[9px] bg-primary text-primary-foreground">{getInitials(task.assignee.display_name || task.assignee.name)}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">{task.assignee.display_name || task.assignee.name}</span>
+                    </div>
+                  </div>
+                )}
+                {/* Sub-responsáveis */}
+                {(() => {
+                  const extras = getTaskAssignees ? getTaskAssignees(task.id) : [];
+                  return (
+                    <div>
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Sub-responsáveis</p>
+                      {extras.length === 0 ? (
+                        <p className="text-xs text-muted-foreground py-1">Nenhum sub-responsável</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {extras.map((a: any) => (
+                            <div key={a.id} className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted/50 group">
+                              <Avatar className="h-7 w-7">
+                                <AvatarImage src={a.profile?.avatar_url || ''} />
+                                <AvatarFallback className="text-[9px] bg-muted">{getInitials(a.profile?.display_name || a.profile?.name || '?')}</AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm flex-1">{a.profile?.display_name || a.profile?.name}</span>
+                              <Button
+                                variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                                onClick={() => onSetTaskAssignees?.(task.id, extras.filter((e: any) => e.profile_id !== a.profile_id).map((e: any) => e.profile_id))}
+                              >
+                                <X className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+                {/* Adicionar membro */}
+                {allUsers && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 mt-2">Adicionar membro</p>
+                    <ScrollArea className="max-h-[150px]">
+                      <div className="space-y-0.5">
+                        {allUsers.filter(u => {
+                          const extras = getTaskAssignees ? getTaskAssignees(task.id) : [];
+                          return u.id !== task.assigned_to && !extras.some((e: any) => e.profile_id === u.id);
+                        }).map(u => (
+                          <button
+                            key={u.id}
+                            className="flex items-center gap-2 w-full p-1.5 rounded-md hover:bg-muted/50 text-left"
+                            onClick={() => {
+                              const extras = getTaskAssignees ? getTaskAssignees(task.id) : [];
+                              onSetTaskAssignees?.(task.id, [...extras.map((e: any) => e.profile_id), u.id]);
+                            }}
+                          >
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={u.avatar_url || ''} />
+                              <AvatarFallback className="text-[8px] bg-muted">{getInitials(u.display_name || u.name)}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs">{u.display_name || u.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         )}
+
+        {/* Capa Popover */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs">
+              <Palette className="h-3.5 w-3.5" /> Capa
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-3" align="start" sideOffset={8}>
+            <h4 className="text-sm font-semibold mb-2">Cor da capa</h4>
+            <div className="grid grid-cols-4 gap-1.5 mb-3">
+              <button
+                onClick={() => onUpdateTask?.(task.id, { cover_image: null })}
+                className={cn('h-8 rounded-md border-2 border-dashed border-border flex items-center justify-center text-[10px] text-muted-foreground', !task.cover_image && 'ring-2 ring-foreground ring-offset-2 ring-offset-background')}
+              >
+                <X className="h-3 w-3" />
+              </button>
+              {COVER_COLORS.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => onUpdateTask?.(task.id, { cover_image: c.id })}
+                  className={cn('h-8 rounded-md transition-all', c.color, task.cover_image === c.id && 'ring-2 ring-foreground ring-offset-2 ring-offset-background')}
+                />
+              ))}
+            </div>
+            <h4 className="text-sm font-semibold mb-2">Imagem de capa</h4>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="text-xs gap-1.5 flex-1" onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = async (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = async (ev) => {
+                    const dataUrl = ev.target?.result as string;
+                    await onUpdateTask?.(task.id, { cover_image: dataUrl });
+                  };
+                  reader.readAsDataURL(file);
+                };
+                input.click();
+              }}>
+                <Upload className="h-3 w-3" /> Enviar imagem
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );
