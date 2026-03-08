@@ -625,7 +625,48 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     setEditingTask(null);
   };
 
-  const handleDeleteTask = async (taskId: string) => {
+  const openCreateTemplate = (columnId: string) => {
+    resetForm();
+    setIsCreatingTemplate(true);
+    setTargetColumn(columnId);
+    setShowCreateTask(true);
+  };
+
+  const duplicateTemplateAsCard = async (template: BoardTask, targetColumnId: string) => {
+    const taskData = {
+      title: template.title,
+      description: template.description || undefined,
+      status: targetColumnId,
+      priority: template.priority,
+      cover_image: template.cover_image || undefined,
+      is_template: false,
+    };
+    const result = await createTask(taskData);
+    if (result.error) {
+      toast.error('Erro ao criar card a partir do template');
+    } else {
+      // Copy subtasks from template
+      const { data: subtasks } = await supabase
+        .from('task_subtasks')
+        .select('*')
+        .eq('task_id', template.id)
+        .order('position');
+      if (subtasks && subtasks.length > 0 && result.data) {
+        for (const st of subtasks) {
+          await supabase.from('task_subtasks').insert({
+            task_id: result.data.id,
+            title: st.title,
+            position: st.position,
+            group_id: st.group_id,
+          });
+        }
+      }
+      toast.success('Card criado a partir do template!');
+    }
+    setShowTemplatePicker(null);
+  };
+
+
     if (!confirm('Excluir esta tarefa?')) return;
     const { error } = await deleteTask(taskId);
     if (error) { toast.error('Erro ao excluir tarefa'); return; }
