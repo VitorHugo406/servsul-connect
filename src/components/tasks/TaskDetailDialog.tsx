@@ -92,6 +92,7 @@ interface TaskDetailDialogProps {
   onOpenAutomation?: (taskId: string) => void;
   columns?: { id: string; title: string; color: string }[];
   onDuplicateTemplate?: (template: BoardTask, targetColumnId: string) => void;
+  onMakeTemplate?: (taskId: string) => void;
 }
 
 export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTask, taskLabels, allLabels, onToggleLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate }: TaskDetailDialogProps) {
