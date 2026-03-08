@@ -229,29 +229,48 @@
     scrollbar-width: none;
   }
 
-  /* Emergency Mode - Marching border animation */
-  @keyframes emergency-border-march {
-    0% { background-position: 0 0, 100% 0, 100% 100%, 0 100%; }
-    100% { background-position: 200px 0, calc(100% - 200px) 0, calc(100% - 200px) 100%, 200px 100%; }
+  /* Emergency Mode - Rotating border + pulsing glow */
+  @property --emergency-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  @keyframes emergency-rotate {
+    to { --emergency-angle: 360deg; }
+  }
+
+  @keyframes emergency-pulse-glow {
+    0%, 100% { box-shadow: 0 0 8px hsl(0 80% 55% / 0.3); }
+    50% { box-shadow: 0 0 22px hsl(0 80% 55% / 0.6), 0 0 40px hsl(0 80% 55% / 0.2); }
   }
 
   .emergency-card {
     position: relative;
-    background:
-      linear-gradient(90deg, hsl(0 80% 55%) 50%, transparent 50%) top / 12px 3px repeat-x,
-      linear-gradient(90deg, transparent 50%, hsl(0 80% 55%) 50%) bottom / 12px 3px repeat-x,
-      linear-gradient(0deg, hsl(0 80% 55%) 50%, transparent 50%) left / 3px 12px repeat-y,
-      linear-gradient(0deg, transparent 50%, hsl(0 80% 55%) 50%) right / 3px 12px repeat-y;
-    animation: emergency-border-march 1.5s linear infinite;
-    box-shadow: 0 0 12px hsl(0 80% 55% / 0.35), inset 0 0 8px hsl(0 80% 55% / 0.08);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    animation: emergency-pulse-glow 1.5s ease-in-out infinite;
   }
 
-  @keyframes emergency-pulse-glow {
-    0%, 100% { box-shadow: 0 0 12px hsl(0 80% 55% / 0.35), inset 0 0 8px hsl(0 80% 55% / 0.08); }
-    50% { box-shadow: 0 0 20px hsl(0 80% 55% / 0.55), inset 0 0 12px hsl(0 80% 55% / 0.15); }
-  }
-
-  .emergency-card {
-    animation: emergency-border-march 1.5s linear infinite, emergency-pulse-glow 2s ease-in-out infinite;
+  .emergency-card::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: inherit;
+    padding: 3px;
+    background: conic-gradient(
+      from var(--emergency-angle),
+      hsl(0 80% 55%) 0%,
+      transparent 25%,
+      transparent 50%,
+      hsl(0 80% 55%) 75%,
+      hsl(0 80% 55%) 100%
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: emergency-rotate 2s linear infinite;
+    pointer-events: none;
+    z-index: 1;
   }
 }
