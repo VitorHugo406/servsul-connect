@@ -1114,10 +1114,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       </div>
 
       {/* Board area with optional planner */}
-      <div className={cn(
-        "flex-1 overflow-hidden relative z-10 flex transition-all duration-300",
-        showPlanner && "mx-3 mb-1 rounded-xl border-2 border-sidebar shadow-lg"
-      )}>
+      <div className="flex-1 overflow-hidden relative z-10 flex transition-all duration-300">
         {/* Planner sidebar - Trello style */}
         <AnimatePresence>
         {showPlanner && (
@@ -2565,14 +2562,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
       {/* Distribution Dialog */}
       <Dialog open={showDistribution} onOpenChange={setShowDistribution}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-md w-[95vw]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shuffle className="h-5 w-5 text-orange-500" /> Auto-distribuição de Tarefas
             </DialogTitle>
             <DialogDescription>Recomendações de redistribuição baseadas na carga de trabalho</DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[450px]">
+          <ScrollArea className="max-h-[60vh]">
             {(() => {
               const recs = getDistributionRecommendations();
               return recs.length === 0 ? (
@@ -2581,22 +2578,21 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   <p className="text-sm text-muted-foreground">As tarefas estão bem distribuídas!</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 pr-2">
                   {recs.map((rec, i) => (
-                    <div key={i} className="p-3 rounded-lg border border-border bg-card space-y-2">
+                    <div key={i} className="p-3 rounded-lg border border-border bg-card space-y-2 overflow-hidden">
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: columns.find(c => c.id === rec.targetColumnId)?.color }} />
-                        <p className="text-sm font-medium text-foreground truncate flex-1" title={rec.taskTitle}>{rec.taskTitle}</p>
+                        <p className="text-sm font-medium text-foreground line-clamp-1" title={rec.taskTitle}>{rec.taskTitle}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed bg-muted/50 rounded-md p-2">
+                      <p className="text-xs text-muted-foreground leading-relaxed bg-muted/50 rounded-md p-2 break-words">
                         💡 {rec.reason}
                       </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="truncate max-w-[100px]" title={rec.fromName}>{rec.fromName}</span>
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="truncate max-w-[80px]" title={rec.fromName}>{rec.fromName}</span>
                         <MoveRight className="h-3 w-3 flex-shrink-0 text-orange-500" />
-                        <span className="font-medium text-foreground truncate max-w-[100px]" title={rec.toName}>{rec.toName}</span>
-                        <span className="text-muted-foreground">•</span>
-                        <Badge variant="outline" className="text-[10px] h-5 flex-shrink-0">{rec.targetColumn}</Badge>
+                        <span className="font-medium text-foreground truncate max-w-[80px]" title={rec.toName}>{rec.toName}</span>
+                        <Badge variant="outline" className="text-[10px] h-5 flex-shrink-0 ml-auto">{rec.targetColumn}</Badge>
                       </div>
                       <div className="flex items-center gap-2 pt-1">
                         <Button size="sm" className="h-7 text-xs flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
@@ -2606,10 +2602,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                         }}>
                           <CheckCircle2 className="h-3 w-3 mr-1" /> Aprovar
                         </Button>
-                        <Button size="sm" variant="outline" className="h-7 text-xs flex-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => {
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => {
                           toast.info('Redistribuição recusada');
                         }}>
-                          <X className="h-3 w-3 mr-1" /> Recusar
+                          <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </div>
