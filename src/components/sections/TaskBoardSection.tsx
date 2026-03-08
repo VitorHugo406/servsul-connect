@@ -1928,7 +1928,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             </div>
             <div className="space-y-2">
               <Label>Descrição</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descreva a tarefa..." rows={2} />
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descreva a tarefa... Use **negrito**, *itálico*, ~~riscado~~" rows={5} className="min-h-[120px]" />
+              <p className="text-[10px] text-muted-foreground">Formatação: **negrito**, *itálico*, ~~riscado~~, `código`</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
