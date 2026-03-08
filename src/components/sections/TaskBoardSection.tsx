@@ -285,6 +285,11 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [showFilter, setShowFilter] = useState(false);
   const [showPlanner, setShowPlanner] = useState(false);
   const [showBoard, setShowBoard] = useState(true);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showJoinRequests, setShowJoinRequests] = useState(false);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [joinRequests, setJoinRequests] = useState<any[]>([]);
+  const [showDistribution, setShowDistribution] = useState(false);
 
   const togglePlanner = () => {
     if (showPlanner) { setShowPlanner(false); setShowBoard(true); }
@@ -293,6 +298,99 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const toggleBoard = () => {
     if (showBoard) { if (!showPlanner) return; setShowBoard(false); }
     else setShowBoard(true);
+  };
+
+  // Fetch share link and join requests
+  useEffect(() => {
+    if (!isAdminOrOwner) return;
+    const fetchShareData = async () => {
+      const { data: links } = await (supabase as any)
+        .from('board_share_links')
+        .select('*')
+        .eq('board_id', board.id)
+        .eq('is_active', true)
+        .limit(1);
+      if (links && links.length > 0) {
+        setShareLink(`${window.location.origin}?join=${links[0].share_token}`);
+      }
+      
+      const { data: requests } = await (supabase as any)
+        .from('board_join_requests')
+        .select('*, profile:profiles!board_join_requests_profile_id_fkey(id, name, display_name, avatar_url, email)')
+        .eq('board_id', board.id)
+        .eq('status', 'pending');
+      setJoinRequests(requests || []);
+    };
+    fetchShareData();
+
+    const channel = supabase
+      .channel(`board-requests-${board.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'board_join_requests', filter: `board_id=eq.${board.id}` }, () => fetchShareData())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [board.id, isAdminOrOwner]);
+
+  const generateShareLink = async () => {
+    const { data, error } = await (supabase as any)
+      .from('board_share_links')
+      .insert({ board_id: board.id, created_by: currentUserId })
+      .select()
+      .single();
+    if (!error && data) {
+      const link = `${window.location.origin}?join=${data.share_token}`;
+      setShareLink(link);
+      navigator.clipboard.writeText(link);
+      toast.success('Link copiado para a área de transferência!');
+    }
+  };
+
+  const handleJoinRequest = async (requestId: string, approve: boolean) => {
+    const request = joinRequests.find(r => r.id === requestId);
+    if (!request) return;
+    
+    if (approve) {
+      await addMember(request.user_id, request.profile_id, 'member');
+    }
+    
+    await (supabase as any)
+      .from('board_join_requests')
+      .update({ status: approve ? 'approved' : 'rejected', resolved_at: new Date().toISOString(), resolved_by: currentUserId })
+      .eq('id', requestId);
+    
+    setJoinRequests(prev => prev.filter(r => r.id !== requestId));
+    toast.success(approve ? 'Usuário aprovado!' : 'Solicitação recusada');
+  };
+
+  // Auto-distribution recommendations
+  const getDistributionRecommendations = () => {
+    const memberWorkloads = members.map(m => {
+      const memberTasks = tasks.filter(t => t.assigned_to === m.profile_id && !columns.find(c => c.id === t.status)?.is_conclusion);
+      return { ...m, taskCount: memberTasks.length, tasks: memberTasks };
+    });
+    const avg = memberWorkloads.reduce((s, m) => s + m.taskCount, 0) / Math.max(memberWorkloads.length, 1);
+    const overloaded = memberWorkloads.filter(m => m.taskCount > avg + 1);
+    const underloaded = memberWorkloads.filter(m => m.taskCount < avg);
+    
+    const recommendations: { taskId: string; taskTitle: string; fromName: string; toName: string; toProfileId: string }[] = [];
+    for (const over of overloaded) {
+      const excess = over.tasks.slice(Math.ceil(avg));
+      for (const task of excess) {
+        const target = underloaded.find(u => u.taskCount < avg);
+        if (target) {
+          const fromProfile = allUsers.find(u => u.id === over.profile_id);
+          const toProfile = allUsers.find(u => u.id === target.profile_id);
+          recommendations.push({
+            taskId: task.id,
+            taskTitle: task.title,
+            fromName: fromProfile?.display_name || fromProfile?.name || 'Sem nome',
+            toName: toProfile?.display_name || toProfile?.name || 'Sem nome',
+            toProfileId: target.profile_id,
+          });
+          target.taskCount++;
+        }
+      }
+    }
+    return recommendations;
   };
 
   // Form state
