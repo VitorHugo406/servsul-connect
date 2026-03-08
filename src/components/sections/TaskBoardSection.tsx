@@ -697,6 +697,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     toast.success('Card arquivado');
   };
 
+  const handleMakeTemplate = async (taskId: string) => {
+    if (!confirm('Tornar este card um template? Ele perderá responsável e data de entrega.')) return;
+    const { error } = await updateTask(taskId, { is_template: true, assigned_to: null, due_date: null } as any);
+    if (error) { toast.error('Erro ao converter'); return; }
+    toast.success('Card convertido em template!');
+  };
+
+
   const handleArchiveColumn = async (colId: string) => {
     const colTasks = tasks.filter(t => t.status === colId);
     if (colTasks.length === 0) { toast.info('Nenhum card para arquivar'); return; }
@@ -1339,6 +1347,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setAutomationTaskId(task.id); setShowAutomationRules(true); }}>
                                 <Zap className="h-4 w-4 mr-2" /> Automações
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMakeTemplate(task.id); }}>
+                                <Copy className="h-4 w-4 mr-2" /> Tornar Template
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>Mover para:</DropdownMenuItem>
                               {columns.filter(c => c.id !== mobileSelectedColumn).map(c => (
@@ -1378,12 +1389,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                       </div>
                     </div>
                   ))}
-                  <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1" onClick={() => openCreateTask(mobileSelectedColumn)}>
-                    <Plus className="h-3 w-3" /> Adicionar Tarefa
-                  </Button>
-                  <Button variant="ghost" size="sm" className="w-full text-xs gap-1 text-muted-foreground" onClick={() => openCreateTemplate(mobileSelectedColumn)}>
-                    <Copy className="h-3 w-3" /> Criar template
-                  </Button>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Button variant="ghost" size="sm" className="flex-1 text-xs gap-1" onClick={() => openCreateTask(mobileSelectedColumn)}>
+                      <Plus className="h-3 w-3" /> Adicionar Tarefa
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => openCreateTemplate(mobileSelectedColumn)}>
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -1691,6 +1704,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setAutomationTaskId(task.id); setShowAutomationRules(true); }}>
                                   <Zap className="h-4 w-4 mr-2" /> Automações
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMakeTemplate(task.id); }}>
+                                  <Copy className="h-4 w-4 mr-2" /> Tornar Template
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>
                                   Mover para:
@@ -1799,13 +1815,20 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   })()}
                   </div>
                   {/* Fixed add button at bottom of column */}
-                  <div className="p-2 pt-0 border-t border-border space-y-1">
-                    <Button variant="ghost" size="sm" className="w-full text-xs gap-1" onClick={() => openCreateTask(column.id)}>
-                      <Plus className="h-3 w-3" /> Adicionar
-                    </Button>
-                    <Button variant="ghost" size="sm" className="w-full text-xs gap-1 text-muted-foreground" onClick={() => openCreateTemplate(column.id)}>
-                      <Copy className="h-3 w-3" /> Criar template
-                    </Button>
+                  <div className="p-2 pt-0 border-t border-border">
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" className="flex-1 text-xs gap-1" onClick={() => openCreateTask(column.id)}>
+                        <Plus className="h-3 w-3" /> Adicionar
+                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openCreateTemplate(column.id)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Criar template</TooltipContent>
+                      </Tooltip>
+                    </div>
                   </div>
                 </div>
               );
@@ -1905,7 +1928,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             </div>
             <div className="space-y-2">
               <Label>Descrição</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descreva a tarefa..." rows={2} />
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descreva a tarefa... Use **negrito**, *itálico*, ~~riscado~~" rows={5} className="min-h-[120px]" />
+              <p className="text-[10px] text-muted-foreground">Formatação: **negrito**, *itálico*, ~~riscado~~, `código`</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -2051,6 +2075,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         onToggleLabel={handleToggleLabel}
         boardId={board.id}
         onOpenAutomation={(id) => { setShowTaskDetail(false); setAutomationTaskId(id); setShowAutomationRules(true); }}
+        columns={columns.map(c => ({ id: c.id, title: c.title, color: c.color }))}
+        onDuplicateTemplate={duplicateTemplateAsCard}
       />
 
       {/* Label Picker Dialog */}

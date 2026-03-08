@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   ArrowRight, Calendar, CheckCircle2, CheckSquare, ChevronDown, ChevronRight,
-  Eye, EyeOff, Loader2, MessageSquare, Plus, Tag, Trash2, Users, X, Zap, Bell, Move
+  Eye, EyeOff, Loader2, MessageSquare, Plus, Tag, Trash2, Users, X, Zap, Bell, Move, Copy, Layout
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,42 @@ const ACTIVITY_ICONS: Record<string, any> = {
   automation: Zap,
 };
 
+// Simple rich text renderer for descriptions
+function RichDescription({ text }: { text: string }) {
+  // Process markdown-like formatting: **bold**, *italic*, ~~strikethrough~~, `code`
+  const processLine = (line: string, idx: number) => {
+    const parts: React.ReactNode[] = [];
+    let remaining = line;
+    let key = 0;
+    
+    const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|~~(.+?)~~|`(.+?)`)/g;
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = regex.exec(remaining)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(<span key={key++}>{remaining.slice(lastIndex, match.index)}</span>);
+      }
+      if (match[2]) parts.push(<strong key={key++} className="font-bold">{match[2]}</strong>);
+      else if (match[3]) parts.push(<em key={key++} className="italic">{match[3]}</em>);
+      else if (match[4]) parts.push(<span key={key++} className="line-through text-muted-foreground">{match[4]}</span>);
+      else if (match[5]) parts.push(<code key={key++} className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{match[5]}</code>);
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < remaining.length) {
+      parts.push(<span key={key++}>{remaining.slice(lastIndex)}</span>);
+    }
+    
+    return <p key={idx} className="min-h-[1.25em]">{parts.length > 0 ? parts : line}</p>;
+  };
+
+  return (
+    <div className="text-foreground text-sm leading-relaxed space-y-1">
+      {text.split('\n').map((line, idx) => processLine(line, idx))}
+    </div>
+  );
+}
+
 interface TaskDetailDialogProps {
   task: BoardTask | null;
   open: boolean;
@@ -54,9 +90,11 @@ interface TaskDetailDialogProps {
   onToggleLabel?: (taskId: string, labelId: string) => void;
   boardId?: string | null;
   onOpenAutomation?: (taskId: string) => void;
+  columns?: { id: string; title: string; color: string }[];
+  onDuplicateTemplate?: (template: BoardTask, targetColumnId: string) => void;
 }
 
-export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTask, taskLabels, allLabels, onToggleLabel, boardId, onOpenAutomation }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTask, taskLabels, allLabels, onToggleLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate }: TaskDetailDialogProps) {
   const isMobile = useIsMobile();
   const { comments, addComment, loading: commentsLoading } = useTaskComments(task?.id || null);
   const { subtasks, addSubtask, toggleSubtask, deleteSubtask, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null, boardId);
@@ -135,6 +173,39 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
 
   // ===== Shared render sections =====
 
+  const renderTemplateBanner = () => task.is_template ? (
+    <div className="mx-4 mt-3 mb-1 rounded-lg bg-primary/5 border border-primary/20 p-3 flex items-center gap-3">
+      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+        <Layout className="h-5 w-5 text-primary" />
+      </div>
+      <div className="flex-1">
+        <p className="text-sm font-medium text-foreground">Este é um template de cartão.</p>
+        <p className="text-xs text-muted-foreground">Use-o como base para criar novos cartões.</p>
+      </div>
+      {columns && onDuplicateTemplate && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" className="gap-1.5 rounded-md text-xs bg-primary text-primary-foreground hover:bg-primary/90">
+              <Copy className="h-3.5 w-3.5" /> Criar cartão com base em template
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-1" align="end">
+            {columns.map(c => (
+              <button
+                key={c.id}
+                onClick={() => { onDuplicateTemplate(task, c.id); onOpenChange(false); }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted rounded-md transition-colors"
+              >
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                {c.title}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
+      )}
+    </div>
+  ) : null;
+
   const renderCover = () => (
     <>
       {cover.type === 'color' && <div className={cn('h-3 rounded-t-lg', cover.value)} />}
@@ -174,6 +245,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
             <Tag className="h-3.5 w-3.5" /> Etiquetas
           </Button>
         )}
+        {!task.is_template && (
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs">
@@ -211,12 +283,15 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
             </div>
           </PopoverContent>
         </Popover>
+        )}
         <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => setShowAddGroup(true)}>
           <CheckSquare className="h-3.5 w-3.5" /> Checklist
         </Button>
-        <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => onEdit(task)}>
-          <Users className="h-3.5 w-3.5" /> Membros
-        </Button>
+        {!task.is_template && (
+          <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => onEdit(task)}>
+            <Users className="h-3.5 w-3.5" /> Membros
+          </Button>
+        )}
       </div>
       {/* Label picker */}
       {showLabelPicker && allLabels && onToggleLabel && (
@@ -271,7 +346,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
   const renderDescription = () => task.description ? (
     <div className="px-4 py-2">
       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Descrição</h4>
-      <p className="text-foreground text-sm whitespace-pre-wrap">{task.description}</p>
+      <RichDescription text={task.description} />
     </div>
   ) : null;
 
@@ -513,12 +588,13 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-full w-full h-[95vh] max-h-[95vh] overflow-hidden flex flex-col p-0 gap-0">
           {renderCover()}
+          {renderTemplateBanner()}
           <ScrollArea className="flex-1">
             {renderHeader()}
             <div className="h-px bg-border mx-4" />
             {renderActionButtons()}
             <div className="h-px bg-border mx-4" />
-            {renderInfoRow()}
+            {!task.is_template && renderInfoRow()}
             {renderDescription()}
             <div className="h-px bg-border mx-4" />
             {renderProgress()}
@@ -539,6 +615,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
         {renderCover()}
+        {renderTemplateBanner()}
         {renderHeader()}
         <div className="h-px bg-border mx-4" />
         {renderActionButtons()}
@@ -548,7 +625,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
           {/* Left: Details & Subtasks */}
           <ScrollArea className="flex-1 border-r border-border">
             <div className="pb-6">
-              {renderInfoRow()}
+              {!task.is_template && renderInfoRow()}
               {renderDescription()}
               {renderProgress()}
               {renderSubtasks()}
