@@ -1531,7 +1531,42 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
           )}
           </TooltipProvider>
         </div>
+        </div>
+        )}
       </div>
+
+      {/* Bottom bar: Planner / Board / Switch */}
+      {!isMobile && (
+        <div className={cn("flex items-center justify-center gap-1 px-4 py-2 border-t border-border backdrop-blur-sm relative z-10", isDarkBg ? "bg-black/50" : "bg-background/80")}>
+          <Button variant={showPlanner ? "default" : "ghost"} size="sm" className="gap-1.5 rounded-md text-xs" onClick={togglePlanner}>
+            📋 Planejador
+          </Button>
+          <Button variant={showBoard ? "default" : "ghost"} size="sm" className="gap-1.5 rounded-md text-xs" onClick={toggleBoard}>
+            📊 Quadro
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-1.5 rounded-md text-xs">
+                🔄 Mudar de quadro
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-64">
+              {boards.filter(b => b.id !== board.id).map(b => (
+                <DropdownMenuItem key={b.id} onClick={() => onSelectBoard(b.id)} className="flex items-center gap-3 p-2">
+                  <div
+                    className={cn("w-12 h-8 rounded flex-shrink-0 border border-border", getBoardBg(b.background_image))}
+                    style={getBoardBgStyle(b.background_image)}
+                  />
+                  <span className="text-sm font-medium truncate">{b.name}</span>
+                </DropdownMenuItem>
+              ))}
+              {boards.filter(b => b.id !== board.id).length === 0 && (
+                <div className="p-3 text-sm text-muted-foreground text-center">Nenhum outro quadro</div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
 
       {/* Create/Edit Task Dialog */}
       <Dialog open={showCreateTask} onOpenChange={(o) => { if (!o) { setShowCreateTask(false); setEditingTask(null); resetForm(); } }}>
