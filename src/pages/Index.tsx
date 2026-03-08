@@ -253,6 +253,9 @@ const Index = () => {
           borderStyle={pendingAnnouncement.border_style}
         />
       )}
+      
+      {/* Tutorial Modal */}
+      <TutorialModal isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
     </div>
   );
 };
