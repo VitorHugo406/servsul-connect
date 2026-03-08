@@ -813,6 +813,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     setAutoCover(col.auto_cover || 'none');
     setAutoConclusion(col.is_conclusion || false);
     setAutoTemplate((col as any).is_template_column || false);
+    setAutoTab('appearance');
     setShowAutomation(col);
   };
 
