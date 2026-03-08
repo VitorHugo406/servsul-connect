@@ -2449,6 +2449,125 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         labels={labels}
         currentProfileId={profile?.id}
       />
+
+      {/* Share Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="h-5 w-5 text-primary" /> Compartilhar Quadro
+            </DialogTitle>
+            <DialogDescription>Gere um link para convidar pessoas ao quadro</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {shareLink ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted border border-border">
+                  <Link2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <p className="text-xs text-foreground truncate flex-1 font-mono">{shareLink}</p>
+                </div>
+                <Button className="w-full" onClick={() => { navigator.clipboard.writeText(shareLink); toast.success('Link copiado!'); }}>
+                  <Copy className="h-4 w-4 mr-2" /> Copiar Link
+                </Button>
+              </div>
+            ) : (
+              <Button className="w-full" onClick={generateShareLink}>
+                <Link2 className="h-4 w-4 mr-2" /> Gerar Link de Convite
+              </Button>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Pessoas que acessarem o link poderão solicitar participação. Você precisará aprovar cada solicitação.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Join Requests Dialog */}
+      <Dialog open={showJoinRequests} onOpenChange={setShowJoinRequests}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-primary" /> Solicitações de Participação
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[400px]">
+            {joinRequests.length === 0 ? (
+              <div className="py-8 text-center">
+                <UserPlus className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">Nenhuma solicitação pendente</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {joinRequests.map(req => (
+                  <div key={req.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={req.profile?.avatar_url || ''} />
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {getInitials(req.profile?.display_name || req.profile?.name || '?')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{req.profile?.display_name || req.profile?.name}</p>
+                      <p className="text-xs text-muted-foreground">{req.profile?.email}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="default" className="h-7 text-xs" onClick={() => handleJoinRequest(req.id, true)}>
+                        Aprovar
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleJoinRequest(req.id, false)}>
+                        Recusar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Distribution Dialog */}
+      <Dialog open={showDistribution} onOpenChange={setShowDistribution}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shuffle className="h-5 w-5 text-secondary" /> Auto-distribuição de Tarefas
+            </DialogTitle>
+            <DialogDescription>Recomendações de redistribuição baseadas na carga de trabalho</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[400px]">
+            {(() => {
+              const recs = getDistributionRecommendations();
+              return recs.length === 0 ? (
+                <div className="py-8 text-center">
+                  <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">As tarefas estão bem distribuídas!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recs.map((rec, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{rec.taskTitle}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {rec.fromName} → {rec.toName}
+                        </p>
+                      </div>
+                      <Button size="sm" className="h-7 text-xs" onClick={async () => {
+                        await updateTask(rec.taskId, { assigned_to: rec.toProfileId });
+                        toast.success(`Tarefa reatribuída para ${rec.toName}`);
+                        setShowDistribution(false);
+                      }}>
+                        Aprovar
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
