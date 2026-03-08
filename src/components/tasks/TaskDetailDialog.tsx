@@ -1226,6 +1226,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
             <div className="h-px bg-border mx-4" />
             {!task.is_template && renderInfoRow()}
             {renderDescription()}
+            {renderDecisions()}
             <div className="h-px bg-border mx-4" />
             {renderProgress()}
             {renderSubtasks()}
