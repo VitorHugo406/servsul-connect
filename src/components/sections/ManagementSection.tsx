@@ -214,6 +214,7 @@ export function ManagementSection() {
         can_delete_messages: 'canDeleteMessages',
         can_access_management: 'canAccessManagement',
         can_access_password_change: 'canAccessPasswordChange',
+        can_create_war_room: 'canCreateWarRoom',
       };
 
       // Build the full permissions object
@@ -223,6 +224,7 @@ export function ManagementSection() {
         canDeleteMessages: permission === 'can_delete_messages' ? value : (currentPerm.can_delete_messages ?? false),
         canAccessManagement: permission === 'can_access_management' ? value : (currentPerm.can_access_management ?? false),
         canAccessPasswordChange: permission === 'can_access_password_change' ? value : (currentPerm.can_access_password_change ?? false),
+        canCreateWarRoom: permission === 'can_create_war_room' ? value : (currentPerm.can_create_war_room ?? false),
       };
 
       // Call the edge function to update permissions
