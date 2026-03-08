@@ -958,8 +958,48 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         </div>
       </div>
 
-      {/* Board columns with horizontal scroll - drag to scroll on desktop */}
-      <div className="flex-1 overflow-hidden relative z-10">
+      {/* Board area with optional planner */}
+      <div className="flex-1 overflow-hidden relative z-10 flex">
+        {/* Planner sidebar */}
+        {showPlanner && (
+          <div className={cn(
+            "overflow-y-auto border-r border-border backdrop-blur-sm flex-shrink-0 p-4 space-y-3",
+            isDarkBg ? "bg-black/60 text-white" : "bg-background/90",
+            showBoard ? "w-[280px]" : "flex-1"
+          )}>
+            <h3 className={cn("font-semibold text-sm", isDarkBg && "text-white")}>
+              📋 {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </h3>
+            <div className="h-px bg-border" />
+            {(() => {
+              const todayTasks = tasks.filter(t => {
+                if (!t.due_date) return false;
+                return new Date(t.due_date).toDateString() === new Date().toDateString();
+              }).sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
+              return todayTasks.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">Nenhuma tarefa para hoje</p>
+              ) : todayTasks.map(t => {
+                const col = columns.find(c => c.id === t.status);
+                return (
+                  <div key={t.id} className="p-3 rounded-lg border border-border bg-card/50 cursor-pointer hover:bg-card/80 transition-colors"
+                    onClick={() => { setSelectedTask(t); setShowTaskDetail(true); }}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col?.color }} />
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(t.due_date!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium">{t.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{col?.title}</p>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        )}
+        {showBoard && (
+        <div className="flex-1 overflow-hidden">
           <div
             ref={boardScrollRef}
             className={cn(isMobile ? 'overflow-y-auto' : 'overflow-x-auto overflow-y-hidden h-full p-4 task-board-scroll')}
