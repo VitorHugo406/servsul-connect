@@ -145,8 +145,10 @@ const Index = () => {
           return <StorageMonitoringSection />;
         case 'event-history':
           return <EventHistorySection />;
-        case 'documentation':
-          return <DocumentationSection />;
+         case 'documentation':
+           return <DocumentationSection />;
+         case 'war-room':
+           return <WarRoomSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }

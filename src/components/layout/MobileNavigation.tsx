@@ -20,7 +20,7 @@ const mainNavItems = [
 ];
 
 const moreNavItems = [
-  
+  { id: 'war-room', icon: Shield, label: 'War Room' },
   { id: 'facial', icon: Camera, label: 'Cadastro Facial' },
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
   { id: 'sectors', icon: Building2, label: 'Gestão de Setores', adminOnly: true },
