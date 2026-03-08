@@ -1869,7 +1869,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       <Dialog open={showCreateTask} onOpenChange={(o) => { if (!o) { setShowCreateTask(false); setEditingTask(null); resetForm(); } }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingTask ? `Editar Tarefa #${editingTask.task_number}` : 'Nova Tarefa'}</DialogTitle>
+           <DialogTitle>
+              {isCreatingTemplate ? '🔧 Novo Template' : editingTask ? `Editar Tarefa #${editingTask.task_number}` : 'Nova Tarefa'}
+            </DialogTitle>
+            {isCreatingTemplate && (
+              <DialogDescription className="text-xs">
+                Templates não possuem responsável nem data de entrega. Duplique-os como cards normais.
+              </DialogDescription>
+            )}
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
