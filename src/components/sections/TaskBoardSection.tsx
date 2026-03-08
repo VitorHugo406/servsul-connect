@@ -1640,10 +1640,12 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         open={showTaskDetail}
         onOpenChange={(o) => { setShowTaskDetail(o); if (!o) setSelectedTask(null); }}
         onEdit={(t) => { setShowTaskDetail(false); openEditTask(t); }}
+        onUpdateTask={async (id, updates) => { await updateTask(id, updates); await refetchTasks(); }}
         taskLabels={selectedTask ? getTaskLabels(selectedTask.id) : []}
         allLabels={labels}
         onToggleLabel={handleToggleLabel}
         boardId={board.id}
+        onOpenAutomation={(id) => { setShowTaskDetail(false); setAutomationTaskId(id); setShowAutomationRules(true); }}
       />
 
       {/* Label Picker Dialog */}
