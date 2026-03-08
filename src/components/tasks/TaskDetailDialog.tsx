@@ -245,6 +245,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
             <Tag className="h-3.5 w-3.5" /> Etiquetas
           </Button>
         )}
+        {!task.is_template && (
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs">
@@ -282,6 +283,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
             </div>
           </PopoverContent>
         </Popover>
+        )}
         <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs" onClick={() => setShowAddGroup(true)}>
           <CheckSquare className="h-3.5 w-3.5" /> Checklist
         </Button>
