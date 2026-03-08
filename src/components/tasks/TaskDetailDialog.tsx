@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import {
   ArrowRight, Calendar as CalendarIcon, CheckCircle2, CheckSquare, ChevronDown, ChevronRight,
   Eye, EyeOff, Loader2, MessageSquare, Plus, Tag, Trash2, Users, X, Zap, Bell, Move, Copy, Layout,
-  Bold, Italic, Strikethrough, List, Type, Minus
+  Bold, Italic, Strikethrough, List, Type, Minus, Search, Pencil
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -26,6 +26,32 @@ import { TaskLabel } from '@/hooks/useTaskLabels';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
 import { cn } from '@/lib/utils';
+
+// Colorblind patterns as SVG data URIs
+const COLORBLIND_PATTERNS: Record<string, string> = {
+  '#22c55e': 'url("data:image/svg+xml,%3Csvg width=\'8\' height=\'8\' viewBox=\'0 0 8 8\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M0 0L4 4L0 8M4 0L8 4L4 8\' stroke=\'rgba(255,255,255,0.5)\' stroke-width=\'1\' fill=\'none\'/%3E%3C/svg%3E")',
+  '#a3a306': 'url("data:image/svg+xml,%3Csvg width=\'8\' height=\'8\' viewBox=\'0 0 8 8\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Ccircle cx=\'2\' cy=\'2\' r=\'1.5\' fill=\'rgba(255,255,255,0.5)\'/%3E%3Ccircle cx=\'6\' cy=\'6\' r=\'1.5\' fill=\'rgba(255,255,255,0.5)\'/%3E%3C/svg%3E")',
+  '#f97316': 'url("data:image/svg+xml,%3Csvg width=\'8\' height=\'8\' viewBox=\'0 0 8 8\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cline x1=\'0\' y1=\'0\' x2=\'8\' y2=\'8\' stroke=\'rgba(255,255,255,0.5)\' stroke-width=\'1.5\'/%3E%3C/svg%3E")',
+  '#ef4444': 'url("data:image/svg+xml,%3Csvg width=\'8\' height=\'8\' viewBox=\'0 0 8 8\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Crect x=\'1\' y=\'1\' width=\'2\' height=\'6\' fill=\'rgba(255,255,255,0.5)\'/%3E%3Crect x=\'5\' y=\'1\' width=\'2\' height=\'6\' fill=\'rgba(255,255,255,0.5)\'/%3E%3C/svg%3E")',
+  '#8b5cf6': 'url("data:image/svg+xml,%3Csvg width=\'8\' height=\'8\' viewBox=\'0 0 8 8\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cline x1=\'0\' y1=\'4\' x2=\'8\' y2=\'4\' stroke=\'rgba(255,255,255,0.5)\' stroke-width=\'1.5\'/%3E%3C/svg%3E")',
+  '#3b82f6': 'url("data:image/svg+xml,%3Csvg width=\'8\' height=\'8\' viewBox=\'0 0 8 8\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cline x1=\'0\' y1=\'8\' x2=\'8\' y2=\'0\' stroke=\'rgba(255,255,255,0.5)\' stroke-width=\'1.5\'/%3E%3Cline x1=\'0\' y1=\'0\' x2=\'8\' y2=\'8\' stroke=\'rgba(255,255,255,0.5)\' stroke-width=\'1.5\'/%3E%3C/svg%3E")',
+  '#6366f1': 'url("data:image/svg+xml,%3Csvg width=\'6\' height=\'6\' viewBox=\'0 0 6 6\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Ccircle cx=\'3\' cy=\'3\' r=\'1\' fill=\'rgba(255,255,255,0.5)\'/%3E%3C/svg%3E")',
+};
+
+function getPatternForColor(color: string): string | undefined {
+  const lc = color.toLowerCase();
+  return COLORBLIND_PATTERNS[lc] || Object.values(COLORBLIND_PATTERNS)[Math.abs(hashCode(lc)) % Object.values(COLORBLIND_PATTERNS).length];
+}
+function hashCode(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return h;
+}
+
+const LABEL_COLORS = [
+  '#22c55e', '#a3a306', '#f97316', '#ef4444', '#8b5cf6', '#3b82f6',
+  '#ec4899', '#14b8a6', '#64748b', '#000000',
+];
 
 const REMINDER_OPTIONS = [
   { value: 'none', label: 'Sem lembrete' },
