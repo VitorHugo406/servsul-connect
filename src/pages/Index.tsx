@@ -217,6 +217,9 @@ const Index = () => {
           borderStyle={pendingAnnouncement.border_style}
         />
       )}
+
+      {/* Board Join Dialog */}
+      <BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} />
       </div>
     );
   }
