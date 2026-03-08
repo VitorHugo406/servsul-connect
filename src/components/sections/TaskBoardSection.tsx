@@ -786,18 +786,32 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       auto_assign_to: autoAssign !== 'none' ? autoAssign : null,
       auto_cover: autoCover !== 'none' ? autoCover : null,
       is_conclusion: autoConclusion,
+      is_template_column: autoTemplate,
     };
     const { error } = await updateColumn(showAutomation.id, updates as any);
     if (error) { toast.error('Erro ao salvar automação'); return; }
+
+    // If template column is toggled, update all existing cards in this column
+    const colTasks = tasks.filter(t => t.status === showAutomation.id);
+    if (colTasks.length > 0) {
+      for (const t of colTasks) {
+        if (t.is_template !== autoTemplate) {
+          await updateTask(t.id, { is_template: autoTemplate } as any);
+        }
+      }
+    }
+
     toast.success('Automação salva!');
     setShowAutomation(null);
     refetchColumns();
+    refetchTasks();
   };
 
   const openAutomation = (col: TaskBoardColumn) => {
     setAutoAssign(col.auto_assign_to || 'none');
     setAutoCover(col.auto_cover || 'none');
     setAutoConclusion(col.is_conclusion || false);
+    setAutoTemplate((col as any).is_template_column || false);
     setShowAutomation(col);
   };
 
