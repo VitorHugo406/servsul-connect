@@ -1394,24 +1394,27 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedTask(task); setShowTaskDetail(true); }}>
                                 <Edit className="h-4 w-4 mr-2" /> Abrir
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchiveTask(task.id); }}>
-                                <Archive className="h-4 w-4 mr-2" /> Arquivar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setAutomationTaskId(task.id); setShowAutomationRules(true); }}>
-                                <Zap className="h-4 w-4 mr-2" /> Automações
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMakeTemplate(task.id); }}>
-                                <Copy className="h-4 w-4 mr-2" /> Tornar Template
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                setShowDuplication(task);
-                                setDupTargetColumn(columns[0]?.id || '');
-                                setDupFrequency('daily');
-                              }}>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); duplicateTemplateAsCard(task, task.status); }}>
+                                  <Copy className="h-4 w-4 mr-2" /> Duplicar Card
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchiveTask(task.id); }}>
+                                  <Archive className="h-4 w-4 mr-2" /> Arquivar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setAutomationTaskId(task.id); setShowAutomationRules(true); }}>
+                                  <Zap className="h-4 w-4 mr-2" /> Automações
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMakeTemplate(task.id); }}>
+                                  <Copy className="h-4 w-4 mr-2" /> Tornar Template
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowDuplication(task);
+                                  setDupTargetColumn(columns[0]?.id || '');
+                                  setDupFrequency('daily');
+                                }}>
                                 <Repeat className="h-4 w-4 mr-2" /> Auto-duplicar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleEmergency(task.id, task.is_emergency); }}>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleEmergency(task.id, task.is_emergency); }}>
                                 <Siren className="h-4 w-4 mr-2" /> {task.is_emergency ? 'Desativar Emergente' : 'Ativar Modo Emergente'}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
