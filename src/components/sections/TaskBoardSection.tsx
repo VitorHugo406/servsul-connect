@@ -1817,8 +1817,8 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                                     </DropdownMenuItem>
                                   ))}
                                   <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditTask(template); }}>
-                                    <Edit className="h-4 w-4 mr-2" /> Editar Template
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedTask(template as any); setShowTaskDetail(true); }}>
+                                    <Edit className="h-4 w-4 mr-2" /> Abrir Template
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={(e) => {
                                     e.stopPropagation();
