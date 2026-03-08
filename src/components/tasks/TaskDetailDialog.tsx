@@ -1258,6 +1258,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
             <div className="pb-6">
               {!task.is_template && renderInfoRow()}
               {renderDescription()}
+              {renderDecisions()}
               {renderProgress()}
               {renderSubtasks()}
             </div>
