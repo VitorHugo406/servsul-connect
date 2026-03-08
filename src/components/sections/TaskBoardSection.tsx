@@ -1020,6 +1020,17 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 </DropdownMenuItem>
                 {isAdminOrOwner && (
                   <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setShowDistribution(true)}>
+                      <Shuffle className="h-4 w-4 mr-2" /> Auto-distribuição
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowShareDialog(true)}>
+                      <Share2 className="h-4 w-4 mr-2" /> Compartilhar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowJoinRequests(true)}>
+                      <UserPlus className="h-4 w-4 mr-2" /> Solicitações {joinRequests.length > 0 && `(${joinRequests.length})`}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setShowArchive(true)}>
                       <Archive className="h-4 w-4 mr-2" /> Arquivados
                     </DropdownMenuItem>
