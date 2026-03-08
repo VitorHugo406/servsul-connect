@@ -427,6 +427,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [autoAssign, setAutoAssign] = useState('none');
   const [autoCover, setAutoCover] = useState('none');
   const [autoConclusion, setAutoConclusion] = useState(false);
+  const [autoTemplate, setAutoTemplate] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState('#6366f1');
   const [additionalAssignees, setAdditionalAssignees] = useState<string[]>([]);
