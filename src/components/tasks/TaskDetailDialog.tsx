@@ -210,7 +210,6 @@ interface TaskDetailDialogProps {
   task: BoardTask | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  onEdit: (t: BoardTask) => void;
   onUpdateTask?: (taskId: string, updates: Record<string, any>) => Promise<any>;
   taskLabels?: TaskLabel[];
   allLabels?: TaskLabel[];
@@ -222,9 +221,13 @@ interface TaskDetailDialogProps {
   columns?: { id: string; title: string; color: string }[];
   onDuplicateTemplate?: (template: BoardTask, targetColumnId: string) => void;
   onMakeTemplate?: (taskId: string) => void;
+  boardMembers?: { id: string; user_id: string; profile_id: string; role: string; profile?: any }[];
+  getTaskAssignees?: (taskId: string) => any[];
+  onSetTaskAssignees?: (taskId: string, profileIds: string[]) => Promise<any>;
+  allUsers?: { id: string; name: string; display_name: string | null; avatar_url: string | null }[];
 }
 
-export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTask, taskLabels, allLabels, onToggleLabel, onCreateLabel, onDeleteLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate, onMakeTemplate }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskLabels, allLabels, onToggleLabel, onCreateLabel, onDeleteLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate, onMakeTemplate, boardMembers, getTaskAssignees, onSetTaskAssignees, allUsers }: TaskDetailDialogProps) {
   const isMobile = useIsMobile();
   const { comments, addComment, loading: commentsLoading } = useTaskComments(task?.id || null);
   const { subtasks, addSubtask, toggleSubtask, deleteSubtask, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null, boardId);
