@@ -283,6 +283,17 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const dragStartRef = useRef<{ x: number; scrollLeft: number } | null>(null);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>(emptyFilter);
   const [showFilter, setShowFilter] = useState(false);
+  const [showPlanner, setShowPlanner] = useState(false);
+  const [showBoard, setShowBoard] = useState(true);
+
+  const togglePlanner = () => {
+    if (showPlanner) { setShowPlanner(false); setShowBoard(true); }
+    else setShowPlanner(true);
+  };
+  const toggleBoard = () => {
+    if (showBoard) { if (!showPlanner) return; setShowBoard(false); }
+    else setShowBoard(true);
+  };
 
   // Form state
   const [title, setTitle] = useState('');
