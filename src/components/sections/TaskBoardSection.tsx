@@ -601,7 +601,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       assigned_to: isCreatingTemplate ? undefined : (assignedTo !== 'none' ? assignedTo : undefined),
       due_date: isCreatingTemplate ? undefined : (dueDate ? new Date(dueDate).toISOString() : undefined),
       cover_image: finalCover,
-      is_template: isCreatingTemplate,
+      is_template: isCreatingTemplate || !!(columns.find(c => c.id === targetColumn) as any)?.is_template_column,
     };
 
     let result;
