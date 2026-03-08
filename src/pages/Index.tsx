@@ -29,6 +29,7 @@ import { StorageMonitoringSection } from '@/components/sections/StorageMonitorin
 import { EventHistorySection } from '@/components/sections/EventHistorySection';
 import { CalendarSection } from '@/components/sections/CalendarSection';
 import { DocumentationSection } from '@/components/sections/DocumentationSection';
+import { WarRoomSection } from '@/components/sections/WarRoomSection';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
@@ -56,6 +57,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
    'storage': { title: 'Armazenamento', subtitle: 'Monitoramento do banco de dados' },
    'event-history': { title: 'Eventos Mensais', subtitle: 'Histórico de campanhas' },
    'documentation': { title: 'Documentação', subtitle: 'Documentação técnica do sistema' },
+   'war-room': { title: 'War Room', subtitle: 'Gestão de incidentes críticos' },
 };
 
 const Index = () => {
@@ -143,8 +145,10 @@ const Index = () => {
           return <StorageMonitoringSection />;
         case 'event-history':
           return <EventHistorySection />;
-        case 'documentation':
-          return <DocumentationSection />;
+         case 'documentation':
+           return <DocumentationSection />;
+         case 'war-room':
+           return <WarRoomSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }

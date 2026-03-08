@@ -1,5 +1,5 @@
 import { useState } from 'react';
- import { Home, MessageSquare, Bell, Cake, MoreHorizontal, Settings, Camera, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, FileText, CalendarDays } from 'lucide-react';
+ import { Home, MessageSquare, Bell, Cake, MoreHorizontal, Settings, Camera, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, FileText, CalendarDays, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -20,7 +20,7 @@ const mainNavItems = [
 ];
 
 const moreNavItems = [
-  
+  { id: 'war-room', icon: Shield, label: 'War Room' },
   { id: 'facial', icon: Camera, label: 'Cadastro Facial' },
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
   { id: 'sectors', icon: Building2, label: 'Gestão de Setores', adminOnly: true },

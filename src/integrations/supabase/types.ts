@@ -1805,6 +1805,166 @@ export type Database = {
         }
         Relationships: []
       }
+      war_room_members: {
+        Row: {
+          acknowledged_at: string | null
+          has_acknowledged: boolean
+          id: string
+          joined_at: string
+          profile_id: string
+          user_id: string
+          war_room_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          has_acknowledged?: boolean
+          id?: string
+          joined_at?: string
+          profile_id: string
+          user_id: string
+          war_room_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          has_acknowledged?: boolean
+          id?: string
+          joined_at?: string
+          profile_id?: string
+          user_id?: string
+          war_room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "war_room_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "war_room_members_war_room_id_fkey"
+            columns: ["war_room_id"]
+            isOneToOne: false
+            referencedRelation: "war_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      war_room_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          sender_id: string
+          war_room_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          sender_id: string
+          war_room_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+          war_room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "war_room_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "war_room_messages_war_room_id_fkey"
+            columns: ["war_room_id"]
+            isOneToOne: false
+            referencedRelation: "war_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      war_room_timeline: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          war_room_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          war_room_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          war_room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "war_room_timeline_war_room_id_fkey"
+            columns: ["war_room_id"]
+            isOneToOne: false
+            referencedRelation: "war_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      war_rooms: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          status: string
+          task_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          status?: string
+          task_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          status?: string
+          task_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "war_rooms_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workload_alerts: {
         Row: {
           alert_type: string

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen } from 'lucide-react';
+import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield } from 'lucide-react';
 import logoServsul from '@/assets/logo-servsul.png';
 import { 
   MessageSquare, 
@@ -33,6 +33,7 @@ const menuItems = [
   { id: 'chat', icon: MessageSquare, label: 'Chat' },
   { id: 'announcements', icon: Bell, label: 'Avisos' },
   { id: 'birthdays', icon: Cake, label: 'Aniversariantes' },
+  { id: 'war-room', icon: Shield, label: 'War Room' },
    { id: 'tasks', icon: ListTodo, label: 'Tarefas' },
   { id: 'people-management', icon: UsersRound, label: 'Gestão de Pessoas', supervisorOnly: true },
   
