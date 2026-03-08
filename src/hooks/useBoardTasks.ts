@@ -21,6 +21,7 @@ export interface BoardTask {
   completed_at: string | null;
   completed_late: boolean | null;
   delay_days: number | null;
+  is_emergency: boolean;
   created_at: string;
   updated_at: string;
   assignee?: {
