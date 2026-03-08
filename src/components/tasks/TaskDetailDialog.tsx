@@ -586,12 +586,13 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-full w-full h-[95vh] max-h-[95vh] overflow-hidden flex flex-col p-0 gap-0">
           {renderCover()}
+          {renderTemplateBanner()}
           <ScrollArea className="flex-1">
             {renderHeader()}
             <div className="h-px bg-border mx-4" />
             {renderActionButtons()}
             <div className="h-px bg-border mx-4" />
-            {renderInfoRow()}
+            {!task.is_template && renderInfoRow()}
             {renderDescription()}
             <div className="h-px bg-border mx-4" />
             {renderProgress()}
