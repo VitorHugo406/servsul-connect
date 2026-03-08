@@ -236,7 +236,7 @@ function PodiumPlace({ member, place, height }: { member: MemberScore; place: nu
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: place === 1 ? 0.1 : place === 2 ? 0.2 : 0.3 }}
-      className="flex flex-col items-center gap-2 w-24"
+      className="flex flex-col items-center gap-1.5 sm:gap-2 w-18 sm:w-24"
     >
       <div className="relative">
         <Avatar className={cn('h-12 w-12 border-2', borderColors[place - 1])}>
