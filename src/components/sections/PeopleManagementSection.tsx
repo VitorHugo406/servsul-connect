@@ -16,7 +16,7 @@ import { useWorkloadAlerts } from '@/hooks/useWorkloadAlerts';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useGlobalScores } from '@/hooks/useBoardScores';
-import { ScorePanel } from '@/components/tasks/ScorePanel';
+import type { MemberScore, MonthlyScoreEntry } from '@/hooks/useBoardScores';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
