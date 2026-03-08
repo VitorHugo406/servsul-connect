@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import {
   ArrowRight, Calendar as CalendarIcon, CheckCircle2, CheckSquare, ChevronDown, ChevronRight,
   Eye, EyeOff, Image, Loader2, MessageSquare, Palette, Plus, Tag, Trash2, Users, X, Zap, Bell, Move, Copy, Layout,
-  Bold, Italic, Strikethrough, List, Type, Minus, Search, Upload
+  Bold, Italic, Strikethrough, List, Type, Minus, Search, Upload, Siren, Signal
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -759,6 +759,44 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
             </div>
           </PopoverContent>
         </Popover>
+
+        {/* Priority Popover */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs">
+              <Signal className="h-3.5 w-3.5" /> Prioridade
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-2" align="start" sideOffset={8}>
+            <h4 className="text-sm font-semibold mb-2">Prioridade</h4>
+            <div className="space-y-1">
+              {PRIORITIES.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => onUpdateTask?.(task.id, { priority: p.id })}
+                  className={cn(
+                    'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors hover:bg-muted',
+                    task.priority === p.id && 'bg-muted ring-1 ring-foreground/20'
+                  )}
+                >
+                  <div className={cn('w-3 h-3 rounded-full', p.color)} />
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Emergency Toggle */}
+        <Button
+          variant={(task as any).is_emergency ? "destructive" : "outline"}
+          size="sm"
+          className="gap-1.5 rounded-md h-8 text-xs"
+          onClick={() => onUpdateTask?.(task.id, { is_emergency: !(task as any).is_emergency })}
+        >
+          <Siren className="h-3.5 w-3.5" />
+          {(task as any).is_emergency ? 'Emergente ✓' : 'Emergência'}
+        </Button>
       </div>
     </div>
   );
