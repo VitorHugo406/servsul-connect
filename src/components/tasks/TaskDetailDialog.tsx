@@ -440,7 +440,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
         )}
         {task.due_date && (
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
             <div>
               <p className="text-xs text-muted-foreground">Entrega</p>
               <p className="text-sm font-medium">{new Date(task.due_date).toLocaleDateString('pt-BR')}</p>
