@@ -242,8 +242,6 @@ const Index = () => {
         />
       )}
       
-      {/* Tutorial Modal */}
-      <TutorialModal isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
     </div>
   );
 };
