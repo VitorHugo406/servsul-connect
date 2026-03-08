@@ -379,9 +379,12 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit, onUpdateTas
 
   const handleCreateNewLabel = async () => {
     if (!newLabelName.trim() || !onCreateLabel) return;
-    await onCreateLabel(newLabelName.trim(), newLabelColor);
-    setNewLabelName('');
-    setCreatingLabel(false);
+    const result = await onCreateLabel(newLabelName.trim(), newLabelColor);
+    if (!result?.error) {
+      setNewLabelName('');
+      setNewLabelColor(LABEL_COLORS[0]);
+      setCreatingLabel(false);
+    }
   };
 
   const renderActionButtons = () => (
