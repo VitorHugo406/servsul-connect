@@ -67,6 +67,7 @@ const defaultPermissions: UserPermissions = {
   can_delete_messages: false,
   can_access_management: false,
   can_access_password_change: false,
+  can_create_war_room: false,
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
