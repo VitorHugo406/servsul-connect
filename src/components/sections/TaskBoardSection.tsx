@@ -1799,13 +1799,20 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   })()}
                   </div>
                   {/* Fixed add button at bottom of column */}
-                  <div className="p-2 pt-0 border-t border-border space-y-1">
-                    <Button variant="ghost" size="sm" className="w-full text-xs gap-1" onClick={() => openCreateTask(column.id)}>
-                      <Plus className="h-3 w-3" /> Adicionar
-                    </Button>
-                    <Button variant="ghost" size="sm" className="w-full text-xs gap-1 text-muted-foreground" onClick={() => openCreateTemplate(column.id)}>
-                      <Copy className="h-3 w-3" /> Criar template
-                    </Button>
+                  <div className="p-2 pt-0 border-t border-border">
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" className="flex-1 text-xs gap-1" onClick={() => openCreateTask(column.id)}>
+                        <Plus className="h-3 w-3" /> Adicionar
+                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openCreateTemplate(column.id)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Criar template</TooltipContent>
+                      </Tooltip>
+                    </div>
                   </div>
                 </div>
               );
