@@ -141,7 +141,7 @@ const Index = () => {
   const renderSection = () => {
     switch (activeSection) {
       case 'home':
-        return <HomeSection onNavigate={setActiveSection} />;
+        return <HomeSection onNavigate={handleSectionChange} />;
       case 'chat':
         return <ChatSection globalSearch={globalSearch} />;
       case 'announcements':
