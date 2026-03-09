@@ -1,9 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Check, CheckCheck } from 'lucide-react';
+import { MessageCircle, Check, CheckCheck, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ChatInput } from '@/components/chat/ChatInput';
+import { ChatMediaFilter } from '@/components/chat/ChatMediaFilter';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { useDirectMessages, useActiveUsers } from '@/hooks/useDirectMessages';
 import { useSectors } from '@/hooks/useData';
