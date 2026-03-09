@@ -51,7 +51,7 @@ interface ChatMessageProps {
   onScrollToMessage?: (messageId: string) => void;
 }
 
-export function ChatMessage({ message, onReply, reactions, onToggleReaction }: ChatMessageProps) {
+export function ChatMessage({ message, onReply, reactions, onToggleReaction, onScrollToMessage }: ChatMessageProps) {
   const { profile } = useAuth();
   const { sectors } = useSectors();
   const [isHovered, setIsHovered] = useState(false);
