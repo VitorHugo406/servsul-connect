@@ -169,21 +169,39 @@ Deno.serve(async (req) => {
 
       const frequencyLabel = summary.frequency === 'daily' ? 'Diário' : summary.frequency === 'weekly' ? 'Semanal' : 'Mensal';
       
+      // Calculate totals
+      const totals = {
+        completedOnTime: memberStats.reduce((s, m) => s + m.completedOnTime, 0),
+        completedLate: memberStats.reduce((s, m) => s + m.completedLate, 0),
+        pendingTasks: memberStats.reduce((s, m) => s + m.pendingTasks, 0),
+        overdueTasks: memberStats.reduce((s, m) => s + m.overdueTasks, 0),
+        totalMessages: memberStats.reduce((s, m) => s + m.totalMessages, 0),
+      };
+
       if (isVisual) {
-        messageContent = `📊 **Resumo ${frequencyLabel} da Equipe**\n`;
+        messageContent = `📊 *Resumo ${frequencyLabel} da Equipe*\n`;
         messageContent += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
         for (const ms of memberStats) {
-          messageContent += `👤 **${ms.name}**\n`;
+          messageContent += `👤 *${ms.name}*\n`;
           const lines: string[] = [];
-          if (metrics.includes('completed_on_time')) lines.push(`  ✅ No prazo: **${ms.completedOnTime}**`);
-          if (metrics.includes('completed_late')) lines.push(`  ⚠️ Com atraso: **${ms.completedLate}**`);
-          if (metrics.includes('pending_tasks')) lines.push(`  📋 Pendentes: **${ms.pendingTasks}**`);
-          if (metrics.includes('overdue_tasks')) lines.push(`  🔴 Atrasadas: **${ms.overdueTasks}**`);
-          if (metrics.includes('total_messages')) lines.push(`  💬 Mensagens: **${ms.totalMessages}**`);
+          if (metrics.includes('completed_on_time')) lines.push(`  ✅ No prazo: *${ms.completedOnTime}*`);
+          if (metrics.includes('completed_late')) lines.push(`  ⚠️ Com atraso: *${ms.completedLate}*`);
+          if (metrics.includes('pending_tasks')) lines.push(`  📋 Pendentes: *${ms.pendingTasks}*`);
+          if (metrics.includes('overdue_tasks')) lines.push(`  🔴 Atrasadas: *${ms.overdueTasks}*`);
+          if (metrics.includes('total_messages')) lines.push(`  💬 Mensagens: *${ms.totalMessages}*`);
           messageContent += lines.join('\n') + '\n\n';
         }
 
+        messageContent += `━━━━━━━━━━━━━━━━━━━━━\n`;
+        messageContent += `📈 *Resumo Geral*\n`;
+        const totalLines: string[] = [];
+        if (metrics.includes('completed_on_time')) totalLines.push(`  ✅ Total no prazo: *${totals.completedOnTime}*`);
+        if (metrics.includes('completed_late')) totalLines.push(`  ⚠️ Total com atraso: *${totals.completedLate}*`);
+        if (metrics.includes('pending_tasks')) totalLines.push(`  📋 Total pendentes: *${totals.pendingTasks}*`);
+        if (metrics.includes('overdue_tasks')) totalLines.push(`  🔴 Total atrasadas: *${totals.overdueTasks}*`);
+        if (metrics.includes('total_messages')) totalLines.push(`  💬 Total mensagens: *${totals.totalMessages}*`);
+        messageContent += totalLines.join('\n') + '\n\n';
         messageContent += `━━━━━━━━━━━━━━━━━━━━━\n`;
         messageContent += `🤖 _Resumo automático gerado pelo sistema_`;
       } else {
@@ -199,6 +217,15 @@ Deno.serve(async (req) => {
           if (metrics.includes('total_messages')) parts.push(`${ms.totalMessages} msgs`);
           messageContent += parts.join(' | ') + '\n';
         }
+
+        messageContent += `\n📈 Resumo Geral: `;
+        const totalParts: string[] = [];
+        if (metrics.includes('completed_on_time')) totalParts.push(`${totals.completedOnTime} no prazo`);
+        if (metrics.includes('completed_late')) totalParts.push(`${totals.completedLate} com atraso`);
+        if (metrics.includes('pending_tasks')) totalParts.push(`${totals.pendingTasks} pendentes`);
+        if (metrics.includes('overdue_tasks')) totalParts.push(`${totals.overdueTasks} atrasadas`);
+        if (metrics.includes('total_messages')) totalParts.push(`${totals.totalMessages} msgs`);
+        messageContent += totalParts.join(' | ') + '\n';
 
         messageContent += `\n🤖 Resumo automático gerado pelo sistema`;
       }
