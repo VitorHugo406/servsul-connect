@@ -110,16 +110,17 @@ export function useMessages(sectorId: string | null) {
                  m.author_id === newMessage.author_id)
               );
               
-              if (existingIndex >= 0) {
-                // Replace temp message with real one, keep author info from optimistic
-                const updated = [...prev];
-                updated[existingIndex] = { 
-                  ...newMessage, 
-                  author: prev[existingIndex].author, 
-                  status: 'delivered' 
-                };
-                return updated;
-              }
+                 if (existingIndex >= 0) {
+                 // Replace temp message with real one, keep author/reply info from optimistic
+                 const updated = [...prev];
+                 updated[existingIndex] = {
+                   ...newMessage,
+                   author: prev[existingIndex].author,
+                   reply_to: prev[existingIndex].reply_to,
+                   status: 'delivered',
+                 };
+                 return updated;
+               }
               
               // New message from another user - fetch author info
               supabase
