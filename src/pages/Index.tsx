@@ -261,7 +261,7 @@ const Index = () => {
     <div className="flex h-screen overflow-hidden bg-background">
       <WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} />
       <OfflineIndicator />
-      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+      <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
       
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={setActiveSection} />
