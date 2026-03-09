@@ -293,6 +293,11 @@ function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) 
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {isActive && isRoomCreator && (
+            <Button variant="outline" size="sm" onClick={handleDeleteHistory} className="gap-1">
+              <Trash2 className="h-4 w-4" /> Excluir histórico
+            </Button>
+          )}
+          {isActive && isRoomCreator && (
             <Button variant="outline" size="sm" onClick={() => setTaskDialogOpen(true)} className="gap-1">
               <FilePlus2 className="h-4 w-4" /> Criar card
             </Button>
