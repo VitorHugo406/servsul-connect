@@ -14,7 +14,6 @@ interface MobileNavigationProps {
 
 const mainNavItems = [
   { id: 'home', icon: Home, label: 'Início' },
-  { id: 'my-dashboard', icon: LayoutDashboard, label: 'Painel' },
   { id: 'chat', icon: MessageSquare, label: 'Chat' },
   { id: 'announcements', icon: Bell, label: 'Avisos' },
 ];
