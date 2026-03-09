@@ -143,6 +143,27 @@ const WIDGET_DEFS: WidgetDef[] = [
     icon: <BarChart2 className="h-5 w-5" />,
     defaultSize: 'lg',
   },
+  {
+    type: 'tasks_by_priority',
+    label: 'Tarefas por Prioridade',
+    description: 'Distribuição por nível de prioridade',
+    icon: <AlertTriangle className="h-5 w-5" />,
+    defaultSize: 'md',
+  },
+  {
+    type: 'completion_rate',
+    label: 'Taxa de Conclusão',
+    description: 'Percentual de tarefas concluídas no período',
+    icon: <CheckCircle2 className="h-5 w-5" />,
+    defaultSize: 'sm',
+  },
+  {
+    type: 'avg_completion_time',
+    label: 'Tempo Médio de Conclusão',
+    description: 'Dias médios para concluir uma tarefa',
+    icon: <Clock className="h-5 w-5" />,
+    defaultSize: 'sm',
+  },
 ];
 
 const DATE_RANGES = [
