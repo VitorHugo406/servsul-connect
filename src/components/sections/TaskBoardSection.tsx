@@ -247,8 +247,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 }) {
   const { profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const restrictedTaskId = searchParams.get('task');
+
   const { columns, addColumn, updateColumn, deleteColumn, refetch: refetchColumns } = useBoardColumns(board.id);
-  const { tasks, archivedTasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: refetchTasks } = useBoardTasks(board.id);
+  const { tasks, archivedTasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: refetchTasks } = useBoardTasks(board.id, restrictedTaskId);
   const { members, addMember, removeMember, updateMemberRole } = useBoardMembers(board.id);
   const { labels, getTaskLabels, createLabel, deleteLabel, assignLabel, removeLabel } = useTaskLabels(board.id);
   const { counts: subtaskCounts } = useSubtaskCounts(tasks.map(t => t.id));
