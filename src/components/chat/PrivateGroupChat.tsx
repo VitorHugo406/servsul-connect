@@ -420,6 +420,18 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
                  </ScrollArea>
                 </div>
 
+                {/* Scheduled Summaries */}
+                {isAdmin && (
+                  <>
+                    <Separator className="my-2" />
+                    <ScheduledSummaryConfig
+                      targetType="group"
+                      targetId={group.id}
+                      targetName={group.name}
+                    />
+                  </>
+                )}
+
                 {/* Delete Group Button */}
                 {isAdmin && (
                   <Button
