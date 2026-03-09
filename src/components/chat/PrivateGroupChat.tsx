@@ -422,6 +422,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
                  </ScrollArea>
                 </div>
 
+                {/* Media & Files Filter */}
+                <Separator className="my-2" />
+                <div>
+                  <h4 className="font-medium mb-3">Mídia e Arquivos</h4>
+                  <ChatMediaFilter chatType="group" chatId={group.id} />
+                </div>
+
                 {/* Scheduled Summaries */}
                 {isAdmin && (
                   <>
