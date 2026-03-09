@@ -160,18 +160,18 @@ export function useMessages(sectorId: string | null) {
                  return updated;
                }
               
-              // New message from another user - fetch author info
+              // New message from another user - fetch full message info
               supabase
                 .from('messages')
-                .select(`*, author:profiles!messages_author_id_fkey(*), reply_to:messages!messages_reply_to_id_fkey(id, content, reply_author:profiles!messages_author_id_fkey(name, display_name))`)
+                .select(`*, author:profiles!messages_author_id_fkey(*)`)
                 .eq('id', newMessage.id)
                 .single()
-                .then(({ data }) => {
+                .then(async ({ data }) => {
                   if (data) {
-                    const rawReplyTo = (data as any).reply_to;
-                    const reply_to = Array.isArray(rawReplyTo) ? (rawReplyTo[0] ?? null) : (rawReplyTo ?? null);
-                    const normalized = { ...(data as any), reply_to, status: 'delivered' } as Message;
-                    setMessages(p => p.map(m => m.id === newMessage.id ? normalized : m));
+                    const [normalized] = await hydrateMessages([data as any]);
+                    if (normalized) {
+                      setMessages(p => p.map(m => m.id === newMessage.id ? normalized : m));
+                    }
                   }
                 });
               
