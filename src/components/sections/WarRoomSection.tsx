@@ -273,6 +273,31 @@ function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) 
     await refetch();
   }, [isRoomCreator, room.id, refetch]);
 
+  const currentMember = members.find(m => m.user_id === user?.id);
+  const needsAcknowledge = currentMember && !currentMember.has_acknowledged;
+
+  useEffect(() => {
+    if (needsAcknowledge) acknowledge();
+  }, [needsAcknowledge, acknowledge]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleAddTimeline = async () => {
+    if (!newTimeline.trim()) return;
+    await addTimelineEntry(newTimeline);
+    setNewTimeline('');
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
+    await sendMessage(newMessage);
+    setNewMessage('');
+  };
+
+  const isActive = room.status === 'active';
+
   if (loading) {
     return <div className="flex h-full items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
   }
