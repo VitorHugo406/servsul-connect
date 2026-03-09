@@ -24,6 +24,7 @@ import { useSound } from '@/hooks/useSound';
 import { useConversations } from '@/hooks/useDirectMessages';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useMessageReactions } from '@/hooks/useMessageReactions';
 
 type ChatMode = 'sectors' | 'direct' | 'groups';
 
