@@ -38,20 +38,7 @@ export interface WarRoomTimelineEntry {
   created_by: string;
   created_at: string;
   creator_name?: string;
-}
-
-export interface WarRoomMessage {
-  id: string;
-  war_room_id: string;
-  sender_id: string;
-  content: string;
-  created_at: string;
-  sender?: {
-    id: string;
-    name: string;
-    display_name: string | null;
-    avatar_url: string | null;
-  };
+  task_id?: string | null;
 }
 
 export interface EmergencyTaskInput {
@@ -61,6 +48,7 @@ export interface EmergencyTaskInput {
   description?: string;
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   due_date?: string;
+  subtask_groups?: Array<{ title: string; subtasks: string[] }>;
 }
 
 interface WarRoomCreateOptions {
