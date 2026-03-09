@@ -115,33 +115,6 @@ export function CardMentionCard({ taskNumber, title, description, labels, priori
         </div>
       </div>
 
-      {/* Preview Dialog */}
-      <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span>📋</span> Card #{taskNumber}
-            </DialogTitle>
-          </DialogHeader>
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">Carregando...</div>
-          ) : fullTask ? (
-            <div className="space-y-4">
-              <div className={cn('h-2 rounded', PRIORITY_COLORS[fullTask.priority])} />
-              <h3 className="font-semibold text-lg">{fullTask.title}</h3>
-              {fullTask.description && <p className="text-sm text-muted-foreground">{fullTask.description}</p>}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-muted-foreground">Prioridade:</span> <Badge className={cn('text-white ml-1', PRIORITY_COLORS[fullTask.priority])}>{PRIORITY_LABELS[fullTask.priority]}</Badge></div>
-                <div><span className="text-muted-foreground">Status:</span> <span className="ml-1 font-medium">{fullTask.status}</span></div>
-                {fullTask.due_date && <div><span className="text-muted-foreground">Prazo:</span> <span className="ml-1">{new Date(fullTask.due_date).toLocaleDateString('pt-BR')}</span></div>}
-                {fullTask.assignee && <div><span className="text-muted-foreground">Responsável:</span> <span className="ml-1">{fullTask.assignee.display_name || fullTask.assignee.name}</span></div>}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">Card não encontrado ou sem acesso</div>
-          )}
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
