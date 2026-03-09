@@ -453,7 +453,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                     const showDateSeparator = msgDate !== prevDate;
 
                     return (
-                      <div key={message.id}>
+                      <div key={message.id} id={`msg-${message.id}`} className="transition-colors duration-500 rounded-lg">
                         {showDateSeparator && <DateSeparator date={message.created_at} />}
                         <ChatMessage
                           message={message}
@@ -461,6 +461,14 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                           onReply={(msg) => setReplyTo({ id: msg.id, content: msg.content, author: msg.author })}
                           reactions={reactions[message.id]}
                           onToggleReaction={toggleReaction}
+                          onScrollToMessage={(id) => {
+                            const el = document.getElementById(`msg-${id}`);
+                            if (el) {
+                              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              el.classList.add('bg-primary/10');
+                              setTimeout(() => el.classList.remove('bg-primary/10'), 2000);
+                            }
+                          }}
                         />
                       </div>
                     );
