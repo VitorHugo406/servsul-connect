@@ -212,22 +212,23 @@ function generateId() {
 const STORAGE_KEY = 'meu_painel_widgets';
 
 function getAllowedChartVariants(type: WidgetType): ChartVariant[] {
-  if (type === 'tasks_by_status' || type === 'tasks_pie') return ['bar', 'pie'];
-  if (type === 'tasks_timeline') return ['line', 'bar'];
-  if (type === 'score_comparison') return ['bar', 'line'];
+  if (type === 'tasks_by_status' || type === 'tasks_pie' || type === 'tasks_by_priority') return ['bar', 'pie', 'donut'];
+  if (type === 'tasks_timeline') return ['line', 'bar', 'area'];
+  if (type === 'score_comparison') return ['bar', 'line', 'area'];
   return ['bar'];
 }
 
 function getDefaultChartVariant(type: WidgetType): ChartVariant | undefined {
   if (type === 'tasks_by_status') return 'bar';
   if (type === 'tasks_pie') return 'pie';
+  if (type === 'tasks_by_priority') return 'donut';
   if (type === 'tasks_timeline') return 'line';
   if (type === 'score_comparison') return 'bar';
   return undefined;
 }
 
 function widgetSupportsCompare(type: WidgetType) {
-  return ['pending_tasks', 'completed_tasks', 'late_tasks', 'messages_sent', 'tasks_by_status', 'tasks_timeline', 'tasks_pie'].includes(type);
+  return ['pending_tasks', 'completed_tasks', 'late_tasks', 'messages_sent', 'tasks_by_status', 'tasks_timeline', 'tasks_pie', 'tasks_by_priority', 'completion_rate', 'avg_completion_time'].includes(type);
 }
 
 function normalizeWidget(w: Widget): Widget {
