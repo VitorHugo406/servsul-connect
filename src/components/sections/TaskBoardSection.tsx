@@ -1416,10 +1416,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                                 {sc && sc.total > 0 && (
                                   <div className={cn(
                                     'flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md',
-                                    sc.done === sc.total ? 'text-green-600 bg-green-500/10' : 'text-muted-foreground bg-muted/80'
+                                    sc.completed === sc.total ? 'text-green-600 bg-green-500/10' : 'text-muted-foreground bg-muted/80'
                                   )}>
                                     <ListTodo className="h-3 w-3" />
-                                    {sc.done}/{sc.total}
+                                    {sc.completed}/{sc.total}
                                   </div>
                                 )}
 
