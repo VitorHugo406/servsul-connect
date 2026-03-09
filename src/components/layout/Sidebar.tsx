@@ -30,7 +30,6 @@ interface SidebarProps {
 
 const menuItems = [
   { id: 'home', icon: Home, label: 'Início' },
-  { id: 'my-dashboard', icon: LayoutDashboard, label: 'Meu Painel' },
   { id: 'chat', icon: MessageSquare, label: 'Chat' },
   { id: 'announcements', icon: Bell, label: 'Avisos' },
   { id: 'birthdays', icon: Cake, label: 'Aniversariantes' },
@@ -43,6 +42,7 @@ const menuItems = [
    { id: 'important-announcements', icon: Sparkles, label: 'Comunicados Importantes', adminOnly: true },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
   { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
+  { id: 'my-dashboard', icon: LayoutDashboard, label: 'Meu Painel' },
   { id: 'calendar', icon: CalendarDays, label: 'Calendário' },
   { id: 'system-logs', icon: FileText, label: 'Logs do Sistema', mainAdminOnly: true },
   { id: 'event-history', icon: Sparkles, label: 'Eventos Mensais', adminOnly: true },
