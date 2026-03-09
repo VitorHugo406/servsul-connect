@@ -40,16 +40,56 @@ export function useMessages(sectorId: string | null) {
   const [loading, setLoading] = useState(true);
   const { profile, isAdmin } = useAuth();
 
+  const hydrateMessages = useCallback(async (rows: any[]): Promise<Message[]> => {
+    const baseMessages = rows as Message[];
+    const replyIds = Array.from(
+      new Set(
+        baseMessages
+          .map((m) => m.reply_to_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+
+    const replyMap = new Map<string, Message['reply_to']>();
+
+    if (replyIds.length > 0) {
+      const { data: replyRows, error: repliesError } = await supabase
+        .from('messages')
+        .select('id, content, author:profiles!messages_author_id_fkey(name, display_name)')
+        .in('id', replyIds);
+
+      if (repliesError) {
+        console.error('Error fetching reply messages:', repliesError);
+      } else {
+        for (const row of (replyRows as any[]) || []) {
+          const rawAuthor = Array.isArray(row.author) ? row.author[0] : row.author;
+          replyMap.set(row.id, {
+            id: row.id,
+            content: row.content,
+            reply_author: rawAuthor
+              ? { name: rawAuthor.name, display_name: rawAuthor.display_name }
+              : null,
+          });
+        }
+      }
+    }
+
+    return baseMessages.map((m) => ({
+      ...m,
+      reply_to: m.reply_to_id ? (replyMap.get(m.reply_to_id) ?? null) : null,
+      status: 'delivered' as const,
+    }));
+  }, []);
+
   const fetchMessages = useCallback(async () => {
     if (!sectorId) return;
-    
+
     setLoading(true);
     const { data, error } = await supabase
       .from('messages')
       .select(`
         *,
-        author:profiles!messages_author_id_fkey(*),
-        reply_to:messages!messages_reply_to_id_fkey(id, content, reply_author:profiles!messages_author_id_fkey(name, display_name))
+        author:profiles!messages_author_id_fkey(*)
       `)
       .eq('sector_id', sectorId)
       .order('created_at', { ascending: true });
@@ -57,31 +97,29 @@ export function useMessages(sectorId: string | null) {
     if (error) {
       console.error('Error fetching messages:', error);
     } else {
+      const hydratedMessages = await hydrateMessages((data as any[]) || []);
+
       // Preserve temp messages and merge with real data
       setMessages(prev => {
         const tempMessages = prev.filter(m => m.id.startsWith('temp-'));
-        const realMessages = ((data as any[]) || []).map(m => {
-          const rawReplyTo = m.reply_to;
-          const reply_to = Array.isArray(rawReplyTo) ? (rawReplyTo[0] ?? null) : (rawReplyTo ?? null);
-          return { ...m, reply_to, status: 'delivered' as const };
-        }) as Message[];
-        
+        const realMessages = hydratedMessages;
+
         // Filter out temp messages that now have real counterparts
-        const filteredTemp = tempMessages.filter(temp => 
-          !realMessages.some(real => 
-            real.content === temp.content && 
+        const filteredTemp = tempMessages.filter(temp =>
+          !realMessages.some(real =>
+            real.content === temp.content &&
             real.author_id === temp.author_id &&
             Math.abs(new Date(real.created_at).getTime() - new Date(temp.created_at).getTime()) < 5000
           )
         );
-        
-        return [...realMessages, ...filteredTemp].sort((a, b) => 
+
+        return [...realMessages, ...filteredTemp].sort((a, b) =>
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         );
       });
     }
     setLoading(false);
-  }, [sectorId]);
+  }, [sectorId, hydrateMessages]);
 
   useEffect(() => {
     fetchMessages();
