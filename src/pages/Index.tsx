@@ -105,7 +105,7 @@ const Index = () => {
   const { isAlarming, pendingWarRoomId, dismissAlarm } = useWarRoomAlarm();
 
   const handleOpenWarRoom = () => {
-    setActiveSection('war-room');
+    handleSectionChange('war-room');
     dismissAlarm();
   };
   
