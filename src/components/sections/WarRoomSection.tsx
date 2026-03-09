@@ -468,9 +468,18 @@ function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) 
 }
 
 export function WarRoomSection() {
-  const { warRooms, loading, canCreateWarRoom } = useWarRooms();
+  const { warRooms, loading, canCreateWarRoom, deleteWarRoom } = useWarRooms();
   const [selectedRoom, setSelectedRoom] = useState<WarRoom | null>(null);
   const [filter, setFilter] = useState<'active' | 'closed' | 'all'>('active');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteRoom = async (e: React.MouseEvent, roomId: string) => {
+    e.stopPropagation();
+    if (!confirm('Tem certeza que deseja excluir esta War Room? Esta ação não pode ser desfeita.')) return;
+    setDeletingId(roomId);
+    await deleteWarRoom(roomId);
+    setDeletingId(null);
+  };
 
   const filtered = warRooms.filter(r => {
     if (filter === 'active') return r.status === 'active';
