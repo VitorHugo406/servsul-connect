@@ -185,7 +185,10 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
             isOwn ? 'gradient-primary text-white rounded-tr-md' : 'bg-card text-card-foreground rounded-tl-md border border-border')}>
             {/* Reply quote */}
             {message.reply_to && (
-              <div className={cn('mb-2 rounded-lg px-2 py-1.5 text-xs border-l-2', isOwn ? 'bg-white/10 border-white/40' : 'bg-muted border-muted-foreground/30')}>
+              <div
+                className={cn('mb-2 rounded-lg px-2 py-1.5 text-xs border-l-2 cursor-pointer transition-colors', isOwn ? 'bg-white/10 border-white/40 hover:bg-white/20' : 'bg-muted border-muted-foreground/30 hover:bg-muted/80')}
+                onClick={() => message.reply_to?.id && onScrollToMessage?.(message.reply_to.id)}
+              >
                 <span className="font-semibold">
                   {message.reply_to.reply_author?.display_name || message.reply_to.reply_author?.name || 'Usuário'}
                 </span>
