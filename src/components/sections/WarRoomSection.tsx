@@ -293,8 +293,10 @@ function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) 
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
-    await sendMessage(newMessage);
+    const msg = newMessage;
     setNewMessage('');
+    const success = await sendMessage(msg);
+    if (!success) setNewMessage(msg);
   };
 
   const isActive = room.status === 'active';
