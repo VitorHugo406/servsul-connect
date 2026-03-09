@@ -288,21 +288,29 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
            </div>
          </div>
  
-         <Sheet>
-           <SheetTrigger asChild>
-             <Button variant="ghost" size="icon">
-               <Settings className="h-5 w-5" />
-             </Button>
-           </SheetTrigger>
-           <SheetContent className="w-full sm:max-w-md">
-             <SheetHeader>
-               <SheetTitle>Configurações do Grupo</SheetTitle>
-               <SheetDescription>
-                 Gerencie os membros e configurações
-               </SheetDescription>
-             </SheetHeader>
-             
-             <div className="mt-6 space-y-6">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Settings className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-full sm:max-w-md flex flex-col">
+              <SheetHeader className="border-b border-border pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                    <Settings className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <SheetTitle>Configurações do Grupo</SheetTitle>
+                    <SheetDescription className="text-xs">
+                      Gerencie membros, mídia e automações
+                    </SheetDescription>
+                  </div>
+                </div>
+              </SheetHeader>
+              
+              <ScrollArea className="flex-1 -mx-6 px-6">
+              <div className="mt-4 space-y-5 pb-6">
                {/* Group Info */}
                <div className="flex items-center gap-4">
                  <Avatar className="h-16 w-16">
