@@ -48,7 +48,8 @@ export function useMessages(sectorId: string | null) {
       .from('messages')
       .select(`
         *,
-        author:profiles!messages_author_id_fkey(*)
+        author:profiles!messages_author_id_fkey(*),
+        reply_to:messages!messages_reply_to_id_fkey(id, content, reply_author:profiles!messages_author_id_fkey(name, display_name))
       `)
       .eq('sector_id', sectorId)
       .order('created_at', { ascending: true });
