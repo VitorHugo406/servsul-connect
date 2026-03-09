@@ -70,12 +70,23 @@ const Index = () => {
   const joinToken = searchParams.get('join');
 
   // Deep-link interno (ex: War Room -> Mural específico)
+  // Only track searchParams changes, NOT activeSection — otherwise navigating away loops back
   useEffect(() => {
     const sectionParam = searchParams.get('section');
-    if (sectionParam && sectionParam !== activeSection && sectionParam in sectionTitles) {
+    if (sectionParam && sectionParam in sectionTitles) {
       setActiveSection(sectionParam);
     }
-  }, [searchParams, activeSection]);
+  }, [searchParams]);
+
+  // Wrapper that clears deep-link URL params when user manually navigates
+  const handleSectionChange = (section: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('section');
+    next.delete('board');
+    next.delete('task');
+    setSearchParams(next, { replace: true });
+    setActiveSection(section);
+  };
   
   const handleCloseJoinDialog = () => {
     searchParams.delete('join');
