@@ -975,6 +975,54 @@ export type Database = {
           },
         ]
       }
+      scheduled_summaries: {
+        Row: {
+          created_at: string
+          created_by: string
+          format: string
+          frequency: string
+          id: string
+          is_active: boolean
+          metrics: Json
+          month_day: number | null
+          send_time: string
+          target_id: string
+          target_type: string
+          updated_at: string
+          weekday: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          format?: string
+          frequency: string
+          id?: string
+          is_active?: boolean
+          metrics?: Json
+          month_day?: number | null
+          send_time?: string
+          target_id: string
+          target_type: string
+          updated_at?: string
+          weekday?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          format?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          metrics?: Json
+          month_day?: number | null
+          send_time?: string
+          target_id?: string
+          target_type?: string
+          updated_at?: string
+          weekday?: number | null
+        }
+        Relationships: []
+      }
       sectors: {
         Row: {
           color: string
