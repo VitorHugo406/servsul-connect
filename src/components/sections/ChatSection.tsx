@@ -60,6 +60,8 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const { typingUsers, sendTyping } = useTypingIndicator(`sector-${effectiveSector || 'none'}`);
   
   const { messages, loading: messagesLoading, sendMessage, canSendMessages } = useMessages(effectiveSector);
+  const { reactions, toggleReaction } = useMessageReactions(messages.map(m => m.id));
+  const [replyTo, setReplyTo] = useState<{ id: string; content: string; author?: { name: string; display_name: string | null } | null } | null>(null);
 
   // Mark mention notifications as read when viewing a sector chat
   useEffect(() => {

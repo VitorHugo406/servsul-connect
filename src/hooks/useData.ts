@@ -129,7 +129,10 @@ export function useMessages(sectorId: string | null) {
                 .single()
                 .then(({ data }) => {
                   if (data) {
-                    setMessages(p => p.map(m => m.id === newMessage.id ? { ...data, status: 'delivered' } : m));
+                    const rawReplyTo = (data as any).reply_to;
+                    const reply_to = Array.isArray(rawReplyTo) ? (rawReplyTo[0] ?? null) : (rawReplyTo ?? null);
+                    const normalized = { ...(data as any), reply_to, status: 'delivered' } as Message;
+                    setMessages(p => p.map(m => m.id === newMessage.id ? normalized : m));
                   }
                 });
               

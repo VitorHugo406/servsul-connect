@@ -41,6 +41,20 @@ export interface WarRoomTimelineEntry {
   task_id?: string | null;
 }
 
+export interface WarRoomMessage {
+  id: string;
+  war_room_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+  sender?: {
+    id: string;
+    name: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+}
+
 export interface EmergencyTaskInput {
   board_id: string;
   column_id: string;
