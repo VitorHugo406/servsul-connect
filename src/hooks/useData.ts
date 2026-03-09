@@ -29,6 +29,8 @@ interface Message {
   author_id: string;
   sector_id: string;
   created_at: string;
+  reply_to_id?: string | null;
+  reply_to?: { id: string; content: string; reply_author?: { name: string; display_name: string | null } | null } | null;
   author?: Profile;
   status?: 'sending' | 'sent' | 'delivered';
 }
