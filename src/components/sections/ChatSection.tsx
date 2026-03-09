@@ -458,7 +458,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                         <ChatMessage
                           message={message}
                           index={index}
-                          onReply={setReplyTo}
+                          onReply={(msg) => setReplyTo({ id: msg.id, content: msg.content, author: msg.author })}
                           reactions={reactions[message.id]}
                           onToggleReaction={toggleReaction}
                         />
