@@ -70,12 +70,23 @@ const Index = () => {
   const joinToken = searchParams.get('join');
 
   // Deep-link interno (ex: War Room -> Mural específico)
+  // Only track searchParams changes, NOT activeSection — otherwise navigating away loops back
   useEffect(() => {
     const sectionParam = searchParams.get('section');
-    if (sectionParam && sectionParam !== activeSection && sectionParam in sectionTitles) {
+    if (sectionParam && sectionParam in sectionTitles) {
       setActiveSection(sectionParam);
     }
-  }, [searchParams, activeSection]);
+  }, [searchParams]);
+
+  // Wrapper that clears deep-link URL params when user manually navigates
+  const handleSectionChange = (section: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('section');
+    next.delete('board');
+    next.delete('task');
+    setSearchParams(next, { replace: true });
+    setActiveSection(section);
+  };
   
   const handleCloseJoinDialog = () => {
     searchParams.delete('join');
@@ -83,7 +94,7 @@ const Index = () => {
   };
 
   const handleNavigateToTasks = () => {
-    setActiveSection('tasks');
+    handleSectionChange('tasks');
   };
   const isMobile = useIsMobile();
   const [isReady, setIsReady] = useState(false);
@@ -94,7 +105,7 @@ const Index = () => {
   const { isAlarming, pendingWarRoomId, dismissAlarm } = useWarRoomAlarm();
 
   const handleOpenWarRoom = () => {
-    setActiveSection('war-room');
+    handleSectionChange('war-room');
     dismissAlarm();
   };
   
@@ -115,22 +126,22 @@ const Index = () => {
 
   // Navigation handlers for notifications
   const handleNavigateToChat = () => {
-    setActiveSection('chat');
+    handleSectionChange('chat');
   };
 
   const handleNavigateToAnnouncements = () => {
-    setActiveSection('announcements');
+    handleSectionChange('announcements');
   };
 
   const handleRegisterFacial = () => {
     completeOnboarding();
-    setActiveSection('facial');
+    handleSectionChange('facial');
   };
 
   const renderSection = () => {
     switch (activeSection) {
       case 'home':
-        return <HomeSection onNavigate={setActiveSection} />;
+        return <HomeSection onNavigate={handleSectionChange} />;
       case 'chat':
         return <ChatSection globalSearch={globalSearch} />;
       case 'announcements':
@@ -213,7 +224,7 @@ const Index = () => {
           {renderSection()}
         </main>
 
-        <MobileNavigation activeSection={activeSection} onSectionChange={setActiveSection} />
+        <MobileNavigation activeSection={activeSection} onSectionChange={handleSectionChange} />
         
         {/* PWA Install Prompt */}
         <InstallPrompt />
@@ -250,10 +261,10 @@ const Index = () => {
     <div className="flex h-screen overflow-hidden bg-background">
       <WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} />
       <OfflineIndicator />
-      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+      <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
       
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={setActiveSection} />
+        <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} />
         
         <main className="flex-1 overflow-auto">
           {renderSection()}
