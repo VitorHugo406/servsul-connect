@@ -26,21 +26,29 @@ interface CardMentionCardProps {
 }
 
 export function CardMentionCard({ taskNumber, title, description, labels, priority, dueDate, boardName, isOwnMessage }: CardMentionCardProps) {
-  const [showPreview, setShowPreview] = useState(false);
-  const [fullTask, setFullTask] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
 
-  const loadFullTask = async () => {
+  const openTaskInBoard = async () => {
     setLoading(true);
-    setShowPreview(true);
     const { data } = await supabase
       .from('tasks')
-      .select('*, assignee:profiles!tasks_assigned_to_fkey(id, name, display_name, avatar_url)')
+      .select('id, board_id')
       .eq('task_number', taskNumber)
       .maybeSingle();
-    setFullTask(data);
     setLoading(false);
+
+    const taskId = (data as any)?.id as string | undefined;
+    const boardId = (data as any)?.board_id as string | null | undefined;
+
+    if (!taskId || !boardId) return;
+
+    const next = new URLSearchParams(searchParams);
+    next.set('section', 'tasks');
+    next.set('board', boardId);
+    next.set('task', taskId);
+    setSearchParams(next, { replace: false });
   };
 
   const cardWidth = isMobile ? 'max-w-[280px]' : 'max-w-[380px]';
