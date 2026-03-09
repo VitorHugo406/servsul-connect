@@ -57,6 +57,7 @@ import { CheckSquare, CheckCircle2 } from 'lucide-react';
 
 export function TaskBoardSection() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const { boards, loading: boardsLoading, createBoard, updateBoard, deleteBoard } = useTaskBoards();
   const isMobile = useIsMobile();
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
@@ -64,6 +65,15 @@ export function TaskBoardSection() {
   const [boardName, setBoardName] = useState('');
   const [boardDesc, setBoardDesc] = useState('');
   const [creating, setCreating] = useState(false);
+
+  // Permite abrir um mural específico via URL (?section=tasks&board=...)
+  useEffect(() => {
+    const section = searchParams.get('section');
+    const board = searchParams.get('board');
+    if (section === 'tasks' && board && board !== selectedBoardId) {
+      setSelectedBoardId(board);
+    }
+  }, [searchParams, selectedBoardId]);
 
   const handleCreateBoard = async () => {
     if (!boardName.trim()) { toast.error('Nome é obrigatório'); return; }
