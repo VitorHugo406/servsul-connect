@@ -354,9 +354,11 @@ function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) 
                     <div className="pb-4 flex-1 min-w-0">
                       <p className="text-sm">{entry.content}</p>
                       {entry.task_id && (
-                        <button onClick={() => setViewingTaskId(entry.task_id!)}
-                          className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20 rounded-md px-2 py-1 transition-colors">
-                          <ExternalLink className="h-3 w-3" /> Ver card emergencial
+                        <button
+                          onClick={() => openTaskInBoard(entry.task_id!)}
+                          className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20 rounded-md px-2 py-1 transition-colors"
+                        >
+                          <ExternalLink className="h-3 w-3" /> Abrir no mural
                         </button>
                       )}
                       <p className="text-xs text-muted-foreground mt-0.5">
