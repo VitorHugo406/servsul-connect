@@ -394,7 +394,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                 <Sheet>
                   <SheetTrigger asChild>
                     <Button variant="ghost" size="icon" title="Mídia e arquivos">
-                      <Settings className="h-5 w-5" />
+                      <FolderOpen className="h-5 w-5" />
                     </Button>
                   </SheetTrigger>
                   <SheetContent>

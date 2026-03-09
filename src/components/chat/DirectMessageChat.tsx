@@ -167,8 +167,8 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
         </div>
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Settings className="h-5 w-5" />
+            <Button variant="ghost" size="icon" title="Mídia e arquivos">
+              <FolderOpen className="h-5 w-5" />
             </Button>
           </SheetTrigger>
           <SheetContent className="w-full sm:max-w-md">
