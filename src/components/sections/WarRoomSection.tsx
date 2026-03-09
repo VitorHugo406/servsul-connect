@@ -468,9 +468,18 @@ function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) 
 }
 
 export function WarRoomSection() {
-  const { warRooms, loading, canCreateWarRoom } = useWarRooms();
+  const { warRooms, loading, canCreateWarRoom, deleteWarRoom } = useWarRooms();
   const [selectedRoom, setSelectedRoom] = useState<WarRoom | null>(null);
   const [filter, setFilter] = useState<'active' | 'closed' | 'all'>('active');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteRoom = async (e: React.MouseEvent, roomId: string) => {
+    e.stopPropagation();
+    if (!confirm('Tem certeza que deseja excluir esta War Room? Esta ação não pode ser desfeita.')) return;
+    setDeletingId(roomId);
+    await deleteWarRoom(roomId);
+    setDeletingId(null);
+  };
 
   const filtered = warRooms.filter(r => {
     if (filter === 'active') return r.status === 'active';
@@ -542,6 +551,21 @@ export function WarRoomSection() {
                     {format(new Date(room.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </p>
                 </div>
+                {room.status === 'closed' && canCreateWarRoom && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                    onClick={(e) => handleDeleteRoom(e, room.id)}
+                    disabled={deletingId === room.id}
+                  >
+                    {deletingId === room.id ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}

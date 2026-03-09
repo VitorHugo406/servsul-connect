@@ -269,7 +269,29 @@ export function useWarRooms() {
     fetchWarRooms();
   };
 
-  return { warRooms, loading, canCreateWarRoom, createWarRoom, closeWarRoom, createEmergencyTask, fetchWarRooms };
+  const deleteWarRoom = async (roomId: string) => {
+    // Delete associated data first (messages, timeline, members)
+    await Promise.all([
+      supabase.from('war_room_messages').delete().eq('war_room_id', roomId),
+      supabase.from('war_room_timeline').delete().eq('war_room_id', roomId),
+      supabase.from('war_room_members').delete().eq('war_room_id', roomId),
+    ]);
+
+    const { error } = await supabase
+      .from('war_rooms')
+      .delete()
+      .eq('id', roomId);
+
+    if (error) {
+      toast({ title: 'Erro ao excluir War Room', description: error.message, variant: 'destructive' });
+      return false;
+    }
+    toast({ title: 'War Room excluída com sucesso' });
+    fetchWarRooms();
+    return true;
+  };
+
+  return { warRooms, loading, canCreateWarRoom, createWarRoom, closeWarRoom, deleteWarRoom, createEmergencyTask, fetchWarRooms };
 }
 
 export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) {
