@@ -29,6 +29,8 @@ interface Message {
   author_id: string;
   sector_id: string;
   created_at: string;
+  reply_to_id?: string | null;
+  reply_to?: { id: string; content: string; reply_author?: { name: string; display_name: string | null } | null } | null;
   author?: Profile;
   status?: 'sending' | 'sent' | 'delivered';
 }
@@ -46,7 +48,8 @@ export function useMessages(sectorId: string | null) {
       .from('messages')
       .select(`
         *,
-        author:profiles!messages_author_id_fkey(*)
+        author:profiles!messages_author_id_fkey(*),
+        reply_to:messages!messages_reply_to_id_fkey(id, content, reply_author:profiles!messages_author_id_fkey(name, display_name))
       `)
       .eq('sector_id', sectorId)
       .order('created_at', { ascending: true });
@@ -117,7 +120,7 @@ export function useMessages(sectorId: string | null) {
               // New message from another user - fetch author info
               supabase
                 .from('messages')
-                .select(`*, author:profiles!messages_author_id_fkey(*)`)
+                .select(`*, author:profiles!messages_author_id_fkey(*), reply_to:messages!messages_reply_to_id_fkey(id, content, reply_author:profiles!messages_author_id_fkey(name, display_name))`)
                 .eq('id', newMessage.id)
                 .single()
                 .then(({ data }) => {
@@ -143,48 +146,30 @@ export function useMessages(sectorId: string | null) {
     };
   }, [sectorId, fetchMessages]);
 
-  const sendMessage = async (content: string, onOptimisticUpdate?: (tempMessage: Message) => void) => {
+  const sendMessage = async (content: string, options?: { reply_to_id?: string }) => {
     if (!profile || !sectorId) return { error: new Error('Not authenticated') };
 
-    // Check if user can send to this sector (their sector, Geral, or admin)
-    const canSend = isAdmin || 
-                    sectorId === profile.sector_id || 
-                    sectorId === GERAL_SECTOR_ID;
-    
-    if (!canSend) {
-      return { error: new Error('You cannot send messages to this sector') };
-    }
+    const canSend = isAdmin || sectorId === profile.sector_id || sectorId === GERAL_SECTOR_ID;
+    if (!canSend) return { error: new Error('You cannot send messages to this sector') };
 
-    // Create optimistic message for immediate UI update
     const tempId = `temp-${Date.now()}`;
     const tempMessage: Message = {
-      id: tempId,
-      content,
-      author_id: profile.id,
-      sector_id: sectorId,
-      created_at: new Date().toISOString(),
-      author: profile as Profile,
-      status: 'sending',
+      id: tempId, content, author_id: profile.id, sector_id: sectorId,
+      created_at: new Date().toISOString(), author: profile as Profile, status: 'sending',
+      reply_to_id: options?.reply_to_id || null,
     };
-    
-    // Immediately add to local state for instant feedback
-    setMessages(prev => [...prev, tempMessage]);
-    onOptimisticUpdate?.(tempMessage);
 
-    const { error, data } = await supabase.from('messages').insert({
-      content,
-      author_id: profile.id,
-      sector_id: sectorId,
-    }).select().single();
+    setMessages(prev => [...prev, tempMessage]);
+
+    const insertPayload: any = { content, author_id: profile.id, sector_id: sectorId };
+    if (options?.reply_to_id) insertPayload.reply_to_id = options.reply_to_id;
+
+    const { error, data } = await supabase.from('messages').insert(insertPayload).select().single();
 
     if (error) {
-      // Remove optimistic message on error
       setMessages(prev => prev.filter(m => m.id !== tempId));
     } else if (data) {
-      // Update temp message to sent status immediately
-      setMessages(prev => prev.map(m => 
-        m.id === tempId ? { ...m, status: 'sent' as const } : m
-      ));
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'sent' as const } : m));
     }
 
     return { error, data };

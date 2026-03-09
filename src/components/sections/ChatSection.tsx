@@ -24,6 +24,7 @@ import { useSound } from '@/hooks/useSound';
 import { useConversations } from '@/hooks/useDirectMessages';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useMessageReactions } from '@/hooks/useMessageReactions';
 
 type ChatMode = 'sectors' | 'direct' | 'groups';
 
@@ -173,27 +174,21 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     }
   }, [profile]);
 
-  const handleSendMessage = async (content: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[]) => {
-    // Play sound immediately for instant feedback
+  const handleSendMessage = async (content: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[], replyToId?: string) => {
     playMessageSent();
-    
-    // Build message content with attachments
     let fullContent = content;
     if (attachments && attachments.length > 0) {
       const attachmentLinks = attachments.map(a => {
-        if (a.fileType.startsWith('image/')) {
-          return `\n📷 [${a.fileName}](${a.url})`;
-        }
+        if (a.fileType.startsWith('image/')) return `\n📷 [${a.fileName}](${a.url})`;
         return `\n📎 [${a.fileName}](${a.url})`;
       }).join('');
       fullContent = content + attachmentLinks;
     }
-    
-    const { error } = await sendMessage(fullContent);
+    const { error } = await sendMessage(fullContent, { reply_to_id: replyToId });
     if (error) {
       console.error('Error sending message:', error);
     } else {
-      // Send mention notifications after successful message send
+      setReplyTo(null);
       await sendMentionNotifications(fullContent);
     }
   };
@@ -458,7 +453,13 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                     return (
                       <div key={message.id}>
                         {showDateSeparator && <DateSeparator date={message.created_at} />}
-                        <ChatMessage message={message} index={index} />
+                        <ChatMessage
+                          message={message}
+                          index={index}
+                          onReply={setReplyTo}
+                          reactions={reactions[message.id]}
+                          onToggleReaction={toggleReaction}
+                        />
                       </div>
                     );
                   })
@@ -493,7 +494,13 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
 
           {/* Input */}
           {canSendMessages ? (
-            <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} onMention={handleMention} />
+            <ChatInput
+              onSendMessage={handleSendMessage}
+              onTyping={sendTyping}
+              onMention={handleMention}
+              replyTo={replyTo}
+              onClearReply={() => setReplyTo(null)}
+            />
           ) : (
             <div className="border-t border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">
               Você só pode enviar mensagens no seu próprio setor

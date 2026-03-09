@@ -620,12 +620,52 @@ export type Database = {
           },
         ]
       }
+      message_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          profile_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           author_id: string
           content: string
           created_at: string
           id: string
+          reply_to_id: string | null
           sector_id: string
         }
         Insert: {
@@ -633,6 +673,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          reply_to_id?: string | null
           sector_id: string
         }
         Update: {
@@ -640,6 +681,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          reply_to_id?: string | null
           sector_id?: string
         }
         Relationships: [
@@ -648,6 +690,13 @@ export type Database = {
             columns: ["author_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
           {
@@ -1898,6 +1947,7 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          task_id: string | null
           war_room_id: string
         }
         Insert: {
@@ -1905,6 +1955,7 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
+          task_id?: string | null
           war_room_id: string
         }
         Update: {
@@ -1912,9 +1963,17 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          task_id?: string | null
           war_room_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "war_room_timeline_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "war_room_timeline_war_room_id_fkey"
             columns: ["war_room_id"]
