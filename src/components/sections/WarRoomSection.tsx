@@ -233,9 +233,10 @@ function CreateWarRoomDialog({ onCreated }: { onCreated: (room: WarRoom) => void
 }
 
 function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) {
-  const { members, timeline, messages, loading, acknowledge, addTimelineEntry, sendMessage, isRoomCreator } = useWarRoomDetail(room.id, room.created_by);
+  const { members, timeline, messages, loading, acknowledge, addTimelineEntry, sendMessage, isRoomCreator, refetch } = useWarRoomDetail(room.id, room.created_by);
   const { user, profile } = useAuth();
   const { closeWarRoom, createEmergencyTask } = useWarRooms();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [newTimeline, setNewTimeline] = useState('');
   const [newMessage, setNewMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'timeline' | 'chat'>('timeline');
@@ -243,25 +244,34 @@ function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) 
   const [viewingTaskId, setViewingTaskId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const currentMember = members.find(m => m.user_id === user?.id);
-  const needsAcknowledge = currentMember && !currentMember.has_acknowledged;
+  const openTaskInBoard = useCallback(async (taskId: string) => {
+    const { data } = await supabase.from('tasks').select('id, board_id').eq('id', taskId).maybeSingle();
+    const boardId = (data as any)?.board_id as string | null | undefined;
 
-  useEffect(() => { if (needsAcknowledge) acknowledge(); }, [needsAcknowledge, acknowledge]);
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+    if (!boardId) {
+      setViewingTaskId(taskId);
+      return;
+    }
 
-  const handleAddTimeline = async () => {
-    if (!newTimeline.trim()) return;
-    await addTimelineEntry(newTimeline);
-    setNewTimeline('');
-  };
+    const next = new URLSearchParams(searchParams);
+    next.set('section', 'tasks');
+    next.set('board', boardId);
+    next.set('task', taskId);
+    setSearchParams(next, { replace: false });
+  }, [searchParams, setSearchParams]);
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
-    await sendMessage(newMessage);
-    setNewMessage('');
-  };
+  const handleDeleteHistory = useCallback(async () => {
+    if (!isRoomCreator) return;
+    const ok = confirm('Excluir TODO o histórico desta War Room? (mensagens + timeline)');
+    if (!ok) return;
 
-  const isActive = room.status === 'active';
+    await Promise.all([
+      supabase.from('war_room_messages').delete().eq('war_room_id', room.id),
+      supabase.from('war_room_timeline').delete().eq('war_room_id', room.id),
+    ]);
+
+    await refetch();
+  }, [isRoomCreator, room.id, refetch]);
 
   if (loading) {
     return <div className="flex h-full items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
