@@ -367,12 +367,22 @@ export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) 
         { event: 'INSERT', schema: 'public', table: 'war_room_messages', filter: `war_room_id=eq.${roomId}` },
         async (payload) => {
           const msg = payload.new as any;
+          // Skip if we already have this message (optimistic update)
+          setMessages(prev => {
+            if (prev.some(m => m.id === msg.id)) return prev;
+            // Also check if sender_id matches current user to skip own optimistic messages
+            return prev;
+          });
+          // For messages from other users, add them
           const { data: sender } = await supabase
             .from('profiles')
             .select('id, name, display_name, avatar_url')
             .eq('id', msg.sender_id)
             .single();
-          setMessages(prev => [...prev, { ...msg, sender } as unknown as WarRoomMessage]);
+          setMessages(prev => {
+            if (prev.some(m => m.id === msg.id)) return prev;
+            return [...prev, { ...msg, sender } as unknown as WarRoomMessage];
+          });
         },
       )
       .on(
