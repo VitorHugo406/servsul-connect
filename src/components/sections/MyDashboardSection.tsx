@@ -1142,12 +1142,11 @@ export function MyDashboardSection() {
               {widgets.map((widget, index) => (
                 <motion.div
                   key={widget.id}
-                  layout
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.2 }}
-                  className={cn(colSpan[widget.size], rowHeight[widget.size])}
+                  transition={{ duration: 0.15 }}
+                  className={cn(colSpan[widget.size], rowHeight[widget.size], draggedWidgetIndex === index && 'opacity-50')}
                   draggable
                   onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent, index)}
                   onDragOver={(e) => handleDragOver(e as unknown as React.DragEvent, index)}

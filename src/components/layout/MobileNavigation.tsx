@@ -14,7 +14,6 @@ interface MobileNavigationProps {
 
 const mainNavItems = [
   { id: 'home', icon: Home, label: 'Início' },
-  { id: 'my-dashboard', icon: LayoutDashboard, label: 'Painel' },
   { id: 'chat', icon: MessageSquare, label: 'Chat' },
   { id: 'announcements', icon: Bell, label: 'Avisos' },
 ];
@@ -28,6 +27,7 @@ const moreNavItems = [
    { id: 'important-announcements', icon: Sparkles, label: 'Comunicados Importantes', adminOnly: true },
    { id: 'tasks', icon: ListTodo, label: 'Gestão de Tarefas' },
    { id: 'people-management', icon: UsersRound, label: 'Gestão de Pessoas', supervisorOnly: true },
+  { id: 'my-dashboard', icon: LayoutDashboard, label: 'Meu Painel' },
   { id: 'calendar', icon: CalendarDays, label: 'Calendário' },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
   { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
