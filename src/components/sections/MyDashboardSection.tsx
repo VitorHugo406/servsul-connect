@@ -51,11 +51,14 @@ type WidgetType =
   | 'monthly_score'
   | 'score_comparison'
   | 'completed_tasks'
-  | 'tasks_pie';
+  | 'tasks_pie'
+  | 'tasks_by_priority'
+  | 'completion_rate'
+  | 'avg_completion_time';
 
 type WidgetSize = 'sm' | 'md' | 'lg';
 
-type ChartVariant = 'bar' | 'line' | 'pie';
+type ChartVariant = 'bar' | 'line' | 'pie' | 'area' | 'donut';
 
 interface Widget {
   id: string;
