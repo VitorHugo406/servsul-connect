@@ -264,7 +264,7 @@ const Index = () => {
       <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
       
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={setActiveSection} />
+        <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} />
         
         <main className="flex-1 overflow-auto">
           {renderSection()}
