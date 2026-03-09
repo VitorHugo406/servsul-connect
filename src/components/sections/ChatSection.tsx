@@ -46,7 +46,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   // Global search no longer syncs to chat (now used for tab navigation)
   const isMobile = useIsMobile();
   const { playMessageSent } = useSound();
-  const { groups } = usePrivateGroups();
+  const { groups, refetch: refetchGroups } = usePrivateGroups();
   const { conversations } = useConversations();
   const [unreadGroupCount, setUnreadGroupCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -199,6 +199,13 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
 
   const currentSector = sectors.find((s) => s.id === effectiveSector);
   const selectedGroup = groups.find(g => g.id === selectedGroupId) || null;
+
+  // Refetch groups when a group is selected but not found in the list
+  useEffect(() => {
+    if (selectedGroupId && !groups.find(g => g.id === selectedGroupId)) {
+      refetchGroups();
+    }
+  }, [selectedGroupId, groups, refetchGroups]);
 
   // Handle back button on mobile
   const handleBack = () => {
