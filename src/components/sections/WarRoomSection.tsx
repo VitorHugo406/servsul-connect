@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useWarRooms, useWarRoomDetail, WarRoom, EmergencyTaskInput } from '@/hooks/useWarRooms';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -233,9 +233,10 @@ function CreateWarRoomDialog({ onCreated }: { onCreated: (room: WarRoom) => void
 }
 
 function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) {
-  const { members, timeline, messages, loading, acknowledge, addTimelineEntry, sendMessage, isRoomCreator } = useWarRoomDetail(room.id, room.created_by);
+  const { members, timeline, messages, loading, acknowledge, addTimelineEntry, sendMessage, isRoomCreator, refetch } = useWarRoomDetail(room.id, room.created_by);
   const { user, profile } = useAuth();
   const { closeWarRoom, createEmergencyTask } = useWarRooms();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [newTimeline, setNewTimeline] = useState('');
   const [newMessage, setNewMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'timeline' | 'chat'>('timeline');
@@ -243,11 +244,45 @@ function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) 
   const [viewingTaskId, setViewingTaskId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const openTaskInBoard = useCallback(async (taskId: string) => {
+    const { data } = await supabase.from('tasks').select('id, board_id').eq('id', taskId).maybeSingle();
+    const boardId = (data as any)?.board_id as string | null | undefined;
+
+    if (!boardId) {
+      setViewingTaskId(taskId);
+      return;
+    }
+
+    const next = new URLSearchParams(searchParams);
+    next.set('section', 'tasks');
+    next.set('board', boardId);
+    next.set('task', taskId);
+    setSearchParams(next, { replace: false });
+  }, [searchParams, setSearchParams]);
+
+  const handleDeleteHistory = useCallback(async () => {
+    if (!isRoomCreator) return;
+    const ok = confirm('Excluir TODO o histórico desta War Room? (mensagens + timeline)');
+    if (!ok) return;
+
+    await Promise.all([
+      supabase.from('war_room_messages').delete().eq('war_room_id', room.id),
+      supabase.from('war_room_timeline').delete().eq('war_room_id', room.id),
+    ]);
+
+    await refetch();
+  }, [isRoomCreator, room.id, refetch]);
+
   const currentMember = members.find(m => m.user_id === user?.id);
   const needsAcknowledge = currentMember && !currentMember.has_acknowledged;
 
-  useEffect(() => { if (needsAcknowledge) acknowledge(); }, [needsAcknowledge, acknowledge]);
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => {
+    if (needsAcknowledge) acknowledge();
+  }, [needsAcknowledge, acknowledge]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleAddTimeline = async () => {
     if (!newTimeline.trim()) return;
@@ -282,6 +317,11 @@ function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) 
           <p className="text-xs text-muted-foreground">{format(new Date(room.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {isActive && isRoomCreator && (
+            <Button variant="outline" size="sm" onClick={handleDeleteHistory} className="gap-1">
+              <Trash2 className="h-4 w-4" /> Excluir histórico
+            </Button>
+          )}
           {isActive && isRoomCreator && (
             <Button variant="outline" size="sm" onClick={() => setTaskDialogOpen(true)} className="gap-1">
               <FilePlus2 className="h-4 w-4" /> Criar card
@@ -339,9 +379,11 @@ function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) 
                     <div className="pb-4 flex-1 min-w-0">
                       <p className="text-sm">{entry.content}</p>
                       {entry.task_id && (
-                        <button onClick={() => setViewingTaskId(entry.task_id!)}
-                          className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20 rounded-md px-2 py-1 transition-colors">
-                          <ExternalLink className="h-3 w-3" /> Ver card emergencial
+                        <button
+                          onClick={() => openTaskInBoard(entry.task_id!)}
+                          className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20 rounded-md px-2 py-1 transition-colors"
+                        >
+                          <ExternalLink className="h-3 w-3" /> Abrir no mural
                         </button>
                       )}
                       <p className="text-xs text-muted-foreground mt-0.5">

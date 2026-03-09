@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Eye, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -26,21 +26,29 @@ interface CardMentionCardProps {
 }
 
 export function CardMentionCard({ taskNumber, title, description, labels, priority, dueDate, boardName, isOwnMessage }: CardMentionCardProps) {
-  const [showPreview, setShowPreview] = useState(false);
-  const [fullTask, setFullTask] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
 
-  const loadFullTask = async () => {
+  const openTaskInBoard = async () => {
     setLoading(true);
-    setShowPreview(true);
     const { data } = await supabase
       .from('tasks')
-      .select('*, assignee:profiles!tasks_assigned_to_fkey(id, name, display_name, avatar_url)')
+      .select('id, board_id')
       .eq('task_number', taskNumber)
       .maybeSingle();
-    setFullTask(data);
     setLoading(false);
+
+    const taskId = (data as any)?.id as string | undefined;
+    const boardId = (data as any)?.board_id as string | null | undefined;
+
+    if (!taskId || !boardId) return;
+
+    const next = new URLSearchParams(searchParams);
+    next.set('section', 'tasks');
+    next.set('board', boardId);
+    next.set('task', taskId);
+    setSearchParams(next, { replace: false });
   };
 
   const cardWidth = isMobile ? 'max-w-[280px]' : 'max-w-[380px]';
@@ -93,10 +101,15 @@ export function CardMentionCard({ taskNumber, title, description, labels, priori
             <Button
               variant="ghost"
               size="sm"
-              className={cn('gap-1', isMobile ? 'h-5 text-[10px] px-1.5' : 'h-6 text-xs px-2', isOwnMessage ? 'text-white/70 hover:text-white hover:bg-white/10' : '')}
-              onClick={(e) => { e.stopPropagation(); loadFullTask(); }}
+              disabled={loading}
+              className={cn(
+                'gap-1',
+                isMobile ? 'h-5 text-[10px] px-1.5' : 'h-6 text-xs px-2',
+                isOwnMessage ? 'text-white/70 hover:text-white hover:bg-white/10' : '',
+              )}
+              onClick={(e) => { e.stopPropagation(); openTaskInBoard(); }}
             >
-              <Eye className={cn(isMobile ? 'h-3 w-3' : 'h-3.5 w-3.5')} /> Ver
+              <Eye className={cn(isMobile ? 'h-3 w-3' : 'h-3.5 w-3.5')} /> Abrir
             </Button>
           </div>
         </div>

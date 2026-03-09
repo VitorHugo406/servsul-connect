@@ -68,6 +68,14 @@ const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   
   const joinToken = searchParams.get('join');
+
+  // Deep-link interno (ex: War Room -> Mural específico)
+  useEffect(() => {
+    const sectionParam = searchParams.get('section');
+    if (sectionParam && sectionParam !== activeSection && sectionParam in sectionTitles) {
+      setActiveSection(sectionParam);
+    }
+  }, [searchParams, activeSection]);
   
   const handleCloseJoinDialog = () => {
     searchParams.delete('join');

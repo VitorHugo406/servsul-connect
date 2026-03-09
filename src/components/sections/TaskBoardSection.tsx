@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import plannerEmptyIllustration from '@/assets/planner-empty-illustration.png';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -56,6 +57,7 @@ import { CheckSquare, CheckCircle2 } from 'lucide-react';
 
 export function TaskBoardSection() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const { boards, loading: boardsLoading, createBoard, updateBoard, deleteBoard } = useTaskBoards();
   const isMobile = useIsMobile();
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
@@ -63,6 +65,15 @@ export function TaskBoardSection() {
   const [boardName, setBoardName] = useState('');
   const [boardDesc, setBoardDesc] = useState('');
   const [creating, setCreating] = useState(false);
+
+  // Permite abrir um mural específico via URL (?section=tasks&board=...)
+  useEffect(() => {
+    const section = searchParams.get('section');
+    const board = searchParams.get('board');
+    if (section === 'tasks' && board && board !== selectedBoardId) {
+      setSelectedBoardId(board);
+    }
+  }, [searchParams, selectedBoardId]);
 
   const handleCreateBoard = async () => {
     if (!boardName.trim()) { toast.error('Nome é obrigatório'); return; }
@@ -235,6 +246,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   currentUserId: string;
 }) {
   const { profile } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { columns, addColumn, updateColumn, deleteColumn, refetch: refetchColumns } = useBoardColumns(board.id);
   const { tasks, archivedTasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: refetchTasks } = useBoardTasks(board.id);
   const { members, addMember, removeMember, updateMemberRole } = useBoardMembers(board.id);
@@ -298,6 +310,29 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [showDistribution, setShowDistribution] = useState(false);
   const [distributionColumnOverrides, setDistributionColumnOverrides] = useState<Record<string, string>>({});
   const [showScore, setShowScore] = useState(false);
+
+  // Auto-open de um card específico via URL (?board=...&task=...)
+  const didAutoOpenTaskRef = useRef(false);
+  useEffect(() => {
+    if (didAutoOpenTaskRef.current) return;
+
+    const boardParam = searchParams.get('board');
+    const taskParam = searchParams.get('task');
+
+    if (!taskParam) return;
+    if (boardParam !== board.id) return;
+
+    const t = tasks.find(x => x.id === taskParam);
+    if (!t) return;
+
+    setSelectedTask(t);
+    setShowTaskDetail(true);
+    didAutoOpenTaskRef.current = true;
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('task');
+    setSearchParams(next, { replace: true });
+  }, [tasks, board.id, searchParams, setSearchParams]);
 
   // Score system
   const memberProfileIds = members.map(m => m.profile_id);

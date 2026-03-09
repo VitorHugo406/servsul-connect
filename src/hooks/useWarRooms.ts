@@ -208,6 +208,9 @@ export function useWarRooms() {
         war_room_id: room.id,
         profile_id: p.id,
         user_id: p.user_id,
+        // Se eu criei a War Room, não devo receber alarme: já entra como acknowledged
+        has_acknowledged: p.user_id === user.id,
+        acknowledged_at: p.user_id === user.id ? new Date().toISOString() : null,
       }));
 
       const notifications = profiles
