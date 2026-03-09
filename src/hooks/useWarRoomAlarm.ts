@@ -15,15 +15,19 @@ export function useWarRoomAlarm() {
 
     const { data, error } = await supabase
       .from('war_room_members')
-      .select('war_room_id, has_acknowledged, war_room:war_rooms!war_room_members_war_room_id_fkey(id, status)')
+      .select(
+        'war_room_id, has_acknowledged, war_room:war_rooms!war_room_members_war_room_id_fkey(id, status, created_by)',
+      )
       .eq('user_id', user.id)
       .eq('has_acknowledged', false);
 
     if (error || !data) return;
 
-    // Filter only active war rooms
-    const pending = data.filter((d: any) => d.war_room?.status === 'active');
-    
+    // Filter only active war rooms AND ignore rooms created by me
+    const pending = data.filter(
+      (d: any) => d.war_room?.status === 'active' && d.war_room?.created_by !== user.id,
+    );
+
     if (pending.length > 0) {
       setPendingWarRoomId(pending[0].war_room_id);
       setIsAlarming(true);

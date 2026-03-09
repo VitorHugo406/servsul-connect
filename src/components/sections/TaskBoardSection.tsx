@@ -246,6 +246,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   currentUserId: string;
 }) {
   const { profile } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { columns, addColumn, updateColumn, deleteColumn, refetch: refetchColumns } = useBoardColumns(board.id);
   const { tasks, archivedTasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: refetchTasks } = useBoardTasks(board.id);
   const { members, addMember, removeMember, updateMemberRole } = useBoardMembers(board.id);
@@ -309,6 +310,29 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [showDistribution, setShowDistribution] = useState(false);
   const [distributionColumnOverrides, setDistributionColumnOverrides] = useState<Record<string, string>>({});
   const [showScore, setShowScore] = useState(false);
+
+  // Auto-open de um card específico via URL (?board=...&task=...)
+  const didAutoOpenTaskRef = useRef(false);
+  useEffect(() => {
+    if (didAutoOpenTaskRef.current) return;
+
+    const boardParam = searchParams.get('board');
+    const taskParam = searchParams.get('task');
+
+    if (!taskParam) return;
+    if (boardParam !== board.id) return;
+
+    const t = tasks.find(x => x.id === taskParam);
+    if (!t) return;
+
+    setSelectedTask(t);
+    setShowTaskDetail(true);
+    didAutoOpenTaskRef.current = true;
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('task');
+    setSearchParams(next, { replace: true });
+  }, [tasks, board.id, searchParams, setSearchParams]);
 
   // Score system
   const memberProfileIds = members.map(m => m.profile_id);

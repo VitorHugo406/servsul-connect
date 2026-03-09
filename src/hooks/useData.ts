@@ -160,11 +160,28 @@ export function useMessages(sectorId: string | null) {
     const canSend = isAdmin || sectorId === profile.sector_id || sectorId === GERAL_SECTOR_ID;
     if (!canSend) return { error: new Error('You cannot send messages to this sector') };
 
+    const parent = options?.reply_to_id ? messages.find(m => m.id === options.reply_to_id) : null;
+    const reply_to = parent
+      ? {
+          id: parent.id,
+          content: parent.content,
+          reply_author: parent.author
+            ? { name: parent.author.name, display_name: parent.author.display_name }
+            : null,
+        }
+      : null;
+
     const tempId = `temp-${Date.now()}`;
     const tempMessage: Message = {
-      id: tempId, content, author_id: profile.id, sector_id: sectorId,
-      created_at: new Date().toISOString(), author: profile as Profile, status: 'sending',
+      id: tempId,
+      content,
+      author_id: profile.id,
+      sector_id: sectorId,
+      created_at: new Date().toISOString(),
+      author: profile as Profile,
+      status: 'sending',
       reply_to_id: options?.reply_to_id || null,
+      reply_to: reply_to as any,
     };
 
     setMessages(prev => [...prev, tempMessage]);

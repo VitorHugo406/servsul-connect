@@ -233,11 +233,55 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction }: C
         {reactions && reactions.length > 0 && (
           <div className={cn('flex flex-wrap gap-1 mt-1', isOwn && 'justify-end')}>
             {reactions.map(r => (
-              <button key={r.emoji} onClick={() => onToggleReaction?.(message.id, r.emoji)}
-                className={cn('text-xs rounded-full px-2 py-0.5 border transition-all',
-                  r.reactedByMe ? 'bg-primary/20 border-primary/40 text-foreground' : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted')}>
-                {r.emoji} {r.count}
-              </button>
+              <Popover key={r.emoji}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      'text-xs rounded-full px-2 py-0.5 border transition-all',
+                      r.reactedByMe
+                        ? 'bg-primary/20 border-primary/40 text-foreground'
+                        : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted',
+                    )}
+                  >
+                    {r.emoji} {r.count}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align={isOwn ? 'end' : 'start'}
+                  className="w-64 p-2"
+                  onOpenAutoFocus={(e) => e.preventDefault()}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-foreground">{r.emoji} · {r.count}</span>
+                    <button
+                      type="button"
+                      onClick={() => onToggleReaction?.(message.id, r.emoji)}
+                      className="text-xs text-primary hover:text-primary/80"
+                    >
+                      {r.reactedByMe ? 'Remover' : 'Reagir'}
+                    </button>
+                  </div>
+                  <div className="mt-2 space-y-1 max-h-44 overflow-auto">
+                    {(r.reactors || []).length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Sem detalhes.</p>
+                    ) : (
+                      (r.reactors || []).map(u => {
+                        const name = u.display_name || u.name || 'Usuário';
+                        return (
+                          <div key={u.id} className="flex items-center gap-2">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage src={u.avatar_url || ''} alt={name} />
+                              <AvatarFallback className="text-[10px]">{name[0]}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs text-foreground truncate">{name}</span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             ))}
           </div>
         )}
