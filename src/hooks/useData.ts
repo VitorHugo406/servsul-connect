@@ -60,7 +60,11 @@ export function useMessages(sectorId: string | null) {
       // Preserve temp messages and merge with real data
       setMessages(prev => {
         const tempMessages = prev.filter(m => m.id.startsWith('temp-'));
-        const realMessages = (data || []).map(m => ({ ...m, status: 'delivered' as const }));
+        const realMessages = ((data as any[]) || []).map(m => {
+          const rawReplyTo = m.reply_to;
+          const reply_to = Array.isArray(rawReplyTo) ? (rawReplyTo[0] ?? null) : (rawReplyTo ?? null);
+          return { ...m, reply_to, status: 'delivered' as const };
+        }) as Message[];
         
         // Filter out temp messages that now have real counterparts
         const filteredTemp = tempMessages.filter(temp => 
@@ -125,7 +129,10 @@ export function useMessages(sectorId: string | null) {
                 .single()
                 .then(({ data }) => {
                   if (data) {
-                    setMessages(p => p.map(m => m.id === newMessage.id ? { ...data, status: 'delivered' } : m));
+                    const rawReplyTo = (data as any).reply_to;
+                    const reply_to = Array.isArray(rawReplyTo) ? (rawReplyTo[0] ?? null) : (rawReplyTo ?? null);
+                    const normalized = { ...(data as any), reply_to, status: 'delivered' } as Message;
+                    setMessages(p => p.map(m => m.id === newMessage.id ? normalized : m));
                   }
                 });
               

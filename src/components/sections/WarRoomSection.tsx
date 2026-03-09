@@ -414,7 +414,7 @@ function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) 
       </div>
 
       <WarRoomTaskDialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}
-        onSubmit={task => createEmergencyTask(task, room.id)}
+        onSubmit={async (task) => { await createEmergencyTask(task, room.id); }}
         title="Criar Card Emergencial" confirmLabel="Criar card" />
 
       {viewingTaskId && (
