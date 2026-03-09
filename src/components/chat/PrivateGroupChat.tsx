@@ -461,6 +461,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
                   </Button>
                 )}
               </div>
+              </ScrollArea>
             </SheetContent>
           </Sheet>
 
