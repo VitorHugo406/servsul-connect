@@ -149,7 +149,7 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
             />
           )}
         </div>
-        <div>
+        <div className="flex-1">
           <h3 className="font-display font-semibold text-foreground">{displayName}</h3>
           <p className="text-xs text-muted-foreground">
             {(() => {
@@ -165,6 +165,21 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
             {partnerSector && ` • ${partnerSector.name}`}
           </p>
         </div>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Settings className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent className="w-full sm:max-w-md">
+            <SheetHeader>
+              <SheetTitle>Mídia e Arquivos</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6">
+              <ChatMediaFilter chatType="direct" chatId={partnerId} profileId={profile?.id} />
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
 
       {/* Messages */}
