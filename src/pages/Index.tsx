@@ -15,6 +15,7 @@ import { HomeSection } from '@/components/sections/HomeSection';
 import { ChatSection } from '@/components/sections/ChatSection';
 import { AnnouncementsSection } from '@/components/sections/AnnouncementsSection';
 import { BirthdaysSection } from '@/components/sections/BirthdaysSection';
+import { MyDashboardSection } from '@/components/sections/MyDashboardSection';
 
 import { ManagementSection } from '@/components/sections/ManagementSection';
 import { FacialRegistrationSection } from '@/components/sections/FacialRegistrationSection';
