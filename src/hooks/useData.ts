@@ -120,7 +120,7 @@ export function useMessages(sectorId: string | null) {
               // New message from another user - fetch author info
               supabase
                 .from('messages')
-                .select(`*, author:profiles!messages_author_id_fkey(*)`)
+                .select(`*, author:profiles!messages_author_id_fkey(*), reply_to:messages!messages_reply_to_id_fkey(id, content, reply_author:profiles!messages_author_id_fkey(name, display_name))`)
                 .eq('id', newMessage.id)
                 .single()
                 .then(({ data }) => {
