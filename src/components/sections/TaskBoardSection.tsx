@@ -65,6 +65,9 @@ export function TaskBoardSection() {
   const [boardName, setBoardName] = useState('');
   const [boardDesc, setBoardDesc] = useState('');
   const [creating, setCreating] = useState(false);
+  const [editingBoard, setEditingBoard] = useState<{ id: string; name: string; description: string } | null>(null);
+  const [boardOrder, setBoardOrder] = useState<string[]>([]);
+  const [draggedBoardIdx, setDraggedBoardIdx] = useState<number | null>(null);
 
   // Permite abrir um mural específico via URL (?section=tasks&board=...)
   useEffect(() => {
@@ -74,6 +77,58 @@ export function TaskBoardSection() {
       setSelectedBoardId(board);
     }
   }, [searchParams, selectedBoardId]);
+
+  // Persist board order in localStorage
+  const ORDER_KEY = 'board_order';
+  useEffect(() => {
+    if (boards.length === 0) return;
+    const saved = localStorage.getItem(ORDER_KEY);
+    if (saved) {
+      try {
+        const order = JSON.parse(saved) as string[];
+        setBoardOrder(order);
+      } catch { setBoardOrder(boards.map(b => b.id)); }
+    } else {
+      setBoardOrder(boards.map(b => b.id));
+    }
+  }, [boards]);
+
+  const orderedBoards = useMemo(() => {
+    if (!boardOrder.length) return boards;
+    const orderMap = new Map(boardOrder.map((id, i) => [id, i]));
+    const sorted = [...boards].sort((a, b) => {
+      const ai = orderMap.get(a.id) ?? 999;
+      const bi = orderMap.get(b.id) ?? 999;
+      return ai - bi;
+    });
+    return sorted;
+  }, [boards, boardOrder]);
+
+  const saveBoardOrder = (ids: string[]) => {
+    setBoardOrder(ids);
+    localStorage.setItem(ORDER_KEY, JSON.stringify(ids));
+  };
+
+  const handleBoardDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedBoardIdx(index);
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleBoardDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedBoardIdx === null || draggedBoardIdx === index) return;
+    const newOrder = orderedBoards.map(b => b.id);
+    const [moved] = newOrder.splice(draggedBoardIdx, 1);
+    newOrder.splice(index, 0, moved);
+    saveBoardOrder(newOrder);
+    setDraggedBoardIdx(index);
+  };
+
+  const handleBoardDragEnd = () => {
+    setDraggedBoardIdx(null);
+  };
 
   const handleCreateBoard = async () => {
     if (!boardName.trim()) { toast.error('Nome é obrigatório'); return; }
@@ -91,6 +146,17 @@ export function TaskBoardSection() {
     if (error) { toast.error('Erro ao excluir mural'); return; }
     toast.success('Mural excluído com sucesso!');
     if (selectedBoardId === id) setSelectedBoardId(null);
+  };
+
+  const handleEditBoard = async () => {
+    if (!editingBoard) return;
+    if (!editingBoard.name.trim()) { toast.error('Nome é obrigatório'); return; }
+    await updateBoard(editingBoard.id, {
+      name: editingBoard.name.trim(),
+      description: editingBoard.description.trim() || null,
+    });
+    toast.success('Mural atualizado!');
+    setEditingBoard(null);
   };
 
   if (boardsLoading) {
@@ -149,25 +215,39 @@ export function TaskBoardSection() {
           </div>
         ) : (
           <div className={cn('grid gap-4', isMobile ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-3')}>
-            {boards.map((board) => {
+            {orderedBoards.map((board, index) => {
               const isDark = isBoardBgDark(board.background_image);
+              const textColor = isDark ? 'text-white' : 'text-foreground';
+              const subTextColor = isDark ? 'text-white/70' : 'text-muted-foreground';
+              const metaColor = isDark ? 'text-white/60' : 'text-muted-foreground';
               return (
               <Card
                 key={board.id}
-                className={cn('cursor-pointer hover:shadow-lg transition-all overflow-hidden', getBoardBg(board.background_image))}
+                className={cn(
+                  'cursor-pointer hover:shadow-lg transition-all overflow-hidden',
+                  getBoardBg(board.background_image),
+                  draggedBoardIdx === index && 'opacity-50 ring-2 ring-primary',
+                )}
                 style={getBoardBgStyle(board.background_image)}
                 onClick={() => setSelectedBoardId(board.id)}
+                draggable
+                onDragStart={(e) => handleBoardDragStart(e, index)}
+                onDragOver={(e) => handleBoardDragOver(e, index)}
+                onDragEnd={handleBoardDragEnd}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <h3 className={cn("font-semibold truncate", isDark ? "text-white" : "text-foreground")}>{board.name}</h3>
-                      {board.description && (
-                        <p className={cn("text-sm line-clamp-2 mt-1", isDark ? "text-white/70" : "text-muted-foreground")}>{board.description}</p>
-                      )}
-                      <p className={cn("text-xs mt-2", isDark ? "text-white/60" : "text-muted-foreground")}>
-                        {new Date(board.created_at).toLocaleDateString('pt-BR')}
-                      </p>
+                    <div className="flex items-start gap-2 flex-1 min-w-0">
+                      <GripVertical className={cn("h-4 w-4 mt-1 flex-shrink-0 cursor-grab active:cursor-grabbing", isDark ? "text-white/50" : "text-muted-foreground/50")} />
+                      <div className="flex-1 min-w-0">
+                        <h3 className={cn("font-semibold truncate", textColor)}>{board.name}</h3>
+                        {board.description && (
+                          <p className={cn("text-sm line-clamp-2 mt-1", subTextColor)}>{board.description}</p>
+                        )}
+                        <p className={cn("text-xs mt-2", metaColor)}>
+                          {new Date(board.created_at).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -178,13 +258,13 @@ export function TaskBoardSection() {
                       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                         {board.owner_id === user?.id && (
                           <DropdownMenuItem onClick={() => {
-                            const newName = prompt('Novo nome do mural:', board.name);
-                            if (newName && newName.trim()) {
-                              updateBoard(board.id, { name: newName.trim() });
-                              toast.success('Nome atualizado!');
-                            }
+                            setEditingBoard({
+                              id: board.id,
+                              name: board.name,
+                              description: board.description || '',
+                            });
                           }}>
-                            <Edit className="h-4 w-4 mr-2" /> Renomear
+                            <Edit className="h-4 w-4 mr-2" /> Editar Mural
                           </DropdownMenuItem>
                         )}
                         {board.owner_id === user?.id && (
@@ -206,6 +286,7 @@ export function TaskBoardSection() {
         )}
       </ScrollArea>
 
+      {/* Create Board Dialog */}
       <Dialog open={showCreateBoard} onOpenChange={setShowCreateBoard}>
         <DialogContent>
           <DialogHeader>
@@ -228,6 +309,39 @@ export function TaskBoardSection() {
               {creating && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Criar Mural
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Board Dialog */}
+      <Dialog open={!!editingBoard} onOpenChange={(open) => !open && setEditingBoard(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Mural</DialogTitle>
+            <DialogDescription>Altere o título e a descrição do mural</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome *</Label>
+              <Input
+                value={editingBoard?.name || ''}
+                onChange={(e) => setEditingBoard(prev => prev ? { ...prev, name: e.target.value } : null)}
+                placeholder="Nome do mural"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Textarea
+                value={editingBoard?.description || ''}
+                onChange={(e) => setEditingBoard(prev => prev ? { ...prev, description: e.target.value } : null)}
+                placeholder="Descrição opcional"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingBoard(null)}>Cancelar</Button>
+            <Button onClick={handleEditBoard}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
