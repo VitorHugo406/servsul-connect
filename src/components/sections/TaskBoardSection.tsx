@@ -1453,14 +1453,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                                     <Tooltip key={ea.profile_id}>
                                       <TooltipTrigger asChild>
                                         <Avatar className="h-5 w-5 ring-1 ring-background">
-                                          <AvatarImage src={ea.avatar_url || ''} />
+                                          <AvatarImage src={ea.profile?.avatar_url || ''} />
                                           <AvatarFallback className="text-[7px] bg-muted text-muted-foreground">
-                                            {getInitials(ea.display_name || ea.name || '?')}
+                                            {getInitials(ea.profile?.display_name || ea.profile?.name || '?')}
                                           </AvatarFallback>
                                         </Avatar>
                                       </TooltipTrigger>
                                       <TooltipContent side="bottom" className="text-xs">
-                                        {ea.display_name || ea.name}
+                                        {ea.profile?.display_name || ea.profile?.name}
                                       </TooltipContent>
                                     </Tooltip>
                                   ))}
