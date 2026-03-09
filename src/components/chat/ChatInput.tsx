@@ -63,7 +63,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
         const result = await uploadFile(attachment.file);
         if (result) uploadedAttachments.push(result);
       }
-      await onSendMessage(currentMessage, uploadedAttachments.length > 0 ? uploadedAttachments : undefined);
+      await onSendMessage(currentMessage, uploadedAttachments.length > 0 ? uploadedAttachments : undefined, replyTo?.id);
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
