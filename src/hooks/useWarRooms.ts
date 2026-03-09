@@ -299,7 +299,7 @@ export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) 
   const [timeline, setTimeline] = useState<WarRoomTimelineEntry[]>([]);
   const [messages, setMessages] = useState<WarRoomMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const { toast } = useToast();
 
   const isRoomCreator = Boolean(user?.id && roomCreatorId && user.id === roomCreatorId);

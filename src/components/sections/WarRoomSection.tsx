@@ -235,7 +235,7 @@ function CreateWarRoomDialog({ onCreated }: { onCreated: (room: WarRoom) => void
 
 function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) {
   const { members, timeline, messages, loading, acknowledge, addTimelineEntry, sendMessage, isRoomCreator, refetch } = useWarRoomDetail(room.id, room.created_by);
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const { closeWarRoom, createEmergencyTask } = useWarRooms();
   const [searchParams, setSearchParams] = useSearchParams();
   const [newTimeline, setNewTimeline] = useState('');
