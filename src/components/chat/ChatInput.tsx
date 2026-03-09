@@ -182,6 +182,20 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
 
   return (
     <div className="relative border-t border-border bg-card p-4" onSubmit={(e) => e.preventDefault()}>
+      {/* Reply quote */}
+      {replyTo && (
+        <div className="mb-2 flex items-start gap-2 rounded-lg bg-muted/60 border-l-2 border-primary px-3 py-2">
+          <div className="flex-1 min-w-0">
+            <span className="text-xs font-semibold text-primary">
+              {replyTo.author?.display_name || replyTo.author?.name || 'Usuário'}
+            </span>
+            <p className="text-xs text-muted-foreground truncate">{replyTo.content.substring(0, 120)}</p>
+          </div>
+          <button onClick={onClearReply} className="text-muted-foreground hover:text-foreground flex-shrink-0">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       {/* Card Mention Picker */}
       {showCardPicker && (
         <CardMentionPicker

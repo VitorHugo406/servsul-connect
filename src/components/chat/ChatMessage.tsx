@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Check, CheckCheck } from 'lucide-react';
+import { Check, CheckCheck, Reply, SmilePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSectors } from '@/hooks/useData';
 import { CardMentionCard } from './CardMentionCard';
 import { formatText } from '@/lib/chatFormatUtils';
+
+const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '🚀'];
 
 interface Author {
   id: string;
@@ -15,37 +17,49 @@ interface Author {
   sector_id: string | null;
 }
 
+interface ReplyAuthor {
+  name: string;
+  display_name: string | null;
+}
+
 interface Message {
   id: string;
   content: string;
   author_id: string;
   sector_id: string;
   created_at: string;
+  reply_to_id?: string | null;
+  reply_to?: { id: string; content: string; reply_author?: ReplyAuthor | null } | null;
   author?: Author;
   status?: 'sending' | 'sent' | 'delivered';
+}
+
+interface Reaction {
+  emoji: string;
+  count: number;
+  reactedByMe: boolean;
 }
 
 interface ChatMessageProps {
   message: Message;
   index: number;
+  onReply?: (message: Message) => void;
+  reactions?: Reaction[];
+  onToggleReaction?: (messageId: string, emoji: string) => void;
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message, onReply, reactions, onToggleReaction }: ChatMessageProps) {
   const { profile } = useAuth();
   const { sectors } = useSectors();
-  
+  const [isHovered, setIsHovered] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+
   const isOwn = message.author_id === profile?.id;
   const author = message.author;
   const authorSector = sectors.find((s) => s.id === author?.sector_id);
-  
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
-  };
+
+  const getInitials = (name: string) =>
+    name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -53,25 +67,14 @@ export function ChatMessage({ message }: ChatMessageProps) {
   };
 
   const displayName = author?.display_name || author?.name || 'Usuário';
-  
-  // Message status - if it has an ID, it's in the database (delivered)
   const messageStatus = message.status || (message.id ? 'delivered' : 'sending');
 
-  // formatText is now imported from shared util
-
-  // Parse card mention block
-  const parseCardMention = (lines: string[]): { taskNumber: number; title: string; description?: string; labels?: string; priority: string; dueDate?: string; boardName: string } | null => {
+  const parseCardMention = (lines: string[]): any => {
     if (lines.length < 2) return null;
     const firstLine = lines[0];
     const match = firstLine.match(/^📋 Card #(\d+) — (.+)$/);
     if (!match) return null;
-    
-    let description: string | undefined;
-    let labels: string | undefined;
-    let priority = 'medium';
-    let dueDate: string | undefined;
-    let boardName = '';
-    
+    let description: string | undefined, labels: string | undefined, priority = 'medium', dueDate: string | undefined, boardName = '';
     for (const line of lines.slice(1)) {
       if (line.startsWith('📝 ')) description = line.slice(3);
       else if (line.startsWith('🏷️ ')) labels = line.slice(3);
@@ -81,15 +84,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
         else if (pLabel === 'Média') priority = 'medium';
         else if (pLabel === 'Alta') priority = 'high';
         else if (pLabel === 'Urgente') priority = 'urgent';
-      }
-      else if (line.startsWith('📅 Prazo: ')) dueDate = line.replace('📅 Prazo: ', '');
+      } else if (line.startsWith('📅 Prazo: ')) dueDate = line.replace('📅 Prazo: ', '');
       else if (line.startsWith('📌 Mural: ')) boardName = line.replace('📌 Mural: ', '');
     }
-    
     return { taskNumber: parseInt(match[1]), title: match[2], description, labels, priority, dueDate, boardName };
   };
 
-  // Parse content for attachment links and card mentions
   const renderContent = (content: string, isOwnMsg: boolean) => {
     const lines = content.split('\n');
     const textLines: string[] = [];
@@ -101,14 +101,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
     const flushCardMention = () => {
       if (cardMentionLines.length > 0) {
         const card = parseCardMention(cardMentionLines);
-        if (card) {
-          elements.push(
-            <CardMentionCard key={`card-${card.taskNumber}`} {...card} isOwnMessage={isOwnMsg} />
-          );
-        } else {
-          // Not a valid card mention, treat as text
-          textLines.push(...cardMentionLines);
-        }
+        if (card) elements.push(<CardMentionCard key={`card-${card.taskNumber}`} {...card} isOwnMessage={isOwnMsg} />);
+        else textLines.push(...cardMentionLines);
         cardMentionLines = [];
         inCardMention = false;
       }
@@ -116,37 +110,27 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
     for (const line of lines) {
       if (line.startsWith('📋 Card #')) {
-        flushCardMention();
-        inCardMention = true;
-        cardMentionLines.push(line);
+        flushCardMention(); inCardMention = true; cardMentionLines.push(line);
       } else if (inCardMention && (line.startsWith('📝 ') || line.startsWith('🏷️ ') || line.startsWith('⚡ ') || line.startsWith('📅 ') || line.startsWith('📌 '))) {
         cardMentionLines.push(line);
       } else {
         flushCardMention();
         const imageMatch = line.match(/^📷 \[(.+?)\]\((.+?)\)$/);
         const fileMatch = line.match(/^📎 \[(.+?)\]\((.+?)\)$/);
-        if (imageMatch) {
-          attachments.push({ type: 'image', name: imageMatch[1], url: imageMatch[2] });
-        } else if (fileMatch) {
-          attachments.push({ type: 'file', name: fileMatch[1], url: fileMatch[2] });
-        } else {
-          textLines.push(line);
-        }
+        if (imageMatch) attachments.push({ type: 'image', name: imageMatch[1], url: imageMatch[2] });
+        else if (fileMatch) attachments.push({ type: 'file', name: fileMatch[1], url: fileMatch[2] });
+        else textLines.push(line);
       }
     }
     flushCardMention();
 
     const textContent = textLines.join('\n').trim();
-
     return (
       <div className="space-y-2">
         {textContent && (
           <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
             {textContent.split('\n').map((line, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && <br />}
-                {formatText(line, isOwnMsg)}
-              </React.Fragment>
+              <React.Fragment key={i}>{i > 0 && <br />}{formatText(line, isOwnMsg)}</React.Fragment>
             ))}
           </p>
         )}
@@ -157,18 +141,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
               <img src={att.url} alt={att.name} className="max-w-full max-h-48 rounded-lg object-cover" />
             </a>
           ) : (
-            <a
-              key={i}
-              href={att.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                "flex items-center gap-2 rounded-lg p-2 text-xs",
-                isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80"
-              )}
-            >
-              <span>📎</span>
-              <span className="truncate">{att.name}</span>
+            <a key={i} href={att.url} target="_blank" rel="noopener noreferrer"
+              className={cn("flex items-center gap-2 rounded-lg p-2 text-xs", isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80")}>
+              <span>📎</span><span className="truncate">{att.name}</span>
             </a>
           )
         ))}
@@ -176,85 +151,112 @@ export function ChatMessage({ message }: ChatMessageProps) {
     );
   };
 
-  const renderStatus = () => {
-    if (!isOwn) return null;
-    
-    return (
-      <span className="ml-1 inline-flex items-center">
-        {messageStatus === 'sending' ? (
-          <Check className="h-3.5 w-3.5 text-white/60" />
-        ) : (
-          <CheckCheck className="h-3.5 w-3.5 text-white/80" />
-        )}
-      </span>
-    );
-  };
-
   return (
-    <div className={cn('flex gap-3', isOwn && 'flex-row-reverse')}>
+    <div
+      className={cn('group flex gap-3', isOwn && 'flex-row-reverse')}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => { setIsHovered(false); setShowReactionPicker(false); }}
+    >
       <Avatar className="h-10 w-10 flex-shrink-0 ring-2 ring-border">
         <AvatarImage src={author?.avatar_url || ''} alt={displayName} />
-        <AvatarFallback 
-          className="text-sm font-semibold text-white"
-          style={{ backgroundColor: authorSector?.color || '#6366f1' }}
-        >
+        <AvatarFallback className="text-sm font-semibold text-white"
+          style={{ backgroundColor: authorSector?.color || '#6366f1' }}>
           {getInitials(displayName)}
         </AvatarFallback>
       </Avatar>
-      
+
       <div className={cn('flex flex-col', isOwn && 'items-end')}>
         <div className={cn('mb-1 flex flex-wrap items-center gap-2', isOwn && 'flex-row-reverse')}>
           <span className="text-sm font-medium text-foreground">{displayName}</span>
           {authorSector && (
-            <span 
-              className="rounded-full px-2 py-0.5 text-xs font-medium"
-              style={{ backgroundColor: `${authorSector.color}20`, color: authorSector.color }}
-            >
+            <span className="rounded-full px-2 py-0.5 text-xs font-medium"
+              style={{ backgroundColor: `${authorSector.color}20`, color: authorSector.color }}>
               {authorSector.name}
             </span>
           )}
           <span className="text-xs text-muted-foreground">{formatTime(message.created_at)}</span>
         </div>
-        
-        <div
-          className={cn(
-            'rounded-2xl px-4 py-3 shadow-sm max-w-[min(70vw,400px)] w-fit',
-            isOwn
-              ? 'gradient-primary text-white rounded-tr-md'
-              : 'bg-card text-card-foreground rounded-tl-md border border-border'
-          )}
-        >
-          {renderContent(message.content, isOwn)}
-          {renderStatus()}
+
+        <div className={cn('flex items-end gap-1.5', isOwn && 'flex-row-reverse')}>
+          <div className={cn('rounded-2xl px-4 py-3 shadow-sm max-w-[min(70vw,400px)] w-fit',
+            isOwn ? 'gradient-primary text-white rounded-tr-md' : 'bg-card text-card-foreground rounded-tl-md border border-border')}>
+            {/* Reply quote */}
+            {message.reply_to && (
+              <div className={cn('mb-2 rounded-lg px-2 py-1.5 text-xs border-l-2', isOwn ? 'bg-white/10 border-white/40' : 'bg-muted border-muted-foreground/30')}>
+                <span className="font-semibold">
+                  {message.reply_to.reply_author?.display_name || message.reply_to.reply_author?.name || 'Usuário'}
+                </span>
+                <p className="opacity-80 truncate mt-0.5">{message.reply_to.content.substring(0, 100)}</p>
+              </div>
+            )}
+            {renderContent(message.content, isOwn)}
+            {isOwn && (
+              <span className="ml-1 inline-flex items-center">
+                {messageStatus === 'sending'
+                  ? <Check className="h-3.5 w-3.5 text-white/60" />
+                  : <CheckCheck className="h-3.5 w-3.5 text-white/80" />}
+              </span>
+            )}
+          </div>
+
+          {/* Action buttons on hover */}
+          <div className={cn('flex items-center gap-0.5 transition-opacity', isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none')}>
+            <button onClick={() => onReply?.(message)}
+              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              title="Responder">
+              <Reply className="h-3.5 w-3.5" />
+            </button>
+            <div className="relative">
+              <button onClick={() => setShowReactionPicker(!showReactionPicker)}
+                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                title="Reagir">
+                <SmilePlus className="h-3.5 w-3.5" />
+              </button>
+              {showReactionPicker && (
+                <div className={cn('absolute bottom-full mb-1 bg-card border border-border rounded-xl shadow-lg p-2 flex gap-1 z-50 whitespace-nowrap',
+                  isOwn ? 'right-0' : 'left-0')}>
+                  {QUICK_REACTIONS.map(emoji => (
+                    <button key={emoji} onClick={() => { onToggleReaction?.(message.id, emoji); setShowReactionPicker(false); }}
+                      className="text-lg hover:bg-muted rounded-lg p-1 transition-colors leading-none">
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* Reactions display */}
+        {reactions && reactions.length > 0 && (
+          <div className={cn('flex flex-wrap gap-1 mt-1', isOwn && 'justify-end')}>
+            {reactions.map(r => (
+              <button key={r.emoji} onClick={() => onToggleReaction?.(message.id, r.emoji)}
+                className={cn('text-xs rounded-full px-2 py-0.5 border transition-all',
+                  r.reactedByMe ? 'bg-primary/20 border-primary/40 text-foreground' : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted')}>
+                {r.emoji} {r.count}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// Date separator component
 export function DateSeparator({ date }: { date: string }) {
   const getLabel = (dateStr: string) => {
     const msgDate = new Date(dateStr);
     const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-
-    const isSameDay = (a: Date, b: Date) =>
-      a.getFullYear() === b.getFullYear() &&
-      a.getMonth() === b.getMonth() &&
-      a.getDate() === b.getDate();
-
+    const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
+    const isSameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
     if (isSameDay(msgDate, today)) return 'Hoje';
     if (isSameDay(msgDate, yesterday)) return 'Ontem';
     return msgDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
-
   return (
     <div className="flex items-center justify-center my-4">
-      <span className="rounded-lg bg-muted px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm">
-        {getLabel(date)}
-      </span>
+      <span className="rounded-lg bg-muted px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm">{getLabel(date)}</span>
     </div>
   );
 }

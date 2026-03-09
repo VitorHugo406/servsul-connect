@@ -494,7 +494,13 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
 
           {/* Input */}
           {canSendMessages ? (
-            <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} onMention={handleMention} />
+            <ChatInput
+              onSendMessage={handleSendMessage}
+              onTyping={sendTyping}
+              onMention={handleMention}
+              replyTo={replyTo}
+              onClearReply={() => setReplyTo(null)}
+            />
           ) : (
             <div className="border-t border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">
               Você só pode enviar mensagens no seu próprio setor

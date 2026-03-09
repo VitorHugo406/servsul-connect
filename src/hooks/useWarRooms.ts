@@ -118,21 +118,45 @@ export function useWarRooms() {
       .select('id, title, task_number, board_id, status')
       .single();
 
-    if (error) {
-      toast({ title: 'Erro ao criar card emergencial', description: error.message, variant: 'destructive' });
-      return { data: null, error };
-    }
+  if (error) {
+    toast({ title: 'Erro ao criar card emergencial', description: error.message, variant: 'destructive' });
+    return { data: null, error };
+  }
 
-    if (warRoomId) {
-      await Promise.all([
-        supabase.from('war_rooms').update({ task_id: data.id }).eq('id', warRoomId),
-        supabase.from('war_room_timeline').insert({
-          war_room_id: warRoomId,
-          content: `Card emergencial #${data.task_number} criado: ${data.title}`,
-          created_by: user.id,
-        }),
-      ]);
+  // Insert subtask groups and subtasks if provided
+  if (task.subtask_groups && task.subtask_groups.length > 0) {
+    for (let gi = 0; gi < task.subtask_groups.length; gi++) {
+      const group = task.subtask_groups[gi];
+      const { data: groupData } = await supabase
+        .from('subtask_groups')
+        .insert({ task_id: data.id, title: group.title, position: gi })
+        .select('id')
+        .single();
+      if (groupData && group.subtasks.length > 0) {
+        await supabase.from('task_subtasks').insert(
+          group.subtasks.map((title, si) => ({
+            task_id: data.id,
+            group_id: groupData.id,
+            title,
+            position: si,
+            is_completed: false,
+          }))
+        );
+      }
     }
+  }
+
+  if (warRoomId) {
+    await Promise.all([
+      supabase.from('war_rooms').update({ task_id: data.id }).eq('id', warRoomId),
+      supabase.from('war_room_timeline').insert({
+        war_room_id: warRoomId,
+        content: `Card emergencial #${data.task_number} criado: ${data.title}`,
+        created_by: user.id,
+        task_id: data.id,
+      } as any),
+    ]);
+  }
 
     return { data, error: null };
   };
