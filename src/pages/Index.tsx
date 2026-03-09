@@ -43,6 +43,7 @@ import { WarRoomAlarmOverlay } from '@/components/warroom/WarRoomAlarmOverlay';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
+  'my-dashboard': { title: 'Meu Painel', subtitle: 'Métricas e estatísticas personalizadas' },
   chat: { title: 'Chat por Setores', subtitle: 'Comunicação entre equipes' },
   announcements: { title: 'Avisos Gerais', subtitle: 'Comunicados oficiais' },
   birthdays: { title: 'Aniversariantes', subtitle: 'Mural de celebrações' },
