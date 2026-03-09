@@ -46,7 +46,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   // Global search no longer syncs to chat (now used for tab navigation)
   const isMobile = useIsMobile();
   const { playMessageSent } = useSound();
-  const { groups } = usePrivateGroups();
+  const { groups, refetch: refetchGroups } = usePrivateGroups();
   const { conversations } = useConversations();
   const [unreadGroupCount, setUnreadGroupCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
