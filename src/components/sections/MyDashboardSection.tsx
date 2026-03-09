@@ -330,17 +330,18 @@ function WidgetControls({ widget, onRemove, onChangeSize, onChangeDateRange }: {
   widget: Widget; onRemove: () => void; onChangeSize: (s: WidgetSize) => void; onChangeDateRange: (r: string) => void;
 }) {
   return (
-    <div className="absolute top-2 right-2 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div className="absolute top-2 right-2 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm p-1 rounded-md border border-border/50 shadow-sm">
       <Select value={widget.dateRange} onValueChange={onChangeDateRange}>
-        <SelectTrigger className="h-6 w-28 text-[10px] border-border/50">
+        <SelectTrigger className="h-7 w-[110px] text-[10px] border-none bg-transparent hover:bg-muted/50 focus:ring-0">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {DATE_RANGES.map(d => <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>)}
         </SelectContent>
       </Select>
+      <div className="w-px h-4 bg-border/50 mx-1"></div>
       <Select value={widget.size} onValueChange={(v) => onChangeSize(v as WidgetSize)}>
-        <SelectTrigger className="h-6 w-20 text-[10px] border-border/50">
+        <SelectTrigger className="h-7 w-[90px] text-[10px] border-none bg-transparent hover:bg-muted/50 focus:ring-0">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -349,9 +350,13 @@ function WidgetControls({ widget, onRemove, onChangeSize, onChangeDateRange }: {
           ))}
         </SelectContent>
       </Select>
-      <button onClick={onRemove} className="flex h-6 w-6 items-center justify-center rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">
-        <X className="h-3 w-3" />
+      <div className="w-px h-4 bg-border/50 mx-1"></div>
+      <button onClick={onRemove} className="flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+        <X className="h-3.5 w-3.5" />
       </button>
+      <div className="w-px h-4 bg-border/50 mx-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground flex items-center justify-center px-1 drag-handle" title="Arraste para mover">
+        <GripVertical className="h-4 w-4" />
+      </div>
     </div>
   );
 }
@@ -452,6 +457,7 @@ export function MyDashboardSection() {
   const { profile } = useAuth();
   const [widgets, setWidgets] = useState<Widget[]>(() => loadWidgets());
   const [showPicker, setShowPicker] = useState(false);
+  const [draggedWidgetIndex, setDraggedWidgetIndex] = useState<number | null>(null);
 
   const persist = (w: Widget[]) => { setWidgets(w); saveWidgets(w); };
 
@@ -469,6 +475,45 @@ export function MyDashboardSection() {
 
   const changeDateRange = (id: string, dateRange: string) =>
     persist(widgets.map(w => w.id === id ? { ...w, dateRange } : w));
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedWidgetIndex(index);
+    // Para funcionar corretamente no Firefox e alguns outros browsers
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.dataTransfer.effectAllowed = 'move';
+    
+    // Deixar o elemento meio transparente enquanto arrasta
+    setTimeout(() => {
+      if (e.target instanceof HTMLElement) {
+        e.target.style.opacity = '0.5';
+      }
+    }, 0);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    if (draggedWidgetIndex === null || draggedWidgetIndex === index) return;
+    
+    // Reordenar visualmente durante o arrasto
+    const newWidgets = [...widgets];
+    const draggedWidget = newWidgets[draggedWidgetIndex];
+    
+    newWidgets.splice(draggedWidgetIndex, 1);
+    newWidgets.splice(index, 0, draggedWidget);
+    
+    setWidgets(newWidgets);
+    setDraggedWidgetIndex(index);
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    if (e.target instanceof HTMLElement) {
+      e.target.style.opacity = '1';
+    }
+    setDraggedWidgetIndex(null);
+    saveWidgets(widgets); // Salvar a ordem final no localStorage
+  };
 
   // Grid col span per size
   const colSpan: Record<WidgetSize, string> = {
@@ -527,7 +572,7 @@ export function MyDashboardSection() {
         ) : (
           <div className="grid grid-cols-3 gap-4 auto-rows-auto">
             <AnimatePresence>
-              {widgets.map((widget) => (
+              {widgets.map((widget, index) => (
                 <motion.div
                   key={widget.id}
                   layout
@@ -536,6 +581,10 @@ export function MyDashboardSection() {
                   exit={{ opacity: 0, scale: 0.8 }}
                   transition={{ duration: 0.2 }}
                   className={cn(colSpan[widget.size], rowHeight[widget.size])}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent, index)}
+                  onDragOver={(e) => handleDragOver(e as unknown as React.DragEvent, index)}
+                  onDragEnd={(e) => handleDragEnd(e as unknown as React.DragEvent)}
                 >
                   <WidgetRenderer
                     widget={widget}
