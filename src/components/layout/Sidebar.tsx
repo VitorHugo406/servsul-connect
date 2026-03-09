@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield } from 'lucide-react';
+import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, LayoutDashboard } from 'lucide-react';
 import logoServsul from '@/assets/logo-servsul.png';
 import { 
   MessageSquare, 
@@ -30,6 +30,7 @@ interface SidebarProps {
 
 const menuItems = [
   { id: 'home', icon: Home, label: 'Início' },
+  { id: 'my-dashboard', icon: LayoutDashboard, label: 'Meu Painel' },
   { id: 'chat', icon: MessageSquare, label: 'Chat' },
   { id: 'announcements', icon: Bell, label: 'Avisos' },
   { id: 'birthdays', icon: Cake, label: 'Aniversariantes' },

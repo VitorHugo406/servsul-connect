@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Check, CheckCheck, Settings } from 'lucide-react';
+import { MessageCircle, Check, CheckCheck, FolderOpen } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -167,8 +167,8 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
         </div>
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Settings className="h-5 w-5" />
+            <Button variant="ghost" size="icon" title="Mídia e arquivos">
+              <FolderOpen className="h-5 w-5" />
             </Button>
           </SheetTrigger>
           <SheetContent className="w-full sm:max-w-md">

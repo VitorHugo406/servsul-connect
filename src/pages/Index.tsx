@@ -15,6 +15,7 @@ import { HomeSection } from '@/components/sections/HomeSection';
 import { ChatSection } from '@/components/sections/ChatSection';
 import { AnnouncementsSection } from '@/components/sections/AnnouncementsSection';
 import { BirthdaysSection } from '@/components/sections/BirthdaysSection';
+import { MyDashboardSection } from '@/components/sections/MyDashboardSection';
 
 import { ManagementSection } from '@/components/sections/ManagementSection';
 import { FacialRegistrationSection } from '@/components/sections/FacialRegistrationSection';
@@ -42,6 +43,7 @@ import { WarRoomAlarmOverlay } from '@/components/warroom/WarRoomAlarmOverlay';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
+  'my-dashboard': { title: 'Meu Painel', subtitle: 'Métricas e estatísticas personalizadas' },
   chat: { title: 'Chat por Setores', subtitle: 'Comunicação entre equipes' },
   announcements: { title: 'Avisos Gerais', subtitle: 'Comunicados oficiais' },
   birthdays: { title: 'Aniversariantes', subtitle: 'Mural de celebrações' },
@@ -142,6 +144,8 @@ const Index = () => {
     switch (activeSection) {
       case 'home':
         return <HomeSection onNavigate={handleSectionChange} />;
+      case 'my-dashboard':
+        return <MyDashboardSection />;
       case 'chat':
         return <ChatSection globalSearch={globalSearch} />;
       case 'announcements':
