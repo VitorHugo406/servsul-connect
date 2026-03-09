@@ -359,6 +359,28 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
               </p>
             </div>
             <div className="flex items-center gap-1 ml-auto">
+              {/* Scheduled Summary Config - only for admins, not Geral */}
+              {isAdmin && effectiveSector && effectiveSector !== geralSectorId && (
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" title="Automações de resumo">
+                      <Bot className="h-5 w-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent>
+                    <SheetHeader>
+                      <SheetTitle>Automações - {currentSector?.name}</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-6">
+                      <ScheduledSummaryConfig
+                        targetType="sector"
+                        targetId={effectiveSector}
+                        targetName={currentSector?.name || 'Setor'}
+                      />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              )}
               <Button 
                 variant="ghost" 
                 size="icon"
