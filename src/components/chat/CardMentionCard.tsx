@@ -101,10 +101,15 @@ export function CardMentionCard({ taskNumber, title, description, labels, priori
             <Button
               variant="ghost"
               size="sm"
-              className={cn('gap-1', isMobile ? 'h-5 text-[10px] px-1.5' : 'h-6 text-xs px-2', isOwnMessage ? 'text-white/70 hover:text-white hover:bg-white/10' : '')}
-              onClick={(e) => { e.stopPropagation(); loadFullTask(); }}
+              disabled={loading}
+              className={cn(
+                'gap-1',
+                isMobile ? 'h-5 text-[10px] px-1.5' : 'h-6 text-xs px-2',
+                isOwnMessage ? 'text-white/70 hover:text-white hover:bg-white/10' : '',
+              )}
+              onClick={(e) => { e.stopPropagation(); openTaskInBoard(); }}
             >
-              <Eye className={cn(isMobile ? 'h-3 w-3' : 'h-3.5 w-3.5')} /> Ver
+              <Eye className={cn(isMobile ? 'h-3 w-3' : 'h-3.5 w-3.5')} /> Abrir
             </Button>
           </div>
         </div>
