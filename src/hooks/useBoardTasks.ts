@@ -42,23 +42,39 @@ const triggerAutomations = async (boardId: string) => {
   }
 };
 
-export function useBoardTasks(boardId: string | null) {
+export function useBoardTasks(boardId: string | null, restrictTaskId?: string | null) {
   const { profile } = useAuth();
-  const [tasks, setTasks] = useState<BoardTask[]>([]);
+  const [allTasks, setAllTasks] = useState<BoardTask[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchTasks = useCallback(async () => {
-    if (!boardId) { setLoading(false); return; }
+    if (!boardId) {
+      setAllTasks([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('tasks')
         .select(`*, assignee:profiles!tasks_assigned_to_fkey(id, name, display_name, avatar_url)`)
         .eq('board_id', boardId)
         .order('position', { ascending: true });
+
       if (error) throw error;
-      setTasks((data || []).map(t => ({ ...t, is_archived: t.is_archived ?? false, is_template: t.is_template ?? false, is_emergency: (t as any).is_emergency ?? false })) as BoardTask[]);
+
+      setAllTasks(
+        (data || []).map((t) => ({
+          ...t,
+          is_archived: t.is_archived ?? false,
+          is_template: t.is_template ?? false,
+          is_emergency: (t as any).is_emergency ?? false,
+        })) as BoardTask[]
+      );
     } catch (error) {
+      // Important: clear state so we don't show stale tasks from a previous board/session
       console.error('Error fetching board tasks:', error);
+      setAllTasks([]);
     } finally {
       setLoading(false);
     }
@@ -67,6 +83,7 @@ export function useBoardTasks(boardId: string | null) {
   useEffect(() => {
     fetchTasks();
     if (!boardId) return;
+
     const channel = supabase
       .channel(`board-tasks-${boardId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `board_id=eq.${boardId}` }, () => fetchTasks())
@@ -93,7 +110,9 @@ export function useBoardTasks(boardId: string | null) {
     cover_image?: string;
   }) => {
     if (!profile || !boardId) return { error: new Error('Not ready') };
-    const tasksInCol = tasks.filter(t => t.status === task.status);
+
+    const tasksInCol = allTasks.filter((t) => t.status === task.status && !t.is_archived);
+
     try {
       const { data, error } = await supabase
         .from('tasks')
@@ -106,6 +125,7 @@ export function useBoardTasks(boardId: string | null) {
         })
         .select()
         .single();
+
       if (error) throw error;
       if (boardId) triggerAutomations(boardId);
       return { data, error: null };
@@ -141,10 +161,11 @@ export function useBoardTasks(boardId: string | null) {
         .from('tasks')
         .update({ status: newStatus, position: newPosition })
         .eq('id', taskId);
+
       if (error) throw error;
-      setTasks(prev => prev.map(t =>
-        t.id === taskId ? { ...t, status: newStatus, position: newPosition } : t
-      ));
+
+      setAllTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus, position: newPosition } : t)));
+
       if (boardId) triggerAutomations(boardId);
       return { error: null };
     } catch (error) {
@@ -153,11 +174,11 @@ export function useBoardTasks(boardId: string | null) {
   };
 
   const reorderInColumn = async (taskId: string, newPosition: number) => {
-    const task = tasks.find(t => t.id === taskId);
+    const task = allTasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    const columnTasks = tasks
-      .filter(t => t.status === task.status && t.id !== taskId)
+    const columnTasks = allTasks
+      .filter((t) => t.status === task.status && t.id !== taskId)
       .sort((a, b) => a.position - b.position);
 
     columnTasks.splice(newPosition, 0, task);
@@ -168,8 +189,8 @@ export function useBoardTasks(boardId: string | null) {
       await supabase.from('tasks').update({ position: u.position }).eq('id', u.id);
     }
 
-    setTasks(prev => {
-      const other = prev.filter(t => t.status !== task.status);
+    setAllTasks((prev) => {
+      const other = prev.filter((t) => t.status !== task.status);
       return [...other, ...columnTasks.map((t, i) => ({ ...t, position: i }))];
     });
   };
@@ -196,8 +217,9 @@ export function useBoardTasks(boardId: string | null) {
 
   const archiveColumnTasks = async (columnId: string) => {
     try {
-      const colTaskIds = tasks.filter(t => t.status === columnId && !t.is_archived).map(t => t.id);
+      const colTaskIds = allTasks.filter((t) => t.status === columnId && !t.is_archived).map((t) => t.id);
       if (colTaskIds.length === 0) return { error: null };
+
       const { error } = await supabase.from('tasks').update({ is_archived: true }).in('id', colTaskIds);
       if (error) throw error;
       return { error: null };
@@ -206,8 +228,25 @@ export function useBoardTasks(boardId: string | null) {
     }
   };
 
-  const activeTasks = tasks.filter(t => !t.is_archived);
-  const archivedTasks = tasks.filter(t => t.is_archived);
+  const activeTasks = allTasks.filter((t) => !t.is_archived);
+  const archivedTasks = allTasks.filter((t) => t.is_archived);
 
-  return { tasks: activeTasks, allTasks: tasks, archivedTasks, loading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: fetchTasks };
+  const visibleActiveTasks = restrictTaskId ? activeTasks.filter((t) => t.id === restrictTaskId) : activeTasks;
+  const visibleArchivedTasks = restrictTaskId ? archivedTasks.filter((t) => t.id === restrictTaskId) : archivedTasks;
+
+  return {
+    tasks: visibleActiveTasks,
+    allTasks,
+    archivedTasks: visibleArchivedTasks,
+    loading,
+    createTask,
+    updateTask,
+    deleteTask,
+    moveTask,
+    reorderInColumn,
+    archiveTask,
+    unarchiveTask,
+    archiveColumnTasks,
+    refetch: fetchTasks,
+  };
 }
