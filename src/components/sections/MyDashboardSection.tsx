@@ -457,6 +457,7 @@ export function MyDashboardSection() {
   const { profile } = useAuth();
   const [widgets, setWidgets] = useState<Widget[]>(() => loadWidgets());
   const [showPicker, setShowPicker] = useState(false);
+  const [draggedWidgetIndex, setDraggedWidgetIndex] = useState<number | null>(null);
 
   const persist = (w: Widget[]) => { setWidgets(w); saveWidgets(w); };
 
