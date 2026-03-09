@@ -645,18 +645,50 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
               <div className="p-3 space-y-2">
                 <h4 className="text-sm font-semibold">Membros</h4>
                 {/* Responsável padrão */}
-                {task.assignee && (
-                  <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Responsável padrão</p>
-                    <div className="flex items-center gap-2 p-1.5 rounded-md bg-muted/50">
+                <div>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Responsável padrão</p>
+                  {task.assignee && (
+                    <div className="flex items-center gap-2 p-1.5 rounded-md bg-muted/50 mb-1">
                       <Avatar className="h-7 w-7">
                         <AvatarImage src={task.assignee.avatar_url || ''} />
                         <AvatarFallback className="text-[9px] bg-primary text-primary-foreground">{getInitials(task.assignee.display_name || task.assignee.name)}</AvatarFallback>
                       </Avatar>
-                      <span className="text-sm font-medium">{task.assignee.display_name || task.assignee.name}</span>
+                      <span className="text-sm font-medium flex-1">{task.assignee.display_name || task.assignee.name}</span>
                     </div>
-                  </div>
-                )}
+                  )}
+                  {allUsers && (
+                    <Select
+                      value={task.assigned_to || ''}
+                      onValueChange={(value) => {
+                        if (value === 'none') {
+                          onUpdateTask?.(task.id, { assigned_to: null });
+                        } else {
+                          onUpdateTask?.(task.id, { assigned_to: value });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Alterar responsável" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground">Sem responsável</span>
+                        </SelectItem>
+                        {allUsers.map(u => (
+                          <SelectItem key={u.id} value={u.id}>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-5 w-5">
+                                <AvatarImage src={u.avatar_url || ''} />
+                                <AvatarFallback className="text-[7px] bg-muted">{getInitials(u.display_name || u.name)}</AvatarFallback>
+                              </Avatar>
+                              <span>{u.display_name || u.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
                 {/* Sub-responsáveis */}
                 {(() => {
                   const extras = getTaskAssignees ? getTaskAssignees(task.id) : [];
