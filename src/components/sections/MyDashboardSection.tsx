@@ -476,6 +476,45 @@ export function MyDashboardSection() {
   const changeDateRange = (id: string, dateRange: string) =>
     persist(widgets.map(w => w.id === id ? { ...w, dateRange } : w));
 
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedWidgetIndex(index);
+    // Para funcionar corretamente no Firefox e alguns outros browsers
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.dataTransfer.effectAllowed = 'move';
+    
+    // Deixar o elemento meio transparente enquanto arrasta
+    setTimeout(() => {
+      if (e.target instanceof HTMLElement) {
+        e.target.style.opacity = '0.5';
+      }
+    }, 0);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    if (draggedWidgetIndex === null || draggedWidgetIndex === index) return;
+    
+    // Reordenar visualmente durante o arrasto
+    const newWidgets = [...widgets];
+    const draggedWidget = newWidgets[draggedWidgetIndex];
+    
+    newWidgets.splice(draggedWidgetIndex, 1);
+    newWidgets.splice(index, 0, draggedWidget);
+    
+    setWidgets(newWidgets);
+    setDraggedWidgetIndex(index);
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    if (e.target instanceof HTMLElement) {
+      e.target.style.opacity = '1';
+    }
+    setDraggedWidgetIndex(null);
+    saveWidgets(widgets); // Salvar a ordem final no localStorage
+  };
+
   // Grid col span per size
   const colSpan: Record<WidgetSize, string> = {
     sm: 'col-span-1',
