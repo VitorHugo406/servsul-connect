@@ -13,11 +13,19 @@ interface Attachment {
   preview?: string;
 }
 
+interface ReplyTo {
+  id: string;
+  content: string;
+  author?: { name: string; display_name: string | null } | null;
+}
+
 interface ChatInputProps {
-  onSendMessage: (message: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[]) => void;
+  onSendMessage: (message: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[], replyToId?: string) => void;
   hideAttachment?: boolean;
   onTyping?: () => void;
   onMention?: (userId: string, userName: string) => void;
+  replyTo?: ReplyTo | null;
+  onClearReply?: () => void;
 }
 
 const EMOJI_LIST = ['😀', '😂', '😍', '🤔', '👍', '👏', '🎉', '🔥', '❤️', '✅', '🚀', '💪', '😊', '👋', '🙏', '💡'];
