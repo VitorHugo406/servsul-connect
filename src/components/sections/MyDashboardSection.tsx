@@ -228,14 +228,16 @@ function loadWidgets(): Widget[] {
     // ignore
   }
   // Defaults
-  return [
+  const defaults: Widget[] = [
     { id: generateId(), type: 'pending_tasks', size: 'sm', dateRange: '30d', comparePrev: false },
     { id: generateId(), type: 'completed_tasks', size: 'sm', dateRange: '30d', comparePrev: false },
     { id: generateId(), type: 'late_tasks', size: 'sm', dateRange: '30d', comparePrev: false },
     { id: generateId(), type: 'monthly_score', size: 'sm', dateRange: '30d' },
     { id: generateId(), type: 'tasks_by_status', size: 'md', dateRange: '30d', chartVariant: 'bar', comparePrev: false },
     { id: generateId(), type: 'tasks_timeline', size: 'lg', dateRange: '30d', chartVariant: 'line', comparePrev: false },
-  ].map(normalizeWidget);
+  ];
+
+  return defaults.map(normalizeWidget);
 }
 
 function saveWidgets(widgets: Widget[]) {
