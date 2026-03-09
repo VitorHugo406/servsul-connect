@@ -39,6 +39,7 @@ interface Reaction {
   emoji: string;
   count: number;
   reactedByMe: boolean;
+  reactors?: { id: string; name: string; display_name: string | null; avatar_url: string | null }[];
 }
 
 interface ChatMessageProps {
