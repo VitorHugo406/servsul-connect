@@ -427,15 +427,48 @@ export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) 
   };
 
   const sendMessage = async (content: string) => {
-    if (!roomId || !profile) return;
-    const { error } = await supabase.from('war_room_messages').insert({
+    if (!roomId || !profile) {
+      toast({ title: 'Erro ao enviar mensagem', description: 'Sessão não carregada', variant: 'destructive' });
+      return false;
+    }
+
+    // Optimistic update
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg: WarRoomMessage = {
+      id: tempId,
       war_room_id: roomId,
       sender_id: profile.id,
       content,
-    });
+      created_at: new Date().toISOString(),
+      sender: {
+        id: profile.id,
+        name: profile.name,
+        display_name: profile.display_name,
+        avatar_url: profile.avatar_url,
+      },
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+
+    const { data, error } = await supabase.from('war_room_messages').insert({
+      war_room_id: roomId,
+      sender_id: profile.id,
+      content,
+    }).select('id').single();
+
     if (error) {
-      toast({ title: 'Erro ao enviar mensagem', variant: 'destructive' });
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      toast({ 
+        title: 'Erro ao enviar mensagem', 
+        description: error.message,
+        variant: 'destructive' 
+      });
+      return false;
     }
+
+    // Replace temp ID with real ID
+    setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: data.id } : m));
+    return true;
   };
 
   return { members, timeline, messages, loading, acknowledge, addTimelineEntry, sendMessage, isRoomCreator, refetch: fetchAll };
