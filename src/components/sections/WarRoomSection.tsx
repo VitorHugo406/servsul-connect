@@ -551,6 +551,21 @@ export function WarRoomSection() {
                     {format(new Date(room.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </p>
                 </div>
+                {room.status === 'closed' && canCreateWarRoom && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                    onClick={(e) => handleDeleteRoom(e, room.id)}
+                    disabled={deletingId === room.id}
+                  >
+                    {deletingId === room.id ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}
