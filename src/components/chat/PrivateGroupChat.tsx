@@ -1,6 +1,7 @@
- import React, { useEffect, useRef, useState, useCallback } from 'react';
- import { motion } from 'framer-motion';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Users, Settings, UserPlus, Check, CheckCheck, Crown, Loader2, Trash2, Image, Eye } from 'lucide-react';
+import { ScheduledSummaryConfig } from '@/components/chat/ScheduledSummaryConfig';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { useTypingIndicator } from '@/hooks/useTypingIndicator';
  import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
