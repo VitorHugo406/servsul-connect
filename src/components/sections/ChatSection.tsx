@@ -19,7 +19,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { AlertCircle, Users, MessageSquare, ArrowLeft, UsersRound, Eye, EyeOff, Search, Calendar as CalendarIcon, Bot } from 'lucide-react';
+import { AlertCircle, Users, MessageSquare, ArrowLeft, UsersRound, Eye, EyeOff, Search, Calendar as CalendarIcon, Bot, Settings } from 'lucide-react';
+import { ChatMediaFilter } from '@/components/chat/ChatMediaFilter';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSound } from '@/hooks/useSound';
@@ -384,6 +385,24 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                         targetId={effectiveSector}
                         targetName={currentSector?.name || 'Setor'}
                       />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              )}
+              {/* Media Filter - for all sectors except Geral */}
+              {effectiveSector && effectiveSector !== geralSectorId && (
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" title="Mídia e arquivos">
+                      <Settings className="h-5 w-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent>
+                    <SheetHeader>
+                      <SheetTitle>Mídia e Arquivos - {currentSector?.name}</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-6">
+                      <ChatMediaFilter chatType="sector" chatId={effectiveSector} />
                     </div>
                   </SheetContent>
                 </Sheet>

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Settings, UserPlus, Check, CheckCheck, Crown, Loader2, Trash2, Image, Eye } from 'lucide-react';
 import { ScheduledSummaryConfig } from '@/components/chat/ScheduledSummaryConfig';
+import { ChatMediaFilter } from '@/components/chat/ChatMediaFilter';
 import { Separator } from '@/components/ui/separator';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { useTypingIndicator } from '@/hooks/useTypingIndicator';
@@ -419,6 +420,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
                      })}
                    </div>
                  </ScrollArea>
+                </div>
+
+                {/* Media & Files Filter */}
+                <Separator className="my-2" />
+                <div>
+                  <h4 className="font-medium mb-3">Mídia e Arquivos</h4>
+                  <ChatMediaFilter chatType="group" chatId={group.id} />
                 </div>
 
                 {/* Scheduled Summaries */}

@@ -1,9 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Check, CheckCheck } from 'lucide-react';
+import { MessageCircle, Check, CheckCheck, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ChatInput } from '@/components/chat/ChatInput';
+import { ChatMediaFilter } from '@/components/chat/ChatMediaFilter';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { useDirectMessages, useActiveUsers } from '@/hooks/useDirectMessages';
 import { useSectors } from '@/hooks/useData';
@@ -146,7 +149,7 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
             />
           )}
         </div>
-        <div>
+        <div className="flex-1">
           <h3 className="font-display font-semibold text-foreground">{displayName}</h3>
           <p className="text-xs text-muted-foreground">
             {(() => {
@@ -162,6 +165,21 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
             {partnerSector && ` • ${partnerSector.name}`}
           </p>
         </div>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Settings className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent className="w-full sm:max-w-md">
+            <SheetHeader>
+              <SheetTitle>Mídia e Arquivos</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6">
+              <ChatMediaFilter chatType="direct" chatId={partnerId} profileId={profile?.id} />
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
 
       {/* Messages */}
