@@ -94,7 +94,7 @@ const Index = () => {
   };
 
   const handleNavigateToTasks = () => {
-    setActiveSection('tasks');
+    handleSectionChange('tasks');
   };
   const isMobile = useIsMobile();
   const [isReady, setIsReady] = useState(false);
