@@ -126,16 +126,16 @@ const Index = () => {
 
   // Navigation handlers for notifications
   const handleNavigateToChat = () => {
-    setActiveSection('chat');
+    handleSectionChange('chat');
   };
 
   const handleNavigateToAnnouncements = () => {
-    setActiveSection('announcements');
+    handleSectionChange('announcements');
   };
 
   const handleRegisterFacial = () => {
     completeOnboarding();
-    setActiveSection('facial');
+    handleSectionChange('facial');
   };
 
   const renderSection = () => {
