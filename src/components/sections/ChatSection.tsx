@@ -389,6 +389,24 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                   </SheetContent>
                 </Sheet>
               )}
+              {/* Media Filter - for all sectors except Geral */}
+              {effectiveSector && effectiveSector !== geralSectorId && (
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" title="Mídia e arquivos">
+                      <Settings className="h-5 w-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent>
+                    <SheetHeader>
+                      <SheetTitle>Mídia e Arquivos - {currentSector?.name}</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-6">
+                      <ChatMediaFilter chatType="sector" chatId={effectiveSector} />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              )}
               <Button 
                 variant="ghost" 
                 size="icon"
