@@ -453,7 +453,13 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                     return (
                       <div key={message.id}>
                         {showDateSeparator && <DateSeparator date={message.created_at} />}
-                        <ChatMessage message={message} index={index} />
+                        <ChatMessage
+                          message={message}
+                          index={index}
+                          onReply={setReplyTo}
+                          reactions={reactions[message.id]}
+                          onToggleReaction={toggleReaction}
+                        />
                       </div>
                     );
                   })
