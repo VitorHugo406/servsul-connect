@@ -48,6 +48,7 @@ interface ChatMessageProps {
   onReply?: (message: Message) => void;
   reactions?: Reaction[];
   onToggleReaction?: (messageId: string, emoji: string) => void;
+  onScrollToMessage?: (messageId: string) => void;
 }
 
 export function ChatMessage({ message, onReply, reactions, onToggleReaction }: ChatMessageProps) {
