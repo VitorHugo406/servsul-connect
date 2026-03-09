@@ -572,7 +572,7 @@ export function MyDashboardSection() {
         ) : (
           <div className="grid grid-cols-3 gap-4 auto-rows-auto">
             <AnimatePresence>
-              {widgets.map((widget) => (
+              {widgets.map((widget, index) => (
                 <motion.div
                   key={widget.id}
                   layout
@@ -581,6 +581,10 @@ export function MyDashboardSection() {
                   exit={{ opacity: 0, scale: 0.8 }}
                   transition={{ duration: 0.2 }}
                   className={cn(colSpan[widget.size], rowHeight[widget.size])}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent, index)}
+                  onDragOver={(e) => handleDragOver(e as unknown as React.DragEvent, index)}
+                  onDragEnd={(e) => handleDragEnd(e as unknown as React.DragEvent)}
                 >
                   <WidgetRenderer
                     widget={widget}
