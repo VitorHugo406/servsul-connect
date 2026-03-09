@@ -1270,21 +1270,34 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             className="overflow-hidden flex-shrink-0 p-2"
           >
             <div className={cn(
-              "h-full overflow-y-auto p-4 space-y-3 rounded-xl",
-              "bg-muted text-foreground"
+              "h-full overflow-y-auto p-4 space-y-4 rounded-xl",
+              "bg-muted/60 backdrop-blur-sm text-foreground border border-border/50"
             )}>
-              <h3 className="font-display font-semibold text-sm text-foreground">
-                Planejador
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-              </p>
-              <div className="h-px bg-border" />
+              {/* Header */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Calendar className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-semibold text-sm text-foreground">
+                      Planejador
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground capitalize">
+                      {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {(() => {
                 const todayTasks = tasks.filter(t => {
                   if (!t.due_date) return false;
                   return new Date(t.due_date).toDateString() === new Date().toDateString();
                 }).sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
+
+                const completedCount = todayTasks.filter(t => !!t.completed_at || conclusionColumnIds.includes(t.status)).length;
+
                 return todayTasks.length === 0 ? (
                   <div className="flex flex-col items-center py-6 text-center px-4">
                     <img src={plannerEmptyIllustration} alt="Planejador" className="w-36 h-auto mb-4 opacity-80 rounded-lg" />
@@ -1308,23 +1321,163 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     </div>
                     <p className="text-[10px] text-muted-foreground/60 mt-4">Nenhuma tarefa agendada para hoje</p>
                   </div>
-                ) : todayTasks.map(t => {
-                  const col = columns.find(c => c.id === t.status);
-                  return (
-                    <div key={t.id} className="p-3 rounded-lg bg-background cursor-pointer hover:bg-background/80 transition-all shadow-sm"
-                      onClick={() => { setSelectedTask(t); setShowTaskDetail(true); }}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col?.color }} />
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(t.due_date!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                ) : (
+                  <>
+                    {/* Progress summary */}
+                    <div className="rounded-lg bg-background/80 border border-border/50 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-foreground">{completedCount}/{todayTasks.length} concluídas</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {todayTasks.length > 0 ? Math.round((completedCount / todayTasks.length) * 100) : 0}%
                         </span>
                       </div>
-                      <p className="text-sm font-medium text-foreground">{t.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{col?.title}</p>
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                        <motion.div
+                          className="h-full rounded-full bg-gradient-to-r from-primary to-primary/70"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${todayTasks.length > 0 ? (completedCount / todayTasks.length) * 100 : 0}%` }}
+                          transition={{ duration: 0.6, ease: 'easeOut' }}
+                        />
+                      </div>
                     </div>
-                  );
-                });
+
+                    <div className="h-px bg-border/50" />
+
+                    {/* Task cards */}
+                    <div className="space-y-2">
+                      {todayTasks.map((t, idx) => {
+                        const col = columns.find(c => c.id === t.status);
+                        const isCompleted = !!t.completed_at || conclusionColumnIds.includes(t.status);
+                        const dueInfo = getDueDateInfo(t.due_date, isCompleted);
+                        const taskLabelsForCard = getTaskLabels(t.id);
+                        const sc = subtaskCounts[t.id];
+                        const extraAssignees = getTaskAssignees(t.id);
+                        const priorityData = PRIORITIES.find(p => p.id === t.priority);
+
+                        return (
+                          <motion.div
+                            key={t.id}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.04, duration: 0.25 }}
+                            className={cn(
+                              "group relative rounded-lg bg-background border border-border/60 cursor-pointer overflow-hidden",
+                              "hover:shadow-md hover:border-border transition-all duration-200",
+                              isCompleted && "opacity-60"
+                            )}
+                            onClick={() => { setSelectedTask(t); setShowTaskDetail(true); }}
+                          >
+                            {/* Priority color bar */}
+                            <div className={cn('h-1 w-full', priorityData?.color || 'bg-blue-500')} />
+
+                            <div className="p-3 space-y-2">
+                              {/* Labels */}
+                              {taskLabelsForCard.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {taskLabelsForCard.map(l => (
+                                    <span
+                                      key={l.id}
+                                      className="inline-block h-1.5 w-8 rounded-full"
+                                      style={{ backgroundColor: l.color }}
+                                      title={l.name}
+                                    />
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Title */}
+                              <p className={cn(
+                                "text-sm font-medium text-foreground leading-snug",
+                                isCompleted && "line-through text-muted-foreground"
+                              )}>
+                                {t.title}
+                              </p>
+
+                              {/* Meta row */}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {/* Column badge */}
+                                <div className="flex items-center gap-1 rounded-md bg-muted/80 px-1.5 py-0.5">
+                                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: col?.color }} />
+                                  <span className="text-[10px] text-muted-foreground font-medium truncate max-w-[80px]">{col?.title}</span>
+                                </div>
+
+                                {/* Due time */}
+                                {dueInfo && (() => {
+                                  const DI = dueInfo.icon;
+                                  return (
+                                    <div className={cn('flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md font-medium', dueInfo.color)}>
+                                      <DI className="h-3 w-3" />
+                                      {t.due_date && new Date(t.due_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                  );
+                                })()}
+
+                                {/* Subtask progress */}
+                                {sc && sc.total > 0 && (
+                                  <div className={cn(
+                                    'flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md',
+                                    sc.done === sc.total ? 'text-green-600 bg-green-500/10' : 'text-muted-foreground bg-muted/80'
+                                  )}>
+                                    <ListTodo className="h-3 w-3" />
+                                    {sc.done}/{sc.total}
+                                  </div>
+                                )}
+
+                                {/* Priority badge */}
+                                {t.priority !== 'medium' && priorityData && (
+                                  <Badge className={cn('text-[9px] text-white h-4 px-1.5', priorityData.color)}>
+                                    {priorityData.label}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* Footer: Assignees */}
+                              {(t.assignee || extraAssignees.length > 0) && (
+                                <div className="flex items-center justify-end -space-x-1.5 pt-0.5">
+                                  {t.assignee && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Avatar className="h-5 w-5 ring-1 ring-background">
+                                          <AvatarImage src={t.assignee.avatar_url || ''} />
+                                          <AvatarFallback className="text-[7px] bg-primary/80 text-primary-foreground">
+                                            {getInitials(t.assignee.display_name || t.assignee.name)}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="bottom" className="text-xs">
+                                        {t.assignee.display_name || t.assignee.name}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                  {extraAssignees.slice(0, 2).map(ea => (
+                                    <Tooltip key={ea.profile_id}>
+                                      <TooltipTrigger asChild>
+                                        <Avatar className="h-5 w-5 ring-1 ring-background">
+                                          <AvatarImage src={ea.avatar_url || ''} />
+                                          <AvatarFallback className="text-[7px] bg-muted text-muted-foreground">
+                                            {getInitials(ea.display_name || ea.name || '?')}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="bottom" className="text-xs">
+                                        {ea.display_name || ea.name}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ))}
+                                  {extraAssignees.length > 2 && (
+                                    <Avatar className="h-5 w-5 ring-1 ring-background">
+                                      <AvatarFallback className="text-[7px] bg-muted text-muted-foreground">+{extraAssignees.length - 2}</AvatarFallback>
+                                    </Avatar>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </>
+                );
               })()}
             </div>
           </motion.div>
