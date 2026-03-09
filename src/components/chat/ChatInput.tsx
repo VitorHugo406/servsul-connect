@@ -30,7 +30,7 @@ interface ChatInputProps {
 
 const EMOJI_LIST = ['😀', '😂', '😍', '🤔', '👍', '👏', '🎉', '🔥', '❤️', '✅', '🚀', '💪', '😊', '👋', '🙏', '💡'];
 
-export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onMention }: ChatInputProps) {
+export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onMention, replyTo, onClearReply }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
