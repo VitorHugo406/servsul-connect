@@ -144,6 +144,8 @@ const Index = () => {
     switch (activeSection) {
       case 'home':
         return <HomeSection onNavigate={handleSectionChange} />;
+      case 'my-dashboard':
+        return <MyDashboardSection />;
       case 'chat':
         return <ChatSection globalSearch={globalSearch} />;
       case 'announcements':

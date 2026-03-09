@@ -30,6 +30,7 @@ interface SidebarProps {
 
 const menuItems = [
   { id: 'home', icon: Home, label: 'Início' },
+  { id: 'my-dashboard', icon: LayoutDashboard, label: 'Meu Painel' },
   { id: 'chat', icon: MessageSquare, label: 'Chat' },
   { id: 'announcements', icon: Bell, label: 'Avisos' },
   { id: 'birthdays', icon: Cake, label: 'Aniversariantes' },
