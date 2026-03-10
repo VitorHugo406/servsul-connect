@@ -194,7 +194,7 @@ export function CalendarSection() {
     setStartDate(''); setStartTime('09:00'); setEndDate(''); setEndTime('10:00');
     setAllDay(false); setColor('#F59E0B'); setReminderMinutes(''); setMeetingLink('');
     setSelectedParticipants([]); setEditingEvent(null); setHasUnsavedChanges(false);
-    setMeetingScheduleDate(new Date());
+    setMeetingScheduleDate(new Date()); setMeetingType(null);
   };
 
   const openCreateEvent = (date?: Date) => {
