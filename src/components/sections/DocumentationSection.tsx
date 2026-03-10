@@ -153,18 +153,21 @@ function generateDocumentationPDF() {
   // =============================================
   drawPageDecoration();
   
-  // Large decorative circle
-  doc.setFillColor(239, 246, 255);
-  doc.circle(pageW / 2, 85, 40, 'F');
-  doc.setFillColor(219, 234, 254);
-  doc.circle(pageW / 2, 85, 28, 'F');
-  doc.setFillColor(...BLUE);
-  doc.circle(pageW / 2, 85, 16, 'F');
-
-  // Icon-like text inside circle
-  doc.setFontSize(18);
-  doc.setTextColor(...WHITE);
-  doc.text('SC', pageW / 2, 89, { align: 'center' });
+  // Add logo image
+  const logoImg = new Image();
+  logoImg.src = appLogo;
+  try {
+    doc.addImage(logoImg, 'PNG', pageW / 2 - 18, 55, 36, 36);
+  } catch {
+    // Fallback: draw circle with text if image fails
+    doc.setFillColor(239, 246, 255);
+    doc.circle(pageW / 2, 73, 20, 'F');
+    doc.setFillColor(...BLUE);
+    doc.circle(pageW / 2, 73, 14, 'F');
+    doc.setFontSize(14);
+    doc.setTextColor(...WHITE);
+    doc.text('SC', pageW / 2, 77, { align: 'center' });
+  }
 
   doc.setFontSize(32);
   doc.setTextColor(...DARK);
