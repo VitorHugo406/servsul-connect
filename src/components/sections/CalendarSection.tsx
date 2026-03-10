@@ -204,11 +204,21 @@ export function CalendarSection() {
     setShowCreatePage('event');
   };
 
-  const openCreateMeeting = (date?: Date) => {
+  const openCreateMeeting = (date?: Date, type?: 'external' | 'servchat') => {
     resetForm();
     setEventType('meeting'); setColor('#3B82F6');
     if (date) { setStartDate(format(date, 'yyyy-MM-dd')); setEndDate(format(date, 'yyyy-MM-dd')); setMeetingScheduleDate(date); }
+    setMeetingType(type || 'external');
     setShowCreatePage('meeting');
+    setShowMeetingTypeSelector(false);
+  };
+
+  const handleMeetingButtonClick = (date?: Date) => {
+    if (isAdmin) {
+      setShowMeetingTypeSelector(true);
+    } else {
+      openCreateMeeting(date, 'external');
+    }
   };
 
   const openEdit = (event: CalendarEvent) => {
