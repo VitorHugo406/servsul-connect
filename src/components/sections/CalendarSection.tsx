@@ -524,12 +524,20 @@ export function CalendarSection() {
           </Button>
           <div className="flex-1">
             <h2 className="font-semibold text-foreground">
-              {editingEvent ? 'Editar' : 'Novo'} {isMeeting ? 'Reunião' : 'Evento'}
+              {editingEvent ? 'Editar' : 'Nova'} {isMeeting ? 'Reunião' : 'Evento'}
+              {isMeeting && meetingType === 'servchat' && !editingEvent && (
+                <Badge variant="secondary" className="ml-2 text-[10px]">ServChat Conference</Badge>
+              )}
+              {isMeeting && meetingType === 'external' && !editingEvent && (
+                <Badge variant="outline" className="ml-2 text-[10px]">Link Externo</Badge>
+              )}
             </h2>
           </div>
           <Button variant="outline" onClick={handleBack}>Cancelar</Button>
-          <Button onClick={handleSave} className="gap-1">
-            {isMeeting && <Video className="h-4 w-4" />}
+          <Button onClick={handleSave} disabled={savingConference} className="gap-1">
+            {savingConference ? (
+              <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+            ) : isMeeting ? <Video className="h-4 w-4" /> : null}
             {editingEvent ? 'Salvar' : isMeeting ? 'Agendar' : 'Criar'}
           </Button>
         </div>
