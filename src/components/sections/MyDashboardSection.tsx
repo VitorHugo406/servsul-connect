@@ -780,10 +780,12 @@ function StatWidget({
           <div className="h-8 w-16 animate-pulse rounded bg-muted" />
         ) : (
           <div className="flex flex-col items-center gap-1">
-            <p className={cn('text-4xl font-bold tabular-nums', colorMap[widget.type] || 'text-foreground')}>{currentValue}</p>
+            <p className={cn('text-4xl font-bold tabular-nums', colorMap[widget.type] || 'text-foreground')}>
+              {currentValue}{data?.suffix || ''}
+            </p>
             {widget.comparePrev && widgetSupportsCompare(widget.type) ? (
               <p className="text-[10px] text-muted-foreground">
-                Anterior: {previousValue} ({formatDelta(currentValue, previousValue)})
+                Anterior: {previousValue}{data?.suffix || ''} ({formatDelta(currentValue, previousValue)})
               </p>
             ) : null}
           </div>
