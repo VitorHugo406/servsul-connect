@@ -246,11 +246,61 @@ export function CalendarSection() {
     const startDateTime = allDay ? new Date(`${startDate}T00:00:00`).toISOString() : new Date(`${startDate}T${startTime}:00`).toISOString();
     const endDateTime = endDate ? (allDay ? new Date(`${endDate}T23:59:59`).toISOString() : new Date(`${endDate}T${endTime}:00`).toISOString()) : null;
 
+    let finalMeetingLink = meetingLink.trim() || null;
+
+    // If ServChat Conference, call the API to create the meeting first
+    if (meetingType === 'servchat' && !editingEvent) {
+      setSavingConference(true);
+      try {
+        const startDt = new Date(startDateTime);
+        const endDt = endDateTime ? new Date(endDateTime) : new Date(startDt.getTime() + 60 * 60 * 1000);
+        const durationMinutes = Math.round((endDt.getTime() - startDt.getTime()) / 60000);
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+        if (!accessToken) { toast.error('Sessão expirada'); setSavingConference(false); return; }
+
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/servchat-conference?path=/meetings`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              title: title.trim(),
+              scheduled_at: startDateTime,
+              duration_minutes: durationMinutes,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || 'Erro ao criar reunião ServChat');
+        }
+
+        const result = await response.json();
+        finalMeetingLink = result.join_url || null;
+        if (!finalMeetingLink) {
+          toast.warning('Reunião criada mas link não retornado');
+        }
+      } catch (e: any) {
+        console.error('ServChat Conference error:', e);
+        toast.error(e.message || 'Erro ao criar reunião ServChat Conference');
+        setSavingConference(false);
+        return;
+      }
+      setSavingConference(false);
+    }
+
     const eventData: any = {
       title: title.trim(), description: description.trim() || null,
       event_type: eventType, start_date: startDateTime, end_date: endDateTime,
       all_day: allDay, color, reminder_minutes: reminderMinutes ? parseInt(reminderMinutes) : null,
-      meeting_link: meetingLink.trim() || null, created_by: user!.id,
+      meeting_link: finalMeetingLink, created_by: user!.id,
     };
 
     try {
@@ -268,7 +318,7 @@ export function CalendarSection() {
       if (selectedParticipants.length > 0) {
         await supabase.from('meeting_participants').insert(selectedParticipants.map(pid => ({ event_id: eventId, profile_id: pid })));
       }
-      toast.success(editingEvent ? 'Evento atualizado!' : 'Evento criado!');
+      toast.success(editingEvent ? 'Evento atualizado!' : meetingType === 'servchat' ? 'Reunião ServChat criada!' : 'Evento criado!');
       resetForm(); setShowCreatePage(null); fetchEvents();
     } catch (e) { toast.error('Erro ao salvar evento'); console.error(e); }
   };
