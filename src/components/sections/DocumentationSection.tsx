@@ -970,6 +970,9 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                 <InfoCard icon={Trash2} title="Exclusão de Dados" value="Exclusão controlada com auditoria automática" />
                 <InfoCard icon={FileText} title="Logs do Sistema" value="Audit logs com filtros (admin principal)" />
                 <InfoCard icon={HardDrive} title="Armazenamento" value="Monitoramento de storage (admin principal)" />
+                <InfoCard icon={BarChart2} title="Meu Painel" value="Dashboard pessoal com widgets, gráficos e comparações" color="text-primary" />
+                <InfoCard icon={Siren} title="Sala de Guerra" value="Emergência com alarme, chat e tarefa vinculada" color="text-destructive" />
+                <InfoCard icon={Trophy} title="Pontuação Mensal" value="Ranking de produtividade por quadro" color="text-warning" />
               </div>
             </CollapsibleSection>
           </div>
