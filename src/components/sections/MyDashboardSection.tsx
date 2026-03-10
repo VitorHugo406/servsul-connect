@@ -921,8 +921,8 @@ function ChartWidget({
   const effectiveVariant: ChartVariant = useMemo(() => {
     const allowed = getAllowedChartVariants(widget.type);
     const v = widget.chartVariant || getDefaultChartVariant(widget.type) || allowed[0] || 'bar';
-    // comparação não fica legível em pizza
-    if (widget.comparePrev && v === 'pie') return 'bar';
+    // comparação não fica legível em pizza/donut
+    if (widget.comparePrev && (v === 'pie' || v === 'donut')) return 'bar';
     return v;
   }, [widget.type, widget.chartVariant, widget.comparePrev]);
 
