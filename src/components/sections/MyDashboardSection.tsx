@@ -600,6 +600,103 @@ function useWidgetData(widget: Widget, profileId: string | undefined) {
               })),
             );
         }
+
+        else if (widget.type === 'tasks_by_priority') {
+          const priorityLabels: Record<string, string> = { low: 'Baixa', medium: 'Média', high: 'Alta', urgent: 'Urgente' };
+          const fetchByPriority = async (rangeFrom: string, rangeTo: string) => {
+            const { data: tasks } = await supabase
+              .from('tasks')
+              .select('priority')
+              .or(buildAssignedTasksOr(profileId, extraTaskIds))
+              .gte('created_at', rangeFrom)
+              .lte('created_at', rangeTo);
+            const map: Record<string, number> = {};
+            for (const t of tasks || []) {
+              const label = priorityLabels[t.priority] || t.priority;
+              map[label] = (map[label] || 0) + 1;
+            }
+            return map;
+          };
+
+          const [currMap, prevMap] = await Promise.all([
+            fetchByPriority(fromIso, toIso),
+            widget.comparePrev && prevFromIso && prevToIso ? fetchByPriority(prevFromIso, prevToIso) : Promise.resolve({} as Record<string, number>),
+          ]);
+
+          if (widget.comparePrev) {
+            const keys = Array.from(new Set([...Object.keys(currMap), ...Object.keys(prevMap)])).sort();
+            if (!cancelled) setData(keys.map((name) => ({ name, atual: currMap[name] ?? 0, anterior: prevMap[name] ?? 0 })));
+          } else {
+            const keys = Object.keys(currMap).sort();
+            if (!cancelled) setData(keys.map((name) => ({ name, value: currMap[name] ?? 0 })));
+          }
+        }
+
+        else if (widget.type === 'completion_rate') {
+          const { data: allTasks } = await supabase
+            .from('tasks')
+            .select('completed_at')
+            .or(buildAssignedTasksOr(profileId, extraTaskIds))
+            .gte('created_at', fromIso)
+            .lte('created_at', toIso);
+
+          const total = allTasks?.length || 0;
+          const completed = allTasks?.filter(t => t.completed_at).length || 0;
+          const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+          if (widget.comparePrev && prevFromIso && prevToIso) {
+            const { data: prevTasks } = await supabase
+              .from('tasks')
+              .select('completed_at')
+              .or(buildAssignedTasksOr(profileId, extraTaskIds))
+              .gte('created_at', prevFromIso)
+              .lte('created_at', prevToIso);
+
+            const prevTotal = prevTasks?.length || 0;
+            const prevCompleted = prevTasks?.filter(t => t.completed_at).length || 0;
+            const prevRate = prevTotal > 0 ? Math.round((prevCompleted / prevTotal) * 100) : 0;
+            if (!cancelled) setData({ value: rate, previous: prevRate, suffix: '%' });
+          } else {
+            if (!cancelled) setData({ value: rate, suffix: '%' });
+          }
+        }
+
+        else if (widget.type === 'avg_completion_time') {
+          const { data: tasks } = await supabase
+            .from('tasks')
+            .select('created_at, completed_at')
+            .or(buildAssignedTasksOr(profileId, extraTaskIds))
+            .not('completed_at', 'is', null)
+            .gte('completed_at', fromIso)
+            .lte('completed_at', toIso);
+
+          const diffs = (tasks || []).map(t => {
+            const created = new Date(t.created_at).getTime();
+            const completed = new Date(t.completed_at!).getTime();
+            return (completed - created) / (1000 * 60 * 60 * 24); // days
+          });
+          const avg = diffs.length ? Math.round((diffs.reduce((a, b) => a + b, 0) / diffs.length) * 10) / 10 : 0;
+
+          if (widget.comparePrev && prevFromIso && prevToIso) {
+            const { data: prevTasks } = await supabase
+              .from('tasks')
+              .select('created_at, completed_at')
+              .or(buildAssignedTasksOr(profileId, extraTaskIds))
+              .not('completed_at', 'is', null)
+              .gte('completed_at', prevFromIso)
+              .lte('completed_at', prevToIso);
+
+            const prevDiffs = (prevTasks || []).map(t => {
+              const created = new Date(t.created_at).getTime();
+              const completed = new Date(t.completed_at!).getTime();
+              return (completed - created) / (1000 * 60 * 60 * 24);
+            });
+            const prevAvg = prevDiffs.length ? Math.round((prevDiffs.reduce((a, b) => a + b, 0) / prevDiffs.length) * 10) / 10 : 0;
+            if (!cancelled) setData({ value: avg, previous: prevAvg, suffix: 'd' });
+          } else {
+            if (!cancelled) setData({ value: avg, suffix: 'd' });
+          }
+        }
       } catch (e) {
         console.error('Widget data error', e);
       } finally {
