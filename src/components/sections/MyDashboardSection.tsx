@@ -842,7 +842,7 @@ function WidgetControls({
             <SelectContent>
               {allowedVariants.map((v) => (
                 <SelectItem key={v} value={v} className="text-xs">
-                  {v === 'bar' ? 'Barra' : v === 'line' ? 'Linha' : 'Pizza'}
+                  {v === 'bar' ? 'Barra' : v === 'line' ? 'Linha' : v === 'pie' ? 'Pizza' : v === 'donut' ? 'Rosca' : 'Área'}
                 </SelectItem>
               ))}
             </SelectContent>
