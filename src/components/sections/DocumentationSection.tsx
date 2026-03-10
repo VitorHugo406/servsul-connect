@@ -445,6 +445,12 @@ function generateDocumentationPDF() {
     ['📄 Logs do Sistema', 'LogsSection.tsx', 'Audit logs com filtros por ação, tabela, data, usuário (admin)'],
     ['💾 Armazenamento', 'StorageMonitoringSection.tsx', 'Monitoramento de buckets e uso de espaço (admin)'],
     ['🎉 Eventos Mensais', 'EventHistorySection.tsx', 'Histórico de campanhas e eventos sazonais com efeitos visuais'],
+    ['📊 Meu Painel', 'MyDashboardSection.tsx', 'Dashboard pessoal com widgets configuráveis: gráficos (pizza, rosca, barra, linha, área), métricas de produtividade, comparação entre períodos'],
+    ['🚨 Sala de Guerra', 'WarRoomSection.tsx', 'Sala de emergência com alarme, membros convocados, chat dedicado e tarefa vinculada'],
+    ['📋 Decisões de Tarefas', 'TaskDetailDialog.tsx', 'Registro formal de decisões dentro de cards com data e responsável'],
+    ['📬 Resumos Agendados', 'ScheduledSummaryConfig.tsx', 'Envio automático de resumos de produtividade por DM (diário/semanal/mensal)'],
+    ['🤖 Chatbot', 'ChatbotWidget.tsx', 'Assistente inteligente integrado para suporte interno'],
+    ['🏆 Pontuação Mensal', 'ScorePanel.tsx', 'Ranking de membros por quadro com pontuação baseada em tarefas concluídas'],
   ], [30, 42, contentW - 72]);
 
   // =============================================
