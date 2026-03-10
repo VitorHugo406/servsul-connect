@@ -745,6 +745,8 @@ function StatWidget({
     late_tasks: 'text-destructive',
     monthly_score: 'text-primary',
     messages_sent: 'text-secondary',
+    completion_rate: 'text-success',
+    avg_completion_time: 'text-primary',
   };
 
   const bgMap: Partial<Record<WidgetType, string>> = {
@@ -753,6 +755,8 @@ function StatWidget({
     late_tasks: 'bg-destructive/10',
     monthly_score: 'bg-primary/10',
     messages_sent: 'bg-secondary/10',
+    completion_rate: 'bg-success/10',
+    avg_completion_time: 'bg-primary/10',
   };
 
   const currentValue = data?.value ?? 0;
