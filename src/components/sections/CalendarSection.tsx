@@ -91,6 +91,9 @@ export function CalendarSection() {
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
 
   const [showCreatePage, setShowCreatePage] = useState<'event' | 'meeting' | null>(null);
+  const [showMeetingTypeSelector, setShowMeetingTypeSelector] = useState(false);
+  const [meetingType, setMeetingType] = useState<'external' | 'servchat' | null>(null);
+  const [savingConference, setSavingConference] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
