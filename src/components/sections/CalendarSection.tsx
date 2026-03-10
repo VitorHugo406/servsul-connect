@@ -963,8 +963,9 @@ export function CalendarSection() {
                               {event.all_day && <Badge variant="secondary" className="text-[9px] h-4">Dia inteiro</Badge>}
                               {event.meeting_link && (
                                 <a href={event.meeting_link} target="_blank" rel="noopener noreferrer"
-                                  className="text-[9px] text-primary flex items-center gap-0.5 hover:underline" onClick={e => e.stopPropagation()}>
-                                  <Link2 className="h-2.5 w-2.5" /> Link
+                                  className="inline-flex items-center gap-1 text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded px-2 py-0.5 transition-colors"
+                                  onClick={e => e.stopPropagation()}>
+                                  <ExternalLink className="h-2.5 w-2.5" /> Entrar na reunião
                                 </a>
                               )}
                             </div>
