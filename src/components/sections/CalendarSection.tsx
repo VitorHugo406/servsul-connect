@@ -79,7 +79,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const WORK_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 
 export function CalendarSection() {
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const isMobile = useIsMobile();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [taskDeadlines, setTaskDeadlines] = useState<TaskDeadline[]>([]);
