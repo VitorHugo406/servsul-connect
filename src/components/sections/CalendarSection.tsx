@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, Plus, Trash2, Clock, Bell, ListTodo, Edit, X, Users, Link2, ChevronLeft, ChevronRight, Video, ArrowLeft, Check, FileDown } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Trash2, Clock, Bell, ListTodo, Edit, X, Users, Link2, ChevronLeft, ChevronRight, Video, ArrowLeft, Check, FileDown, ExternalLink, MonitorPlay } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,7 +79,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const WORK_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 
 export function CalendarSection() {
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const isMobile = useIsMobile();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [taskDeadlines, setTaskDeadlines] = useState<TaskDeadline[]>([]);
@@ -91,6 +91,9 @@ export function CalendarSection() {
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
 
   const [showCreatePage, setShowCreatePage] = useState<'event' | 'meeting' | null>(null);
+  const [showMeetingTypeSelector, setShowMeetingTypeSelector] = useState(false);
+  const [meetingType, setMeetingType] = useState<'external' | 'servchat' | null>(null);
+  const [savingConference, setSavingConference] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -191,7 +194,7 @@ export function CalendarSection() {
     setStartDate(''); setStartTime('09:00'); setEndDate(''); setEndTime('10:00');
     setAllDay(false); setColor('#F59E0B'); setReminderMinutes(''); setMeetingLink('');
     setSelectedParticipants([]); setEditingEvent(null); setHasUnsavedChanges(false);
-    setMeetingScheduleDate(new Date());
+    setMeetingScheduleDate(new Date()); setMeetingType(null);
   };
 
   const openCreateEvent = (date?: Date) => {
@@ -201,11 +204,21 @@ export function CalendarSection() {
     setShowCreatePage('event');
   };
 
-  const openCreateMeeting = (date?: Date) => {
+  const openCreateMeeting = (date?: Date, type?: 'external' | 'servchat') => {
     resetForm();
     setEventType('meeting'); setColor('#3B82F6');
     if (date) { setStartDate(format(date, 'yyyy-MM-dd')); setEndDate(format(date, 'yyyy-MM-dd')); setMeetingScheduleDate(date); }
+    setMeetingType(type || 'external');
     setShowCreatePage('meeting');
+    setShowMeetingTypeSelector(false);
+  };
+
+  const handleMeetingButtonClick = (date?: Date) => {
+    if (isAdmin) {
+      setShowMeetingTypeSelector(true);
+    } else {
+      openCreateMeeting(date, 'external');
+    }
   };
 
   const openEdit = (event: CalendarEvent) => {
@@ -233,11 +246,61 @@ export function CalendarSection() {
     const startDateTime = allDay ? new Date(`${startDate}T00:00:00`).toISOString() : new Date(`${startDate}T${startTime}:00`).toISOString();
     const endDateTime = endDate ? (allDay ? new Date(`${endDate}T23:59:59`).toISOString() : new Date(`${endDate}T${endTime}:00`).toISOString()) : null;
 
+    let finalMeetingLink = meetingLink.trim() || null;
+
+    // If ServChat Conference, call the API to create the meeting first
+    if (meetingType === 'servchat' && !editingEvent) {
+      setSavingConference(true);
+      try {
+        const startDt = new Date(startDateTime);
+        const endDt = endDateTime ? new Date(endDateTime) : new Date(startDt.getTime() + 60 * 60 * 1000);
+        const durationMinutes = Math.round((endDt.getTime() - startDt.getTime()) / 60000);
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+        if (!accessToken) { toast.error('Sessão expirada'); setSavingConference(false); return; }
+
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/servchat-conference?path=/meetings`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              title: title.trim(),
+              scheduled_at: startDateTime,
+              duration_minutes: durationMinutes,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || 'Erro ao criar reunião ServChat');
+        }
+
+        const result = await response.json();
+        finalMeetingLink = result.join_url || null;
+        if (!finalMeetingLink) {
+          toast.warning('Reunião criada mas link não retornado');
+        }
+      } catch (e: any) {
+        console.error('ServChat Conference error:', e);
+        toast.error(e.message || 'Erro ao criar reunião ServChat Conference');
+        setSavingConference(false);
+        return;
+      }
+      setSavingConference(false);
+    }
+
     const eventData: any = {
       title: title.trim(), description: description.trim() || null,
       event_type: eventType, start_date: startDateTime, end_date: endDateTime,
       all_day: allDay, color, reminder_minutes: reminderMinutes ? parseInt(reminderMinutes) : null,
-      meeting_link: meetingLink.trim() || null, created_by: user!.id,
+      meeting_link: finalMeetingLink, created_by: user!.id,
     };
 
     try {
@@ -255,7 +318,7 @@ export function CalendarSection() {
       if (selectedParticipants.length > 0) {
         await supabase.from('meeting_participants').insert(selectedParticipants.map(pid => ({ event_id: eventId, profile_id: pid })));
       }
-      toast.success(editingEvent ? 'Evento atualizado!' : 'Evento criado!');
+      toast.success(editingEvent ? 'Evento atualizado!' : meetingType === 'servchat' ? 'Reunião ServChat criada!' : 'Evento criado!');
       resetForm(); setShowCreatePage(null); fetchEvents();
     } catch (e) { toast.error('Erro ao salvar evento'); console.error(e); }
   };
@@ -461,12 +524,20 @@ export function CalendarSection() {
           </Button>
           <div className="flex-1">
             <h2 className="font-semibold text-foreground">
-              {editingEvent ? 'Editar' : 'Novo'} {isMeeting ? 'Reunião' : 'Evento'}
+              {editingEvent ? 'Editar' : 'Nova'} {isMeeting ? 'Reunião' : 'Evento'}
+              {isMeeting && meetingType === 'servchat' && !editingEvent && (
+                <Badge variant="secondary" className="ml-2 text-[10px]">ServChat Conference</Badge>
+              )}
+              {isMeeting && meetingType === 'external' && !editingEvent && (
+                <Badge variant="outline" className="ml-2 text-[10px]">Link Externo</Badge>
+              )}
             </h2>
           </div>
           <Button variant="outline" onClick={handleBack}>Cancelar</Button>
-          <Button onClick={handleSave} className="gap-1">
-            {isMeeting && <Video className="h-4 w-4" />}
+          <Button onClick={handleSave} disabled={savingConference} className="gap-1">
+            {savingConference ? (
+              <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+            ) : isMeeting ? <Video className="h-4 w-4" /> : null}
             {editingEvent ? 'Salvar' : isMeeting ? 'Agendar' : 'Criar'}
           </Button>
         </div>
@@ -526,16 +597,28 @@ export function CalendarSection() {
                     </div>
                   </div>
 
-                  {/* Meeting link */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Link2 className="h-4 w-4" />
-                      <span>Link da reunião</span>
+                  {/* Meeting link - only for external meetings */}
+                  {meetingType !== 'servchat' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Link2 className="h-4 w-4" />
+                        <span>Link da reunião</span>
+                      </div>
+                      <div className="pl-6">
+                        <Input value={meetingLink} onChange={e => { setMeetingLink(e.target.value); setHasUnsavedChanges(true); }} placeholder="https://meet.google.com/..." className="h-9" />
+                      </div>
                     </div>
+                  )}
+                  {meetingType === 'servchat' && !editingEvent && (
                     <div className="pl-6">
-                      <Input value={meetingLink} onChange={e => { setMeetingLink(e.target.value); setHasUnsavedChanges(true); }} placeholder="https://meet.google.com/..." className="h-9" />
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                        <MonitorPlay className="h-4 w-4 text-primary flex-shrink-0" />
+                        <p className="text-xs text-muted-foreground">
+                          O link da reunião será gerado automaticamente pelo ServChat Conference ao agendar.
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Description */}
                   <div className="space-y-2">
@@ -748,6 +831,59 @@ export function CalendarSection() {
     );
   }
 
+  // ========== MEETING TYPE SELECTOR ==========
+  if (showMeetingTypeSelector) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full items-center justify-center p-6">
+        <div className="max-w-md w-full space-y-6">
+          <div className="text-center space-y-2">
+            <Video className="h-10 w-10 mx-auto text-primary" />
+            <h2 className="text-xl font-bold text-foreground">Agendar Reunião</h2>
+            <p className="text-sm text-muted-foreground">Escolha o tipo de reunião:</p>
+          </div>
+
+          <div className="grid gap-3">
+            {/* Option 1: Google Meet / Manual Link */}
+            <button
+              onClick={() => openCreateMeeting(selectedDate, 'external')}
+              className="flex items-start gap-4 p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
+            >
+              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10">
+                <Link2 className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Google Meet ou Link Manual</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Cole um link externo (Google Meet, Zoom, Teams, etc.)
+                </p>
+              </div>
+            </button>
+
+            {/* Option 2: ServChat Conference */}
+            <button
+              onClick={() => openCreateMeeting(selectedDate, 'servchat')}
+              className="flex items-start gap-4 p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
+            >
+              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10">
+                <MonitorPlay className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">ServChat Conference</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Crie uma sala de reunião interna com link gerado automaticamente
+                </p>
+              </div>
+            </button>
+          </div>
+
+          <Button variant="outline" className="w-full" onClick={() => setShowMeetingTypeSelector(false)}>
+            Cancelar
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
   // ========== MAIN CALENDAR VIEW ==========
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full overflow-hidden">
@@ -762,7 +898,7 @@ export function CalendarSection() {
             <Badge variant="destructive" className="gap-1"><Bell className="h-3 w-3" /> {myInvites.length} convite(s)</Badge>
           )}
           <Button variant="outline" size="sm" onClick={goToToday}>Hoje</Button>
-          <Button variant="outline" size="sm" onClick={() => openCreateMeeting(selectedDate)} className="gap-1">
+          <Button variant="outline" size="sm" onClick={() => handleMeetingButtonClick(selectedDate)} className="gap-1">
             <Video className="h-3.5 w-3.5" /> Reunião
           </Button>
           <Button size="sm" onClick={() => openCreateEvent(selectedDate)} className="gap-1">
@@ -880,8 +1016,9 @@ export function CalendarSection() {
                               {event.all_day && <Badge variant="secondary" className="text-[9px] h-4">Dia inteiro</Badge>}
                               {event.meeting_link && (
                                 <a href={event.meeting_link} target="_blank" rel="noopener noreferrer"
-                                  className="text-[9px] text-primary flex items-center gap-0.5 hover:underline" onClick={e => e.stopPropagation()}>
-                                  <Link2 className="h-2.5 w-2.5" /> Link
+                                  className="inline-flex items-center gap-1 text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded px-2 py-0.5 transition-colors"
+                                  onClick={e => e.stopPropagation()}>
+                                  <ExternalLink className="h-2.5 w-2.5" /> Entrar na reunião
                                 </a>
                               )}
                             </div>
