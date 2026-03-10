@@ -845,7 +845,7 @@ export function CalendarSection() {
             <Badge variant="destructive" className="gap-1"><Bell className="h-3 w-3" /> {myInvites.length} convite(s)</Badge>
           )}
           <Button variant="outline" size="sm" onClick={goToToday}>Hoje</Button>
-          <Button variant="outline" size="sm" onClick={() => openCreateMeeting(selectedDate)} className="gap-1">
+          <Button variant="outline" size="sm" onClick={() => handleMeetingButtonClick(selectedDate)} className="gap-1">
             <Video className="h-3.5 w-3.5" /> Reunião
           </Button>
           <Button size="sm" onClick={() => openCreateEvent(selectedDate)} className="gap-1">
