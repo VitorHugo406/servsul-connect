@@ -1120,7 +1120,7 @@ function WidgetRenderer({
   onChangeChartVariant: (v: ChartVariant) => void;
   onToggleCompare: () => void;
 }) {
-  const statTypes: WidgetType[] = ['pending_tasks', 'completed_tasks', 'late_tasks', 'monthly_score', 'messages_sent'];
+  const statTypes: WidgetType[] = ['pending_tasks', 'completed_tasks', 'late_tasks', 'monthly_score', 'messages_sent', 'completion_rate', 'avg_completion_time'];
   if (statTypes.includes(widget.type)) {
     return (
       <StatWidget
