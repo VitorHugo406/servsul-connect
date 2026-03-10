@@ -3,7 +3,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, ChevronDown, ChevronRight, BookOpen, Database, Code2, Layers, Shield, Zap, Users, MessageSquare, Bell, ListTodo, CalendarDays, FileText, HardDrive, Building2, Sparkles, Mail, Cake, Home, Settings, Trash2, Eye, Lock, Server, Globe, Smartphone } from 'lucide-react';
+import { Download, ChevronDown, ChevronRight, BookOpen, Database, Code2, Layers, Shield, Zap, Users, MessageSquare, Bell, ListTodo, CalendarDays, FileText, HardDrive, Building2, Sparkles, Mail, Cake, Home, Settings, Trash2, Eye, Lock, Server, Globe, Smartphone, BarChart2, Siren, Trophy } from 'lucide-react';
 import logoServsul from '@/assets/logo-servsul.png';
 import appLogo from '@/assets/app-logo.png';
 import { cn } from '@/lib/utils';
@@ -153,18 +153,21 @@ function generateDocumentationPDF() {
   // =============================================
   drawPageDecoration();
   
-  // Large decorative circle
-  doc.setFillColor(239, 246, 255);
-  doc.circle(pageW / 2, 85, 40, 'F');
-  doc.setFillColor(219, 234, 254);
-  doc.circle(pageW / 2, 85, 28, 'F');
-  doc.setFillColor(...BLUE);
-  doc.circle(pageW / 2, 85, 16, 'F');
-
-  // Icon-like text inside circle
-  doc.setFontSize(18);
-  doc.setTextColor(...WHITE);
-  doc.text('SC', pageW / 2, 89, { align: 'center' });
+  // Add logo image
+  const logoImg = new Image();
+  logoImg.src = appLogo;
+  try {
+    doc.addImage(logoImg, 'PNG', pageW / 2 - 18, 55, 36, 36);
+  } catch {
+    // Fallback: draw circle with text if image fails
+    doc.setFillColor(239, 246, 255);
+    doc.circle(pageW / 2, 73, 20, 'F');
+    doc.setFillColor(...BLUE);
+    doc.circle(pageW / 2, 73, 14, 'F');
+    doc.setFontSize(14);
+    doc.setTextColor(...WHITE);
+    doc.text('SC', pageW / 2, 77, { align: 'center' });
+  }
 
   doc.setFontSize(32);
   doc.setTextColor(...DARK);
@@ -442,6 +445,12 @@ function generateDocumentationPDF() {
     ['📄 Logs do Sistema', 'LogsSection.tsx', 'Audit logs com filtros por ação, tabela, data, usuário (admin)'],
     ['💾 Armazenamento', 'StorageMonitoringSection.tsx', 'Monitoramento de buckets e uso de espaço (admin)'],
     ['🎉 Eventos Mensais', 'EventHistorySection.tsx', 'Histórico de campanhas e eventos sazonais com efeitos visuais'],
+    ['📊 Meu Painel', 'MyDashboardSection.tsx', 'Dashboard pessoal com widgets configuráveis: gráficos (pizza, rosca, barra, linha, área), métricas de produtividade, comparação entre períodos'],
+    ['🚨 Sala de Guerra', 'WarRoomSection.tsx', 'Sala de emergência com alarme, membros convocados, chat dedicado e tarefa vinculada'],
+    ['📋 Decisões de Tarefas', 'TaskDetailDialog.tsx', 'Registro formal de decisões dentro de cards com data e responsável'],
+    ['📬 Resumos Agendados', 'ScheduledSummaryConfig.tsx', 'Envio automático de resumos de produtividade por DM (diário/semanal/mensal)'],
+    ['🤖 Chatbot', 'ChatbotWidget.tsx', 'Assistente inteligente integrado para suporte interno'],
+    ['🏆 Pontuação Mensal', 'ScorePanel.tsx', 'Ranking de membros por quadro com pontuação baseada em tarefas concluídas'],
   ], [30, 42, contentW - 72]);
 
   // =============================================
@@ -961,6 +970,9 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                 <InfoCard icon={Trash2} title="Exclusão de Dados" value="Exclusão controlada com auditoria automática" />
                 <InfoCard icon={FileText} title="Logs do Sistema" value="Audit logs com filtros (admin principal)" />
                 <InfoCard icon={HardDrive} title="Armazenamento" value="Monitoramento de storage (admin principal)" />
+                <InfoCard icon={BarChart2} title="Meu Painel" value="Dashboard pessoal com widgets, gráficos e comparações" color="text-primary" />
+                <InfoCard icon={Siren} title="Sala de Guerra" value="Emergência com alarme, chat e tarefa vinculada" color="text-destructive" />
+                <InfoCard icon={Trophy} title="Pontuação Mensal" value="Ranking de produtividade por quadro" color="text-warning" />
               </div>
             </CollapsibleSection>
           </div>

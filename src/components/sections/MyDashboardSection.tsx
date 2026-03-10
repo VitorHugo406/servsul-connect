@@ -5,6 +5,8 @@ import {
   Bar,
   LineChart,
   Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -51,11 +53,14 @@ type WidgetType =
   | 'monthly_score'
   | 'score_comparison'
   | 'completed_tasks'
-  | 'tasks_pie';
+  | 'tasks_pie'
+  | 'tasks_by_priority'
+  | 'completion_rate'
+  | 'avg_completion_time';
 
 type WidgetSize = 'sm' | 'md' | 'lg';
 
-type ChartVariant = 'bar' | 'line' | 'pie';
+type ChartVariant = 'bar' | 'line' | 'pie' | 'area' | 'donut';
 
 interface Widget {
   id: string;
@@ -138,6 +143,27 @@ const WIDGET_DEFS: WidgetDef[] = [
     icon: <BarChart2 className="h-5 w-5" />,
     defaultSize: 'lg',
   },
+  {
+    type: 'tasks_by_priority',
+    label: 'Tarefas por Prioridade',
+    description: 'Distribuição por nível de prioridade',
+    icon: <AlertTriangle className="h-5 w-5" />,
+    defaultSize: 'md',
+  },
+  {
+    type: 'completion_rate',
+    label: 'Taxa de Conclusão',
+    description: 'Percentual de tarefas concluídas no período',
+    icon: <CheckCircle2 className="h-5 w-5" />,
+    defaultSize: 'sm',
+  },
+  {
+    type: 'avg_completion_time',
+    label: 'Tempo Médio de Conclusão',
+    description: 'Dias médios para concluir uma tarefa',
+    icon: <Clock className="h-5 w-5" />,
+    defaultSize: 'sm',
+  },
 ];
 
 const DATE_RANGES = [
@@ -186,22 +212,23 @@ function generateId() {
 const STORAGE_KEY = 'meu_painel_widgets';
 
 function getAllowedChartVariants(type: WidgetType): ChartVariant[] {
-  if (type === 'tasks_by_status' || type === 'tasks_pie') return ['bar', 'pie'];
-  if (type === 'tasks_timeline') return ['line', 'bar'];
-  if (type === 'score_comparison') return ['bar', 'line'];
+  if (type === 'tasks_by_status' || type === 'tasks_pie' || type === 'tasks_by_priority') return ['bar', 'pie', 'donut'];
+  if (type === 'tasks_timeline') return ['line', 'bar', 'area'];
+  if (type === 'score_comparison') return ['bar', 'line', 'area'];
   return ['bar'];
 }
 
 function getDefaultChartVariant(type: WidgetType): ChartVariant | undefined {
   if (type === 'tasks_by_status') return 'bar';
   if (type === 'tasks_pie') return 'pie';
+  if (type === 'tasks_by_priority') return 'donut';
   if (type === 'tasks_timeline') return 'line';
   if (type === 'score_comparison') return 'bar';
   return undefined;
 }
 
 function widgetSupportsCompare(type: WidgetType) {
-  return ['pending_tasks', 'completed_tasks', 'late_tasks', 'messages_sent', 'tasks_by_status', 'tasks_timeline', 'tasks_pie'].includes(type);
+  return ['pending_tasks', 'completed_tasks', 'late_tasks', 'messages_sent', 'tasks_by_status', 'tasks_timeline', 'tasks_pie', 'tasks_by_priority', 'completion_rate', 'avg_completion_time'].includes(type);
 }
 
 function normalizeWidget(w: Widget): Widget {
@@ -573,6 +600,103 @@ function useWidgetData(widget: Widget, profileId: string | undefined) {
               })),
             );
         }
+
+        else if (widget.type === 'tasks_by_priority') {
+          const priorityLabels: Record<string, string> = { low: 'Baixa', medium: 'Média', high: 'Alta', urgent: 'Urgente' };
+          const fetchByPriority = async (rangeFrom: string, rangeTo: string) => {
+            const { data: tasks } = await supabase
+              .from('tasks')
+              .select('priority')
+              .or(buildAssignedTasksOr(profileId, extraTaskIds))
+              .gte('created_at', rangeFrom)
+              .lte('created_at', rangeTo);
+            const map: Record<string, number> = {};
+            for (const t of tasks || []) {
+              const label = priorityLabels[t.priority] || t.priority;
+              map[label] = (map[label] || 0) + 1;
+            }
+            return map;
+          };
+
+          const [currMap, prevMap] = await Promise.all([
+            fetchByPriority(fromIso, toIso),
+            widget.comparePrev && prevFromIso && prevToIso ? fetchByPriority(prevFromIso, prevToIso) : Promise.resolve({} as Record<string, number>),
+          ]);
+
+          if (widget.comparePrev) {
+            const keys = Array.from(new Set([...Object.keys(currMap), ...Object.keys(prevMap)])).sort();
+            if (!cancelled) setData(keys.map((name) => ({ name, atual: currMap[name] ?? 0, anterior: prevMap[name] ?? 0 })));
+          } else {
+            const keys = Object.keys(currMap).sort();
+            if (!cancelled) setData(keys.map((name) => ({ name, value: currMap[name] ?? 0 })));
+          }
+        }
+
+        else if (widget.type === 'completion_rate') {
+          const { data: allTasks } = await supabase
+            .from('tasks')
+            .select('completed_at')
+            .or(buildAssignedTasksOr(profileId, extraTaskIds))
+            .gte('created_at', fromIso)
+            .lte('created_at', toIso);
+
+          const total = allTasks?.length || 0;
+          const completed = allTasks?.filter(t => t.completed_at).length || 0;
+          const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+          if (widget.comparePrev && prevFromIso && prevToIso) {
+            const { data: prevTasks } = await supabase
+              .from('tasks')
+              .select('completed_at')
+              .or(buildAssignedTasksOr(profileId, extraTaskIds))
+              .gte('created_at', prevFromIso)
+              .lte('created_at', prevToIso);
+
+            const prevTotal = prevTasks?.length || 0;
+            const prevCompleted = prevTasks?.filter(t => t.completed_at).length || 0;
+            const prevRate = prevTotal > 0 ? Math.round((prevCompleted / prevTotal) * 100) : 0;
+            if (!cancelled) setData({ value: rate, previous: prevRate, suffix: '%' });
+          } else {
+            if (!cancelled) setData({ value: rate, suffix: '%' });
+          }
+        }
+
+        else if (widget.type === 'avg_completion_time') {
+          const { data: tasks } = await supabase
+            .from('tasks')
+            .select('created_at, completed_at')
+            .or(buildAssignedTasksOr(profileId, extraTaskIds))
+            .not('completed_at', 'is', null)
+            .gte('completed_at', fromIso)
+            .lte('completed_at', toIso);
+
+          const diffs = (tasks || []).map(t => {
+            const created = new Date(t.created_at).getTime();
+            const completed = new Date(t.completed_at!).getTime();
+            return (completed - created) / (1000 * 60 * 60 * 24); // days
+          });
+          const avg = diffs.length ? Math.round((diffs.reduce((a, b) => a + b, 0) / diffs.length) * 10) / 10 : 0;
+
+          if (widget.comparePrev && prevFromIso && prevToIso) {
+            const { data: prevTasks } = await supabase
+              .from('tasks')
+              .select('created_at, completed_at')
+              .or(buildAssignedTasksOr(profileId, extraTaskIds))
+              .not('completed_at', 'is', null)
+              .gte('completed_at', prevFromIso)
+              .lte('completed_at', prevToIso);
+
+            const prevDiffs = (prevTasks || []).map(t => {
+              const created = new Date(t.created_at).getTime();
+              const completed = new Date(t.completed_at!).getTime();
+              return (completed - created) / (1000 * 60 * 60 * 24);
+            });
+            const prevAvg = prevDiffs.length ? Math.round((prevDiffs.reduce((a, b) => a + b, 0) / prevDiffs.length) * 10) / 10 : 0;
+            if (!cancelled) setData({ value: avg, previous: prevAvg, suffix: 'd' });
+          } else {
+            if (!cancelled) setData({ value: avg, suffix: 'd' });
+          }
+        }
       } catch (e) {
         console.error('Widget data error', e);
       } finally {
@@ -621,6 +745,8 @@ function StatWidget({
     late_tasks: 'text-destructive',
     monthly_score: 'text-primary',
     messages_sent: 'text-secondary',
+    completion_rate: 'text-success',
+    avg_completion_time: 'text-primary',
   };
 
   const bgMap: Partial<Record<WidgetType, string>> = {
@@ -629,6 +755,8 @@ function StatWidget({
     late_tasks: 'bg-destructive/10',
     monthly_score: 'bg-primary/10',
     messages_sent: 'bg-secondary/10',
+    completion_rate: 'bg-success/10',
+    avg_completion_time: 'bg-primary/10',
   };
 
   const currentValue = data?.value ?? 0;
@@ -652,10 +780,12 @@ function StatWidget({
           <div className="h-8 w-16 animate-pulse rounded bg-muted" />
         ) : (
           <div className="flex flex-col items-center gap-1">
-            <p className={cn('text-4xl font-bold tabular-nums', colorMap[widget.type] || 'text-foreground')}>{currentValue}</p>
+            <p className={cn('text-4xl font-bold tabular-nums', colorMap[widget.type] || 'text-foreground')}>
+              {currentValue}{data?.suffix || ''}
+            </p>
             {widget.comparePrev && widgetSupportsCompare(widget.type) ? (
               <p className="text-[10px] text-muted-foreground">
-                Anterior: {previousValue} ({formatDelta(currentValue, previousValue)})
+                Anterior: {previousValue}{data?.suffix || ''} ({formatDelta(currentValue, previousValue)})
               </p>
             ) : null}
           </div>
@@ -712,7 +842,7 @@ function WidgetControls({
             <SelectContent>
               {allowedVariants.map((v) => (
                 <SelectItem key={v} value={v} className="text-xs">
-                  {v === 'bar' ? 'Barra' : v === 'line' ? 'Linha' : 'Pizza'}
+                  {v === 'bar' ? 'Barra' : v === 'line' ? 'Linha' : v === 'pie' ? 'Pizza' : v === 'donut' ? 'Rosca' : 'Área'}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -791,8 +921,8 @@ function ChartWidget({
   const effectiveVariant: ChartVariant = useMemo(() => {
     const allowed = getAllowedChartVariants(widget.type);
     const v = widget.chartVariant || getDefaultChartVariant(widget.type) || allowed[0] || 'bar';
-    // comparação não fica legível em pizza
-    if (widget.comparePrev && v === 'pie') return 'bar';
+    // comparação não fica legível em pizza/donut
+    if (widget.comparePrev && (v === 'pie' || v === 'donut')) return 'bar';
     return v;
   }, [widget.type, widget.chartVariant, widget.comparePrev]);
 
@@ -990,7 +1120,7 @@ function WidgetRenderer({
   onChangeChartVariant: (v: ChartVariant) => void;
   onToggleCompare: () => void;
 }) {
-  const statTypes: WidgetType[] = ['pending_tasks', 'completed_tasks', 'late_tasks', 'monthly_score', 'messages_sent'];
+  const statTypes: WidgetType[] = ['pending_tasks', 'completed_tasks', 'late_tasks', 'monthly_score', 'messages_sent', 'completion_rate', 'avg_completion_time'];
   if (statTypes.includes(widget.type)) {
     return (
       <StatWidget
