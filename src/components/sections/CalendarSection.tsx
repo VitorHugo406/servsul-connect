@@ -597,16 +597,28 @@ export function CalendarSection() {
                     </div>
                   </div>
 
-                  {/* Meeting link */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Link2 className="h-4 w-4" />
-                      <span>Link da reunião</span>
+                  {/* Meeting link - only for external meetings */}
+                  {meetingType !== 'servchat' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Link2 className="h-4 w-4" />
+                        <span>Link da reunião</span>
+                      </div>
+                      <div className="pl-6">
+                        <Input value={meetingLink} onChange={e => { setMeetingLink(e.target.value); setHasUnsavedChanges(true); }} placeholder="https://meet.google.com/..." className="h-9" />
+                      </div>
                     </div>
+                  )}
+                  {meetingType === 'servchat' && !editingEvent && (
                     <div className="pl-6">
-                      <Input value={meetingLink} onChange={e => { setMeetingLink(e.target.value); setHasUnsavedChanges(true); }} placeholder="https://meet.google.com/..." className="h-9" />
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                        <MonitorPlay className="h-4 w-4 text-primary flex-shrink-0" />
+                        <p className="text-xs text-muted-foreground">
+                          O link da reunião será gerado automaticamente pelo ServChat Conference ao agendar.
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Description */}
                   <div className="space-y-2">
