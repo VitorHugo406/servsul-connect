@@ -831,6 +831,59 @@ export function CalendarSection() {
     );
   }
 
+  // ========== MEETING TYPE SELECTOR ==========
+  if (showMeetingTypeSelector) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full items-center justify-center p-6">
+        <div className="max-w-md w-full space-y-6">
+          <div className="text-center space-y-2">
+            <Video className="h-10 w-10 mx-auto text-primary" />
+            <h2 className="text-xl font-bold text-foreground">Agendar Reunião</h2>
+            <p className="text-sm text-muted-foreground">Escolha o tipo de reunião:</p>
+          </div>
+
+          <div className="grid gap-3">
+            {/* Option 1: Google Meet / Manual Link */}
+            <button
+              onClick={() => openCreateMeeting(selectedDate, 'external')}
+              className="flex items-start gap-4 p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
+            >
+              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10">
+                <Link2 className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Google Meet ou Link Manual</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Cole um link externo (Google Meet, Zoom, Teams, etc.)
+                </p>
+              </div>
+            </button>
+
+            {/* Option 2: ServChat Conference */}
+            <button
+              onClick={() => openCreateMeeting(selectedDate, 'servchat')}
+              className="flex items-start gap-4 p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
+            >
+              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10">
+                <MonitorPlay className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">ServChat Conference</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Crie uma sala de reunião interna com link gerado automaticamente
+                </p>
+              </div>
+            </button>
+          </div>
+
+          <Button variant="outline" className="w-full" onClick={() => setShowMeetingTypeSelector(false)}>
+            Cancelar
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
   // ========== MAIN CALENDAR VIEW ==========
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full overflow-hidden">
