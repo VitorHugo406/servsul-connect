@@ -32,6 +32,7 @@ const moreNavItems = [
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
   { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
   { id: 'system-logs', icon: FileText, label: 'Logs do Sistema', mainAdminOnly: true },
+  { id: 'api-management', icon: Globe, label: 'API Integração', supervisorOnly: true },
 ];
 
 export function MobileNavigation({ activeSection, onSectionChange }: MobileNavigationProps) {
