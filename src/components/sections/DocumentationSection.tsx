@@ -1232,6 +1232,45 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
             </CollapsibleSection>
           </div>
 
+          {/* 13. API de Integração */}
+          <div id="doc-api" className="scroll-mt-4">
+            <CollapsibleSection title="13. API de Integração Externa" icon={Globe}>
+              <p>O sistema possui uma API REST completa para integração com sistemas externos, dashboards de BI e painéis analíticos.</p>
+              
+              <h4 className="font-semibold mt-3 text-xs">Segurança:</h4>
+              <ul className="list-disc pl-5 space-y-1 text-xs">
+                <li>Autenticação via <code>X-API-KEY</code> e <code>X-API-TOKEN</code></li>
+                <li>Credenciais exibidas apenas uma vez na criação</li>
+                <li>Integrações podem ser ativadas/desativadas/excluídas</li>
+                <li>Logs de acesso e auditoria completa</li>
+              </ul>
+
+              <h4 className="font-semibold mt-3 text-xs">Endpoints:</h4>
+              <div className="border border-border rounded-md overflow-hidden">
+                {[
+                  ['GET', '/metrics/general', 'Métricas gerais'],
+                  ['GET', '/metrics/users', 'Métricas por usuário'],
+                  ['GET', '/metrics/departments', 'Por departamento'],
+                  ['GET', '/metrics/teams', 'Por equipe'],
+                  ['GET', '/tasks/summary', 'Resumo de tarefas'],
+                  ['GET', '/messages/summary', 'Resumo de mensagens'],
+                ].map(([method, path, desc]) => (
+                  <div key={path} className="flex border-b border-border last:border-0 text-xs">
+                    <div className="w-12 px-2 py-1.5 bg-muted/20 font-mono font-medium">{method}</div>
+                    <div className="w-1/2 px-2 py-1.5 font-mono">{path}</div>
+                    <div className="flex-1 px-2 py-1.5 text-muted-foreground">{desc}</div>
+                  </div>
+                ))}
+              </div>
+
+              <h4 className="font-semibold mt-3 text-xs">Filtros disponíveis:</h4>
+              <CodeBlock>{`?start_date=2024-01-01&end_date=2024-12-31&status=completed`}</CodeBlock>
+
+              <h4 className="font-semibold mt-3 text-xs">Nome de Equipe:</h4>
+              <p>Gestores podem nomear suas equipes na aba Gestão de Pessoas. O nome da equipe é enviado pela API nos endpoints de métricas.</p>
+            </CollapsibleSection>
+          </div>
+
           {/* Footer */}
           <div className="text-center pt-6 pb-4 border-t border-border text-xs text-muted-foreground space-y-1">
             <div className="flex items-center justify-center gap-2">
