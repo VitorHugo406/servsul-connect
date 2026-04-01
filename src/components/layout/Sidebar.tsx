@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, LayoutDashboard } from 'lucide-react';
+import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, LayoutDashboard, Globe } from 'lucide-react';
 import logoServsul from '@/assets/logo-servsul.png';
 import { 
   MessageSquare, 

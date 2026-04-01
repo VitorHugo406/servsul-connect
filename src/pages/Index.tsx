@@ -182,6 +182,8 @@ const Index = () => {
            return <DocumentationSection />;
          case 'war-room':
            return <WarRoomSection />;
+         case 'api-management':
+           return <ApiManagementSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }
