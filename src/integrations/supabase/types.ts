@@ -129,6 +129,115 @@ export type Database = {
           },
         ]
       }
+      api_access_logs: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          integration_id: string
+          ip_address: string | null
+          method: string
+          status_code: number
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          integration_id: string
+          ip_address?: string | null
+          method: string
+          status_code: number
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          integration_id?: string
+          ip_address?: string | null
+          method?: string
+          status_code?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_access_logs_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "api_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_integration_history: {
+        Row: {
+          action: string
+          created_at: string
+          details: string | null
+          id: string
+          integration_id: string
+          performed_by: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          integration_id: string
+          performed_by: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          integration_id?: string
+          performed_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_integration_history_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "api_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_integrations: {
+        Row: {
+          api_key: string
+          api_token_hash: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          api_key: string
+          api_token_hash: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string
+          api_token_hash?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attachments: {
         Row: {
           announcement_id: string | null
@@ -1085,18 +1194,21 @@ export type Database = {
           id: string
           member_profile_id: string
           supervisor_id: string
+          team_name: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           member_profile_id: string
           supervisor_id: string
+          team_name?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           member_profile_id?: string
           supervisor_id?: string
+          team_name?: string | null
         }
         Relationships: [
           {

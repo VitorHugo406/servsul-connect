@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search, CalendarDays, AlertTriangle, Bell, X, Trophy, CheckCheck, Filter } from 'lucide-react';
+import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search, CalendarDays, AlertTriangle, Bell, X, Trophy, CheckCheck, Filter, Edit2, Save } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,7 +34,7 @@ const CHART_COLORS = [
 ];
 
 export function PeopleManagementSection() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const isMobile = useIsMobile();
   const { members, loading, addMember, removeMember } = useSupervisorTeam();
   const memberIds = members.map(m => m.member_profile_id);
@@ -46,6 +46,44 @@ export function PeopleManagementSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
+  const [teamName, setTeamName] = useState('');
+  const [editingTeamName, setEditingTeamName] = useState(false);
+  const [savingTeamName, setSavingTeamName] = useState(false);
+
+  // Load team name from first member's record
+  useEffect(() => {
+    if (members.length > 0) {
+      const loadTeamName = async () => {
+        if (!user) return;
+        const { data } = await supabase
+          .from('supervisor_team_members')
+          .select('team_name')
+          .eq('supervisor_id', user.id)
+          .limit(1)
+          .maybeSingle();
+        if (data?.team_name) setTeamName(data.team_name);
+      };
+      loadTeamName();
+    }
+  }, [members, user]);
+
+  const saveTeamName = async () => {
+    if (!user) return;
+    setSavingTeamName(true);
+    try {
+      const { error } = await supabase
+        .from('supervisor_team_members')
+        .update({ team_name: teamName.trim() || null })
+        .eq('supervisor_id', user.id);
+      if (error) throw error;
+      toast({ title: 'Nome da equipe atualizado.' });
+      setEditingTeamName(false);
+    } catch (e) {
+      toast({ title: 'Erro', description: 'Não foi possível salvar.', variant: 'destructive' });
+    } finally {
+      setSavingTeamName(false);
+    }
+  };
 
   const getInitials = (name: string) =>
     name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
@@ -126,8 +164,34 @@ export function PeopleManagementSection() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-6 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="font-display text-2xl font-bold text-foreground">Gestão de Pessoas</h3>
-          <p className="text-muted-foreground">Gerencie sua equipe e acompanhe métricas</p>
+          <div className="flex items-center gap-3">
+            <h3 className="font-display text-2xl font-bold text-foreground">Gestão de Pessoas</h3>
+            {editingTeamName ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={teamName}
+                  onChange={e => setTeamName(e.target.value)}
+                  placeholder="Nome da equipe..."
+                  className="h-8 w-48 text-sm"
+                  onKeyDown={e => e.key === 'Enter' && saveTeamName()}
+                />
+                <Button size="icon" className="h-8 w-8" onClick={saveTeamName} disabled={savingTeamName}>
+                  <Save className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamName(false)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <Button size="sm" variant="ghost" className="gap-1.5 text-xs text-muted-foreground" onClick={() => setEditingTeamName(true)}>
+                <Edit2 className="h-3 w-3" />
+                {teamName || 'Nomear equipe'}
+              </Button>
+            )}
+          </div>
+          <p className="text-muted-foreground">
+            {teamName ? `Equipe: ${teamName}` : 'Gerencie sua equipe e acompanhe métricas'}
+          </p>
         </div>
         <Button onClick={openAddDialog} className="gap-2">
           <UserPlus className="h-4 w-4" />

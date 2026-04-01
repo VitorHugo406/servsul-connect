@@ -650,6 +650,59 @@ function generateDocumentationPDF() {
   ], [32, 38, 28, contentW - 98]);
 
   // =============================================
+  // 13. API DE INTEGRAÇÃO
+  // =============================================
+  addPage();
+  sectionTitle('13', 'API de Integração Externa');
+  bodyText('O sistema possui uma API REST completa para integração com sistemas externos, dashboards de BI e painéis analíticos. A API é gerenciada através de uma aba administrativa exclusiva.');
+
+  subTitle('Segurança e Autenticação');
+  bulletList([
+    'Autenticação via headers X-API-KEY e X-API-TOKEN',
+    'Credenciais geradas pelo sistema e exibidas apenas uma vez',
+    'Integrações podem ser ativadas, desativadas ou excluídas',
+    'Regeneração de credenciais invalida as anteriores',
+    'Logs completos de acesso e auditoria',
+  ]);
+
+  subTitle('Endpoints Disponíveis');
+  addTable([['Método', 'Endpoint', 'Descrição']], [
+    ['GET', '/metrics/general', 'Métricas gerais do sistema'],
+    ['GET', '/metrics/users', 'Métricas por usuário'],
+    ['GET', '/metrics/users/:id', 'Métricas de um usuário específico'],
+    ['GET', '/metrics/departments', 'Métricas por departamento'],
+    ['GET', '/metrics/departments/:id', 'Métricas de um departamento'],
+    ['GET', '/metrics/teams', 'Métricas por equipe'],
+    ['GET', '/metrics/teams/:id', 'Métricas de uma equipe'],
+    ['GET', '/tasks/summary', 'Resumo de tarefas'],
+    ['GET', '/messages/summary', 'Resumo de mensagens'],
+  ], [20, 55, contentW - 75]);
+
+  subTitle('Filtros Disponíveis');
+  bulletList([
+    'start_date e end_date — filtros por período',
+    'status — filtrar por status da tarefa (completed, pending, late)',
+    'Todos os endpoints aceitam filtros via query params',
+  ]);
+
+  subTitle('Dados Retornados por Usuário');
+  bulletList([
+    'Total de mensagens enviadas e recebidas',
+    'Tarefas atribuídas, concluídas, pendentes e atrasadas',
+    'Departamento e equipe do usuário',
+    'Produtividade geral (%)',
+    'Último acesso e status atual',
+  ]);
+
+  subTitle('Gestão Administrativa');
+  bulletList([
+    'Criação, ativação, desativação e exclusão de integrações',
+    'Regeneração de credenciais com invalidação das anteriores',
+    'Histórico completo de alterações por integração',
+    'Acesso restrito a admins, supervisores e gestores',
+  ]);
+
+  // =============================================
   // FINAL FOOTER
   // =============================================
   checkPage(25);
@@ -1176,6 +1229,45 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
     filter: \`board_id=eq.\${boardId}\`
   }, () => fetchTasks())
   .subscribe();`}</CodeBlock>
+            </CollapsibleSection>
+          </div>
+
+          {/* 13. API de Integração */}
+          <div id="doc-api" className="scroll-mt-4">
+            <CollapsibleSection title="13. API de Integração Externa" icon={Globe}>
+              <p>O sistema possui uma API REST completa para integração com sistemas externos, dashboards de BI e painéis analíticos.</p>
+              
+              <h4 className="font-semibold mt-3 text-xs">Segurança:</h4>
+              <ul className="list-disc pl-5 space-y-1 text-xs">
+                <li>Autenticação via <code>X-API-KEY</code> e <code>X-API-TOKEN</code></li>
+                <li>Credenciais exibidas apenas uma vez na criação</li>
+                <li>Integrações podem ser ativadas/desativadas/excluídas</li>
+                <li>Logs de acesso e auditoria completa</li>
+              </ul>
+
+              <h4 className="font-semibold mt-3 text-xs">Endpoints:</h4>
+              <div className="border border-border rounded-md overflow-hidden">
+                {[
+                  ['GET', '/metrics/general', 'Métricas gerais'],
+                  ['GET', '/metrics/users', 'Métricas por usuário'],
+                  ['GET', '/metrics/departments', 'Por departamento'],
+                  ['GET', '/metrics/teams', 'Por equipe'],
+                  ['GET', '/tasks/summary', 'Resumo de tarefas'],
+                  ['GET', '/messages/summary', 'Resumo de mensagens'],
+                ].map(([method, path, desc]) => (
+                  <div key={path} className="flex border-b border-border last:border-0 text-xs">
+                    <div className="w-12 px-2 py-1.5 bg-muted/20 font-mono font-medium">{method}</div>
+                    <div className="w-1/2 px-2 py-1.5 font-mono">{path}</div>
+                    <div className="flex-1 px-2 py-1.5 text-muted-foreground">{desc}</div>
+                  </div>
+                ))}
+              </div>
+
+              <h4 className="font-semibold mt-3 text-xs">Filtros disponíveis:</h4>
+              <CodeBlock>{`?start_date=2024-01-01&end_date=2024-12-31&status=completed`}</CodeBlock>
+
+              <h4 className="font-semibold mt-3 text-xs">Nome de Equipe:</h4>
+              <p>Gestores podem nomear suas equipes na aba Gestão de Pessoas. O nome da equipe é enviado pela API nos endpoints de métricas.</p>
             </CollapsibleSection>
           </div>
 

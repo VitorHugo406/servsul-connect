@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.servchat-conference]
 verify_jwt = false
+
+[functions.api-integrations]
+verify_jwt = false
