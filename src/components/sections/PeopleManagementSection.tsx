@@ -46,6 +46,44 @@ export function PeopleManagementSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
+  const [teamName, setTeamName] = useState('');
+  const [editingTeamName, setEditingTeamName] = useState(false);
+  const [savingTeamName, setSavingTeamName] = useState(false);
+
+  // Load team name from first member's record
+  useEffect(() => {
+    if (members.length > 0) {
+      const loadTeamName = async () => {
+        if (!user) return;
+        const { data } = await supabase
+          .from('supervisor_team_members')
+          .select('team_name')
+          .eq('supervisor_id', user.id)
+          .limit(1)
+          .maybeSingle();
+        if (data?.team_name) setTeamName(data.team_name);
+      };
+      loadTeamName();
+    }
+  }, [members, user]);
+
+  const saveTeamName = async () => {
+    if (!user) return;
+    setSavingTeamName(true);
+    try {
+      const { error } = await supabase
+        .from('supervisor_team_members')
+        .update({ team_name: teamName.trim() || null })
+        .eq('supervisor_id', user.id);
+      if (error) throw error;
+      toast({ title: 'Nome da equipe atualizado.' });
+      setEditingTeamName(false);
+    } catch (e) {
+      toast({ title: 'Erro', description: 'Não foi possível salvar.', variant: 'destructive' });
+    } finally {
+      setSavingTeamName(false);
+    }
+  };
 
   const getInitials = (name: string) =>
     name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
