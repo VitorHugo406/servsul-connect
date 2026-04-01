@@ -164,8 +164,34 @@ export function PeopleManagementSection() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-6 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="font-display text-2xl font-bold text-foreground">Gestão de Pessoas</h3>
-          <p className="text-muted-foreground">Gerencie sua equipe e acompanhe métricas</p>
+          <div className="flex items-center gap-3">
+            <h3 className="font-display text-2xl font-bold text-foreground">Gestão de Pessoas</h3>
+            {editingTeamName ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={teamName}
+                  onChange={e => setTeamName(e.target.value)}
+                  placeholder="Nome da equipe..."
+                  className="h-8 w-48 text-sm"
+                  onKeyDown={e => e.key === 'Enter' && saveTeamName()}
+                />
+                <Button size="icon" className="h-8 w-8" onClick={saveTeamName} disabled={savingTeamName}>
+                  <Save className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamName(false)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <Button size="sm" variant="ghost" className="gap-1.5 text-xs text-muted-foreground" onClick={() => setEditingTeamName(true)}>
+                <Edit2 className="h-3 w-3" />
+                {teamName || 'Nomear equipe'}
+              </Button>
+            )}
+          </div>
+          <p className="text-muted-foreground">
+            {teamName ? `Equipe: ${teamName}` : 'Gerencie sua equipe e acompanhe métricas'}
+          </p>
         </div>
         <Button onClick={openAddDialog} className="gap-2">
           <UserPlus className="h-4 w-4" />
