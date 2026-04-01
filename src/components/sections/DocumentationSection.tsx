@@ -650,6 +650,59 @@ function generateDocumentationPDF() {
   ], [32, 38, 28, contentW - 98]);
 
   // =============================================
+  // 13. API DE INTEGRAÇÃO
+  // =============================================
+  addPage();
+  sectionTitle('13', 'API de Integração Externa');
+  bodyText('O sistema possui uma API REST completa para integração com sistemas externos, dashboards de BI e painéis analíticos. A API é gerenciada através de uma aba administrativa exclusiva.');
+
+  subTitle('Segurança e Autenticação');
+  bulletList([
+    'Autenticação via headers X-API-KEY e X-API-TOKEN',
+    'Credenciais geradas pelo sistema e exibidas apenas uma vez',
+    'Integrações podem ser ativadas, desativadas ou excluídas',
+    'Regeneração de credenciais invalida as anteriores',
+    'Logs completos de acesso e auditoria',
+  ]);
+
+  subTitle('Endpoints Disponíveis');
+  addTable([['Método', 'Endpoint', 'Descrição']], [
+    ['GET', '/metrics/general', 'Métricas gerais do sistema'],
+    ['GET', '/metrics/users', 'Métricas por usuário'],
+    ['GET', '/metrics/users/:id', 'Métricas de um usuário específico'],
+    ['GET', '/metrics/departments', 'Métricas por departamento'],
+    ['GET', '/metrics/departments/:id', 'Métricas de um departamento'],
+    ['GET', '/metrics/teams', 'Métricas por equipe'],
+    ['GET', '/metrics/teams/:id', 'Métricas de uma equipe'],
+    ['GET', '/tasks/summary', 'Resumo de tarefas'],
+    ['GET', '/messages/summary', 'Resumo de mensagens'],
+  ], [20, 55, contentW - 75]);
+
+  subTitle('Filtros Disponíveis');
+  bulletList([
+    'start_date e end_date — filtros por período',
+    'status — filtrar por status da tarefa (completed, pending, late)',
+    'Todos os endpoints aceitam filtros via query params',
+  ]);
+
+  subTitle('Dados Retornados por Usuário');
+  bulletList([
+    'Total de mensagens enviadas e recebidas',
+    'Tarefas atribuídas, concluídas, pendentes e atrasadas',
+    'Departamento e equipe do usuário',
+    'Produtividade geral (%)',
+    'Último acesso e status atual',
+  ]);
+
+  subTitle('Gestão Administrativa');
+  bulletList([
+    'Criação, ativação, desativação e exclusão de integrações',
+    'Regeneração de credenciais com invalidação das anteriores',
+    'Histórico completo de alterações por integração',
+    'Acesso restrito a admins, supervisores e gestores',
+  ]);
+
+  // =============================================
   // FINAL FOOTER
   // =============================================
   checkPage(25);
