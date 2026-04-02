@@ -137,10 +137,8 @@ export function useMessages(sectorId: string | null) {
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            // Add new message directly without full refetch
             const newMessage = payload.new as Message;
             setMessages(prev => {
-              // Check if we already have this message (from optimistic update)
               const existingIndex = prev.findIndex(m => 
                 m.id === newMessage.id || 
                 (m.id.startsWith('temp-') && 
@@ -148,19 +146,26 @@ export function useMessages(sectorId: string | null) {
                  m.author_id === newMessage.author_id)
               );
               
-                 if (existingIndex >= 0) {
-                 // Replace temp message with real one, keep author/reply info from optimistic
-                 const updated = [...prev];
-                 updated[existingIndex] = {
-                   ...newMessage,
-                   author: prev[existingIndex].author,
-                   reply_to: prev[existingIndex].reply_to,
-                   status: 'delivered',
-                 };
-                 return updated;
-               }
+              if (existingIndex >= 0) {
+                const updated = [...prev];
+                updated[existingIndex] = {
+                  ...newMessage,
+                  author: prev[existingIndex].author,
+                  reply_to: prev[existingIndex].reply_to,
+                  status: 'delivered',
+                };
+                return updated;
+              }
               
-              // New message from another user - fetch full message info
+              // New message from another user - find author from existing messages cache first
+              const cachedAuthor = prev.find(m => m.author_id === newMessage.author_id)?.author;
+              
+              if (cachedAuthor) {
+                // Use cached author data instantly - no additional fetch needed
+                return [...prev, { ...newMessage, author: cachedAuthor, status: 'delivered' as const }];
+              }
+              
+              // Only fetch if author not in cache (rare case - first message from a new user)
               supabase
                 .from('messages')
                 .select(`*, author:profiles!messages_author_id_fkey(*)`)
@@ -175,7 +180,7 @@ export function useMessages(sectorId: string | null) {
                   }
                 });
               
-              return [...prev, { ...newMessage, status: 'delivered' }];
+              return [...prev, { ...newMessage, status: 'delivered' as const }];
             });
           } else if (payload.eventType === 'DELETE') {
             setMessages(prev => prev.filter(m => m.id !== (payload.old as Message).id));

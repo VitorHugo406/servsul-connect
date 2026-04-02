@@ -119,16 +119,41 @@ Deno.serve(async (req) => {
           totalMessages: 0,
         };
 
+        // Calculate date range based on frequency
+        // For monthly: use previous month's data only
+        // For weekly: use previous week's data
+        // For daily: use previous day's data
+        let periodStart: Date | null = null;
+        let periodEnd: Date | null = null;
+        
+        if (summary.frequency === 'monthly') {
+          const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          periodStart = prevMonth;
+          periodEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        } else if (summary.frequency === 'weekly') {
+          periodStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          periodEnd = now;
+        } else {
+          periodStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          periodEnd = now;
+        }
+
         if (metrics.includes('completed_on_time') || metrics.includes('completed_late')) {
-          const { data: tasks } = await admin
+          let query = admin
             .from('tasks')
-            .select('id, completed_at, completed_late, status')
+            .select('id, completed_at, completed_late, status, due_date')
             .eq('assigned_to', mp.id)
-            .eq('is_archived', false);
+            .eq('is_archived', false)
+            .not('completed_at', 'is', null);
+
+          if (periodStart) query = query.gte('completed_at', periodStart.toISOString());
+          if (periodEnd) query = query.lte('completed_at', periodEnd.toISOString());
+
+          const { data: tasks } = await query;
 
           if (tasks) {
-            stats.completedOnTime = tasks.filter(t => t.completed_at && !t.completed_late).length;
-            stats.completedLate = tasks.filter(t => t.completed_at && t.completed_late).length;
+            stats.completedOnTime = tasks.filter(t => !t.completed_late).length;
+            stats.completedLate = tasks.filter(t => t.completed_late).length;
           }
         }
 
@@ -147,15 +172,22 @@ Deno.serve(async (req) => {
         }
 
         if (metrics.includes('total_messages')) {
-          const { count: msgCount } = await admin
+          let msgQ = admin
             .from('messages')
             .select('id', { count: 'exact', head: true })
             .eq('author_id', mp.id);
+          if (periodStart) msgQ = msgQ.gte('created_at', periodStart.toISOString());
+          if (periodEnd) msgQ = msgQ.lte('created_at', periodEnd.toISOString());
 
-          const { count: dmCount } = await admin
+          let dmQ = admin
             .from('direct_messages')
             .select('id', { count: 'exact', head: true })
             .eq('sender_id', mp.id);
+          if (periodStart) dmQ = dmQ.gte('created_at', periodStart.toISOString());
+          if (periodEnd) dmQ = dmQ.lte('created_at', periodEnd.toISOString());
+
+          const { count: msgCount } = await msgQ;
+          const { count: dmCount } = await dmQ;
 
           stats.totalMessages = (msgCount || 0) + (dmCount || 0);
         }
