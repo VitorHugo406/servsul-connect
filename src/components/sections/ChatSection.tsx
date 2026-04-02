@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useMessages, useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
