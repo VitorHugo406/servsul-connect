@@ -468,7 +468,16 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
           {/* Main Chat Area */}
           <div className="flex flex-1 overflow-hidden">
             {/* Messages */}
-            <ScrollArea className={cn("flex-1 p-4", showSectorUsers && !isMobile && "border-r border-border")}>
+            <ScrollArea 
+              className={cn("flex-1 p-4", showSectorUsers && !isMobile && "border-r border-border")}
+              onScrollCapture={(e) => {
+                const target = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
+                if (target) {
+                  const { scrollTop, scrollHeight, clientHeight } = target as HTMLElement;
+                  setShowScrollToBottom(scrollHeight - scrollTop - clientHeight > 200);
+                }
+              }}
+            >
               <div className="space-y-4">
                 {messagesLoading ? (
                   <div className="flex justify-center py-8">
@@ -533,6 +542,17 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                 )}
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* Scroll to bottom button */}
+              {showScrollToBottom && (
+                <button
+                  onClick={scrollToBottom}
+                  className="fixed bottom-32 right-8 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all"
+                  title="Ir para o final"
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </button>
+              )}
             </ScrollArea>
 
             {/* Sector Users Panel */}
