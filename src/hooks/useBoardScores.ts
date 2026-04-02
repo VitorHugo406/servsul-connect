@@ -215,7 +215,7 @@ export function useGlobalScores(memberProfileIds: string[]) {
 
           const totalTasks = memberTasks.length;
           const completedTasks = memberTasks.filter(t => t.completed_at !== null).length;
-          const lateTasks = memberTasks.filter(t => t.completed_late === true).length;
+          const lateTasks = memberTasks.filter(t => isTaskLate(t as any)).length;
           const onTimeTasks = completedTasks - lateTasks;
           const score = calculateScore(totalTasks, completedTasks, lateTasks);
 
