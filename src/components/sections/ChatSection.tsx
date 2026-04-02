@@ -88,10 +88,14 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   }, [user, effectiveSector, messages]);
 
   // Scroll to bottom when messages change
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
   }, [messages]);
 
   // Calculate unread DM count
