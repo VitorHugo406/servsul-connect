@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useMessages, useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,6 +52,8 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const { conversations } = useConversations();
   const [unreadGroupCount, setUnreadGroupCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const mentionedUsersRef = useRef<{id: string; name: string}[]>([]);
 
   // Filter sectors user can access using the new allAccessibleSectorIds
@@ -85,10 +88,14 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   }, [user, effectiveSector, messages]);
 
   // Scroll to bottom when messages change
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
   }, [messages]);
 
   // Calculate unread DM count
@@ -461,7 +468,16 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
           {/* Main Chat Area */}
           <div className="flex flex-1 overflow-hidden">
             {/* Messages */}
-            <ScrollArea className={cn("flex-1 p-4", showSectorUsers && !isMobile && "border-r border-border")}>
+            <ScrollArea 
+              className={cn("flex-1 p-4", showSectorUsers && !isMobile && "border-r border-border")}
+              onScrollCapture={(e) => {
+                const target = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
+                if (target) {
+                  const { scrollTop, scrollHeight, clientHeight } = target as HTMLElement;
+                  setShowScrollToBottom(scrollHeight - scrollTop - clientHeight > 200);
+                }
+              }}
+            >
               <div className="space-y-4">
                 {messagesLoading ? (
                   <div className="flex justify-center py-8">
@@ -526,6 +542,17 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                 )}
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* Scroll to bottom button */}
+              {showScrollToBottom && (
+                <button
+                  onClick={scrollToBottom}
+                  className="fixed bottom-32 right-8 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all"
+                  title="Ir para o final"
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </button>
+              )}
             </ScrollArea>
 
             {/* Sector Users Panel */}

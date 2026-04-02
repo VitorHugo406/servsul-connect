@@ -22,8 +22,6 @@ export interface MonthlyScoreEntry {
 
 function calculateScore(totalTasks: number, completedTasks: number, lateTasks: number): number {
   if (totalTasks === 0) return 0;
-  // Each task is worth 1000/totalTasks points
-  // Completed on time = full points, completed late = reduced points
   const pointsPerTask = 1000 / totalTasks;
   const onTimeTasks = completedTasks - lateTasks;
   // On-time completed tasks get full points
@@ -32,6 +30,16 @@ function calculateScore(totalTasks: number, completedTasks: number, lateTasks: n
   const latePoints = lateTasks * pointsPerTask * 0.6;
   // Not completed tasks get 0 points
   return Math.round(onTimePoints + latePoints);
+}
+
+// Only count as late if delivered 1+ day after the deadline
+function isTaskLate(task: { completed_at: string | null; due_date: string | null; completed_late: boolean | null }): boolean {
+  if (!task.completed_at || !task.due_date) return false;
+  const completedDate = new Date(task.completed_at);
+  const dueDate = new Date(task.due_date);
+  // Add 1 day to due date - only late if completed more than 1 day after
+  const gracePeriod = new Date(dueDate.getTime() + 24 * 60 * 60 * 1000);
+  return completedDate > gracePeriod;
 }
 
 export function useBoardScores(boardId: string | null, memberProfileIds: string[]) {
@@ -83,7 +91,7 @@ export function useBoardScores(boardId: string | null, memberProfileIds: string[
 
         const totalTasks = memberTasks.length;
         const completedTasks = memberTasks.filter(t => t.completed_at !== null).length;
-        const lateTasks = memberTasks.filter(t => t.completed_late === true).length;
+        const lateTasks = memberTasks.filter(t => isTaskLate(t as any)).length;
         const onTimeTasks = completedTasks - lateTasks;
         const score = calculateScore(totalTasks, completedTasks, lateTasks);
 
@@ -207,7 +215,7 @@ export function useGlobalScores(memberProfileIds: string[]) {
 
           const totalTasks = memberTasks.length;
           const completedTasks = memberTasks.filter(t => t.completed_at !== null).length;
-          const lateTasks = memberTasks.filter(t => t.completed_late === true).length;
+          const lateTasks = memberTasks.filter(t => isTaskLate(t as any)).length;
           const onTimeTasks = completedTasks - lateTasks;
           const score = calculateScore(totalTasks, completedTasks, lateTasks);
 
