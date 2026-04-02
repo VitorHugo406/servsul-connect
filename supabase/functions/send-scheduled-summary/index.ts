@@ -250,7 +250,7 @@ Deno.serve(async (req) => {
         messageContent += `━━━━━━━━━━━━━━━━━━━━━\n`;
         messageContent += `🤖 _Resumo automático gerado pelo sistema_`;
       } else {
-        messageContent = `📊 Resumo ${frequencyLabel} da Equipe\n\n`;
+        messageContent = `📊 Resumo ${frequencyLabel} da Equipe\n📅 ${periodLabel}\n\n`;
 
         for (const ms of memberStats) {
           messageContent += `• ${ms.name}: `;
