@@ -224,6 +224,7 @@ Deno.serve(async (req) => {
 
       if (isVisual) {
         messageContent = `📊 *Resumo ${frequencyLabel} da Equipe*\n`;
+        messageContent += `📅 ${periodLabel}\n`;
         messageContent += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
         for (const ms of memberStats) {
