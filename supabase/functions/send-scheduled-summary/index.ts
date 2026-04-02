@@ -201,7 +201,19 @@ Deno.serve(async (req) => {
 
       const frequencyLabel = summary.frequency === 'daily' ? 'Diário' : summary.frequency === 'weekly' ? 'Semanal' : 'Mensal';
       
-      // Calculate totals
+      // Build period label
+      let periodLabel = '';
+      if (summary.frequency === 'monthly') {
+        const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        periodLabel = `Período: ${monthNames[prevMonth.getMonth()]}/${prevMonth.getFullYear()}`;
+      } else if (summary.frequency === 'weekly') {
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        periodLabel = `Período: ${weekAgo.toLocaleDateString('pt-BR')} a ${now.toLocaleDateString('pt-BR')}`;
+      } else {
+        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        periodLabel = `Período: ${yesterday.toLocaleDateString('pt-BR')}`;
+      }
       const totals = {
         completedOnTime: memberStats.reduce((s, m) => s + m.completedOnTime, 0),
         completedLate: memberStats.reduce((s, m) => s + m.completedLate, 0),
