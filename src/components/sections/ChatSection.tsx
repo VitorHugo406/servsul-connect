@@ -52,6 +52,8 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const { conversations } = useConversations();
   const [unreadGroupCount, setUnreadGroupCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const mentionedUsersRef = useRef<{id: string; name: string}[]>([]);
 
   // Filter sectors user can access using the new allAccessibleSectorIds
