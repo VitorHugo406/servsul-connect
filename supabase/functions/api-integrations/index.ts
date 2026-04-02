@@ -65,29 +65,21 @@ async function validateAdminAuth(req: Request): Promise<{ userId: string } | nul
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
-
   const token = authHeader.replace("Bearer ", "");
-  const { data, error } = await supabase.auth.getClaims(token);
-  if (error || !data?.claims) return null;
-
-  const userId = data.claims.sub as string;
-  const admin = getAdminClient();
+  const adminClient = getAdminClient();
   
-  // Check admin or supervisor role
-  const { data: roleData } = await admin.from("user_roles").select("role").eq("user_id", userId);
+  // Validate JWT using admin client
+  const { data: userData, error } = await adminClient.auth.getUser(token);
+  if (error || !userData?.user) return null;
+
+  const userId = userData.user.id;
+  
+  // Check admin role only (restricted to admins)
+  const { data: roleData } = await adminClient.from("user_roles").select("role").eq("user_id", userId);
   const roles = (roleData || []).map((r: any) => r.role);
   
   if (!roles.includes("admin")) {
-    // Check autonomy level for supervisor access
-    const { data: profileData } = await admin.from("profiles").select("autonomy_level").eq("user_id", userId).maybeSingle();
-    if (!profileData || !["supervisor", "gerente", "diretoria", "admin"].includes(profileData.autonomy_level)) {
-      return null;
-    }
+    return null;
   }
 
   return { userId };
