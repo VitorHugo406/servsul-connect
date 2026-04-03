@@ -622,6 +622,328 @@ export type Database = {
           },
         ]
       }
+      eval_competencies: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      eval_cycles: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string
+          id: string
+          name: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date: string
+          id?: string
+          name: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          name?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      eval_position_competencies: {
+        Row: {
+          competency_id: string
+          created_at: string
+          id: string
+          min_expected_score: number | null
+          position_id: string
+          requires_comment: boolean
+          weight: number
+        }
+        Insert: {
+          competency_id: string
+          created_at?: string
+          id?: string
+          min_expected_score?: number | null
+          position_id: string
+          requires_comment?: boolean
+          weight?: number
+        }
+        Update: {
+          competency_id?: string
+          created_at?: string
+          id?: string
+          min_expected_score?: number | null
+          position_id?: string
+          requires_comment?: boolean
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eval_position_competencies_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "eval_competencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eval_position_competencies_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "eval_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eval_positions: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sector_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sector_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sector_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eval_positions_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_history: {
+        Row: {
+          action: string
+          created_at: string
+          details: string | null
+          evaluation_id: string
+          id: string
+          new_status: string | null
+          old_status: string | null
+          performed_by: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: string | null
+          evaluation_id: string
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          performed_by: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: string | null
+          evaluation_id?: string
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          performed_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_history_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "evaluations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_items: {
+        Row: {
+          classification: string | null
+          competency_id: string
+          created_at: string
+          evaluated_response: string | null
+          evaluation_id: string
+          evaluator_comment: string | null
+          evaluator_reply: string | null
+          id: string
+          score: number | null
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          classification?: string | null
+          competency_id: string
+          created_at?: string
+          evaluated_response?: string | null
+          evaluation_id: string
+          evaluator_comment?: string | null
+          evaluator_reply?: string | null
+          id?: string
+          score?: number | null
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          classification?: string | null
+          competency_id?: string
+          created_at?: string
+          evaluated_response?: string | null
+          evaluation_id?: string
+          evaluator_comment?: string | null
+          evaluator_reply?: string | null
+          id?: string
+          score?: number | null
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_items_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "eval_competencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_items_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "evaluations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluations: {
+        Row: {
+          created_at: string
+          cycle_id: string | null
+          evaluated_comment: string | null
+          evaluated_id: string
+          evaluator_id: string
+          evaluator_response: string | null
+          finalized_at: string | null
+          id: string
+          overall_comment: string | null
+          overall_score: number | null
+          position_id: string | null
+          responded_at: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          cycle_id?: string | null
+          evaluated_comment?: string | null
+          evaluated_id: string
+          evaluator_id: string
+          evaluator_response?: string | null
+          finalized_at?: string | null
+          id?: string
+          overall_comment?: string | null
+          overall_score?: number | null
+          position_id?: string | null
+          responded_at?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          cycle_id?: string | null
+          evaluated_comment?: string | null
+          evaluated_id?: string
+          evaluator_id?: string
+          evaluator_response?: string | null
+          finalized_at?: string | null
+          id?: string
+          overall_comment?: string | null
+          overall_score?: number | null
+          position_id?: string | null
+          responded_at?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluations_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "eval_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluations_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "eval_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       important_announcement_reads: {
         Row: {
           announcement_id: string
@@ -1840,6 +2162,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      team_members: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          supervisor_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          supervisor_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          supervisor_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_additional_sectors: {
         Row: {
