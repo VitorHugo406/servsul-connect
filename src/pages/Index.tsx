@@ -65,6 +65,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
    'documentation': { title: 'Documentação', subtitle: 'Documentação técnica do sistema' },
    'war-room': { title: 'War Room', subtitle: 'Gestão de incidentes críticos' },
    'api-management': { title: 'API de Integração', subtitle: 'Gerenciamento de integrações externas' },
+   'evaluations': { title: 'Avaliações', subtitle: 'Avaliação de desempenho e feedback' },
 };
 
 const Index = () => {
