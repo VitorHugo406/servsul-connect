@@ -610,6 +610,125 @@ async function handleMessagesSummary(url: URL) {
   });
 }
 
+// ===== USER DATA ENDPOINTS (for external system integration) =====
+async function handleUsersData(url: URL, userId?: string) {
+  const admin = getAdminClient();
+
+  let query = admin.from("profiles").select("id, user_id, name, display_name, email, phone, avatar_url, sector_id, autonomy_level, is_active, birth_date, company, address, registration_number, work_period, user_status, last_seen_at, created_at, updated_at, profile_type");
+  if (userId) query = query.eq("id", userId);
+  else query = query.eq("is_active", true);
+  const { data: profiles, error } = await query.order("name");
+
+  if (error) return jsonResponse({ status: "error", message: error.message }, 500);
+  if (!profiles || profiles.length === 0) return jsonResponse({ status: "success", data: userId ? null : [] });
+
+  // Enrich with sector name, roles, teams, permissions
+  const sectorIds = [...new Set((profiles || []).map((p: any) => p.sector_id).filter(Boolean))];
+  const { data: sectors } = sectorIds.length > 0 ? await admin.from("sectors").select("id, name, color").in("id", sectorIds) : { data: [] };
+  const sectorMap = new Map((sectors || []).map((s: any) => [s.id, s]));
+
+  const userIds = profiles.map((p: any) => p.user_id);
+  const { data: roles } = await admin.from("user_roles").select("user_id, role").in("user_id", userIds);
+  const roleMap = new Map<string, string[]>();
+  for (const r of roles || []) {
+    if (!roleMap.has(r.user_id)) roleMap.set(r.user_id, []);
+    roleMap.get(r.user_id)!.push(r.role);
+  }
+
+  const profileIds = profiles.map((p: any) => p.id);
+  const { data: teamData } = await admin.from("supervisor_team_members").select("member_profile_id, supervisor_id, team_name").in("member_profile_id", profileIds);
+  const teamMap = new Map<string, { team_name: string; supervisor_id: string }[]>();
+  for (const t of teamData || []) {
+    if (!teamMap.has(t.member_profile_id)) teamMap.set(t.member_profile_id, []);
+    teamMap.get(t.member_profile_id)!.push({ team_name: t.team_name || "", supervisor_id: t.supervisor_id });
+  }
+
+  const results = profiles.map((p: any) => {
+    const sector = sectorMap.get(p.sector_id);
+    return {
+      id: p.id,
+      user_id: p.user_id,
+      name: p.name,
+      display_name: p.display_name,
+      email: p.email,
+      phone: p.phone,
+      avatar_url: p.avatar_url,
+      department: sector ? { id: sector.id, name: sector.name, color: sector.color } : null,
+      autonomy_level: p.autonomy_level,
+      profile_type: p.profile_type,
+      roles: roleMap.get(p.user_id) || [],
+      teams: teamMap.get(p.id) || [],
+      is_active: p.is_active,
+      birth_date: p.birth_date,
+      company: p.company,
+      address: p.address,
+      registration_number: p.registration_number,
+      work_period: p.work_period,
+      status: p.user_status,
+      last_seen_at: p.last_seen_at,
+      created_at: p.created_at,
+      updated_at: p.updated_at,
+    };
+  });
+
+  return jsonResponse({
+    status: "success",
+    message: "Consulta realizada com sucesso.",
+    data: userId ? results[0] || null : results,
+  });
+}
+
+async function handleUsersSectors(url: URL) {
+  const admin = getAdminClient();
+  const { data, error } = await admin.from("sectors").select("id, name, color, icon, created_at").order("name");
+  if (error) return jsonResponse({ status: "error", message: error.message }, 500);
+
+  // Count users per sector
+  const results = [];
+  for (const s of data || []) {
+    const { count } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("sector_id", s.id).eq("is_active", true);
+    results.push({ ...s, total_users: count || 0 });
+  }
+
+  return jsonResponse({ status: "success", data: results });
+}
+
+async function handleUsersTeams(url: URL) {
+  const admin = getAdminClient();
+  const { data: teamData } = await admin.from("supervisor_team_members").select("supervisor_id, member_profile_id, team_name");
+
+  const teamMap = new Map<string, { name: string; memberIds: string[] }>();
+  for (const t of teamData || []) {
+    if (!teamMap.has(t.supervisor_id)) teamMap.set(t.supervisor_id, { name: t.team_name || "", memberIds: [] });
+    teamMap.get(t.supervisor_id)!.memberIds.push(t.member_profile_id);
+  }
+
+  const supervisorIds = [...teamMap.keys()];
+  const { data: supervisorProfiles } = await admin.from("profiles").select("user_id, id, name, display_name, email").in("user_id", supervisorIds);
+  const supMap = new Map((supervisorProfiles || []).map((p: any) => [p.user_id, p]));
+
+  const results = [];
+  for (const [supId, team] of teamMap) {
+    const sup = supMap.get(supId);
+    // Get member details
+    const { data: memberProfiles } = await admin.from("profiles").select("id, name, display_name, email, avatar_url, autonomy_level").in("id", team.memberIds);
+    results.push({
+      supervisor_id: supId,
+      supervisor_name: sup?.display_name || sup?.name || "Desconhecido",
+      team_name: team.name,
+      members: (memberProfiles || []).map((m: any) => ({
+        id: m.id,
+        name: m.display_name || m.name,
+        email: m.email,
+        avatar_url: m.avatar_url,
+        autonomy_level: m.autonomy_level,
+      })),
+    });
+  }
+
+  return jsonResponse({ status: "success", data: results });
+}
+
 // ===== MAIN HANDLER =====
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
