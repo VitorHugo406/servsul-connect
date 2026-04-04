@@ -800,6 +800,15 @@ Deno.serve(async (req) => {
       response = await handleTasksSummary(url);
     } else if (path === "/messages/summary" && method === "GET") {
       response = await handleMessagesSummary(url);
+    } else if (path === "/users/data" && method === "GET") {
+      response = await handleUsersData(url);
+    } else if (path.match(/^\/users\/data\/(.+)$/) && method === "GET") {
+      const uid = path.match(/^\/users\/data\/(.+)$/)![1];
+      response = await handleUsersData(url, uid);
+    } else if (path === "/users/sectors" && method === "GET") {
+      response = await handleUsersSectors(url);
+    } else if (path === "/users/teams" && method === "GET") {
+      response = await handleUsersTeams(url);
     } else {
       response = jsonResponse({ status: "error", message: "Rota não encontrada." }, 404);
     }
