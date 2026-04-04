@@ -133,6 +133,17 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
               </div>
             )}
           </div>
+
+          {/* Orbs External Link */}
+          <Button variant="outline" size="sm" className="gap-1.5 hidden md:flex" asChild>
+            <a href="https://sync-synergy-flow.vercel.app/" target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-4 w-4" />
+              Orbs
+            </a>
+          </Button>
+
+          {/* Team Header Button */}
+          <TeamHeaderButton />
           
           {/* Notifications - hidden on home page */}
           {!hideNotifications && (
