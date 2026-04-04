@@ -1308,6 +1308,52 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
             </CollapsibleSection>
           </div>
 
+          {/* 14. Avaliações */}
+          <div id="doc-evaluations" className="scroll-mt-4">
+            <CollapsibleSection title="14. Avaliações de Desempenho" icon={ClipboardCheck}>
+              <p>Módulo completo de avaliação de desempenho, feedback e mapeamento de competências, sem IA, baseado em regras e pesos configuráveis.</p>
+              
+              <h4 className="font-semibold mt-3 text-xs">Hierarquia de Avaliação:</h4>
+              <ul className="list-disc pl-5 space-y-1 text-xs">
+                <li><strong>Diretoria</strong> → avalia Gestores</li>
+                <li><strong>Gestores</strong> → avaliam suas equipes</li>
+                <li><strong>Supervisores</strong> → estruturam cargos, competências e formulários</li>
+                <li><strong>Colaboradores</strong> → visualizam, aprovam ou contestam avaliações</li>
+              </ul>
+
+              <h4 className="font-semibold mt-3 text-xs">Tabelas:</h4>
+              <div className="border border-border rounded-md overflow-hidden">
+                <TableRow label="eval_positions" value="Cargos com setor vinculado" />
+                <TableRow label="eval_competencies" value="Competências (técnica/comportamental)" />
+                <TableRow label="eval_position_competencies" value="Vínculo cargo ↔ competência com peso" />
+                <TableRow label="eval_cycles" value="Ciclos de avaliação com período" />
+                <TableRow label="evaluations" value="Avaliações com status, versão e auditoria" />
+                <TableRow label="evaluation_items" value="Notas por competência com classificação" />
+                <TableRow label="evaluation_history" value="Histórico de movimentações" />
+              </div>
+
+              <h4 className="font-semibold mt-3 text-xs">Fluxo:</h4>
+              <CodeBlock>{`Rascunho → Em Avaliação → Enviada → Aprovada/Contestada → Revisão → Finalizada`}</CodeBlock>
+
+              <h4 className="font-semibold mt-3 text-xs">Classificação Automática:</h4>
+              <div className="border border-border rounded-md overflow-hidden">
+                <TableRow label="1-2" value="Precisa Melhorar" />
+                <TableRow label="3" value="Bom" />
+                <TableRow label="4-5" value="Excelente" />
+              </div>
+
+              <h4 className="font-semibold mt-3 text-xs">Funcionalidades:</h4>
+              <ul className="list-disc pl-5 space-y-1 text-xs">
+                <li>Dashboard com métricas por perfil</li>
+                <li>Cadastro de cargos e competências (supervisor/diretoria)</li>
+                <li>Formulários dinâmicos com pesos</li>
+                <li>Aprovação/contestação com justificativa obrigatória</li>
+                <li>Histórico completo e versionamento</li>
+                <li>Gráficos de evolução pessoal</li>
+              </ul>
+            </CollapsibleSection>
+          </div>
+
           {/* Footer */}
           <div className="text-center pt-6 pb-4 border-t border-border text-xs text-muted-foreground space-y-1">
             <div className="flex items-center justify-center gap-2">
