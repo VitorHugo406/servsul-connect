@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { useNotifications } from '@/hooks/useNotifications';
 import { UserProfileDialog } from '@/components/user/UserProfileDialog';
+import { TeamHeaderButton } from '@/components/teams/TeamHeaderButton';
 import {
   Popover,
   PopoverContent,
