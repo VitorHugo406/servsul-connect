@@ -1147,6 +1147,9 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                   <TableRow label="send-feedback-email" value="E-mail de feedback (Resend)" />
                   <TableRow label="process-automations" value="Motor de automações" />
                   <TableRow label="duplicate-scheduled-cards" value="Duplicação agendada" />
+                  <TableRow label="api-integrations" value="API REST externa (métricas, usuários)" />
+                  <TableRow label="servchat-conference" value="Videoconferência ServChat" />
+                  <TableRow label="send-scheduled-summary" value="Resumo mensal automatizado" />
                 </div>
               </div>
             </CollapsibleSection>
