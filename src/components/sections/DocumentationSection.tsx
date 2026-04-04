@@ -499,6 +499,9 @@ function generateDocumentationPDF() {
     ['functions/send-feedback-email/', 'Edge Fn', 'Disparo de e-mail de feedback via Resend API'],
     ['functions/process-automations/', 'Edge Fn', 'Executa regras SE→ENTÃO nos quadros Kanban'],
     ['functions/duplicate-scheduled-cards/', 'Edge Fn', 'Duplica cards agendados (diário/semanal/mensal)'],
+    ['functions/api-integrations/', 'Edge Fn', 'API REST externa: métricas, dados de usuários, equipes'],
+    ['functions/servchat-conference/', 'Edge Fn', 'Videoconferência ServChat'],
+    ['functions/send-scheduled-summary/', 'Edge Fn', 'Resumo mensal automatizado de produtividade'],
   ], [48, 18, contentW - 66]);
 
   subTitle('📁  Público (public/)');
