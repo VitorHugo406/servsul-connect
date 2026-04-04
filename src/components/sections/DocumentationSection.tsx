@@ -1245,13 +1245,16 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                 <li>Logs de acesso e auditoria completa</li>
               </ul>
 
-              <h4 className="font-semibold mt-3 text-xs">Endpoints:</h4>
+              <h4 className="font-semibold mt-3 text-xs">Endpoints de Métricas:</h4>
               <div className="border border-border rounded-md overflow-hidden">
                 {[
-                  ['GET', '/metrics/general', 'Métricas gerais'],
+                  ['GET', '/metrics/general', 'Métricas gerais do sistema'],
                   ['GET', '/metrics/users', 'Métricas por usuário'],
+                  ['GET', '/metrics/users/:id', 'Métricas de um usuário'],
                   ['GET', '/metrics/departments', 'Por departamento'],
+                  ['GET', '/metrics/departments/:id', 'De um departamento'],
                   ['GET', '/metrics/teams', 'Por equipe'],
+                  ['GET', '/metrics/teams/:id', 'De uma equipe'],
                   ['GET', '/tasks/summary', 'Resumo de tarefas'],
                   ['GET', '/messages/summary', 'Resumo de mensagens'],
                 ].map(([method, path, desc]) => (
@@ -1263,11 +1266,40 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                 ))}
               </div>
 
+              <h4 className="font-semibold mt-3 text-xs">Endpoints de Dados de Usuários (Integração Externa):</h4>
+              <div className="border border-border rounded-md overflow-hidden">
+                {[
+                  ['GET', '/users/data', 'Todos os usuários com perfil completo, roles, equipes e departamento'],
+                  ['GET', '/users/data/:id', 'Dados completos de um usuário específico'],
+                  ['GET', '/users/sectors', 'Todos os setores com contagem de usuários'],
+                  ['GET', '/users/teams', 'Todas as equipes com lista de membros'],
+                ].map(([method, path, desc]) => (
+                  <div key={path} className="flex border-b border-border last:border-0 text-xs">
+                    <div className="w-12 px-2 py-1.5 bg-muted/20 font-mono font-medium">{method}</div>
+                    <div className="w-1/2 px-2 py-1.5 font-mono">{path}</div>
+                    <div className="flex-1 px-2 py-1.5 text-muted-foreground">{desc}</div>
+                  </div>
+                ))}
+              </div>
+
+              <h4 className="font-semibold mt-3 text-xs">Resposta /users/data:</h4>
+              <CodeBlock>{`{
+  "id": "uuid",
+  "name": "Nome",
+  "email": "email@empresa.com",
+  "department": { "id": "uuid", "name": "Setor", "color": "#hex" },
+  "autonomy_level": "colaborador",
+  "roles": ["admin"],
+  "teams": [{ "team_name": "Equipe A", "supervisor_id": "uuid" }],
+  "phone": "...", "avatar_url": "...",
+  "birth_date": "...", "registration_number": "..."
+}`}</CodeBlock>
+
               <h4 className="font-semibold mt-3 text-xs">Filtros disponíveis:</h4>
               <CodeBlock>{`?start_date=2024-01-01&end_date=2024-12-31&status=completed`}</CodeBlock>
 
               <h4 className="font-semibold mt-3 text-xs">Nome de Equipe:</h4>
-              <p>Gestores podem nomear suas equipes na aba Gestão de Pessoas. O nome da equipe é enviado pela API nos endpoints de métricas.</p>
+              <p>Gestores podem nomear suas equipes na aba Gestão de Pessoas. O nome da equipe é enviado pela API nos endpoints de métricas e dados de usuários.</p>
             </CollapsibleSection>
           </div>
 
