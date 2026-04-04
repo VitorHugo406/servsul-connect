@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, LogOut, Mail, Building2, Calendar, Moon, Sun } from 'lucide-react';
+import { Bell, LogOut, Mail, Building2, Calendar, Moon, Sun, ExternalLink } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -84,7 +84,16 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <a
+              href="https://sync-synergy-flow.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-full hover:bg-accent"
+              title="Orbs"
+            >
+              <ExternalLink className="h-5 w-5 text-muted-foreground" />
+            </a>
             <button
               className="p-2 rounded-full hover:bg-accent"
               onClick={toggleDarkMode}

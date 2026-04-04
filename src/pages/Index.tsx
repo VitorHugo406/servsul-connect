@@ -32,6 +32,7 @@ import { CalendarSection } from '@/components/sections/CalendarSection';
 import { DocumentationSection } from '@/components/sections/DocumentationSection';
 import { ApiManagementSection } from '@/components/sections/ApiManagementSection';
 import { WarRoomSection } from '@/components/sections/WarRoomSection';
+import { EvaluationsSection } from '@/components/sections/EvaluationsSection';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
@@ -64,6 +65,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
    'documentation': { title: 'Documentação', subtitle: 'Documentação técnica do sistema' },
    'war-room': { title: 'War Room', subtitle: 'Gestão de incidentes críticos' },
    'api-management': { title: 'API de Integração', subtitle: 'Gerenciamento de integrações externas' },
+   'evaluations': { title: 'Avaliações', subtitle: 'Avaliação de desempenho e feedback' },
 };
 
 const Index = () => {
@@ -184,6 +186,8 @@ const Index = () => {
            return <WarRoomSection />;
          case 'api-management':
            return <ApiManagementSection />;
+         case 'evaluations':
+           return <EvaluationsSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }

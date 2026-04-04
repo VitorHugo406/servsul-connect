@@ -3,7 +3,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, ChevronDown, ChevronRight, BookOpen, Database, Code2, Layers, Shield, Zap, Users, MessageSquare, Bell, ListTodo, CalendarDays, FileText, HardDrive, Building2, Sparkles, Mail, Cake, Home, Settings, Trash2, Eye, Lock, Server, Globe, Smartphone, BarChart2, Siren, Trophy } from 'lucide-react';
+import { Download, ChevronDown, ChevronRight, BookOpen, Database, Code2, Layers, Shield, Zap, Users, MessageSquare, Bell, ListTodo, CalendarDays, FileText, HardDrive, Building2, Sparkles, Mail, Cake, Home, Settings, Trash2, Eye, Lock, Server, Globe, Smartphone, BarChart2, Siren, Trophy, ClipboardCheck } from 'lucide-react';
 import logoServsul from '@/assets/logo-servsul.png';
 import appLogo from '@/assets/app-logo.png';
 import { cn } from '@/lib/utils';
@@ -451,6 +451,8 @@ function generateDocumentationPDF() {
     ['📬 Resumos Agendados', 'ScheduledSummaryConfig.tsx', 'Envio automático de resumos de produtividade por DM (diário/semanal/mensal)'],
     ['🤖 Chatbot', 'ChatbotWidget.tsx', 'Assistente inteligente integrado para suporte interno'],
     ['🏆 Pontuação Mensal', 'ScorePanel.tsx', 'Ranking de membros por quadro com pontuação baseada em tarefas concluídas'],
+    ['📝 Avaliações', 'EvaluationsSection.tsx', 'Avaliação de desempenho: cargos, competências, ciclos, aprovação, contestação, dashboards'],
+    ['🔗 API Integração', 'ApiManagementSection.tsx', 'API REST externa: métricas, dados de usuários, departamentos, equipes para sistemas externos'],
   ], [30, 42, contentW - 72]);
 
   // =============================================
@@ -497,6 +499,9 @@ function generateDocumentationPDF() {
     ['functions/send-feedback-email/', 'Edge Fn', 'Disparo de e-mail de feedback via Resend API'],
     ['functions/process-automations/', 'Edge Fn', 'Executa regras SE→ENTÃO nos quadros Kanban'],
     ['functions/duplicate-scheduled-cards/', 'Edge Fn', 'Duplica cards agendados (diário/semanal/mensal)'],
+    ['functions/api-integrations/', 'Edge Fn', 'API REST externa: métricas, dados de usuários, equipes'],
+    ['functions/servchat-conference/', 'Edge Fn', 'Videoconferência ServChat'],
+    ['functions/send-scheduled-summary/', 'Edge Fn', 'Resumo mensal automatizado de produtividade'],
   ], [48, 18, contentW - 66]);
 
   subTitle('📁  Público (public/)');
@@ -823,6 +828,8 @@ export function DocumentationSection() {
                   { id: 'pwa', label: '10. PWA' },
                   { id: 'rls', label: '11. RLS' },
                   { id: 'realtime', label: '12. Realtime' },
+                  { id: 'api', label: '13. API Integração' },
+                  { id: 'evaluations', label: '14. Avaliações' },
                 ].map(item => (
                   <a key={item.id} href={`#doc-${item.id}`} className="text-xs text-primary hover:underline py-0.5">{item.label}</a>
                 ))}
@@ -1145,6 +1152,9 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                   <TableRow label="send-feedback-email" value="E-mail de feedback (Resend)" />
                   <TableRow label="process-automations" value="Motor de automações" />
                   <TableRow label="duplicate-scheduled-cards" value="Duplicação agendada" />
+                  <TableRow label="api-integrations" value="API REST externa (métricas, usuários)" />
+                  <TableRow label="servchat-conference" value="Videoconferência ServChat" />
+                  <TableRow label="send-scheduled-summary" value="Resumo mensal automatizado" />
                 </div>
               </div>
             </CollapsibleSection>
@@ -1245,13 +1255,16 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                 <li>Logs de acesso e auditoria completa</li>
               </ul>
 
-              <h4 className="font-semibold mt-3 text-xs">Endpoints:</h4>
+              <h4 className="font-semibold mt-3 text-xs">Endpoints de Métricas:</h4>
               <div className="border border-border rounded-md overflow-hidden">
                 {[
-                  ['GET', '/metrics/general', 'Métricas gerais'],
+                  ['GET', '/metrics/general', 'Métricas gerais do sistema'],
                   ['GET', '/metrics/users', 'Métricas por usuário'],
+                  ['GET', '/metrics/users/:id', 'Métricas de um usuário'],
                   ['GET', '/metrics/departments', 'Por departamento'],
+                  ['GET', '/metrics/departments/:id', 'De um departamento'],
                   ['GET', '/metrics/teams', 'Por equipe'],
+                  ['GET', '/metrics/teams/:id', 'De uma equipe'],
                   ['GET', '/tasks/summary', 'Resumo de tarefas'],
                   ['GET', '/messages/summary', 'Resumo de mensagens'],
                 ].map(([method, path, desc]) => (
@@ -1263,11 +1276,86 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                 ))}
               </div>
 
+              <h4 className="font-semibold mt-3 text-xs">Endpoints de Dados de Usuários (Integração Externa):</h4>
+              <div className="border border-border rounded-md overflow-hidden">
+                {[
+                  ['GET', '/users/data', 'Todos os usuários com perfil completo, roles, equipes e departamento'],
+                  ['GET', '/users/data/:id', 'Dados completos de um usuário específico'],
+                  ['GET', '/users/sectors', 'Todos os setores com contagem de usuários'],
+                  ['GET', '/users/teams', 'Todas as equipes com lista de membros'],
+                ].map(([method, path, desc]) => (
+                  <div key={path} className="flex border-b border-border last:border-0 text-xs">
+                    <div className="w-12 px-2 py-1.5 bg-muted/20 font-mono font-medium">{method}</div>
+                    <div className="w-1/2 px-2 py-1.5 font-mono">{path}</div>
+                    <div className="flex-1 px-2 py-1.5 text-muted-foreground">{desc}</div>
+                  </div>
+                ))}
+              </div>
+
+              <h4 className="font-semibold mt-3 text-xs">Resposta /users/data:</h4>
+              <CodeBlock>{`{
+  "id": "uuid",
+  "name": "Nome",
+  "email": "email@empresa.com",
+  "department": { "id": "uuid", "name": "Setor", "color": "#hex" },
+  "autonomy_level": "colaborador",
+  "roles": ["admin"],
+  "teams": [{ "team_name": "Equipe A", "supervisor_id": "uuid" }],
+  "phone": "...", "avatar_url": "...",
+  "birth_date": "...", "registration_number": "..."
+}`}</CodeBlock>
+
               <h4 className="font-semibold mt-3 text-xs">Filtros disponíveis:</h4>
               <CodeBlock>{`?start_date=2024-01-01&end_date=2024-12-31&status=completed`}</CodeBlock>
 
               <h4 className="font-semibold mt-3 text-xs">Nome de Equipe:</h4>
-              <p>Gestores podem nomear suas equipes na aba Gestão de Pessoas. O nome da equipe é enviado pela API nos endpoints de métricas.</p>
+              <p>Gestores podem nomear suas equipes na aba Gestão de Pessoas. O nome da equipe é enviado pela API nos endpoints de métricas e dados de usuários.</p>
+            </CollapsibleSection>
+          </div>
+
+          {/* 14. Avaliações */}
+          <div id="doc-evaluations" className="scroll-mt-4">
+            <CollapsibleSection title="14. Avaliações de Desempenho" icon={ClipboardCheck}>
+              <p>Módulo completo de avaliação de desempenho, feedback e mapeamento de competências, sem IA, baseado em regras e pesos configuráveis.</p>
+              
+              <h4 className="font-semibold mt-3 text-xs">Hierarquia de Avaliação:</h4>
+              <ul className="list-disc pl-5 space-y-1 text-xs">
+                <li><strong>Diretoria</strong> → avalia Gestores</li>
+                <li><strong>Gestores</strong> → avaliam suas equipes</li>
+                <li><strong>Supervisores</strong> → estruturam cargos, competências e formulários</li>
+                <li><strong>Colaboradores</strong> → visualizam, aprovam ou contestam avaliações</li>
+              </ul>
+
+              <h4 className="font-semibold mt-3 text-xs">Tabelas:</h4>
+              <div className="border border-border rounded-md overflow-hidden">
+                <TableRow label="eval_positions" value="Cargos com setor vinculado" />
+                <TableRow label="eval_competencies" value="Competências (técnica/comportamental)" />
+                <TableRow label="eval_position_competencies" value="Vínculo cargo ↔ competência com peso" />
+                <TableRow label="eval_cycles" value="Ciclos de avaliação com período" />
+                <TableRow label="evaluations" value="Avaliações com status, versão e auditoria" />
+                <TableRow label="evaluation_items" value="Notas por competência com classificação" />
+                <TableRow label="evaluation_history" value="Histórico de movimentações" />
+              </div>
+
+              <h4 className="font-semibold mt-3 text-xs">Fluxo:</h4>
+              <CodeBlock>{`Rascunho → Em Avaliação → Enviada → Aprovada/Contestada → Revisão → Finalizada`}</CodeBlock>
+
+              <h4 className="font-semibold mt-3 text-xs">Classificação Automática:</h4>
+              <div className="border border-border rounded-md overflow-hidden">
+                <TableRow label="1-2" value="Precisa Melhorar" />
+                <TableRow label="3" value="Bom" />
+                <TableRow label="4-5" value="Excelente" />
+              </div>
+
+              <h4 className="font-semibold mt-3 text-xs">Funcionalidades:</h4>
+              <ul className="list-disc pl-5 space-y-1 text-xs">
+                <li>Dashboard com métricas por perfil</li>
+                <li>Cadastro de cargos e competências (supervisor/diretoria)</li>
+                <li>Formulários dinâmicos com pesos</li>
+                <li>Aprovação/contestação com justificativa obrigatória</li>
+                <li>Histórico completo e versionamento</li>
+                <li>Gráficos de evolução pessoal</li>
+              </ul>
             </CollapsibleSection>
           </div>
 

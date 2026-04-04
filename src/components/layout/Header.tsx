@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Bell, User, Moon, Sun } from 'lucide-react';
+import { Search, Bell, User, Moon, Sun, ExternalLink } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { useNotifications } from '@/hooks/useNotifications';
 import { UserProfileDialog } from '@/components/user/UserProfileDialog';
+import { TeamHeaderButton } from '@/components/teams/TeamHeaderButton';
 import {
   Popover,
   PopoverContent,
@@ -132,6 +133,17 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
               </div>
             )}
           </div>
+
+          {/* Orbs External Link */}
+          <Button variant="outline" size="sm" className="gap-1.5 hidden md:flex" asChild>
+            <a href="https://sync-synergy-flow.vercel.app/" target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-4 w-4" />
+              Orbs
+            </a>
+          </Button>
+
+          {/* Team Header Button */}
+          <TeamHeaderButton />
           
           {/* Notifications - hidden on home page */}
           {!hideNotifications && (
