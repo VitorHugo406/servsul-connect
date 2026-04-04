@@ -13,6 +13,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  *   GET /metrics/teams/:id - Single team
  *   GET /tasks/summary - Tasks summary
  *   GET /messages/summary - Messages summary
+ *   GET /users/data - All users full data (profiles, roles, teams, departments)
+ *   GET /users/data/:id - Single user full data
+ *   GET /users/sectors - All sectors with user counts
+ *   GET /users/teams - All teams with members
  * 
  * Admin Endpoints (authenticated via Bearer token):
  *   POST /admin/integrations - Create integration
