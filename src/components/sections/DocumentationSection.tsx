@@ -823,6 +823,8 @@ export function DocumentationSection() {
                   { id: 'pwa', label: '10. PWA' },
                   { id: 'rls', label: '11. RLS' },
                   { id: 'realtime', label: '12. Realtime' },
+                  { id: 'api', label: '13. API Integração' },
+                  { id: 'evaluations', label: '14. Avaliações' },
                 ].map(item => (
                   <a key={item.id} href={`#doc-${item.id}`} className="text-xs text-primary hover:underline py-0.5">{item.label}</a>
                 ))}
