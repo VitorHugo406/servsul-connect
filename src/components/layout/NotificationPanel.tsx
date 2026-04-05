@@ -49,7 +49,7 @@ export function NotificationPanel({
   onNavigateToAnnouncements 
 }: NotificationPanelProps) {
   const { profile, user } = useAuth();
-  const { counts, markDirectMessagesAsRead, markAnnouncementAsRead } = useNotifications();
+  const { counts, markDirectMessagesAsRead, markAnnouncementAsRead, markAllAnnouncementsAsRead } = useNotifications();
   const [unreadMessages, setUnreadMessages] = useState<UnreadMessage[]>([]);
   const [unreadAnnouncements, setUnreadAnnouncements] = useState<UnreadAnnouncement[]>([]);
   const [loading, setLoading] = useState(false);
