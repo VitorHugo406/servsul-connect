@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
 import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, LayoutDashboard, Globe, ClipboardCheck } from 'lucide-react';
 import logoServsul from '@/assets/logo-servsul.png';
