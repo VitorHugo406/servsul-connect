@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Bell, MessageSquare, Megaphone, User } from 'lucide-react';
+import { Bell, MessageSquare, Megaphone, User, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,7 +49,7 @@ export function NotificationPanel({
   onNavigateToAnnouncements 
 }: NotificationPanelProps) {
   const { profile, user } = useAuth();
-  const { counts, markDirectMessagesAsRead, markAnnouncementAsRead } = useNotifications();
+  const { counts, markDirectMessagesAsRead, markAnnouncementAsRead, markAllAnnouncementsAsRead } = useNotifications();
   const [unreadMessages, setUnreadMessages] = useState<UnreadMessage[]>([]);
   const [unreadAnnouncements, setUnreadAnnouncements] = useState<UnreadAnnouncement[]>([]);
   const [loading, setLoading] = useState(false);
@@ -165,15 +166,38 @@ export function NotificationPanel({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full max-w-sm p-0">
         <SheetHeader className="p-4 border-b border-border">
-          <SheetTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notificações
+          <div className="flex items-center justify-between">
+            <SheetTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notificações
+              {counts.total > 0 && (
+                <Badge variant="destructive" className="ml-1">
+                  {counts.total}
+                </Badge>
+              )}
+            </SheetTitle>
             {counts.total > 0 && (
-              <Badge variant="destructive" className="ml-auto">
-                {counts.total}
-              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-xs text-destructive hover:text-destructive"
+                onClick={async () => {
+                  await markAllAnnouncementsAsRead();
+                  // Mark all DMs as read
+                  if (profile) {
+                    const senderIds = [...new Set(unreadMessages.map(m => m.sender.id))];
+                    for (const sid of senderIds) {
+                      await markDirectMessagesAsRead(sid);
+                    }
+                  }
+                  setUnreadMessages([]);
+                  setUnreadAnnouncements([]);
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Limpar tudo
+              </Button>
             )}
-          </SheetTitle>
+          </div>
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-5rem)]">
