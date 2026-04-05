@@ -133,7 +133,9 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-3">
+      <nav className="flex-1 overflow-hidden p-3">
+        <ScrollArea className="h-full">
+        <div className="space-y-1">
         {visibleMenuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeSection === item.id;
