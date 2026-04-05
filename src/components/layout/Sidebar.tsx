@@ -192,6 +192,8 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
             </motion.button>
           );
         })}
+        </div>
+        </ScrollArea>
       </nav>
 
       {/* Seasonal Effects Button */}
