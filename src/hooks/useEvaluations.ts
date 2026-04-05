@@ -61,9 +61,10 @@ export interface Evaluation {
   version: number;
   created_at: string;
   updated_at: string;
-  // joined
   evaluator_name?: string;
   evaluated_name?: string;
+  evaluated_registration?: string | null;
+  evaluated_sector?: string | null;
   position_name?: string;
   cycle_name?: string;
 }
@@ -80,6 +81,7 @@ export interface EvaluationItem {
   classification: string | null;
   competency_name?: string;
   competency_category?: string;
+  competency_description?: string | null;
 }
 
 export function classifyScore(score: number | null): string {
@@ -135,6 +137,7 @@ export function useEvaluations() {
   const { profile, isAdmin } = useAuth();
   const [positions, setPositions] = useState<EvalPosition[]>([]);
   const [competencies, setCompetencies] = useState<EvalCompetency[]>([]);
+  const [positionCompetencies, setPositionCompetencies] = useState<EvalPositionCompetency[]>([]);
   const [cycles, setCycles] = useState<EvalCycle[]>([]);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -143,37 +146,46 @@ export function useEvaluations() {
     if (!profile) return;
     setLoading(true);
     try {
-      const [posRes, compRes, cycRes, evalRes] = await Promise.all([
+      const [posRes, compRes, cycRes, evalRes, pcRes] = await Promise.all([
         supabase.from('eval_positions').select('*').eq('is_active', true).order('name'),
         supabase.from('eval_competencies').select('*').eq('is_active', true).order('name'),
         supabase.from('eval_cycles').select('*').order('created_at', { ascending: false }),
         supabase.from('evaluations').select('*').order('created_at', { ascending: false }),
+        supabase.from('eval_position_competencies').select('*'),
       ]);
 
       setPositions((posRes.data as any[]) || []);
       setCompetencies((compRes.data as any[]) || []);
       setCycles((cycRes.data as any[]) || []);
+      setPositionCompetencies((pcRes.data as any[]) || []);
 
-      // Enrich evaluations with names
       const evals = (evalRes.data as any[]) || [];
       if (evals.length > 0) {
         const profileIds = [...new Set(evals.flatMap(e => [e.evaluator_id, e.evaluated_id]))];
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, name, display_name')
+          .select('id, name, display_name, registration_number, sector_id')
           .in('id', profileIds);
 
-        const profileMap = new Map((profiles || []).map(p => [p.id, p.display_name || p.name]));
+        const { data: sectors } = await supabase.from('sectors').select('id, name');
+        const sectorMap = new Map((sectors || []).map(s => [s.id, s.name]));
+        const profileMap = new Map((profiles || []).map(p => [p.id, p]));
         const posMap = new Map((posRes.data as any[] || []).map(p => [p.id, p.name]));
         const cycMap = new Map((cycRes.data as any[] || []).map(c => [c.id, c.name]));
 
-        setEvaluations(evals.map(e => ({
-          ...e,
-          evaluator_name: profileMap.get(e.evaluator_id) || 'Desconhecido',
-          evaluated_name: profileMap.get(e.evaluated_id) || 'Desconhecido',
-          position_name: e.position_id ? posMap.get(e.position_id) : null,
-          cycle_name: e.cycle_id ? cycMap.get(e.cycle_id) : null,
-        })));
+        setEvaluations(evals.map(e => {
+          const evaluated = profileMap.get(e.evaluated_id);
+          const evaluator = profileMap.get(e.evaluator_id);
+          return {
+            ...e,
+            evaluator_name: evaluator ? (evaluator.display_name || evaluator.name) : 'Desconhecido',
+            evaluated_name: evaluated ? (evaluated.display_name || evaluated.name) : 'Desconhecido',
+            evaluated_registration: evaluated?.registration_number || null,
+            evaluated_sector: evaluated?.sector_id ? sectorMap.get(evaluated.sector_id) : null,
+            position_name: e.position_id ? posMap.get(e.position_id) : null,
+            cycle_name: e.cycle_id ? cycMap.get(e.cycle_id) : null,
+          };
+        }));
       } else {
         setEvaluations([]);
       }
@@ -186,7 +198,6 @@ export function useEvaluations() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // CRUD operations
   const createPosition = async (data: { name: string; sector_id?: string; description?: string }) => {
     if (!profile) return;
     const { error } = await supabase.from('eval_positions').insert({ ...data, created_by: profile.user_id });
@@ -221,7 +232,6 @@ export function useEvaluations() {
 
     if (error) { toast.error('Erro ao criar avaliação.'); return null; }
 
-    // Log history
     await supabase.from('evaluation_history').insert({
       evaluation_id: newEval.id,
       action: 'created',
@@ -229,7 +239,27 @@ export function useEvaluations() {
       new_status: 'draft',
     });
 
-    toast.success('Avaliação criada!');
+    // Auto-populate items from position competencies
+    if (data.position_id) {
+      const { data: posComps } = await supabase
+        .from('eval_position_competencies')
+        .select('*')
+        .eq('position_id', data.position_id);
+
+      if (posComps && posComps.length > 0) {
+        const items = posComps.map(pc => ({
+          evaluation_id: newEval.id,
+          competency_id: pc.competency_id,
+          weight: pc.weight,
+          score: null,
+          evaluator_comment: null,
+          classification: null,
+        }));
+        await supabase.from('evaluation_items').insert(items);
+      }
+    }
+
+    toast.success('Avaliação criada com competências do cargo!');
     fetchData();
     return newEval;
   };
@@ -273,13 +303,22 @@ export function useEvaluations() {
     fetchData();
   };
 
-  const contestEvaluation = async (id: string, comment: string) => {
+  const contestEvaluation = async (id: string, comment: string, itemContestations?: { item_id: string; response: string }[]) => {
     if (!profile) return;
     const { error } = await supabase.from('evaluations').update({
       status: 'contested', evaluated_comment: comment, responded_at: new Date().toISOString(),
     }).eq('id', id);
 
     if (error) { toast.error('Erro ao contestar avaliação.'); return; }
+
+    // Save per-item contestations
+    if (itemContestations && itemContestations.length > 0) {
+      for (const ic of itemContestations) {
+        await supabase.from('evaluation_items')
+          .update({ evaluated_response: ic.response })
+          .eq('id', ic.item_id);
+      }
+    }
 
     await supabase.from('evaluation_history').insert({
       evaluation_id: id, action: 'contested', performed_by: profile.user_id,
@@ -290,14 +329,26 @@ export function useEvaluations() {
     fetchData();
   };
 
-  const respondToContestation = async (id: string, response: string) => {
+  const respondToContestation = async (id: string, response: string, itemReplies?: { item_id: string; reply: string; new_score?: number }[]) => {
     if (!profile) return;
+    const eval_ = evaluations.find(e => e.id === id);
     const { error } = await supabase.from('evaluations').update({
-      status: 'sent', evaluator_response: response, version: evaluations.find(e => e.id === id)?.version! + 1,
+      status: 'sent', evaluator_response: response, version: (eval_?.version || 1) + 1,
       sent_at: new Date().toISOString(),
     }).eq('id', id);
 
     if (error) { toast.error('Erro ao responder.'); return; }
+
+    if (itemReplies && itemReplies.length > 0) {
+      for (const ir of itemReplies) {
+        const update: any = { evaluator_reply: ir.reply };
+        if (ir.new_score !== undefined) {
+          update.score = ir.new_score;
+          update.classification = classifyScore(ir.new_score);
+        }
+        await supabase.from('evaluation_items').update(update).eq('id', ir.item_id);
+      }
+    }
 
     await supabase.from('evaluation_history').insert({
       evaluation_id: id, action: 'reviewed', performed_by: profile.user_id,
@@ -310,8 +361,18 @@ export function useEvaluations() {
 
   const finalizeEvaluation = async (id: string) => {
     if (!profile) return;
+    // Recalculate overall score
+    const items = await fetchEvaluationItems(id);
+    const validItems = items.filter(i => i.score != null);
+    let overall = 0;
+    if (validItems.length > 0) {
+      const totalWeight = validItems.reduce((s, i) => s + i.weight, 0);
+      const weightedScore = validItems.reduce((s, i) => s + (i.score! * i.weight), 0);
+      overall = totalWeight > 0 ? Math.round((weightedScore / totalWeight) * 100) / 100 : 0;
+    }
+
     const { error } = await supabase.from('evaluations').update({
-      status: 'finalized', finalized_at: new Date().toISOString(),
+      status: 'finalized', finalized_at: new Date().toISOString(), overall_score: overall,
     }).eq('id', id);
 
     if (error) { toast.error('Erro ao finalizar.'); return; }
@@ -325,7 +386,6 @@ export function useEvaluations() {
     fetchData();
   };
 
-  // Items
   const fetchEvaluationItems = async (evaluationId: string): Promise<EvaluationItem[]> => {
     const { data } = await supabase
       .from('evaluation_items')
@@ -337,18 +397,18 @@ export function useEvaluations() {
     if (items.length === 0) return [];
 
     const compIds = items.map(i => i.competency_id);
-    const { data: comps } = await supabase.from('eval_competencies').select('id, name, category').in('id', compIds);
+    const { data: comps } = await supabase.from('eval_competencies').select('id, name, category, description').in('id', compIds);
     const compMap = new Map((comps || []).map(c => [c.id, c]));
 
     return items.map(i => ({
       ...i,
       competency_name: compMap.get(i.competency_id)?.name || '',
       competency_category: compMap.get(i.competency_id)?.category || '',
+      competency_description: compMap.get(i.competency_id)?.description || null,
     }));
   };
 
   const saveEvaluationItems = async (evaluationId: string, items: { competency_id: string; score: number | null; weight: number; evaluator_comment?: string }[]) => {
-    // Delete existing items then insert new ones
     await supabase.from('evaluation_items').delete().eq('evaluation_id', evaluationId);
     const toInsert = items.map(item => ({
       evaluation_id: evaluationId,
@@ -361,17 +421,17 @@ export function useEvaluations() {
     const { error } = await supabase.from('evaluation_items').insert(toInsert);
     if (error) { toast.error('Erro ao salvar itens.'); return; }
 
-    // Calculate overall score
     const validItems = toInsert.filter(i => i.score != null);
     if (validItems.length > 0) {
       const totalWeight = validItems.reduce((s, i) => s + i.weight, 0);
       const weightedScore = validItems.reduce((s, i) => s + (i.score! * i.weight), 0);
       const overall = totalWeight > 0 ? Math.round((weightedScore / totalWeight) * 100) / 100 : 0;
-      await supabase.from('evaluations').update({ overall_score: overall }).eq('id', evaluationId);
+      await supabase.from('evaluations').update({ overall_score: overall, status: 'in_progress' }).eq('id', evaluationId);
     }
+    toast.success('Avaliação salva!');
+    fetchData();
   };
 
-  // Position competencies
   const fetchPositionCompetencies = async (positionId: string): Promise<EvalPositionCompetency[]> => {
     const { data } = await supabase
       .from('eval_position_competencies')
@@ -396,13 +456,23 @@ export function useEvaluations() {
     toast.success('Competências salvas!');
   };
 
+  const fetchEvaluationHistory = async (evaluationId: string) => {
+    const { data } = await supabase
+      .from('evaluation_history')
+      .select('*')
+      .eq('evaluation_id', evaluationId)
+      .order('created_at', { ascending: true });
+    return (data as any[]) || [];
+  };
+
   return {
-    positions, competencies, cycles, evaluations, loading,
+    positions, competencies, positionCompetencies, cycles, evaluations, loading,
     createPosition, createCompetency, createCycle,
     createEvaluation, updateEvaluation, sendEvaluation,
     approveEvaluation, contestEvaluation, respondToContestation, finalizeEvaluation,
     fetchEvaluationItems, saveEvaluationItems,
     fetchPositionCompetencies, savePositionCompetencies,
+    fetchEvaluationHistory,
     refreshData: fetchData,
   };
 }
