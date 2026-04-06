@@ -465,6 +465,51 @@ export function useEvaluations() {
     return (data as any[]) || [];
   };
 
+  // CRUD for positions
+  const updatePosition = async (id: string, data: { name?: string; description?: string }) => {
+    const { error } = await supabase.from('eval_positions').update(data).eq('id', id);
+    if (error) { toast.error('Erro ao atualizar cargo.'); return; }
+    toast.success('Cargo atualizado!');
+    fetchData();
+  };
+
+  const deletePosition = async (id: string) => {
+    const { error } = await supabase.from('eval_positions').delete().eq('id', id);
+    if (error) { toast.error('Erro ao excluir cargo.'); return; }
+    toast.success('Cargo excluído!');
+    fetchData();
+  };
+
+  // CRUD for competencies
+  const updateCompetency = async (id: string, data: { name?: string; description?: string; category?: string }) => {
+    const { error } = await supabase.from('eval_competencies').update(data).eq('id', id);
+    if (error) { toast.error('Erro ao atualizar competência.'); return; }
+    toast.success('Competência atualizada!');
+    fetchData();
+  };
+
+  const deleteCompetency = async (id: string) => {
+    const { error } = await supabase.from('eval_competencies').delete().eq('id', id);
+    if (error) { toast.error('Erro ao excluir competência.'); return; }
+    toast.success('Competência excluída!');
+    fetchData();
+  };
+
+  // CRUD for cycles
+  const updateCycle = async (id: string, data: { name?: string; start_date?: string; end_date?: string; description?: string; status?: string }) => {
+    const { error } = await supabase.from('eval_cycles').update(data).eq('id', id);
+    if (error) { toast.error('Erro ao atualizar ciclo.'); return; }
+    toast.success('Ciclo atualizado!');
+    fetchData();
+  };
+
+  const deleteCycle = async (id: string) => {
+    const { error } = await supabase.from('eval_cycles').delete().eq('id', id);
+    if (error) { toast.error('Erro ao excluir ciclo.'); return; }
+    toast.success('Ciclo excluído!');
+    fetchData();
+  };
+
   return {
     positions, competencies, positionCompetencies, cycles, evaluations, loading,
     createPosition, createCompetency, createCycle,
@@ -473,6 +518,7 @@ export function useEvaluations() {
     fetchEvaluationItems, saveEvaluationItems,
     fetchPositionCompetencies, savePositionCompetencies,
     fetchEvaluationHistory,
+    updatePosition, deletePosition, updateCompetency, deleteCompetency, updateCycle, deleteCycle,
     refreshData: fetchData,
   };
 }
