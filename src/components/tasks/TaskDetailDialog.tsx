@@ -599,6 +599,13 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
               selected={task.due_date ? new Date(task.due_date) : undefined}
               onSelect={async (date) => {
                 if (onUpdateTask && task) {
+                  // Preserve existing time if set
+                  if (date) {
+                    const existing = task.due_date ? new Date(task.due_date) : null;
+                    if (existing) {
+                      date.setHours(existing.getHours(), existing.getMinutes());
+                    }
+                  }
                   await onUpdateTask(task.id, { due_date: date ? date.toISOString() : null });
                 }
               }}
@@ -611,6 +618,28 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
                 Selecionada: {new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
               </div>
             )}
+            {/* Hour selector */}
+            <div className="border-t border-border pt-3 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-xs font-medium">Horário limite</p>
+              </div>
+              <Input
+                type="time"
+                className="h-8 text-xs w-full"
+                value={task.due_date ? new Date(task.due_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''}
+                onChange={async (e) => {
+                  if (onUpdateTask && task && task.due_date) {
+                    const [h, m] = e.target.value.split(':').map(Number);
+                    const d = new Date(task.due_date);
+                    d.setHours(h, m, 0, 0);
+                    await onUpdateTask(task.id, { due_date: d.toISOString() });
+                  }
+                }}
+                disabled={!task.due_date}
+              />
+              {!task.due_date && <p className="text-[10px] text-muted-foreground">Selecione uma data primeiro</p>}
+            </div>
             <div className="border-t border-border pt-3 space-y-1.5">
               <div className="flex items-center gap-2">
                 <Bell className="h-3.5 w-3.5 text-muted-foreground" />
@@ -862,7 +891,10 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
             <CalendarIcon className="h-4 w-4 text-muted-foreground" />
             <div>
               <p className="text-xs text-muted-foreground">Entrega</p>
-              <p className="text-sm font-medium">{new Date(task.due_date).toLocaleDateString('pt-BR')}</p>
+              <p className="text-sm font-medium">
+                {new Date(task.due_date).toLocaleDateString('pt-BR')}
+                {(() => { const d = new Date(task.due_date!); return (d.getHours() || d.getMinutes()) ? ` às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''; })()}
+              </p>
             </div>
           </div>
         )}
