@@ -115,6 +115,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           can_access_management: permData.can_access_management,
           can_access_password_change: permData.can_access_password_change,
           can_create_war_room: permData.can_create_war_room,
+          can_access_bh: (permData as any).can_access_bh ?? false,
+          can_access_fechamento: (permData as any).can_access_fechamento ?? false,
         });
       } else {
         setPermissions(defaultPermissions);
