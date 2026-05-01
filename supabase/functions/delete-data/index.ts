@@ -430,31 +430,56 @@ serve(async (req) => {
 
         if (targetProfile) {
           const tpId = targetProfile.id;
-          // Nullify references
+          // Nullify references in tasks/columns/boards (keep content, free user)
           await adminClient.from('task_board_columns').update({ auto_assign_to: null }).eq('auto_assign_to', tpId);
           await adminClient.from('tasks').update({ assigned_to: null }).eq('assigned_to', tpId);
+          await adminClient.from('tasks').update({ created_by: null }).eq('created_by', tpId);
+          await adminClient.from('task_boards').update({ owner_id: null }).eq('owner_id', tpId);
+          // Remove auto-duplications created by this user
+          try { await adminClient.from('task_auto_duplications').delete().eq('created_by', tpId); } catch (e) { console.log('auto_duplications:', e); }
+          try { await adminClient.from('task_auto_duplications').delete().eq('created_by', targetUserId2); } catch (e) {}
           // Delete user-specific data
           await adminClient.from('announcement_comments').delete().eq('author_id', tpId);
-          await adminClient.from('task_comments').delete().eq('author_id', tpId);
+          try { await adminClient.from('task_comments').delete().eq('author_id', tpId); } catch (e) {}
+          try { await adminClient.from('task_subtasks').update({ assigned_to: null }).eq('assigned_to', tpId); } catch (e) {}
+          try { await adminClient.from('task_assignees').delete().eq('profile_id', tpId); } catch (e) {}
+          try { await adminClient.from('task_activities').delete().eq('actor_id', tpId); } catch (e) {}
+          try { await adminClient.from('message_reactions').delete().eq('profile_id', tpId); } catch (e) {}
+          try { await adminClient.from('announcement_reads').delete().eq('user_id', targetUserId2); } catch (e) {}
+          try { await adminClient.from('important_announcement_reads').delete().eq('user_id', targetUserId2); } catch (e) {}
+          try { await adminClient.from('private_group_message_reads').delete().eq('user_id', targetUserId2); } catch (e) {}
+          try { await adminClient.from('meeting_participants').delete().eq('profile_id', tpId); } catch (e) {}
+          try { await adminClient.from('calendar_events').delete().eq('created_by', targetUserId2); } catch (e) {}
+          try { await adminClient.from('board_join_requests').delete().eq('user_id', targetUserId2); } catch (e) {}
+          try { await adminClient.from('board_share_links').delete().eq('created_by', targetUserId2); } catch (e) {}
+          try { await adminClient.from('workload_alerts').delete().eq('user_id', targetUserId2); } catch (e) {}
+          try { await adminClient.from('evaluations').delete().eq('evaluator_id', tpId); } catch (e) {}
+          try { await adminClient.from('evaluations').delete().eq('evaluated_id', tpId); } catch (e) {}
           await adminClient.from('supervisor_team_members').delete().eq('supervisor_id', targetUserId2);
           await adminClient.from('supervisor_team_members').delete().eq('member_profile_id', tpId);
           await adminClient.from('private_group_members').delete().eq('profile_id', tpId);
           await adminClient.from('task_board_members').delete().eq('profile_id', tpId);
           await adminClient.from('user_permissions').delete().eq('user_id', targetUserId2);
           await adminClient.from('user_roles').delete().eq('user_id', targetUserId2);
-          await adminClient.from('user_presence').delete().eq('user_id', targetUserId2);
-          await adminClient.from('user_facial_data').delete().eq('user_id', targetUserId2);
+          try { await adminClient.from('user_presence').delete().eq('user_id', targetUserId2); } catch (e) {}
+          try { await adminClient.from('user_facial_data').delete().eq('user_id', targetUserId2); } catch (e) {}
           await adminClient.from('user_additional_sectors').delete().eq('user_id', targetUserId2);
-          await adminClient.from('user_notifications').delete().eq('user_id', targetUserId2);
+          try { await adminClient.from('user_notifications').delete().eq('user_id', targetUserId2); } catch (e) {}
           // Delete attachments uploaded by this user
-          await adminClient.from('attachments').delete().eq('uploaded_by', targetUserId2);
-          // Delete DMs
+          await adminClient.from('attachments').delete().eq('uploaded_by', tpId);
+          try { await adminClient.from('attachments').delete().eq('uploaded_by', targetUserId2); } catch (e) {}
+          // Delete DMs and messages
           await adminClient.from('direct_messages').delete().eq('sender_id', tpId);
           await adminClient.from('direct_messages').delete().eq('receiver_id', tpId);
-          // Delete messages
+          try { await adminClient.from('private_group_messages').delete().eq('sender_id', tpId); } catch (e) {}
           await adminClient.from('messages').delete().eq('author_id', tpId);
+          try { await adminClient.from('announcements').delete().eq('author_id', tpId); } catch (e) {}
           // Delete profile
-          await adminClient.from('profiles').delete().eq('user_id', targetUserId2);
+          const { error: profDelErr } = await adminClient.from('profiles').delete().eq('user_id', targetUserId2);
+          if (profDelErr) {
+            console.error('Error deleting profile:', profDelErr.message);
+            errors.push(`profile: ${profDelErr.message}`);
+          }
           // Delete auth user
           const { error: authDelError } = await adminClient.auth.admin.deleteUser(targetUserId2);
           if (authDelError) {
