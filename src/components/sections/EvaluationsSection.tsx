@@ -93,8 +93,8 @@ export function EvaluationsSection() {
   const [dashDateFrom, setDashDateFrom] = useState('');
   const [dashDateTo, setDashDateTo] = useState('');
 
-  // Pendencies sub-tab
-  const [pendencyTab, setPendencyTab] = useState('to-evaluate');
+  // Pendencies sub-tab — regular users only see "Para Aprovar" / "Contestadas"
+  const [pendencyTab, setPendencyTab] = useState(canCreateEvaluations ? 'to-evaluate' : 'awaiting-approval');
 
   // Filtered evaluations based on role
   const myEvaluations = evaluations.filter(e => e.evaluated_id === profile?.id);
