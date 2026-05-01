@@ -106,10 +106,16 @@ export function EvaluationsSection() {
   // Pendency counts
   const pendingApproval = evaluations.filter(e => e.status === 'sent' && e.evaluated_id === profile?.id);
   const toEvaluate = evaluations.filter(e => ['draft', 'in_progress'].includes(e.status) && e.evaluator_id === profile?.id);
-  const contested = evaluations.filter(e => e.status === 'contested' && e.evaluator_id === profile?.id);
+  // For evaluators: contested evaluations they need to respond to
+  // For regular users: their own contested evaluations awaiting evaluator response
+  const contested = canCreateEvaluations
+    ? evaluations.filter(e => e.status === 'contested' && e.evaluator_id === profile?.id)
+    : evaluations.filter(e => e.status === 'contested' && e.evaluated_id === profile?.id);
   const awaitingFinalization = evaluations.filter(e => ['approved', 'approved_with_obs'].includes(e.status) && e.evaluator_id === profile?.id);
 
-  const totalPendencies = pendingApproval.length + toEvaluate.length + contested.length + awaitingFinalization.length;
+  const totalPendencies = canCreateEvaluations
+    ? pendingApproval.length + toEvaluate.length + contested.length + awaitingFinalization.length
+    : pendingApproval.length + contested.length;
 
   const draftCount = toEvaluate.length;
   const pendingCount = pendingApproval.length;
