@@ -2323,6 +2323,8 @@ export type Database = {
       }
       user_permissions: {
         Row: {
+          can_access_bh: boolean
+          can_access_fechamento: boolean
           can_access_management: boolean
           can_access_password_change: boolean
           can_create_war_room: boolean
@@ -2334,6 +2336,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          can_access_bh?: boolean
+          can_access_fechamento?: boolean
           can_access_management?: boolean
           can_access_password_change?: boolean
           can_create_war_room?: boolean
@@ -2345,6 +2349,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          can_access_bh?: boolean
+          can_access_fechamento?: boolean
           can_access_management?: boolean
           can_access_password_change?: boolean
           can_create_war_room?: boolean
