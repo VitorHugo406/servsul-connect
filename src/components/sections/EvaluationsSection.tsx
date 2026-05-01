@@ -303,7 +303,7 @@ export function EvaluationsSection() {
       doc.setFontSize(11);
       doc.setTextColor(22, 163, 74);
       doc.text('★ Habilidades Excelentes', 14, y); y += 5;
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: y, head: [['Competência', 'Nota', 'Peso', 'Observação']],
         body: excellent.map(i => [i.competency_name, `${i.score}/5`, String(i.weight), i.evaluator_comment || '-']),
         styles: { fontSize: 8, cellPadding: 3 }, headStyles: { fillColor: [22, 163, 74] },
@@ -317,7 +317,7 @@ export function EvaluationsSection() {
       doc.setFontSize(11);
       doc.setTextColor(202, 138, 4);
       doc.text('● Habilidades Boas', 14, y); y += 5;
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: y, head: [['Competência', 'Nota', 'Peso', 'Observação']],
         body: good.map(i => [i.competency_name, `${i.score}/5`, String(i.weight), i.evaluator_comment || '-']),
         styles: { fontSize: 8, cellPadding: 3 }, headStyles: { fillColor: [202, 138, 4] },
@@ -331,7 +331,7 @@ export function EvaluationsSection() {
       doc.setFontSize(11);
       doc.setTextColor(220, 38, 38);
       doc.text('▲ Habilidades que Precisam Melhorar', 14, y); y += 5;
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: y, head: [['Competência', 'Nota', 'Peso', 'Observação']],
         body: needsImprovement.map(i => [i.competency_name, `${i.score}/5`, String(i.weight), i.evaluator_comment || '-']),
         styles: { fontSize: 8, cellPadding: 3 }, headStyles: { fillColor: [220, 38, 38] },
@@ -403,7 +403,7 @@ export function EvaluationsSection() {
     doc.setFontSize(11);
     doc.setTextColor(30, 41, 59);
     doc.text('Avaliação por Competência', 14, y); y += 5;
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: y,
       head: [['Competência', 'Nota', 'Class.', 'Obs. Avaliador', 'Contestação', 'Resposta']],
       body: items.map(i => [
@@ -461,7 +461,7 @@ export function EvaluationsSection() {
       doc.setFontSize(11);
       doc.setTextColor(30, 41, 59);
       doc.text('Histórico do Processo', 14, y); y += 5;
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: y,
         head: [['Data', 'Ação', 'De', 'Para', 'Detalhes']],
         body: history.map(h => [
