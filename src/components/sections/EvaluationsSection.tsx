@@ -650,7 +650,7 @@ export function EvaluationsSection() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <ScrollArea className="w-full">
-          <TabsList className={cn("inline-flex w-full min-w-max", `grid-cols-${tabCount}`)}>
+          <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))` }}>
             <TabsTrigger value="dashboard" className="text-xs">Dashboard</TabsTrigger>
             <TabsTrigger value="pendencies" className="text-xs relative">
               Pendências
