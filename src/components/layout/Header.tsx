@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Bell, User, Moon, Sun, ExternalLink } from 'lucide-react';
+import { Search, Bell, User, Moon, Sun, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useAuth } from '@/contexts/AuthContext';
 import { UserProfileDialog } from '@/components/user/UserProfileDialog';
 import { TeamHeaderButton } from '@/components/teams/TeamHeaderButton';
 import {
@@ -12,8 +13,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
 
 interface HeaderProps {
   title: string;
@@ -24,29 +31,49 @@ interface HeaderProps {
   onNavigateToSection?: (section: string) => void;
 }
 
-const ALL_SECTIONS = [
-  { id: 'home', label: 'Inicio', description: 'Visao geral do ServChat' },
-  { id: 'chat', label: 'Chat por Setores', description: 'Comunicacao entre equipes' },
+const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
+
+type SectionDef = {
+  id: string;
+  label: string;
+  description: string;
+  // visibility flags
+  adminOnly?: boolean;
+  mainAdminOnly?: boolean;
+  supervisorOnly?: boolean;
+  permission?: 'can_access_management' | 'can_post_announcements' | 'can_delete_messages' | 'can_access_password_change' | 'can_create_war_room';
+};
+
+const ALL_SECTIONS: SectionDef[] = [
+  { id: 'home', label: 'Início', description: 'Visão geral do ServChat' },
+  { id: 'chat', label: 'Chat por Setores', description: 'Comunicação entre equipes' },
   { id: 'announcements', label: 'Avisos Gerais', description: 'Comunicados oficiais' },
-  { id: 'birthdays', label: 'Aniversariantes', description: 'Mural de celebracoes' },
-  { id: 'tasks', label: 'Gestao de Tarefas', description: 'Quadro de atividades' },
-  { id: 'people-management', label: 'Gestao de Pessoas', description: 'Equipe e relatorios' },
-  { id: 'management', label: 'Gerenciamento', description: 'Administracao do sistema' },
-  { id: 'sectors', label: 'Gestao de Setores', description: 'Departamentos da empresa' },
-  { id: 'important-announcements', label: 'Comunicados Importantes', description: 'Avisos em destaque' },
-  { id: 'data-management', label: 'Exclusao de Dados', description: 'Gerenciamento de dados' },
-  { id: 'feedback-email', label: 'Disparo de Feedback', description: 'E-mails de feedback mensal' },
-  { id: 'facial', label: 'Cadastro Facial', description: 'Reconhecimento biometrico' },
-  { id: 'system-logs', label: 'Logs do Sistema', description: 'Auditoria e relatorios' },
-  { id: 'event-history', label: 'Eventos Mensais', description: 'Historico de campanhas' },
-  { id: 'storage', label: 'Armazenamento', description: 'Monitoramento do banco de dados' },
+  { id: 'birthdays', label: 'Aniversariantes', description: 'Mural de celebrações' },
+  { id: 'war-room', label: 'War Room', description: 'Gestão de incidentes críticos' },
+  { id: 'tasks', label: 'Gestão de Tarefas', description: 'Quadro de atividades' },
+  { id: 'people-management', label: 'Gestão de Pessoas', description: 'Equipe e relatórios', supervisorOnly: true },
+  { id: 'management', label: 'Gerenciamento', description: 'Administração do sistema', permission: 'can_access_management' },
+  { id: 'sectors', label: 'Gestão de Setores', description: 'Departamentos da empresa', adminOnly: true },
+  { id: 'important-announcements', label: 'Comunicados Importantes', description: 'Avisos em destaque', adminOnly: true },
+  { id: 'data-management', label: 'Exclusão de Dados', description: 'Gerenciamento de dados', adminOnly: true },
+  { id: 'feedback-email', label: 'Disparo de Feedback', description: 'E-mails de feedback mensal', adminOnly: true },
+  { id: 'my-dashboard', label: 'Meu Painel', description: 'Métricas pessoais' },
+  { id: 'evaluations', label: 'Avaliações', description: 'Avaliação de desempenho' },
+  { id: 'calendar', label: 'Calendário', description: 'Reuniões e prazos' },
+  { id: 'system-logs', label: 'Logs do Sistema', description: 'Auditoria e relatórios', mainAdminOnly: true },
+  { id: 'event-history', label: 'Eventos Mensais', description: 'Histórico de campanhas', adminOnly: true },
+  { id: 'api-management', label: 'API Integração', description: 'Integrações externas', adminOnly: true },
+  { id: 'storage', label: 'Armazenamento', description: 'Monitoramento do banco', mainAdminOnly: true },
+  { id: 'documentation', label: 'Documentação', description: 'Documentação técnica', mainAdminOnly: true },
 ];
 
 export function Header({ title, subtitle, hideNotifications = false, searchQuery = '', onSearchChange, onNavigateToSection }: HeaderProps) {
   const { counts } = useNotifications();
+  const { profile, isAdmin, canAccess } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showSectionSearch, setShowSectionSearch] = useState(false);
+  const [showComingSoon, setShowComingSoon] = useState<string | null>(null);
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
   useEffect(() => {
@@ -69,19 +96,45 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
     }
   };
 
+  const isMainAdmin = profile?.email === ADMIN_EMAIL;
+  const autonomy = profile?.autonomy_level;
+
+  // Filter sections by user permissions (mirror Sidebar visibility)
+  const visibleSections = useMemo(() => {
+    return ALL_SECTIONS.filter(s => {
+      if (s.mainAdminOnly) return isAdmin && isMainAdmin;
+      if (s.adminOnly) return isAdmin;
+      if (s.supervisorOnly) {
+        if (isAdmin) return true;
+        return autonomy === 'supervisor' || autonomy === 'gerente' || autonomy === 'gestor' || autonomy === 'diretoria';
+      }
+      if (s.permission) {
+        if (isAdmin) return true;
+        if (autonomy === 'diretoria') return true;
+        return canAccess(s.permission);
+      }
+      return true;
+    });
+  }, [isAdmin, isMainAdmin, autonomy, canAccess]);
+
   const filteredSections = useMemo(() => {
     if (!searchQuery) return [];
     const q = searchQuery.toLowerCase();
-    return ALL_SECTIONS.filter(s =>
+    return visibleSections.filter(s =>
       s.label.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)
     );
-  }, [searchQuery]);
+  }, [searchQuery, visibleSections]);
 
   const handleSelectSection = (sectionId: string) => {
     onNavigateToSection?.(sectionId);
     onSearchChange?.('');
     setShowSectionSearch(false);
   };
+
+  // External shortcut buttons (Dash BI / BH / Fechamento / Orbs)
+  // Dash BI is open to everyone. BH and Fechamento require permission flags.
+  const showBhButton = isAdmin || canAccess('can_access_bh' as any);
+  const showFechamentoButton = isAdmin || canAccess('can_access_fechamento' as any);
 
   return (
     <>
@@ -95,7 +148,7 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
           {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           {/* Section Search */}
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -108,9 +161,8 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
               }}
               onFocus={() => { if (searchQuery) setShowSectionSearch(true); }}
               onBlur={() => setTimeout(() => setShowSectionSearch(false), 200)}
-              className="w-64 bg-muted/50 pl-10 focus-visible:ring-primary"
+              className="w-56 bg-muted/50 pl-10 focus-visible:ring-primary"
             />
-            {/* Dropdown results */}
             {showSectionSearch && filteredSections.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-lg border border-border bg-card shadow-lg overflow-hidden">
                 {filteredSections.map(section => (
@@ -134,7 +186,26 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
             )}
           </div>
 
-          {/* Orbs External Link */}
+          {/* External shortcut buttons */}
+          <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" onClick={() => setShowComingSoon('Dash BI')}>
+            <BarChart3 className="h-4 w-4" />
+            Dash BI
+          </Button>
+
+          {showBhButton && (
+            <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" onClick={() => setShowComingSoon('BH')}>
+              <Briefcase className="h-4 w-4" />
+              BH
+            </Button>
+          )}
+
+          {showFechamentoButton && (
+            <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" onClick={() => setShowComingSoon('Fechamento')}>
+              <FileSpreadsheet className="h-4 w-4" />
+              Fechamento
+            </Button>
+          )}
+
           <Button variant="outline" size="sm" className="gap-1.5 hidden md:flex" asChild>
             <a href="https://sync-synergy-flow.vercel.app/" target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4" />
@@ -145,7 +216,7 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
           {/* Team Header Button */}
           <TeamHeaderButton />
           
-          {/* Notifications - hidden on home page */}
+          {/* Notifications */}
           {!hideNotifications && (
             <Popover open={showNotifications} onOpenChange={setShowNotifications}>
               <PopoverTrigger asChild>
@@ -198,18 +269,15 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
             </Popover>
           )}
 
-          {/* Dark Mode Toggle */}
           <Button variant="ghost" size="icon" onClick={toggleDarkMode} title={isDark ? 'Modo Claro' : 'Modo Noturno'}>
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
 
-          {/* Profile button */}
           <Button variant="ghost" size="icon" onClick={() => setShowProfile(true)}>
             <User className="h-5 w-5" />
           </Button>
           
-          {/* Date */}
-          <div className="hidden text-right lg:block">
+          <div className="hidden text-right xl:block">
             <p className="text-sm font-medium text-foreground">
               {new Date().toLocaleDateString('pt-BR', { weekday: 'long' })}
             </p>
@@ -221,6 +289,28 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
       </motion.header>
 
       <UserProfileDialog open={showProfile} onOpenChange={setShowProfile} />
+
+      <Dialog open={showComingSoon !== null} onOpenChange={(open) => !open && setShowComingSoon(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Construction className="h-5 w-5 text-amber-500" />
+              {showComingSoon}
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Aguarde, em fase de Implantação.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center py-6 text-center">
+            <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-4 mb-3">
+              <Construction className="h-10 w-10 text-amber-500" />
+            </div>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              O módulo <strong>{showComingSoon}</strong> está sendo preparado e estará disponível em breve.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

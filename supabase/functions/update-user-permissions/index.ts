@@ -13,6 +13,8 @@ interface PermissionUpdate {
     canAccessManagement?: boolean;
     canAccessPasswordChange?: boolean;
     canCreateWarRoom?: boolean;
+    canAccessBh?: boolean;
+    canAccessFechamento?: boolean;
   };
 }
 

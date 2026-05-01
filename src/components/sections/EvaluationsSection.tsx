@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend,
@@ -93,8 +93,8 @@ export function EvaluationsSection() {
   const [dashDateFrom, setDashDateFrom] = useState('');
   const [dashDateTo, setDashDateTo] = useState('');
 
-  // Pendencies sub-tab
-  const [pendencyTab, setPendencyTab] = useState('to-evaluate');
+  // Pendencies sub-tab — regular users only see "Para Aprovar" / "Contestadas"
+  const [pendencyTab, setPendencyTab] = useState(canCreateEvaluations ? 'to-evaluate' : 'awaiting-approval');
 
   // Filtered evaluations based on role
   const myEvaluations = evaluations.filter(e => e.evaluated_id === profile?.id);
@@ -106,10 +106,16 @@ export function EvaluationsSection() {
   // Pendency counts
   const pendingApproval = evaluations.filter(e => e.status === 'sent' && e.evaluated_id === profile?.id);
   const toEvaluate = evaluations.filter(e => ['draft', 'in_progress'].includes(e.status) && e.evaluator_id === profile?.id);
-  const contested = evaluations.filter(e => e.status === 'contested' && e.evaluator_id === profile?.id);
+  // For evaluators: contested evaluations they need to respond to
+  // For regular users: their own contested evaluations awaiting evaluator response
+  const contested = canCreateEvaluations
+    ? evaluations.filter(e => e.status === 'contested' && e.evaluator_id === profile?.id)
+    : evaluations.filter(e => e.status === 'contested' && e.evaluated_id === profile?.id);
   const awaitingFinalization = evaluations.filter(e => ['approved', 'approved_with_obs'].includes(e.status) && e.evaluator_id === profile?.id);
 
-  const totalPendencies = pendingApproval.length + toEvaluate.length + contested.length + awaitingFinalization.length;
+  const totalPendencies = canCreateEvaluations
+    ? pendingApproval.length + toEvaluate.length + contested.length + awaitingFinalization.length
+    : pendingApproval.length + contested.length;
 
   const draftCount = toEvaluate.length;
   const pendingCount = pendingApproval.length;
@@ -303,7 +309,7 @@ export function EvaluationsSection() {
       doc.setFontSize(11);
       doc.setTextColor(22, 163, 74);
       doc.text('★ Habilidades Excelentes', 14, y); y += 5;
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: y, head: [['Competência', 'Nota', 'Peso', 'Observação']],
         body: excellent.map(i => [i.competency_name, `${i.score}/5`, String(i.weight), i.evaluator_comment || '-']),
         styles: { fontSize: 8, cellPadding: 3 }, headStyles: { fillColor: [22, 163, 74] },
@@ -317,7 +323,7 @@ export function EvaluationsSection() {
       doc.setFontSize(11);
       doc.setTextColor(202, 138, 4);
       doc.text('● Habilidades Boas', 14, y); y += 5;
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: y, head: [['Competência', 'Nota', 'Peso', 'Observação']],
         body: good.map(i => [i.competency_name, `${i.score}/5`, String(i.weight), i.evaluator_comment || '-']),
         styles: { fontSize: 8, cellPadding: 3 }, headStyles: { fillColor: [202, 138, 4] },
@@ -331,7 +337,7 @@ export function EvaluationsSection() {
       doc.setFontSize(11);
       doc.setTextColor(220, 38, 38);
       doc.text('▲ Habilidades que Precisam Melhorar', 14, y); y += 5;
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: y, head: [['Competência', 'Nota', 'Peso', 'Observação']],
         body: needsImprovement.map(i => [i.competency_name, `${i.score}/5`, String(i.weight), i.evaluator_comment || '-']),
         styles: { fontSize: 8, cellPadding: 3 }, headStyles: { fillColor: [220, 38, 38] },
@@ -403,7 +409,7 @@ export function EvaluationsSection() {
     doc.setFontSize(11);
     doc.setTextColor(30, 41, 59);
     doc.text('Avaliação por Competência', 14, y); y += 5;
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: y,
       head: [['Competência', 'Nota', 'Class.', 'Obs. Avaliador', 'Contestação', 'Resposta']],
       body: items.map(i => [
@@ -461,7 +467,7 @@ export function EvaluationsSection() {
       doc.setFontSize(11);
       doc.setTextColor(30, 41, 59);
       doc.text('Histórico do Processo', 14, y); y += 5;
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: y,
         head: [['Data', 'Ação', 'De', 'Para', 'Detalhes']],
         body: history.map(h => [
@@ -650,7 +656,7 @@ export function EvaluationsSection() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <ScrollArea className="w-full">
-          <TabsList className={cn("inline-flex w-full min-w-max", `grid-cols-${tabCount}`)}>
+          <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))` }}>
             <TabsTrigger value="dashboard" className="text-xs">Dashboard</TabsTrigger>
             <TabsTrigger value="pendencies" className="text-xs relative">
               Pendências
@@ -669,11 +675,13 @@ export function EvaluationsSection() {
           <Card>
             <CardContent className="p-4">
               <Tabs value={pendencyTab} onValueChange={setPendencyTab}>
-                <TabsList className="grid w-full grid-cols-4 mb-4">
-                  <TabsTrigger value="to-evaluate" className="text-[10px] md:text-xs relative">
-                    Avaliar
-                    {toEvaluate.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-blue-500 hover:bg-blue-500">{toEvaluate.length}</Badge>}
-                  </TabsTrigger>
+                <TabsList className="grid w-full mb-4" style={{ gridTemplateColumns: `repeat(${canCreateEvaluations ? 4 : 2}, minmax(0, 1fr))` }}>
+                  {canCreateEvaluations && (
+                    <TabsTrigger value="to-evaluate" className="text-[10px] md:text-xs relative">
+                      Avaliar
+                      {toEvaluate.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-blue-500 hover:bg-blue-500">{toEvaluate.length}</Badge>}
+                    </TabsTrigger>
+                  )}
                   <TabsTrigger value="awaiting-approval" className="text-[10px] md:text-xs relative">
                     Para Aprovar
                     {pendingApproval.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-amber-500 hover:bg-amber-500">{pendingApproval.length}</Badge>}
@@ -682,22 +690,26 @@ export function EvaluationsSection() {
                     Contestadas
                     {contested.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-destructive hover:bg-destructive">{contested.length}</Badge>}
                   </TabsTrigger>
-                  <TabsTrigger value="finalize" className="text-[10px] md:text-xs relative">
-                    Finalizar
-                    {awaitingFinalization.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-green-500 hover:bg-green-500">{awaitingFinalization.length}</Badge>}
-                  </TabsTrigger>
+                  {canCreateEvaluations && (
+                    <TabsTrigger value="finalize" className="text-[10px] md:text-xs relative">
+                      Finalizar
+                      {awaitingFinalization.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-green-500 hover:bg-green-500">{awaitingFinalization.length}</Badge>}
+                    </TabsTrigger>
+                  )}
                 </TabsList>
 
-                <TabsContent value="to-evaluate">
-                  {toEvaluate.length === 0 ? (
-                    <div className="text-center py-8">
-                      <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhuma avaliação pendente de preenchimento.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">{toEvaluate.map(ev => renderEvalCard(ev))}</div>
-                  )}
-                </TabsContent>
+                {canCreateEvaluations && (
+                  <TabsContent value="to-evaluate">
+                    {toEvaluate.length === 0 ? (
+                      <div className="text-center py-8">
+                        <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
+                        <p className="text-sm text-muted-foreground">Nenhuma avaliação pendente de preenchimento.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">{toEvaluate.map(ev => renderEvalCard(ev))}</div>
+                    )}
+                  </TabsContent>
+                )}
 
                 <TabsContent value="awaiting-approval">
                   {pendingApproval.length === 0 ? (
@@ -721,16 +733,18 @@ export function EvaluationsSection() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="finalize">
-                  {awaitingFinalization.length === 0 ? (
-                    <div className="text-center py-8">
-                      <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhuma avaliação aguardando finalização.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">{awaitingFinalization.map(ev => renderEvalCard(ev))}</div>
-                  )}
-                </TabsContent>
+                {canCreateEvaluations && (
+                  <TabsContent value="finalize">
+                    {awaitingFinalization.length === 0 ? (
+                      <div className="text-center py-8">
+                        <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
+                        <p className="text-sm text-muted-foreground">Nenhuma avaliação aguardando finalização.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">{awaitingFinalization.map(ev => renderEvalCard(ev))}</div>
+                    )}
+                  </TabsContent>
+                )}
               </Tabs>
             </CardContent>
           </Card>
