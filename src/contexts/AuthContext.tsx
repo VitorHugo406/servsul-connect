@@ -40,6 +40,8 @@ interface UserPermissions {
   can_access_management: boolean;
   can_access_password_change: boolean;
   can_create_war_room: boolean;
+  can_access_bh: boolean;
+  can_access_fechamento: boolean;
 }
 
 interface AuthContextType {
@@ -68,6 +70,8 @@ const defaultPermissions: UserPermissions = {
   can_access_management: false,
   can_access_password_change: false,
   can_create_war_room: false,
+  can_access_bh: false,
+  can_access_fechamento: false,
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
