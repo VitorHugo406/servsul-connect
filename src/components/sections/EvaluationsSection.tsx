@@ -675,11 +675,13 @@ export function EvaluationsSection() {
           <Card>
             <CardContent className="p-4">
               <Tabs value={pendencyTab} onValueChange={setPendencyTab}>
-                <TabsList className="grid w-full grid-cols-4 mb-4">
-                  <TabsTrigger value="to-evaluate" className="text-[10px] md:text-xs relative">
-                    Avaliar
-                    {toEvaluate.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-blue-500 hover:bg-blue-500">{toEvaluate.length}</Badge>}
-                  </TabsTrigger>
+                <TabsList className="grid w-full mb-4" style={{ gridTemplateColumns: `repeat(${canCreateEvaluations ? 4 : 2}, minmax(0, 1fr))` }}>
+                  {canCreateEvaluations && (
+                    <TabsTrigger value="to-evaluate" className="text-[10px] md:text-xs relative">
+                      Avaliar
+                      {toEvaluate.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-blue-500 hover:bg-blue-500">{toEvaluate.length}</Badge>}
+                    </TabsTrigger>
+                  )}
                   <TabsTrigger value="awaiting-approval" className="text-[10px] md:text-xs relative">
                     Para Aprovar
                     {pendingApproval.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-amber-500 hover:bg-amber-500">{pendingApproval.length}</Badge>}
@@ -688,22 +690,26 @@ export function EvaluationsSection() {
                     Contestadas
                     {contested.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-destructive hover:bg-destructive">{contested.length}</Badge>}
                   </TabsTrigger>
-                  <TabsTrigger value="finalize" className="text-[10px] md:text-xs relative">
-                    Finalizar
-                    {awaitingFinalization.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-green-500 hover:bg-green-500">{awaitingFinalization.length}</Badge>}
-                  </TabsTrigger>
+                  {canCreateEvaluations && (
+                    <TabsTrigger value="finalize" className="text-[10px] md:text-xs relative">
+                      Finalizar
+                      {awaitingFinalization.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-green-500 hover:bg-green-500">{awaitingFinalization.length}</Badge>}
+                    </TabsTrigger>
+                  )}
                 </TabsList>
 
-                <TabsContent value="to-evaluate">
-                  {toEvaluate.length === 0 ? (
-                    <div className="text-center py-8">
-                      <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhuma avaliação pendente de preenchimento.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">{toEvaluate.map(ev => renderEvalCard(ev))}</div>
-                  )}
-                </TabsContent>
+                {canCreateEvaluations && (
+                  <TabsContent value="to-evaluate">
+                    {toEvaluate.length === 0 ? (
+                      <div className="text-center py-8">
+                        <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
+                        <p className="text-sm text-muted-foreground">Nenhuma avaliação pendente de preenchimento.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">{toEvaluate.map(ev => renderEvalCard(ev))}</div>
+                    )}
+                  </TabsContent>
+                )}
 
                 <TabsContent value="awaiting-approval">
                   {pendingApproval.length === 0 ? (
@@ -727,16 +733,18 @@ export function EvaluationsSection() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="finalize">
-                  {awaitingFinalization.length === 0 ? (
-                    <div className="text-center py-8">
-                      <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhuma avaliação aguardando finalização.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">{awaitingFinalization.map(ev => renderEvalCard(ev))}</div>
-                  )}
-                </TabsContent>
+                {canCreateEvaluations && (
+                  <TabsContent value="finalize">
+                    {awaitingFinalization.length === 0 ? (
+                      <div className="text-center py-8">
+                        <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
+                        <p className="text-sm text-muted-foreground">Nenhuma avaliação aguardando finalização.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">{awaitingFinalization.map(ev => renderEvalCard(ev))}</div>
+                    )}
+                  </TabsContent>
+                )}
               </Tabs>
             </CardContent>
           </Card>
