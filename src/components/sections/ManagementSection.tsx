@@ -814,6 +814,24 @@ export function ManagementSection() {
                                 }
                               />
                             </TableCell>
+                            <TableCell className="text-center">
+                              <Switch
+                                checked={isUserAdmin || userPerm.can_access_bh || false}
+                                disabled={isUserAdmin}
+                                onCheckedChange={(checked) =>
+                                  updatePermission(user.user_id, 'can_access_bh', checked)
+                                }
+                              />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Switch
+                                checked={isUserAdmin || userPerm.can_access_fechamento || false}
+                                disabled={isUserAdmin}
+                                onCheckedChange={(checked) =>
+                                  updatePermission(user.user_id, 'can_access_fechamento', checked)
+                                }
+                              />
+                            </TableCell>
                           </TableRow>
                         );
                       })}
