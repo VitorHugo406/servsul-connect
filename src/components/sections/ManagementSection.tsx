@@ -86,6 +86,8 @@ interface UserPermission {
   can_access_management: boolean;
   can_access_password_change: boolean;
   can_create_war_room: boolean;
+  can_access_bh: boolean;
+  can_access_fechamento: boolean;
 }
 
 interface UserRole {
