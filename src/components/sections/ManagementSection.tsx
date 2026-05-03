@@ -88,6 +88,7 @@ interface UserPermission {
   can_create_war_room: boolean;
   can_access_bh: boolean;
   can_access_fechamento: boolean;
+  can_access_orbs: boolean;
 }
 
 interface UserRole {
@@ -218,6 +219,7 @@ export function ManagementSection() {
         can_create_war_room: 'canCreateWarRoom',
         can_access_bh: 'canAccessBh',
         can_access_fechamento: 'canAccessFechamento',
+        can_access_orbs: 'canAccessOrbs',
       };
 
       const backendPermissionKey = permissionMap[permission];
@@ -754,6 +756,7 @@ export function ManagementSection() {
                         <TableHead className="text-center">War Room</TableHead>
                         <TableHead className="text-center">BH</TableHead>
                         <TableHead className="text-center">Fechamento</TableHead>
+                        <TableHead className="text-center">Orbs</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -829,6 +832,15 @@ export function ManagementSection() {
                                 disabled={isUserAdmin}
                                 onCheckedChange={(checked) =>
                                   updatePermission(user.user_id, 'can_access_fechamento', checked)
+                                }
+                              />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Switch
+                                checked={isUserAdmin || userPerm.can_access_orbs || false}
+                                disabled={isUserAdmin}
+                                onCheckedChange={(checked) =>
+                                  updatePermission(user.user_id, 'can_access_orbs', checked)
                                 }
                               />
                             </TableCell>
@@ -1401,6 +1413,14 @@ function MobilePermissionsDialog({ open, onOpenChange, user, permissions, isUser
               checked={isUserAdmin || userPerm.can_access_fechamento || false}
               disabled={isUserAdmin}
               onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_access_fechamento', checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Acesso Orbs</Label>
+            <Switch
+              checked={isUserAdmin || userPerm.can_access_orbs || false}
+              disabled={isUserAdmin}
+              onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_access_orbs', checked)}
             />
           </div>
         </div>
