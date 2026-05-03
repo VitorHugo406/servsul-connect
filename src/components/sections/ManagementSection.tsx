@@ -216,6 +216,8 @@ export function ManagementSection() {
         can_access_management: 'canAccessManagement',
         can_access_password_change: 'canAccessPasswordChange',
         can_create_war_room: 'canCreateWarRoom',
+        can_access_bh: 'canAccessBh',
+        can_access_fechamento: 'canAccessFechamento',
       };
 
       const backendPermissionKey = permissionMap[permission];
