@@ -90,6 +90,33 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
           </div>
 
           <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowComingSoon('Dash BI')}
+              className="p-2 rounded-full hover:bg-accent"
+              title="Dash BI"
+            >
+              <BarChart3 className="h-5 w-5 text-muted-foreground" />
+            </button>
+            {showBhButton && (
+              <a
+                href="https://banco-de-horas-servchat.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-full hover:bg-accent"
+                title="BH"
+              >
+                <Briefcase className="h-5 w-5 text-muted-foreground" />
+              </a>
+            )}
+            {showFechamentoButton && (
+              <button
+                onClick={() => setShowComingSoon('Fechamento')}
+                className="p-2 rounded-full hover:bg-accent"
+                title="Fechamento"
+              >
+                <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
+              </button>
+            )}
             <a
               href="https://sync-synergy-flow.vercel.app/"
               target="_blank"
