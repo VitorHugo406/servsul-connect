@@ -42,6 +42,7 @@ interface UserPermissions {
   can_create_war_room: boolean;
   can_access_bh: boolean;
   can_access_fechamento: boolean;
+  can_access_orbs: boolean;
 }
 
 interface AuthContextType {
@@ -72,6 +73,7 @@ const defaultPermissions: UserPermissions = {
   can_create_war_room: false,
   can_access_bh: false,
   can_access_fechamento: false,
+  can_access_orbs: false,
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -117,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           can_create_war_room: permData.can_create_war_room,
           can_access_bh: (permData as any).can_access_bh ?? false,
           can_access_fechamento: (permData as any).can_access_fechamento ?? false,
+          can_access_orbs: (permData as any).can_access_orbs ?? false,
         });
       } else {
         setPermissions(defaultPermissions);

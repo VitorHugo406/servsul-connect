@@ -135,6 +135,7 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
   // Dash BI is open to everyone. BH and Fechamento require permission flags.
   const showBhButton = isAdmin || canAccess('can_access_bh' as any);
   const showFechamentoButton = isAdmin || canAccess('can_access_fechamento' as any);
+  const showOrbsButton = isAdmin || canAccess('can_access_orbs' as any);
 
   return (
     <>
@@ -208,12 +209,14 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
             </Button>
           )}
 
-          <Button variant="outline" size="sm" className="gap-1.5 hidden md:flex" asChild>
-            <a href="https://sync-synergy-flow.vercel.app/" target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4" />
-              Orbs
-            </a>
-          </Button>
+          {showOrbsButton && (
+            <Button variant="outline" size="sm" className="gap-1.5 hidden md:flex" asChild>
+              <a href="https://sync-synergy-flow.vercel.app/" target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+                Orbs
+              </a>
+            </Button>
+          )}
 
           {/* Team Header Button */}
           <TeamHeaderButton />

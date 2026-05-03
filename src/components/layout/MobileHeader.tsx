@@ -36,6 +36,7 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
   const [showComingSoon, setShowComingSoon] = useState<string | null>(null);
   const showBhButton = isAdmin || canAccess('can_access_bh' as any);
   const showFechamentoButton = isAdmin || canAccess('can_access_fechamento' as any);
+  const showOrbsButton = isAdmin || canAccess('can_access_orbs' as any);
 
 
   useEffect(() => {
@@ -117,15 +118,17 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
                 <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
               </button>
             )}
-            <a
-              href="https://sync-synergy-flow.vercel.app/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-full hover:bg-accent"
-              title="Orbs"
-            >
-              <ExternalLink className="h-5 w-5 text-muted-foreground" />
-            </a>
+            {showOrbsButton && (
+              <a
+                href="https://sync-synergy-flow.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-full hover:bg-accent"
+                title="Orbs"
+              >
+                <ExternalLink className="h-5 w-5 text-muted-foreground" />
+              </a>
+            )}
             <button
               className="p-2 rounded-full hover:bg-accent"
               onClick={toggleDarkMode}
