@@ -251,6 +251,26 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
         onNavigateToChat={onNavigateToChat}
         onNavigateToAnnouncements={onNavigateToAnnouncements}
       />
+
+      <Dialog open={showComingSoon !== null} onOpenChange={(open) => !open && setShowComingSoon(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Construction className="h-5 w-5 text-amber-500" />
+              {showComingSoon}
+            </DialogTitle>
+            <DialogDescription className="pt-2">Aguarde, em fase de Implantação.</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center py-4 text-center">
+            <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-4 mb-3">
+              <Construction className="h-8 w-8 text-amber-500" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              O módulo <strong>{showComingSoon}</strong> está sendo preparado e estará disponível em breve.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
