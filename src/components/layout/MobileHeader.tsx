@@ -32,6 +32,7 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
   const { sectors } = useSectors();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   const [showComingSoon, setShowComingSoon] = useState<string | null>(null);
   const showBhButton = isAdmin || canAccess('can_access_bh' as any);
   const showFechamentoButton = isAdmin || canAccess('can_access_fechamento' as any);
