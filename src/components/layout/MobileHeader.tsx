@@ -27,7 +27,7 @@ const autonomyLevelLabels: Record<string, string> = {
 };
 
 export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAnnouncements }: MobileHeaderProps) {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, isAdmin, canAccess } = useAuth();
   const { counts } = useNotifications();
   const { sectors } = useSectors();
   const [showProfile, setShowProfile] = useState(false);
