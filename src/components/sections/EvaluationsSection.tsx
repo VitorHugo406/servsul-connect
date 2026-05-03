@@ -230,12 +230,14 @@ export function EvaluationsSection() {
 
   // ======= PDF GENERATION =======
   const addPdfHeader = (doc: jsPDF, title: string) => {
-    // Logo placeholder - orange circle with SC
-    doc.setFillColor(234, 88, 12);
-    doc.circle(22, 18, 8, 'F');
-    doc.setFontSize(9);
-    doc.setTextColor(255, 255, 255);
-    doc.text('SC', 18.5, 20);
+    // System logo
+    try {
+      doc.addImage(appLogo, 'PNG', 14, 10, 16, 16);
+    } catch (e) {
+      // fallback if image fails to load
+      doc.setFillColor(37, 99, 235);
+      doc.circle(22, 18, 8, 'F');
+    }
 
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
