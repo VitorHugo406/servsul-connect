@@ -193,9 +193,11 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
           </Button>
 
           {showBhButton && (
-            <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" onClick={() => setShowComingSoon('BH')}>
-              <Briefcase className="h-4 w-4" />
-              BH
+            <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" asChild>
+              <a href="https://banco-de-horas-servchat.vercel.app/" target="_blank" rel="noopener noreferrer">
+                <Briefcase className="h-4 w-4" />
+                BH
+              </a>
             </Button>
           )}
 
