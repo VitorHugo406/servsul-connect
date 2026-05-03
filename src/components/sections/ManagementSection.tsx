@@ -1387,6 +1387,22 @@ function MobilePermissionsDialog({ open, onOpenChange, user, permissions, isUser
               onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_create_war_room', checked)}
             />
           </div>
+          <div className="flex items-center justify-between">
+            <Label>Acesso BH</Label>
+            <Switch
+              checked={isUserAdmin || userPerm.can_access_bh || false}
+              disabled={isUserAdmin}
+              onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_access_bh', checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Acesso Fechamento</Label>
+            <Switch
+              checked={isUserAdmin || userPerm.can_access_fechamento || false}
+              disabled={isUserAdmin}
+              onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_access_fechamento', checked)}
+            />
+          </div>
         </div>
       </DialogContent>
     </Dialog>
