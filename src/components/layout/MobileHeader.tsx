@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Bell, LogOut, Mail, Building2, Calendar, Moon, Sun, ExternalLink } from 'lucide-react';
+import { Bell, LogOut, Mail, Building2, Calendar, Moon, Sun, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,12 +27,16 @@ const autonomyLevelLabels: Record<string, string> = {
 };
 
 export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAnnouncements }: MobileHeaderProps) {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, isAdmin, canAccess } = useAuth();
   const { counts } = useNotifications();
   const { sectors } = useSectors();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const [showComingSoon, setShowComingSoon] = useState<string | null>(null);
+  const showBhButton = isAdmin || canAccess('can_access_bh' as any);
+  const showFechamentoButton = isAdmin || canAccess('can_access_fechamento' as any);
+
 
   useEffect(() => {
     const saved = localStorage.getItem('theme');
@@ -85,6 +90,33 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
           </div>
 
           <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowComingSoon('Dash BI')}
+              className="p-2 rounded-full hover:bg-accent"
+              title="Dash BI"
+            >
+              <BarChart3 className="h-5 w-5 text-muted-foreground" />
+            </button>
+            {showBhButton && (
+              <a
+                href="https://banco-de-horas-servchat.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-full hover:bg-accent"
+                title="BH"
+              >
+                <Briefcase className="h-5 w-5 text-muted-foreground" />
+              </a>
+            )}
+            {showFechamentoButton && (
+              <button
+                onClick={() => setShowComingSoon('Fechamento')}
+                className="p-2 rounded-full hover:bg-accent"
+                title="Fechamento"
+              >
+                <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
+              </button>
+            )}
             <a
               href="https://sync-synergy-flow.vercel.app/"
               target="_blank"
@@ -219,6 +251,26 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
         onNavigateToChat={onNavigateToChat}
         onNavigateToAnnouncements={onNavigateToAnnouncements}
       />
+
+      <Dialog open={showComingSoon !== null} onOpenChange={(open) => !open && setShowComingSoon(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Construction className="h-5 w-5 text-amber-500" />
+              {showComingSoon}
+            </DialogTitle>
+            <DialogDescription className="pt-2">Aguarde, em fase de Implantação.</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center py-4 text-center">
+            <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-4 mb-3">
+              <Construction className="h-8 w-8 text-amber-500" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              O módulo <strong>{showComingSoon}</strong> está sendo preparado e estará disponível em breve.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

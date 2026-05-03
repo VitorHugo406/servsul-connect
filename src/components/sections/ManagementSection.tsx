@@ -86,6 +86,8 @@ interface UserPermission {
   can_access_management: boolean;
   can_access_password_change: boolean;
   can_create_war_room: boolean;
+  can_access_bh: boolean;
+  can_access_fechamento: boolean;
 }
 
 interface UserRole {
@@ -214,6 +216,8 @@ export function ManagementSection() {
         can_access_management: 'canAccessManagement',
         can_access_password_change: 'canAccessPasswordChange',
         can_create_war_room: 'canCreateWarRoom',
+        can_access_bh: 'canAccessBh',
+        can_access_fechamento: 'canAccessFechamento',
       };
 
       const backendPermissionKey = permissionMap[permission];
@@ -748,6 +752,8 @@ export function ManagementSection() {
                         <TableHead className="text-center">Gerenciamento</TableHead>
                         <TableHead className="text-center">Alterar Senhas</TableHead>
                         <TableHead className="text-center">War Room</TableHead>
+                        <TableHead className="text-center">BH</TableHead>
+                        <TableHead className="text-center">Fechamento</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -805,6 +811,24 @@ export function ManagementSection() {
                                 disabled={isUserAdmin}
                                 onCheckedChange={(checked) => 
                                   updatePermission(user.user_id, 'can_create_war_room', checked)
+                                }
+                              />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Switch
+                                checked={isUserAdmin || userPerm.can_access_bh || false}
+                                disabled={isUserAdmin}
+                                onCheckedChange={(checked) =>
+                                  updatePermission(user.user_id, 'can_access_bh', checked)
+                                }
+                              />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Switch
+                                checked={isUserAdmin || userPerm.can_access_fechamento || false}
+                                disabled={isUserAdmin}
+                                onCheckedChange={(checked) =>
+                                  updatePermission(user.user_id, 'can_access_fechamento', checked)
                                 }
                               />
                             </TableCell>
@@ -1361,6 +1385,22 @@ function MobilePermissionsDialog({ open, onOpenChange, user, permissions, isUser
               checked={isUserAdmin || userPerm.can_create_war_room || false}
               disabled={isUserAdmin}
               onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_create_war_room', checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Acesso BH</Label>
+            <Switch
+              checked={isUserAdmin || userPerm.can_access_bh || false}
+              disabled={isUserAdmin}
+              onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_access_bh', checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Acesso Fechamento</Label>
+            <Switch
+              checked={isUserAdmin || userPerm.can_access_fechamento || false}
+              disabled={isUserAdmin}
+              onCheckedChange={(checked) => onUpdatePermission(user.user_id, 'can_access_fechamento', checked)}
             />
           </div>
         </div>
