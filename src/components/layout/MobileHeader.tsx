@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Bell, LogOut, Mail, Building2, Calendar, Moon, Sun, ExternalLink } from 'lucide-react';
+import { Bell, LogOut, Mail, Building2, Calendar, Moon, Sun, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
