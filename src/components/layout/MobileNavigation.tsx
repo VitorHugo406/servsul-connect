@@ -29,6 +29,7 @@ const moreNavItems = [
    { id: 'people-management', icon: UsersRound, label: 'Gestão de Pessoas', supervisorOnly: true },
   { id: 'my-dashboard', icon: LayoutDashboard, label: 'Meu Painel' },
   { id: 'evaluations', icon: ClipboardCheck, label: 'Avaliações' },
+  { id: 'notes', icon: StickyNote, label: 'Anotações' },
   { id: 'calendar', icon: CalendarDays, label: 'Calendário' },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
   { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
