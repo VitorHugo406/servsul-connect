@@ -3026,7 +3026,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             </SheetTitle>
           </SheetHeader>
           {archivedTasks.length > 0 && (
-            <div className="px-4 pt-3">
+            <div className="px-4 pt-3 space-y-2">
               <Button
                 variant="destructive"
                 size="sm"
@@ -3041,6 +3041,21 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 }}
               >
                 <Trash2 className="h-4 w-4" /> Excluir Todos ({archivedTasks.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={async () => {
+                  if (!confirm(`Recuperar ${archivedTasks.length} card(s) arquivado(s)?`)) return;
+                  for (const task of archivedTasks) {
+                    await unarchiveTask(task.id);
+                  }
+                  await refetchTasks();
+                  toast.success('Todos os cards foram recuperados');
+                }}
+              >
+                <ArchiveRestore className="h-4 w-4" /> Recuperar Todos ({archivedTasks.length})
               </Button>
             </div>
           )}
