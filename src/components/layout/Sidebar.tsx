@@ -45,6 +45,7 @@ const menuItems = [
   { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
   { id: 'my-dashboard', icon: LayoutDashboard, label: 'Meu Painel' },
   { id: 'evaluations', icon: ClipboardCheck, label: 'Avaliações' },
+  { id: 'notes', icon: StickyNote, label: 'Anotações' },
   { id: 'calendar', icon: CalendarDays, label: 'Calendário' },
   { id: 'system-logs', icon: FileText, label: 'Logs do Sistema', mainAdminOnly: true },
   { id: 'event-history', icon: Sparkles, label: 'Eventos Mensais', adminOnly: true },
