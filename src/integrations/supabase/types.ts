@@ -1196,6 +1196,80 @@ export type Database = {
           },
         ]
       }
+      note_shares: {
+        Row: {
+          created_at: string
+          id: string
+          note_id: string
+          permission: string
+          shared_with_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note_id: string
+          permission?: string
+          shared_with_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note_id?: string
+          permission?: string
+          shared_with_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_shares_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          background_color: string
+          background_image: string | null
+          background_texture: string | null
+          content: string
+          created_at: string
+          id: string
+          is_archived: boolean
+          is_pinned: boolean
+          owner_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          background_color?: string
+          background_image?: string | null
+          background_texture?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          is_pinned?: boolean
+          owner_id: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          background_color?: string
+          background_image?: string | null
+          background_texture?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          is_pinned?: boolean
+          owner_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       private_group_members: {
         Row: {
           group_id: string
@@ -2634,6 +2708,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_edit_note: { Args: { _note_id: string }; Returns: boolean }
+      can_view_note: { Args: { _note_id: string }; Returns: boolean }
       check_user_is_active: { Args: never; Returns: boolean }
       get_current_autonomy_level: { Args: never; Returns: string }
       get_current_profile_id: { Args: never; Returns: string }

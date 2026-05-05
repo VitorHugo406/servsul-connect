@@ -33,6 +33,8 @@ import { DocumentationSection } from '@/components/sections/DocumentationSection
 import { ApiManagementSection } from '@/components/sections/ApiManagementSection';
 import { WarRoomSection } from '@/components/sections/WarRoomSection';
 import { EvaluationsSection } from '@/components/sections/EvaluationsSection';
+import { NotesSection } from '@/components/sections/NotesSection';
+import { FloatingNoteWindow } from '@/components/notes/FloatingNoteWindow';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
@@ -66,6 +68,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
    'war-room': { title: 'War Room', subtitle: 'Gestão de incidentes críticos' },
    'api-management': { title: 'API de Integração', subtitle: 'Gerenciamento de integrações externas' },
    'evaluations': { title: 'Avaliações', subtitle: 'Avaliação de desempenho e feedback' },
+   'notes': { title: 'Anotações', subtitle: 'Suas notas pessoais e compartilhadas' },
 };
 
 const Index = () => {
@@ -188,6 +191,8 @@ const Index = () => {
            return <ApiManagementSection />;
          case 'evaluations':
            return <EvaluationsSection />;
+         case 'notes':
+           return <NotesSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }
@@ -264,6 +269,7 @@ const Index = () => {
 
       {/* Board Join Dialog */}
       <BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} />
+      <FloatingNoteWindow />
       </div>
     );
   }
@@ -308,7 +314,7 @@ const Index = () => {
 
       {/* Board Join Dialog */}
       <BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} />
-      
+      <FloatingNoteWindow />
     </div>
   );
 };

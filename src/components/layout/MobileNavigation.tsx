@@ -1,5 +1,5 @@
 import { useState } from 'react';
- import { Home, MessageSquare, Bell, Cake, MoreHorizontal, Settings, Camera, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, FileText, CalendarDays, Shield, LayoutDashboard, Globe, ClipboardCheck } from 'lucide-react';
+ import { Home, MessageSquare, Bell, Cake, MoreHorizontal, Settings, Camera, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, FileText, CalendarDays, Shield, LayoutDashboard, Globe, ClipboardCheck, StickyNote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -29,6 +29,7 @@ const moreNavItems = [
    { id: 'people-management', icon: UsersRound, label: 'Gestão de Pessoas', supervisorOnly: true },
   { id: 'my-dashboard', icon: LayoutDashboard, label: 'Meu Painel' },
   { id: 'evaluations', icon: ClipboardCheck, label: 'Avaliações' },
+  { id: 'notes', icon: StickyNote, label: 'Anotações' },
   { id: 'calendar', icon: CalendarDays, label: 'Calendário' },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
   { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
