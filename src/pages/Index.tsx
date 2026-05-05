@@ -191,6 +191,8 @@ const Index = () => {
            return <ApiManagementSection />;
          case 'evaluations':
            return <EvaluationsSection />;
+         case 'notes':
+           return <NotesSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }
