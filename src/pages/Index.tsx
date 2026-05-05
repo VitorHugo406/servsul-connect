@@ -33,6 +33,8 @@ import { DocumentationSection } from '@/components/sections/DocumentationSection
 import { ApiManagementSection } from '@/components/sections/ApiManagementSection';
 import { WarRoomSection } from '@/components/sections/WarRoomSection';
 import { EvaluationsSection } from '@/components/sections/EvaluationsSection';
+import { NotesSection } from '@/components/sections/NotesSection';
+import { FloatingNoteWindow } from '@/components/notes/FloatingNoteWindow';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
