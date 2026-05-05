@@ -269,6 +269,7 @@ const Index = () => {
 
       {/* Board Join Dialog */}
       <BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} />
+      <FloatingNoteWindow />
       </div>
     );
   }
