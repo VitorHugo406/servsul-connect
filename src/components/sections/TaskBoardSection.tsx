@@ -3044,16 +3044,16 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               </Button>
             </div>
           )}
-          <ScrollArea className="flex-1 px-4 py-3">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 min-w-0">
             {archivedTasks.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Nenhum card arquivado</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 w-full">
                 {archivedTasks.map(task => (
-                  <div key={task.id} className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/30">
-                    <div className="flex-1 min-w-0">
+                  <div key={task.id} className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/30 w-full min-w-0">
+                    <div className="flex-1 min-w-0 overflow-hidden">
                       <p className="text-sm font-medium truncate">#{task.task_number} {task.title}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground truncate">
                         {columns.find(c => c.id === task.status)?.title || 'Sem coluna'}
                       </p>
                     </div>
@@ -3067,7 +3067,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 ))}
               </div>
             )}
-          </ScrollArea>
+          </div>
         </SheetContent>
       </Sheet>
 
