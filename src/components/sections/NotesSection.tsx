@@ -236,7 +236,22 @@ interface EditorProps {
 
 function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating, isMobile, onBack }: EditorProps) {
   const [title, setTitle] = useState(note.title);
+  const [content, setContent] = useState(note.content);
+  const contentTimer = useRef<number | null>(null);
   useEffect(() => setTitle(note.title), [note.id, note.title]);
+  useEffect(() => { setContent(note.content); }, [note.id]);
+
+  const handleContentChange = (html: string) => {
+    setContent(html);
+    if (contentTimer.current) window.clearTimeout(contentTimer.current);
+    contentTimer.current = window.setTimeout(() => {
+      onChange({ content: html });
+    }, 500);
+  };
+
+  useEffect(() => () => {
+    if (contentTimer.current) window.clearTimeout(contentTimer.current);
+  }, []);
 
   const bgImage = [getImageCss(note.background_image), getTextureCss(note.background_texture)].filter(Boolean).join(', ');
   const supportsPip = typeof window !== 'undefined' && 'documentPictureInPicture' in window;
