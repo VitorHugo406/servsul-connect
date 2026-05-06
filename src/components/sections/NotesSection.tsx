@@ -412,8 +412,8 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
 
       <div className="flex-1 overflow-auto p-4">
         <RichTextEditor
-          value={note.content}
-          onChange={(html) => onChange({ content: html })}
+          value={content}
+          onChange={handleContentChange}
           placeholder="Escreva sua anotação..."
           readOnly={!isOwner && !canEditShared(note)}
         />
