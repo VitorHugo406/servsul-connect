@@ -268,7 +268,7 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
               {note.is_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{note.is_pinned ? 'Desafixar' : 'Fixar'}</TooltipContent>
+          <TooltipContent side="bottom">{note.is_pinned ? 'Desafixar' : 'Fixar'}</TooltipContent>
         </Tooltip>
 
         {/* Cor */}
@@ -362,7 +362,7 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
                 <Share2 className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Compartilhar</TooltipContent>
+            <TooltipContent side="bottom">Compartilhar</TooltipContent>
           </Tooltip>
         )}
 
@@ -373,7 +373,7 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
                 {note.is_archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{note.is_archived ? 'Desarquivar' : 'Arquivar'}</TooltipContent>
+            <TooltipContent side="bottom">{note.is_archived ? 'Desarquivar' : 'Arquivar'}</TooltipContent>
           </Tooltip>
         )}
 
@@ -390,7 +390,7 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Excluir</TooltipContent>
+            <TooltipContent side="bottom">Excluir</TooltipContent>
           </Tooltip>
         )}
       </div>

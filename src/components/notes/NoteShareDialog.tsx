@@ -111,9 +111,9 @@ export function NoteShareDialog({ open, onOpenChange, noteId }: ShareDialogProps
                 </SelectContent>
               </Select>
             </div>
-            <ScrollArea className="max-h-48 rounded-md border border-border">
+            <ScrollArea className="h-72 rounded-md border border-border">
               <div className="space-y-1 p-1">
-                {filtered.slice(0, 50).map((u) => (
+                {filtered.map((u) => (
                   <button
                     key={u.user_id}
                     className="flex w-full items-center gap-2 rounded p-2 text-left hover:bg-accent"
