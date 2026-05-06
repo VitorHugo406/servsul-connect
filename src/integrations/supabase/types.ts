@@ -2732,6 +2732,8 @@ export type Database = {
       is_group_admin: { Args: { check_group_id: string }; Returns: boolean }
       is_group_empty: { Args: { check_group_id: string }; Returns: boolean }
       is_group_member: { Args: { check_group_id: string }; Returns: boolean }
+      is_note_owner: { Args: { _note_id: string }; Returns: boolean }
+      is_note_shared_with_me: { Args: { _note_id: string }; Returns: boolean }
       user_has_sector_access: {
         Args: { check_sector_id: string; check_user_id: string }
         Returns: boolean
