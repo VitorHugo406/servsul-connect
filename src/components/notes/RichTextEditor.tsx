@@ -20,16 +20,18 @@ const TEXT_COLORS = ['#000000', '#DC2626', '#EA580C', '#CA8A04', '#16A34A', '#25
 
 export function RichTextEditor({ value, onChange, readOnly, className, placeholder }: RichTextEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const isInternalUpdate = useRef(false);
+  const lastEmitted = useRef<string>(value || '');
 
   useEffect(() => {
     if (!ref.current) return;
-    if (isInternalUpdate.current) {
-      isInternalUpdate.current = false;
-      return;
-    }
-    if (ref.current.innerHTML !== value) {
-      ref.current.innerHTML = value || '';
+    const incoming = value || '';
+    // Skip if it's our own emission echoing back
+    if (incoming === lastEmitted.current) return;
+    // Don't stomp the DOM while user is actively typing in this editor
+    if (document.activeElement === ref.current) return;
+    if (ref.current.innerHTML !== incoming) {
+      ref.current.innerHTML = incoming;
+      lastEmitted.current = incoming;
     }
   }, [value]);
 
@@ -42,8 +44,9 @@ export function RichTextEditor({ value, onChange, readOnly, className, placehold
 
   const handleInput = () => {
     if (ref.current) {
-      isInternalUpdate.current = true;
-      onChange(ref.current.innerHTML);
+      const html = ref.current.innerHTML;
+      lastEmitted.current = html;
+      onChange(html);
     }
   };
 
