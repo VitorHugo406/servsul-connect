@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Note, useNotes } from '@/hooks/useNotes';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -236,7 +236,22 @@ interface EditorProps {
 
 function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating, isMobile, onBack }: EditorProps) {
   const [title, setTitle] = useState(note.title);
+  const [content, setContent] = useState(note.content);
+  const contentTimer = useRef<number | null>(null);
   useEffect(() => setTitle(note.title), [note.id, note.title]);
+  useEffect(() => { setContent(note.content); }, [note.id]);
+
+  const handleContentChange = (html: string) => {
+    setContent(html);
+    if (contentTimer.current) window.clearTimeout(contentTimer.current);
+    contentTimer.current = window.setTimeout(() => {
+      onChange({ content: html });
+    }, 500);
+  };
+
+  useEffect(() => () => {
+    if (contentTimer.current) window.clearTimeout(contentTimer.current);
+  }, []);
 
   const bgImage = [getImageCss(note.background_image), getTextureCss(note.background_texture)].filter(Boolean).join(', ');
   const supportsPip = typeof window !== 'undefined' && 'documentPictureInPicture' in window;
@@ -397,8 +412,8 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
 
       <div className="flex-1 overflow-auto p-4">
         <RichTextEditor
-          value={note.content}
-          onChange={(html) => onChange({ content: html })}
+          value={content}
+          onChange={handleContentChange}
           placeholder="Escreva sua anotação..."
           readOnly={!isOwner && !canEditShared(note)}
         />
