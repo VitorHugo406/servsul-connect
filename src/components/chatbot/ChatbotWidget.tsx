@@ -119,6 +119,8 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
     setIsOpen(false);
   };
 
+  const [refreshTick, setRefreshTick] = useState(0);
+
   useEffect(() => {
     if (!user || !profile || !isHomePage) return;
 
@@ -286,24 +288,38 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
       })
       .subscribe();
 
-    // Set up realtime subscription for new direct messages
+    // Set up realtime subscription for new direct messages (refetch to stay accurate)
     const messageChannel = supabase
-      .channel('new-direct-messages')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
+      .channel('chatbot-direct-messages')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
         table: 'direct_messages',
         filter: `receiver_id=eq.${profile.id}`
       }, () => {
-        setUnreadCounts(prev => ({ ...prev, messages: prev.messages + 1 }));
+        setRefreshTick(t => t + 1);
+      })
+      .subscribe();
+
+    // Refresh when user_notifications change (e.g. War Room marked as read elsewhere)
+    const notifChannel = supabase
+      .channel('chatbot-user-notifications')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_notifications',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        setRefreshTick(t => t + 1);
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(announcementChannel);
       supabase.removeChannel(messageChannel);
+      supabase.removeChannel(notifChannel);
     };
-  }, [user, profile, isHomePage]);
+  }, [user, profile, isHomePage, refreshTick, isOpen]);
 
   // Only render on home page
   if (!isHomePage) {
