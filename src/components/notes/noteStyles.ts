@@ -78,6 +78,56 @@ export const NOTE_BACKGROUND_IMAGES: { name: string; value: string; css: string 
     value: 'coffee',
     css: 'linear-gradient(135deg, #6F4E37 0%, #C4A484 100%)',
   },
+  {
+    name: 'Céu Estrelado',
+    value: 'starry',
+    css: 'radial-gradient(circle at 20% 30%, white 1px, transparent 2px), radial-gradient(circle at 70% 60%, white 1px, transparent 2px), radial-gradient(circle at 40% 80%, white 1px, transparent 2px), linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
+  },
+  {
+    name: 'Menta',
+    value: 'mint',
+    css: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+  },
+  {
+    name: 'Cereja',
+    value: 'cherry',
+    css: 'linear-gradient(135deg, #eb3349 0%, #f45c43 100%)',
+  },
+  {
+    name: 'Neon',
+    value: 'neon',
+    css: 'linear-gradient(135deg, #12c2e9 0%, #c471ed 50%, #f64f59 100%)',
+  },
+  {
+    name: 'Outono',
+    value: 'autumn',
+    css: 'linear-gradient(135deg, #d38312 0%, #a83279 100%)',
+  },
+  {
+    name: 'Nebulosa',
+    value: 'nebula',
+    css: 'radial-gradient(ellipse at 30% 30%, rgba(255,100,200,0.5), transparent 60%), radial-gradient(ellipse at 70% 70%, rgba(100,150,255,0.5), transparent 60%), linear-gradient(135deg, #1a1a3e 0%, #0f0c29 100%)',
+  },
+  {
+    name: 'Pastel',
+    value: 'pastel',
+    css: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+  },
+  {
+    name: 'Esmeralda',
+    value: 'emerald',
+    css: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+  },
+  {
+    name: 'Crepúsculo',
+    value: 'twilight',
+    css: 'linear-gradient(135deg, #4b6cb7 0%, #182848 100%)',
+  },
+  {
+    name: 'Sakura',
+    value: 'sakura',
+    css: 'radial-gradient(circle at 20% 30%, rgba(255,182,193,0.6) 4px, transparent 5px), radial-gradient(circle at 60% 70%, rgba(255,192,203,0.5) 5px, transparent 6px), linear-gradient(135deg, #ffe4e1 0%, #ffc0cb 100%)',
+  },
 ];
 
 export function getTextureCss(texture: string | null): string {
