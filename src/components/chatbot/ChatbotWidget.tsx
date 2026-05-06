@@ -119,6 +119,8 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
     setIsOpen(false);
   };
 
+  const [refreshTick, setRefreshTick] = useState(0);
+
   useEffect(() => {
     if (!user || !profile || !isHomePage) return;
 
