@@ -14,6 +14,11 @@ export const NOTE_COLORS = [
 export const NOTE_TEXTURES: { name: string; value: string; css: string }[] = [
   { name: 'Nenhuma', value: 'none', css: '' },
   {
+    name: 'Papel Leitura (Sepia)',
+    value: 'reading',
+    css: 'radial-gradient(ellipse at top, rgba(120,72,30,0.08), transparent 60%), radial-gradient(ellipse at bottom, rgba(120,72,30,0.10), transparent 60%), repeating-radial-gradient(circle at 30% 40%, rgba(160,110,60,0.04) 0px, rgba(160,110,60,0.04) 1px, transparent 1px, transparent 4px)',
+  },
+  {
     name: 'Linhas (Caderno)',
     value: 'lines',
     css: 'repeating-linear-gradient(transparent, transparent 27px, rgba(0,0,0,0.08) 28px)',
