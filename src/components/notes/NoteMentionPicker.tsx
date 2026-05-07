@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Users as UsersIcon, ListTodo, Link as LinkIcon, LayoutGrid } from 'lucide-react';
+import { Calendar, Users as UsersIcon, ListTodo, Link as LinkIcon, LayoutGrid, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type MentionType = 'task' | 'meeting' | 'user';
