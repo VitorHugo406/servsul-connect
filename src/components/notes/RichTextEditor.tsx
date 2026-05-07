@@ -14,6 +14,7 @@ import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
 interface RichTextEditorProps {
   value: string;
   onChange: (html: string) => void;
+  onImmediateSave?: (html: string) => void;
   readOnly?: boolean;
   className?: string;
   placeholder?: string;
@@ -21,7 +22,7 @@ interface RichTextEditorProps {
 
 const TEXT_COLORS = ['#000000', '#DC2626', '#EA580C', '#CA8A04', '#16A34A', '#2563EB', '#7C3AED', '#DB2777'];
 
-export function RichTextEditor({ value, onChange, readOnly, className, placeholder }: RichTextEditorProps) {
+export function RichTextEditor({ value, onChange, onImmediateSave, readOnly, className, placeholder }: RichTextEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef<string>('');
   const savedRange = useRef<Range | null>(null);
@@ -195,7 +196,10 @@ export function RichTextEditor({ value, onChange, readOnly, className, placehold
         contentEditable={!readOnly}
         suppressContentEditableWarning
         onInput={handleInput}
-        onBlur={handleInput}
+        onBlur={() => {
+          handleInput();
+          if (ref.current) onImmediateSave?.(ref.current.innerHTML);
+        }}
         onKeyDown={onKeyDown}
         onKeyUp={detectMention}
         onMouseUp={detectMention}
