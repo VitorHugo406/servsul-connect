@@ -235,22 +235,49 @@ interface EditorProps {
 }
 
 function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating, isMobile, onBack }: EditorProps) {
+  const permission = useMyNotePermission(note);
+  const canEdit = permission === 'owner' || permission === 'edit';
+
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const contentTimer = useRef<number | null>(null);
+  const pendingContent = useRef<string | null>(null);
+
   useEffect(() => setTitle(note.title), [note.id, note.title]);
-  useEffect(() => { setContent(note.content); }, [note.id]);
+  useEffect(() => { setContent(note.content); pendingContent.current = null; }, [note.id]);
+
+  const flush = () => {
+    if (contentTimer.current) { window.clearTimeout(contentTimer.current); contentTimer.current = null; }
+    if (pendingContent.current !== null) {
+      onChange({ content: pendingContent.current });
+      pendingContent.current = null;
+    }
+  };
 
   const handleContentChange = (html: string) => {
     setContent(html);
+    pendingContent.current = html;
     if (contentTimer.current) window.clearTimeout(contentTimer.current);
     contentTimer.current = window.setTimeout(() => {
-      onChange({ content: html });
+      if (pendingContent.current !== null) {
+        onChange({ content: pendingContent.current });
+        pendingContent.current = null;
+      }
     }, 500);
   };
 
-  useEffect(() => () => {
-    if (contentTimer.current) window.clearTimeout(contentTimer.current);
+  // Flush on note change or unmount
+  useEffect(() => () => { flush(); }, []);
+  useEffect(() => { return () => { flush(); }; }, [note.id]);
+  // Flush on tab hide / before unload
+  useEffect(() => {
+    const onHide = () => flush();
+    window.addEventListener('beforeunload', onHide);
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      window.removeEventListener('beforeunload', onHide);
+      document.removeEventListener('visibilitychange', onHide);
+    };
   }, []);
 
   const bgImage = [getImageCss(note.background_image), getTextureCss(note.background_texture)].filter(Boolean).join(', ');
