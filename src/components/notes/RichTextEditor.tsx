@@ -23,7 +23,7 @@ const TEXT_COLORS = ['#000000', '#DC2626', '#EA580C', '#CA8A04', '#16A34A', '#25
 
 export function RichTextEditor({ value, onChange, readOnly, className, placeholder }: RichTextEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const lastEmitted = useRef<string>(value || '');
+  const lastEmitted = useRef<string>('');
   const savedRange = useRef<Range | null>(null);
   const triggerRange = useRef<Range | null>(null);
 
@@ -53,12 +53,11 @@ export function RichTextEditor({ value, onChange, readOnly, className, placehold
   useEffect(() => {
     if (!ref.current) return;
     const incoming = value || '';
-    if (incoming === lastEmitted.current) return;
     if (document.activeElement === ref.current) return;
     if (ref.current.innerHTML !== incoming) {
       ref.current.innerHTML = incoming;
-      lastEmitted.current = incoming;
     }
+    lastEmitted.current = incoming;
   }, [value]);
 
   const exec = (cmd: string, arg?: string) => {
