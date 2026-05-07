@@ -56,8 +56,9 @@ export function NoteMentionPicker({ trigger, query, format, onFormatChange, onSe
             .eq('is_archived', false)
             .order('task_number', { ascending: false })
             .limit(80);
+          const q = effectiveQuery.toLowerCase();
           const filtered = (data || []).filter(t =>
-            !query || t.task_number.toString().includes(query) || t.title.toLowerCase().includes(query.toLowerCase())
+            !q || t.task_number.toString().includes(q) || t.title.toLowerCase().includes(q)
           ).slice(0, 30);
           if (!cancel) setItems(filtered);
         } else if (type === 'meeting') {
@@ -66,8 +67,9 @@ export function NoteMentionPicker({ trigger, query, format, onFormatChange, onSe
             .select('id, title, start_date, event_type')
             .order('start_date', { ascending: false })
             .limit(80);
+          const q = effectiveQuery.toLowerCase();
           const filtered = (data || []).filter(e =>
-            !query || e.title.toLowerCase().includes(query.toLowerCase())
+            !q || e.title.toLowerCase().includes(q)
           ).slice(0, 30);
           if (!cancel) setItems(filtered);
         } else {
@@ -77,10 +79,12 @@ export function NoteMentionPicker({ trigger, query, format, onFormatChange, onSe
             .eq('is_active', true)
             .order('name')
             .limit(200);
+          const q = effectiveQuery.toLowerCase();
           const filtered = (data || []).filter(p => {
             const name = (p.display_name || p.name || '').toLowerCase();
-            return !query || name.includes(query.toLowerCase());
-          }).slice(0, 30);
+            const email = '';
+            return !q || name.includes(q) || email.includes(q);
+          }).slice(0, 50);
           if (!cancel) setItems(filtered);
         }
       } finally {
@@ -89,7 +93,7 @@ export function NoteMentionPicker({ trigger, query, format, onFormatChange, onSe
     };
     load();
     return () => { cancel = true; };
-  }, [type, query]);
+  }, [type, effectiveQuery]);
 
   const handlePick = (raw: any) => {
     if (type === 'task') {
