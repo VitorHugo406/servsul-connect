@@ -200,14 +200,23 @@ export function RichTextEditor({ value, onChange, readOnly, className, placehold
         onKeyDown={onKeyDown}
         onKeyUp={detectMention}
         onMouseUp={detectMention}
+        onClick={handleClick}
         className={cn(
           'min-h-[120px] flex-1 rounded-md p-2 text-sm outline-none focus:ring-2 focus:ring-primary/30',
           '[&_a]:text-primary [&_a]:underline',
+          '[&_a[data-mention]]:cursor-pointer',
           '[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5',
           readOnly && 'cursor-default',
         )}
         data-placeholder={placeholder}
       />
+      {previewUserId && (
+        <UserPreviewDialog
+          open={!!previewUserId}
+          onOpenChange={(o) => !o && setPreviewUserId(null)}
+          userId={previewUserId}
+        />
+      )}
       {mention && !readOnly && (
         <NoteMentionPicker
           trigger={mention.trigger}
