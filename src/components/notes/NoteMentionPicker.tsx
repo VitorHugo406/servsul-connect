@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Users as UsersIcon, ListTodo, Link as LinkIcon, LayoutGrid } from 'lucide-react';
+import { Calendar, Users as UsersIcon, ListTodo, Link as LinkIcon, LayoutGrid, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type MentionType = 'task' | 'meeting' | 'user';
@@ -36,8 +37,12 @@ export function NoteMentionPicker({ trigger, query, format, onFormatChange, onSe
   const [type, setType] = useState<MentionType>(initialType);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [innerQuery, setInnerQuery] = useState('');
 
   useEffect(() => { setType(initialType); }, [initialType]);
+  useEffect(() => { setInnerQuery(''); }, [type]);
+
+  const effectiveQuery = (innerQuery || query || '').trim();
 
   useEffect(() => {
     let cancel = false;
@@ -51,8 +56,9 @@ export function NoteMentionPicker({ trigger, query, format, onFormatChange, onSe
             .eq('is_archived', false)
             .order('task_number', { ascending: false })
             .limit(80);
+          const q = effectiveQuery.toLowerCase();
           const filtered = (data || []).filter(t =>
-            !query || t.task_number.toString().includes(query) || t.title.toLowerCase().includes(query.toLowerCase())
+            !q || t.task_number.toString().includes(q) || t.title.toLowerCase().includes(q)
           ).slice(0, 30);
           if (!cancel) setItems(filtered);
         } else if (type === 'meeting') {
@@ -61,8 +67,9 @@ export function NoteMentionPicker({ trigger, query, format, onFormatChange, onSe
             .select('id, title, start_date, event_type')
             .order('start_date', { ascending: false })
             .limit(80);
+          const q = effectiveQuery.toLowerCase();
           const filtered = (data || []).filter(e =>
-            !query || e.title.toLowerCase().includes(query.toLowerCase())
+            !q || e.title.toLowerCase().includes(q)
           ).slice(0, 30);
           if (!cancel) setItems(filtered);
         } else {
@@ -72,10 +79,12 @@ export function NoteMentionPicker({ trigger, query, format, onFormatChange, onSe
             .eq('is_active', true)
             .order('name')
             .limit(200);
+          const q = effectiveQuery.toLowerCase();
           const filtered = (data || []).filter(p => {
             const name = (p.display_name || p.name || '').toLowerCase();
-            return !query || name.includes(query.toLowerCase());
-          }).slice(0, 30);
+            const email = '';
+            return !q || name.includes(q) || email.includes(q);
+          }).slice(0, 50);
           if (!cancel) setItems(filtered);
         }
       } finally {
@@ -84,7 +93,7 @@ export function NoteMentionPicker({ trigger, query, format, onFormatChange, onSe
     };
     load();
     return () => { cancel = true; };
-  }, [type, query]);
+  }, [type, effectiveQuery]);
 
   const handlePick = (raw: any) => {
     if (type === 'task') {
@@ -141,6 +150,20 @@ export function NoteMentionPicker({ trigger, query, format, onFormatChange, onSe
         >
           <LinkIcon className="h-3 w-3" /> Link
         </button>
+      </div>
+
+      <div className="px-2 py-1.5 border-b border-border bg-background">
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+          <Input
+            autoFocus
+            value={innerQuery}
+            onChange={(e) => setInnerQuery(e.target.value)}
+            placeholder={type === 'task' ? 'Buscar por número ou título...' : type === 'meeting' ? 'Buscar reunião...' : 'Buscar pessoa...'}
+            className="h-7 pl-7 text-xs"
+            onKeyDown={(e) => e.stopPropagation()}
+          />
+        </div>
       </div>
 
       <ScrollArea className="max-h-[260px]">

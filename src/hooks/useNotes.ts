@@ -25,6 +25,27 @@ export interface NoteShare {
   created_at: string;
 }
 
+export function useMyNotePermission(note: Note | null) {
+  const { user } = useAuth();
+  const [permission, setPermission] = useState<'owner' | 'edit' | 'read' | null>(null);
+
+  useEffect(() => {
+    if (!note || !user) { setPermission(null); return; }
+    if (note.owner_id === user.id) { setPermission('owner'); return; }
+    (async () => {
+      const { data } = await supabase
+        .from('note_shares')
+        .select('permission')
+        .eq('note_id', note.id)
+        .eq('shared_with_user_id', user.id)
+        .maybeSingle();
+      setPermission((data?.permission as 'read' | 'edit') || 'read');
+    })();
+  }, [note?.id, note?.owner_id, user?.id]);
+
+  return permission;
+}
+
 export function useNotes() {
   const { user } = useAuth();
   const [notes, setNotes] = useState<Note[]>([]);

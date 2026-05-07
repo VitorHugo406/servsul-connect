@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bold, Italic, Underline, List, ListOrdered, Link as LinkIcon, Palette, AtSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { NoteMentionPicker, MentionFormat, MentionResult, buildMentionHtml } from './NoteMentionPicker';
+import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
 
 interface RichTextEditorProps {
   value: string;
@@ -27,6 +29,26 @@ export function RichTextEditor({ value, onChange, readOnly, className, placehold
 
   const [mention, setMention] = useState<{ trigger: '#' | '@' | '!'; query: string; pos: { top: number; left: number } } | null>(null);
   const [mentionFormat, setMentionFormat] = useState<MentionFormat>('card');
+  const [previewUserId, setPreviewUserId] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  // Intercept clicks on mentions to navigate inside the app
+  const handleClick = (e: React.MouseEvent) => {
+    const target = (e.target as HTMLElement).closest('a[data-mention]') as HTMLAnchorElement | null;
+    if (!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const type = target.getAttribute('data-mention');
+    const id = target.getAttribute('data-mention-id');
+    if (!id) return;
+    if (type === 'task') {
+      navigate(`/?section=tasks&task=${id}`);
+    } else if (type === 'meeting') {
+      navigate(`/?section=calendar&event=${id}`);
+    } else if (type === 'user') {
+      setPreviewUserId(id);
+    }
+  };
 
   useEffect(() => {
     if (!ref.current) return;
@@ -178,14 +200,23 @@ export function RichTextEditor({ value, onChange, readOnly, className, placehold
         onKeyDown={onKeyDown}
         onKeyUp={detectMention}
         onMouseUp={detectMention}
+        onClick={handleClick}
         className={cn(
           'min-h-[120px] flex-1 rounded-md p-2 text-sm outline-none focus:ring-2 focus:ring-primary/30',
           '[&_a]:text-primary [&_a]:underline',
+          '[&_a[data-mention]]:cursor-pointer',
           '[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5',
           readOnly && 'cursor-default',
         )}
         data-placeholder={placeholder}
       />
+      {previewUserId && (
+        <UserPreviewDialog
+          open={!!previewUserId}
+          onOpenChange={(o) => !o && setPreviewUserId(null)}
+          userId={previewUserId}
+        />
+      )}
       {mention && !readOnly && (
         <NoteMentionPicker
           trigger={mention.trigger}

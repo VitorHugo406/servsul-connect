@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Note, useNotes } from '@/hooks/useNotes';
+import { Note, useNotes, useMyNotePermission } from '@/hooks/useNotes';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -235,22 +235,49 @@ interface EditorProps {
 }
 
 function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating, isMobile, onBack }: EditorProps) {
+  const permission = useMyNotePermission(note);
+  const canEdit = permission === 'owner' || permission === 'edit';
+
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const contentTimer = useRef<number | null>(null);
+  const pendingContent = useRef<string | null>(null);
+
   useEffect(() => setTitle(note.title), [note.id, note.title]);
-  useEffect(() => { setContent(note.content); }, [note.id]);
+  useEffect(() => { setContent(note.content); pendingContent.current = null; }, [note.id]);
+
+  const flushRef = useRef<() => void>(() => {});
+  flushRef.current = () => {
+    if (contentTimer.current) { window.clearTimeout(contentTimer.current); contentTimer.current = null; }
+    if (pendingContent.current !== null) {
+      onChange({ content: pendingContent.current });
+      pendingContent.current = null;
+    }
+  };
 
   const handleContentChange = (html: string) => {
     setContent(html);
+    pendingContent.current = html;
     if (contentTimer.current) window.clearTimeout(contentTimer.current);
     contentTimer.current = window.setTimeout(() => {
-      onChange({ content: html });
+      if (pendingContent.current !== null) {
+        onChange({ content: pendingContent.current });
+        pendingContent.current = null;
+      }
     }, 500);
   };
 
-  useEffect(() => () => {
-    if (contentTimer.current) window.clearTimeout(contentTimer.current);
+  // Flush on unmount, on note change, on tab hide, on beforeunload
+  useEffect(() => () => { flushRef.current(); }, []);
+  useEffect(() => () => { flushRef.current(); }, [note.id]);
+  useEffect(() => {
+    const onHide = () => flushRef.current();
+    window.addEventListener('beforeunload', onHide);
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      window.removeEventListener('beforeunload', onHide);
+      document.removeEventListener('visibilitychange', onHide);
+    };
   }, []);
 
   const bgImage = [getImageCss(note.background_image), getTextureCss(note.background_texture)].filter(Boolean).join(', ');
@@ -415,15 +442,10 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
           value={content}
           onChange={handleContentChange}
           placeholder="Escreva sua anotação..."
-          readOnly={!isOwner && !canEditShared(note)}
+          readOnly={!canEdit}
         />
       </div>
     </div>
   );
 }
 
-// Helper consultaria note_shares para validar — feito no servidor via RLS de UPDATE.
-function canEditShared(_note: Note): boolean {
-  // Permitimos tentar editar; se for read-only o RLS rejeita silenciosamente.
-  return true;
-}
