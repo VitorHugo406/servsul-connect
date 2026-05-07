@@ -246,7 +246,8 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
   useEffect(() => setTitle(note.title), [note.id, note.title]);
   useEffect(() => { setContent(note.content); pendingContent.current = null; }, [note.id]);
 
-  const flush = () => {
+  const flushRef = useRef<() => void>(() => {});
+  flushRef.current = () => {
     if (contentTimer.current) { window.clearTimeout(contentTimer.current); contentTimer.current = null; }
     if (pendingContent.current !== null) {
       onChange({ content: pendingContent.current });
@@ -266,12 +267,11 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
     }, 500);
   };
 
-  // Flush on note change or unmount
-  useEffect(() => () => { flush(); }, []);
-  useEffect(() => { return () => { flush(); }; }, [note.id]);
-  // Flush on tab hide / before unload
+  // Flush on unmount, on note change, on tab hide, on beforeunload
+  useEffect(() => () => { flushRef.current(); }, []);
+  useEffect(() => () => { flushRef.current(); }, [note.id]);
   useEffect(() => {
-    const onHide = () => flush();
+    const onHide = () => flushRef.current();
     window.addEventListener('beforeunload', onHide);
     document.addEventListener('visibilitychange', onHide);
     return () => {
