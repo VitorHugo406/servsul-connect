@@ -152,6 +152,20 @@ export function NoteMentionPicker({ trigger, query, format, onFormatChange, onSe
         </button>
       </div>
 
+      <div className="px-2 py-1.5 border-b border-border bg-background">
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+          <Input
+            autoFocus
+            value={innerQuery}
+            onChange={(e) => setInnerQuery(e.target.value)}
+            placeholder={type === 'task' ? 'Buscar por número ou título...' : type === 'meeting' ? 'Buscar reunião...' : 'Buscar pessoa...'}
+            className="h-7 pl-7 text-xs"
+            onKeyDown={(e) => e.stopPropagation()}
+          />
+        </div>
+      </div>
+
       <ScrollArea className="max-h-[260px]">
         <div className="p-1">
           {loading && <p className="text-xs text-muted-foreground text-center py-3">Buscando...</p>}
