@@ -29,6 +29,26 @@ export function RichTextEditor({ value, onChange, readOnly, className, placehold
 
   const [mention, setMention] = useState<{ trigger: '#' | '@' | '!'; query: string; pos: { top: number; left: number } } | null>(null);
   const [mentionFormat, setMentionFormat] = useState<MentionFormat>('card');
+  const [previewUserId, setPreviewUserId] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  // Intercept clicks on mentions to navigate inside the app
+  const handleClick = (e: React.MouseEvent) => {
+    const target = (e.target as HTMLElement).closest('a[data-mention]') as HTMLAnchorElement | null;
+    if (!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const type = target.getAttribute('data-mention');
+    const id = target.getAttribute('data-mention-id');
+    if (!id) return;
+    if (type === 'task') {
+      navigate(`/?section=tasks&task=${id}`);
+    } else if (type === 'meeting') {
+      navigate(`/?section=calendar&event=${id}`);
+    } else if (type === 'user') {
+      setPreviewUserId(id);
+    }
+  };
 
   useEffect(() => {
     if (!ref.current) return;
