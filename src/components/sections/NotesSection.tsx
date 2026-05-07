@@ -442,15 +442,10 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
           value={content}
           onChange={handleContentChange}
           placeholder="Escreva sua anotação..."
-          readOnly={!isOwner && !canEditShared(note)}
+          readOnly={!canEdit}
         />
       </div>
     </div>
   );
 }
 
-// Helper consultaria note_shares para validar — feito no servidor via RLS de UPDATE.
-function canEditShared(_note: Note): boolean {
-  // Permitimos tentar editar; se for read-only o RLS rejeita silenciosamente.
-  return true;
-}
