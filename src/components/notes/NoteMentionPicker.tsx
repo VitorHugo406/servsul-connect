@@ -37,8 +37,12 @@ export function NoteMentionPicker({ trigger, query, format, onFormatChange, onSe
   const [type, setType] = useState<MentionType>(initialType);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [innerQuery, setInnerQuery] = useState('');
 
   useEffect(() => { setType(initialType); }, [initialType]);
+  useEffect(() => { setInnerQuery(''); }, [type]);
+
+  const effectiveQuery = (innerQuery || query || '').trim();
 
   useEffect(() => {
     let cancel = false;
