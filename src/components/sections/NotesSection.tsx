@@ -441,6 +441,11 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
         <RichTextEditor
           value={content}
           onChange={handleContentChange}
+          onImmediateSave={(html) => {
+            if (contentTimer.current) { window.clearTimeout(contentTimer.current); contentTimer.current = null; }
+            pendingContent.current = null;
+            onChange({ content: html });
+          }}
           placeholder="Escreva sua anotação..."
           readOnly={!canEdit}
         />
