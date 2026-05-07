@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bold, Italic, Underline, List, ListOrdered, Link as LinkIcon, Palette, AtSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { NoteMentionPicker, MentionFormat, MentionResult, buildMentionHtml } from './NoteMentionPicker';
+import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
 
 interface RichTextEditorProps {
   value: string;
