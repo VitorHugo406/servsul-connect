@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Note, useNotes } from '@/hooks/useNotes';
+import { Note, useNotes, useMyNotePermission } from '@/hooks/useNotes';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
