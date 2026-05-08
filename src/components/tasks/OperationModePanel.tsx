@@ -95,7 +95,7 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
         }
 
         // After changing priorities, re-sort columns by priority + due date
-        for (const col of columns) {
+        for (const col of opColumns) {
           // Re-fetch latest data for this column
           const { data: freshTasks } = await supabase
             .from('tasks')
