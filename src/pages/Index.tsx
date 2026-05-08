@@ -36,6 +36,7 @@ import { EvaluationsSection } from '@/components/sections/EvaluationsSection';
 import { NotesSection } from '@/components/sections/NotesSection';
 import { FloatingNoteWindow } from '@/components/notes/FloatingNoteWindow';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
+import { SeasonalMarquee } from '@/components/seasonal/SeasonalMarquee';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
@@ -237,6 +238,7 @@ const Index = () => {
           onNavigateToAnnouncements={handleNavigateToAnnouncements}
         />
         
+        <SeasonalMarquee />
         <main className="flex-1 overflow-auto pb-20">
           {renderSection()}
         </main>
@@ -283,6 +285,7 @@ const Index = () => {
       
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} />
+        <SeasonalMarquee />
         
         <main className="flex-1 overflow-auto">
           {renderSection()}

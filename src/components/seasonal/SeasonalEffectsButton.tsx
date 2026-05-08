@@ -12,6 +12,10 @@ interface SeasonalTheme {
   emoji: string;
 }
 
+export function getCurrentSeasonalTheme(): SeasonalTheme {
+  return getSeasonalTheme();
+}
+
 function getSeasonalTheme(): SeasonalTheme {
   const now = new Date();
   const month = now.getMonth(); // 0-indexed
