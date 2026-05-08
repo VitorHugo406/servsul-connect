@@ -38,13 +38,18 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
     setRunning(true);
     const actions: string[] = [];
 
+    // Exclude completion/conclusion columns from any operation mode actions
+    const completionColumnIds = new Set(columns.filter((c: any) => c.is_conclusion).map(c => c.id));
+    const opColumns = columns.filter(c => !completionColumnIds.has(c.id));
+    const opTasks = tasks.filter(t => !completionColumnIds.has(t.status));
+
     try {
       const priorityOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
       // 1. Priority: reorder all columns by priority (urgent first)
       if (criteria.priority) {
-        for (const col of columns) {
-          const colTasks = [...tasks.filter(t => t.status === col.id)];
+        for (const col of opColumns) {
+          const colTasks = [...opTasks.filter(t => t.status === col.id)];
           colTasks.sort((a, b) => {
             const pa = priorityOrder[a.priority] ?? 2;
             const pb = priorityOrder[b.priority] ?? 2;
@@ -67,8 +72,8 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
       // 2. Deadline: bump overdue to urgent, at-risk to high
       if (criteria.deadline) {
         const now = new Date();
-        const overdue = tasks.filter(t => t.due_date && new Date(t.due_date) < now);
-        const atRisk = tasks.filter(t => {
+        const overdue = opTasks.filter(t => t.due_date && new Date(t.due_date) < now);
+        const atRisk = opTasks.filter(t => {
           if (!t.due_date) return false;
           const due = new Date(t.due_date);
           const hoursLeft = (due.getTime() - now.getTime()) / (1000 * 60 * 60);
@@ -90,7 +95,7 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
         }
 
         // After changing priorities, re-sort columns by priority + due date
-        for (const col of columns) {
+        for (const col of opColumns) {
           // Re-fetch latest data for this column
           const { data: freshTasks } = await supabase
             .from('tasks')
@@ -124,8 +129,8 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
       // 3. Urgency: sort by priority then due date within each column
       if (criteria.urgency && !criteria.deadline && !criteria.priority) {
         // Only if other criteria didn't already sort
-        for (const col of columns) {
-          const colTasks = [...tasks.filter(t => t.status === col.id)];
+        for (const col of opColumns) {
+          const colTasks = [...opTasks.filter(t => t.status === col.id)];
           colTasks.sort((a, b) => {
             const pa = priorityOrder[a.priority] ?? 2;
             const pb = priorityOrder[b.priority] ?? 2;
