@@ -91,13 +91,15 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
           </div>
 
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => setShowComingSoon('Dash BI')}
+            <a
+              href="https://drive-data-ace.vercel.app/login"
+              target="_blank"
+              rel="noopener noreferrer"
               className="p-2 rounded-full hover:bg-accent"
               title="Dash BI"
             >
               <BarChart3 className="h-5 w-5 text-muted-foreground" />
-            </button>
+            </a>
             {showBhButton && (
               <a
                 href="https://banco-de-horas-servchat.vercel.app/"
