@@ -38,6 +38,11 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
     setRunning(true);
     const actions: string[] = [];
 
+    // Exclude completion/conclusion columns from any operation mode actions
+    const completionColumnIds = new Set(columns.filter((c: any) => c.is_conclusion).map(c => c.id));
+    const opColumns = columns.filter(c => !completionColumnIds.has(c.id));
+    const opTasks = tasks.filter(t => !completionColumnIds.has(t.status));
+
     try {
       const priorityOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
