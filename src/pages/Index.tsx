@@ -36,6 +36,7 @@ import { EvaluationsSection } from '@/components/sections/EvaluationsSection';
 import { NotesSection } from '@/components/sections/NotesSection';
 import { FloatingNoteWindow } from '@/components/notes/FloatingNoteWindow';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
+import { SeasonalMarquee } from '@/components/seasonal/SeasonalMarquee';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
