@@ -170,6 +170,10 @@ export default {
   				'50%': {
   					transform: 'translateY(-5px)'
   				}
+  			},
+  			marquee: {
+  				'0%': { transform: 'translateX(0)' },
+  				'100%': { transform: 'translateX(-50%)' }
   			}
   		},
   		animation: {
@@ -179,7 +183,8 @@ export default {
   			'slide-in-left': 'slide-in-left 0.3s ease-out',
   			'slide-in-right': 'slide-in-right 0.3s ease-out',
   			'pulse-soft': 'pulse-soft 2s ease-in-out infinite',
-  			float: 'float 3s ease-in-out infinite'
+  			float: 'float 3s ease-in-out infinite',
+  			marquee: 'marquee 40s linear infinite'
   		}
   	}
   },
