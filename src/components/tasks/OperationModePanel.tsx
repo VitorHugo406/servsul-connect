@@ -72,8 +72,8 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
       // 2. Deadline: bump overdue to urgent, at-risk to high
       if (criteria.deadline) {
         const now = new Date();
-        const overdue = tasks.filter(t => t.due_date && new Date(t.due_date) < now);
-        const atRisk = tasks.filter(t => {
+        const overdue = opTasks.filter(t => t.due_date && new Date(t.due_date) < now);
+        const atRisk = opTasks.filter(t => {
           if (!t.due_date) return false;
           const due = new Date(t.due_date);
           const hoursLeft = (due.getTime() - now.getTime()) / (1000 * 60 * 60);
