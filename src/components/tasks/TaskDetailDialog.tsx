@@ -624,16 +624,20 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
                 <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
                 <p className="text-xs font-medium">Horário limite</p>
               </div>
-              <TimeInput
-                dueDate={task.due_date}
-                disabled={!task.due_date}
-                onCommit={async (h, m) => {
-                  if (onUpdateTask && task && task.due_date) {
-                    const d = new Date(task.due_date);
-                    d.setHours(h, m, 0, 0);
-                    await onUpdateTask(task.id, { due_date: d.toISOString() });
-                  }
+              <Input
+                key={`time-${task.id}-${task.due_date || ''}`}
+                type="time"
+                className="h-8 text-xs w-full"
+                defaultValue={task.due_date ? new Date(task.due_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''}
+                onBlur={async (e) => {
+                  if (!onUpdateTask || !task || !task.due_date || !e.target.value) return;
+                  const [h, m] = e.target.value.split(':').map(Number);
+                  const d = new Date(task.due_date);
+                  if (d.getHours() === h && d.getMinutes() === m) return;
+                  d.setHours(h, m, 0, 0);
+                  await onUpdateTask(task.id, { due_date: d.toISOString() });
                 }}
+                disabled={!task.due_date}
               />
               {!task.due_date && <p className="text-[10px] text-muted-foreground">Selecione uma data primeiro</p>}
             </div>
