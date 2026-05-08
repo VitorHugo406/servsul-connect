@@ -238,6 +238,7 @@ const Index = () => {
           onNavigateToAnnouncements={handleNavigateToAnnouncements}
         />
         
+        <SeasonalMarquee />
         <main className="flex-1 overflow-auto pb-20">
           {renderSection()}
         </main>
