@@ -129,8 +129,8 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
       // 3. Urgency: sort by priority then due date within each column
       if (criteria.urgency && !criteria.deadline && !criteria.priority) {
         // Only if other criteria didn't already sort
-        for (const col of columns) {
-          const colTasks = [...tasks.filter(t => t.status === col.id)];
+        for (const col of opColumns) {
+          const colTasks = [...opTasks.filter(t => t.status === col.id)];
           colTasks.sort((a, b) => {
             const pa = priorityOrder[a.priority] ?? 2;
             const pb = priorityOrder[b.priority] ?? 2;
