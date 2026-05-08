@@ -188,9 +188,11 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
           </div>
 
           {/* External shortcut buttons */}
-          <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" onClick={() => setShowComingSoon('Dash BI')}>
-            <BarChart3 className="h-4 w-4" />
-            Dash BI
+          <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" asChild>
+            <a href="https://drive-data-ace.vercel.app/login" target="_blank" rel="noopener noreferrer">
+              <BarChart3 className="h-4 w-4" />
+              Dash BI
+            </a>
           </Button>
 
           {showBhButton && (
