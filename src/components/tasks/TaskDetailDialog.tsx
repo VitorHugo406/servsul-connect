@@ -28,6 +28,7 @@ import { useTaskDecisions } from '@/hooks/useTaskDecisions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
 import { TaskCompletionReport } from './TaskCompletionReport';
+import { SubtaskList } from './SubtaskList';
 import { cn } from '@/lib/utils';
 
 // Colorblind patterns as SVG data URIs
