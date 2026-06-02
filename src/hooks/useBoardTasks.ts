@@ -199,16 +199,18 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
 
     columnTasks.splice(newPosition, 0, task);
 
-    // Update all positions
-    const updates = columnTasks.map((t, i) => ({ id: t.id, position: i }));
-    for (const u of updates) {
-      await supabase.from('tasks').update({ position: u.position }).eq('id', u.id);
-    }
-
+    // Optimistic UI first — feels instant
     setAllTasks((prev) => {
       const other = prev.filter((t) => t.status !== task.status);
       return [...other, ...columnTasks.map((t, i) => ({ ...t, position: i }))];
     });
+
+    // Persist in parallel instead of sequentially
+    await Promise.all(
+      columnTasks.map((t, i) =>
+        t.position === i ? Promise.resolve() : supabase.from('tasks').update({ position: i }).eq('id', t.id)
+      )
+    );
   };
 
   const archiveTask = async (id: string) => {
