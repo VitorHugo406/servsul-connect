@@ -28,6 +28,7 @@ import { useTaskDecisions } from '@/hooks/useTaskDecisions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
 import { TaskCompletionReport } from './TaskCompletionReport';
+import { SubtaskList } from './SubtaskList';
 import { cn } from '@/lib/utils';
 
 // Colorblind patterns as SVG data URIs
@@ -243,7 +244,7 @@ interface TaskDetailDialogProps {
 export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskLabels, allLabels, onToggleLabel, onCreateLabel, onDeleteLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate, onMakeTemplate, boardMembers, getTaskAssignees, onSetTaskAssignees, allUsers }: TaskDetailDialogProps) {
   const isMobile = useIsMobile();
   const { comments, addComment, loading: commentsLoading } = useTaskComments(task?.id || null);
-  const { subtasks, addSubtask, toggleSubtask, deleteSubtask, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null, boardId);
+  const { subtasks, addSubtask, toggleSubtask, deleteSubtask, updateSubtask, reorderSubtasks, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null, boardId);
   const { groups, addGroup, deleteGroup, loading: groupsLoading } = useSubtaskGroups(task?.id || null);
   const { activities, loading: activitiesLoading } = useTaskActivities(task?.id || null);
 
@@ -1041,105 +1042,6 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
     </div>
   ) : null;
 
-  const renderSubtaskGroup = (group: any) => {
-    const groupSubtasks = subtasks.filter(s => s.group_id === group.id);
-    const gCompleted = groupSubtasks.filter(s => s.is_completed).length;
-    const gTotal = groupSubtasks.length;
-    const gProgress = gTotal > 0 ? Math.round((gCompleted / gTotal) * 100) : 0;
-    const isCollapsed = collapsedGroups.has(group.id);
-
-    return (
-      <div key={group.id} className="border border-border rounded-lg overflow-hidden">
-        <div className="flex items-center gap-2 px-3 py-2.5 bg-muted/50">
-          <button onClick={() => toggleGroupCollapse(group.id)} className="p-0.5">
-            {isCollapsed ? <ChevronRight className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-          </button>
-          <CheckSquare className="h-4 w-4 text-primary" />
-          <h4 className="font-semibold text-sm flex-1">{group.title}</h4>
-          {gTotal > 0 && <span className="text-xs text-muted-foreground">{gCompleted}/{gTotal}</span>}
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteGroup(group.id)}>
-            <Trash2 className="h-3 w-3 text-destructive" />
-          </Button>
-        </div>
-        {gTotal > 0 && !isCollapsed && (
-          <div className="px-3 pt-2">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground w-8">{gProgress}%</span>
-              <Progress value={gProgress} className="h-1.5 flex-1" />
-            </div>
-          </div>
-        )}
-        {!isCollapsed && (
-          <div className="px-3 py-2 space-y-1">
-            {groupSubtasks.map(s => (
-              <div key={s.id} className="flex items-center gap-2 group py-0.5">
-                <Checkbox checked={s.is_completed} onCheckedChange={(checked) => toggleSubtask(s.id, !!checked)} />
-                <span className={cn('text-sm flex-1', s.is_completed && 'line-through text-muted-foreground')}>{s.title}</span>
-                <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteSubtask(s.id)}>
-                  <X className="h-3 w-3 text-destructive" />
-                </Button>
-              </div>
-            ))}
-            {activeAddItem === group.id ? (
-              <div className="pt-1 space-y-2">
-                <Input
-                  value={newGroupSubtask[group.id] || ''}
-                  onChange={(e) => setNewGroupSubtask(prev => ({ ...prev, [group.id]: e.target.value }))}
-                  placeholder="Adicionar um item"
-                  className="h-8 text-sm"
-                  autoFocus
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask(group.id)}
-                />
-                <div className="flex items-center gap-2">
-                  <Button size="sm" onClick={() => handleAddSubtask(group.id)} disabled={!(newGroupSubtask[group.id] || '').trim()}>Adicionar</Button>
-                  <Button variant="ghost" size="sm" onClick={() => setActiveAddItem(null)}>Cancelar</Button>
-                </div>
-              </div>
-            ) : (
-              <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1 justify-start text-muted-foreground" onClick={() => setActiveAddItem(group.id)}>
-                Adicionar um item
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderUngroupedSubtasks = () => ungroupedSubtasks.length > 0 ? (
-    <div className="border border-border rounded-lg overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2.5 bg-muted/50">
-        <CheckSquare className="h-4 w-4 text-primary" />
-        <h4 className="font-semibold text-sm flex-1">Subtarefas</h4>
-        <span className="text-xs text-muted-foreground">{ungroupedSubtasks.filter(s => s.is_completed).length}/{ungroupedSubtasks.length}</span>
-      </div>
-      <div className="px-3 py-2 space-y-1">
-        {ungroupedSubtasks.map(s => (
-          <div key={s.id} className="flex items-center gap-2 group py-0.5">
-            <Checkbox checked={s.is_completed} onCheckedChange={(checked) => toggleSubtask(s.id, !!checked)} />
-            <span className={cn('text-sm flex-1', s.is_completed && 'line-through text-muted-foreground')}>{s.title}</span>
-            <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteSubtask(s.id)}>
-              <X className="h-3 w-3 text-destructive" />
-            </Button>
-          </div>
-        ))}
-        {activeAddItem === 'ungrouped' ? (
-          <div className="pt-1 space-y-2">
-            <Input value={newSubtask} onChange={(e) => setNewSubtask(e.target.value)} placeholder="Adicionar um item" className="h-8 text-sm" autoFocus onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask(null)} />
-            <div className="flex items-center gap-2">
-              <Button size="sm" onClick={() => handleAddSubtask(null)} disabled={!newSubtask.trim()}>Adicionar</Button>
-              <Button variant="ghost" size="sm" onClick={() => setActiveAddItem(null)}>Cancelar</Button>
-            </div>
-          </div>
-        ) : (
-          <Button variant="ghost" size="sm" className="w-full text-xs gap-1 mt-1 justify-start text-muted-foreground" onClick={() => setActiveAddItem('ungrouped')}>
-            Adicionar um item
-          </Button>
-        )}
-      </div>
-    </div>
-  ) : null;
-
   const renderAddChecklist = () => showAddGroup ? (
     <div className="border border-border rounded-lg p-3 space-y-2">
       <h4 className="font-medium text-sm">Adicionar Checklist</h4>
@@ -1153,10 +1055,21 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
 
   const renderSubtasks = () => (
     <div className="px-4 py-2 space-y-3">
-      {!groupsLoading && groups.map(renderSubtaskGroup)}
-      {!subtasksLoading && renderUngroupedSubtasks()}
+      <SubtaskList
+        subtasks={subtasks}
+        groups={groups}
+        subtasksLoading={subtasksLoading}
+        groupsLoading={groupsLoading}
+        collapsedGroups={collapsedGroups}
+        toggleGroupCollapse={toggleGroupCollapse}
+        onToggleSubtask={toggleSubtask}
+        onDeleteSubtask={deleteSubtask}
+        onUpdateSubtask={updateSubtask}
+        onReorderSubtasks={reorderSubtasks}
+        onAddSubtask={(gid, title) => addSubtask(title, gid)}
+        onDeleteGroup={deleteGroup}
+      />
       {renderAddChecklist()}
-      {subtasksLoading && <div className="flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>}
     </div>
   );
 

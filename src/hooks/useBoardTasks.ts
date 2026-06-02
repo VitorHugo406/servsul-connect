@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -32,20 +32,30 @@ export interface BoardTask {
   };
 }
 
-const triggerAutomations = async (boardId: string) => {
-  try {
-    await supabase.functions.invoke('process-automations', {
-      body: { board_id: boardId },
-    });
-  } catch (err) {
-    console.error('Error triggering automations:', err);
-  }
+// Debounced/coalesced automation trigger — one call per board within a window
+const automationTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const triggerAutomations = (boardId: string, delay = 1500) => {
+  const existing = automationTimers.get(boardId);
+  if (existing) clearTimeout(existing);
+  const t = setTimeout(async () => {
+    automationTimers.delete(boardId);
+    try {
+      await supabase.functions.invoke('process-automations', {
+        body: { board_id: boardId },
+      });
+    } catch (err) {
+      console.error('Error triggering automations:', err);
+    }
+  }, delay);
+  automationTimers.set(boardId, t);
 };
 
 export function useBoardTasks(boardId: string | null, restrictTaskId?: string | null) {
   const { profile } = useAuth();
   const [allTasks, setAllTasks] = useState<BoardTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inFlight = useRef(false);
 
   const fetchTasks = useCallback(async () => {
     if (!boardId) {
@@ -54,6 +64,8 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       return;
     }
 
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
       const { data, error } = await supabase
         .from('tasks')
@@ -72,13 +84,22 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
         })) as BoardTask[]
       );
     } catch (error) {
-      // Important: clear state so we don't show stale tasks from a previous board/session
       console.error('Error fetching board tasks:', error);
       setAllTasks([]);
     } finally {
+      inFlight.current = false;
       setLoading(false);
     }
   }, [boardId]);
+
+  // Debounced refetch to coalesce realtime bursts
+  const scheduleRefetch = useCallback(() => {
+    if (refetchTimer.current) clearTimeout(refetchTimer.current);
+    refetchTimer.current = setTimeout(() => {
+      refetchTimer.current = null;
+      fetchTasks();
+    }, 400);
+  }, [fetchTasks]);
 
   useEffect(() => {
     fetchTasks();
@@ -86,17 +107,12 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
 
     const channel = supabase
       .channel(`board-tasks-${boardId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `board_id=eq.${boardId}` }, () => fetchTasks())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `board_id=eq.${boardId}` }, () => scheduleRefetch())
       .subscribe();
-
-    // Poll automations every 2 seconds
-    const pollInterval = setInterval(() => {
-      triggerAutomations(boardId);
-    }, 2000);
 
     return () => {
       supabase.removeChannel(channel);
-      clearInterval(pollInterval);
+      if (refetchTimer.current) clearTimeout(refetchTimer.current);
     };
   }, [fetchTasks, boardId]);
 
@@ -183,16 +199,18 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
 
     columnTasks.splice(newPosition, 0, task);
 
-    // Update all positions
-    const updates = columnTasks.map((t, i) => ({ id: t.id, position: i }));
-    for (const u of updates) {
-      await supabase.from('tasks').update({ position: u.position }).eq('id', u.id);
-    }
-
+    // Optimistic UI first — feels instant
     setAllTasks((prev) => {
       const other = prev.filter((t) => t.status !== task.status);
       return [...other, ...columnTasks.map((t, i) => ({ ...t, position: i }))];
     });
+
+    // Persist in parallel instead of sequentially
+    await Promise.all(
+      columnTasks.map((t, i) =>
+        t.position === i ? Promise.resolve() : supabase.from('tasks').update({ position: i }).eq('id', t.id)
+      )
+    );
   };
 
   const archiveTask = async (id: string) => {

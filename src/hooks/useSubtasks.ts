@@ -94,10 +94,42 @@ export function useSubtasks(taskId: string | null, boardId?: string | null) {
     }
   };
 
+  const updateSubtask = async (id: string, updates: { title?: string; group_id?: string | null; position?: number }) => {
+    try {
+      // Optimistic update
+      setSubtasks(prev => prev.map(s => s.id === id ? { ...s, ...updates } as Subtask : s));
+      const { error } = await supabase.from('task_subtasks').update(updates).eq('id', id);
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      await fetchSubtasks();
+      return { error };
+    }
+  };
+
+  // Persist new ordering for a list of subtasks in parallel
+  const reorderSubtasks = async (orderedIds: string[], groupId: string | null) => {
+    // optimistic
+    setSubtasks(prev => {
+      const map = new Map(prev.map(s => [s.id, s]));
+      const updated = orderedIds.map((id, i) => {
+        const s = map.get(id);
+        return s ? { ...s, position: i, group_id: groupId } : s;
+      }).filter(Boolean) as Subtask[];
+      const others = prev.filter(s => !orderedIds.includes(s.id));
+      return [...others, ...updated];
+    });
+    await Promise.all(
+      orderedIds.map((id, i) =>
+        supabase.from('task_subtasks').update({ position: i, group_id: groupId }).eq('id', id)
+      )
+    );
+  };
+
   const completed = subtasks.filter(s => s.is_completed).length;
   const total = subtasks.length;
 
-  return { subtasks, loading, addSubtask, toggleSubtask, deleteSubtask, completed, total, refetch: fetchSubtasks };
+  return { subtasks, loading, addSubtask, toggleSubtask, deleteSubtask, updateSubtask, reorderSubtasks, completed, total, refetch: fetchSubtasks };
 }
 
 // Lightweight hook to get subtask counts for multiple tasks at once (for card indicators)
