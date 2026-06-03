@@ -14,17 +14,18 @@ interface TaskAssignee {
 }
 
 const assigneeCache = new Map<string, TaskAssignee[]>();
+type TaskAssigneeJoin = TaskAssignee & { task?: { board_id: string } | null };
 
 export function useTaskAssignees(boardId: string | null) {
   const [assignees, setAssignees] = useState<TaskAssignee[]>(() => (boardId ? assigneeCache.get(boardId) || [] : []));
 
   const fetchAssignees = useCallback(async () => {
     if (!boardId) return;
-    const { data } = await (supabase as any)
+    const { data } = await supabase
       .from('task_assignees')
       .select('*, task:tasks!inner(board_id), profile:profiles!task_assignees_profile_id_fkey(id, name, display_name, avatar_url)')
       .eq('task.board_id', boardId);
-    const next = (data || []).map(({ task, ...assignee }: any) => assignee) as TaskAssignee[];
+    const next = ((data || []) as unknown as TaskAssigneeJoin[]).map(({ task: _task, ...assignee }) => assignee);
     assigneeCache.set(boardId, next);
     setAssignees(next);
   }, [boardId]);
