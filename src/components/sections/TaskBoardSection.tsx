@@ -1632,10 +1632,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   </Button>
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: columns.find(c => c.id === mobileSelectedColumn)?.color }} />
                   <span className="font-semibold text-sm">{columns.find(c => c.id === mobileSelectedColumn)?.title}</span>
-                  <Badge variant="secondary" className="text-xs">{filteredTasks.filter(t => t.status === mobileSelectedColumn).length}</Badge>
+                  <Badge variant="secondary" className="text-xs">{tasksByColumn.get(mobileSelectedColumn)?.length || 0}</Badge>
                 </div>
                 <div className="space-y-2">
-                  {filteredTasks.filter(t => t.status === mobileSelectedColumn).sort((a, b) => a.position - b.position).map((task) => {
+                  {(tasksByColumn.get(mobileSelectedColumn) || []).map((task) => {
                     const cover = getCoverDisplay(task.cover_image);
                     const isTaskCompleted = !!task.completed_at || conclusionColumnIds.includes(task.status);
                     const dueInfo = getDueDateInfo(task.due_date, isTaskCompleted);
@@ -1826,7 +1826,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   );
                 })()}
                 {columns.map(col => {
-                  const colTasks = filteredTasks.filter(t => t.status === col.id);
+                  const colTasks = tasksByColumn.get(col.id) || [];
                   return (
                     <button
                       key={col.id}
@@ -1853,7 +1853,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             /* Desktop: horizontal scroll */
             <div className="inline-flex gap-4 h-full pb-2 items-start">
             {columns.map((column) => {
-              const colTasks = filteredTasks.filter(t => t.status === column.id).sort((a, b) => a.position - b.position);
+              const colTasks = tasksByColumn.get(column.id) || [];
               return (
                 <div
                   key={column.id}
