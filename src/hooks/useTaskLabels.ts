@@ -17,6 +17,7 @@ export interface TaskLabelAssignment {
 }
 
 const labelCache = new Map<string, { labels: TaskLabel[]; assignments: TaskLabelAssignment[] }>();
+type LabelAssignmentJoin = TaskLabelAssignment & { label?: { board_id: string } | null };
 
 export function useTaskLabels(boardId: string | null) {
   const [labels, setLabels] = useState<TaskLabel[]>(() => (boardId ? labelCache.get(boardId)?.labels || [] : []));
@@ -45,12 +46,12 @@ export function useTaskLabels(boardId: string | null) {
   const fetchAssignments = useCallback(async () => {
     if (!boardId) return;
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('task_label_assignments')
         .select('*, label:task_labels!inner(board_id)')
         .eq('label.board_id', boardId);
       if (error) throw error;
-      const next = (data || []).map(({ label, ...assignment }: any) => assignment) as TaskLabelAssignment[];
+      const next = ((data || []) as unknown as LabelAssignmentJoin[]).map(({ label: _label, ...assignment }) => assignment);
       setAssignments(next);
       labelCache.set(boardId, { labels: labelCache.get(boardId)?.labels || [], assignments: next });
     } catch (error) {
@@ -67,7 +68,7 @@ export function useTaskLabels(boardId: string | null) {
     }
     fetchLabels();
     fetchAssignments();
-  }, [fetchLabels, fetchAssignments]);
+  }, [boardId, fetchLabels, fetchAssignments]);
 
   const assignmentsByTask = useMemo(() => {
     const map = new Map<string, Set<string>>();
