@@ -462,7 +462,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         setSelectedTask(updated);
       }
     }
-  }, [tasks, selectedTask?.id, selectedTask?.updated_at]);
+  }, [tasks, selectedTask]);
 
   const togglePlanner = () => {
     if (showPlanner) { setShowPlanner(false); setShowBoard(true); }
