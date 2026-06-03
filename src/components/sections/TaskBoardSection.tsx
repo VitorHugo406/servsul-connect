@@ -458,11 +458,11 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   useEffect(() => {
     if (selectedTask) {
       const updated = tasks.find(t => t.id === selectedTask.id);
-      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedTask)) {
+      if (updated && updated.updated_at !== selectedTask.updated_at) {
         setSelectedTask(updated);
       }
     }
-  }, [tasks, selectedTask]);
+  }, [tasks, selectedTask?.id, selectedTask?.updated_at]);
 
   const togglePlanner = () => {
     if (showPlanner) { setShowPlanner(false); setShowBoard(true); }
