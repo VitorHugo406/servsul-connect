@@ -285,8 +285,6 @@ export function EvaluationsSection() {
     const { excellent, good, needsImprovement } = groupItemsByClassification(items);
 
     let y = addPdfHeader(doc, 'Relatório de Avaliação de Desempenho');
-    let pageNum = 1;
-    addPdfFooter(doc, pageNum);
 
     // Info block
     doc.setFillColor(248, 250, 252);
@@ -312,7 +310,7 @@ export function EvaluationsSection() {
     y += 12;
 
     const checkPage = (needed: number) => {
-      if (y + needed > 265) { doc.addPage(); pageNum++; addPdfFooter(doc, pageNum); y = 20; }
+      if (y + needed > 265) { doc.addPage(); y = addPdfHeader(doc, 'Relatório de Avaliação de Desempenho'); }
     };
 
     // Excellent
@@ -383,6 +381,7 @@ export function EvaluationsSection() {
     doc.text(ev.evaluator_name || '', 30, y + 4);
     doc.text(ev.evaluated_name || '', 133, y + 4);
 
+    addAllFooters(doc);
     doc.save(`avaliacao_${ev.evaluated_name?.replace(/\s/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
     toast.success('Relatório final gerado!');
   };
@@ -393,11 +392,9 @@ export function EvaluationsSection() {
     const { excellent, good, needsImprovement } = groupItemsByClassification(items);
 
     let y = addPdfHeader(doc, 'Relatório Completo do Processo Avaliativo');
-    let pageNum = 1;
-    addPdfFooter(doc, pageNum);
 
     const checkPage = (needed: number) => {
-      if (y + needed > 265) { doc.addPage(); pageNum++; addPdfFooter(doc, pageNum); y = 20; }
+      if (y + needed > 265) { doc.addPage(); y = addPdfHeader(doc, 'Relatório Completo do Processo Avaliativo'); }
     };
 
     // Info block
@@ -492,6 +489,7 @@ export function EvaluationsSection() {
       });
     }
 
+    addAllFooters(doc);
     doc.save(`processo_avaliacao_${ev.evaluated_name?.replace(/\s/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
     toast.success('Relatório do processo gerado!');
   };
