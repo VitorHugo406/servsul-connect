@@ -230,45 +230,54 @@ export function EvaluationsSection() {
 
   // ======= PDF GENERATION =======
   const addPdfHeader = (doc: jsPDF, title: string) => {
-    // System logo
+    doc.setFillColor(248, 250, 252);
+    doc.rect(0, 0, 210, 32, 'F');
+    doc.setFillColor(37, 99, 235);
+    doc.rect(0, 0, 210, 3, 'F');
+    doc.setFillColor(234, 88, 12);
+    doc.rect(0, 3, 210, 1.2, 'F');
+
     try {
-      doc.addImage(appLogo, 'PNG', 14, 10, 16, 16);
+      doc.addImage(appLogo, 'PNG', 14, 9, 16, 16);
     } catch (e) {
-      // fallback if image fails to load
       doc.setFillColor(37, 99, 235);
-      doc.circle(22, 18, 8, 'F');
+      doc.circle(22, 17, 8, 'F');
     }
 
     doc.setFontSize(8);
-    doc.setTextColor(100, 100, 100);
-    doc.text('ServChat', 32, 15);
+    doc.setTextColor(71, 85, 105);
+    doc.text('ServChat', 32, 14);
     doc.setFontSize(7);
-    doc.text('Plataforma de Gestão', 32, 19);
+    doc.text('Plataforma de Gestão • Relatórios', 32, 19);
 
-    doc.setFontSize(16);
+    doc.setFontSize(15);
     doc.setTextColor(30, 41, 59);
-    doc.text(title, 14, 38);
+    doc.text(title, 14, 42);
 
     doc.setFontSize(8);
-    doc.setTextColor(130, 130, 130);
-    doc.text(`Emitido em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 14, 44);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Emitido em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 14, 48);
 
-    doc.setDrawColor(234, 88, 12);
-    doc.setLineWidth(0.8);
-    doc.line(14, 47, 196, 47);
-
-    return 54;
+    return 58;
   };
 
   const addPdfFooter = (doc: jsPDF, pageNum: number) => {
     const h = doc.internal.pageSize.getHeight();
-    doc.setDrawColor(200);
+    doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.3);
     doc.line(14, h - 15, 196, h - 15);
     doc.setFontSize(7);
-    doc.setTextColor(150);
+    doc.setTextColor(100, 116, 139);
     doc.text('ServChat • Avaliação de Desempenho', 14, h - 10);
-    doc.text(`Página ${pageNum}`, 185, h - 10);
+    doc.text(`Página ${pageNum}`, 182, h - 10);
+  };
+
+  const addAllFooters = (doc: jsPDF) => {
+    const pages = doc.getNumberOfPages();
+    for (let i = 1; i <= pages; i++) {
+      doc.setPage(i);
+      addPdfFooter(doc, i);
+    }
   };
 
   const generateFinalReport = (ev: Evaluation, items: EvaluationItem[]) => {
