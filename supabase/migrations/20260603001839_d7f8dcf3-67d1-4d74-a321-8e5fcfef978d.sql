@@ -1,0 +1,16 @@
+CREATE INDEX IF NOT EXISTS idx_tasks_board_position ON public.tasks (board_id, position);
+CREATE INDEX IF NOT EXISTS idx_tasks_board_active_status_position ON public.tasks (board_id, is_archived, status, position);
+CREATE INDEX IF NOT EXISTS idx_tasks_board_updated_at ON public.tasks (board_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_task_board_columns_board_position ON public.task_board_columns (board_id, position);
+CREATE INDEX IF NOT EXISTS idx_task_labels_board_name ON public.task_labels (board_id, name);
+CREATE INDEX IF NOT EXISTS idx_task_label_assignments_task_id ON public.task_label_assignments (task_id);
+CREATE INDEX IF NOT EXISTS idx_task_label_assignments_label_id ON public.task_label_assignments (label_id);
+CREATE INDEX IF NOT EXISTS idx_task_assignees_task_id ON public.task_assignees (task_id);
+CREATE INDEX IF NOT EXISTS idx_task_assignees_profile_id ON public.task_assignees (profile_id);
+CREATE INDEX IF NOT EXISTS idx_task_subtasks_task_position ON public.task_subtasks (task_id, position);
+CREATE INDEX IF NOT EXISTS idx_task_subtasks_group_position ON public.task_subtasks (group_id, position);
+CREATE INDEX IF NOT EXISTS idx_subtask_groups_task_position ON public.subtask_groups (task_id, position);
+CREATE INDEX IF NOT EXISTS idx_task_activities_task_created ON public.task_activities (task_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_task_decisions_task_created ON public.task_decisions (task_id, decision_date DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_sector_created ON public.messages (sector_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_profiles_active_birth_date ON public.profiles (is_active, birth_date);

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import confetti from 'canvas-confetti';
+import { isCelebrationToday } from '@/lib/birthdayUtils';
 
 const CELEBRATION_STORAGE_KEY = 'servchat_birthday_celebrated';
 
@@ -12,12 +13,7 @@ export function useBirthdayCelebration() {
     if (!profile?.birth_date) return false;
 
     const today = new Date();
-    const [year, month, day] = profile.birth_date.split('-').map(Number);
-    
-    // Check if today is the birthday
-    const isToday = today.getMonth() + 1 === month && today.getDate() === day;
-    
-    if (!isToday) return false;
+    if (!isCelebrationToday(profile.birth_date, today)) return false;
 
     // Check if already celebrated today
     const todayKey = `${CELEBRATION_STORAGE_KEY}_${profile.id}_${today.toISOString().split('T')[0]}`;

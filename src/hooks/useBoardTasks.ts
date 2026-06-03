@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -34,6 +34,7 @@ export interface BoardTask {
 
 // Debounced/coalesced automation trigger — one call per board within a window
 const automationTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const boardTaskCache = new Map<string, BoardTask[]>();
 const triggerAutomations = (boardId: string, delay = 1500) => {
   const existing = automationTimers.get(boardId);
   if (existing) clearTimeout(existing);
@@ -52,8 +53,8 @@ const triggerAutomations = (boardId: string, delay = 1500) => {
 
 export function useBoardTasks(boardId: string | null, restrictTaskId?: string | null) {
   const { profile } = useAuth();
-  const [allTasks, setAllTasks] = useState<BoardTask[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [allTasks, setAllTasks] = useState<BoardTask[]>(() => (boardId ? boardTaskCache.get(boardId) || [] : []));
+  const [loading, setLoading] = useState(() => (boardId ? !boardTaskCache.has(boardId) : false));
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlight = useRef(false);
 
@@ -69,23 +70,24 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
     try {
       const { data, error } = await supabase
         .from('tasks')
-        .select(`*, assignee:profiles!tasks_assigned_to_fkey(id, name, display_name, avatar_url)`)
+        .select(`id, task_number, title, description, status, priority, assigned_to, created_by, sector_id, board_id, cover_image, due_date, position, is_archived, is_template, completed_at, completed_late, delay_days, is_emergency, created_at, updated_at, assignee:profiles!tasks_assigned_to_fkey(id, name, display_name, avatar_url)`)
         .eq('board_id', boardId)
         .order('position', { ascending: true });
 
       if (error) throw error;
 
-      setAllTasks(
-        (data || []).map((t) => ({
+      const normalized = (data || []).map((t) => ({
           ...t,
           is_archived: t.is_archived ?? false,
           is_template: t.is_template ?? false,
-          is_emergency: (t as any).is_emergency ?? false,
-        })) as BoardTask[]
-      );
+          is_emergency: t.is_emergency ?? false,
+        })) as BoardTask[];
+      boardTaskCache.set(boardId, normalized);
+      setAllTasks(normalized);
     } catch (error) {
       console.error('Error fetching board tasks:', error);
-      setAllTasks([]);
+      const cached = boardTaskCache.get(boardId);
+      if (cached) setAllTasks(cached);
     } finally {
       inFlight.current = false;
       setLoading(false);
@@ -102,19 +104,39 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
   }, [fetchTasks]);
 
   useEffect(() => {
+    if (boardId && boardTaskCache.has(boardId)) {
+      setAllTasks(boardTaskCache.get(boardId) || []);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     fetchTasks();
     if (!boardId) return;
 
     const channel = supabase
       .channel(`board-tasks-${boardId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `board_id=eq.${boardId}` }, () => scheduleRefetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `board_id=eq.${boardId}` }, (payload) => {
+        setAllTasks((prev) => {
+          let next = prev;
+          if (payload.eventType === 'DELETE') {
+            next = prev.filter((task) => task.id !== (payload.old as { id?: string }).id);
+          } else {
+            const incoming = payload.new as Partial<BoardTask>;
+            const existing = prev.find((task) => task.id === incoming.id);
+            if (existing) next = prev.map((task) => (task.id === incoming.id ? { ...task, ...incoming, assignee: existing.assignee } : task));
+            else { scheduleRefetch(); return prev; }
+          }
+          boardTaskCache.set(boardId, next);
+          return next;
+        });
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
       if (refetchTimer.current) clearTimeout(refetchTimer.current);
     };
-  }, [fetchTasks, boardId]);
+  }, [fetchTasks, scheduleRefetch, boardId]);
 
   const createTask = async (task: {
     title: string;
@@ -151,22 +173,38 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
   };
 
   const updateTask = async (id: string, updates: Partial<BoardTask>) => {
+    const previous = allTasks;
+    setAllTasks((prev) => {
+      const next = prev.map((t) => (t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t));
+      if (boardId) boardTaskCache.set(boardId, next);
+      return next;
+    });
     try {
       const { error } = await supabase.from('tasks').update(updates).eq('id', id);
       if (error) throw error;
       if (boardId) triggerAutomations(boardId);
       return { error: null };
     } catch (error) {
+      setAllTasks(previous);
+      if (boardId) boardTaskCache.set(boardId, previous);
       return { error };
     }
   };
 
   const deleteTask = async (id: string) => {
+    const previous = allTasks;
+    setAllTasks((prev) => {
+      const next = prev.filter((t) => t.id !== id);
+      if (boardId) boardTaskCache.set(boardId, next);
+      return next;
+    });
     try {
       const { error } = await supabase.from('tasks').delete().eq('id', id);
       if (error) throw error;
       return { error: null };
     } catch (error) {
+      setAllTasks(previous);
+      if (boardId) boardTaskCache.set(boardId, previous);
       return { error };
     }
   };
@@ -180,7 +218,11 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
 
       if (error) throw error;
 
-      setAllTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus, position: newPosition } : t)));
+      setAllTasks((prev) => {
+        const next = prev.map((t) => (t.id === taskId ? { ...t, status: newStatus, position: newPosition } : t));
+        if (boardId) boardTaskCache.set(boardId, next);
+        return next;
+      });
 
       if (boardId) triggerAutomations(boardId);
       return { error: null };
@@ -202,7 +244,9 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
     // Optimistic UI first — feels instant
     setAllTasks((prev) => {
       const other = prev.filter((t) => t.status !== task.status);
-      return [...other, ...columnTasks.map((t, i) => ({ ...t, position: i }))];
+      const next = [...other, ...columnTasks.map((t, i) => ({ ...t, position: i }))];
+      if (boardId) boardTaskCache.set(boardId, next);
+      return next;
     });
 
     // Persist in parallel instead of sequentially
@@ -214,21 +258,37 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
   };
 
   const archiveTask = async (id: string) => {
+    const previous = allTasks;
+    setAllTasks((prev) => {
+      const next = prev.map((t) => (t.id === id ? { ...t, is_archived: true } : t));
+      if (boardId) boardTaskCache.set(boardId, next);
+      return next;
+    });
     try {
       const { error } = await supabase.from('tasks').update({ is_archived: true }).eq('id', id);
       if (error) throw error;
       return { error: null };
     } catch (error) {
+      setAllTasks(previous);
+      if (boardId) boardTaskCache.set(boardId, previous);
       return { error };
     }
   };
 
   const unarchiveTask = async (id: string) => {
+    const previous = allTasks;
+    setAllTasks((prev) => {
+      const next = prev.map((t) => (t.id === id ? { ...t, is_archived: false } : t));
+      if (boardId) boardTaskCache.set(boardId, next);
+      return next;
+    });
     try {
       const { error } = await supabase.from('tasks').update({ is_archived: false }).eq('id', id);
       if (error) throw error;
       return { error: null };
     } catch (error) {
+      setAllTasks(previous);
+      if (boardId) boardTaskCache.set(boardId, previous);
       return { error };
     }
   };
@@ -246,11 +306,11 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
     }
   };
 
-  const activeTasks = allTasks.filter((t) => !t.is_archived);
-  const archivedTasks = allTasks.filter((t) => t.is_archived);
+  const activeTasks = useMemo(() => allTasks.filter((t) => !t.is_archived), [allTasks]);
+  const archivedTasks = useMemo(() => allTasks.filter((t) => t.is_archived), [allTasks]);
 
-  const visibleActiveTasks = restrictTaskId ? activeTasks.filter((t) => t.id === restrictTaskId) : activeTasks;
-  const visibleArchivedTasks = restrictTaskId ? archivedTasks.filter((t) => t.id === restrictTaskId) : archivedTasks;
+  const visibleActiveTasks = useMemo(() => restrictTaskId ? activeTasks.filter((t) => t.id === restrictTaskId) : activeTasks, [activeTasks, restrictTaskId]);
+  const visibleArchivedTasks = useMemo(() => restrictTaskId ? archivedTasks.filter((t) => t.id === restrictTaskId) : archivedTasks, [archivedTasks, restrictTaskId]);
 
   return {
     tasks: visibleActiveTasks,

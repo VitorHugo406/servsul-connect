@@ -458,7 +458,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   useEffect(() => {
     if (selectedTask) {
       const updated = tasks.find(t => t.id === selectedTask.id);
-      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedTask)) {
+      if (updated && updated.updated_at !== selectedTask.updated_at) {
         setSelectedTask(updated);
       }
     }
@@ -660,9 +660,22 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   }, [board.background_image]);
 
   // Apply filter to tasks
-  const conclusionColumnIds = columns.filter(c => c.is_conclusion).map(c => c.id);
-  const filteredTasks = applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels).filter(t => !t.is_template);
-  const templateTasks = tasks.filter(t => t.is_template && !t.is_archived);
+  const conclusionColumnIds = useMemo(() => columns.filter(c => c.is_conclusion).map(c => c.id), [columns]);
+  const filteredTasks = useMemo(
+    () => applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels).filter(t => !t.is_template),
+    [tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels]
+  );
+  const templateTasks = useMemo(() => tasks.filter(t => t.is_template && !t.is_archived), [tasks]);
+  const tasksByColumn = useMemo(() => {
+    const map = new Map<string, BoardTask[]>();
+    filteredTasks.forEach((task) => {
+      const list = map.get(task.status) || [];
+      list.push(task);
+      map.set(task.status, list);
+    });
+    map.forEach((list) => list.sort((a, b) => a.position - b.position));
+    return map;
+  }, [filteredTasks]);
 
   const getDueDateInfo = (dueDateStr: string | null, isCompleted?: boolean) => {
     if (!dueDateStr) return null;
@@ -1619,10 +1632,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   </Button>
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: columns.find(c => c.id === mobileSelectedColumn)?.color }} />
                   <span className="font-semibold text-sm">{columns.find(c => c.id === mobileSelectedColumn)?.title}</span>
-                  <Badge variant="secondary" className="text-xs">{filteredTasks.filter(t => t.status === mobileSelectedColumn).length}</Badge>
+                  <Badge variant="secondary" className="text-xs">{tasksByColumn.get(mobileSelectedColumn)?.length || 0}</Badge>
                 </div>
                 <div className="space-y-2">
-                  {filteredTasks.filter(t => t.status === mobileSelectedColumn).sort((a, b) => a.position - b.position).map((task) => {
+                  {(tasksByColumn.get(mobileSelectedColumn) || []).map((task) => {
                     const cover = getCoverDisplay(task.cover_image);
                     const isTaskCompleted = !!task.completed_at || conclusionColumnIds.includes(task.status);
                     const dueInfo = getDueDateInfo(task.due_date, isTaskCompleted);
@@ -1634,7 +1647,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                         {cover.type === 'color' && <div className={cn('h-2 rounded-t-lg -mx-3 -mt-3 mb-2', cover.value)} />}
                         {cover.type === 'image' && (
                           <div className="h-20 rounded-t-lg -mx-3 -mt-3 mb-2 overflow-hidden">
-                            <img src={cover.value} alt="" className="w-full h-full object-cover" />
+                            <img src={cover.value} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                           </div>
                         )}
                         {taskLabelsForCard.length > 0 && (
@@ -1813,7 +1826,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                   );
                 })()}
                 {columns.map(col => {
-                  const colTasks = filteredTasks.filter(t => t.status === col.id);
+                  const colTasks = tasksByColumn.get(col.id) || [];
                   return (
                     <button
                       key={col.id}
@@ -1840,7 +1853,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             /* Desktop: horizontal scroll */
             <div className="inline-flex gap-4 h-full pb-2 items-start">
             {columns.map((column) => {
-              const colTasks = filteredTasks.filter(t => t.status === column.id).sort((a, b) => a.position - b.position);
+              const colTasks = tasksByColumn.get(column.id) || [];
               return (
                 <div
                   key={column.id}
@@ -1952,7 +1965,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                           {cover.type === 'color' && <div className={cn('h-8 rounded-t-lg', cover.value)} />}
                           {cover.type === 'image' && (
                             <div className="h-28 rounded-t-lg overflow-hidden">
-                              <img src={cover.value} alt="Capa" className="w-full h-full object-cover" />
+                              <img src={cover.value} alt="Capa" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                             </div>
                           )}
 
@@ -2468,7 +2481,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         task={selectedTask}
         open={showTaskDetail}
         onOpenChange={(o) => { setShowTaskDetail(o); if (!o) setSelectedTask(null); }}
-        onUpdateTask={async (id, updates) => { await updateTask(id, updates); await refetchTasks(); }}
+        onUpdateTask={async (id, updates) => { await updateTask(id, updates); }}
         taskLabels={selectedTask ? getTaskLabels(selectedTask.id) : []}
         allLabels={labels}
         onToggleLabel={handleToggleLabel}

@@ -67,6 +67,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
   };
 
   const todayBirthdays = birthdayPeople.filter((p) => p.isToday);
+  const visibleBirthdays = birthdayPeople.slice(0, 5);
   const latestAnnouncement = announcements[0];
   const displayName = profile?.display_name || profile?.name || 'Usuário';
   const autonomyLevel = profile?.autonomy_level || 'colaborador';
@@ -139,7 +140,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
           { id: 'chat', icon: MessageSquare, label: 'Chat', color: 'bg-primary', count: messages.length },
           { id: 'announcements', icon: Bell, label: 'Avisos', color: 'bg-secondary', count: announcements.length },
           { id: 'tasks', icon: ListTodo, label: 'Tarefas', color: 'bg-purple-500', count: totalTasks > 0 ? totalTasks : null },
-          { id: 'birthdays', icon: Cake, label: 'Aniversariantes', color: 'bg-success', count: todayBirthdays.length },
+          { id: 'birthdays', icon: Cake, label: 'Aniversariantes', color: 'bg-success', count: birthdayPeople.length },
         ].map((action, index) => (
           <motion.div
             key={action.id}
@@ -215,7 +216,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
           </Card>
         </motion.div>
 
-        {/* Today's Birthdays */}
+        {/* Monthly Birthdays */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -225,7 +226,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2 font-display">
                 <Cake className="h-5 w-5 text-secondary" />
-                Aniversariantes de Hoje
+                Aniversariantes do Mês
               </CardTitle>
               <Button variant="ghost" size="sm" onClick={() => onNavigate('birthdays')}>
                 Ver todos
@@ -233,9 +234,9 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
               </Button>
             </CardHeader>
             <CardContent>
-              {todayBirthdays.length > 0 ? (
+              {visibleBirthdays.length > 0 ? (
                 <div className="space-y-3">
-                  {todayBirthdays.slice(0, 3).map((person) => (
+                  {visibleBirthdays.map((person) => (
                     <div key={person.id} className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 ring-2 ring-secondary">
                         <AvatarImage src={person.avatar} />
@@ -243,17 +244,22 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
                           {getInitials(person.name)}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <p className="font-medium text-foreground">{person.name}</p>
-                        <p className="text-sm text-muted-foreground">{person.sector}</p>
+                        <p className="text-sm text-muted-foreground truncate">{person.sector}</p>
                       </div>
-                      <span className="ml-auto text-2xl">🎂</span>
+                      <Badge variant={person.isToday ? 'default' : 'secondary'} className="ml-auto">
+                        {person.isToday ? 'Hoje' : `${String(person.birthDay).padStart(2, '0')}/${String(person.birthMonth).padStart(2, '0')}`}
+                      </Badge>
                     </div>
                   ))}
+                  {birthdayPeople.length > visibleBirthdays.length && (
+                    <p className="pt-1 text-center text-xs text-muted-foreground">+{birthdayPeople.length - visibleBirthdays.length} aniversariante(s) no mês</p>
+                  )}
                 </div>
               ) : (
                 <p className="text-center text-muted-foreground">
-                  Nenhum aniversariante hoje
+                  Nenhum aniversariante neste mês
                 </p>
               )}
             </CardContent>

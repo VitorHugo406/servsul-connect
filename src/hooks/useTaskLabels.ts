@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface TaskLabel {
@@ -16,10 +16,13 @@ export interface TaskLabelAssignment {
   created_at: string;
 }
 
+const labelCache = new Map<string, { labels: TaskLabel[]; assignments: TaskLabelAssignment[] }>();
+type LabelAssignmentJoin = TaskLabelAssignment & { label?: { board_id: string } | null };
+
 export function useTaskLabels(boardId: string | null) {
-  const [labels, setLabels] = useState<TaskLabel[]>([]);
-  const [assignments, setAssignments] = useState<TaskLabelAssignment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [labels, setLabels] = useState<TaskLabel[]>(() => (boardId ? labelCache.get(boardId)?.labels || [] : []));
+  const [assignments, setAssignments] = useState<TaskLabelAssignment[]>(() => (boardId ? labelCache.get(boardId)?.assignments || [] : []));
+  const [loading, setLoading] = useState(() => (boardId ? !labelCache.has(boardId) : false));
 
   const fetchLabels = useCallback(async () => {
     if (!boardId) { setLoading(false); return; }
@@ -30,7 +33,9 @@ export function useTaskLabels(boardId: string | null) {
         .eq('board_id', boardId)
         .order('name');
       if (error) throw error;
-      setLabels((data || []) as TaskLabel[]);
+      const next = (data || []) as TaskLabel[];
+      setLabels(next);
+      labelCache.set(boardId, { labels: next, assignments: labelCache.get(boardId)?.assignments || [] });
     } catch (error) {
       console.error('Error fetching labels:', error);
     } finally {
@@ -41,28 +46,38 @@ export function useTaskLabels(boardId: string | null) {
   const fetchAssignments = useCallback(async () => {
     if (!boardId) return;
     try {
-      // Get all task IDs for this board first
-      const { data: taskIds } = await supabase
-        .from('tasks')
-        .select('id')
-        .eq('board_id', boardId);
-      if (!taskIds || taskIds.length === 0) { setAssignments([]); return; }
-
       const { data, error } = await supabase
         .from('task_label_assignments')
-        .select('*')
-        .in('task_id', taskIds.map(t => t.id));
+        .select('*, label:task_labels!inner(board_id)')
+        .eq('label.board_id', boardId);
       if (error) throw error;
-      setAssignments((data || []) as TaskLabelAssignment[]);
+      const next = ((data || []) as unknown as LabelAssignmentJoin[]).map(({ label: _label, ...assignment }) => assignment);
+      setAssignments(next);
+      labelCache.set(boardId, { labels: labelCache.get(boardId)?.labels || [], assignments: next });
     } catch (error) {
       console.error('Error fetching label assignments:', error);
     }
   }, [boardId]);
 
   useEffect(() => {
+    if (boardId && labelCache.has(boardId)) {
+      const cached = labelCache.get(boardId)!;
+      setLabels(cached.labels);
+      setAssignments(cached.assignments);
+      setLoading(false);
+    }
     fetchLabels();
     fetchAssignments();
-  }, [fetchLabels, fetchAssignments]);
+  }, [boardId, fetchLabels, fetchAssignments]);
+
+  const assignmentsByTask = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    assignments.forEach((assignment) => {
+      if (!map.has(assignment.task_id)) map.set(assignment.task_id, new Set());
+      map.get(assignment.task_id)!.add(assignment.label_id);
+    });
+    return map;
+  }, [assignments]);
 
   const createLabel = async (name: string, color: string) => {
     if (!boardId) return { error: new Error('No board') };
@@ -130,9 +145,10 @@ export function useTaskLabels(boardId: string | null) {
   };
 
   const getTaskLabels = useCallback((taskId: string) => {
-    const taskAssignments = assignments.filter(a => a.task_id === taskId);
-    return labels.filter(l => taskAssignments.some(a => a.label_id === l.id));
-  }, [assignments, labels]);
+    const taskAssignments = assignmentsByTask.get(taskId);
+    if (!taskAssignments) return [];
+    return labels.filter(l => taskAssignments.has(l.id));
+  }, [assignmentsByTask, labels]);
 
   return {
     labels, assignments, loading,
