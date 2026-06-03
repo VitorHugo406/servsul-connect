@@ -34,7 +34,7 @@ export function useTaskLabels(boardId: string | null) {
       if (error) throw error;
       const next = (data || []) as TaskLabel[];
       setLabels(next);
-      labelCache.set(boardId, { labels: next, assignments: labelCache.get(boardId)?.assignments || assignments });
+      labelCache.set(boardId, { labels: next, assignments: labelCache.get(boardId)?.assignments || [] });
     } catch (error) {
       console.error('Error fetching labels:', error);
     } finally {
@@ -45,14 +45,14 @@ export function useTaskLabels(boardId: string | null) {
   const fetchAssignments = useCallback(async () => {
     if (!boardId) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('task_label_assignments')
         .select('*, label:task_labels!inner(board_id)')
         .eq('label.board_id', boardId);
       if (error) throw error;
       const next = (data || []).map(({ label, ...assignment }: any) => assignment) as TaskLabelAssignment[];
       setAssignments(next);
-      labelCache.set(boardId, { labels: labelCache.get(boardId)?.labels || labels, assignments: next });
+      labelCache.set(boardId, { labels: labelCache.get(boardId)?.labels || [], assignments: next });
     } catch (error) {
       console.error('Error fetching label assignments:', error);
     }
