@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getCelebrationDate, isCelebrationToday } from '@/lib/birthdayUtils';
 
 const GERAL_SECTOR_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -315,6 +316,7 @@ export function useBirthdays() {
       const [year, month, day] = p.birth_date!.split('-').map(Number);
       const birthMonth = month;
       const birthDay = day;
+      const celebrationDate = getCelebrationDate(p.birth_date!);
       const isToday = birthMonth === currentMonth && birthDay === currentDay;
       const isThisMonth = birthMonth === currentMonth;
       const sector = sectors.find((s) => s.id === p.sector_id);
@@ -328,6 +330,9 @@ export function useBirthdays() {
         birthDay,
         birthMonth,
         isToday,
+        isCelebrationToday: isCelebrationToday(p.birth_date!),
+        celebrationDate,
+        celebrationDay: celebrationDate.getDate(),
         isThisMonth,
       };
     })
