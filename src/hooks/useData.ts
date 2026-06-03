@@ -313,7 +313,7 @@ export function useBirthdays() {
     .filter((p) => p.birth_date && (p as { is_active?: boolean }).is_active !== false)
     .map((p) => {
       // Parse birth date correctly - handle YYYY-MM-DD format
-      const [year, month, day] = p.birth_date!.split('-').map(Number);
+      const [, month, day] = p.birth_date!.split('-').map(Number);
       const birthMonth = month;
       const birthDay = day;
       const celebrationDate = getCelebrationDate(p.birth_date!);
