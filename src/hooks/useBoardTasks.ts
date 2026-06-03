@@ -80,7 +80,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
           ...t,
           is_archived: t.is_archived ?? false,
           is_template: t.is_template ?? false,
-          is_emergency: (t as any).is_emergency ?? false,
+          is_emergency: t.is_emergency ?? false,
         })) as BoardTask[];
       boardTaskCache.set(boardId, normalized);
       setAllTasks(normalized);
@@ -119,7 +119,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
         setAllTasks((prev) => {
           let next = prev;
           if (payload.eventType === 'DELETE') {
-            next = prev.filter((task) => task.id !== (payload.old as any).id);
+            next = prev.filter((task) => task.id !== (payload.old as { id?: string }).id);
           } else {
             const incoming = payload.new as Partial<BoardTask>;
             const existing = prev.find((task) => task.id === incoming.id);
