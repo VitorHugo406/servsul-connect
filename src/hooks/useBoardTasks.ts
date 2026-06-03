@@ -136,7 +136,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       supabase.removeChannel(channel);
       if (refetchTimer.current) clearTimeout(refetchTimer.current);
     };
-  }, [fetchTasks, boardId]);
+  }, [fetchTasks, scheduleRefetch, boardId]);
 
   const createTask = async (task: {
     title: string;
