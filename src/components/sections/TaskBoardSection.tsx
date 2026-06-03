@@ -660,9 +660,22 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   }, [board.background_image]);
 
   // Apply filter to tasks
-  const conclusionColumnIds = columns.filter(c => c.is_conclusion).map(c => c.id);
-  const filteredTasks = applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels).filter(t => !t.is_template);
-  const templateTasks = tasks.filter(t => t.is_template && !t.is_archived);
+  const conclusionColumnIds = useMemo(() => columns.filter(c => c.is_conclusion).map(c => c.id), [columns]);
+  const filteredTasks = useMemo(
+    () => applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels).filter(t => !t.is_template),
+    [tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels]
+  );
+  const templateTasks = useMemo(() => tasks.filter(t => t.is_template && !t.is_archived), [tasks]);
+  const tasksByColumn = useMemo(() => {
+    const map = new Map<string, BoardTask[]>();
+    filteredTasks.forEach((task) => {
+      const list = map.get(task.status) || [];
+      list.push(task);
+      map.set(task.status, list);
+    });
+    map.forEach((list) => list.sort((a, b) => a.position - b.position));
+    return map;
+  }, [filteredTasks]);
 
   const getDueDateInfo = (dueDateStr: string | null, isCompleted?: boolean) => {
     if (!dueDateStr) return null;
