@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Cake, PartyPopper, Calendar, CheckCircle2, Download, Send, Sparkles, Users } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { useBirthdays } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -190,11 +191,11 @@ export function BirthdaysSection() {
   );
 }
 
-function Metric({ icon: Icon, label, value }: { icon: any; label: string; value: number }) {
+function Metric({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: number }) {
   return <Card><CardContent className="flex items-center gap-3 p-4"><div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><Icon className="h-5 w-5 text-primary" /></div><div><p className="text-2xl font-bold text-foreground">{value}</p><p className="text-xs text-muted-foreground">{label}</p></div></CardContent></Card>;
 }
 
-function SectionTitle({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle: string }) {
+function SectionTitle({ icon: Icon, title, subtitle }: { icon: LucideIcon; title: string; subtitle: string }) {
   return <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted"><Icon className="h-5 w-5 text-muted-foreground" /></div><div><h3 className="font-display text-lg font-semibold text-foreground">{title}</h3><p className="text-sm text-muted-foreground">{subtitle}</p></div></div>;
 }
 
