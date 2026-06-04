@@ -138,12 +138,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
        if (!content.includes(`@${m.name}`)) continue;
        const { data: mp } = await supabase.from('profiles').select('user_id').eq('id', m.id).single();
        if (!mp) continue;
-       await supabase.from('user_notifications').insert({
-         user_id: mp.user_id,
-         type: 'mention',
-         title: 'Você foi mencionado',
-         message: `${profile.display_name || profile.name} mencionou você em ${group?.name || 'grupo'}: "${content.substring(0, 80)}${content.length > 80 ? '...' : ''}"`,
-       });
+        await supabase.rpc('create_user_notification' as any, {
+          _target_user_id: mp.user_id,
+          _type: 'mention',
+          _title: 'Você foi mencionado',
+          _message: `${profile.display_name || profile.name} mencionou você em ${group?.name || 'grupo'}: "${content.substring(0, 80)}${content.length > 80 ? '...' : ''}"`,
+          _reference_id: group?.id || null,
+        });
      }
    }, [profile, group]);
 

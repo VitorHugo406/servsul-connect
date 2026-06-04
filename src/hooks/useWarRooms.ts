@@ -226,7 +226,13 @@ export function useWarRooms() {
       await Promise.all([
         supabase.from('war_room_members').insert(memberInserts),
         notifications.length > 0
-          ? supabase.from('user_notifications').insert(notifications)
+          ? Promise.all(notifications.map((notification) => supabase.rpc('create_user_notification' as any, {
+              _target_user_id: notification.user_id,
+              _type: notification.type,
+              _title: notification.title,
+              _message: notification.message,
+              _reference_id: room.id,
+            })))
           : Promise.resolve(),
       ]);
     }
