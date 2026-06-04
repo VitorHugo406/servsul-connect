@@ -73,7 +73,7 @@ serve(async (req) => {
     const error = err as Error;
     console.error('Error in get-facial-data:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Erro interno do servidor' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
