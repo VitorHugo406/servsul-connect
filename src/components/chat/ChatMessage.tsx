@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSectors } from '@/hooks/useData';
 import { CardMentionCard } from './CardMentionCard';
 import { formatText } from '@/lib/chatFormatUtils';
+import { SignedStorageImage, SignedStorageLink } from '@/components/common/SignedStorageMedia';
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '🚀'];
 
@@ -140,14 +141,14 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
         {elements}
         {attachments.map((att, i) => (
           att.type === 'image' ? (
-            <a key={i} href={att.url} target="_blank" rel="noopener noreferrer">
-              <img src={att.url} alt={att.name} className="max-w-full max-h-48 rounded-lg object-cover" />
-            </a>
+            <SignedStorageLink key={i} url={att.url}>
+              <SignedStorageImage url={att.url} alt={att.name} className="max-w-full max-h-48 rounded-lg object-cover" />
+            </SignedStorageLink>
           ) : (
-            <a key={i} href={att.url} target="_blank" rel="noopener noreferrer"
+            <SignedStorageLink key={i} url={att.url}
               className={cn("flex items-center gap-2 rounded-lg p-2 text-xs", isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80")}>
               <span>📎</span><span className="truncate">{att.name}</span>
-            </a>
+            </SignedStorageLink>
           )
         ))}
       </div>

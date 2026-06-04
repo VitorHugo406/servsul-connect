@@ -38,6 +38,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
  import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
  import { formatText } from '@/lib/chatFormatUtils';
  import { cn } from '@/lib/utils';
+ import { SignedStorageImage, SignedStorageLink } from '@/components/common/SignedStorageMedia';
  import { supabase } from '@/integrations/supabase/client';
  import { toast } from 'sonner';
  
@@ -115,11 +116,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
            </p>
          )}
          {atts.map((att, i) => att.type === 'image' ? (
-           <a key={i} href={att.url} target="_blank" rel="noopener noreferrer"><img src={att.url} alt={att.name} className="max-w-full max-h-48 rounded-lg object-cover" /></a>
+           <SignedStorageLink key={i} url={att.url}><SignedStorageImage url={att.url} alt={att.name} className="max-w-full max-h-48 rounded-lg object-cover" /></SignedStorageLink>
          ) : (
-           <a key={i} href={att.url} target="_blank" rel="noopener noreferrer" className={cn("flex items-center gap-2 rounded-lg p-2 text-xs", isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80")}>
+           <SignedStorageLink key={i} url={att.url} className={cn("flex items-center gap-2 rounded-lg p-2 text-xs", isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80")}>
              <span>📎</span><span className="truncate">{att.name}</span>
-           </a>
+           </SignedStorageLink>
          ))}
        </div>
      );
