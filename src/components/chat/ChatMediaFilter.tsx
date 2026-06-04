@@ -5,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { FileText, Link2, ImageIcon, Download, ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { SignedStorageImage, SignedStorageLink } from '@/components/common/SignedStorageMedia';
 
 interface ChatMediaFilterProps {
   chatType: 'sector' | 'direct' | 'group';
@@ -352,24 +353,18 @@ export function ChatMediaFilter({ chatType, chatId, profileId }: ChatMediaFilter
             {images.length === 0 ? renderEmpty('foto') : (
               <div className="grid grid-cols-3 gap-1.5">
                 {images.map(img => (
-                  <a
+                  <SignedStorageLink
                     key={img.id}
-                    href={img.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    url={img.url}
                     className="relative aspect-square rounded-lg overflow-hidden bg-muted group"
                   >
-                    <img
-                      src={img.url}
+                    <SignedStorageImage
+                      url={img.url}
                       alt={img.name}
                       className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                      loading="lazy"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
                     />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                  </a>
+                  </SignedStorageLink>
                 ))}
               </div>
             )}

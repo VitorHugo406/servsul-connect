@@ -26,6 +26,7 @@ import { useTaskActivities, TaskActivity } from '@/hooks/useTaskActivities';
 import { TaskLabel } from '@/hooks/useTaskLabels';
 import { useTaskDecisions } from '@/hooks/useTaskDecisions';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useFileUpload } from '@/hooks/useFileUpload';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
 import { TaskCompletionReport } from './TaskCompletionReport';
 import { SubtaskList } from './SubtaskList';
@@ -247,6 +248,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
   const { subtasks, addSubtask, toggleSubtask, deleteSubtask, updateSubtask, reorderSubtasks, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null, boardId);
   const { groups, addGroup, deleteGroup, loading: groupsLoading } = useSubtaskGroups(task?.id || null);
   const { activities, loading: activitiesLoading } = useTaskActivities(task?.id || null);
+  const { uploadFile, uploading: uploadingCover } = useFileUpload();
 
   const [newComment, setNewComment] = useState('');
   const [newGroupSubtask, setNewGroupSubtask] = useState<Record<string, string>>({});
@@ -810,23 +812,19 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
             </div>
             <h4 className="text-sm font-semibold mb-2">Imagem de capa</h4>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="text-xs gap-1.5 flex-1" onClick={() => {
+              <Button variant="outline" size="sm" className="text-xs gap-1.5 flex-1" disabled={uploadingCover} onClick={() => {
                 const input = document.createElement('input');
                 input.type = 'file';
                 input.accept = 'image/*';
                 input.onchange = async (e) => {
                   const file = (e.target as HTMLInputElement).files?.[0];
                   if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = async (ev) => {
-                    const dataUrl = ev.target?.result as string;
-                    await onUpdateTask?.(task.id, { cover_image: dataUrl });
-                  };
-                  reader.readAsDataURL(file);
+                  const result = await uploadFile(file);
+                  if (result?.url) await onUpdateTask?.(task.id, { cover_image: result.url });
                 };
                 input.click();
               }}>
-                <Upload className="h-3 w-3" /> Enviar imagem
+                {uploadingCover ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />} Enviar imagem
               </Button>
             </div>
           </PopoverContent>
