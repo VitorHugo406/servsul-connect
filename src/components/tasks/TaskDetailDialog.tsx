@@ -30,6 +30,7 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
 import { TaskCompletionReport } from './TaskCompletionReport';
 import { SubtaskList } from './SubtaskList';
+import { SignedStorageImage } from '@/components/common/SignedStorageMedia';
 import { cn } from '@/lib/utils';
 
 // Colorblind patterns as SVG data URIs
@@ -374,7 +375,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
       {cover.type === 'color' && <div className={cn('h-3 rounded-t-lg', cover.value)} />}
       {cover.type === 'image' && (
         <div className={cn(isMobile ? 'h-28' : 'h-40', 'rounded-t-lg overflow-hidden')}>
-          <img src={cover.value} alt="Capa" className="w-full h-full object-cover" />
+          <SignedStorageImage url={cover.value} alt="Capa" className="w-full h-full object-cover" />
         </div>
       )}
     </>
