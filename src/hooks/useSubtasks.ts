@@ -135,6 +135,7 @@ export function useSubtasks(taskId: string | null, boardId?: string | null) {
 // Lightweight hook to get subtask counts for multiple tasks at once (for card indicators)
 export function useSubtaskCounts(taskIds: string[]) {
   const [counts, setCounts] = useState<Record<string, { completed: number; total: number }>>({});
+  const idsKey = taskIds.join(',');
 
   const fetchCounts = useCallback(async () => {
     if (taskIds.length === 0) { setCounts({}); return; }
@@ -154,7 +155,7 @@ export function useSubtaskCounts(taskIds: string[]) {
     } catch (error) {
       console.error('Error fetching subtask counts:', error);
     }
-  }, [taskIds.join(',')]);
+  }, [idsKey]);
 
   useEffect(() => { fetchCounts(); }, [fetchCounts]);
 

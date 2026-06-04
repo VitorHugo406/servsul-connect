@@ -47,6 +47,7 @@ import { useColumnAutoSubtasks } from '@/hooks/useColumnAutoSubtasks';
 import { logTaskActivity } from '@/hooks/useTaskActivities';
 import { useBoardScores } from '@/hooks/useBoardScores';
 import { ScorePanel } from '@/components/tasks/ScorePanel';
+import { SignedStorageImage } from '@/components/common/SignedStorageMedia';
 import {
   PRIORITIES, BACKGROUND_IMAGES, BACKGROUND_GROUPS, CARD_COVERS,
   getBoardBg, getBoardBgStyle, getInitials, getCoverDisplay, isBoardBgDark,
@@ -1647,7 +1648,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                         {cover.type === 'color' && <div className={cn('h-2 rounded-t-lg -mx-3 -mt-3 mb-2', cover.value)} />}
                         {cover.type === 'image' && (
                           <div className="h-20 rounded-t-lg -mx-3 -mt-3 mb-2 overflow-hidden">
-                            <img src={cover.value} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                            <SignedStorageImage url={cover.value} alt="" className="w-full h-full object-cover" />
                           </div>
                         )}
                         {taskLabelsForCard.length > 0 && (
@@ -1965,7 +1966,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                           {cover.type === 'color' && <div className={cn('h-8 rounded-t-lg', cover.value)} />}
                           {cover.type === 'image' && (
                             <div className="h-28 rounded-t-lg overflow-hidden">
-                              <img src={cover.value} alt="Capa" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                              <SignedStorageImage url={cover.value} alt="Capa" className="w-full h-full object-cover" />
                             </div>
                           )}
 

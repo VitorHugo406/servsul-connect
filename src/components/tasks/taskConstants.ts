@@ -128,7 +128,7 @@ export function getInitials(name: string) {
 
 export function isImageUrl(value: string | null): boolean {
   if (!value) return false;
-  return value.startsWith('http') || value.startsWith('data:');
+  return value.startsWith('http');
 }
 
 export function getCoverDisplay(cover: string | null): { type: 'none' | 'color' | 'image'; value: string } {

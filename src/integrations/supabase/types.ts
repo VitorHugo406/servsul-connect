@@ -2709,8 +2709,53 @@ export type Database = {
     }
     Functions: {
       can_edit_note: { Args: { _note_id: string }; Returns: boolean }
+      can_view_calendar_event: {
+        Args: { _created_by: string; _event_id: string }
+        Returns: boolean
+      }
+      can_view_meeting_participants: {
+        Args: { _event_id: string }
+        Returns: boolean
+      }
       can_view_note: { Args: { _note_id: string }; Returns: boolean }
       check_user_is_active: { Args: never; Returns: boolean }
+      create_user_notification: {
+        Args: {
+          _message: string
+          _reference_id?: string
+          _target_user_id: string
+          _title: string
+          _type: string
+        }
+        Returns: string
+      }
+      get_board_tasks_fast: {
+        Args: { _board_id: string }
+        Returns: {
+          assigned_to: string
+          assignee: Json
+          board_id: string
+          completed_at: string
+          completed_late: boolean
+          cover_image: string
+          created_at: string
+          created_by: string
+          delay_days: number
+          description: string
+          due_date: string
+          id: string
+          is_archived: boolean
+          is_emergency: boolean
+          is_template: boolean
+          position: number
+          priority: string
+          sector_id: string
+          status: string
+          task_number: number
+          title: string
+          updated_at: string
+        }[]
+      }
       get_current_autonomy_level: { Args: never; Returns: string }
       get_current_profile_id: { Args: never; Returns: string }
       get_current_sector_id: { Args: never; Returns: string }

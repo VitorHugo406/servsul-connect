@@ -38,6 +38,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
  import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
  import { formatText } from '@/lib/chatFormatUtils';
  import { cn } from '@/lib/utils';
+ import { SignedStorageImage, SignedStorageLink } from '@/components/common/SignedStorageMedia';
  import { supabase } from '@/integrations/supabase/client';
  import { toast } from 'sonner';
  
@@ -115,11 +116,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
            </p>
          )}
          {atts.map((att, i) => att.type === 'image' ? (
-           <a key={i} href={att.url} target="_blank" rel="noopener noreferrer"><img src={att.url} alt={att.name} className="max-w-full max-h-48 rounded-lg object-cover" /></a>
+           <SignedStorageLink key={i} url={att.url}><SignedStorageImage url={att.url} alt={att.name} className="max-w-full max-h-48 rounded-lg object-cover" /></SignedStorageLink>
          ) : (
-           <a key={i} href={att.url} target="_blank" rel="noopener noreferrer" className={cn("flex items-center gap-2 rounded-lg p-2 text-xs", isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80")}>
+           <SignedStorageLink key={i} url={att.url} className={cn("flex items-center gap-2 rounded-lg p-2 text-xs", isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80")}>
              <span>📎</span><span className="truncate">{att.name}</span>
-           </a>
+           </SignedStorageLink>
          ))}
        </div>
      );
@@ -137,12 +138,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
        if (!content.includes(`@${m.name}`)) continue;
        const { data: mp } = await supabase.from('profiles').select('user_id').eq('id', m.id).single();
        if (!mp) continue;
-       await supabase.from('user_notifications').insert({
-         user_id: mp.user_id,
-         type: 'mention',
-         title: 'Você foi mencionado',
-         message: `${profile.display_name || profile.name} mencionou você em ${group?.name || 'grupo'}: "${content.substring(0, 80)}${content.length > 80 ? '...' : ''}"`,
-       });
+        await supabase.rpc('create_user_notification' as any, {
+          _target_user_id: mp.user_id,
+          _type: 'mention',
+          _title: 'Você foi mencionado',
+          _message: `${profile.display_name || profile.name} mencionou você em ${group?.name || 'grupo'}: "${content.substring(0, 80)}${content.length > 80 ? '...' : ''}"`,
+          _reference_id: group?.id || null,
+        });
      }
    }, [profile, group]);
 

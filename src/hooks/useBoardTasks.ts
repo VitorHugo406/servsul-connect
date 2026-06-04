@@ -68,16 +68,13 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
     if (inFlight.current) return;
     inFlight.current = true;
     try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select(`id, task_number, title, description, status, priority, assigned_to, created_by, sector_id, board_id, cover_image, due_date, position, is_archived, is_template, completed_at, completed_late, delay_days, is_emergency, created_at, updated_at, assignee:profiles!tasks_assigned_to_fkey(id, name, display_name, avatar_url)`)
-        .eq('board_id', boardId)
-        .order('position', { ascending: true });
+      const { data, error } = await supabase.rpc('get_board_tasks_fast' as any, { _board_id: boardId });
 
       if (error) throw error;
 
-      const normalized = (data || []).map((t) => ({
+      const normalized = ((data || []) as any[]).map((t) => ({
           ...t,
+          priority: t.priority || 'medium',
           is_archived: t.is_archived ?? false,
           is_template: t.is_template ?? false,
           is_emergency: t.is_emergency ?? false,

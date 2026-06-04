@@ -1,7 +1,5 @@
-const CACHE_NAME = 'servchat-v1';
+const CACHE_NAME = 'servchat-runtime-v3';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/icons/logo-192.png',
   '/icons/logo-512.png',
@@ -33,7 +31,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - network first, fallback to cache
+// Fetch event - never cache app shell or Vite bundles, so published updates appear immediately.
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') {
@@ -49,6 +47,11 @@ self.addEventListener('fetch', (event) => {
   if (event.request.url.includes('/rest/') || 
       event.request.url.includes('/auth/') ||
       event.request.url.includes('/functions/')) {
+    return;
+  }
+
+  if (event.request.mode === 'navigate' || event.request.url.includes('/assets/') || event.request.url.endsWith('/index.html')) {
+    event.respondWith(fetch(event.request).catch(() => caches.match('/index.html')));
     return;
   }
 

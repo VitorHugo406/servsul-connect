@@ -79,6 +79,8 @@ export function useTaskLabels(boardId: string | null) {
     return map;
   }, [assignments]);
 
+  const labelById = useMemo(() => new Map(labels.map((label) => [label.id, label])), [labels]);
+
   const createLabel = async (name: string, color: string) => {
     if (!boardId) return { error: new Error('No board') };
     try {
@@ -147,8 +149,10 @@ export function useTaskLabels(boardId: string | null) {
   const getTaskLabels = useCallback((taskId: string) => {
     const taskAssignments = assignmentsByTask.get(taskId);
     if (!taskAssignments) return [];
-    return labels.filter(l => taskAssignments.has(l.id));
-  }, [assignmentsByTask, labels]);
+    return Array.from(taskAssignments)
+      .map((labelId) => labelById.get(labelId))
+      .filter(Boolean) as TaskLabel[];
+  }, [assignmentsByTask, labelById]);
 
   return {
     labels, assignments, loading,
