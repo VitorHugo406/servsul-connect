@@ -28,7 +28,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTaskBoards, useBoardMembers, useBoardColumns, TaskBoardColumn } from '@/hooks/useTaskBoards';
 import { useBoardTasks, BoardTask } from '@/hooks/useBoardTasks';
-import { useTaskLabels } from '@/hooks/useTaskLabels';
+import { useBoardTaskDetails } from '@/hooks/useBoardTaskDetails';
 import { useActiveUsers } from '@/hooks/useDirectMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -39,8 +39,6 @@ import { AutomationRulesPanel } from '@/components/tasks/AutomationRulesPanel';
 import { OperationModePanel } from '@/components/tasks/OperationModePanel';
 import { TaskFilterPanel, TaskFilter, emptyFilter, isFilterActive, applyFilter } from '@/components/tasks/TaskFilterPanel';
 import { AutoSubtasksConfig } from '@/components/tasks/AutoSubtasksConfig';
-import { useSubtaskCounts } from '@/hooks/useSubtasks';
-import { useTaskAssignees } from '@/hooks/useTaskAssignees';
 import { useCardDuplications } from '@/hooks/useCardDuplications';
 import { useWorkflowRules } from '@/hooks/useWorkflowRules';
 import { useColumnAutoSubtasks } from '@/hooks/useColumnAutoSubtasks';
@@ -367,9 +365,17 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const { columns, addColumn, updateColumn, deleteColumn, refetch: refetchColumns } = useBoardColumns(board.id);
   const { tasks, archivedTasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: refetchTasks } = useBoardTasks(board.id, restrictedTaskId);
   const { members, addMember, removeMember, updateMemberRole } = useBoardMembers(board.id);
-  const { labels, getTaskLabels, createLabel, deleteLabel, assignLabel, removeLabel } = useTaskLabels(board.id);
-  const { counts: subtaskCounts } = useSubtaskCounts(tasks.map(t => t.id));
-  const { getTaskAssignees, setTaskAssignees: setTaskAssigneesDb } = useTaskAssignees(board.id);
+  const {
+    labels,
+    counts: subtaskCounts,
+    getTaskLabels,
+    createLabel,
+    deleteLabel,
+    assignLabel,
+    removeLabel,
+    getTaskAssignees,
+    setTaskAssignees: setTaskAssigneesDb,
+  } = useBoardTaskDetails(board.id);
   const { createDuplication, deleteDuplication, getTaskDuplication } = useCardDuplications(board.id);
   const { rules: workflowRules, canMoveToColumn } = useWorkflowRules(board.id);
   const { users: allUsers } = useActiveUsers();
@@ -1025,12 +1031,13 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       await assignLabel(taskId, labelId);
     }
     if (profile && label) {
-      await (supabase as any).from('task_activities').insert({
-        task_id: taskId, user_id: profile.id,
-        user_name: profile.display_name || profile.name,
-        action_type: 'label',
-        description: hasLabel ? `removeu a etiqueta "${label.name}"` : `adicionou a etiqueta "${label.name}"`,
-      });
+      await logTaskActivity(
+        taskId,
+        profile.id,
+        profile.display_name || profile.name,
+        'label',
+        hasLabel ? `removeu a etiqueta "${label.name}"` : `adicionou a etiqueta "${label.name}"`
+      );
     }
   };
 
@@ -1047,11 +1054,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     });
     toast.success('Tarefa concluída!');
     if (profile) {
-      await (supabase as any).from('task_activities').insert({
-        task_id: task.id, user_id: profile.id,
-        user_name: profile.display_name || profile.name,
-        action_type: 'complete', description: 'marcou como concluída',
-      });
+      await logTaskActivity(task.id, profile.id, profile.display_name || profile.name, 'complete', 'marcou como concluída');
     }
   };
 
@@ -1111,12 +1114,13 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       const sourceCol = columns.find(c => c.id === draggedTask.status);
       const targetCol = columns.find(c => c.id === colId);
       if (profile && targetCol) {
-        await (supabase as any).from('task_activities').insert({
-          task_id: draggedTask.id, user_id: profile.id,
-          user_name: profile.display_name || profile.name,
-          action_type: 'move',
-          description: `moveu de "${sourceCol?.title || '?'}" para "${targetCol.title}"`,
-        });
+        await logTaskActivity(
+          draggedTask.id,
+          profile.id,
+          profile.display_name || profile.name,
+          'move',
+          `moveu de "${sourceCol?.title || '?'}" para "${targetCol.title}"`
+        );
       }
 
       // Apply column automations on drag

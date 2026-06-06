@@ -48,13 +48,11 @@ export async function logTaskActivity(
   metadata: any = {}
 ) {
   try {
-    await (supabase as any).from('task_activities').insert({
-      task_id: taskId,
-      user_id: userId,
-      user_name: userName,
-      action_type: actionType,
-      description,
-      metadata,
+    await (supabase as any).rpc('log_task_activity_secure', {
+      _task_id: taskId,
+      _action_type: actionType,
+      _description: description,
+      _metadata: metadata,
     });
   } catch (error) {
     console.error('Error logging activity:', error);
