@@ -1025,12 +1025,13 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       await assignLabel(taskId, labelId);
     }
     if (profile && label) {
-      await (supabase as any).from('task_activities').insert({
-        task_id: taskId, user_id: profile.id,
-        user_name: profile.display_name || profile.name,
-        action_type: 'label',
-        description: hasLabel ? `removeu a etiqueta "${label.name}"` : `adicionou a etiqueta "${label.name}"`,
-      });
+      await logTaskActivity(
+        taskId,
+        profile.id,
+        profile.display_name || profile.name,
+        'label',
+        hasLabel ? `removeu a etiqueta "${label.name}"` : `adicionou a etiqueta "${label.name}"`
+      );
     }
   };
 
@@ -1047,11 +1048,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     });
     toast.success('Tarefa concluída!');
     if (profile) {
-      await (supabase as any).from('task_activities').insert({
-        task_id: task.id, user_id: profile.id,
-        user_name: profile.display_name || profile.name,
-        action_type: 'complete', description: 'marcou como concluída',
-      });
+      await logTaskActivity(task.id, profile.id, profile.display_name || profile.name, 'complete', 'marcou como concluída');
     }
   };
 
@@ -1111,12 +1108,13 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       const sourceCol = columns.find(c => c.id === draggedTask.status);
       const targetCol = columns.find(c => c.id === colId);
       if (profile && targetCol) {
-        await (supabase as any).from('task_activities').insert({
-          task_id: draggedTask.id, user_id: profile.id,
-          user_name: profile.display_name || profile.name,
-          action_type: 'move',
-          description: `moveu de "${sourceCol?.title || '?'}" para "${targetCol.title}"`,
-        });
+        await logTaskActivity(
+          draggedTask.id,
+          profile.id,
+          profile.display_name || profile.name,
+          'move',
+          `moveu de "${sourceCol?.title || '?'}" para "${targetCol.title}"`
+        );
       }
 
       // Apply column automations on drag
