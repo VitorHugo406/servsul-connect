@@ -204,7 +204,8 @@ export type Database = {
       }
       api_integrations: {
         Row: {
-          api_key: string
+          api_key_hash: string
+          api_key_hint: string
           api_token_hash: string
           created_at: string
           created_by: string
@@ -215,7 +216,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          api_key: string
+          api_key_hash: string
+          api_key_hint: string
           api_token_hash: string
           created_at?: string
           created_by: string
@@ -226,7 +228,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          api_key?: string
+          api_key_hash?: string
+          api_key_hint?: string
           api_token_hash?: string
           created_at?: string
           created_by?: string
@@ -2729,6 +2732,10 @@ export type Database = {
         }
         Returns: string
       }
+      get_board_task_details_fast: {
+        Args: { _board_id: string }
+        Returns: Json
+      }
       get_board_tasks_fast: {
         Args: { _board_id: string }
         Returns: {
@@ -2779,6 +2786,19 @@ export type Database = {
       is_group_member: { Args: { check_group_id: string }; Returns: boolean }
       is_note_owner: { Args: { _note_id: string }; Returns: boolean }
       is_note_shared_with_me: { Args: { _note_id: string }; Returns: boolean }
+      log_task_activity_secure: {
+        Args: {
+          _action_type: string
+          _description: string
+          _metadata?: Json
+          _task_id: string
+        }
+        Returns: string
+      }
+      refresh_board_monthly_scores: {
+        Args: { _board_id: string }
+        Returns: undefined
+      }
       user_has_sector_access: {
         Args: { check_sector_id: string; check_user_id: string }
         Returns: boolean
