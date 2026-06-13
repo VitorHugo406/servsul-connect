@@ -96,10 +96,11 @@ async function validateApiAuth(req: Request): Promise<{ integrationId: string } 
   if (!apiKey || !apiToken) return null;
 
   const admin = getAdminClient();
+  const apiKeyHash = await hashToken(apiKey);
   const { data: integration } = await admin
     .from("api_integrations")
     .select("id, is_active, api_token_hash")
-    .eq("api_key", apiKey)
+    .eq("api_key_hash", apiKeyHash)
     .maybeSingle();
 
   if (!integration) return null;
@@ -108,7 +109,6 @@ async function validateApiAuth(req: Request): Promise<{ integrationId: string } 
   const tokenHash = await hashToken(apiToken);
   if (tokenHash !== integration.api_token_hash) return null;
 
-  // Update last_used_at
   await admin.from("api_integrations").update({ last_used_at: new Date().toISOString() }).eq("id", integration.id);
 
   return { integrationId: integration.id };
@@ -133,19 +133,23 @@ async function handleAdminCreateIntegration(req: Request, userId: string) {
 
   const apiKey = generateKey("sk");
   const apiToken = generateKey("st");
+  const apiKeyHash = await hashToken(apiKey);
   const tokenHash = await hashToken(apiToken);
 
   const admin = getAdminClient();
   const { data, error } = await admin.from("api_integrations").insert({
     name,
-    api_key: apiKey,
+    api_key_hint: `${apiKey.slice(0, 8)}…${apiKey.slice(-4)}`,
+    api_key_hash: apiKeyHash,
     api_token_hash: tokenHash,
     created_by: userId,
   }).select().single();
 
-  if (error) return jsonResponse({ status: "error", message: error.message }, 500);
+  if (error) {
+    console.error("api_integrations insert error:", error);
+    return jsonResponse({ status: "error", message: "Falha ao criar integração." }, 500);
+  }
 
-  // Log history
   await admin.from("api_integration_history").insert({
     integration_id: data.id,
     action: "created",
@@ -209,16 +213,21 @@ async function handleAdminToggle(integrationId: string, activate: boolean, userI
 async function handleAdminRegenerate(integrationId: string, userId: string) {
   const apiKey = generateKey("sk");
   const apiToken = generateKey("st");
+  const apiKeyHash = await hashToken(apiKey);
   const tokenHash = await hashToken(apiToken);
 
   const admin = getAdminClient();
   const { error } = await admin.from("api_integrations").update({
-    api_key: apiKey,
+    api_key_hint: `${apiKey.slice(0, 8)}…${apiKey.slice(-4)}`,
+    api_key_hash: apiKeyHash,
     api_token_hash: tokenHash,
     updated_at: new Date().toISOString(),
   }).eq("id", integrationId);
 
-  if (error) return jsonResponse({ status: "error", message: error.message }, 500);
+  if (error) {
+    console.error("api_integrations regenerate error:", error);
+    return jsonResponse({ status: "error", message: "Falha ao regenerar credenciais." }, 500);
+  }
 
   await admin.from("api_integration_history").insert({
     integration_id: integrationId,
