@@ -96,10 +96,11 @@ async function validateApiAuth(req: Request): Promise<{ integrationId: string } 
   if (!apiKey || !apiToken) return null;
 
   const admin = getAdminClient();
+  const apiKeyHash = await hashToken(apiKey);
   const { data: integration } = await admin
     .from("api_integrations")
     .select("id, is_active, api_token_hash")
-    .eq("api_key", apiKey)
+    .eq("api_key_hash", apiKeyHash)
     .maybeSingle();
 
   if (!integration) return null;
@@ -108,7 +109,6 @@ async function validateApiAuth(req: Request): Promise<{ integrationId: string } 
   const tokenHash = await hashToken(apiToken);
   if (tokenHash !== integration.api_token_hash) return null;
 
-  // Update last_used_at
   await admin.from("api_integrations").update({ last_used_at: new Date().toISOString() }).eq("id", integration.id);
 
   return { integrationId: integration.id };
