@@ -445,8 +445,8 @@ Deno.serve(async (req) => {
           if (uploadError) {
             console.error(`PDF upload error for ${profile.name}:`, uploadError)
           } else {
-            const { data: urlData } = supabase.storage.from('attachments').getPublicUrl(fileName)
-            pdfUrl = urlData?.publicUrl
+            const { data: signed } = await supabase.storage.from('attachments').createSignedUrl(fileName, 60 * 60 * 24 * 7)
+            pdfUrl = signed?.signedUrl
             sentPdfCount++
           }
         } catch (pdfError) {
