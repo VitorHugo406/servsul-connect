@@ -110,24 +110,11 @@ export function useBoardScores(boardId: string | null, memberProfileIds: string[
 
       setScores(result.sort((a, b) => b.score - a.score));
 
-      // Save/update current month scores
-      const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      for (const r of result) {
-        await supabase
-          .from('monthly_scores')
-          .upsert({
-            profile_id: r.profileId,
-            board_id: boardId,
-            year_month: yearMonth,
-            score: r.score,
-            total_tasks: r.totalTasks,
-            completed_tasks: r.completedTasks,
-            late_tasks: r.lateTasks,
-            on_time_tasks: r.onTimeTasks,
-            updated_at: new Date().toISOString(),
-          }, {
-            onConflict: 'profile_id,board_id,year_month',
-          });
+      // Persist current month scores via secure RPC (validated server-side)
+      try {
+        await (supabase as any).rpc('refresh_board_monthly_scores', { _board_id: boardId });
+      } catch (err) {
+        console.warn('refresh_board_monthly_scores failed:', err);
       }
 
       // Fetch last 6 months of history
