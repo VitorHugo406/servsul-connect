@@ -133,19 +133,23 @@ async function handleAdminCreateIntegration(req: Request, userId: string) {
 
   const apiKey = generateKey("sk");
   const apiToken = generateKey("st");
+  const apiKeyHash = await hashToken(apiKey);
   const tokenHash = await hashToken(apiToken);
 
   const admin = getAdminClient();
   const { data, error } = await admin.from("api_integrations").insert({
     name,
-    api_key: apiKey,
+    api_key_hint: `${apiKey.slice(0, 8)}…${apiKey.slice(-4)}`,
+    api_key_hash: apiKeyHash,
     api_token_hash: tokenHash,
     created_by: userId,
   }).select().single();
 
-  if (error) return jsonResponse({ status: "error", message: error.message }, 500);
+  if (error) {
+    console.error("api_integrations insert error:", error);
+    return jsonResponse({ status: "error", message: "Falha ao criar integração." }, 500);
+  }
 
-  // Log history
   await admin.from("api_integration_history").insert({
     integration_id: data.id,
     action: "created",
