@@ -213,16 +213,21 @@ async function handleAdminToggle(integrationId: string, activate: boolean, userI
 async function handleAdminRegenerate(integrationId: string, userId: string) {
   const apiKey = generateKey("sk");
   const apiToken = generateKey("st");
+  const apiKeyHash = await hashToken(apiKey);
   const tokenHash = await hashToken(apiToken);
 
   const admin = getAdminClient();
   const { error } = await admin.from("api_integrations").update({
-    api_key: apiKey,
+    api_key_hint: `${apiKey.slice(0, 8)}…${apiKey.slice(-4)}`,
+    api_key_hash: apiKeyHash,
     api_token_hash: tokenHash,
     updated_at: new Date().toISOString(),
   }).eq("id", integrationId);
 
-  if (error) return jsonResponse({ status: "error", message: error.message }, 500);
+  if (error) {
+    console.error("api_integrations regenerate error:", error);
+    return jsonResponse({ status: "error", message: "Falha ao regenerar credenciais." }, 500);
+  }
 
   await admin.from("api_integration_history").insert({
     integration_id: integrationId,
