@@ -30,12 +30,10 @@ export function BoardJoinDialog({ token, onClose, onNavigateToTasks }: BoardJoin
     const lookupBoard = async () => {
       setLoading(true);
       try {
-        const { data: link, error: linkErr } = await (supabase as any)
-          .from('board_share_links')
-          .select('board_id, is_active')
-          .eq('share_token', normalizedToken)
-          .eq('is_active', true)
-          .maybeSingle();
+        const { data: linkRows, error: linkErr } = await (supabase as any)
+          .rpc('resolve_board_share_link', { _token: normalizedToken });
+
+        const link = Array.isArray(linkRows) ? linkRows[0] : linkRows;
 
         if (linkErr || !link) {
           setStatus('error');
@@ -45,17 +43,13 @@ export function BoardJoinDialog({ token, onClose, onNavigateToTasks }: BoardJoin
 
         const boardId = link.board_id;
 
-        const { data: board } = await (supabase as any)
-          .from('task_boards')
-          .select('id, name, description')
-          .eq('id', boardId)
-          .maybeSingle();
-
         setBoardInfo({
           id: boardId,
-          name: board?.name || 'Quadro compartilhado',
-          description: board?.description ?? null,
+          name: link.board_name || 'Quadro compartilhado',
+          description: link.board_description ?? null,
         });
+
+
 
         const { data: membership } = await (supabase as any)
           .from('task_board_members')
