@@ -128,7 +128,7 @@ export function EvaluationsSection() {
     const { data: teamData } = await supabase.from('supervisor_team_members').select('member_profile_id').eq('supervisor_id', profile.user_id);
     const memberIds = (teamData || []).map(t => t.member_profile_id);
 
-    let query = supabase.from('profiles').select('id, name, display_name, email, registration_number, sector_id, autonomy_level').eq('is_active', true);
+    let query = supabase.from('profiles').select('id, name, display_name, email, sector_id, autonomy_level').eq('is_active', true);
 
     if (!isDirectoria && memberIds.length > 0) {
       query = query.in('id', memberIds);
@@ -137,7 +137,17 @@ export function EvaluationsSection() {
     }
 
     const { data } = await query.order('name');
-    setTeamMembers(data || []);
+    const baseMembers = (data as any[]) || [];
+
+    // Enrich with registration_number via secure RPC (mgmt/admin/supervisor only)
+    const ids = baseMembers.map((m) => m.id);
+    let regMap = new Map<string, string | null>();
+    if (ids.length > 0) {
+      const { data: regs } = await supabase.rpc('get_profiles_registration', { _ids: ids });
+      regMap = new Map(((regs as any[]) || []).map((r) => [r.id, r.registration_number]));
+    }
+    setTeamMembers(baseMembers.map((m) => ({ ...m, registration_number: regMap.get(m.id) ?? null })));
+
 
     const { data: sectorData } = await supabase.from('sectors').select('id, name');
     setSectors(sectorData || []);
