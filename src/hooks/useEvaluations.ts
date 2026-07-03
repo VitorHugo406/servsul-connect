@@ -164,12 +164,16 @@ export function useEvaluations() {
         const profileIds = [...new Set(evals.flatMap(e => [e.evaluator_id, e.evaluated_id]))];
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, name, display_name, registration_number, sector_id')
+          .select('id, name, display_name, sector_id')
           .in('id', profileIds);
+
+        const { data: regs } = await supabase.rpc('get_profiles_registration', { _ids: profileIds });
+        const regMap = new Map(((regs as any[]) || []).map((r) => [r.id, r.registration_number]));
 
         const { data: sectors } = await supabase.from('sectors').select('id, name');
         const sectorMap = new Map((sectors || []).map(s => [s.id, s.name]));
-        const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+        const profileMap = new Map((profiles || []).map(p => [p.id, { ...p, registration_number: regMap.get(p.id) ?? null }]));
+
         const posMap = new Map((posRes.data as any[] || []).map(p => [p.id, p.name]));
         const cycMap = new Map((cycRes.data as any[] || []).map(c => [c.id, c.name]));
 
