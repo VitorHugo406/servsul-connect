@@ -124,14 +124,13 @@ export function ManagementSection() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch users
+      // Fetch users via admin RPC (includes sensitive fields for admins/mgmt)
       const { data: usersData, error: usersError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('name');
+        .rpc('admin_list_profiles_full');
 
       if (usersError) throw usersError;
-      setUsers(usersData || []);
+      setUsers((usersData as any[]) || []);
+
 
       // Fetch sectors
       const { data: sectorsData, error: sectorsError } = await supabase
