@@ -2869,6 +2869,15 @@ export type Database = {
         Args: { _board_id: string }
         Returns: undefined
       }
+      resolve_board_share_link: {
+        Args: { _token: string }
+        Returns: {
+          board_description: string
+          board_id: string
+          board_name: string
+          is_active: boolean
+        }[]
+      }
       update_profile_sensitive: {
         Args: {
           _address: string
