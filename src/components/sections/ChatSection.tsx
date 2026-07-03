@@ -175,14 +175,15 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       
       if (!mentionedProfile) continue;
       
-      // Insert notification
-      await supabase.from('user_notifications').insert({
-        user_id: mentionedProfile.user_id,
-        type: 'mention',
-        title: 'Você foi mencionado',
-        message: `${profile.display_name || profile.name} mencionou você no chat: "${content.substring(0, 80)}${content.length > 80 ? '...' : ''}"`,
-        reference_id: null,
+      // Insert notification via secure RPC
+      await supabase.rpc('create_user_notification', {
+        _target_user_id: mentionedProfile.user_id,
+        _type: 'mention',
+        _title: 'Você foi mencionado',
+        _message: `${profile.display_name || profile.name} mencionou você no chat: "${content.substring(0, 80)}${content.length > 80 ? '...' : ''}"`,
+        _reference_id: null,
       });
+
     }
   }, [profile]);
 

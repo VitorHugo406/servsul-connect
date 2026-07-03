@@ -124,14 +124,13 @@ export function ManagementSection() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch users
+      // Fetch users via admin RPC (includes sensitive fields for admins/mgmt)
       const { data: usersData, error: usersError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('name');
+        .rpc('admin_list_profiles_full');
 
       if (usersError) throw usersError;
-      setUsers(usersData || []);
+      setUsers((usersData as any[]) || []);
+
 
       // Fetch sectors
       const { data: sectorsData, error: sectorsError } = await supabase
@@ -1144,19 +1143,27 @@ function EditUserDialog({ open, onOpenChange, user, sectors, currentRole, onSucc
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Update profile
+      // Update non-sensitive profile fields
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           name,
-          phone: phone || null,
-          company: company || null,
-          registration_number: registrationNumber || null,
           sector_id: sectorId || null,
         })
         .eq('user_id', user.user_id);
 
       if (profileError) throw profileError;
+
+      // Update sensitive fields via secure RPC (admin/self only)
+      const { error: sensitiveError } = await supabase.rpc('update_profile_sensitive', {
+        _user_id: user.user_id,
+        _phone: phone || null,
+        _address: null,
+        _registration_number: registrationNumber || null,
+        _company: company || null,
+      });
+      if (sensitiveError) throw sensitiveError;
+
 
       // Update autonomy_level on profile to match role
       const autonomyMap: Record<string, string> = {
