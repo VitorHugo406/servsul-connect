@@ -171,17 +171,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
-      // Fetch profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // Fetch profile via RPC to include sensitive fields for self
+      const { data: profileRows, error: profileError } = await supabase
+        .rpc('get_my_full_profile');
 
       if (profileError) {
         console.error('Error fetching profile:', profileError);
         return;
       }
+
+      const profileData = Array.isArray(profileRows) ? profileRows[0] : profileRows;
+
+
 
       if (profileData) {
         setProfile(profileData as Profile);
