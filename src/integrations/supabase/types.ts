@@ -2711,6 +2711,37 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_list_profiles_full: {
+        Args: never
+        Returns: {
+          address: string | null
+          autonomy_level: string
+          avatar_url: string | null
+          birth_date: string | null
+          company: string | null
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          is_active: boolean
+          last_seen_at: string | null
+          name: string
+          phone: string | null
+          profile_type: string
+          registration_number: string | null
+          sector_id: string | null
+          updated_at: string
+          user_id: string
+          user_status: string | null
+          work_period: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       can_edit_note: { Args: { _note_id: string }; Returns: boolean }
       can_view_calendar_event: {
         Args: { _created_by: string; _event_id: string }
@@ -2766,6 +2797,44 @@ export type Database = {
       get_current_autonomy_level: { Args: never; Returns: string }
       get_current_profile_id: { Args: never; Returns: string }
       get_current_sector_id: { Args: never; Returns: string }
+      get_my_full_profile: {
+        Args: never
+        Returns: {
+          address: string | null
+          autonomy_level: string
+          avatar_url: string | null
+          birth_date: string | null
+          company: string | null
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          is_active: boolean
+          last_seen_at: string | null
+          name: string
+          phone: string | null
+          profile_type: string
+          registration_number: string | null
+          sector_id: string | null
+          updated_at: string
+          user_id: string
+          user_status: string | null
+          work_period: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_profiles_registration: {
+        Args: { _ids: string[] }
+        Returns: {
+          id: string
+          registration_number: string
+        }[]
+      }
       has_autonomy_level: { Args: { required_level: string }; Returns: boolean }
       has_role: {
         Args: {
@@ -2786,6 +2855,7 @@ export type Database = {
       is_group_member: { Args: { check_group_id: string }; Returns: boolean }
       is_note_owner: { Args: { _note_id: string }; Returns: boolean }
       is_note_shared_with_me: { Args: { _note_id: string }; Returns: boolean }
+      is_war_room_member: { Args: { _war_room_id: string }; Returns: boolean }
       log_task_activity_secure: {
         Args: {
           _action_type: string
@@ -2797,6 +2867,16 @@ export type Database = {
       }
       refresh_board_monthly_scores: {
         Args: { _board_id: string }
+        Returns: undefined
+      }
+      update_profile_sensitive: {
+        Args: {
+          _address: string
+          _company: string
+          _phone: string
+          _registration_number: string
+          _user_id: string
+        }
         Returns: undefined
       }
       user_has_sector_access: {
