@@ -9,8 +9,6 @@ import { useImportantAnnouncements } from '@/hooks/useImportantAnnouncements';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
-import { MobileNavigation } from '@/components/layout/MobileNavigation';
-import { MobileHeader } from '@/components/layout/MobileHeader';
 import { HomeSection } from '@/components/sections/HomeSection';
 import { ChatSection } from '@/components/sections/ChatSection';
 import { AnnouncementsSection } from '@/components/sections/AnnouncementsSection';
