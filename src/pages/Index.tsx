@@ -9,8 +9,6 @@ import { useImportantAnnouncements } from '@/hooks/useImportantAnnouncements';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
-import { MobileNavigation } from '@/components/layout/MobileNavigation';
-import { MobileHeader } from '@/components/layout/MobileHeader';
 import { HomeSection } from '@/components/sections/HomeSection';
 import { ChatSection } from '@/components/sections/ChatSection';
 import { AnnouncementsSection } from '@/components/sections/AnnouncementsSection';
@@ -34,6 +32,7 @@ import { ApiManagementSection } from '@/components/sections/ApiManagementSection
 import { WarRoomSection } from '@/components/sections/WarRoomSection';
 import { EvaluationsSection } from '@/components/sections/EvaluationsSection';
 import { NotesSection } from '@/components/sections/NotesSection';
+import { CompaniesManagementSection } from '@/components/sections/CompaniesManagementSection';
 import { FloatingNoteWindow } from '@/components/notes/FloatingNoteWindow';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { SeasonalMarquee } from '@/components/seasonal/SeasonalMarquee';
@@ -45,6 +44,7 @@ import { ImportantAnnouncementModal } from '@/components/announcements/Important
 import { BoardJoinDialog } from '@/components/tasks/BoardJoinDialog';
 import { useWarRoomAlarm } from '@/hooks/useWarRoomAlarm';
 import { WarRoomAlarmOverlay } from '@/components/warroom/WarRoomAlarmOverlay';
+import { MobileShell } from '@/components/layout/mobile/MobileShell';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
@@ -70,6 +70,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
    'api-management': { title: 'API de Integração', subtitle: 'Gerenciamento de integrações externas' },
    'evaluations': { title: 'Avaliações', subtitle: 'Avaliação de desempenho e feedback' },
    'notes': { title: 'Anotações', subtitle: 'Suas notas pessoais e compartilhadas' },
+   'companies': { title: 'Empresas', subtitle: 'Gestão de tenants do sistema' },
 };
 
 const Index = () => {
@@ -194,6 +195,8 @@ const Index = () => {
            return <EvaluationsSection />;
          case 'notes':
            return <NotesSection />;
+         case 'companies':
+           return <CompaniesManagementSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }
@@ -225,54 +228,40 @@ const Index = () => {
     );
   }
 
-  // Mobile Layout
+  // Mobile Layout — redesenhado com 3 abas apenas (Início, Chat, Avisos)
   if (isMobile) {
     return (
-      <div className="flex flex-col h-screen overflow-hidden bg-background">
+      <>
         <WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} />
         <OfflineIndicator />
-        <MobileHeader 
-          title={currentSection.title} 
-          subtitle={currentSection.subtitle}
-          onNavigateToChat={handleNavigateToChat}
-          onNavigateToAnnouncements={handleNavigateToAnnouncements}
+        <MobileShell
+          activeSection={activeSection}
+          onSectionChange={handleSectionChange}
+          globalSearch={globalSearch}
         />
-        
-        <SeasonalMarquee />
-        <main className="flex-1 overflow-auto pb-20">
-          {renderSection()}
-        </main>
 
-        <MobileNavigation activeSection={activeSection} onSectionChange={handleSectionChange} />
-        
-        {/* PWA Install Prompt */}
         <InstallPrompt />
-        
-        {/* Chatbot Widget - only on home page in mobile too */}
         <ChatbotWidget isHomePage={isHomePage} />
-        
-        {/* Birthday Celebration */}
+
         <BirthdayCelebrationModal
           isOpen={showCelebration}
           onClose={closeCelebration}
           userName={userName}
         />
-      
-      {/* Important Announcement Modal */}
-      {pendingAnnouncement && !showCelebration && !showOnboarding && (
-        <ImportantAnnouncementModal
-          isOpen={true}
-          onClose={dismissAnnouncement}
-          title={pendingAnnouncement.title}
-          content={pendingAnnouncement.content}
-          borderStyle={pendingAnnouncement.border_style}
-        />
-      )}
 
-      {/* Board Join Dialog */}
-      <BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} />
-      <FloatingNoteWindow />
-      </div>
+        {pendingAnnouncement && !showCelebration && !showOnboarding && (
+          <ImportantAnnouncementModal
+            isOpen={true}
+            onClose={dismissAnnouncement}
+            title={pendingAnnouncement.title}
+            content={pendingAnnouncement.content}
+            borderStyle={pendingAnnouncement.border_style}
+          />
+        )}
+
+        <BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} />
+        <FloatingNoteWindow />
+      </>
     );
   }
 

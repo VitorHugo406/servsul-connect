@@ -39,6 +39,7 @@ const menuItems = [
   { id: 'people-management', icon: UsersRound, label: 'Gestão de Pessoas', supervisorOnly: true },
   
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
+  { id: 'companies', icon: Building2, label: 'Empresas', superAdminOnly: true },
   { id: 'sectors', icon: Building2, label: 'Gestão de Setores', adminOnly: true },
    { id: 'important-announcements', icon: Sparkles, label: 'Comunicados Importantes', adminOnly: true },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
@@ -65,8 +66,9 @@ const autonomyLevelLabels: Record<string, string> = {
 
 export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { profile, signOut, isAdmin, canAccess } = useAuth();
+  const { profile, signOut, isAdmin, canAccess, roles } = useAuth();
   const { counts } = useNotifications();
+  const isSuperAdmin = roles.some((r: any) => (r.role as string) === 'super_admin');
 
   const getInitials = (name: string) => {
     return name
@@ -82,6 +84,9 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
   // Filter menu items based on permissions
   const visibleMenuItems = menuItems.filter((item) => {
+    if ('superAdminOnly' in item && (item as any).superAdminOnly) {
+      return isSuperAdmin;
+    }
     // Main admin only items (specific email)
     if ('mainAdminOnly' in item && item.mainAdminOnly) {
       return isAdmin && profile?.email === 'adminservchat@servsul.com.br';
