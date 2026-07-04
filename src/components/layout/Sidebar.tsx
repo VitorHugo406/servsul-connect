@@ -66,8 +66,9 @@ const autonomyLevelLabels: Record<string, string> = {
 
 export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { profile, signOut, isAdmin, canAccess } = useAuth();
+  const { profile, signOut, isAdmin, canAccess, roles } = useAuth();
   const { counts } = useNotifications();
+  const isSuperAdmin = roles.some((r: any) => (r.role as string) === 'super_admin');
 
   const getInitials = (name: string) => {
     return name
@@ -83,6 +84,9 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
   // Filter menu items based on permissions
   const visibleMenuItems = menuItems.filter((item) => {
+    if ('superAdminOnly' in item && (item as any).superAdminOnly) {
+      return isSuperAdmin;
+    }
     // Main admin only items (specific email)
     if ('mainAdminOnly' in item && item.mainAdminOnly) {
       return isAdmin && profile?.email === 'adminservchat@servsul.com.br';
