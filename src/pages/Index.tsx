@@ -34,6 +34,7 @@ import { ApiManagementSection } from '@/components/sections/ApiManagementSection
 import { WarRoomSection } from '@/components/sections/WarRoomSection';
 import { EvaluationsSection } from '@/components/sections/EvaluationsSection';
 import { NotesSection } from '@/components/sections/NotesSection';
+import { CompaniesManagementSection } from '@/components/sections/CompaniesManagementSection';
 import { FloatingNoteWindow } from '@/components/notes/FloatingNoteWindow';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { SeasonalMarquee } from '@/components/seasonal/SeasonalMarquee';
@@ -45,6 +46,7 @@ import { ImportantAnnouncementModal } from '@/components/announcements/Important
 import { BoardJoinDialog } from '@/components/tasks/BoardJoinDialog';
 import { useWarRoomAlarm } from '@/hooks/useWarRoomAlarm';
 import { WarRoomAlarmOverlay } from '@/components/warroom/WarRoomAlarmOverlay';
+import { MobileShell } from '@/components/layout/mobile/MobileShell';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
@@ -70,6 +72,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
    'api-management': { title: 'API de Integração', subtitle: 'Gerenciamento de integrações externas' },
    'evaluations': { title: 'Avaliações', subtitle: 'Avaliação de desempenho e feedback' },
    'notes': { title: 'Anotações', subtitle: 'Suas notas pessoais e compartilhadas' },
+   'companies': { title: 'Empresas', subtitle: 'Gestão de tenants do sistema' },
 };
 
 const Index = () => {
@@ -194,6 +197,8 @@ const Index = () => {
            return <EvaluationsSection />;
          case 'notes':
            return <NotesSection />;
+         case 'companies':
+           return <CompaniesManagementSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }
