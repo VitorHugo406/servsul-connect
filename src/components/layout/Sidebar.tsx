@@ -39,6 +39,7 @@ const menuItems = [
   { id: 'people-management', icon: UsersRound, label: 'Gestão de Pessoas', supervisorOnly: true },
   
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
+  { id: 'companies', icon: Building2, label: 'Empresas', superAdminOnly: true },
   { id: 'sectors', icon: Building2, label: 'Gestão de Setores', adminOnly: true },
    { id: 'important-announcements', icon: Sparkles, label: 'Comunicados Importantes', adminOnly: true },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },

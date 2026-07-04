@@ -230,54 +230,40 @@ const Index = () => {
     );
   }
 
-  // Mobile Layout
+  // Mobile Layout — redesenhado com 3 abas apenas (Início, Chat, Avisos)
   if (isMobile) {
     return (
-      <div className="flex flex-col h-screen overflow-hidden bg-background">
+      <>
         <WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} />
         <OfflineIndicator />
-        <MobileHeader 
-          title={currentSection.title} 
-          subtitle={currentSection.subtitle}
-          onNavigateToChat={handleNavigateToChat}
-          onNavigateToAnnouncements={handleNavigateToAnnouncements}
+        <MobileShell
+          activeSection={activeSection}
+          onSectionChange={handleSectionChange}
+          globalSearch={globalSearch}
         />
-        
-        <SeasonalMarquee />
-        <main className="flex-1 overflow-auto pb-20">
-          {renderSection()}
-        </main>
 
-        <MobileNavigation activeSection={activeSection} onSectionChange={handleSectionChange} />
-        
-        {/* PWA Install Prompt */}
         <InstallPrompt />
-        
-        {/* Chatbot Widget - only on home page in mobile too */}
         <ChatbotWidget isHomePage={isHomePage} />
-        
-        {/* Birthday Celebration */}
+
         <BirthdayCelebrationModal
           isOpen={showCelebration}
           onClose={closeCelebration}
           userName={userName}
         />
-      
-      {/* Important Announcement Modal */}
-      {pendingAnnouncement && !showCelebration && !showOnboarding && (
-        <ImportantAnnouncementModal
-          isOpen={true}
-          onClose={dismissAnnouncement}
-          title={pendingAnnouncement.title}
-          content={pendingAnnouncement.content}
-          borderStyle={pendingAnnouncement.border_style}
-        />
-      )}
 
-      {/* Board Join Dialog */}
-      <BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} />
-      <FloatingNoteWindow />
-      </div>
+        {pendingAnnouncement && !showCelebration && !showOnboarding && (
+          <ImportantAnnouncementModal
+            isOpen={true}
+            onClose={dismissAnnouncement}
+            title={pendingAnnouncement.title}
+            content={pendingAnnouncement.content}
+            borderStyle={pendingAnnouncement.border_style}
+          />
+        )}
+
+        <BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} />
+        <FloatingNoteWindow />
+      </>
     );
   }
 
