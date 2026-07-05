@@ -276,19 +276,19 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
         )}
       </AnimatePresence>
 
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-1.5 sm:gap-2">
         <div className="flex items-center gap-0.5 flex-shrink-0">
           <Button
             type="button" variant="ghost" size="icon"
-            className="h-10 w-10 text-muted-foreground hover:text-foreground"
+            className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground hover:text-foreground"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           >
-            <Smile className="h-5 w-5" />
+            <Smile className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
           {!hideAttachment && (
             <>
               <Button type="button" variant="ghost" size="icon"
-                className={`h-10 w-10 ${effectiveLimitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`h-8 w-8 sm:h-10 sm:w-10 ${effectiveLimitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
                 onClick={() => {
                   if (effectiveLimitReached) {
                     toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`);
@@ -298,10 +298,10 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
                 }}
                 disabled={uploading}
               >
-                <Paperclip className="h-5 w-5" />
+                <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
               <Button type="button" variant="ghost" size="icon"
-                className={`h-10 w-10 ${effectiveLimitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`h-8 w-8 sm:h-10 sm:w-10 ${effectiveLimitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
                 onClick={() => {
                   if (effectiveLimitReached) {
                     toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`);
@@ -311,7 +311,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
                 }}
                 disabled={uploading}
               >
-                <ImageIcon className="h-5 w-5" />
+                <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </>
           )}
@@ -326,10 +326,10 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
             value={message}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            placeholder='Digite sua mensagem... (# cards, @ pessoas)'
+            placeholder='Mensagem...'
             rows={1}
             style={{ overflow: 'hidden' }}
-            className="w-full resize-none rounded-xl border border-border bg-muted/50 px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full resize-none rounded-xl border border-border bg-muted/50 px-3 py-1.5 text-sm sm:px-4 sm:py-2.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
@@ -337,9 +337,9 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
           type="button"
           onClick={handleSubmit}
           disabled={(!message.trim() && attachments.length === 0) || uploading || isSending}
-          className="h-10 w-10 flex-shrink-0 rounded-xl gradient-primary p-0 shadow-lg transition-all hover:shadow-xl disabled:opacity-50"
+          className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 rounded-xl gradient-primary p-0 shadow-lg transition-all hover:shadow-xl disabled:opacity-50"
         >
-          <Send className="h-5 w-5" />
+          <Send className="h-4 w-4 sm:h-5 sm:w-5" />
         </Button>
       </div>
     </div>
