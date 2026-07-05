@@ -46,14 +46,12 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
   const initials = displayName.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
   const totalNotifs = counts.unreadMessages + counts.unreadAnnouncements;
 
+  const isChat = current.id === 'chat';
+
   const renderContent = () => {
     switch (current.id) {
       case 'chat':
-        return (
-          <div className="h-full flex flex-col">
-            <ChatSection globalSearch={globalSearch} />
-          </div>
-        );
+        return <ChatSection globalSearch={globalSearch} />;
       case 'announcements':
         return <AnnouncementsSection />;
       case 'home':
