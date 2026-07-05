@@ -365,18 +365,26 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
           />
           
           {/* Chat Header */}
-          <div className="flex items-center gap-3 border-b border-border bg-card px-4 py-3">
+          <div className={cn(
+            'flex items-center gap-3 border-b border-border bg-card shrink-0',
+            isMobile ? 'px-3 py-1.5' : 'px-4 py-3',
+          )}>
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-white"
+              className={cn(
+                'flex items-center justify-center rounded-xl text-white shrink-0',
+                isMobile ? 'h-8 w-8' : 'h-10 w-10',
+              )}
               style={{ backgroundColor: currentSector?.color }}
             >
-              <span className="text-lg font-bold">{currentSector?.name.charAt(0)}</span>
+              <span className={cn('font-bold', isMobile ? 'text-sm' : 'text-lg')}>{currentSector?.name.charAt(0)}</span>
             </div>
-            <div className="flex-1">
-              <h3 className="font-display font-semibold text-foreground">{currentSector?.name}</h3>
-              <p className="text-xs text-muted-foreground">
-                {messages.length} mensagens
-              </p>
+            <div className="flex-1 min-w-0">
+              <h3 className={cn('font-display font-semibold text-foreground truncate', isMobile && 'text-sm')}>{currentSector?.name}</h3>
+              {!isMobile && (
+                <p className="text-xs text-muted-foreground">
+                  {messages.length} mensagens
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-1 ml-auto">
               {/* Scheduled Summary Config - only for admins, not Geral */}
