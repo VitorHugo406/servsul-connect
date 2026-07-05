@@ -181,7 +181,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
   };
 
   return (
-    <div className="relative border-t border-border bg-card p-4" onSubmit={(e) => e.preventDefault()}>
+    <div className="relative border-t border-border bg-card px-2 py-2 sm:p-4 shrink-0" onSubmit={(e) => e.preventDefault()}>
       {/* Reply quote */}
       {replyTo && (
         <div className="mb-2 flex items-start gap-2 rounded-lg bg-muted/60 border-l-2 border-primary px-3 py-2">
