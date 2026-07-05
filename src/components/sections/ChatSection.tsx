@@ -306,30 +306,32 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       className="flex h-full flex-col"
     >
       {/* Mode Toggle */}
-      <div className="flex border-b border-border bg-card">
+      <div className="flex border-b border-border bg-card shrink-0">
         <button
           onClick={() => setChatMode('sectors')}
           className={cn(
-            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
+            'flex flex-1 items-center justify-center gap-2 font-medium transition-colors',
+            isMobile ? 'px-2 py-1.5 text-xs' : 'px-4 py-3 text-sm',
             chatMode === 'sectors'
               ? 'border-b-2 border-primary text-primary'
               : 'text-muted-foreground hover:text-foreground'
           )}
         >
-          <Users className="h-4 w-4" />
-          <span className={isMobile ? 'text-xs' : ''}>Setores</span>
+          <Users className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+          <span>Setores</span>
         </button>
         <button
           onClick={() => setChatMode('direct')}
           className={cn(
-            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
+            'flex flex-1 items-center justify-center gap-2 font-medium transition-colors',
+            isMobile ? 'px-2 py-1.5 text-xs' : 'px-4 py-3 text-sm',
             chatMode === 'direct'
               ? 'border-b-2 border-primary text-primary'
               : 'text-muted-foreground hover:text-foreground'
           )}
         >
-          <MessageSquare className="h-4 w-4" />
-          <span className={isMobile ? 'text-xs' : ''}>Individual</span>
+          <MessageSquare className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+          <span>Individual</span>
           {unreadDmCount > 0 && chatMode !== 'direct' && (
             <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />
           )}
@@ -337,19 +339,21 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
         <button
           onClick={() => setChatMode('groups')}
           className={cn(
-            'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
+            'flex flex-1 items-center justify-center gap-2 font-medium transition-colors',
+            isMobile ? 'px-2 py-1.5 text-xs' : 'px-4 py-3 text-sm',
             chatMode === 'groups'
               ? 'border-b-2 border-primary text-primary'
               : 'text-muted-foreground hover:text-foreground'
           )}
         >
-          <UsersRound className="h-4 w-4" />
-          <span className={isMobile ? 'text-xs' : ''}>Grupos</span>
+          <UsersRound className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+          <span>Grupos</span>
           {unreadGroupCount > 0 && chatMode !== 'groups' && (
             <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />
           )}
         </button>
       </div>
+
 
       {chatMode === 'sectors' ? (
         <>
@@ -361,18 +365,26 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
           />
           
           {/* Chat Header */}
-          <div className="flex items-center gap-3 border-b border-border bg-card px-4 py-3">
+          <div className={cn(
+            'flex items-center gap-3 border-b border-border bg-card shrink-0',
+            isMobile ? 'px-3 py-1.5' : 'px-4 py-3',
+          )}>
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-white"
+              className={cn(
+                'flex items-center justify-center rounded-xl text-white shrink-0',
+                isMobile ? 'h-8 w-8' : 'h-10 w-10',
+              )}
               style={{ backgroundColor: currentSector?.color }}
             >
-              <span className="text-lg font-bold">{currentSector?.name.charAt(0)}</span>
+              <span className={cn('font-bold', isMobile ? 'text-sm' : 'text-lg')}>{currentSector?.name.charAt(0)}</span>
             </div>
-            <div className="flex-1">
-              <h3 className="font-display font-semibold text-foreground">{currentSector?.name}</h3>
-              <p className="text-xs text-muted-foreground">
-                {messages.length} mensagens
-              </p>
+            <div className="flex-1 min-w-0">
+              <h3 className={cn('font-display font-semibold text-foreground truncate', isMobile && 'text-sm')}>{currentSector?.name}</h3>
+              {!isMobile && (
+                <p className="text-xs text-muted-foreground">
+                  {messages.length} mensagens
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-1 ml-auto">
               {/* Scheduled Summary Config - only for admins, not Geral */}

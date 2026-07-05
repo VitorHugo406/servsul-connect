@@ -46,14 +46,12 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
   const initials = displayName.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
   const totalNotifs = counts.unreadMessages + counts.unreadAnnouncements;
 
+  const isChat = current.id === 'chat';
+
   const renderContent = () => {
     switch (current.id) {
       case 'chat':
-        return (
-          <div className="h-full flex flex-col">
-            <ChatSection globalSearch={globalSearch} />
-          </div>
-        );
+        return <ChatSection globalSearch={globalSearch} />;
       case 'announcements':
         return <AnnouncementsSection />;
       case 'home':
@@ -73,34 +71,44 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
-      {/* Topbar */}
-      <header className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
+      {/* Topbar (compact on chat to preserve message area) */}
+      <header
+        className={cn(
+          'flex items-center justify-between px-4 shrink-0',
+          isChat ? 'pt-2 pb-1.5' : 'pt-4 pb-2',
+        )}
+      >
         <div className="min-w-0">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            {current.eyebrow}
-          </div>
+          {!isChat && (
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              {current.eyebrow}
+            </div>
+          )}
           <div
-            className="text-[18px] font-bold text-foreground truncate"
+            className={cn('font-bold text-foreground truncate', isChat ? 'text-[15px]' : 'text-[18px]')}
             style={{ fontFamily: "'Sora', system-ui, sans-serif" }}
           >
             {current.label}
           </div>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setShowNotifications(true)}
-            className="relative w-9 h-9 rounded-xl bg-muted/60 flex items-center justify-center text-muted-foreground"
+            className={cn(
+              'relative rounded-xl bg-muted/60 flex items-center justify-center text-muted-foreground',
+              isChat ? 'w-8 h-8' : 'w-9 h-9',
+            )}
             aria-label="Notificações"
           >
-            <Bell className="w-4 h-4" />
+            <Bell className={isChat ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
             {totalNotifs > 0 && (
               <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] rounded-full bg-destructive text-white text-[9px] font-bold flex items-center justify-center px-1 border-2 border-background">
                 {totalNotifs > 99 ? '99+' : totalNotifs}
               </span>
             )}
           </button>
-          <button onClick={() => setShowProfile(true)} className="w-9 h-9 rounded-xl overflow-hidden">
-            <Avatar className="w-9 h-9 rounded-xl">
+          <button onClick={() => setShowProfile(true)} className={cn('rounded-xl overflow-hidden', isChat ? 'w-8 h-8' : 'w-9 h-9')}>
+            <Avatar className={cn('rounded-xl', isChat ? 'w-8 h-8' : 'w-9 h-9')}>
               <AvatarImage src={profile?.avatar_url || ''} alt={displayName} />
               <AvatarFallback
                 className="rounded-xl text-white text-xs font-bold"
@@ -115,7 +123,11 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
 
       {/* Main content */}
       <main className="flex-1 overflow-hidden relative">
-        <div className="h-full overflow-y-auto pb-24">{renderContent()}</div>
+        {isChat ? (
+          <div className="h-full flex flex-col pb-[76px]">{renderContent()}</div>
+        ) : (
+          <div className="h-full overflow-y-auto pb-24">{renderContent()}</div>
+        )}
       </main>
 
       {/* Bottom nav with FAB */}
