@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.api-integrations]
 verify_jwt = false
+
+[functions.seed-super-admin]
+verify_jwt = false
