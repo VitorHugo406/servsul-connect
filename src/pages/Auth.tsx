@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageSquare, 
@@ -17,7 +17,8 @@ import {
   ChevronLeft,
   Check,
   Plus,
-  Camera
+  Camera,
+  ArrowLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,14 +33,26 @@ import { supabase } from '@/integrations/supabase/client';
 import { FacialLoginCamera } from '@/components/facial/FacialLoginCamera';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { applyBrand, resetBrand, VETOR_LOGO_URL, VETOR_PRIMARY, VETOR_SECONDARY } from '@/lib/branding';
 
 const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
+
+interface CompanyBrand {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  primary_color: string;
+  secondary_color: string;
+  is_system: boolean;
+}
 
 interface Sector {
   id: string;
   name: string;
   color: string;
 }
+
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -91,6 +104,30 @@ const Auth = () => {
   
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const companySlug = searchParams.get('company');
+  const [companyBrand, setCompanyBrand] = useState<CompanyBrand | null>(null);
+
+  // Load company brand from ?company=slug
+  useEffect(() => {
+    if (!companySlug) {
+      resetBrand();
+      setCompanyBrand(null);
+      return;
+    }
+    (async () => {
+      const { data, error } = await (supabase as any).rpc('public_get_company_by_slug', {
+        _slug: companySlug,
+      });
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!error && row) {
+        setCompanyBrand(row as CompanyBrand);
+        applyBrand(row as CompanyBrand);
+      }
+    })();
+    return () => resetBrand();
+  }, [companySlug]);
+
 
   // Handle facial login success
   const handleFacialLoginSuccess = async (userId: string, email: string) => {
@@ -361,10 +398,18 @@ const Auth = () => {
           className="max-w-md text-white"
         >
           <div className="mb-8 flex items-center gap-4">
-            <img src="/icons/logo-512.png" alt="Servsul" className="h-16 w-16 object-contain rounded-2xl bg-white/10 p-1" />
+            <img
+              src={companyBrand?.logo_url || VETOR_LOGO_URL}
+              alt={companyBrand?.name || 'Vetor'}
+              className="h-16 w-16 object-contain rounded-2xl bg-white/10 p-1"
+            />
             <div>
-              <h1 className="font-display text-4xl font-bold">ServChat</h1>
-              <p className="text-white/70">Grupo Servsul</p>
+              <h1 className="font-display text-4xl font-bold">
+                {companyBrand?.is_system ? 'Vetor' : (companyBrand?.name || 'Vetor')}
+              </h1>
+              <p className="text-white/70">
+                {companyBrand?.is_system ? 'Painel de administração' : (companyBrand ? 'Ambiente corporativo' : 'Plataforma corporativa')}
+              </p>
             </div>
           </div>
           
@@ -373,7 +418,7 @@ const Auth = () => {
           </h2>
           <p className="mb-8 text-white/80 leading-relaxed">
             Conecte-se com sua equipe, receba avisos oficiais, acompanhe dados em tempo real 
-            e mantenha sua identidade digital dentro do Grupo Servsul.
+            e mantenha sua identidade digital.
           </p>
           
           <div className="space-y-4">
@@ -408,14 +453,28 @@ const Auth = () => {
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
+          <div className="mb-4 flex justify-start lg:hidden">
+            <Link to="/select-company" className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:text-foreground">
+              <ArrowLeft className="w-3 h-3" /> Trocar empresa
+            </Link>
+          </div>
           {/* Mobile Logo - Larger and more prominent */}
           <div className="mb-8 flex flex-col items-center justify-center gap-3 lg:hidden">
-            <img src="/icons/logo-512.png" alt="Servsul" className="h-20 w-20 object-contain" />
+            <img
+              src={companyBrand?.logo_url || VETOR_LOGO_URL}
+              alt={companyBrand?.name || 'Vetor'}
+              className="h-20 object-contain"
+            />
             <div className="text-center">
-              <h1 className="font-display text-3xl font-bold text-foreground">ServChat</h1>
-              <p className="text-sm text-muted-foreground">Grupo Servsul</p>
+              <h1 className="font-display text-3xl font-bold text-foreground">
+                {companyBrand?.is_system ? 'Vetor' : (companyBrand?.name || 'Vetor')}
+              </h1>
+              {companyBrand && !companyBrand.is_system && (
+                <p className="text-sm text-muted-foreground">Entrar na empresa</p>
+              )}
             </div>
           </div>
+
 
           <Card className="border-0 shadow-xl">
             <CardHeader className="text-center pb-4 px-4 sm:px-6">

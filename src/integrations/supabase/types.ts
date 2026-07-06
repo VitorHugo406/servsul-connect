@@ -617,6 +617,7 @@ export type Database = {
       companies: {
         Row: {
           created_at: string
+          enabled_modules: string[]
           id: string
           is_active: boolean
           is_system: boolean
@@ -629,6 +630,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          enabled_modules?: string[]
           id?: string
           is_active?: boolean
           is_system?: boolean
@@ -641,6 +643,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          enabled_modules?: string[]
           id?: string
           is_active?: boolean
           is_system?: boolean
@@ -3099,6 +3102,39 @@ export type Database = {
       is_note_shared_with_me: { Args: { _note_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       is_war_room_member: { Args: { _war_room_id: string }; Returns: boolean }
+      list_companies_with_stats: {
+        Args: never
+        Returns: {
+          active_users: number
+          admins: number
+          colaboradores: number
+          created_at: string
+          enabled_modules: string[]
+          id: string
+          is_active: boolean
+          is_system: boolean
+          logo_url: string
+          name: string
+          primary_color: string
+          secondary_color: string
+          slug: string
+          supervisors: number
+          total_users: number
+        }[]
+      }
+      list_company_users: {
+        Args: { _company_id: string }
+        Returns: {
+          autonomy_level: string
+          display_name: string
+          email: string
+          is_active: boolean
+          name: string
+          profile_id: string
+          roles: string[]
+          user_id: string
+        }[]
+      }
       log_task_activity_secure: {
         Args: {
           _action_type: string
@@ -3107,6 +3143,29 @@ export type Database = {
           _task_id: string
         }
         Returns: string
+      }
+      public_get_company_by_slug: {
+        Args: { _slug: string }
+        Returns: {
+          id: string
+          is_system: boolean
+          logo_url: string
+          name: string
+          primary_color: string
+          secondary_color: string
+          slug: string
+        }[]
+      }
+      public_list_companies_for_login: {
+        Args: never
+        Returns: {
+          id: string
+          logo_url: string
+          name: string
+          primary_color: string
+          secondary_color: string
+          slug: string
+        }[]
       }
       refresh_board_monthly_scores: {
         Args: { _board_id: string }
