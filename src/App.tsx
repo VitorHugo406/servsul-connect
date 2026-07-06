@@ -8,6 +8,7 @@ import { CompanyProvider } from "@/contexts/CompanyContext";
 import { FloatingNoteProvider } from "@/contexts/FloatingNoteContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import SelectCompany from "./pages/SelectCompany";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,7 +28,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/select-company" replace />;
   }
 
   return <>{children}</>;
@@ -70,6 +71,14 @@ function AppRoutes() {
         element={
           <PublicRoute>
             <Auth />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/select-company"
+        element={
+          <PublicRoute>
+            <SelectCompany />
           </PublicRoute>
         }
       />
