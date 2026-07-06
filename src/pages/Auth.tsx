@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageSquare, 
@@ -17,7 +17,8 @@ import {
   ChevronLeft,
   Check,
   Plus,
-  Camera
+  Camera,
+  ArrowLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,14 +33,26 @@ import { supabase } from '@/integrations/supabase/client';
 import { FacialLoginCamera } from '@/components/facial/FacialLoginCamera';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { applyBrand, resetBrand, VETOR_LOGO_URL, VETOR_PRIMARY, VETOR_SECONDARY } from '@/lib/branding';
 
 const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
+
+interface CompanyBrand {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  primary_color: string;
+  secondary_color: string;
+  is_system: boolean;
+}
 
 interface Sector {
   id: string;
   name: string;
   color: string;
 }
+
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
