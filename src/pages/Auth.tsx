@@ -104,6 +104,30 @@ const Auth = () => {
   
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const companySlug = searchParams.get('company');
+  const [companyBrand, setCompanyBrand] = useState<CompanyBrand | null>(null);
+
+  // Load company brand from ?company=slug
+  useEffect(() => {
+    if (!companySlug) {
+      resetBrand();
+      setCompanyBrand(null);
+      return;
+    }
+    (async () => {
+      const { data, error } = await (supabase as any).rpc('public_get_company_by_slug', {
+        _slug: companySlug,
+      });
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!error && row) {
+        setCompanyBrand(row as CompanyBrand);
+        applyBrand(row as CompanyBrand);
+      }
+    })();
+    return () => resetBrand();
+  }, [companySlug]);
+
 
   // Handle facial login success
   const handleFacialLoginSuccess = async (userId: string, email: string) => {
