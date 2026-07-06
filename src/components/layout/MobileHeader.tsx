@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useSectors } from '@/hooks/useData';
 import { NotificationPanel } from './NotificationPanel';
@@ -28,15 +29,17 @@ const autonomyLevelLabels: Record<string, string> = {
 
 export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAnnouncements }: MobileHeaderProps) {
   const { profile, signOut, isAdmin, canAccess } = useAuth();
+  const { hasModule } = useCompany();
   const { counts } = useNotifications();
   const { sectors } = useSectors();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   const [showComingSoon, setShowComingSoon] = useState<string | null>(null);
-  const showBhButton = isAdmin || canAccess('can_access_bh' as any);
-  const showFechamentoButton = isAdmin || canAccess('can_access_fechamento' as any);
-  const showOrbsButton = isAdmin || canAccess('can_access_orbs' as any);
+  const showBiButton = hasModule('bi');
+  const showBhButton = hasModule('bh') && (isAdmin || canAccess('can_access_bh' as any));
+  const showFechamentoButton = hasModule('fechamento') && (isAdmin || canAccess('can_access_fechamento' as any));
+  const showOrbsButton = hasModule('orbs') && (isAdmin || canAccess('can_access_orbs' as any));
 
 
   useEffect(() => {
@@ -91,15 +94,17 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
           </div>
 
           <div className="flex items-center gap-1">
-            <a
-              href="https://drive-data-ace.vercel.app/login"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-full hover:bg-accent"
-              title="Dash BI"
-            >
-              <BarChart3 className="h-5 w-5 text-muted-foreground" />
-            </a>
+            {showBiButton && (
+              <a
+                href="https://drive-data-ace.vercel.app/login"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-full hover:bg-accent"
+                title="Dash BI"
+              >
+                <BarChart3 className="h-5 w-5 text-muted-foreground" />
+              </a>
+            )}
             {showBhButton && (
               <a
                 href="https://banco-de-horas-servchat.vercel.app/"

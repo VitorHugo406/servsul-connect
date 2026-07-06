@@ -398,10 +398,18 @@ const Auth = () => {
           className="max-w-md text-white"
         >
           <div className="mb-8 flex items-center gap-4">
-            <img src="/icons/logo-512.png" alt="Servsul" className="h-16 w-16 object-contain rounded-2xl bg-white/10 p-1" />
+            <img
+              src={companyBrand?.logo_url || VETOR_LOGO_URL}
+              alt={companyBrand?.name || 'Vetor'}
+              className="h-16 w-16 object-contain rounded-2xl bg-white/10 p-1"
+            />
             <div>
-              <h1 className="font-display text-4xl font-bold">ServChat</h1>
-              <p className="text-white/70">Grupo Servsul</p>
+              <h1 className="font-display text-4xl font-bold">
+                {companyBrand?.is_system ? 'Vetor' : (companyBrand?.name || 'Vetor')}
+              </h1>
+              <p className="text-white/70">
+                {companyBrand?.is_system ? 'Painel de administração' : (companyBrand ? 'Ambiente corporativo' : 'Plataforma corporativa')}
+              </p>
             </div>
           </div>
           
@@ -410,7 +418,7 @@ const Auth = () => {
           </h2>
           <p className="mb-8 text-white/80 leading-relaxed">
             Conecte-se com sua equipe, receba avisos oficiais, acompanhe dados em tempo real 
-            e mantenha sua identidade digital dentro do Grupo Servsul.
+            e mantenha sua identidade digital.
           </p>
           
           <div className="space-y-4">
@@ -445,14 +453,28 @@ const Auth = () => {
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
+          <div className="mb-4 flex justify-start lg:hidden">
+            <Link to="/select-company" className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:text-foreground">
+              <ArrowLeft className="w-3 h-3" /> Trocar empresa
+            </Link>
+          </div>
           {/* Mobile Logo - Larger and more prominent */}
           <div className="mb-8 flex flex-col items-center justify-center gap-3 lg:hidden">
-            <img src="/icons/logo-512.png" alt="Servsul" className="h-20 w-20 object-contain" />
+            <img
+              src={companyBrand?.logo_url || VETOR_LOGO_URL}
+              alt={companyBrand?.name || 'Vetor'}
+              className="h-20 object-contain"
+            />
             <div className="text-center">
-              <h1 className="font-display text-3xl font-bold text-foreground">ServChat</h1>
-              <p className="text-sm text-muted-foreground">Grupo Servsul</p>
+              <h1 className="font-display text-3xl font-bold text-foreground">
+                {companyBrand?.is_system ? 'Vetor' : (companyBrand?.name || 'Vetor')}
+              </h1>
+              {companyBrand && !companyBrand.is_system && (
+                <p className="text-sm text-muted-foreground">Entrar na empresa</p>
+              )}
             </div>
           </div>
+
 
           <Card className="border-0 shadow-xl">
             <CardHeader className="text-center pb-4 px-4 sm:px-6">

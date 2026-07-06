@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
 import { UserProfileDialog } from '@/components/user/UserProfileDialog';
 import { TeamHeaderButton } from '@/components/teams/TeamHeaderButton';
 import {
@@ -70,6 +71,7 @@ const ALL_SECTIONS: SectionDef[] = [
 export function Header({ title, subtitle, hideNotifications = false, searchQuery = '', onSearchChange, onNavigateToSection }: HeaderProps) {
   const { counts } = useNotifications();
   const { profile, isAdmin, canAccess } = useAuth();
+  const { hasModule } = useCompany();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showSectionSearch, setShowSectionSearch] = useState(false);
@@ -131,11 +133,11 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
     setShowSectionSearch(false);
   };
 
-  // External shortcut buttons (Dash BI / BH / Fechamento / Orbs)
-  // Dash BI is open to everyone. BH and Fechamento require permission flags.
-  const showBhButton = isAdmin || canAccess('can_access_bh' as any);
-  const showFechamentoButton = isAdmin || canAccess('can_access_fechamento' as any);
-  const showOrbsButton = isAdmin || canAccess('can_access_orbs' as any);
+  // Atalhos só aparecem quando o módulo está habilitado NA EMPRESA e o usuário tem permissão individual.
+  const showBiButton = hasModule('bi');
+  const showBhButton = hasModule('bh') && (isAdmin || canAccess('can_access_bh' as any));
+  const showFechamentoButton = hasModule('fechamento') && (isAdmin || canAccess('can_access_fechamento' as any));
+  const showOrbsButton = hasModule('orbs') && (isAdmin || canAccess('can_access_orbs' as any));
 
   return (
     <>
@@ -188,12 +190,14 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
           </div>
 
           {/* External shortcut buttons */}
-          <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" asChild>
-            <a href="https://drive-data-ace.vercel.app/login" target="_blank" rel="noopener noreferrer">
-              <BarChart3 className="h-4 w-4" />
-              Dash BI
-            </a>
-          </Button>
+          {showBiButton && (
+            <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" asChild>
+              <a href="https://drive-data-ace.vercel.app/login" target="_blank" rel="noopener noreferrer">
+                <BarChart3 className="h-4 w-4" />
+                Dash BI
+              </a>
+            </Button>
+          )}
 
           {showBhButton && (
             <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" asChild>
