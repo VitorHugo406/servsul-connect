@@ -3144,6 +3144,18 @@ export type Database = {
         }
         Returns: string
       }
+      public_find_company: {
+        Args: { _query: string }
+        Returns: {
+          id: string
+          is_system: boolean
+          logo_url: string
+          name: string
+          primary_color: string
+          secondary_color: string
+          slug: string
+        }[]
+      }
       public_get_company_by_slug: {
         Args: { _slug: string }
         Returns: {
