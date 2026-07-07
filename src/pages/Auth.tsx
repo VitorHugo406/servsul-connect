@@ -284,7 +284,7 @@ const Auth = () => {
       const { error } = await signIn(loginEmail, loginPassword);
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-                 setError('Email ou senha incorretos');
+                 setError('Cadastro não encontrado para esta empresa');
         } else {
           if (error.message.includes('inativo') || error.message.includes('Inativo')) {
                    setError('Sua conta está inativa. Por favor, entre em contato com o administrador do sistema para reativação.');
@@ -294,6 +294,25 @@ const Auth = () => {
         }
         setLoading(false);
         return;
+      }
+
+      // Enforce company scoping: block cross-company login (e.g. Admin credentials on ServSul)
+      if (companyBrand) {
+        const { data: sessionData } = await supabase.auth.getUser();
+        const uid = sessionData.user?.id;
+        if (uid) {
+          const { data: prof } = await (supabase as any)
+            .from('profiles')
+            .select('company_id')
+            .eq('user_id', uid)
+            .maybeSingle();
+          if (!prof || prof.company_id !== companyBrand.id) {
+            await supabase.auth.signOut();
+            setError('Cadastro não encontrado para esta empresa');
+            setLoading(false);
+            return;
+          }
+        }
       }
       navigate('/');
     } catch (err) {
