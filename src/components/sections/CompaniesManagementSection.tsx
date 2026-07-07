@@ -118,7 +118,13 @@ export function CompaniesManagementSection() {
   const load = async () => {
     setLoading(true);
     const { data, error } = await (supabase as any).rpc('list_companies_with_stats');
-    if (!error && data) setCompanies(data as CompanyStats[]);
+    if (error) {
+      console.error('list_companies_with_stats error', error);
+      toast.error('Erro ao carregar empresas: ' + error.message);
+      setCompanies([]);
+    } else if (data) {
+      setCompanies((data as any[]).map((c) => ({ ...c, enabled_modules: c.enabled_modules ?? [] })) as CompanyStats[]);
+    }
     setLoading(false);
   };
 
