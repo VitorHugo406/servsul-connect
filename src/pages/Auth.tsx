@@ -272,31 +272,32 @@ const Auth = () => {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    if (companyBrand) setVerifying(true);
 
     try {
       const validation = loginSchema.safeParse({ email: loginEmail, password: loginPassword });
       if (!validation.success) {
         setError(validation.error.errors[0].message);
         setLoading(false);
+        setVerifying(false);
         return;
       }
 
       const { error } = await signIn(loginEmail, loginPassword);
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-                 setError('Cadastro não encontrado para esta empresa');
+          setError('Cadastro não encontrado para esta empresa');
+        } else if (error.message.includes('inativo') || error.message.includes('Inativo')) {
+          setError('Sua conta está inativa. Por favor, entre em contato com o administrador do sistema para reativação.');
         } else {
-          if (error.message.includes('inativo') || error.message.includes('Inativo')) {
-                   setError('Sua conta está inativa. Por favor, entre em contato com o administrador do sistema para reativação.');
-          } else {
-            setError(error.message);
-          }
+          setError(error.message);
         }
         setLoading(false);
+        setVerifying(false);
         return;
       }
 
-      // Enforce company scoping: block cross-company login (e.g. Admin credentials on ServSul)
+      // Enforce company scoping: block cross-company login
       if (companyBrand) {
         const { data: sessionData } = await supabase.auth.getUser();
         const uid = sessionData.user?.id;
@@ -310,15 +311,18 @@ const Auth = () => {
             await supabase.auth.signOut();
             setError('Cadastro não encontrado para esta empresa');
             setLoading(false);
+            setVerifying(false);
             return;
           }
         }
       }
+      setVerifying(false);
       navigate('/');
     } catch (err) {
       console.error('Auth error:', err);
       setError('Ocorreu um erro. Tente novamente.');
       setLoading(false);
+      setVerifying(false);
     }
   };
 
