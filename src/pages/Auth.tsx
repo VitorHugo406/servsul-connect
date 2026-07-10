@@ -406,10 +406,18 @@ const Auth = () => {
     }
   };
 
+  const brandPrimary = companyBrand?.primary_color || VETOR_PRIMARY;
+  const brandSecondary = companyBrand?.secondary_color || VETOR_SECONDARY;
+
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
       {/* Left Panel - Branding - Hidden on mobile */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-hero items-center justify-center p-12">
+      <div
+        className="hidden lg:flex lg:w-1/2 items-center justify-center p-12"
+        style={{
+          background: `linear-gradient(135deg, ${brandPrimary} 0%, ${brandSecondary} 100%)`,
+        }}
+      >
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
