@@ -102,7 +102,7 @@ const Auth = () => {
   const [additionalSectors, setAdditionalSectors] = useState<string[]>([]);
   const [birthDate, setBirthDate] = useState('');
   
-  const { signIn } = useAuth();
+  const { signIn, setVerifying } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const companySlug = searchParams.get('company');
@@ -272,31 +272,32 @@ const Auth = () => {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    if (companyBrand) setVerifying(true);
 
     try {
       const validation = loginSchema.safeParse({ email: loginEmail, password: loginPassword });
       if (!validation.success) {
         setError(validation.error.errors[0].message);
         setLoading(false);
+        setVerifying(false);
         return;
       }
 
       const { error } = await signIn(loginEmail, loginPassword);
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-                 setError('Cadastro não encontrado para esta empresa');
+          setError('Cadastro não encontrado para esta empresa');
+        } else if (error.message.includes('inativo') || error.message.includes('Inativo')) {
+          setError('Sua conta está inativa. Por favor, entre em contato com o administrador do sistema para reativação.');
         } else {
-          if (error.message.includes('inativo') || error.message.includes('Inativo')) {
-                   setError('Sua conta está inativa. Por favor, entre em contato com o administrador do sistema para reativação.');
-          } else {
-            setError(error.message);
-          }
+          setError(error.message);
         }
         setLoading(false);
+        setVerifying(false);
         return;
       }
 
-      // Enforce company scoping: block cross-company login (e.g. Admin credentials on ServSul)
+      // Enforce company scoping: block cross-company login
       if (companyBrand) {
         const { data: sessionData } = await supabase.auth.getUser();
         const uid = sessionData.user?.id;
@@ -310,15 +311,18 @@ const Auth = () => {
             await supabase.auth.signOut();
             setError('Cadastro não encontrado para esta empresa');
             setLoading(false);
+            setVerifying(false);
             return;
           }
         }
       }
+      setVerifying(false);
       navigate('/');
     } catch (err) {
       console.error('Auth error:', err);
       setError('Ocorreu um erro. Tente novamente.');
       setLoading(false);
+      setVerifying(false);
     }
   };
 
@@ -406,10 +410,18 @@ const Auth = () => {
     }
   };
 
+  const brandPrimary = companyBrand?.primary_color || VETOR_PRIMARY;
+  const brandSecondary = companyBrand?.secondary_color || VETOR_SECONDARY;
+
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
       {/* Left Panel - Branding - Hidden on mobile */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-hero items-center justify-center p-12">
+      <div
+        className="hidden lg:flex lg:w-1/2 items-center justify-center p-12"
+        style={{
+          background: `linear-gradient(135deg, ${brandPrimary} 0%, ${brandSecondary} 100%)`,
+        }}
+      >
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -599,7 +611,7 @@ const Auth = () => {
                         type="email"
                         inputMode="email"
                         autoComplete="email"
-                        placeholder="seu.email@servsul.com.br"
+                        placeholder="seu.email@exemplo.com"
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         className="h-12 pl-10 text-base"
@@ -733,7 +745,7 @@ const Auth = () => {
                             type="email"
                             inputMode="email"
                             autoComplete="email"
-                            placeholder="seu.email@servsul.com.br"
+                            placeholder="seu.email@exemplo.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className={`h-12 pl-10 text-base ${fieldErrors.email ? 'border-destructive' : ''}`}
@@ -968,7 +980,7 @@ const Auth = () => {
           </Card>
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            © 2026 ServChat - Grupo Servsul. Todos os direitos reservados.
+            © 2026 Vetor. Todos os direitos reservados.
           </p>
         </motion.div>
       </div>

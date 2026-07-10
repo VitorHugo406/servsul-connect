@@ -68,7 +68,7 @@ export default function SelectCompany() {
 
   const glow = useMemo(() => {
     if (!found) return 'transparent';
-    return `radial-gradient(closest-side, ${found.primary_color}80, ${found.secondary_color}40 45%, transparent 75%)`;
+    return `radial-gradient(closest-side, ${found.primary_color}, ${found.secondary_color} 40%, transparent 78%)`;
   }, [found]);
 
   const handleContinue = () => {
@@ -132,7 +132,7 @@ export default function SelectCompany() {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9AA1AF]" />
             <Input
               autoFocus
-              placeholder="Ex.: Grupo ServSul"
+              placeholder="Ex.: Sua Empresa Ltda"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="pl-10 h-12 rounded-xl bg-[#F5F6F8] border-transparent focus-visible:ring-2 focus-visible:ring-[color:var(--brand,#2E5AAC)] text-[15px]"
@@ -151,10 +151,10 @@ export default function SelectCompany() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.25 }}
-                  className="flex items-center gap-3 p-3 rounded-2xl border"
+                  className="flex items-center gap-3 p-3 rounded-2xl border-2"
                   style={{
-                    borderColor: `${found.primary_color}55`,
-                    background: `linear-gradient(135deg, ${found.primary_color}10, ${found.secondary_color}08)`,
+                    borderColor: found.primary_color,
+                    background: `linear-gradient(135deg, ${found.primary_color}33, ${found.secondary_color}22)`,
                   }}
                 >
                   <div

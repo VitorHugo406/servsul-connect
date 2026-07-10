@@ -57,6 +57,8 @@ interface AuthContextType {
   isAdmin: boolean;
   geralSectorId: string;
   loading: boolean;
+  verifying: boolean;
+  setVerifying: (v: boolean) => void;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -87,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [permissions, setPermissions] = useState<UserPermissions | null>(null);
   const [loading, setLoading] = useState(true);
+  const [verifying, setVerifying] = useState(false);
 
   const isAdmin = roles.some(r => r.role === 'admin');
 
@@ -375,6 +378,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin,
         geralSectorId: GERAL_SECTOR_ID,
         loading,
+        verifying,
+        setVerifying,
         signIn,
         signOut,
         refreshProfile,
