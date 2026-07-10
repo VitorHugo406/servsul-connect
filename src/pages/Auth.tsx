@@ -607,7 +607,7 @@ const Auth = () => {
                         type="email"
                         inputMode="email"
                         autoComplete="email"
-                        placeholder="seu.email@servsul.com.br"
+                        placeholder="seu.email@exemplo.com"
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         className="h-12 pl-10 text-base"
@@ -741,7 +741,7 @@ const Auth = () => {
                             type="email"
                             inputMode="email"
                             autoComplete="email"
-                            placeholder="seu.email@servsul.com.br"
+                            placeholder="seu.email@exemplo.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className={`h-12 pl-10 text-base ${fieldErrors.email ? 'border-destructive' : ''}`}
@@ -976,7 +976,7 @@ const Auth = () => {
           </Card>
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            © 2026 ServChat - Grupo Servsul. Todos os direitos reservados.
+            © 2026 Vetor. Todos os direitos reservados.
           </p>
         </motion.div>
       </div>
