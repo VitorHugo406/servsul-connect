@@ -13,45 +13,29 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
+function LoadingScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <p className="text-muted-foreground">Carregando...</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  if (!user) {
-    return <Navigate to="/select-company" replace />;
-  }
-
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading, verifying } = useAuth();
+  if (loading || verifying) return <LoadingScreen />;
+  if (!user) return <Navigate to="/select-company" replace />;
   return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (user) {
-    return <Navigate to="/" replace />;
-  }
-
+  const { user, loading, verifying } = useAuth();
+  if (loading) return <LoadingScreen />;
+  // While a login attempt is being verified (cross-company check), stay on the public page
+  if (user && !verifying) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
