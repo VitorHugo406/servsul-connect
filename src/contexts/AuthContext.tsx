@@ -378,6 +378,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin,
         geralSectorId: GERAL_SECTOR_ID,
         loading,
+        verifying,
+        setVerifying,
         signIn,
         signOut,
         refreshProfile,
