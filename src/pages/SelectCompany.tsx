@@ -151,10 +151,10 @@ export default function SelectCompany() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.25 }}
-                  className="flex items-center gap-3 p-3 rounded-2xl border"
+                  className="flex items-center gap-3 p-3 rounded-2xl border-2"
                   style={{
-                    borderColor: `${found.primary_color}55`,
-                    background: `linear-gradient(135deg, ${found.primary_color}10, ${found.secondary_color}08)`,
+                    borderColor: found.primary_color,
+                    background: `linear-gradient(135deg, ${found.primary_color}33, ${found.secondary_color}22)`,
                   }}
                 >
                   <div
