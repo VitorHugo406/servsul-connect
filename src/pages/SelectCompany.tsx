@@ -68,7 +68,7 @@ export default function SelectCompany() {
 
   const glow = useMemo(() => {
     if (!found) return 'transparent';
-    return `radial-gradient(closest-side, ${found.primary_color}80, ${found.secondary_color}40 45%, transparent 75%)`;
+    return `radial-gradient(closest-side, ${found.primary_color}, ${found.secondary_color} 40%, transparent 78%)`;
   }, [found]);
 
   const handleContinue = () => {
