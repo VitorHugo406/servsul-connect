@@ -132,7 +132,7 @@ export default function SelectCompany() {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9AA1AF]" />
             <Input
               autoFocus
-              placeholder="Ex.: Grupo ServSul"
+              placeholder="Ex.: Sua Empresa Ltda"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="pl-10 h-12 rounded-xl bg-[#F5F6F8] border-transparent focus-visible:ring-2 focus-visible:ring-[color:var(--brand,#2E5AAC)] text-[15px]"
