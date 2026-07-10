@@ -102,7 +102,7 @@ const Auth = () => {
   const [additionalSectors, setAdditionalSectors] = useState<string[]>([]);
   const [birthDate, setBirthDate] = useState('');
   
-  const { signIn } = useAuth();
+  const { signIn, setVerifying } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const companySlug = searchParams.get('company');
