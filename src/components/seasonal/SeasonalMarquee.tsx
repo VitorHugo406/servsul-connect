@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
 import { getCurrentSeasonalTheme } from './SeasonalEffectsButton';
 
 export function SeasonalMarquee() {
