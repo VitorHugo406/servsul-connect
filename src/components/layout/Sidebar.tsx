@@ -51,7 +51,7 @@ const menuItems = [
   { id: 'system-logs', icon: FileText, label: 'Logs do Sistema', mainAdminOnly: true },
   { id: 'event-history', icon: Sparkles, label: 'Eventos Mensais', adminOnly: true },
   { id: 'api-management', icon: Globe, label: 'API Integração', adminOnly: true },
-  { id: 'storage', icon: HardDrive, label: 'Armazenamento', mainAdminOnly: true },
+  { id: 'storage', icon: HardDrive, label: 'Armazenamento', superAdminOnly: true },
   { id: 'documentation', icon: BookOpen, label: 'Documentação', mainAdminOnly: true },
 ];
 
