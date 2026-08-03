@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
 import { getCurrentSeasonalTheme } from './SeasonalEffectsButton';
 
 export function SeasonalMarquee() {
@@ -23,7 +22,7 @@ export function SeasonalMarquee() {
       title={locked ? 'Clique para retomar' : 'Clique para pausar'}
     >
       <div className="flex items-center gap-2 py-1.5 px-3">
-        <Sparkles className="h-4 w-4 text-amber-500 flex-shrink-0" />
+
         <div className="flex-1 overflow-hidden">
           <div
             className="flex whitespace-nowrap animate-marquee"

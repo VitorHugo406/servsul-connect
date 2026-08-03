@@ -3038,6 +3038,15 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_company_storage_stats: {
+        Args: never
+        Returns: {
+          company_id: string
+          company_name: string
+          row_count: number
+          table_name: string
+        }[]
+      }
       get_current_autonomy_level: { Args: never; Returns: string }
       get_current_profile_id: { Args: never; Returns: string }
       get_current_sector_id: { Args: never; Returns: string }

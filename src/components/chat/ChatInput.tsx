@@ -181,7 +181,11 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
   };
 
   return (
-    <div className="relative border-t border-border bg-card px-2 py-2 sm:p-4 shrink-0" onSubmit={(e) => e.preventDefault()}>
+    <div
+      className="relative shrink-0 border-t border-border/60 bg-card/85 backdrop-blur-xl px-2 pt-2 sm:px-4 sm:pt-3"
+      style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+      onSubmit={(e) => e.preventDefault()}
+    >
       {/* Reply quote */}
       {replyTo && (
         <div className="mb-2 flex items-start gap-2 rounded-lg bg-muted/60 border-l-2 border-primary px-3 py-2">
@@ -276,11 +280,11 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
         )}
       </AnimatePresence>
 
-      <div className="flex items-end gap-1.5 sm:gap-2">
+      <div className="flex items-end gap-1 rounded-[24px] border border-border/70 bg-muted/40 p-1 transition-all focus-within:border-primary/50 focus-within:bg-muted/60 focus-within:ring-2 focus-within:ring-primary/15 sm:gap-1.5 sm:p-1.5">
         <div className="flex items-center gap-0.5 flex-shrink-0">
           <Button
             type="button" variant="ghost" size="icon"
-            className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground hover:text-foreground"
+            className="h-9 w-9 rounded-full text-muted-foreground hover:bg-background/70 hover:text-foreground"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           >
             <Smile className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -288,7 +292,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
           {!hideAttachment && (
             <>
               <Button type="button" variant="ghost" size="icon"
-                className={`h-8 w-8 sm:h-10 sm:w-10 ${effectiveLimitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`h-9 w-9 rounded-full ${effectiveLimitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
                 onClick={() => {
                   if (effectiveLimitReached) {
                     toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`);
@@ -301,7 +305,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
                 <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
               <Button type="button" variant="ghost" size="icon"
-                className={`h-8 w-8 sm:h-10 sm:w-10 ${effectiveLimitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`h-9 w-9 rounded-full ${effectiveLimitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
                 onClick={() => {
                   if (effectiveLimitReached) {
                     toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`);
@@ -329,7 +333,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
             placeholder='Mensagem...'
             rows={1}
             style={{ overflow: 'hidden' }}
-            className="w-full resize-none rounded-xl border border-border bg-muted/50 px-3 py-1.5 text-sm sm:px-4 sm:py-2.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full resize-none border-0 bg-transparent px-2 py-2 text-[15px] leading-5 placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0 sm:text-sm"
           />
         </div>
 
@@ -337,9 +341,9 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
           type="button"
           onClick={handleSubmit}
           disabled={(!message.trim() && attachments.length === 0) || uploading || isSending}
-          className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 rounded-xl gradient-primary p-0 shadow-lg transition-all hover:shadow-xl disabled:opacity-50"
+          className="h-9 w-9 flex-shrink-0 rounded-full gradient-primary p-0 shadow-md transition-all hover:scale-105 hover:shadow-lg active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
         >
-          <Send className="h-4 w-4 sm:h-5 sm:w-5" />
+          <Send className="h-4 w-4" />
         </Button>
       </div>
     </div>

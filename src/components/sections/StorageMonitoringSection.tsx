@@ -5,9 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
+import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 
-const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
 
 // Free tier limits
 const DB_LIMIT_MB = 500; // 500MB database
@@ -21,7 +21,8 @@ interface StorageInfo {
 }
 
 export function StorageMonitoringSection() {
-  const { isAdmin, profile } = useAuth();
+  const { roles } = useAuth();
+  const [companyStats, setCompanyStats] = useState<{ company_id: string; company_name: string; table_name: string; row_count: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<StorageInfo>({
     dbSizeMb: 0,
@@ -30,7 +31,7 @@ export function StorageMonitoringSection() {
     bucketStats: [],
   });
 
-  const isMainAdmin = isAdmin && profile?.email === ADMIN_EMAIL;
+  const isMainAdmin = roles.some((r: any) => (r.role as string) === 'super_admin');
 
   useEffect(() => {
     if (isMainAdmin) fetchStorageInfo();
@@ -103,6 +104,9 @@ export function StorageMonitoringSection() {
       // Real storage size from buckets
       const totalStorageMb = bucketStats.reduce((sum, b) => sum + b.sizeMb, 0);
 
+      const { data: perCompany } = await (supabase as any).rpc('get_company_storage_stats');
+      setCompanyStats(Array.isArray(perCompany) ? perCompany : []);
+
       setInfo({
         dbSizeMb: Math.round(estimatedDbMb * 100) / 100,
         storageSizeMb: Math.round(totalStorageMb * 100) / 100,
@@ -122,7 +126,7 @@ export function StorageMonitoringSection() {
         <Shield className="mb-4 h-16 w-16 text-muted-foreground" />
         <h3 className="font-display text-xl font-semibold text-foreground">Acesso Restrito</h3>
         <p className="mt-2 text-muted-foreground">
-          Apenas o administrador principal pode acessar esta seção.
+          Apenas o super administrador pode acessar esta seção.
         </p>
       </div>
     );
@@ -243,6 +247,53 @@ export function StorageMonitoringSection() {
               );
             })}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Per-company breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Armazenamento por Empresa</CardTitle>
+          <CardDescription>Registros de cada empresa, isolados por tenant</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-3">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {Object.values(
+                companyStats.reduce((acc, row) => {
+                  acc[row.company_id] = acc[row.company_id] || { name: row.company_name, rows: [] as typeof companyStats };
+                  acc[row.company_id].rows.push(row);
+                  return acc;
+                }, {} as Record<string, { name: string; rows: typeof companyStats }>),
+              ).map((group) => {
+                const total = group.rows.reduce((sum, r) => sum + Number(r.row_count), 0);
+                return (
+                  <div key={group.name} className="rounded-xl border border-border p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-foreground">{group.name}</span>
+                      <span className="text-sm text-muted-foreground font-mono">{total.toLocaleString()} registros</span>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {group.rows
+                        .filter((r) => Number(r.row_count) > 0)
+                        .map((r) => (
+                          <div key={r.table_name} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-1.5 text-xs">
+                            <span className="text-muted-foreground">{tableLabels[r.table_name] || r.table_name}</span>
+                            <span className="font-mono font-semibold">{Number(r.row_count).toLocaleString()}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
