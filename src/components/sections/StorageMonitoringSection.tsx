@@ -8,7 +8,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 
-const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
 
 // Free tier limits
 const DB_LIMIT_MB = 500; // 500MB database
