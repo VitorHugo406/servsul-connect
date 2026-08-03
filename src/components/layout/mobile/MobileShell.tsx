@@ -124,48 +124,53 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
       {/* Main content */}
       <main className="flex-1 overflow-hidden relative">
         {isChat ? (
-          <div className="h-full flex flex-col pb-[76px]">{renderContent()}</div>
+          <div className="h-full flex flex-col pb-[86px]">{renderContent()}</div>
         ) : (
-          <div className="h-full overflow-y-auto pb-24">{renderContent()}</div>
+          <div className="h-full overflow-y-auto pb-[110px]">{renderContent()}</div>
         )}
       </main>
 
-      {/* Bottom nav with FAB */}
-      <nav
-        className="relative flex items-center justify-around px-3 pt-3 pb-6 border-t border-border shrink-0"
-        style={{ background: 'hsl(var(--card))' }}
+      {/* Floating glass bottom nav */}
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4"
+        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
       >
-        {current.id === 'home' && onOpenChatbot && (
-          <button
-            onClick={onOpenChatbot}
-            className="absolute right-5 -top-6 w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-white shadow-lg"
-            style={{
-              background: 'linear-gradient(140deg, var(--brand, hsl(var(--primary))), var(--brand-2, hsl(var(--secondary))))',
-              boxShadow: '0 12px 22px -8px var(--brand-glow, hsl(var(--primary) / 0.35))',
-            }}
-            aria-label="Assistente"
-          >
-            <Bot className="w-6 h-6" />
-          </button>
-        )}
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          const active = current.id === tab.id;
-          return (
+        <nav className="glass-nav pointer-events-auto relative flex items-center gap-1 rounded-full p-1.5">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = current.id === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onSectionChange(tab.id)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full px-4 py-2 text-[12.5px] font-semibold transition-all duration-300',
+                  active
+                    ? 'bg-foreground/90 text-background shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <Icon className="w-[18px] h-[18px]" />
+                {active && <span>{tab.label}</span>}
+              </button>
+            );
+          })}
+          {current.id === 'home' && onOpenChatbot && (
             <button
-              key={tab.id}
-              onClick={() => onSectionChange(tab.id)}
-              className={cn(
-                'flex flex-col items-center gap-1 w-16 text-[10.5px] font-semibold transition-colors',
-                active ? 'text-[color:var(--brand,hsl(var(--primary)))]' : 'text-muted-foreground',
-              )}
+              onClick={onOpenChatbot}
+              className="ml-0.5 flex h-9 w-9 items-center justify-center rounded-full text-white"
+              style={{
+                background: 'linear-gradient(140deg, var(--brand, hsl(var(--primary))), var(--brand-2, hsl(var(--secondary))))',
+                boxShadow: '0 8px 18px -8px var(--brand-glow, hsl(var(--primary) / 0.45))',
+              }}
+              aria-label="Assistente"
             >
-              <Icon className="w-5 h-5" />
-              <span>{tab.label}</span>
+              <Bot className="w-[18px] h-[18px]" />
             </button>
-          );
-        })}
-      </nav>
+          )}
+        </nav>
+      </div>
+
 
       {/* Notifications */}
       <NotificationPanel
