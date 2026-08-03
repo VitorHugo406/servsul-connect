@@ -274,3 +274,44 @@
     z-index: 1;
   }
 }
+/* Frosted-glass shimmer used for loading placeholders */
+.glass-shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    linear-gradient(135deg, hsl(var(--muted) / 0.85), hsl(var(--muted) / 0.45));
+  backdrop-filter: blur(10px);
+  border: 1px solid hsl(var(--foreground) / 0.06);
+}
+
+.glass-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    hsl(var(--background) / 0.35) 40%,
+    hsl(var(--background) / 0.85) 50%,
+    hsl(var(--background) / 0.35) 60%,
+    transparent 80%
+  );
+  animation: glass-sheen 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes glass-sheen {
+  100% { transform: translateX(100%); }
+}
+
+/* Floating glass navigation pill (mobile) */
+.glass-nav {
+  background: hsl(var(--card) / 0.55);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid hsl(var(--foreground) / 0.08);
+  box-shadow:
+    0 10px 30px -10px hsl(var(--foreground) / 0.25),
+    inset 0 1px 0 hsl(var(--background) / 0.6);
+}
