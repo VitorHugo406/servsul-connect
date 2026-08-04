@@ -307,11 +307,12 @@
 
 /* Floating glass navigation pill (mobile) */
 .glass-nav {
-  background: hsl(var(--card) / 0.55);
-  backdrop-filter: blur(22px) saturate(180%);
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
-  border: 1px solid hsl(var(--foreground) / 0.08);
+  background: linear-gradient(145deg, hsl(var(--card) / 0.72), hsl(var(--background) / 0.46));
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid hsl(var(--background) / 0.85);
   box-shadow:
-    0 10px 30px -10px hsl(var(--foreground) / 0.25),
-    inset 0 1px 0 hsl(var(--background) / 0.6);
+    0 16px 38px -14px hsl(var(--foreground) / 0.35),
+    inset 0 1px 0 hsl(var(--background) / 0.95),
+    inset 0 -1px 0 hsl(var(--foreground) / 0.05);
 }

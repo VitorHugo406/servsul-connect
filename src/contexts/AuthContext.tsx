@@ -21,6 +21,7 @@ interface Profile {
   last_seen_at: string | null;
   user_status: string | null;
   work_period: string | null;
+  company_id: string;
 }
 
 interface Sector {

@@ -182,8 +182,8 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
 
   return (
     <div
-      className="relative shrink-0 border-t border-border/60 bg-card/85 backdrop-blur-xl px-2 pt-2 sm:px-4 sm:pt-3"
-      style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+      className="relative shrink-0 border-t border-border/40 bg-card/70 px-2 pt-2 backdrop-blur-2xl sm:px-4 sm:pt-3"
+      style={{ paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom))' }}
       onSubmit={(e) => e.preventDefault()}
     >
       {/* Reply quote */}
@@ -280,7 +280,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
         )}
       </AnimatePresence>
 
-      <div className="flex items-end gap-1 rounded-[24px] border border-border/70 bg-muted/40 p-1 transition-all focus-within:border-primary/50 focus-within:bg-muted/60 focus-within:ring-2 focus-within:ring-primary/15 sm:gap-1.5 sm:p-1.5">
+      <div className="flex items-end gap-1 rounded-[28px] border border-background/70 bg-background/65 p-1.5 shadow-[0_10px_30px_-18px_hsl(var(--foreground)/0.5),inset_0_1px_0_hsl(var(--background)/0.9)] backdrop-blur-2xl transition-all focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15 sm:gap-1.5">
         <div className="flex items-center gap-0.5 flex-shrink-0">
           <Button
             type="button" variant="ghost" size="icon"

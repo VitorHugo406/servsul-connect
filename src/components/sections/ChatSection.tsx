@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useMessages, useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,6 +29,7 @@ import { useConversations } from '@/hooks/useDirectMessages';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useMessageReactions } from '@/hooks/useMessageReactions';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 type ChatMode = 'sectors' | 'direct' | 'groups';
 
@@ -305,8 +306,8 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       animate={{ opacity: 1 }}
       className="flex h-full flex-col"
     >
-      {/* Mode Toggle */}
-      <div className="flex border-b border-border bg-card shrink-0">
+      {/* Desktop mode toggle; mobile uses the Telegram-style settings menu. */}
+      {!isMobile && <div className="flex border-b border-border bg-card shrink-0">
         <button
           onClick={() => setChatMode('sectors')}
           className={cn(
@@ -352,7 +353,31 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
             <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />
           )}
         </button>
-      </div>
+      </div>}
+
+      {isMobile && (
+        <div className="flex shrink-0 items-center justify-between border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Conversas</p>
+            <p className="text-[11px] text-muted-foreground">
+              {chatMode === 'direct' ? 'Individuais' : chatMode === 'groups' ? 'Grupos privados' : 'Canais da empresa'}
+            </p>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full border border-border/60 bg-background/65 shadow-sm" aria-label="Alternar tipo de conversa">
+                <Settings className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 rounded-2xl border-border/60 bg-popover/90 p-2 shadow-2xl backdrop-blur-2xl">
+              <DropdownMenuLabel>Tipo de conversa</DropdownMenuLabel>
+              <DropdownMenuItem className="rounded-xl py-2.5" onSelect={() => setChatMode('direct')}><MessageSquare className="mr-2 h-4 w-4" /> Individuais</DropdownMenuItem>
+              <DropdownMenuItem className="rounded-xl py-2.5" onSelect={() => setChatMode('groups')}><UsersRound className="mr-2 h-4 w-4" /> Grupos</DropdownMenuItem>
+              <DropdownMenuItem className="rounded-xl py-2.5" onSelect={() => setChatMode('sectors')}><Users className="mr-2 h-4 w-4" /> Canais da empresa</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
 
 
       {chatMode === 'sectors' ? (

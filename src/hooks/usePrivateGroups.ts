@@ -10,6 +10,7 @@
    created_by: string;
    created_at: string;
    updated_at: string;
+    company_id: string;
  }
  
  export interface GroupMember {
@@ -50,13 +51,18 @@
    const [loading, setLoading] = useState(true);
  
    const fetchGroups = useCallback(async () => {
-    if (!user || !profile) return;
+     if (!user || !profile?.company_id) {
+       setGroups([]);
+       setLoading(false);
+       return;
+     }
  
      try {
       // First create the group with the current user as the first member
        const { data, error } = await supabase
          .from('private_groups')
          .select('*')
+          .eq('company_id', profile.company_id)
          .order('updated_at', { ascending: false });
  
        if (error) throw error;
@@ -83,6 +89,7 @@
            name,
            description,
            created_by: user.id,
+            company_id: profile.company_id,
          })
          .select()
          .single();

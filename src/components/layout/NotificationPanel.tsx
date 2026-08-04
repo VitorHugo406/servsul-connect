@@ -82,10 +82,12 @@ export function NotificationPanel({
       if (msgError) {
         console.error('Error fetching unread messages:', msgError);
       } else {
-        setUnreadMessages((messages || []).map(m => ({
-          ...m,
-          sender: m.sender as unknown as UnreadMessage['sender']
-        })));
+        setUnreadMessages((messages || [])
+          .filter((m) => Boolean(m.sender))
+          .map(m => ({
+            ...m,
+            sender: m.sender as unknown as UnreadMessage['sender']
+          })));
       }
 
       // Fetch active announcements
@@ -118,7 +120,7 @@ export function NotificationPanel({
         
         setUnreadAnnouncements(unread.slice(0, 10).map(a => ({
           ...a,
-          author: a.author as unknown as UnreadAnnouncement['author']
+          author: (a.author || { name: 'Sistema', avatar_url: null }) as unknown as UnreadAnnouncement['author']
         })));
       }
     } catch (error) {
@@ -129,7 +131,7 @@ export function NotificationPanel({
   };
 
   const getInitials = (name: string) => {
-    return name
+    return (name || 'U')
       .split(' ')
       .map((n) => n[0])
       .slice(0, 2)
@@ -164,7 +166,7 @@ export function NotificationPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full max-w-sm p-0">
+      <SheetContent side="right" className="w-[calc(100%-1rem)] max-w-sm rounded-l-[28px] border-border/60 bg-card/92 p-0 shadow-2xl backdrop-blur-2xl">
         <SheetHeader className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-2">
@@ -228,19 +230,19 @@ export function NotificationPanel({
                     {unreadMessages.map((msg) => (
                       <button
                         key={msg.id}
-                        onClick={() => handleMessageClick(msg.sender.id)}
+                         onClick={() => msg.sender?.id && handleMessageClick(msg.sender.id)}
                         className="w-full flex items-start gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors text-left"
                       >
                         <Avatar className="h-10 w-10 flex-shrink-0">
                           <AvatarImage src={msg.sender.avatar_url || ''} />
                           <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                            {getInitials(msg.sender.display_name || msg.sender.name)}
+                             {getInitials(msg.sender?.display_name || msg.sender?.name || 'Usuário')}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <p className="font-medium text-sm text-foreground truncate">
-                              {msg.sender.display_name || msg.sender.name}
+                               {msg.sender?.display_name || msg.sender?.name || 'Usuário'}
                             </p>
                             <span className="text-xs text-muted-foreground flex-shrink-0">
                               {formatTime(msg.created_at)}

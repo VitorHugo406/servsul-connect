@@ -22,6 +22,7 @@ interface Profile {
   sector_id: string | null;
   autonomy_level: string;
   birth_date: string | null;
+  company_id?: string;
 }
 
 interface Message {
@@ -278,12 +279,19 @@ export function useSectors() {
 export function useProfiles() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const { profile } = useAuth();
 
   useEffect(() => {
     const fetchProfiles = async () => {
+      if (!profile?.company_id) {
+        setProfiles([]);
+        setLoading(false);
+        return;
+      }
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
+        .eq('company_id', profile.company_id)
         .order('name');
 
       if (error) {
@@ -295,7 +303,7 @@ export function useProfiles() {
     };
 
     fetchProfiles();
-  }, []);
+  }, [profile?.company_id]);
 
   return { profiles, loading };
 }
