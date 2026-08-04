@@ -11,6 +11,7 @@ interface Profile {
   sector_id: string | null;
   is_active: boolean;
   user_status?: string | null;
+  company_id?: string;
 }
 
 interface DirectMessage {
@@ -48,8 +49,8 @@ export function useDirectMessages(partnerId?: string) {
       .from('direct_messages')
       .select(`
         *,
-        sender:profiles!direct_messages_sender_id_fkey(id, name, display_name, avatar_url, sector_id, is_active),
-        receiver:profiles!direct_messages_receiver_id_fkey(id, name, display_name, avatar_url, sector_id, is_active)
+        sender:profiles!direct_messages_sender_id_fkey(id, name, display_name, avatar_url, sector_id, is_active, company_id),
+        receiver:profiles!direct_messages_receiver_id_fkey(id, name, display_name, avatar_url, sector_id, is_active, company_id)
       `)
       .or(`and(sender_id.eq.${profile.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${profile.id})`)
       .order('created_at', { ascending: true });
@@ -228,8 +229,8 @@ export function useConversations() {
       .from('direct_messages')
       .select(`
         *,
-        sender:profiles!direct_messages_sender_id_fkey(id, name, display_name, avatar_url, sector_id, is_active),
-        receiver:profiles!direct_messages_receiver_id_fkey(id, name, display_name, avatar_url, sector_id, is_active)
+        sender:profiles!direct_messages_sender_id_fkey(id, name, display_name, avatar_url, sector_id, is_active, company_id),
+        receiver:profiles!direct_messages_receiver_id_fkey(id, name, display_name, avatar_url, sector_id, is_active, company_id)
       `)
       .or(`sender_id.eq.${profile.id},receiver_id.eq.${profile.id}`)
       .order('created_at', { ascending: false });
@@ -252,6 +253,7 @@ export function useConversations() {
     for (const msg of messages) {
       const partnerId = msg.sender_id === profile.id ? msg.receiver_id : msg.sender_id;
       const partner = msg.sender_id === profile.id ? msg.receiver : msg.sender;
+      if (!partner || partner.company_id !== profile.company_id) continue;
       
       if (!conversationMap.has(partnerId)) {
         conversationMap.set(partnerId, {
@@ -317,8 +319,9 @@ export function useActiveUsers() {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, name, display_name, avatar_url, sector_id, is_active, user_status')
+        .select('id, user_id, name, display_name, avatar_url, sector_id, is_active, user_status, company_id')
         .eq('is_active', true)
+        .eq('company_id', profile.company_id)
         .neq('id', profile.id)
         .order('name');
 
