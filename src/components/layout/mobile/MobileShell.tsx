@@ -1,5 +1,6 @@
-import { ReactNode, useState, useEffect } from 'react';
-import { Home, MessageSquare, Bell, LogOut, Bot } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Home, MessageSquare, Bell, LogOut, Cake } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
@@ -11,13 +12,15 @@ import { NotificationPanel } from '@/components/layout/NotificationPanel';
 import { MobileHomeView } from '@/components/sections/mobile/MobileHomeView';
 import { ChatSection } from '@/components/sections/ChatSection';
 import { AnnouncementsSection } from '@/components/sections/AnnouncementsSection';
+import { BirthdaysSection } from '@/components/sections/BirthdaysSection';
 
-const MOBILE_ALLOWED = new Set(['home', 'chat', 'announcements']);
+const MOBILE_ALLOWED = new Set(['home', 'chat', 'announcements', 'birthdays']);
 
-const TABS: Array<{ id: 'home' | 'chat' | 'announcements'; label: string; icon: typeof Home; eyebrow: string }> = [
+const TABS: Array<{ id: 'home' | 'chat' | 'announcements' | 'birthdays'; label: string; icon: typeof Home; eyebrow: string }> = [
   { id: 'home', label: 'Início', icon: Home, eyebrow: 'Visão geral' },
   { id: 'chat', label: 'Chat', icon: MessageSquare, eyebrow: 'Setores' },
   { id: 'announcements', label: 'Avisos', icon: Bell, eyebrow: 'Comunicados' },
+  { id: 'birthdays', label: 'Aniversários', icon: Cake, eyebrow: 'Este mês' },
 ];
 
 interface MobileShellProps {
@@ -54,6 +57,8 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
         return <ChatSection globalSearch={globalSearch} />;
       case 'announcements':
         return <AnnouncementsSection />;
+      case 'birthdays':
+        return <BirthdaysSection />;
       case 'home':
       default:
         return <MobileHomeView onNavigate={onSectionChange} />;
@@ -123,11 +128,18 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
 
       {/* Main content */}
       <main className="flex-1 overflow-hidden relative">
-        {isChat ? (
-          <div className="h-full flex flex-col pb-[86px]">{renderContent()}</div>
-        ) : (
-          <div className="h-full overflow-y-auto pb-[110px]">{renderContent()}</div>
-        )}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={current.id}
+            initial={{ opacity: 0, x: 18, scale: 0.99 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -18, scale: 0.99 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className={isChat ? 'h-full flex flex-col pb-[94px]' : 'h-full overflow-y-auto pb-[118px]'}
+          >
+            {renderContent()}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Floating glass bottom nav */}
@@ -135,7 +147,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
         className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4"
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
       >
-        <nav className="glass-nav pointer-events-auto relative flex items-center gap-1 rounded-full p-1.5">
+        <nav className="glass-nav pointer-events-auto relative flex min-h-14 items-center gap-1 rounded-full p-2">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = current.id === tab.id;
@@ -144,7 +156,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
                 key={tab.id}
                 onClick={() => onSectionChange(tab.id)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-full px-4 py-2 text-[12.5px] font-semibold transition-all duration-300',
+                   'flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-full px-3 text-[12px] font-semibold transition-all duration-300',
                   active
                     ? 'bg-foreground/90 text-background shadow-sm'
                     : 'text-muted-foreground hover:text-foreground',
@@ -155,19 +167,6 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
               </button>
             );
           })}
-          {current.id === 'home' && onOpenChatbot && (
-            <button
-              onClick={onOpenChatbot}
-              className="ml-0.5 flex h-9 w-9 items-center justify-center rounded-full text-white"
-              style={{
-                background: 'linear-gradient(140deg, var(--brand, hsl(var(--primary))), var(--brand-2, hsl(var(--secondary))))',
-                boxShadow: '0 8px 18px -8px var(--brand-glow, hsl(var(--primary) / 0.45))',
-              }}
-              aria-label="Assistente"
-            >
-              <Bot className="w-[18px] h-[18px]" />
-            </button>
-          )}
         </nav>
       </div>
 
