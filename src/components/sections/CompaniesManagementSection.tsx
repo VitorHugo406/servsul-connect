@@ -26,6 +26,7 @@ import {
   LayoutDashboard,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -265,7 +266,16 @@ export function CompaniesManagementSection() {
     });
     setCreatingAdmin(false);
     if (error || (data as any)?.error) {
-      toast.error('Erro: ' + (error?.message || (data as any)?.error));
+      let details = (data as any)?.error || error?.message || 'Falha ao criar administrador';
+      if (error instanceof FunctionsHttpError) {
+        try {
+          const body = await error.context.json();
+          details = body?.error || details;
+        } catch {
+          // Keep the SDK fallback when the function did not return JSON.
+        }
+      }
+      toast.error('Erro: ' + details);
       return;
     }
     toast.success('Admin criado com sucesso');

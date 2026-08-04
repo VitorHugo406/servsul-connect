@@ -1,10 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+const responseHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
 interface Payload {
   company_id: string;
@@ -22,7 +19,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'missing auth' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: responseHeaders,
       });
     }
 
@@ -38,22 +35,22 @@ Deno.serve(async (req) => {
     if (userErr || !userData?.user) {
       return new Response(JSON.stringify({ error: 'unauthorized' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: responseHeaders,
       });
     }
 
     const admin = createClient(supabaseUrl, service);
-    const { data: roleRow } = await admin
+    const { data: roleRow, error: roleError } = await admin
       .from('user_roles')
       .select('role')
       .eq('user_id', userData.user.id)
       .eq('role', 'super_admin')
       .maybeSingle();
 
-    if (!roleRow) {
+    if (roleError || !roleRow) {
       return new Response(JSON.stringify({ error: 'forbidden' }), {
         status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: responseHeaders,
       });
     }
 
@@ -61,7 +58,7 @@ Deno.serve(async (req) => {
     if (!body?.company_id || !body?.email || !body?.password || !body?.name) {
       return new Response(JSON.stringify({ error: 'invalid payload' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: responseHeaders,
       });
     }
 
@@ -74,7 +71,7 @@ Deno.serve(async (req) => {
     if (cErr || !company) {
       return new Response(JSON.stringify({ error: 'company not found' }), {
         status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: responseHeaders,
       });
     }
 
@@ -93,14 +90,14 @@ Deno.serve(async (req) => {
     if (createErr || !created?.user) {
       return new Response(
         JSON.stringify({ error: createErr?.message || 'failed to create user' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+         { status: 400, headers: responseHeaders },
       );
     }
 
     const newUserId = created.user.id;
 
     // Force the profile to the target company (trigger already inserted a profile row)
-    await admin
+    const { error: profileError } = await admin
       .from('profiles')
       .update({
         company_id: body.company_id,
@@ -111,14 +108,30 @@ Deno.serve(async (req) => {
       })
       .eq('user_id', newUserId);
 
+    if (profileError) {
+      await admin.auth.admin.deleteUser(newUserId);
+      return new Response(JSON.stringify({ error: `Falha ao vincular perfil à empresa: ${profileError.message}` }), {
+        status: 500,
+        headers: responseHeaders,
+      });
+    }
+
     // Grant admin role
-    await admin.from('user_roles').upsert(
+    const { error: roleInsertError } = await admin.from('user_roles').upsert(
       { user_id: newUserId, role: 'admin' as any },
       { onConflict: 'user_id,role' },
     );
 
+    if (roleInsertError) {
+      await admin.auth.admin.deleteUser(newUserId);
+      return new Response(JSON.stringify({ error: `Falha ao atribuir função de admin: ${roleInsertError.message}` }), {
+        status: 500,
+        headers: responseHeaders,
+      });
+    }
+
     // Grant full permissions
-    await admin.from('user_permissions').upsert(
+    const { error: permissionsError } = await admin.from('user_permissions').upsert(
       {
         user_id: newUserId,
         can_post_announcements: true,
@@ -133,14 +146,22 @@ Deno.serve(async (req) => {
       { onConflict: 'user_id' },
     );
 
+    if (permissionsError) {
+      await admin.auth.admin.deleteUser(newUserId);
+      return new Response(JSON.stringify({ error: `Falha ao atribuir permissões: ${permissionsError.message}` }), {
+        status: 500,
+        headers: responseHeaders,
+      });
+    }
+
     return new Response(
       JSON.stringify({ ok: true, user_id: newUserId }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+       { headers: responseHeaders },
     );
   } catch (e) {
     return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: responseHeaders,
     });
   }
 });
