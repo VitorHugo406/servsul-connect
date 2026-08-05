@@ -33,7 +33,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { FacialLoginCamera } from '@/components/facial/FacialLoginCamera';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { applyBrand, resetBrand, VETOR_LOGO_URL, VETOR_PRIMARY, VETOR_SECONDARY } from '@/lib/branding';
+import { applyBrand, resetBrand, BRAND_LOGO_URL, BRAND_PRIMARY, BRAND_SECONDARY } from '@/lib/branding';
 
 const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
 
@@ -410,8 +410,8 @@ const Auth = () => {
     }
   };
 
-  const brandPrimary = companyBrand?.primary_color || VETOR_PRIMARY;
-  const brandSecondary = companyBrand?.secondary_color || VETOR_SECONDARY;
+  const brandPrimary = companyBrand?.primary_color || BRAND_PRIMARY;
+  const brandSecondary = companyBrand?.secondary_color || BRAND_SECONDARY;
 
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
@@ -430,13 +430,13 @@ const Auth = () => {
         >
           <div className="mb-8 flex items-center gap-4">
             <img
-              src={companyBrand?.logo_url || VETOR_LOGO_URL}
-              alt={companyBrand?.name || 'Vetor'}
+              src={companyBrand?.logo_url || BRAND_LOGO_URL}
+              alt={companyBrand?.name || 'Nuvexa'}
               className="h-16 w-16 object-contain rounded-2xl bg-white/10 p-1"
             />
             <div>
               <h1 className="font-display text-4xl font-bold">
-                {companyBrand?.is_system ? 'Vetor' : (companyBrand?.name || 'Vetor')}
+                {companyBrand?.is_system ? 'Nuvexa' : (companyBrand?.name || 'Nuvexa')}
               </h1>
               <p className="text-white/70">
                 {companyBrand?.is_system ? 'Painel de administração' : (companyBrand ? 'Ambiente corporativo' : 'Plataforma corporativa')}
@@ -492,13 +492,13 @@ const Auth = () => {
           {/* Mobile Logo - Larger and more prominent */}
           <div className="mb-8 flex flex-col items-center justify-center gap-3 lg:hidden">
             <img
-              src={companyBrand?.logo_url || VETOR_LOGO_URL}
-              alt={companyBrand?.name || 'Vetor'}
+              src={companyBrand?.logo_url || BRAND_LOGO_URL}
+              alt={companyBrand?.name || 'Nuvexa'}
               className="h-20 object-contain"
             />
             <div className="text-center">
               <h1 className="font-display text-3xl font-bold text-foreground">
-                {companyBrand?.is_system ? 'Vetor' : (companyBrand?.name || 'Vetor')}
+                {companyBrand?.is_system ? 'Nuvexa' : (companyBrand?.name || 'Nuvexa')}
               </h1>
               {companyBrand && !companyBrand.is_system && (
                 <p className="text-sm text-muted-foreground">Entrar na empresa</p>
@@ -980,7 +980,7 @@ const Auth = () => {
           </Card>
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            © 2026 Vetor. Todos os direitos reservados.
+            © 2026 Nuvexa. Todos os direitos reservados.
           </p>
         </motion.div>
       </div>

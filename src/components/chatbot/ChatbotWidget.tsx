@@ -26,8 +26,8 @@ type TabType = 'notifications' | 'help' | 'sectors';
 
 const helpItems = [
   {
-    title: 'Bem-vindo ao ServChat!',
-    content: 'O ServChat é a plataforma de comunicação interna do Grupo Servsul. Aqui você pode trocar mensagens com sua equipe, receber avisos importantes, gerenciar tarefas e muito mais.',
+    title: 'Bem-vindo ao Nuvexa!',
+    content: 'O Nuvexa é a plataforma de comunicação interna do Nuvexa. Aqui você pode trocar mensagens com sua equipe, receber avisos importantes, gerenciar tarefas e muito mais.',
   },
   {
     title: 'Como usar o Chat',
@@ -412,7 +412,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                     <Bot className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="font-display font-semibold">Assistente ServChat</h3>
+                    <h3 className="font-display font-semibold">Assistente Nuvexa</h3>
                     <p className="text-xs text-white/70">Olá, {profile?.display_name || profile?.name || 'Usuário'}!</p>
                   </div>
                 </div>

@@ -1,8 +1,8 @@
-import vetorLogo from '@/assets/vetor-logo.png.asset.json';
+import brandLogo from '@/assets/nuvexa-logo.png';
 
-export const VETOR_LOGO_URL = vetorLogo.url;
-export const VETOR_PRIMARY = '#2E5AAC';
-export const VETOR_SECONDARY = '#4C7DE0';
+export const BRAND_LOGO_URL = brandLogo;
+export const BRAND_PRIMARY = '#3D2FD6';
+export const BRAND_SECONDARY = '#12C2F0';
 
 export interface BrandColors {
   primary_color: string;
@@ -37,8 +37,8 @@ function hexToHslTuple(hex: string): { h: number; s: number; l: number } {
 
 export function applyBrand(colors: BrandColors | null) {
   const root = document.documentElement;
-  const primary = colors?.primary_color || VETOR_PRIMARY;
-  const secondary = colors?.secondary_color || VETOR_SECONDARY;
+  const primary = colors?.primary_color || BRAND_PRIMARY;
+  const secondary = colors?.secondary_color || BRAND_SECONDARY;
   const p = hexToHslTuple(primary);
   const s = hexToHslTuple(secondary);
   root.style.setProperty('--company-hue', String(p.h));
@@ -53,5 +53,5 @@ export function applyBrand(colors: BrandColors | null) {
 }
 
 export function resetBrand() {
-  applyBrand({ primary_color: VETOR_PRIMARY, secondary_color: VETOR_SECONDARY });
+  applyBrand({ primary_color: BRAND_PRIMARY, secondary_color: BRAND_SECONDARY });
 }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
 import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, LayoutDashboard, Globe, ClipboardCheck, StickyNote } from 'lucide-react';
-import logoServsul from '@/assets/logo-servsul.png';
+import appLogo from '@/assets/nuvexa-logo.png';
 import { 
   MessageSquare, 
   Bell, 
@@ -124,10 +124,10 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
           animate={{ opacity: isCollapsed ? 0 : 1, width: isCollapsed ? 0 : 'auto' }}
           className="flex items-center gap-3 overflow-hidden"
         >
-          <img src={logoServsul} alt="Servsul" className="h-10 w-10 object-contain rounded-xl" />
+          <img src={appLogo} alt="Nuvexa" className="h-10 w-10 object-contain rounded-xl" />
           <div>
-            <h1 className="font-display text-lg font-bold text-sidebar-foreground">ServChat</h1>
-            <p className="text-xs text-sidebar-foreground/60">Grupo Servsul</p>
+            <h1 className="font-display text-lg font-bold text-sidebar-foreground">Nuvexa</h1>
+            <p className="text-xs text-sidebar-foreground/60">Nuvexa</p>
           </div>
         </motion.div>
         

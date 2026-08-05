@@ -117,7 +117,7 @@ export function FeedbackEmailSection() {
             <div>
               <p className="font-medium text-foreground">Envio automático ativo</p>
               <p className="text-sm text-muted-foreground">
-                O sistema envia automaticamente o feedback mensal todo dia 1º de cada mês. Cada usuário recebe um e-mail e uma mensagem direta do 🤖 ServChat Bot com o resumo e recomendações personalizadas.
+                O sistema envia automaticamente o feedback mensal todo dia 1º de cada mês. Cada usuário recebe um e-mail e uma mensagem direta do 🤖 Nuvexa Bot com o resumo e recomendações personalizadas.
               </p>
             </div>
           </div>

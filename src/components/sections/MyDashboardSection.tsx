@@ -34,6 +34,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ChartSkeleton } from '@/components/ui/skeletons';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -777,7 +779,7 @@ function StatWidget({
         </div>
 
         {loading ? (
-          <div className="h-8 w-16 animate-pulse rounded bg-muted" />
+          <Skeleton className="h-8 w-16 rounded" />
         ) : (
           <div className="flex flex-col items-center gap-1">
             <p className={cn('text-4xl font-bold tabular-nums', colorMap[widget.type] || 'text-foreground')}>
@@ -947,9 +949,7 @@ function ChartWidget({
 
       <CardContent className="px-2 pb-4">
         {loading ? (
-          <div className="flex items-center justify-center h-40">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
+          <ChartSkeleton height="h-40" />
         ) : isEmpty ? (
           <div className="flex flex-col items-center justify-center h-40 text-center">
             <BarChart2 className="h-8 w-8 text-muted-foreground/40 mb-2" />

@@ -91,7 +91,7 @@ export function BirthdayCelebrationModal({ isOpen, onClose, userName }: Birthday
                 transition={{ delay: 0.4 }}
                 className="mb-6 text-muted-foreground"
               >
-                Toda a equipe do Grupo Servsul deseja a você um dia muito especial! 
+                Toda a equipe do Nuvexa deseja a você um dia muito especial! 
                 Que este novo ano de vida seja repleto de conquistas, alegrias e realizações.
               </motion.p>
 

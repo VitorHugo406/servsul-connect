@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ListSkeleton, CardGridSkeleton } from '@/components/ui/skeletons';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -302,7 +304,18 @@ function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) 
   const isActive = room.status === 'active';
 
   if (loading) {
-    return <div className="flex h-full items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
+    return (
+      <div className="flex flex-col h-full p-4 space-y-4">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-9 w-9 rounded-lg" />
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-5 w-1/3 rounded-md" />
+            <Skeleton className="h-3.5 w-1/2 rounded-md" />
+          </div>
+        </div>
+        <ListSkeleton rows={4} showAvatar={false} />
+      </div>
+    );
   }
 
   return (
@@ -517,7 +530,7 @@ export function WarRoomSection() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>
+        <CardGridSkeleton count={4} columns="" cardHeight="h-20" />
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">

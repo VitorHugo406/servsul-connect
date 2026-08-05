@@ -307,7 +307,7 @@ export function CompaniesManagementSection() {
             <div className="space-y-4">
               <div>
                 <Label>Nome</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Grupo ServSul" />
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Nuvexa" />
               </div>
               <div>
                 <Label>Slug (identificador)</Label>

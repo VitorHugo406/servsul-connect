@@ -46,7 +46,7 @@ type SectionDef = {
 };
 
 const ALL_SECTIONS: SectionDef[] = [
-  { id: 'home', label: 'Início', description: 'Visão geral do ServChat' },
+  { id: 'home', label: 'Início', description: 'Visão geral do Nuvexa' },
   { id: 'chat', label: 'Chat por Setores', description: 'Comunicação entre equipes' },
   { id: 'announcements', label: 'Avisos Gerais', description: 'Comunicados oficiais' },
   { id: 'birthdays', label: 'Aniversariantes', description: 'Mural de celebrações' },

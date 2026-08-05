@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { Cake, PartyPopper, Calendar, CheckCircle2, Download, Send, Sparkles, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import jsPDF from 'jspdf';
+import { Skeleton } from '@/components/ui/skeleton';
+import { CardGridSkeleton, StatsSkeleton } from '@/components/ui/skeletons';
 import { useBirthdays } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import appLogo from '@/assets/app-logo.png';
+import appLogo from '@/assets/nuvexa-logo.png';
 
 const monthThemes: Record<number, { name: string; emoji: string; accent: [number, number, number] }> = {
   1: { name: 'Verão Corporativo', emoji: '☀️', accent: [234, 88, 12] },
@@ -21,7 +23,7 @@ const monthThemes: Record<number, { name: string; emoji: string; accent: [number
   3: { name: 'Ciclo de Renovação', emoji: '🌿', accent: [22, 163, 74] },
   4: { name: 'Celebração Especial', emoji: '🎁', accent: [168, 85, 247] },
   5: { name: 'Mês de Reconhecimento', emoji: '🌟', accent: [202, 138, 4] },
-  6: { name: 'Festa Junina Servsul', emoji: '🎊', accent: [234, 88, 12] },
+  6: { name: 'Festa Junina Nuvexa', emoji: '🎊', accent: [234, 88, 12] },
   7: { name: 'Arraiá de Talentos', emoji: '🔥', accent: [220, 38, 38] },
   8: { name: 'Mês de Excelência', emoji: '🏆', accent: [37, 99, 235] },
   9: { name: 'Primavera de Resultados', emoji: '🌸', accent: [219, 39, 119] },
@@ -88,48 +90,122 @@ export function BirthdaysSection() {
     }
   };
 
+  // Brand colors
+  const BRAND_PRIMARY: [number, number, number] = [61, 47, 214]; // #3D2FD6
+  const BRAND_SECONDARY: [number, number, number] = [18, 194, 240]; // #12C2F0
+  const PAGE_W = 210;
+  const MARGIN = 14;
+  const CONTENT_W = PAGE_W - MARGIN * 2;
+
+  const truncateText = (doc: jsPDF, text: string, maxWidth: number) => {
+    let t = text || '';
+    while (doc.getTextWidth(t) > maxWidth && t.length > 1) {
+      t = t.slice(0, -1);
+    }
+    if (t !== text) t = t.slice(0, -1) + '…';
+    return t;
+  };
+
+  const drawBirthdaysHeader = (doc: jsPDF, monthName: string, count: number) => {
+    // Branded band with gradient-like two-tone strip
+    doc.setFillColor(...BRAND_PRIMARY);
+    doc.rect(0, 0, PAGE_W, 30, 'F');
+    doc.setFillColor(...BRAND_SECONDARY);
+    doc.rect(0, 28, PAGE_W, 2, 'F');
+
+    try { doc.addImage(appLogo, 'PNG', MARGIN, 6, 16, 16); } catch { doc.setFillColor(255, 255, 255); doc.circle(MARGIN + 8, 14, 8, 'F'); }
+
+    doc.setFontSize(14); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold');
+    doc.text('Nuvexa', MARGIN + 22, 13);
+    doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+    doc.text('Plataforma de Gestão', MARGIN + 22, 19);
+
+    doc.setFontSize(11);
+    const title = `Aniversariantes de ${monthName}`;
+    doc.text(title, PAGE_W - MARGIN, 13, { align: 'right' });
+    doc.setFontSize(8);
+    doc.text(`${count} pessoa(s)`, PAGE_W - MARGIN, 19, { align: 'right' });
+
+    let y = 40;
+    doc.setFontSize(9); doc.setTextColor(71, 85, 105); doc.setFont('helvetica', 'normal');
+    doc.text(`${theme.name} ${theme.emoji}`, MARGIN, y);
+    doc.setTextColor(150, 150, 150);
+    doc.text(`Emitido em ${new Date().toLocaleDateString('pt-BR')}`, PAGE_W - MARGIN, y, { align: 'right' });
+    y += 5;
+    doc.setDrawColor(...BRAND_SECONDARY); doc.setLineWidth(0.8); doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    return y + 8;
+  };
+
+  const drawBirthdaysFooter = (doc: jsPDF, pageNum: number, totalPages: number) => {
+    const h = doc.internal.pageSize.getHeight();
+    doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.3);
+    doc.line(MARGIN, h - 14, PAGE_W - MARGIN, h - 14);
+    doc.setFontSize(7); doc.setTextColor(140, 140, 140); doc.setFont('helvetica', 'normal');
+    doc.text('Nuvexa • Painel de Aniversariantes', MARGIN, h - 9);
+    doc.text(`Página ${pageNum} de ${totalPages}`, PAGE_W - MARGIN, h - 9, { align: 'right' });
+  };
+
   const generateMonthlyPdf = async () => {
     setGeneratingPdf(true);
     const doc = new jsPDF('p', 'mm', 'a4');
     const [r, g, b] = theme.accent;
     const monthName = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
-    try { doc.addImage(appLogo, 'PNG', 14, 10, 16, 16); } catch { doc.setFillColor(37, 99, 235); doc.circle(22, 18, 8, 'F'); }
-    doc.setFontSize(8); doc.setTextColor(100); doc.text('ServChat', 32, 15); doc.text('Plataforma de Gestão', 32, 20);
-    doc.setFontSize(18); doc.setTextColor(30, 41, 59); doc.text(`Aniversariantes de ${monthName}`, 14, 40);
-    doc.setFontSize(9); doc.setTextColor(100); doc.text(`${theme.name} ${theme.emoji} • ${birthdayPeople.length} pessoa(s)`, 14, 47);
-    doc.setDrawColor(r, g, b); doc.setLineWidth(1); doc.line(14, 51, 196, 51);
+    let y = drawBirthdaysHeader(doc, monthName, birthdayPeople.length);
 
-    let x = 14;
-    let y = 60;
-    const cardW = 86;
+    let x = MARGIN;
+    const gap = 8;
+    const cardW = (CONTENT_W - gap) / 2;
     const cardH = 38;
+    const bottomLimit = 280;
+
     for (const person of birthdayPeople) {
-      if (y + cardH > 275) { doc.addPage(); x = 14; y = 18; }
+      if (y + cardH > bottomLimit) { doc.addPage(); y = drawBirthdaysHeader(doc, monthName, birthdayPeople.length); x = MARGIN; }
       doc.setFillColor(248, 250, 252); doc.roundedRect(x, y, cardW, cardH, 3, 3, 'F');
-      doc.setDrawColor(226, 232, 240); doc.roundedRect(x, y, cardW, cardH, 3, 3, 'S');
+      doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.3); doc.roundedRect(x, y, cardW, cardH, 3, 3, 'S');
       const img = await loadImage(person.avatar);
       if (img) doc.addImage(img, 'JPEG', x + 4, y + 6, 22, 22);
-      else { doc.setFillColor(r, g, b); doc.circle(x + 15, y + 17, 11, 'F'); doc.setTextColor(255); doc.setFontSize(8); doc.text(getInitials(person.name), x + 10, y + 19); }
-      doc.setFillColor(r, g, b); doc.circle(x + 24, y + 28, 5, 'F'); doc.setTextColor(255); doc.setFontSize(8); doc.text(theme.emoji, x + 21.8, y + 30);
-      doc.setTextColor(30, 41, 59); doc.setFontSize(10); doc.text(doc.splitTextToSize(person.name, 50), x + 31, y + 11);
-      doc.setFontSize(8); doc.setTextColor(100); doc.text(person.sector, x + 31, y + 21);
-      doc.setTextColor(r, g, b); doc.text(`Aniversário: ${formatBirthday(person.birthDate)}`, x + 31, y + 28);
+      else { doc.setFillColor(r, g, b); doc.circle(x + 15, y + 17, 11, 'F'); doc.setTextColor(255, 255, 255); doc.setFontSize(8); doc.text(getInitials(person.name), x + 10, y + 19); }
+      doc.setFillColor(...BRAND_SECONDARY); doc.circle(x + 24, y + 28, 5, 'F'); doc.setTextColor(255, 255, 255); doc.setFontSize(8); doc.text(theme.emoji, x + 21.8, y + 30);
+
+      const textX = x + 31;
+      const textMaxW = cardW - 33;
+      doc.setTextColor(30, 41, 59); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+      doc.text(truncateText(doc, person.name, textMaxW), textX, y + 11);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8); doc.setTextColor(100, 116, 139);
+      doc.text(truncateText(doc, person.sector, textMaxW), textX, y + 21);
+      doc.setTextColor(...BRAND_PRIMARY);
+      doc.text(truncateText(doc, `Aniversário: ${formatBirthday(person.birthDate)}`, textMaxW), textX, y + 28);
       if (person.celebrationDate && formatShortDate(person.celebrationDate) !== formatShortDate(new Date(new Date().getFullYear(), person.birthMonth - 1, person.birthDay))) {
-        doc.setFontSize(7); doc.text(`Mensagem antecipada: ${formatShortDate(person.celebrationDate)}`, x + 31, y + 34);
+        doc.setFontSize(7); doc.setTextColor(100, 116, 139);
+        doc.text(truncateText(doc, `Mensagem antecipada: ${formatShortDate(person.celebrationDate)}`, textMaxW), textX, y + 34);
       }
-      x = x === 14 ? 110 : 14;
-      if (x === 14) y += cardH + 8;
+      x = x === MARGIN ? MARGIN + cardW + gap : MARGIN;
+      if (x === MARGIN) y += cardH + gap;
     }
+
     const pages = doc.getNumberOfPages();
-    for (let i = 1; i <= pages; i++) { doc.setPage(i); doc.setFontSize(7); doc.setTextColor(140); doc.text(`ServChat • Página ${i}/${pages}`, 14, 288); }
+    for (let i = 1; i <= pages; i++) { doc.setPage(i); drawBirthdaysFooter(doc, i, pages); }
     doc.save(`aniversariantes_${monthName.replace(/\s/g, '_')}.pdf`);
     toast.success('PDF mensal de aniversariantes gerado!');
     setGeneratingPdf(false);
   };
 
   if (loading) {
-    return <div className="flex h-full items-center justify-center p-6"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-12 w-12 rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-64 rounded-md" />
+            <Skeleton className="h-3.5 w-80 rounded-md" />
+          </div>
+        </div>
+        <StatsSkeleton count={4} />
+        <CardGridSkeleton count={4} columns="lg:grid-cols-2" cardHeight="h-24" />
+      </div>
+    );
   }
 
   return (

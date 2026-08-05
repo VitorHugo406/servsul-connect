@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import confetti from 'canvas-confetti';
 import { isCelebrationToday } from '@/lib/birthdayUtils';
 
-const CELEBRATION_STORAGE_KEY = 'servchat_birthday_celebrated';
+const CELEBRATION_STORAGE_KEY = 'nuvexa_birthday_celebrated';
 
 export function useBirthdayCelebration() {
   const { profile } = useAuth();

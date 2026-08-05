@@ -1,12 +1,12 @@
 {
-  "name": "ServChat - Comunicação Empresarial",
-  "short_name": "ServChat",
+  "name": "Nuvexa - Comunicação Empresarial",
+  "short_name": "Nuvexa",
   "description": "Sistema de comunicação empresarial com chat por setores, avisos e reconhecimento facial",
   "id": "/",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a365d",
-  "theme_color": "#1a365d",
+  "background_color": "#3D2FD6",
+  "theme_color": "#3D2FD6",
   "orientation": "portrait-primary",
   "scope": "/",
   "icons": [

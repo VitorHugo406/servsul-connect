@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-const ONBOARDING_COMPLETED_KEY = 'servchat_onboarding_completed';
+const ONBOARDING_COMPLETED_KEY = 'nuvexa_onboarding_completed';
 
 export function useOnboarding() {
   const { user, profile } = useAuth();

@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
       <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
         <div style="background:linear-gradient(135deg,${pColor},${pColor}dd);border-radius:16px 16px 0 0;padding:40px 32px;text-align:center;">
           <h1 style="color:white;margin:0;font-size:28px;font-weight:700;">📢 Novo Aviso</h1>
-          <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:14px;">ServChat — Grupo Servsul</p>
+          <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:14px;">Nuvexa — Nuvexa</p>
         </div>
         <div style="background:white;border-radius:0 0 16px 16px;padding:32px;box-shadow:0 4px 6px rgba(0,0,0,0.05);">
           <div style="display:inline-block;background:${pColor}15;color:${pColor};font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;border:1px solid ${pColor}30;margin:0 0 16px;">
@@ -83,8 +83,8 @@ Deno.serve(async (req) => {
         </div>
         <div style="text-align:center;padding:24px 0;">
           <p style="color:#9ca3af;font-size:11px;margin:0;">
-            Este e-mail foi enviado automaticamente pelo ServChat.<br>
-            © ${new Date().getFullYear()} Grupo Servsul. Todos os direitos reservados.
+            Este e-mail foi enviado automaticamente pelo Nuvexa.<br>
+            © ${new Date().getFullYear()} Nuvexa. Todos os direitos reservados.
           </p>
         </div>
       </div>
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
 
     // With onboarding@resend.dev, can only send to the account owner
     const { error } = await resend.emails.send({
-      from: 'ServChat <onboarding@resend.dev>',
+      from: 'Nuvexa <onboarding@resend.dev>',
       to: [resendAccountEmail],
       subject: `📢 ${pLabel}: ${title}`,
       html: emailHtml,

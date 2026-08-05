@@ -1,9 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /**
- * ServChat Conference API Proxy
+ * Nuvexa Conference API Proxy
  * 
- * Proxies requests to the ServChat Conference external API.
+ * Proxies requests to the Nuvexa Conference external API.
  * Base URL: https://bghzxmdnqgmbyuwakktn.supabase.co/functions/v1/meetings-api
  * 
  * === SUPPORTED ENDPOINTS ===
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
 
     if (!roleData) {
       return new Response(
-        JSON.stringify({ error: "Only admins can use ServChat Conference" }),
+        JSON.stringify({ error: "Only admins can use Nuvexa Conference" }),
         {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("ServChat Conference proxy error:", error);
+    console.error("Nuvexa Conference proxy error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       {

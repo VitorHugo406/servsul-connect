@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pin, AlertTriangle, Clock, Trash2, Plus, X, Send, CalendarClock, Calendar, Edit2, Sparkles } from 'lucide-react';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
+import { Skeleton } from '@/components/ui/skeleton';
+import { CardGridSkeleton } from '@/components/ui/skeletons';
 import { useImportantAnnouncements } from '@/hooks/useImportantAnnouncements';
 import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -291,8 +293,14 @@ export function AnnouncementsSection() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center p-6">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="flex flex-col h-full">
+        <div className="p-4 sm:p-6 border-b border-border bg-card space-y-2">
+          <Skeleton className="h-7 w-48 rounded-md" />
+          <Skeleton className="h-4 w-64 rounded-md" />
+        </div>
+        <div className="p-4 sm:p-6">
+          <CardGridSkeleton count={4} columns="md:grid-cols-2" cardHeight="h-32" />
+        </div>
       </div>
     );
   }
@@ -307,7 +315,7 @@ export function AnnouncementsSection() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 className="font-display text-xl sm:text-2xl font-bold text-foreground">Avisos Gerais</h3>
-            <p className="text-sm text-muted-foreground">Comunicados oficiais do Grupo Servsul</p>
+            <p className="text-sm text-muted-foreground">Comunicados oficiais do Nuvexa</p>
           </div>
           
           {canManageAnnouncements && (

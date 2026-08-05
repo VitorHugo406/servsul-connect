@@ -4,6 +4,7 @@ import { Calendar as CalendarIcon, Plus, Trash2, Clock, Bell, ListTodo, Edit, X,
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -92,7 +93,7 @@ export function CalendarSection() {
 
   const [showCreatePage, setShowCreatePage] = useState<'event' | 'meeting' | null>(null);
   const [showMeetingTypeSelector, setShowMeetingTypeSelector] = useState(false);
-  const [meetingType, setMeetingType] = useState<'external' | 'servchat' | null>(null);
+  const [meetingType, setMeetingType] = useState<'external' | 'nuvexa' | null>(null);
   const [savingConference, setSavingConference] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -204,7 +205,7 @@ export function CalendarSection() {
     setShowCreatePage('event');
   };
 
-  const openCreateMeeting = (date?: Date, type?: 'external' | 'servchat') => {
+  const openCreateMeeting = (date?: Date, type?: 'external' | 'nuvexa') => {
     resetForm();
     setEventType('meeting'); setColor('#3B82F6');
     if (date) { setStartDate(format(date, 'yyyy-MM-dd')); setEndDate(format(date, 'yyyy-MM-dd')); setMeetingScheduleDate(date); }
@@ -248,8 +249,8 @@ export function CalendarSection() {
 
     let finalMeetingLink = meetingLink.trim() || null;
 
-    // If ServChat Conference, call the API to create the meeting first
-    if (meetingType === 'servchat' && !editingEvent) {
+    // If Nuvexa Conference, call the API to create the meeting first
+    if (meetingType === 'nuvexa' && !editingEvent) {
       setSavingConference(true);
       try {
         const startDt = new Date(startDateTime);
@@ -279,7 +280,7 @@ export function CalendarSection() {
 
         if (!response.ok) {
           const err = await response.json().catch(() => ({}));
-          throw new Error(err.error || 'Erro ao criar reunião ServChat');
+          throw new Error(err.error || 'Erro ao criar reunião Nuvexa');
         }
 
         const result = await response.json();
@@ -288,8 +289,8 @@ export function CalendarSection() {
           toast.warning('Reunião criada mas link não retornado');
         }
       } catch (e: any) {
-        console.error('ServChat Conference error:', e);
-        toast.error(e.message || 'Erro ao criar reunião ServChat Conference');
+        console.error('Nuvexa Conference error:', e);
+        toast.error(e.message || 'Erro ao criar reunião Nuvexa Conference');
         setSavingConference(false);
         return;
       }
@@ -318,7 +319,7 @@ export function CalendarSection() {
       if (selectedParticipants.length > 0) {
         await supabase.from('meeting_participants').insert(selectedParticipants.map(pid => ({ event_id: eventId, profile_id: pid })));
       }
-      toast.success(editingEvent ? 'Evento atualizado!' : meetingType === 'servchat' ? 'Reunião ServChat criada!' : 'Evento criado!');
+      toast.success(editingEvent ? 'Evento atualizado!' : meetingType === 'nuvexa' ? 'Reunião Nuvexa criada!' : 'Evento criado!');
       resetForm(); setShowCreatePage(null); fetchEvents();
     } catch (e) { toast.error('Erro ao salvar evento'); console.error(e); }
   };
@@ -435,7 +436,7 @@ export function CalendarSection() {
         html += '<p style="text-align:center;color:#94a3b8;padding:40px 0;font-size:14px;">Nenhum evento ou tarefa para este dia.</p>';
       }
 
-      html += `<div class="footer">Relatório gerado automaticamente pelo ServChat • ${new Date().toLocaleDateString('pt-BR')}</div></body></html>`;
+      html += `<div class="footer">Relatório gerado automaticamente pelo Nuvexa • ${new Date().toLocaleDateString('pt-BR')}</div></body></html>`;
 
       const w = window.open('', '_blank');
       if (w) { w.document.write(html); w.document.close(); w.print(); }
@@ -513,6 +514,22 @@ export function CalendarSection() {
   // Filter to only weekdays (Mon-Fri) for meeting scheduling
   const scheduleBusinessDays = scheduleWeekDays.filter(d => d.getDay() !== 0 && d.getDay() !== 6);
 
+  if (loading) {
+    return (
+      <div className="flex flex-col h-full p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-6 w-40 rounded-md" />
+          <Skeleton className="h-9 w-24 rounded-lg" />
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {Array.from({ length: 35 }).map((_, i) => (
+            <div key={i} className="glass-shimmer rounded-lg h-14 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   // ========== FULL PAGE CREATE/EDIT ==========
   if (showCreatePage) {
     const isMeeting = showCreatePage === 'meeting';
@@ -525,8 +542,8 @@ export function CalendarSection() {
           <div className="flex-1">
             <h2 className="font-semibold text-foreground">
               {editingEvent ? 'Editar' : 'Nova'} {isMeeting ? 'Reunião' : 'Evento'}
-              {isMeeting && meetingType === 'servchat' && !editingEvent && (
-                <Badge variant="secondary" className="ml-2 text-[10px]">ServChat Conference</Badge>
+              {isMeeting && meetingType === 'nuvexa' && !editingEvent && (
+                <Badge variant="secondary" className="ml-2 text-[10px]">Nuvexa Conference</Badge>
               )}
               {isMeeting && meetingType === 'external' && !editingEvent && (
                 <Badge variant="outline" className="ml-2 text-[10px]">Link Externo</Badge>
@@ -598,7 +615,7 @@ export function CalendarSection() {
                   </div>
 
                   {/* Meeting link - only for external meetings */}
-                  {meetingType !== 'servchat' && (
+                  {meetingType !== 'nuvexa' && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Link2 className="h-4 w-4" />
@@ -609,12 +626,12 @@ export function CalendarSection() {
                       </div>
                     </div>
                   )}
-                  {meetingType === 'servchat' && !editingEvent && (
+                  {meetingType === 'nuvexa' && !editingEvent && (
                     <div className="pl-6">
                       <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
                         <MonitorPlay className="h-4 w-4 text-primary flex-shrink-0" />
                         <p className="text-xs text-muted-foreground">
-                          O link da reunião será gerado automaticamente pelo ServChat Conference ao agendar.
+                          O link da reunião será gerado automaticamente pelo Nuvexa Conference ao agendar.
                         </p>
                       </div>
                     </div>
@@ -859,16 +876,16 @@ export function CalendarSection() {
               </div>
             </button>
 
-            {/* Option 2: ServChat Conference */}
+            {/* Option 2: Nuvexa Conference */}
             <button
-              onClick={() => openCreateMeeting(selectedDate, 'servchat')}
+              onClick={() => openCreateMeeting(selectedDate, 'nuvexa')}
               className="flex items-start gap-4 p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
             >
               <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10">
                 <MonitorPlay className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">ServChat Conference</p>
+                <p className="font-semibold text-foreground">Nuvexa Conference</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Crie uma sala de reunião interna com link gerado automaticamente
                 </p>

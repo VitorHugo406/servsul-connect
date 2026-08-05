@@ -153,7 +153,7 @@ export function OnboardingScreen({ userName, onComplete, onRegisterFacial }: Onb
                 transition={{ delay: 0.3 }}
               >
                 <h1 className="font-display text-3xl md:text-4xl font-bold mb-4">
-                  Bem-vindo ao ServChat!
+                  Bem-vindo ao Nuvexa!
                 </h1>
                 <p className="text-xl md:text-2xl text-white/80 mb-2">
                   Olá, <span className="font-semibold text-secondary">{firstName}</span>! 👋
@@ -195,7 +195,7 @@ export function OnboardingScreen({ userName, onComplete, onRegisterFacial }: Onb
                   O que você pode fazer {featurePageLabel && `(${featurePageLabel})`}
                 </h2>
                 <p className="text-white/70">
-                  Conheça as principais funcionalidades do ServChat
+                  Conheça as principais funcionalidades do Nuvexa
                 </p>
               </div>
 
@@ -274,7 +274,7 @@ export function OnboardingScreen({ userName, onComplete, onRegisterFacial }: Onb
                 Você está pronto!
               </h2>
               <p className="text-white/70 max-w-md mx-auto leading-relaxed mb-8">
-                Agora você conhece as principais funcionalidades do ServChat.
+                Agora você conhece as principais funcionalidades do Nuvexa.
                 Antes de começar, que tal cadastrar seu reconhecimento facial
                 para um acesso mais rápido?
               </p>
@@ -319,7 +319,7 @@ export function OnboardingScreen({ userName, onComplete, onRegisterFacial }: Onb
                     onClick={onComplete}
                     className="gap-2 bg-white text-primary hover:bg-white/90 px-8 py-6 text-lg rounded-xl shadow-lg"
                   >
-                    Entrar no ServChat
+                    Entrar no Nuvexa
                     <ArrowRight className="h-5 w-5" />
                   </Button>
                   

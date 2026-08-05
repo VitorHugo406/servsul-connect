@@ -5,7 +5,7 @@ import { ArrowRight, Loader2, Search, Check, X, Building2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { VETOR_LOGO_URL, applyBrand, resetBrand } from '@/lib/branding';
+import { BRAND_LOGO_URL, applyBrand, resetBrand } from '@/lib/branding';
 
 interface FoundCompany {
   id: string;
@@ -85,7 +85,7 @@ export default function SelectCompany() {
           'radial-gradient(circle at 12% 0%, hsla(220,60%,55%,0.10), transparent 45%), radial-gradient(circle at 88% 100%, hsla(220,60%,45%,0.08), transparent 40%), #F5F7FB',
       }}
     >
-      {/* Vetor logo with dynamic glow */}
+      {/* Nuvexa logo with dynamic glow */}
       <div className="relative mb-8 flex items-center justify-center">
         <motion.div
           initial={false}
@@ -99,8 +99,8 @@ export default function SelectCompany() {
         />
         <motion.img
           key={found?.id ?? 'default'}
-          src={VETOR_LOGO_URL}
-          alt="Vetor"
+          src={BRAND_LOGO_URL}
+          alt="Nuvexa"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
@@ -239,7 +239,7 @@ export default function SelectCompany() {
       </motion.div>
 
       <p className="mt-8 text-xs text-[#9AA1AF] relative z-10">
-        © {new Date().getFullYear()} Vetor
+        © {new Date().getFullYear()} Nuvexa
       </p>
     </div>
   );

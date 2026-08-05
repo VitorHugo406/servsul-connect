@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, ChevronDown, ChevronRight, BookOpen, Database, Code2, Layers, Shield, Zap, Users, MessageSquare, Bell, ListTodo, CalendarDays, FileText, HardDrive, Building2, Sparkles, Mail, Cake, Home, Settings, Trash2, Eye, Lock, Server, Globe, Smartphone, BarChart2, Siren, Trophy, ClipboardCheck } from 'lucide-react';
-import logoServsul from '@/assets/logo-servsul.png';
-import appLogo from '@/assets/app-logo.png';
+import appLogo from '@/assets/nuvexa-logo.png';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -171,7 +170,7 @@ function generateDocumentationPDF() {
 
   doc.setFontSize(32);
   doc.setTextColor(...DARK);
-  doc.text('ServChat', pageW / 2, 135, { align: 'center' });
+  doc.text('Nuvexa', pageW / 2, 135, { align: 'center' });
 
   doc.setFontSize(13);
   doc.setTextColor(...GRAY);
@@ -184,7 +183,7 @@ function generateDocumentationPDF() {
   doc.setFontSize(11);
   doc.setTextColor(...DARK);
   doc.text('Plataforma de Comunicação Interna', pageW / 2, 162, { align: 'center' });
-  doc.text('Grupo Servsul', pageW / 2, 170, { align: 'center' });
+  doc.text('Nuvexa', pageW / 2, 170, { align: 'center' });
 
   // Tech badges
   const techs = ['React 18', 'TypeScript', 'Tailwind CSS', 'PostgreSQL', 'Vite', 'PWA'];
@@ -277,7 +276,7 @@ function generateDocumentationPDF() {
   addPage();
   drawPageDecoration();
   sectionTitle('01', 'Visão Geral do Sistema');
-  bodyText('O ServChat é uma plataforma web interna desenvolvida para o Grupo Servsul, focada em comunicação corporativa, gestão de tarefas e colaboração entre setores. O sistema foi projetado para centralizar toda a comunicação interna, substituindo ferramentas fragmentadas.');
+  bodyText('O Nuvexa é uma plataforma web interna desenvolvida para o Nuvexa, focada em comunicação corporativa, gestão de tarefas e colaboração entre setores. O sistema foi projetado para centralizar toda a comunicação interna, substituindo ferramentas fragmentadas.');
   
   y += 2;
   subTitle('Principais Objetivos');
@@ -500,7 +499,7 @@ function generateDocumentationPDF() {
     ['functions/process-automations/', 'Edge Fn', 'Executa regras SE→ENTÃO nos quadros Kanban'],
     ['functions/duplicate-scheduled-cards/', 'Edge Fn', 'Duplica cards agendados (diário/semanal/mensal)'],
     ['functions/api-integrations/', 'Edge Fn', 'API REST externa: métricas, dados de usuários, equipes'],
-    ['functions/servchat-conference/', 'Edge Fn', 'Videoconferência ServChat'],
+    ['functions/servchat-conference/', 'Edge Fn', 'Videoconferência Nuvexa'],
     ['functions/send-scheduled-summary/', 'Edge Fn', 'Resumo mensal automatizado de produtividade'],
   ], [48, 18, contentW - 66]);
 
@@ -718,11 +717,11 @@ function generateDocumentationPDF() {
   y += 10;
   doc.setFontSize(10);
   doc.setTextColor(...DARK);
-  doc.text('ServChat', pageW / 2, y, { align: 'center' });
+  doc.text('Nuvexa', pageW / 2, y, { align: 'center' });
   y += 5;
   doc.setFontSize(8);
   doc.setTextColor(...GRAY);
-  doc.text('Plataforma de Comunicação Interna — Grupo Servsul', pageW / 2, y, { align: 'center' });
+  doc.text('Plataforma de Comunicação Interna — Nuvexa', pageW / 2, y, { align: 'center' });
   y += 5;
   doc.text('Desenvolvido com React, TypeScript, Tailwind CSS e Lovable Cloud', pageW / 2, y, { align: 'center' });
   y += 5;
@@ -739,8 +738,8 @@ function generateDocumentationPDF() {
     // Header text
     doc.setFontSize(7);
     doc.setTextColor(180, 180, 180);
-    doc.text('ServChat — Documentação Técnica', margin, 10);
-    doc.text('Grupo Servsul', pageW - margin, 10, { align: 'right' });
+    doc.text('Nuvexa — Documentação Técnica', margin, 10);
+    doc.text('Nuvexa', pageW - margin, 10, { align: 'right' });
     // Page number
     doc.setFontSize(7.5);
     doc.setTextColor(...BLUE);
@@ -750,7 +749,7 @@ function generateDocumentationPDF() {
   doc.setPage(1);
   drawPageDecoration();
 
-  doc.save('ServChat_Documentacao_Tecnica.pdf');
+  doc.save('Nuvexa_Documentacao_Tecnica.pdf');
   toast.success('Documentação PDF baixada com sucesso!');
 }
 
@@ -778,7 +777,7 @@ export function DocumentationSection() {
           <BookOpen className="h-6 w-6 text-primary" />
           <div>
             <h1 className="text-lg font-bold">Documentação Técnica</h1>
-            <p className="text-xs text-muted-foreground">ServChat — Grupo Servsul</p>
+            <p className="text-xs text-muted-foreground">Nuvexa — Nuvexa</p>
           </div>
         </div>
         <Button onClick={handleDownloadPDF} disabled={generating} size="sm" className="gap-2">
@@ -793,11 +792,10 @@ export function DocumentationSection() {
           {/* Cover */}
           <div className="text-center space-y-3 pb-4 border-b border-border">
             <div className="flex items-center justify-center gap-4">
-              <img src={logoServsul} alt="Grupo Servsul" className="h-14 w-14 object-contain rounded-xl" />
-              <img src={appLogo} alt="ServChat" className="h-14 w-14 object-contain rounded-xl" />
+              <img src={appLogo} alt="Nuvexa" className="h-14 w-14 object-contain rounded-xl" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">ServChat</h1>
-            <p className="text-muted-foreground text-sm">Plataforma de Comunicação Interna — Grupo Servsul</p>
+            <h1 className="text-2xl font-bold text-foreground">Nuvexa</h1>
+            <p className="text-muted-foreground text-sm">Plataforma de Comunicação Interna — Nuvexa</p>
             <div className="flex items-center justify-center gap-2 flex-wrap">
               <Badge variant="secondary">React 18</Badge>
               <Badge variant="secondary">TypeScript</Badge>
@@ -841,7 +839,7 @@ export function DocumentationSection() {
           <div id="doc-overview" className="scroll-mt-4">
             <CollapsibleSection title="1. Visão Geral do Sistema" icon={Globe} defaultOpen>
               <p>
-                O <strong>ServChat</strong> é uma plataforma web interna desenvolvida para o <strong>Grupo Servsul</strong>, focada em comunicação corporativa, gestão de tarefas e colaboração entre setores.
+                O <strong>Nuvexa</strong> é uma plataforma web interna desenvolvida para o <strong>Nuvexa</strong>, focada em comunicação corporativa, gestão de tarefas e colaboração entre setores.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
                 <InfoCard icon={MessageSquare} title="Comunicação" value="Chat por setores, DMs, grupos privados, menções" />
@@ -1153,7 +1151,7 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                   <TableRow label="process-automations" value="Motor de automações" />
                   <TableRow label="duplicate-scheduled-cards" value="Duplicação agendada" />
                   <TableRow label="api-integrations" value="API REST externa (métricas, usuários)" />
-                  <TableRow label="servchat-conference" value="Videoconferência ServChat" />
+                  <TableRow label="servchat-conference" value="Videoconferência Nuvexa" />
                   <TableRow label="send-scheduled-summary" value="Resumo mensal automatizado" />
                 </div>
               </div>
@@ -1362,10 +1360,9 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
           {/* Footer */}
           <div className="text-center pt-6 pb-4 border-t border-border text-xs text-muted-foreground space-y-1">
             <div className="flex items-center justify-center gap-2">
-              <img src={logoServsul} alt="Servsul" className="h-6 w-6 object-contain rounded" />
-              <img src={appLogo} alt="ServChat" className="h-6 w-6 object-contain rounded" />
+              <img src={appLogo} alt="Nuvexa" className="h-6 w-6 object-contain rounded" />
             </div>
-            <p><strong>ServChat</strong> — Plataforma de Comunicação Interna • Grupo Servsul</p>
+            <p><strong>Nuvexa</strong> — Plataforma de Comunicação Interna • Nuvexa</p>
             <p>Desenvolvido com React, TypeScript, Tailwind CSS e Lovable Cloud</p>
           </div>
         </div>

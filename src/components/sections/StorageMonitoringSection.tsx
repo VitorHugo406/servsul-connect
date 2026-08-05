@@ -251,7 +251,7 @@ export function StorageMonitoringSection() {
       </Card>
 
       {/* Per-company breakdown */}
-      <Card>
+      <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle>Armazenamento por Empresa</CardTitle>
           <CardDescription>Registros de cada empresa, isolados por tenant</CardDescription>
@@ -265,33 +265,57 @@ export function StorageMonitoringSection() {
             </div>
           ) : (
             <div className="space-y-5">
-              {Object.values(
-                companyStats.reduce((acc, row) => {
-                  acc[row.company_id] = acc[row.company_id] || { name: row.company_name, rows: [] as typeof companyStats };
-                  acc[row.company_id].rows.push(row);
-                  return acc;
-                }, {} as Record<string, { name: string; rows: typeof companyStats }>),
-              ).map((group) => {
-                const total = group.rows.reduce((sum, r) => sum + Number(r.row_count), 0);
-                return (
-                  <div key={group.name} className="rounded-xl border border-border p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-foreground">{group.name}</span>
-                      <span className="text-sm text-muted-foreground font-mono">{total.toLocaleString()} registros</span>
+              {(() => {
+                const groups = Object.values(
+                  companyStats.reduce((acc, row) => {
+                    acc[row.company_id] = acc[row.company_id] || { name: row.company_name, rows: [] as typeof companyStats };
+                    acc[row.company_id].rows.push(row);
+                    return acc;
+                  }, {} as Record<string, { name: string; rows: typeof companyStats }>),
+                ).map((group) => {
+                  const total = group.rows.reduce((sum, r) => sum + Number(r.row_count), 0);
+                  const estimatedMb = Math.max((total * 0.5) / 1024, 0);
+                  return { ...group, total, estimatedMb };
+                });
+
+                const grandTotal = groups.reduce((sum, g) => sum + g.total, 0) || 1;
+
+                const sortedGroups = [...groups].sort((a, b) => b.total - a.total);
+
+                return sortedGroups.map((group) => {
+                  const percent = (group.total / grandTotal) * 100;
+                  return (
+                    <div key={group.name} className="rounded-2xl border border-border p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-semibold text-foreground">{group.name}</span>
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                          <span className="font-mono">{group.total.toLocaleString()} registros</span>
+                          <span className="font-mono">≈ {group.estimatedMb.toFixed(2)} MB</span>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center gap-3">
+                        <Progress value={percent} className="h-3 flex-1" />
+                        <span className="w-14 shrink-0 text-right text-sm font-semibold text-primary">
+                          {percent.toFixed(1)}%
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Representa {percent.toFixed(1)}% do consumo total entre todas as empresas
+                      </p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        {group.rows
+                          .filter((r) => Number(r.row_count) > 0)
+                          .map((r) => (
+                            <div key={r.table_name} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-1.5 text-xs">
+                              <span className="text-muted-foreground">{tableLabels[r.table_name] || r.table_name}</span>
+                              <span className="font-mono font-semibold">{Number(r.row_count).toLocaleString()}</span>
+                            </div>
+                          ))}
+                      </div>
                     </div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                      {group.rows
-                        .filter((r) => Number(r.row_count) > 0)
-                        .map((r) => (
-                          <div key={r.table_name} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-1.5 text-xs">
-                            <span className="text-muted-foreground">{tableLabels[r.table_name] || r.table_name}</span>
-                            <span className="font-mono font-semibold">{Number(r.row_count).toLocaleString()}</span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
           )}
         </CardContent>

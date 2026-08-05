@@ -131,44 +131,57 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={current.id}
-            initial={{ opacity: 0, x: 18, scale: 0.99 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -18, scale: 0.99 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className={isChat ? 'h-full flex flex-col pb-[94px]' : 'h-full overflow-y-auto pb-[118px]'}
+            initial={{ opacity: 0, y: 12, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.985 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32, mass: 0.7 }}
+            className={isChat ? 'h-full flex flex-col pb-[var(--mobile-nav-h)]' : 'h-full overflow-y-auto pb-[calc(var(--mobile-nav-h)+16px)]'}
           >
             {renderContent()}
           </motion.div>
         </AnimatePresence>
       </main>
 
-      {/* Floating glass bottom nav */}
-      <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4"
-        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+      {/* Fixed full-width glass bottom nav */}
+      <nav
+        className="glass-nav fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 rounded-t-3xl px-2 pt-2"
+        style={{ paddingBottom: 'max(0.6rem, env(safe-area-inset-bottom))' }}
       >
-        <nav className="glass-nav pointer-events-auto relative flex min-h-14 items-center gap-1 rounded-full p-2">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const active = current.id === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onSectionChange(tab.id)}
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const active = current.id === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onSectionChange(tab.id)}
+              className="relative flex h-14 flex-col items-center justify-center gap-1 rounded-2xl"
+            >
+              {active && (
+                <motion.span
+                  layoutId="mobile-nav-pill"
+                  className="absolute inset-x-1 inset-y-0 rounded-2xl bg-primary/12"
+                  transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                />
+              )}
+              <Icon
                 className={cn(
-                   'flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-full px-3 text-[12px] font-semibold transition-all duration-300',
-                  active
-                    ? 'bg-foreground/90 text-background shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
+                  'relative z-10 h-[22px] w-[22px] transition-colors duration-200',
+                  active ? 'text-primary' : 'text-muted-foreground',
+                )}
+              />
+              <span
+                className={cn(
+                  'relative z-10 text-[11px] font-semibold transition-colors duration-200',
+                  active ? 'text-primary' : 'text-muted-foreground',
                 )}
               >
-                <Icon className="w-[18px] h-[18px]" />
-                {active && <span>{tab.label}</span>}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
+
 
 
       {/* Notifications */}
