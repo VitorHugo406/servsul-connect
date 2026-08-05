@@ -89,7 +89,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
     }
     // Main admin only items (specific email)
     if ('mainAdminOnly' in item && item.mainAdminOnly) {
-      return isAdmin && profile?.email === 'adminnuvexa@servsul.com.br';
+      return isAdmin && profile?.email === 'adminservchat@servsul.com.br';
     }
     // Admin-only items
     if ('adminOnly' in item && item.adminOnly) {

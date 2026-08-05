@@ -32,7 +32,7 @@ interface HeaderProps {
   onNavigateToSection?: (section: string) => void;
 }
 
-const ADMIN_EMAIL = 'adminnuvexa@servsul.com.br';
+const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
 
 type SectionDef = {
   id: string;

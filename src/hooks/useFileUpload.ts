@@ -16,7 +16,7 @@ const ALLOWED_FILE_TYPES = [
   'text/plain',
 ];
 
-const ADMIN_EMAIL = 'adminnuvexa@servsul.com.br';
+const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
 
 interface UploadResult {
   url: string;

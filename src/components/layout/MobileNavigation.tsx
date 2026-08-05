@@ -45,7 +45,7 @@ export function MobileNavigation({ activeSection, onSectionChange }: MobileNavig
   const visibleMoreItems = moreNavItems.filter((item) => {
     // Main admin only items
     if ('mainAdminOnly' in item && item.mainAdminOnly) {
-      return isAdmin && profile?.email === 'adminnuvexa@servsul.com.br';
+      return isAdmin && profile?.email === 'adminservchat@servsul.com.br';
     }
     if ('adminOnly' in item && item.adminOnly) {
       return isAdmin;

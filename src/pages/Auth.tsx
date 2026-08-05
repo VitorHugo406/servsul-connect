@@ -35,7 +35,7 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { applyBrand, resetBrand, BRAND_LOGO_URL, BRAND_PRIMARY, BRAND_SECONDARY } from '@/lib/branding';
 
-const ADMIN_EMAIL = 'adminnuvexa@servsul.com.br';
+const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
 
 interface CompanyBrand {
   id: string;

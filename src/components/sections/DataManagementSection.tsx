@@ -39,7 +39,7 @@
  import { toast } from 'sonner';
  import { useAuth } from '@/contexts/AuthContext';
  
- const ADMIN_EMAIL = 'adminnuvexa@servsul.com.br';
+ const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
  
 interface DeletionOption {
   id: string;

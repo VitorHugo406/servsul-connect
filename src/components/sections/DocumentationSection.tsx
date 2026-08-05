@@ -423,7 +423,7 @@ function generateDocumentationPDF() {
     ['colaborador', 'Básico', 'Chat, avisos, tarefas atribuídas e perfil pessoal'],
   ], [25, 25, contentW - 50]);
 
-  bodyText('Admin Principal: Identificado pelo e-mail adminnuvexa@servsul.com.br — possui acesso exclusivo a Logs do Sistema, Monitoramento de Armazenamento e Documentação Técnica.');
+  bodyText('Admin Principal: Identificado pelo e-mail adminservchat@servsul.com.br — possui acesso exclusivo a Logs do Sistema, Monitoramento de Armazenamento e Documentação Técnica.');
 
   // =============================================
   // 5. FEATURES
@@ -991,7 +991,7 @@ export function DocumentationSection() {
                     <li><strong>Reconhecimento Facial:</strong> face-api.js (128-dim descriptors)</li>
                   </ul>
                   <h4 className="font-semibold mt-3 mb-1">Admin Principal:</h4>
-                  <p className="text-xs text-muted-foreground">E-mail: <code className="bg-muted px-1 py-0.5 rounded text-xs">adminnuvexa@servsul.com.br</code></p>
+                  <p className="text-xs text-muted-foreground">E-mail: <code className="bg-muted px-1 py-0.5 rounded text-xs">adminservchat@servsul.com.br</code></p>
                 </div>
                 <div>
                   <h4 className="font-semibold mb-2">Níveis de Autonomia:</h4>
