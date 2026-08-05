@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pin, AlertTriangle, Clock, Trash2, Plus, X, Send, CalendarClock, Calendar, Edit2, Sparkles } from 'lucide-react';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
+import { Skeleton } from '@/components/ui/skeleton';
+import { CardGridSkeleton } from '@/components/ui/skeletons';
 import { useImportantAnnouncements } from '@/hooks/useImportantAnnouncements';
 import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';

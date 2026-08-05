@@ -141,7 +141,7 @@ export function NotesSection() {
 
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
-              {loading && <p className="text-xs text-muted-foreground p-3">Carregando...</p>}
+              {loading && <ListSkeleton rows={6} className="p-1" />}
               {!loading && visibleNotes.length === 0 && (
                 <p className="text-xs text-muted-foreground p-3 text-center">
                   {showArchived ? 'Sem anotações arquivadas' : 'Crie sua primeira anotação'}

@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { Cake, PartyPopper, Calendar, CheckCircle2, Download, Send, Sparkles, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import jsPDF from 'jspdf';
+import { Skeleton } from '@/components/ui/skeleton';
+import { CardGridSkeleton, StatsSkeleton } from '@/components/ui/skeletons';
 import { useBirthdays } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
