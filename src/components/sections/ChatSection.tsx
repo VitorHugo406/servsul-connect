@@ -423,12 +423,15 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
 
       {chatMode === 'sectors' ? (
         <>
-          {/* Sector Tabs */}
-          <SectorTabs 
-            sectors={accessibleSectors}
-            activeSector={effectiveSector || ''} 
-            onSectorChange={setActiveSector} 
-          />
+          {/* Sector Tabs (desktop only; mobile uses the top dropdown) */}
+          {!isMobile && (
+            <SectorTabs
+              sectors={accessibleSectors}
+              activeSector={effectiveSector || ''}
+              onSectorChange={setActiveSector}
+            />
+          )}
+
           
           {/* Chat Header */}
           <div className={cn(
