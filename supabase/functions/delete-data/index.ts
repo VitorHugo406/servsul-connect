@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
+const ADMIN_EMAIL = 'adminnuvexa@servsul.com.br';
 
 async function deleteAll(client: any, table: string, filter?: { column: string; op: string; value: any }) {
   try {

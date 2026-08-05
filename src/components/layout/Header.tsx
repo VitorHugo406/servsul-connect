@@ -32,7 +32,7 @@ interface HeaderProps {
   onNavigateToSection?: (section: string) => void;
 }
 
-const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
+const ADMIN_EMAIL = 'adminnuvexa@servsul.com.br';
 
 type SectionDef = {
   id: string;
@@ -46,7 +46,7 @@ type SectionDef = {
 };
 
 const ALL_SECTIONS: SectionDef[] = [
-  { id: 'home', label: 'Início', description: 'Visão geral do ServChat' },
+  { id: 'home', label: 'Início', description: 'Visão geral do Nuvexa' },
   { id: 'chat', label: 'Chat por Setores', description: 'Comunicação entre equipes' },
   { id: 'announcements', label: 'Avisos Gerais', description: 'Comunicados oficiais' },
   { id: 'birthdays', label: 'Aniversariantes', description: 'Mural de celebrações' },
@@ -201,7 +201,7 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
 
           {showBhButton && (
             <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" asChild>
-              <a href="https://banco-de-horas-servchat.vercel.app/" target="_blank" rel="noopener noreferrer">
+              <a href="https://banco-de-horas-nuvexa.vercel.app/" target="_blank" rel="noopener noreferrer">
                 <Briefcase className="h-4 w-4" />
                 BH
               </a>

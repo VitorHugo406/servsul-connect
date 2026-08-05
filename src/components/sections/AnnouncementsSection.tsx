@@ -307,7 +307,7 @@ export function AnnouncementsSection() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 className="font-display text-xl sm:text-2xl font-bold text-foreground">Avisos Gerais</h3>
-            <p className="text-sm text-muted-foreground">Comunicados oficiais do Grupo Servsul</p>
+            <p className="text-sm text-muted-foreground">Comunicados oficiais do Nuvexa</p>
           </div>
           
           {canManageAnnouncements && (

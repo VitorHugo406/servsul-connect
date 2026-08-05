@@ -21,7 +21,7 @@ const monthThemes: Record<number, { name: string; emoji: string; accent: [number
   3: { name: 'Ciclo de Renovação', emoji: '🌿', accent: [22, 163, 74] },
   4: { name: 'Celebração Especial', emoji: '🎁', accent: [168, 85, 247] },
   5: { name: 'Mês de Reconhecimento', emoji: '🌟', accent: [202, 138, 4] },
-  6: { name: 'Festa Junina Servsul', emoji: '🎊', accent: [234, 88, 12] },
+  6: { name: 'Festa Junina Nuvexa', emoji: '🎊', accent: [234, 88, 12] },
   7: { name: 'Arraiá de Talentos', emoji: '🔥', accent: [220, 38, 38] },
   8: { name: 'Mês de Excelência', emoji: '🏆', accent: [37, 99, 235] },
   9: { name: 'Primavera de Resultados', emoji: '🌸', accent: [219, 39, 119] },
@@ -95,7 +95,7 @@ export function BirthdaysSection() {
     const monthName = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
     try { doc.addImage(appLogo, 'PNG', 14, 10, 16, 16); } catch { doc.setFillColor(37, 99, 235); doc.circle(22, 18, 8, 'F'); }
-    doc.setFontSize(8); doc.setTextColor(100); doc.text('ServChat', 32, 15); doc.text('Plataforma de Gestão', 32, 20);
+    doc.setFontSize(8); doc.setTextColor(100); doc.text('Nuvexa', 32, 15); doc.text('Plataforma de Gestão', 32, 20);
     doc.setFontSize(18); doc.setTextColor(30, 41, 59); doc.text(`Aniversariantes de ${monthName}`, 14, 40);
     doc.setFontSize(9); doc.setTextColor(100); doc.text(`${theme.name} ${theme.emoji} • ${birthdayPeople.length} pessoa(s)`, 14, 47);
     doc.setDrawColor(r, g, b); doc.setLineWidth(1); doc.line(14, 51, 196, 51);
@@ -122,7 +122,7 @@ export function BirthdaysSection() {
       if (x === 14) y += cardH + 8;
     }
     const pages = doc.getNumberOfPages();
-    for (let i = 1; i <= pages; i++) { doc.setPage(i); doc.setFontSize(7); doc.setTextColor(140); doc.text(`ServChat • Página ${i}/${pages}`, 14, 288); }
+    for (let i = 1; i <= pages; i++) { doc.setPage(i); doc.setFontSize(7); doc.setTextColor(140); doc.text(`Nuvexa • Página ${i}/${pages}`, 14, 288); }
     doc.save(`aniversariantes_${monthName.replace(/\s/g, '_')}.pdf`);
     toast.success('PDF mensal de aniversariantes gerado!');
     setGeneratingPdf(false);

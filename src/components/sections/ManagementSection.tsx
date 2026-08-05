@@ -334,7 +334,7 @@ export function ManagementSection() {
   };
 
   const handleDeleteUser = (user: Profile) => {
-    if (user.email === 'adminservchat@servsul.com.br') {
+    if (user.email === 'adminnuvexa@servsul.com.br') {
       toast.error('Não é possível excluir o administrador principal');
       return;
     }

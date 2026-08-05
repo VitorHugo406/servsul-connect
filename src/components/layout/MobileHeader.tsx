@@ -107,7 +107,7 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
             )}
             {showBhButton && (
               <a
-                href="https://banco-de-horas-servchat.vercel.app/"
+                href="https://banco-de-horas-nuvexa.vercel.app/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 rounded-full hover:bg-accent"

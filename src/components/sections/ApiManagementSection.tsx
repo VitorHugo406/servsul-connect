@@ -274,7 +274,7 @@ export function ApiManagementSection() {
             <Key className="h-16 w-16 text-muted-foreground/30 mb-4" />
             <h4 className="text-lg font-semibold text-foreground">Nenhuma integração encontrada</h4>
             <p className="text-muted-foreground mt-1 max-w-md">
-              Crie uma nova integração para permitir que sistemas externos acessem métricas do ServChat.
+              Crie uma nova integração para permitir que sistemas externos acessem métricas do Nuvexa.
             </p>
           </CardContent>
         </Card>

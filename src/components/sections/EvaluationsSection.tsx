@@ -256,7 +256,7 @@ export function EvaluationsSection() {
 
     doc.setFontSize(8);
     doc.setTextColor(71, 85, 105);
-    doc.text('ServChat', 32, 14);
+    doc.text('Nuvexa', 32, 14);
     doc.setFontSize(7);
     doc.text('Plataforma de Gestão • Relatórios', 32, 19);
 
@@ -278,7 +278,7 @@ export function EvaluationsSection() {
     doc.line(14, h - 15, 196, h - 15);
     doc.setFontSize(7);
     doc.setTextColor(100, 116, 139);
-    doc.text('ServChat • Avaliação de Desempenho', 14, h - 10);
+    doc.text('Nuvexa • Avaliação de Desempenho', 14, h - 10);
     doc.text(`Página ${pageNum}`, 182, h - 10);
   };
 

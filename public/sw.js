@@ -1,4 +1,4 @@
-const CACHE_NAME = 'servchat-runtime-v3';
+const CACHE_NAME = 'nuvexa-runtime-v3';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/icons/logo-192.png',
@@ -104,7 +104,7 @@ self.addEventListener('push', (event) => {
     };
     
     event.waitUntil(
-      self.registration.showNotification(data.title || 'ServChat', options)
+      self.registration.showNotification(data.title || 'Nuvexa', options)
     );
   }
 });

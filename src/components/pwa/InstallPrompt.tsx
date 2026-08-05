@@ -50,7 +50,7 @@ export function InstallPrompt() {
           </div>
           
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground">Instalar ServChat</h3>
+            <h3 className="font-semibold text-foreground">Instalar Nuvexa</h3>
             <p className="text-sm text-muted-foreground mt-1">
               Adicione o app à tela inicial para acesso rápido e notificações
             </p>

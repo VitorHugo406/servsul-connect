@@ -47,7 +47,7 @@ import { WarRoomAlarmOverlay } from '@/components/warroom/WarRoomAlarmOverlay';
 import { MobileShell } from '@/components/layout/mobile/MobileShell';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
-  home: { title: 'Início', subtitle: 'Visão geral do ServChat' },
+  home: { title: 'Início', subtitle: 'Visão geral do Nuvexa' },
   'my-dashboard': { title: 'Meu Painel', subtitle: 'Métricas e estatísticas personalizadas' },
   chat: { title: 'Chat por Setores', subtitle: 'Comunicação entre equipes' },
   announcements: { title: 'Avisos Gerais', subtitle: 'Comunicados oficiais' },

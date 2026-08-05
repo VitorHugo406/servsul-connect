@@ -122,7 +122,7 @@ export function ReportDialog({ open, onOpenChange, tasks, columns, boardName }: 
       html += '</tr>';
     });
     html += '</tbody></table>';
-    html += `<div class="footer">Relatório gerado automaticamente pelo ServChat • ${new Date().toLocaleDateString('pt-BR')}</div></body></html>`;
+    html += `<div class="footer">Relatório gerado automaticamente pelo Nuvexa • ${new Date().toLocaleDateString('pt-BR')}</div></body></html>`;
 
     const w = window.open('', '_blank');
     if (w) { w.document.write(html); w.document.close(); w.print(); }
