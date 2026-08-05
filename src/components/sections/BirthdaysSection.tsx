@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import appLogo from '@/assets/app-logo.png';
+import appLogo from '@/assets/nuvexa-logo.png';
 
 const monthThemes: Record<number, { name: string; emoji: string; accent: [number, number, number] }> = {
   1: { name: 'Verão Corporativo', emoji: '☀️', accent: [234, 88, 12] },

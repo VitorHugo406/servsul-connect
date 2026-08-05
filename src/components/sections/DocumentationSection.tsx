@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, ChevronDown, ChevronRight, BookOpen, Database, Code2, Layers, Shield, Zap, Users, MessageSquare, Bell, ListTodo, CalendarDays, FileText, HardDrive, Building2, Sparkles, Mail, Cake, Home, Settings, Trash2, Eye, Lock, Server, Globe, Smartphone, BarChart2, Siren, Trophy, ClipboardCheck } from 'lucide-react';
-import logoServsul from '@/assets/logo-servsul.png';
-import appLogo from '@/assets/app-logo.png';
+import appLogo from '@/assets/nuvexa-logo.png';
+import appLogo from '@/assets/nuvexa-logo.png';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -793,7 +793,7 @@ export function DocumentationSection() {
           {/* Cover */}
           <div className="text-center space-y-3 pb-4 border-b border-border">
             <div className="flex items-center justify-center gap-4">
-              <img src={logoServsul} alt="Nuvexa" className="h-14 w-14 object-contain rounded-xl" />
+              <img src={appLogo} alt="Nuvexa" className="h-14 w-14 object-contain rounded-xl" />
               <img src={appLogo} alt="Nuvexa" className="h-14 w-14 object-contain rounded-xl" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">Nuvexa</h1>
@@ -1362,7 +1362,7 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
           {/* Footer */}
           <div className="text-center pt-6 pb-4 border-t border-border text-xs text-muted-foreground space-y-1">
             <div className="flex items-center justify-center gap-2">
-              <img src={logoServsul} alt="Nuvexa" className="h-6 w-6 object-contain rounded" />
+              <img src={appLogo} alt="Nuvexa" className="h-6 w-6 object-contain rounded" />
               <img src={appLogo} alt="Nuvexa" className="h-6 w-6 object-contain rounded" />
             </div>
             <p><strong>Nuvexa</strong> — Plataforma de Comunicação Interna • Nuvexa</p>

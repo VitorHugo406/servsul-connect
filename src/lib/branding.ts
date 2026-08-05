@@ -1,8 +1,8 @@
-import brandLogo from '@/assets/nuvexa-logo.png.asset.json';
+import brandLogo from '@/assets/nuvexa-logo.png';
 
-export const BRAND_LOGO_URL = brandLogo.url;
-export const BRAND_PRIMARY = '#2E5AAC';
-export const BRAND_SECONDARY = '#4C7DE0';
+export const BRAND_LOGO_URL = brandLogo;
+export const BRAND_PRIMARY = '#3D2FD6';
+export const BRAND_SECONDARY = '#12C2F0';
 
 export interface BrandColors {
   primary_color: string;
