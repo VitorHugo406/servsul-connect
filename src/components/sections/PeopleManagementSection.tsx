@@ -246,9 +246,7 @@ export function PeopleManagementSection() {
 
         <TabsContent value="team" className="mt-4">
           {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            </div>
+            <CardGridSkeleton count={6} cardHeight="h-20" />
           ) : members.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -661,8 +659,9 @@ function ScoreTabContent({ scores, monthlyHistory, loading }: {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="space-y-4">
+        <StatsSkeleton count={4} />
+        <ChartSkeleton />
       </div>
     );
   }
@@ -894,11 +893,7 @@ function ActivitiesTab({ memberIds, members }: { memberIds: string[]; members: a
   }, [memberIds]);
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
+    return <ListSkeleton rows={5} />;
   }
 
   if (memberIds.length === 0) {
