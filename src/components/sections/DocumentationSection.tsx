@@ -500,7 +500,7 @@ function generateDocumentationPDF() {
     ['functions/process-automations/', 'Edge Fn', 'Executa regras SE→ENTÃO nos quadros Kanban'],
     ['functions/duplicate-scheduled-cards/', 'Edge Fn', 'Duplica cards agendados (diário/semanal/mensal)'],
     ['functions/api-integrations/', 'Edge Fn', 'API REST externa: métricas, dados de usuários, equipes'],
-    ['functions/nuvexa-conference/', 'Edge Fn', 'Videoconferência Nuvexa'],
+    ['functions/servchat-conference/', 'Edge Fn', 'Videoconferência Nuvexa'],
     ['functions/send-scheduled-summary/', 'Edge Fn', 'Resumo mensal automatizado de produtividade'],
   ], [48, 18, contentW - 66]);
 
@@ -1153,7 +1153,7 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                   <TableRow label="process-automations" value="Motor de automações" />
                   <TableRow label="duplicate-scheduled-cards" value="Duplicação agendada" />
                   <TableRow label="api-integrations" value="API REST externa (métricas, usuários)" />
-                  <TableRow label="nuvexa-conference" value="Videoconferência Nuvexa" />
+                  <TableRow label="servchat-conference" value="Videoconferência Nuvexa" />
                   <TableRow label="send-scheduled-summary" value="Resumo mensal automatizado" />
                 </div>
               </div>

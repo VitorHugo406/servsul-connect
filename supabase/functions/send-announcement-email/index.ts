@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
     </body>
     </html>`
 
-    const resendAccountEmail = 'nuvexaadm@gmail.com'
+    const resendAccountEmail = 'servchatadm@gmail.com'
 
     // With onboarding@resend.dev, can only send to the account owner
     const { error } = await resend.emails.send({

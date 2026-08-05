@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get("NUVEXA_CONFERENCE_API_KEY");
+    const apiKey = Deno.env.get("SERVCHAT_CONFERENCE_API_KEY");
     if (!apiKey) {
       return new Response(
         JSON.stringify({ error: "Conference API key not configured" }),

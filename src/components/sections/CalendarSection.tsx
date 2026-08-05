@@ -262,7 +262,7 @@ export function CalendarSection() {
 
         const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
         const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/nuvexa-conference?path=/meetings`,
+          `https://${projectId}.supabase.co/functions/v1/servchat-conference?path=/meetings`,
           {
             method: 'POST',
             headers: {
