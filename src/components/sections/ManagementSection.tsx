@@ -397,9 +397,7 @@ export function ManagementSection() {
           <ScrollArea className="h-[calc(100vh-220px)]">
             <div className="space-y-3 pr-2">
               {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                </div>
+                <ListSkeleton rows={6} />
               ) : filteredUsers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Users className="mb-2 h-10 w-10 text-muted-foreground" />
@@ -653,14 +651,13 @@ export function ManagementSection() {
                     </TableHeader>
                     <TableBody>
                       {loading ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8">
-                            <div className="flex items-center justify-center gap-2">
-                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                              Carregando...
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                        Array.from({ length: 5 }).map((_, i) => (
+                          <TableRow key={i}>
+                            <TableCell colSpan={6} className="py-2">
+                              <div className="glass-shimmer h-9 w-full rounded-lg" />
+                            </TableCell>
+                          </TableRow>
+                        ))
                       ) : filteredUsers.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
@@ -1284,9 +1281,10 @@ function EditUserDialog({ open, onOpenChange, user, sectors, currentRole, onSucc
               Selecione os setores extras que este usuário terá acesso
             </p>
             {loadingAdditional ? (
-              <div className="flex items-center gap-2 py-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                <span className="text-sm text-muted-foreground">Carregando...</span>
+              <div className="grid grid-cols-2 gap-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="glass-shimmer h-8 rounded-md" />
+                ))}
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto p-2 border rounded-md">
