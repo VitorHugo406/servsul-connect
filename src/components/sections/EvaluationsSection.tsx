@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ClipboardCheck, Plus, Search, BarChart3, Settings2, Users, FileText, TrendingUp, Star, ThumbsUp, ThumbsDown, AlertTriangle, Eye, Send, Download, ChevronDown, ChevronUp, MessageSquare, Clock, Edit2, Trash2, Bell, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SectionSkeleton } from '@/components/ui/skeletons';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -239,39 +240,49 @@ export function EvaluationsSection() {
   };
 
   // ======= PDF GENERATION =======
+  // Brand colors: primary #3D2FD6, secondary #12C2F0
+  const BRAND_PRIMARY: [number, number, number] = [61, 47, 214];
+  const BRAND_SECONDARY: [number, number, number] = [18, 194, 240];
+  const ZEBRA_FILL: [number, number, number] = [246, 247, 251];
+
   const addPdfHeader = (doc: jsPDF, title: string) => {
-    doc.setFillColor(248, 250, 252);
-    doc.rect(0, 0, 210, 32, 'F');
-    doc.setFillColor(37, 99, 235);
-    doc.rect(0, 0, 210, 3, 'F');
-    doc.setFillColor(234, 88, 12);
-    doc.rect(0, 3, 210, 1.2, 'F');
+    doc.setFillColor(...BRAND_PRIMARY);
+    doc.rect(0, 0, 210, 30, 'F');
+    doc.setFillColor(...BRAND_SECONDARY);
+    doc.rect(0, 28, 210, 2, 'F');
 
     try {
-      doc.addImage(appLogo, 'PNG', 14, 9, 16, 16);
+      doc.addImage(appLogo, 'PNG', 14, 7, 16, 16);
     } catch (e) {
-      doc.setFillColor(37, 99, 235);
-      doc.circle(22, 17, 8, 'F');
+      doc.setFillColor(255, 255, 255);
+      doc.circle(22, 15, 8, 'F');
     }
 
-    doc.setFontSize(8);
-    doc.setTextColor(71, 85, 105);
-    doc.text('Nuvexa', 32, 14);
+    doc.setFontSize(13);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Nuvexa', 34, 13);
     doc.setFontSize(7);
-    doc.text('Plataforma de Gestão • Relatórios', 32, 19);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Plataforma de Gestão • Relatórios', 34, 19);
 
-    doc.setFontSize(15);
+    doc.setFontSize(14);
     doc.setTextColor(30, 41, 59);
+    doc.setFont('helvetica', 'bold');
     doc.text(title, 14, 42);
+    doc.setFont('helvetica', 'normal');
 
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
     doc.text(`Emitido em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 14, 48);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.line(14, 51, 196, 51);
 
     return 58;
   };
 
-  const addPdfFooter = (doc: jsPDF, pageNum: number) => {
+  const addPdfFooter = (doc: jsPDF, pageNum: number, totalPages: number) => {
     const h = doc.internal.pageSize.getHeight();
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.3);
@@ -279,14 +290,14 @@ export function EvaluationsSection() {
     doc.setFontSize(7);
     doc.setTextColor(100, 116, 139);
     doc.text('Nuvexa • Avaliação de Desempenho', 14, h - 10);
-    doc.text(`Página ${pageNum}`, 182, h - 10);
+    doc.text(`Página ${pageNum} de ${totalPages}`, 196, h - 10, { align: 'right' });
   };
 
   const addAllFooters = (doc: jsPDF) => {
     const pages = doc.getNumberOfPages();
     for (let i = 1; i <= pages; i++) {
       doc.setPage(i);
-      addPdfFooter(doc, i);
+      addPdfFooter(doc, i, pages);
     }
   };
 
@@ -332,7 +343,9 @@ export function EvaluationsSection() {
       autoTable(doc, {
         startY: y, head: [['Competência', 'Nota', 'Peso', 'Observação']],
         body: excellent.map(i => [i.competency_name, `${i.score}/5`, String(i.weight), i.evaluator_comment || '-']),
-        styles: { fontSize: 8, cellPadding: 3 }, headStyles: { fillColor: [22, 163, 74] },
+        styles: { fontSize: 8, cellPadding: 3, overflow: 'ellipsize' }, headStyles: { fillColor: [22, 163, 74] },
+        alternateRowStyles: { fillColor: ZEBRA_FILL },
+        columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 18 }, 2: { cellWidth: 16 }, 3: { cellWidth: 'auto' } },
         margin: { left: 14, right: 14 },
       });
       y = (doc as any).lastAutoTable.finalY + 6;
@@ -346,7 +359,9 @@ export function EvaluationsSection() {
       autoTable(doc, {
         startY: y, head: [['Competência', 'Nota', 'Peso', 'Observação']],
         body: good.map(i => [i.competency_name, `${i.score}/5`, String(i.weight), i.evaluator_comment || '-']),
-        styles: { fontSize: 8, cellPadding: 3 }, headStyles: { fillColor: [202, 138, 4] },
+        styles: { fontSize: 8, cellPadding: 3, overflow: 'ellipsize' }, headStyles: { fillColor: [202, 138, 4] },
+        alternateRowStyles: { fillColor: ZEBRA_FILL },
+        columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 18 }, 2: { cellWidth: 16 }, 3: { cellWidth: 'auto' } },
         margin: { left: 14, right: 14 },
       });
       y = (doc as any).lastAutoTable.finalY + 6;
@@ -360,7 +375,9 @@ export function EvaluationsSection() {
       autoTable(doc, {
         startY: y, head: [['Competência', 'Nota', 'Peso', 'Observação']],
         body: needsImprovement.map(i => [i.competency_name, `${i.score}/5`, String(i.weight), i.evaluator_comment || '-']),
-        styles: { fontSize: 8, cellPadding: 3 }, headStyles: { fillColor: [220, 38, 38] },
+        styles: { fontSize: 8, cellPadding: 3, overflow: 'ellipsize' }, headStyles: { fillColor: [220, 38, 38] },
+        alternateRowStyles: { fillColor: ZEBRA_FILL },
+        columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 18 }, 2: { cellWidth: 16 }, 3: { cellWidth: 'auto' } },
         margin: { left: 14, right: 14 },
       });
       y = (doc as any).lastAutoTable.finalY + 6;
@@ -436,9 +453,10 @@ export function EvaluationsSection() {
         classifyLabel(classifyScore(i.score)),
         i.evaluator_comment || '-', i.evaluated_response || '-', i.evaluator_reply || '-'
       ]),
-      styles: { fontSize: 7, cellPadding: 2 }, headStyles: { fillColor: [30, 41, 59] },
+      styles: { fontSize: 7, cellPadding: 2, overflow: 'ellipsize' }, headStyles: { fillColor: BRAND_PRIMARY },
+      alternateRowStyles: { fillColor: ZEBRA_FILL },
       margin: { left: 14, right: 14 },
-      columnStyles: { 0: { cellWidth: 28 }, 3: { cellWidth: 28 }, 4: { cellWidth: 28 }, 5: { cellWidth: 28 } },
+      columnStyles: { 0: { cellWidth: 28 }, 1: { cellWidth: 14 }, 2: { cellWidth: 18 }, 3: { cellWidth: 28 }, 4: { cellWidth: 28 }, 5: { cellWidth: 28 } },
     });
     y = (doc as any).lastAutoTable.finalY + 8;
 
@@ -494,7 +512,9 @@ export function EvaluationsSection() {
           h.action, h.old_status || '-', h.new_status || '-',
           h.details ? h.details.substring(0, 80) : '-'
         ]),
-        styles: { fontSize: 7, cellPadding: 2 }, headStyles: { fillColor: [100, 50, 150] },
+        styles: { fontSize: 7, cellPadding: 2, overflow: 'ellipsize' }, headStyles: { fillColor: BRAND_SECONDARY },
+        alternateRowStyles: { fillColor: ZEBRA_FILL },
+        columnStyles: { 0: { cellWidth: 34 }, 1: { cellWidth: 24 }, 2: { cellWidth: 24 }, 3: { cellWidth: 24 }, 4: { cellWidth: 'auto' } },
         margin: { left: 14, right: 14 },
       });
     }
@@ -631,6 +651,10 @@ export function EvaluationsSection() {
 
   // Number of tabs
   const tabCount = 2 + (canCreateEvaluations ? 1 : 0) + (canManageStructure ? 1 : 0) + 1; // +1 for pendencies
+
+  if (loading) {
+    return <SectionSkeleton cardCount={6} />;
+  }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 md:p-6 space-y-6">

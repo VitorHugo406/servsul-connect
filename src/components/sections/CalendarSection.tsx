@@ -4,6 +4,7 @@ import { Calendar as CalendarIcon, Plus, Trash2, Clock, Bell, ListTodo, Edit, X,
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -512,6 +513,22 @@ export function CalendarSection() {
   const scheduleWeekDays = useMemo(() => eachDayOfInterval({ start: scheduleWeekStart, end: addDays(scheduleWeekStart, 6) }), [scheduleWeekStart]);
   // Filter to only weekdays (Mon-Fri) for meeting scheduling
   const scheduleBusinessDays = scheduleWeekDays.filter(d => d.getDay() !== 0 && d.getDay() !== 6);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col h-full p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-6 w-40 rounded-md" />
+          <Skeleton className="h-9 w-24 rounded-lg" />
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {Array.from({ length: 35 }).map((_, i) => (
+            <div key={i} className="glass-shimmer rounded-lg h-14 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   // ========== FULL PAGE CREATE/EDIT ==========
   if (showCreatePage) {
