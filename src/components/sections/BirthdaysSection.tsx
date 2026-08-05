@@ -129,7 +129,19 @@ export function BirthdaysSection() {
   };
 
   if (loading) {
-    return <div className="flex h-full items-center justify-center p-6"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-12 w-12 rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-64 rounded-md" />
+            <Skeleton className="h-3.5 w-80 rounded-md" />
+          </div>
+        </div>
+        <StatsSkeleton count={4} />
+        <CardGridSkeleton count={4} columns="lg:grid-cols-2" cardHeight="h-24" />
+      </div>
+    );
   }
 
   return (

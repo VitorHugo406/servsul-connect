@@ -291,8 +291,14 @@ export function AnnouncementsSection() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center p-6">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="flex flex-col h-full">
+        <div className="p-4 sm:p-6 border-b border-border bg-card space-y-2">
+          <Skeleton className="h-7 w-48 rounded-md" />
+          <Skeleton className="h-4 w-64 rounded-md" />
+        </div>
+        <div className="p-4 sm:p-6">
+          <CardGridSkeleton count={4} columns="md:grid-cols-2" cardHeight="h-32" />
+        </div>
       </div>
     );
   }

@@ -356,16 +356,56 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       </div>}
 
       {isMobile && (
-        <div className="flex shrink-0 items-center justify-between border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl">
-          <div>
-            <p className="text-sm font-semibold text-foreground">Conversas</p>
-            <p className="text-[11px] text-muted-foreground">
+        <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">Conversas</p>
+            <p className="truncate text-[11px] text-muted-foreground">
               {chatMode === 'direct' ? 'Individuais' : chatMode === 'groups' ? 'Grupos privados' : 'Canais da empresa'}
             </p>
           </div>
+
+          {chatMode === 'sectors' && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-10 max-w-[45vw] gap-1.5 rounded-full border border-border/60 bg-background/65 px-3 shadow-sm"
+                  aria-label="Selecionar setor"
+                >
+                  <span
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-primary-foreground"
+                    style={{ backgroundColor: currentSector?.color }}
+                  >
+                    {currentSector?.name?.charAt(0)}
+                  </span>
+                  <span className="truncate text-xs font-semibold">{currentSector?.name || 'Setor'}</span>
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-[60vh] w-60 overflow-y-auto rounded-2xl border-border/60 bg-popover/90 p-2 shadow-2xl backdrop-blur-2xl">
+                <DropdownMenuLabel>Setores</DropdownMenuLabel>
+                {accessibleSectors.map((s: any) => (
+                  <DropdownMenuItem
+                    key={s.id}
+                    className="rounded-xl py-2.5"
+                    onSelect={() => setActiveSector(s.id)}
+                  >
+                    <span
+                      className="mr-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-primary-foreground"
+                      style={{ backgroundColor: s.color }}
+                    >
+                      {s.name.charAt(0)}
+                    </span>
+                    <span className="truncate">{s.name}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full border border-border/60 bg-background/65 shadow-sm" aria-label="Alternar tipo de conversa">
+              <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-full border border-border/60 bg-background/65 shadow-sm" aria-label="Alternar tipo de conversa">
                 <Settings className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -378,6 +418,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
           </DropdownMenu>
         </div>
       )}
+
 
 
       {chatMode === 'sectors' ? (
