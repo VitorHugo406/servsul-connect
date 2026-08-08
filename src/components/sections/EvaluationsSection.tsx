@@ -588,20 +588,21 @@ export function EvaluationsSection() {
   const renderStars = (score: number | null, onChange?: (v: number) => void) => {
     const stars = [1, 2, 3, 4, 5];
     return (
-      <div className="flex gap-0.5">
+      <div className={cn("inline-flex items-center gap-0.5 rounded-full px-1.5 py-1", onChange && "bg-muted/50")}>
         {stars.map(s => (
           <button
             key={s}
             type="button"
             onClick={() => onChange?.(s)}
             disabled={!onChange}
+            aria-label={`Nota ${s}`}
             className={cn(
-              "transition-colors",
-              onChange ? "cursor-pointer hover:scale-110" : "cursor-default",
-              s <= (score || 0) ? "text-amber-500" : "text-muted-foreground/30"
+              "flex h-6 w-6 items-center justify-center rounded-full transition-all duration-150",
+              onChange ? "cursor-pointer hover:scale-125 active:scale-95" : "cursor-default",
+              s <= (score || 0) ? "text-amber-500" : "text-muted-foreground/25"
             )}
           >
-            <Star className={cn("h-5 w-5", s <= (score || 0) && "fill-amber-500")} />
+            <Star className={cn("h-4 w-4 transition-transform", s <= (score || 0) && "fill-amber-500")} />
           </button>
         ))}
       </div>

@@ -166,8 +166,11 @@ export function NotificationPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[calc(100%-1rem)] max-w-sm rounded-l-[28px] border-border/60 bg-card/92 p-0 shadow-2xl backdrop-blur-2xl">
-        <SheetHeader className="p-4 border-b border-border">
+      <SheetContent
+        side="right"
+        className="z-[70] flex w-[calc(100%-1rem)] max-w-sm flex-col rounded-l-2xl border-border/60 bg-popover text-foreground p-0 shadow-2xl"
+      >
+        <SheetHeader className="shrink-0 p-4 pt-[calc(1rem+env(safe-area-inset-top))] border-b border-border bg-popover">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-2">
               <Bell className="h-5 w-5" />
@@ -202,7 +205,8 @@ export function NotificationPanel({
           </div>
         </SheetHeader>
 
-        <ScrollArea className="h-[calc(100vh-5rem)]">
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="pb-[calc(1rem+env(safe-area-inset-bottom))]">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -305,6 +309,7 @@ export function NotificationPanel({
               )}
             </div>
           )}
+          </div>
         </ScrollArea>
       </SheetContent>
     </Sheet>
