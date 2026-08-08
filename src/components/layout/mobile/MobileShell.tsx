@@ -165,8 +165,8 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
 
               <span
                 className={cn(
-                  'relative z-10 text-[11px] font-semibold transition-colors duration-200',
-                  active ? 'text-primary' : 'text-muted-foreground',
+                  'relative z-10 text-[10px] font-semibold transition-colors duration-200',
+                  active ? 'text-secondary' : 'text-muted-foreground',
                 )}
               >
                 {tab.label}
