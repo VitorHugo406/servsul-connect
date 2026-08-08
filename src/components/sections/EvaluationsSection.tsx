@@ -1419,7 +1419,7 @@ export function EvaluationsSection() {
                               <div>
                                 <h4 className="text-sm font-semibold text-green-600 flex items-center gap-1 mb-2"><Star className="h-4 w-4" /> Excelente ({excellent.length})</h4>
                                 {excellent.map(i => (
-                                  <div key={i.id} className="p-3 rounded-xl border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20 mb-2">
+                                  <div key={i.id} className="rounded-2xl border border-green-200/70 dark:border-green-800/60 bg-green-50/60 dark:bg-green-950/20 p-3.5 mb-2">
                                     <div className="flex items-center justify-between">
                                       <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
                                       {renderStars(i.score)}
@@ -1435,7 +1435,7 @@ export function EvaluationsSection() {
                               <div>
                                 <h4 className="text-sm font-semibold text-amber-600 flex items-center gap-1 mb-2"><ThumbsUp className="h-4 w-4" /> Bom ({good.length})</h4>
                                 {good.map(i => (
-                                  <div key={i.id} className="p-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 mb-2">
+                                  <div key={i.id} className="rounded-2xl border border-amber-200/70 dark:border-amber-800/60 bg-amber-50/60 dark:bg-amber-950/20 p-3.5 mb-2">
                                     <div className="flex items-center justify-between">
                                       <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
                                       {renderStars(i.score)}
@@ -1451,7 +1451,7 @@ export function EvaluationsSection() {
                               <div>
                                 <h4 className="text-sm font-semibold text-destructive flex items-center gap-1 mb-2"><AlertTriangle className="h-4 w-4" /> Precisa Melhorar ({needsImprovement.length})</h4>
                                 {needsImprovement.map(i => (
-                                  <div key={i.id} className="p-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20 mb-2">
+                                  <div key={i.id} className="rounded-2xl border border-red-200/70 dark:border-red-800/60 bg-red-50/60 dark:bg-red-950/20 p-3.5 mb-2">
                                     <div className="flex items-center justify-between">
                                       <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
                                       {renderStars(i.score)}
@@ -1467,7 +1467,7 @@ export function EvaluationsSection() {
                               <div>
                                 <h4 className="text-sm font-semibold text-muted-foreground mb-2">Sem Avaliação</h4>
                                 {evalItems.filter(i => i.score == null).map(i => (
-                                  <div key={i.id} className="p-3 rounded-xl border border-border mb-2">
+                                  <div key={i.id} className="rounded-2xl border border-border/60 bg-muted/20 p-3.5 mb-2">
                                     <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
                                   </div>
                                 ))}
@@ -1478,26 +1478,26 @@ export function EvaluationsSection() {
                       })()}
 
                       {currentEval.overall_comment && (
-                        <div className="p-3 rounded-xl bg-muted/50 border border-border">
+                        <div className="rounded-2xl bg-muted/40 border border-border/60 p-3.5">
                           <p className="text-xs font-medium text-muted-foreground mb-1">Observação Geral do Avaliador</p>
                           <p className="text-sm text-foreground">{currentEval.overall_comment}</p>
                         </div>
                       )}
                       {currentEval.evaluated_comment && (
-                        <div className="p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                        <div className="rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-800/60 p-3.5">
                           <p className="text-xs font-medium text-amber-600 mb-1">Observação do Colaborador</p>
                           <p className="text-sm text-foreground">{currentEval.evaluated_comment}</p>
                         </div>
                       )}
                       {currentEval.evaluator_response && (
-                        <div className="p-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                        <div className="rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-800/60 p-3.5">
                           <p className="text-xs font-medium text-blue-600 mb-1">Resposta do Avaliador</p>
                           <p className="text-sm text-foreground">{currentEval.evaluator_response}</p>
                         </div>
                       )}
 
                       {currentEval.overall_score != null && (
-                        <div className="flex items-center justify-center gap-4 p-4 rounded-xl bg-muted/30 border border-border">
+                        <div className="flex items-center justify-center gap-4 rounded-2xl bg-gradient-to-br from-muted/40 to-muted/10 border border-border/60 p-5">
                           <div className="text-center">
                             <p className="text-3xl font-bold text-foreground">{currentEval.overall_score}</p>
                             <p className={cn("text-sm font-medium", classifyColor(classifyScore(currentEval.overall_score) || ''))}>
@@ -1568,7 +1568,7 @@ export function EvaluationsSection() {
             <div className="space-y-4 pb-4">
               <p className="text-xs text-muted-foreground">Conteste competências específicas ou deixe uma observação geral.</p>
               {evalItems.filter(i => i.score != null).map(item => (
-                <div key={item.id} className="p-3 rounded-xl border border-border space-y-2">
+                <div key={item.id} className="rounded-2xl border border-border/60 bg-card/40 p-3.5 space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-foreground">{item.competency_name}</p>
                     <div className="flex items-center gap-2">
@@ -1608,7 +1608,7 @@ export function EvaluationsSection() {
             <div className="space-y-4 pb-4">
               <p className="text-xs text-muted-foreground">Revise as contestações e responda. Você pode ajustar notas.</p>
               {evalItems.filter(i => i.evaluated_response).map(item => (
-                <div key={item.id} className="p-3 rounded-xl border border-amber-200 dark:border-amber-800 space-y-2">
+                <div key={item.id} className="rounded-2xl border border-amber-200/70 dark:border-amber-800/60 bg-amber-50/30 dark:bg-amber-950/10 p-3.5 space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-foreground">{item.competency_name}</p>
                     {renderStars(item.score)}
