@@ -223,7 +223,7 @@ export function BirthdaysSection() {
         </Button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 md:gap-3 md:grid-cols-4">
         <Metric icon={Users} label="No mês" value={birthdayPeople.length} />
         <Metric icon={PartyPopper} label="Hoje" value={todayBirthdays.length} />
         <Metric icon={Sparkles} label="Mensagem hoje" value={celebrationToday.length} />
@@ -268,7 +268,7 @@ export function BirthdaysSection() {
 }
 
 function Metric({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: number }) {
-  return <Card><CardContent className="flex items-center gap-3 p-4"><div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><Icon className="h-5 w-5 text-primary" /></div><div><p className="text-2xl font-bold text-foreground">{value}</p><p className="text-xs text-muted-foreground">{label}</p></div></CardContent></Card>;
+  return <Card><CardContent className="flex items-center gap-2 p-2.5 md:p-4 md:gap-3"><div className="flex h-8 w-8 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10"><Icon className="h-4 w-4 md:h-5 md:w-5 text-primary" /></div><div className="min-w-0"><p className="text-lg md:text-2xl font-bold text-foreground leading-tight">{value}</p><p className="text-[10px] md:text-xs text-muted-foreground truncate">{label}</p></div></CardContent></Card>;
 }
 
 function SectionTitle({ icon: Icon, title, subtitle }: { icon: LucideIcon; title: string; subtitle: string }) {

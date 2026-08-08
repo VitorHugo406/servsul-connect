@@ -615,7 +615,7 @@ export function EvaluationsSection() {
 
   // Render evaluation card list
   const renderEvalCard = (ev: Evaluation, showActions = true) => (
-    <div key={ev.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-primary/30 transition-colors">
+    <div key={ev.id} className="flex items-center justify-between p-3 rounded-xl border border-border hover:border-primary/30 transition-colors">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-foreground">{ev.evaluated_name}</p>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -683,7 +683,7 @@ export function EvaluationsSection() {
           { label: 'Finalizadas', value: finalizedCount, icon: BarChart3, color: 'text-green-500' },
           { label: 'Nota Média', value: avgScore || '-', icon: TrendingUp, color: 'text-primary' },
         ].map(m => (
-          <Card key={m.label} className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => m.label === 'Pendências' && setActiveTab('pendencies')}>
+          <Card key={m.label} className="group cursor-pointer rounded-2xl border-border/60 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-primary/30" onClick={() => m.label === 'Pendências' && setActiveTab('pendencies')}>
             <CardContent className="p-4 flex items-center gap-3">
               <div className={cn("rounded-full p-2 bg-muted", m.color)}>
                 <m.icon className="h-5 w-5" />
@@ -716,7 +716,7 @@ export function EvaluationsSection() {
 
         {/* ===== PENDENCIES TAB ===== */}
         <TabsContent value="pendencies" className="space-y-4">
-          <Card>
+          <Card className="rounded-2xl border-border/60 shadow-sm">
             <CardContent className="p-4">
               <Tabs value={pendencyTab} onValueChange={setPendencyTab}>
                 <TabsList className="grid w-full mb-4" style={{ gridTemplateColumns: `repeat(${canCreateEvaluations ? 4 : 2}, minmax(0, 1fr))` }}>
@@ -813,7 +813,7 @@ export function EvaluationsSection() {
 
           <div className="grid md:grid-cols-2 gap-4">
             {/* Score chart */}
-            <Card>
+            <Card className="rounded-2xl border-border/60 shadow-sm">
               <CardHeader><CardTitle className="text-sm">Notas por Colaborador</CardTitle></CardHeader>
               <CardContent>
                 {dashboardScores.length === 0 ? (
@@ -833,7 +833,7 @@ export function EvaluationsSection() {
             </Card>
 
             {/* Classification pie */}
-            <Card>
+            <Card className="rounded-2xl border-border/60 shadow-sm">
               <CardHeader><CardTitle className="text-sm">Distribuição por Classificação</CardTitle></CardHeader>
               <CardContent>
                 {classDistribution.length === 0 ? (
@@ -855,7 +855,7 @@ export function EvaluationsSection() {
 
           {/* Monthly avg by employee */}
           {monthlyAvgByEmployee.length > 0 && (
-            <Card>
+            <Card className="rounded-2xl border-border/60 shadow-sm">
               <CardHeader><CardTitle className="text-sm">Evolução Mensal de Notas por Colaborador</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
@@ -875,7 +875,7 @@ export function EvaluationsSection() {
           )}
 
           {/* Recent evaluations - last 10 with scroll */}
-          <Card>
+          <Card className="rounded-2xl border-border/60 shadow-sm">
             <CardHeader><CardTitle className="text-sm">Últimas Avaliações</CardTitle></CardHeader>
             <CardContent>
               <ScrollArea className="h-[300px]">
@@ -887,7 +887,7 @@ export function EvaluationsSection() {
                       <button
                         key={ev.id}
                         onClick={() => openEvalDetail(ev.id)}
-                        className="flex items-center justify-between w-full p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors text-left"
+                        className="flex items-center justify-between w-full p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors text-left"
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -909,7 +909,7 @@ export function EvaluationsSection() {
 
         {/* My Evaluations */}
         <TabsContent value="my-evals" className="space-y-4">
-          <Card>
+          <Card className="rounded-2xl border-border/60 shadow-sm">
             <CardHeader><CardTitle className="text-base">Avaliações Recebidas</CardTitle></CardHeader>
             <CardContent>
               {myEvaluations.length === 0 ? (
@@ -946,7 +946,7 @@ export function EvaluationsSection() {
           </Card>
 
           {myEvaluations.filter(e => e.overall_score != null).length > 1 && (
-            <Card>
+            <Card className="rounded-2xl border-border/60 shadow-sm">
               <CardHeader><CardTitle className="text-sm">Minha Evolução</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={200}>
@@ -969,7 +969,7 @@ export function EvaluationsSection() {
         {/* Team - renamed for clarity */}
         {canCreateEvaluations && (
           <TabsContent value="team" className="space-y-4">
-            <Card>
+            <Card className="rounded-2xl border-border/60 shadow-sm">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -996,7 +996,7 @@ export function EvaluationsSection() {
           <TabsContent value="structure" className="space-y-4">
             <div className="grid md:grid-cols-3 gap-4">
               {/* Positions */}
-              <Card>
+              <Card className="rounded-2xl border-border/60 shadow-sm">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm">Cargos</CardTitle>
@@ -1040,7 +1040,7 @@ export function EvaluationsSection() {
               </Card>
 
               {/* Competencies */}
-              <Card>
+              <Card className="rounded-2xl border-border/60 shadow-sm">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm">Competências</CardTitle>
@@ -1076,7 +1076,7 @@ export function EvaluationsSection() {
               </Card>
 
               {/* Cycles */}
-              <Card>
+              <Card className="rounded-2xl border-border/60 shadow-sm">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm">Ciclos</CardTitle>
@@ -1121,7 +1121,7 @@ export function EvaluationsSection() {
 
       {/* New Position */}
       <Dialog open={showNewPosition} onOpenChange={setShowNewPosition}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader><DialogTitle>Novo Cargo</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={posName} onChange={e => setPosName(e.target.value)} placeholder="Ex: Atendente" /></div>
@@ -1136,7 +1136,7 @@ export function EvaluationsSection() {
 
       {/* Edit Position */}
       <Dialog open={!!showEditPosition} onOpenChange={() => setShowEditPosition(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader><DialogTitle>Editar Cargo</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={posName} onChange={e => setPosName(e.target.value)} /></div>
@@ -1151,7 +1151,7 @@ export function EvaluationsSection() {
 
       {/* New Competency */}
       <Dialog open={showNewCompetency} onOpenChange={setShowNewCompetency}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader><DialogTitle>Nova Competência</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={compName} onChange={e => setCompName(e.target.value)} placeholder="Ex: Comunicação" /></div>
@@ -1176,7 +1176,7 @@ export function EvaluationsSection() {
 
       {/* Edit Competency */}
       <Dialog open={!!showEditCompetency} onOpenChange={() => setShowEditCompetency(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader><DialogTitle>Editar Competência</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={compName} onChange={e => setCompName(e.target.value)} /></div>
@@ -1201,7 +1201,7 @@ export function EvaluationsSection() {
 
       {/* New Cycle */}
       <Dialog open={showNewCycle} onOpenChange={setShowNewCycle}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader><DialogTitle>Novo Ciclo</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={cycleName} onChange={e => setCycleName(e.target.value)} placeholder="Ex: 1º Semestre 2026" /></div>
@@ -1220,7 +1220,7 @@ export function EvaluationsSection() {
 
       {/* Edit Cycle */}
       <Dialog open={!!showEditCycle} onOpenChange={() => setShowEditCycle(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader><DialogTitle>Editar Ciclo</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={cycleName} onChange={e => setCycleName(e.target.value)} /></div>
@@ -1239,7 +1239,7 @@ export function EvaluationsSection() {
 
       {/* New Evaluation */}
       <Dialog open={showNewEval} onOpenChange={setShowNewEval}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader><DialogTitle>Nova Avaliação</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">
@@ -1287,7 +1287,7 @@ export function EvaluationsSection() {
 
       {/* Position Competencies Dialog */}
       <Dialog open={!!showPosCompetencies} onOpenChange={() => setShowPosCompetencies(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg rounded-2xl">
           <DialogHeader>
             <DialogTitle>Competências do Cargo: {positions.find(p => p.id === showPosCompetencies)?.name}</DialogTitle>
           </DialogHeader>
@@ -1332,7 +1332,7 @@ export function EvaluationsSection() {
 
       {/* ===== Evaluation Detail Dialog ===== */}
       <Dialog open={!!showEvalDetail} onOpenChange={() => setShowEvalDetail(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl">
           {currentEval && (
             <>
               <DialogHeader>
@@ -1357,7 +1357,7 @@ export function EvaluationsSection() {
                       {editingItems.map((item, idx) => {
                         const comp = competencies.find(c => c.id === item.competency_id);
                         return (
-                          <Card key={idx} className="border-border">
+                          <Card key={idx} className="rounded-2xl border-border/60">
                             <CardContent className="p-4 space-y-2">
                               <div className="flex items-center justify-between">
                                 <div>
@@ -1408,7 +1408,7 @@ export function EvaluationsSection() {
                               <div>
                                 <h4 className="text-sm font-semibold text-green-600 flex items-center gap-1 mb-2"><Star className="h-4 w-4" /> Excelente ({excellent.length})</h4>
                                 {excellent.map(i => (
-                                  <div key={i.id} className="p-3 rounded-lg border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20 mb-2">
+                                  <div key={i.id} className="p-3 rounded-xl border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20 mb-2">
                                     <div className="flex items-center justify-between">
                                       <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
                                       {renderStars(i.score)}
@@ -1424,7 +1424,7 @@ export function EvaluationsSection() {
                               <div>
                                 <h4 className="text-sm font-semibold text-amber-600 flex items-center gap-1 mb-2"><ThumbsUp className="h-4 w-4" /> Bom ({good.length})</h4>
                                 {good.map(i => (
-                                  <div key={i.id} className="p-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 mb-2">
+                                  <div key={i.id} className="p-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 mb-2">
                                     <div className="flex items-center justify-between">
                                       <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
                                       {renderStars(i.score)}
@@ -1440,7 +1440,7 @@ export function EvaluationsSection() {
                               <div>
                                 <h4 className="text-sm font-semibold text-destructive flex items-center gap-1 mb-2"><AlertTriangle className="h-4 w-4" /> Precisa Melhorar ({needsImprovement.length})</h4>
                                 {needsImprovement.map(i => (
-                                  <div key={i.id} className="p-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20 mb-2">
+                                  <div key={i.id} className="p-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20 mb-2">
                                     <div className="flex items-center justify-between">
                                       <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
                                       {renderStars(i.score)}
@@ -1456,7 +1456,7 @@ export function EvaluationsSection() {
                               <div>
                                 <h4 className="text-sm font-semibold text-muted-foreground mb-2">Sem Avaliação</h4>
                                 {evalItems.filter(i => i.score == null).map(i => (
-                                  <div key={i.id} className="p-3 rounded-lg border border-border mb-2">
+                                  <div key={i.id} className="p-3 rounded-xl border border-border mb-2">
                                     <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
                                   </div>
                                 ))}
@@ -1467,19 +1467,19 @@ export function EvaluationsSection() {
                       })()}
 
                       {currentEval.overall_comment && (
-                        <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                        <div className="p-3 rounded-xl bg-muted/50 border border-border">
                           <p className="text-xs font-medium text-muted-foreground mb-1">Observação Geral do Avaliador</p>
                           <p className="text-sm text-foreground">{currentEval.overall_comment}</p>
                         </div>
                       )}
                       {currentEval.evaluated_comment && (
-                        <div className="p-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                        <div className="p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
                           <p className="text-xs font-medium text-amber-600 mb-1">Observação do Colaborador</p>
                           <p className="text-sm text-foreground">{currentEval.evaluated_comment}</p>
                         </div>
                       )}
                       {currentEval.evaluator_response && (
-                        <div className="p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                        <div className="p-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
                           <p className="text-xs font-medium text-blue-600 mb-1">Resposta do Avaliador</p>
                           <p className="text-sm text-foreground">{currentEval.evaluator_response}</p>
                         </div>
@@ -1551,13 +1551,13 @@ export function EvaluationsSection() {
 
       {/* Contest Dialog */}
       <Dialog open={!!showContestDialog} onOpenChange={() => setShowContestDialog(null)}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col rounded-2xl">
           <DialogHeader><DialogTitle className="text-destructive">Contestar Avaliação</DialogTitle></DialogHeader>
           <ScrollArea className="flex-1 pr-2">
             <div className="space-y-4 pb-4">
               <p className="text-xs text-muted-foreground">Conteste competências específicas ou deixe uma observação geral.</p>
               {evalItems.filter(i => i.score != null).map(item => (
-                <div key={item.id} className="p-3 rounded-lg border border-border space-y-2">
+                <div key={item.id} className="p-3 rounded-xl border border-border space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-foreground">{item.competency_name}</p>
                     <div className="flex items-center gap-2">
@@ -1591,13 +1591,13 @@ export function EvaluationsSection() {
 
       {/* Respond to Contestation Dialog */}
       <Dialog open={!!showRespondDialog} onOpenChange={() => setShowRespondDialog(null)}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col rounded-2xl">
           <DialogHeader><DialogTitle className="text-amber-600">Responder Contestação</DialogTitle></DialogHeader>
           <ScrollArea className="flex-1 pr-2">
             <div className="space-y-4 pb-4">
               <p className="text-xs text-muted-foreground">Revise as contestações e responda. Você pode ajustar notas.</p>
               {evalItems.filter(i => i.evaluated_response).map(item => (
-                <div key={item.id} className="p-3 rounded-lg border border-amber-200 dark:border-amber-800 space-y-2">
+                <div key={item.id} className="p-3 rounded-xl border border-amber-200 dark:border-amber-800 space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-foreground">{item.competency_name}</p>
                     {renderStars(item.score)}
