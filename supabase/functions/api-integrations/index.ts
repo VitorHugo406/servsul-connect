@@ -66,7 +66,7 @@ function getAdminClient() {
   );
 }
 
-async function validateAdminAuth(req: Request): Promise<{ userId: string } | null> {
+async function validateAdminAuth(req: Request): Promise<{ userId: string; companyId: string; isSuperAdmin: boolean } | null> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
 
@@ -83,14 +83,17 @@ async function validateAdminAuth(req: Request): Promise<{ userId: string } | nul
   const { data: roleData } = await adminClient.from("user_roles").select("role").eq("user_id", userId);
   const roles = (roleData || []).map((r: any) => r.role);
   
-  if (!roles.includes("admin")) {
+  if (!roles.includes("admin") && !roles.includes("super_admin")) {
     return null;
   }
 
-  return { userId };
+  const { data: profile } = await adminClient.from("profiles").select("company_id").eq("user_id", userId).maybeSingle();
+  if (!profile?.company_id) return null;
+
+  return { userId, companyId: profile.company_id, isSuperAdmin: roles.includes("super_admin") };
 }
 
-async function validateApiAuth(req: Request): Promise<{ integrationId: string } | null> {
+async function validateApiAuth(req: Request): Promise<{ integrationId: string; companyId: string } | null> {
   const apiKey = req.headers.get("X-API-KEY");
   const apiToken = req.headers.get("X-API-TOKEN");
   if (!apiKey || !apiToken) return null;
@@ -99,7 +102,7 @@ async function validateApiAuth(req: Request): Promise<{ integrationId: string } 
   const apiKeyHash = await hashToken(apiKey);
   const { data: integration } = await admin
     .from("api_integrations")
-    .select("id, is_active, api_token_hash")
+    .select("id, is_active, api_token_hash, company_id")
     .eq("api_key_hash", apiKeyHash)
     .maybeSingle();
 
@@ -111,7 +114,7 @@ async function validateApiAuth(req: Request): Promise<{ integrationId: string } 
 
   await admin.from("api_integrations").update({ last_used_at: new Date().toISOString() }).eq("id", integration.id);
 
-  return { integrationId: integration.id };
+  return { integrationId: integration.id, companyId: integration.company_id };
 }
 
 async function logAccess(integrationId: string, endpoint: string, method: string, statusCode: number, ip: string | null) {
