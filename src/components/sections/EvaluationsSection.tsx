@@ -730,23 +730,23 @@ export function EvaluationsSection() {
           <Card className="rounded-2xl border-border/60 shadow-sm">
             <CardContent className="p-4">
               <Tabs value={pendencyTab} onValueChange={setPendencyTab}>
-                <TabsList className="grid w-full mb-4" style={{ gridTemplateColumns: `repeat(${canCreateEvaluations ? 4 : 2}, minmax(0, 1fr))` }}>
+                <TabsList className="grid w-full mb-4 rounded-xl bg-muted/60 p-1" style={{ gridTemplateColumns: `repeat(${canCreateEvaluations ? 4 : 2}, minmax(0, 1fr))` }}>
                   {canCreateEvaluations && (
-                    <TabsTrigger value="to-evaluate" className="text-[10px] md:text-xs relative">
+                    <TabsTrigger value="to-evaluate" className="rounded-lg text-[10px] md:text-xs relative">
                       Avaliar
                       {toEvaluate.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-blue-500 hover:bg-blue-500">{toEvaluate.length}</Badge>}
                     </TabsTrigger>
                   )}
-                  <TabsTrigger value="awaiting-approval" className="text-[10px] md:text-xs relative">
+                  <TabsTrigger value="awaiting-approval" className="rounded-lg text-[10px] md:text-xs relative">
                     Para Aprovar
                     {pendingApproval.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-amber-500 hover:bg-amber-500">{pendingApproval.length}</Badge>}
                   </TabsTrigger>
-                  <TabsTrigger value="contested" className="text-[10px] md:text-xs relative">
+                  <TabsTrigger value="contested" className="rounded-lg text-[10px] md:text-xs relative">
                     Contestadas
                     {contested.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-destructive hover:bg-destructive">{contested.length}</Badge>}
                   </TabsTrigger>
                   {canCreateEvaluations && (
-                    <TabsTrigger value="finalize" className="text-[10px] md:text-xs relative">
+                    <TabsTrigger value="finalize" className="rounded-lg text-[10px] md:text-xs relative">
                       Finalizar
                       {awaitingFinalization.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-green-500 hover:bg-green-500">{awaitingFinalization.length}</Badge>}
                     </TabsTrigger>
@@ -756,8 +756,8 @@ export function EvaluationsSection() {
                 {canCreateEvaluations && (
                   <TabsContent value="to-evaluate">
                     {toEvaluate.length === 0 ? (
-                      <div className="text-center py-8">
-                        <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
+                      <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-10 text-center">
+                        <CheckCircle2 className="h-9 w-9 text-green-500/60" />
                         <p className="text-sm text-muted-foreground">Nenhuma avaliação pendente de preenchimento.</p>
                       </div>
                     ) : (
@@ -768,10 +768,10 @@ export function EvaluationsSection() {
 
                 <TabsContent value="awaiting-approval">
                   {pendingApproval.length === 0 ? (
-                    <div className="text-center py-8">
-                      <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhuma avaliação aguardando sua aprovação.</p>
-                    </div>
+                    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-10 text-center">
+                        <CheckCircle2 className="h-9 w-9 text-green-500/60" />
+                        <p className="text-sm text-muted-foreground">Nenhuma avaliação aguardando sua aprovação.</p>
+                      </div>
                   ) : (
                     <div className="space-y-2">{pendingApproval.map(ev => renderEvalCard(ev))}</div>
                   )}
@@ -779,10 +779,10 @@ export function EvaluationsSection() {
 
                 <TabsContent value="contested">
                   {contested.length === 0 ? (
-                    <div className="text-center py-8">
-                      <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhuma avaliação contestada.</p>
-                    </div>
+                    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-10 text-center">
+                        <CheckCircle2 className="h-9 w-9 text-green-500/60" />
+                        <p className="text-sm text-muted-foreground">Nenhuma avaliação contestada.</p>
+                      </div>
                   ) : (
                     <div className="space-y-2">{contested.map(ev => renderEvalCard(ev))}</div>
                   )}
@@ -791,8 +791,8 @@ export function EvaluationsSection() {
                 {canCreateEvaluations && (
                   <TabsContent value="finalize">
                     {awaitingFinalization.length === 0 ? (
-                      <div className="text-center py-8">
-                        <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
+                      <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-10 text-center">
+                        <CheckCircle2 className="h-9 w-9 text-green-500/60" />
                         <p className="text-sm text-muted-foreground">Nenhuma avaliação aguardando finalização.</p>
                       </div>
                     ) : (
@@ -898,12 +898,12 @@ export function EvaluationsSection() {
                       <button
                         key={ev.id}
                         onClick={() => openEvalDetail(ev.id)}
-                        className="flex items-center justify-between w-full p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors text-left"
+                        className="flex w-full items-center justify-between rounded-2xl border border-border/60 bg-card/60 p-3.5 text-left transition-all hover:border-primary/30 hover:bg-muted/30"
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-medium text-foreground">{ev.evaluated_name}</p>
-                            <Badge className={cn("text-[10px]", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
+                            <Badge className={cn("rounded-full text-[10px]", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {ev.evaluator_name}{ev.overall_score != null && ` • ${ev.overall_score}/5`} • {new Date(ev.created_at).toLocaleDateString('pt-BR')}

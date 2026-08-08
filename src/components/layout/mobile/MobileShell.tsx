@@ -137,8 +137,8 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
 
       {/* Fixed full-width glass bottom nav */}
       <nav
-        className="glass-nav fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 rounded-t-3xl px-2 pt-2"
-        style={{ paddingBottom: 'max(0.6rem, env(safe-area-inset-bottom))' }}
+        className="glass-nav fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 rounded-t-[26px] px-2 pt-1.5"
+        style={{ paddingBottom: 'max(0.45rem, env(safe-area-inset-bottom))' }}
       >
         {TABS.map((tab) => {
           const Icon = tab.icon;
@@ -147,21 +147,22 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
             <button
               key={tab.id}
               onClick={() => onSectionChange(tab.id)}
-              className="relative flex h-14 flex-col items-center justify-center gap-1 rounded-2xl"
+              className="relative flex h-12 flex-col items-center justify-center gap-0.5 rounded-2xl"
             >
               {active && (
                 <motion.span
                   layoutId="mobile-nav-pill"
-                  className="absolute inset-x-1 inset-y-0 rounded-2xl bg-primary/12"
+                  className="absolute inset-x-1 inset-y-0 rounded-2xl bg-secondary/15"
                   transition={{ type: 'spring', stiffness: 420, damping: 34 }}
                 />
               )}
               <Icon
                 className={cn(
-                  'relative z-10 h-[22px] w-[22px] transition-colors duration-200',
-                  active ? 'text-primary' : 'text-muted-foreground',
+                  'relative z-10 h-5 w-5 transition-colors duration-200',
+                  active ? 'text-secondary' : 'text-muted-foreground',
                 )}
               />
+
               <span
                 className={cn(
                   'relative z-10 text-[11px] font-semibold transition-colors duration-200',
