@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
-import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, LayoutDashboard, Globe, ClipboardCheck, StickyNote } from 'lucide-react';
+import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, LayoutDashboard, Globe, ClipboardCheck, StickyNote, Megaphone } from 'lucide-react';
 import appLogo from '@/assets/nuvexa-logo.png';
 import { 
   MessageSquare, 
