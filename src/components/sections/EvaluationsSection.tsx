@@ -615,30 +615,38 @@ export function EvaluationsSection() {
   const canEdit = isEvaluator && currentEval && ['draft', 'in_progress'].includes(currentEval.status);
 
   // Render evaluation card list
+  const evalInitials = (name: string) => (name || '?').split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase();
+
   const renderEvalCard = (ev: Evaluation, showActions = true) => (
-    <div key={ev.id} className="flex items-center justify-between p-3 rounded-xl border border-border hover:border-primary/30 transition-colors">
+    <div
+      key={ev.id}
+      className="group flex items-center gap-3 rounded-2xl border border-border/60 bg-card/60 p-3.5 transition-all hover:border-primary/30 hover:bg-card hover:shadow-sm sm:p-4"
+    >
+      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+        {evalInitials(ev.evaluated_name)}
+      </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-foreground">{ev.evaluated_name}</p>
-        <div className="flex items-center gap-2 mt-1 flex-wrap">
-          <Badge className={cn("text-[10px]", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
+        <p className="truncate text-sm font-semibold text-foreground">{ev.evaluated_name}</p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <Badge className={cn("rounded-full text-[10px] font-medium", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
           {ev.position_name && <span className="text-xs text-muted-foreground">{ev.position_name}</span>}
-          {ev.overall_score != null && <span className="text-xs font-medium text-foreground">{ev.overall_score}/5</span>}
-          <span className="text-[10px] text-muted-foreground">{new Date(ev.created_at).toLocaleDateString('pt-BR')}</span>
+          {ev.overall_score != null && <span className="text-xs font-semibold text-foreground">{ev.overall_score}/5</span>}
+          <span className="text-[10px] text-muted-foreground/80">{new Date(ev.created_at).toLocaleDateString('pt-BR')}</span>
         </div>
       </div>
       {showActions && (
-        <div className="flex gap-1 flex-shrink-0">
-          <Button size="sm" variant="ghost" className="text-xs" onClick={() => openEvalDetail(ev.id)}>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          <Button size="sm" variant="ghost" className="rounded-xl text-xs" onClick={() => openEvalDetail(ev.id)}>
             <Eye className="h-4 w-4" />
           </Button>
           {ev.status === 'contested' && ev.evaluator_id === profile?.id && (
-            <Button size="sm" variant="outline" className="text-xs text-amber-600" onClick={() => openEvalDetail(ev.id)}>Responder</Button>
+            <Button size="sm" variant="outline" className="rounded-xl text-xs text-amber-600" onClick={() => openEvalDetail(ev.id)}>Responder</Button>
           )}
           {['approved', 'approved_with_obs'].includes(ev.status) && ev.evaluator_id === profile?.id && (
-            <Button size="sm" variant="outline" className="text-xs" onClick={() => finalizeEvaluation(ev.id)}>Finalizar</Button>
+            <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => finalizeEvaluation(ev.id)}>Finalizar</Button>
           )}
           {ev.status === 'finalized' && (
-            <Button size="sm" variant="ghost" className="text-xs" onClick={async () => {
+            <Button size="sm" variant="ghost" className="rounded-xl text-xs" onClick={async () => {
               const items = await fetchEvaluationItems(ev.id);
               generateFinalReport(ev, items);
             }}>
