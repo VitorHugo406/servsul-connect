@@ -141,7 +141,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-hidden p-3">
-        <ScrollArea className="h-full">
+        <ScrollArea className="h-full [&_[data-radix-scroll-area-scrollbar]]:hidden">
         <div className="space-y-1">
         {visibleMenuItems.map((item) => {
           const Icon = item.icon;
