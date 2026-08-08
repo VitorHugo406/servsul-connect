@@ -76,55 +76,48 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
-      {/* Topbar (compact on chat to preserve message area) */}
-      <header
-        className={cn(
-          'flex items-center justify-between px-4 shrink-0',
-          isChat ? 'pt-2 pb-1.5' : 'pt-4 pb-2',
-        )}
-      >
-        <div className="min-w-0">
-          {!isChat && (
+      {/* Topbar — hidden on chat so the conversation gets the full screen */}
+      {!isChat && (
+        <header className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
+          <div className="min-w-0">
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
               {current.eyebrow}
             </div>
-          )}
-          <div
-            className={cn('font-bold text-foreground truncate', isChat ? 'text-[15px]' : 'text-[18px]')}
-            style={{ fontFamily: "'Sora', system-ui, sans-serif" }}
-          >
-            {current.label}
+            <div
+              className="font-bold text-foreground truncate text-[18px]"
+              style={{ fontFamily: "'Sora', system-ui, sans-serif" }}
+            >
+              {current.label}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowNotifications(true)}
-            className={cn(
-              'relative rounded-xl bg-muted/60 flex items-center justify-center text-muted-foreground',
-              isChat ? 'w-8 h-8' : 'w-9 h-9',
-            )}
-            aria-label="Notificações"
-          >
-            <Bell className={isChat ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
-            {totalNotifs > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] rounded-full bg-destructive text-white text-[9px] font-bold flex items-center justify-center px-1 border-2 border-background">
-                {totalNotifs > 99 ? '99+' : totalNotifs}
-              </span>
-            )}
-          </button>
-          <button onClick={() => setShowProfile(true)} className={cn('rounded-xl overflow-hidden', isChat ? 'w-8 h-8' : 'w-9 h-9')}>
-            <Avatar className={cn('rounded-xl', isChat ? 'w-8 h-8' : 'w-9 h-9')}>
-              <AvatarImage src={profile?.avatar_url || ''} alt={displayName} />
-              <AvatarFallback
-                className="rounded-xl text-white text-xs font-bold"
-                style={{ background: 'linear-gradient(140deg, var(--brand, hsl(var(--primary))), var(--brand-2, hsl(var(--secondary))))' }}
-              >
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-          </button>
-        </div>
-      </header>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowNotifications(true)}
+              className="relative rounded-2xl bg-muted/60 flex items-center justify-center text-muted-foreground w-9 h-9"
+              aria-label="Notificações"
+            >
+              <Bell className="w-4 h-4" />
+              {totalNotifs > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-1 border-2 border-background">
+                  {totalNotifs > 99 ? '99+' : totalNotifs}
+                </span>
+              )}
+            </button>
+            <button onClick={() => setShowProfile(true)} className="rounded-2xl overflow-hidden w-9 h-9">
+              <Avatar className="rounded-2xl w-9 h-9">
+                <AvatarImage src={profile?.avatar_url || ''} alt={displayName} />
+                <AvatarFallback
+                  className="rounded-2xl text-primary-foreground text-xs font-bold"
+                  style={{ background: 'linear-gradient(140deg, var(--brand, hsl(var(--primary))), var(--brand-2, hsl(var(--secondary))))' }}
+                >
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </div>
+        </header>
+      )}
+
 
       {/* Main content */}
       <main className="flex-1 overflow-hidden relative">

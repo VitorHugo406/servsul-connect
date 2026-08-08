@@ -669,15 +669,17 @@ export function EvaluationsSection() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 md:p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="font-display text-2xl font-bold text-foreground flex items-center gap-2">
-            <ClipboardCheck className="h-7 w-7 text-primary" />
-            Avaliações de Desempenho
-          </h3>
-          <p className="text-muted-foreground text-sm mt-1">Gestão de avaliações, competências e feedbacks</p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl gradient-primary shadow-glow">
+            <ClipboardCheck className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h3 className="font-display text-xl sm:text-2xl font-bold text-foreground">Avaliações de Desempenho</h3>
+            <p className="text-muted-foreground text-sm mt-0.5">Gestão de avaliações, competências e feedbacks</p>
+          </div>
         </div>
         {canCreateEvaluations && (
-          <Button onClick={() => { fetchTeamMembers(); setShowNewEval(true); }} className="gap-2">
+          <Button onClick={() => { fetchTeamMembers(); setShowNewEval(true); }} className="gap-2 rounded-xl">
             <Plus className="h-4 w-4" /> Nova Avaliação
           </Button>
         )}
@@ -686,20 +688,20 @@ export function EvaluationsSection() {
       {/* Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: 'Pendências', value: totalPendencies, icon: Bell, color: 'text-amber-500' },
-          { label: 'Rascunhos', value: draftCount, icon: Settings2, color: 'text-blue-500' },
-          { label: 'Contestadas', value: contestedCount, icon: AlertTriangle, color: 'text-destructive' },
-          { label: 'Finalizadas', value: finalizedCount, icon: BarChart3, color: 'text-green-500' },
-          { label: 'Nota Média', value: avgScore || '-', icon: TrendingUp, color: 'text-primary' },
+          { label: 'Pendências', value: totalPendencies, icon: Bell, color: 'text-amber-500 bg-amber-500/10' },
+          { label: 'Rascunhos', value: draftCount, icon: Settings2, color: 'text-blue-500 bg-blue-500/10' },
+          { label: 'Contestadas', value: contestedCount, icon: AlertTriangle, color: 'text-destructive bg-destructive/10' },
+          { label: 'Finalizadas', value: finalizedCount, icon: BarChart3, color: 'text-green-500 bg-green-500/10' },
+          { label: 'Nota Média', value: avgScore || '-', icon: TrendingUp, color: 'text-primary bg-primary/10' },
         ].map(m => (
           <Card key={m.label} className="group cursor-pointer rounded-2xl border-border/60 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-primary/30" onClick={() => m.label === 'Pendências' && setActiveTab('pendencies')}>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className={cn("rounded-full p-2 bg-muted", m.color)}>
+            <CardContent className="p-3.5 sm:p-4 flex items-center gap-3">
+              <div className={cn("flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl", m.color)}>
                 <m.icon className="h-5 w-5" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{m.value}</p>
-                <p className="text-xs text-muted-foreground">{m.label}</p>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-foreground leading-tight">{m.value}</p>
+                <p className="text-xs text-muted-foreground truncate">{m.label}</p>
               </div>
             </CardContent>
           </Card>
@@ -709,17 +711,17 @@ export function EvaluationsSection() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <ScrollArea className="w-full">
-          <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))` }}>
-            <TabsTrigger value="dashboard" className="text-xs">Dashboard</TabsTrigger>
-            <TabsTrigger value="pendencies" className="text-xs relative">
+          <TabsList className="grid w-full rounded-xl bg-muted/60 p-1" style={{ gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))` }}>
+            <TabsTrigger value="dashboard" className="rounded-lg text-xs">Dashboard</TabsTrigger>
+            <TabsTrigger value="pendencies" className="rounded-lg text-xs relative">
               Pendências
               {totalPendencies > 0 && (
                 <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[9px] text-destructive-foreground flex items-center justify-center">{totalPendencies}</span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="my-evals" className="text-xs">Minhas Avaliações</TabsTrigger>
-            {canCreateEvaluations && <TabsTrigger value="team" className="text-xs">Avaliações da Equipe</TabsTrigger>}
-            {canManageStructure && <TabsTrigger value="structure" className="text-xs">Estrutura</TabsTrigger>}
+            <TabsTrigger value="my-evals" className="rounded-lg text-xs">Minhas Avaliações</TabsTrigger>
+            {canCreateEvaluations && <TabsTrigger value="team" className="rounded-lg text-xs">Avaliações da Equipe</TabsTrigger>}
+            {canManageStructure && <TabsTrigger value="structure" className="rounded-lg text-xs">Estrutura</TabsTrigger>}
           </TabsList>
         </ScrollArea>
 
