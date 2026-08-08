@@ -928,24 +928,24 @@ export function EvaluationsSection() {
               ) : (
                 <div className="space-y-2">
                   {myEvaluations.map(ev => (
-                    <div key={ev.id} className="p-4 rounded-xl border border-border space-y-3 hover:border-primary/30 transition-colors">
-                      <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div key={ev.id} className="rounded-2xl border border-border/60 bg-card/60 p-4 space-y-3 transition-all hover:border-primary/30 hover:shadow-sm sm:p-5">
+                      <div className="flex items-center justify-between flex-wrap gap-3">
                         <div>
-                          <Badge className={cn("text-[10px]", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <Badge className={cn("rounded-full text-[10px]", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
+                          <p className="text-xs text-muted-foreground mt-1.5">
                             Avaliador: {ev.evaluator_name} • {new Date(ev.created_at).toLocaleDateString('pt-BR')}
                             {ev.position_name && ` • Cargo: ${ev.position_name}`}
                           </p>
                         </div>
                         {ev.overall_score != null && (
                           <div className="text-right">
-                            <p className="text-2xl font-bold text-foreground">{ev.overall_score}</p>
+                            <p className="text-2xl font-bold text-foreground leading-tight">{ev.overall_score}</p>
                             <p className={cn("text-[10px] font-medium", classifyColor(classifyScore(ev.overall_score) || ''))}>{classifyLabel(classifyScore(ev.overall_score) || '')}</p>
                           </div>
                         )}
                       </div>
                       <div className="flex gap-2 flex-wrap">
-                        <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => openEvalDetail(ev.id)}>
+                        <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1" onClick={() => openEvalDetail(ev.id)}>
                           <Eye className="h-3.5 w-3.5" /> Ver Detalhes
                         </Button>
                       </div>
