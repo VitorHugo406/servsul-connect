@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import appLogo from '@/assets/nuvexa-logo.png';
 
 const monthThemes: Record<number, { name: string; emoji: string; accent: [number, number, number] }> = {
@@ -209,21 +210,26 @@ export function BirthdaysSection() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 md:p-6 space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl gradient-secondary shadow-glow"><Cake className="h-6 w-6 text-secondary-foreground" /></div>
-          <div>
-            <h2 className="font-display text-2xl font-bold text-foreground">Painel de Aniversariantes</h2>
-            <p className="text-sm text-muted-foreground">{theme.name} • mensagens antecipadas em fins de semana e feriados</p>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 p-4 md:p-6">
+      <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-secondary/15 via-card to-primary/5 p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-secondary/20 blur-2xl" />
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl gradient-secondary shadow-glow text-xl">
+              {theme.emoji}
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-display text-xl sm:text-2xl font-bold text-foreground">Painel de Aniversariantes</h2>
+              <p className="text-sm text-muted-foreground truncate">{theme.name} • mensagens antecipadas em fins de semana e feriados</p>
+            </div>
           </div>
+          <Button onClick={generateMonthlyPdf} disabled={generatingPdf || birthdayPeople.length === 0} className="w-full gap-2 rounded-xl sm:w-auto">
+            <Download className="h-4 w-4" /> {generatingPdf ? 'Gerando...' : 'Baixar PDF do mês'}
+          </Button>
         </div>
-        <Button onClick={generateMonthlyPdf} disabled={generatingPdf || birthdayPeople.length === 0} className="gap-2">
-          <Download className="h-4 w-4" /> {generatingPdf ? 'Gerando...' : 'Baixar PDF do mês'}
-        </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 md:gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Metric icon={Users} label="No mês" value={birthdayPeople.length} />
         <Metric icon={PartyPopper} label="Hoje" value={todayBirthdays.length} />
         <Metric icon={Sparkles} label="Mensagem hoje" value={celebrationToday.length} />
@@ -236,11 +242,18 @@ export function BirthdaysSection() {
           <div className="grid gap-4 lg:grid-cols-2">
             {celebrationToday.map((person, index) => (
               <motion.div key={person.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
-                <Card className="overflow-hidden border-secondary/30 bg-secondary/5">
-                  <CardContent className="p-4 space-y-4">
+                <Card className="overflow-hidden rounded-2xl border-secondary/30 bg-gradient-to-br from-secondary/10 via-card to-card shadow-sm">
+                  <CardContent className="space-y-4 p-4 sm:p-5">
                     <BirthdayRow person={person} getInitials={getInitials} badge="Mensagem hoje" highlight />
-                    <Textarea value={messages[person.id] || ''} onChange={(e) => setMessages((prev) => ({ ...prev, [person.id]: e.target.value }))} placeholder={`Escreva uma mensagem para ${person.name}...`} className="min-h-[88px]" />
-                    <Button onClick={() => sendGreeting(person)} disabled={sendingId === person.id} className="w-full gap-2"><Send className="h-4 w-4" /> Enviar no chat Geral</Button>
+                    <Textarea
+                      value={messages[person.id] || ''}
+                      onChange={(e) => setMessages((prev) => ({ ...prev, [person.id]: e.target.value }))}
+                      placeholder={`Escreva uma mensagem para ${person.name}...`}
+                      className="min-h-[88px] rounded-xl"
+                    />
+                    <Button onClick={() => sendGreeting(person)} disabled={sendingId === person.id} className="w-full gap-2 rounded-xl">
+                      <Send className="h-4 w-4" /> Enviar no chat Geral
+                    </Button>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -252,12 +265,22 @@ export function BirthdaysSection() {
       <section className="space-y-3">
         <SectionTitle icon={Calendar} title="Todos os aniversariantes do mês" subtitle="Visão completa para planejamento das felicitações e ações internas." />
         {birthdayPeople.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center"><div className="mb-4 rounded-full bg-muted p-4"><span className="text-4xl">🎂</span></div><h4 className="font-display text-lg font-semibold text-foreground">Nenhum aniversariante</h4><p className="text-sm text-muted-foreground">Não há aniversariantes neste mês com data cadastrada.</p></div>
+          <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-16 text-center">
+            <div className="mb-1 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+              <span className="text-3xl">🎂</span>
+            </div>
+            <h4 className="font-display text-lg font-semibold text-foreground">Nenhum aniversariante</h4>
+            <p className="text-sm text-muted-foreground">Não há aniversariantes neste mês com data cadastrada.</p>
+          </div>
         ) : (
           <div className="grid gap-3 xl:grid-cols-2">
             {[...todayBirthdays, ...upcomingBirthdays, ...pastBirthdays].map((person, index) => (
               <motion.div key={person.id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.03 }}>
-                <Card className="transition-all hover:shadow-md"><CardContent className="p-4"><BirthdayRow person={person} getInitials={getInitials} badge={person.isToday ? 'Hoje' : formatBirthday(person.birthDate)} /></CardContent></Card>
+                <Card className="rounded-2xl border-border/60 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
+                  <CardContent className="p-4">
+                    <BirthdayRow person={person} getInitials={getInitials} badge={person.isToday ? 'Hoje' : formatBirthday(person.birthDate)} />
+                  </CardContent>
+                </Card>
               </motion.div>
             ))}
           </div>
@@ -268,13 +291,61 @@ export function BirthdaysSection() {
 }
 
 function Metric({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: number }) {
-  return <Card><CardContent className="flex items-center gap-2 p-2.5 md:p-4 md:gap-3"><div className="flex h-8 w-8 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10"><Icon className="h-4 w-4 md:h-5 md:w-5 text-primary" /></div><div className="min-w-0"><p className="text-lg md:text-2xl font-bold text-foreground leading-tight">{value}</p><p className="text-[10px] md:text-xs text-muted-foreground truncate">{label}</p></div></CardContent></Card>;
+  return (
+    <Card className="rounded-2xl border-border/60 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+      <CardContent className="flex items-center gap-3 p-3.5 sm:p-4">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10">
+          <Icon className="h-5 w-5 text-primary" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-xl sm:text-2xl font-bold leading-tight text-foreground">{value}</p>
+          <p className="truncate text-xs text-muted-foreground">{label}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function SectionTitle({ icon: Icon, title, subtitle }: { icon: LucideIcon; title: string; subtitle: string }) {
-  return <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted"><Icon className="h-5 w-5 text-muted-foreground" /></div><div><h3 className="font-display text-lg font-semibold text-foreground">{title}</h3><p className="text-sm text-muted-foreground">{subtitle}</p></div></div>;
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-muted">
+        <Icon className="h-5 w-5 text-muted-foreground" />
+      </div>
+      <div className="min-w-0">
+        <h3 className="font-display text-base sm:text-lg font-semibold text-foreground">{title}</h3>
+        <p className="text-sm text-muted-foreground">{subtitle}</p>
+      </div>
+    </div>
+  );
 }
 
 function BirthdayRow({ person, getInitials, badge, highlight }: { person: BirthdayPerson; getInitials: (name: string) => string; badge: string; highlight?: boolean }) {
-  return <div className="flex items-center gap-4"><div className="relative"><Avatar className={highlight ? 'h-16 w-16 ring-4 ring-secondary/30' : 'h-12 w-12'}><AvatarImage src={person.avatar} /><AvatarFallback className="bg-secondary text-secondary-foreground font-bold">{getInitials(person.name)}</AvatarFallback></Avatar><div className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-card shadow"><span>🎂</span></div></div><div className="min-w-0 flex-1"><h4 className="font-semibold text-foreground truncate">{person.name}</h4><p className="text-sm text-muted-foreground truncate">{person.sector}</p><div className="mt-1 flex flex-wrap gap-2"><Badge variant={highlight ? 'default' : 'outline'}><Cake className="mr-1 h-3 w-3" />{badge}</Badge>{person.celebrationDate && <Badge variant="secondary"><CheckCircle2 className="mr-1 h-3 w-3" />Mensagem: {formatShortDate(person.celebrationDate)}</Badge>}</div></div></div>;
+  return (
+    <div className="flex items-center gap-4">
+      <div className="relative flex-shrink-0">
+        <Avatar className={cn(highlight ? 'h-16 w-16 ring-4 ring-secondary/30' : 'h-12 w-12 ring-2 ring-border/50')}>
+          <AvatarImage src={person.avatar} />
+          <AvatarFallback className="bg-secondary font-bold text-secondary-foreground">{getInitials(person.name)}</AvatarFallback>
+        </Avatar>
+        <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-card text-sm shadow ring-1 ring-border/50">
+          🎂
+        </div>
+      </div>
+      <div className="min-w-0 flex-1">
+        <h4 className="truncate font-semibold text-foreground">{person.name}</h4>
+        <p className="truncate text-sm text-muted-foreground">{person.sector}</p>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <Badge variant={highlight ? 'default' : 'outline'} className="rounded-full">
+            <Cake className="mr-1 h-3 w-3" />{badge}
+          </Badge>
+          {person.celebrationDate && (
+            <Badge variant="secondary" className="rounded-full">
+              <CheckCircle2 className="mr-1 h-3 w-3" />Mensagem: {formatShortDate(person.celebrationDate)}
+            </Badge>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
