@@ -63,7 +63,7 @@
     --radius: 0.75rem;
 
     /* Mobile bottom navigation height (icon+label row + paddings + safe area) */
-    --mobile-nav-h: calc(4.25rem + env(safe-area-inset-bottom));
+    --mobile-nav-h: calc(3.75rem + env(safe-area-inset-bottom));
 
 
     /* Sidebar - Dark Theme */

@@ -76,55 +76,48 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
-      {/* Topbar (compact on chat to preserve message area) */}
-      <header
-        className={cn(
-          'flex items-center justify-between px-4 shrink-0',
-          isChat ? 'pt-2 pb-1.5' : 'pt-4 pb-2',
-        )}
-      >
-        <div className="min-w-0">
-          {!isChat && (
+      {/* Topbar — hidden on chat so the conversation gets the full screen */}
+      {!isChat && (
+        <header className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
+          <div className="min-w-0">
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
               {current.eyebrow}
             </div>
-          )}
-          <div
-            className={cn('font-bold text-foreground truncate', isChat ? 'text-[15px]' : 'text-[18px]')}
-            style={{ fontFamily: "'Sora', system-ui, sans-serif" }}
-          >
-            {current.label}
+            <div
+              className="font-bold text-foreground truncate text-[18px]"
+              style={{ fontFamily: "'Sora', system-ui, sans-serif" }}
+            >
+              {current.label}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowNotifications(true)}
-            className={cn(
-              'relative rounded-xl bg-muted/60 flex items-center justify-center text-muted-foreground',
-              isChat ? 'w-8 h-8' : 'w-9 h-9',
-            )}
-            aria-label="Notificações"
-          >
-            <Bell className={isChat ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
-            {totalNotifs > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] rounded-full bg-destructive text-white text-[9px] font-bold flex items-center justify-center px-1 border-2 border-background">
-                {totalNotifs > 99 ? '99+' : totalNotifs}
-              </span>
-            )}
-          </button>
-          <button onClick={() => setShowProfile(true)} className={cn('rounded-xl overflow-hidden', isChat ? 'w-8 h-8' : 'w-9 h-9')}>
-            <Avatar className={cn('rounded-xl', isChat ? 'w-8 h-8' : 'w-9 h-9')}>
-              <AvatarImage src={profile?.avatar_url || ''} alt={displayName} />
-              <AvatarFallback
-                className="rounded-xl text-white text-xs font-bold"
-                style={{ background: 'linear-gradient(140deg, var(--brand, hsl(var(--primary))), var(--brand-2, hsl(var(--secondary))))' }}
-              >
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-          </button>
-        </div>
-      </header>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowNotifications(true)}
+              className="relative rounded-2xl bg-muted/60 flex items-center justify-center text-muted-foreground w-9 h-9"
+              aria-label="Notificações"
+            >
+              <Bell className="w-4 h-4" />
+              {totalNotifs > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-1 border-2 border-background">
+                  {totalNotifs > 99 ? '99+' : totalNotifs}
+                </span>
+              )}
+            </button>
+            <button onClick={() => setShowProfile(true)} className="rounded-2xl overflow-hidden w-9 h-9">
+              <Avatar className="rounded-2xl w-9 h-9">
+                <AvatarImage src={profile?.avatar_url || ''} alt={displayName} />
+                <AvatarFallback
+                  className="rounded-2xl text-primary-foreground text-xs font-bold"
+                  style={{ background: 'linear-gradient(140deg, var(--brand, hsl(var(--primary))), var(--brand-2, hsl(var(--secondary))))' }}
+                >
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </div>
+        </header>
+      )}
+
 
       {/* Main content */}
       <main className="flex-1 overflow-hidden relative">
@@ -144,8 +137,8 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
 
       {/* Fixed full-width glass bottom nav */}
       <nav
-        className="glass-nav fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 rounded-t-3xl px-2 pt-2"
-        style={{ paddingBottom: 'max(0.6rem, env(safe-area-inset-bottom))' }}
+        className="glass-nav fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 rounded-t-[26px] px-2 pt-1.5"
+        style={{ paddingBottom: 'max(0.45rem, env(safe-area-inset-bottom))' }}
       >
         {TABS.map((tab) => {
           const Icon = tab.icon;
@@ -154,25 +147,26 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
             <button
               key={tab.id}
               onClick={() => onSectionChange(tab.id)}
-              className="relative flex h-14 flex-col items-center justify-center gap-1 rounded-2xl"
+              className="relative flex h-12 flex-col items-center justify-center gap-0.5 rounded-2xl"
             >
               {active && (
                 <motion.span
                   layoutId="mobile-nav-pill"
-                  className="absolute inset-x-1 inset-y-0 rounded-2xl bg-primary/12"
+                  className="absolute inset-x-1 inset-y-0 rounded-2xl bg-secondary/15"
                   transition={{ type: 'spring', stiffness: 420, damping: 34 }}
                 />
               )}
               <Icon
                 className={cn(
-                  'relative z-10 h-[22px] w-[22px] transition-colors duration-200',
-                  active ? 'text-primary' : 'text-muted-foreground',
+                  'relative z-10 h-5 w-5 transition-colors duration-200',
+                  active ? 'text-secondary' : 'text-muted-foreground',
                 )}
               />
+
               <span
                 className={cn(
-                  'relative z-10 text-[11px] font-semibold transition-colors duration-200',
-                  active ? 'text-primary' : 'text-muted-foreground',
+                  'relative z-10 text-[10px] font-semibold transition-colors duration-200',
+                  active ? 'text-secondary' : 'text-muted-foreground',
                 )}
               >
                 {tab.label}

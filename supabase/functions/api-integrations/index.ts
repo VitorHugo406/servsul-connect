@@ -66,7 +66,7 @@ function getAdminClient() {
   );
 }
 
-async function validateAdminAuth(req: Request): Promise<{ userId: string } | null> {
+async function validateAdminAuth(req: Request): Promise<{ userId: string; companyId: string; isSuperAdmin: boolean } | null> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
 
@@ -83,14 +83,17 @@ async function validateAdminAuth(req: Request): Promise<{ userId: string } | nul
   const { data: roleData } = await adminClient.from("user_roles").select("role").eq("user_id", userId);
   const roles = (roleData || []).map((r: any) => r.role);
   
-  if (!roles.includes("admin")) {
+  if (!roles.includes("admin") && !roles.includes("super_admin")) {
     return null;
   }
 
-  return { userId };
+  const { data: profile } = await adminClient.from("profiles").select("company_id").eq("user_id", userId).maybeSingle();
+  if (!profile?.company_id) return null;
+
+  return { userId, companyId: profile.company_id, isSuperAdmin: roles.includes("super_admin") };
 }
 
-async function validateApiAuth(req: Request): Promise<{ integrationId: string } | null> {
+async function validateApiAuth(req: Request): Promise<{ integrationId: string; companyId: string } | null> {
   const apiKey = req.headers.get("X-API-KEY");
   const apiToken = req.headers.get("X-API-TOKEN");
   if (!apiKey || !apiToken) return null;
@@ -99,7 +102,7 @@ async function validateApiAuth(req: Request): Promise<{ integrationId: string } 
   const apiKeyHash = await hashToken(apiKey);
   const { data: integration } = await admin
     .from("api_integrations")
-    .select("id, is_active, api_token_hash")
+    .select("id, is_active, api_token_hash, company_id")
     .eq("api_key_hash", apiKeyHash)
     .maybeSingle();
 
@@ -111,7 +114,7 @@ async function validateApiAuth(req: Request): Promise<{ integrationId: string } 
 
   await admin.from("api_integrations").update({ last_used_at: new Date().toISOString() }).eq("id", integration.id);
 
-  return { integrationId: integration.id };
+  return { integrationId: integration.id, companyId: integration.company_id };
 }
 
 async function logAccess(integrationId: string, endpoint: string, method: string, statusCode: number, ip: string | null) {
@@ -126,7 +129,7 @@ async function logAccess(integrationId: string, endpoint: string, method: string
 }
 
 // ===== ADMIN ENDPOINTS =====
-async function handleAdminCreateIntegration(req: Request, userId: string) {
+async function handleAdminCreateIntegration(req: Request, userId: string, companyId: string) {
   const body = await req.json();
   const name = body.name?.trim();
   if (!name) return jsonResponse({ status: "error", message: "Nome é obrigatório." }, 400);
@@ -143,6 +146,7 @@ async function handleAdminCreateIntegration(req: Request, userId: string) {
     api_key_hash: apiKeyHash,
     api_token_hash: tokenHash,
     created_by: userId,
+    company_id: companyId,
   }).select().single();
 
   if (error) {
@@ -174,12 +178,14 @@ async function handleAdminCreateIntegration(req: Request, userId: string) {
   });
 }
 
-async function handleAdminListIntegrations() {
+async function handleAdminListIntegrations(companyId: string, isSuperAdmin: boolean) {
   const admin = getAdminClient();
-  const { data, error } = await admin
+  let query = admin
     .from("api_integrations")
-    .select("id, name, is_active, created_by, created_at, updated_at, last_used_at")
+    .select("id, name, is_active, created_by, created_at, updated_at, last_used_at, company_id")
     .order("created_at", { ascending: false });
+  if (!isSuperAdmin) query = query.eq("company_id", companyId);
+  const { data, error } = await query;
 
   if (error) return jsonResponse({ status: "error", message: error.message }, 500);
 
@@ -196,10 +202,13 @@ async function handleAdminListIntegrations() {
   return jsonResponse({ status: "success", data: integrations });
 }
 
-async function handleAdminToggle(integrationId: string, activate: boolean, userId: string) {
+async function handleAdminToggle(integrationId: string, activate: boolean, userId: string, companyId: string, isSuperAdmin: boolean) {
   const admin = getAdminClient();
-  const { error } = await admin.from("api_integrations").update({ is_active: activate, updated_at: new Date().toISOString() }).eq("id", integrationId);
+  let query = admin.from("api_integrations").update({ is_active: activate, updated_at: new Date().toISOString() }).eq("id", integrationId);
+  if (!isSuperAdmin) query = query.eq("company_id", companyId);
+  const { data, error } = await query.select().maybeSingle();
   if (error) return jsonResponse({ status: "error", message: error.message }, 500);
+  if (!data) return jsonResponse({ status: "error", message: "Integração não encontrada." }, 404);
 
   await admin.from("api_integration_history").insert({
     integration_id: integrationId,
@@ -210,24 +219,27 @@ async function handleAdminToggle(integrationId: string, activate: boolean, userI
   return jsonResponse({ status: "success", message: activate ? "Integração ativada." : "Integração desativada." });
 }
 
-async function handleAdminRegenerate(integrationId: string, userId: string) {
+async function handleAdminRegenerate(integrationId: string, userId: string, companyId: string, isSuperAdmin: boolean) {
   const apiKey = generateKey("sk");
   const apiToken = generateKey("st");
   const apiKeyHash = await hashToken(apiKey);
   const tokenHash = await hashToken(apiToken);
 
   const admin = getAdminClient();
-  const { error } = await admin.from("api_integrations").update({
+  let updateQuery = admin.from("api_integrations").update({
     api_key_hint: `${apiKey.slice(0, 8)}…${apiKey.slice(-4)}`,
     api_key_hash: apiKeyHash,
     api_token_hash: tokenHash,
     updated_at: new Date().toISOString(),
   }).eq("id", integrationId);
+  if (!isSuperAdmin) updateQuery = updateQuery.eq("company_id", companyId);
+  const { data: updated, error } = await updateQuery.select().maybeSingle();
 
   if (error) {
     console.error("api_integrations regenerate error:", error);
     return jsonResponse({ status: "error", message: "Falha ao regenerar credenciais." }, 500);
   }
+  if (!updated) return jsonResponse({ status: "error", message: "Integração não encontrada." }, 404);
 
   await admin.from("api_integration_history").insert({
     integration_id: integrationId,
@@ -245,13 +257,18 @@ async function handleAdminRegenerate(integrationId: string, userId: string) {
   });
 }
 
-async function handleAdminDelete(integrationId: string, userId: string) {
+async function handleAdminDelete(integrationId: string, userId: string, companyId: string, isSuperAdmin: boolean) {
   const admin = getAdminClient();
-  
-  // Get name before delete
-  const { data: integ } = await admin.from("api_integrations").select("name").eq("id", integrationId).maybeSingle();
 
-  const { error } = await admin.from("api_integrations").delete().eq("id", integrationId);
+  // Get name before delete (scoped to company)
+  let integQuery = admin.from("api_integrations").select("id, name").eq("id", integrationId);
+  if (!isSuperAdmin) integQuery = integQuery.eq("company_id", companyId);
+  const { data: integ } = await integQuery.maybeSingle();
+  if (!integ) return jsonResponse({ status: "error", message: "Integração não encontrada." }, 404);
+
+  let delQuery = admin.from("api_integrations").delete().eq("id", integrationId);
+  if (!isSuperAdmin) delQuery = delQuery.eq("company_id", companyId);
+  const { error } = await delQuery;
   if (error) return jsonResponse({ status: "error", message: error.message }, 500);
 
   // Log to audit_logs since history is cascade deleted
@@ -266,8 +283,14 @@ async function handleAdminDelete(integrationId: string, userId: string) {
   return jsonResponse({ status: "success", message: "Integração excluída." });
 }
 
-async function handleAdminHistory(integrationId: string) {
+async function handleAdminHistory(integrationId: string, companyId: string, isSuperAdmin: boolean) {
   const admin = getAdminClient();
+
+  let integQuery = admin.from("api_integrations").select("id").eq("id", integrationId);
+  if (!isSuperAdmin) integQuery = integQuery.eq("company_id", companyId);
+  const { data: integ } = await integQuery.maybeSingle();
+  if (!integ) return jsonResponse({ status: "error", message: "Integração não encontrada." }, 404);
+
   const { data, error } = await admin
     .from("api_integration_history")
     .select("*")
@@ -297,36 +320,41 @@ function parseDateFilters(url: URL) {
   return { startDate, endDate };
 }
 
-async function handleMetricsGeneral(url: URL) {
+async function handleMetricsGeneral(url: URL, companyId: string) {
   const admin = getAdminClient();
   const { startDate, endDate } = parseDateFilters(url);
 
   // Total users
-  const { count: totalUsers } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("is_active", true);
+  const { count: totalUsers } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("is_active", true).eq("company_id", companyId);
   // Total sectors
-  const { count: totalSectors } = await admin.from("sectors").select("id", { count: "exact", head: true });
-  // Total teams (unique supervisors with team_name)
-  const { data: teamsData } = await admin.from("supervisor_team_members").select("supervisor_id, team_name");
-  const uniqueTeams = new Set((teamsData || []).map((t: any) => t.supervisor_id));
+  const { count: totalSectors } = await admin.from("sectors").select("id", { count: "exact", head: true }).eq("company_id", companyId);
+  // Total teams (unique supervisors with team_name) - scope by company via supervisor profiles
+  const { data: companySupervisors } = await admin.from("profiles").select("user_id").eq("company_id", companyId);
+  const supervisorUserIds = (companySupervisors || []).map((p: any) => p.user_id);
+  let uniqueTeams = new Set<string>();
+  if (supervisorUserIds.length > 0) {
+    const { data: teamsData } = await admin.from("supervisor_team_members").select("supervisor_id, team_name").in("supervisor_id", supervisorUserIds);
+    uniqueTeams = new Set((teamsData || []).map((t: any) => t.supervisor_id));
+  }
 
   // Messages
-  let msgQuery = admin.from("messages").select("id", { count: "exact", head: true });
+  let msgQuery = admin.from("messages").select("id", { count: "exact", head: true }).eq("company_id", companyId);
   if (startDate) msgQuery = msgQuery.gte("created_at", startDate);
   if (endDate) msgQuery = msgQuery.lte("created_at", endDate);
   const { count: totalMessages } = await msgQuery;
 
   // Tasks
-  let taskQuery = admin.from("tasks").select("id", { count: "exact", head: true }).eq("is_template", false);
+  let taskQuery = admin.from("tasks").select("id", { count: "exact", head: true }).eq("is_template", false).eq("company_id", companyId);
   if (startDate) taskQuery = taskQuery.gte("created_at", startDate);
   if (endDate) taskQuery = taskQuery.lte("created_at", endDate);
   const { count: totalTasks } = await taskQuery;
 
-  let completedQuery = admin.from("tasks").select("id", { count: "exact", head: true }).eq("is_template", false).not("completed_at", "is", null);
+  let completedQuery = admin.from("tasks").select("id", { count: "exact", head: true }).eq("is_template", false).eq("company_id", companyId).not("completed_at", "is", null);
   if (startDate) completedQuery = completedQuery.gte("created_at", startDate);
   if (endDate) completedQuery = completedQuery.lte("created_at", endDate);
   const { count: completedTasks } = await completedQuery;
 
-  let lateQuery = admin.from("tasks").select("id", { count: "exact", head: true }).eq("is_template", false).eq("completed_late", true);
+  let lateQuery = admin.from("tasks").select("id", { count: "exact", head: true }).eq("is_template", false).eq("company_id", companyId).eq("completed_late", true);
   if (startDate) lateQuery = lateQuery.gte("created_at", startDate);
   if (endDate) lateQuery = lateQuery.lte("created_at", endDate);
   const { count: lateTasks } = await lateQuery;
@@ -350,11 +378,11 @@ async function handleMetricsGeneral(url: URL) {
   });
 }
 
-async function handleMetricsUsers(url: URL, userId?: string) {
+async function handleMetricsUsers(url: URL, companyId: string, userId?: string) {
   const admin = getAdminClient();
   const { startDate, endDate } = parseDateFilters(url);
 
-  let profileQuery = admin.from("profiles").select("id, user_id, name, display_name, email, sector_id, autonomy_level, last_seen_at, user_status, is_active").eq("is_active", true);
+  let profileQuery = admin.from("profiles").select("id, user_id, name, display_name, email, sector_id, autonomy_level, last_seen_at, user_status, is_active").eq("is_active", true).eq("company_id", companyId);
   if (userId) profileQuery = profileQuery.eq("id", userId);
   const { data: profiles } = await profileQuery;
 
@@ -388,7 +416,7 @@ async function handleMetricsUsers(url: URL, userId?: string) {
     
     let assignedCount = 0, completedCount = 0, pendingCount = 0, lateCount = 0;
     if (assignedTaskIds.length > 0) {
-      let tq = admin.from("tasks").select("id, completed_at, completed_late").in("id", assignedTaskIds).eq("is_template", false);
+      let tq = admin.from("tasks").select("id, completed_at, completed_late").in("id", assignedTaskIds).eq("is_template", false).eq("company_id", companyId);
       if (startDate) tq = tq.gte("created_at", startDate);
       if (endDate) tq = tq.lte("created_at", endDate);
       const { data: tasks } = await tq;
@@ -401,7 +429,7 @@ async function handleMetricsUsers(url: URL, userId?: string) {
     // Sector name
     let sectorName = null;
     if (p.sector_id) {
-      const { data: sector } = await admin.from("sectors").select("name").eq("id", p.sector_id).maybeSingle();
+      const { data: sector } = await admin.from("sectors").select("name").eq("id", p.sector_id).eq("company_id", companyId).maybeSingle();
       sectorName = sector?.name;
     }
 
@@ -435,11 +463,11 @@ async function handleMetricsUsers(url: URL, userId?: string) {
   });
 }
 
-async function handleMetricsDepartments(url: URL, deptId?: string) {
+async function handleMetricsDepartments(url: URL, companyId: string, deptId?: string) {
   const admin = getAdminClient();
   const { startDate, endDate } = parseDateFilters(url);
 
-  let sectorQuery = admin.from("sectors").select("*");
+  let sectorQuery = admin.from("sectors").select("*").eq("company_id", companyId);
   if (deptId) sectorQuery = sectorQuery.eq("id", deptId);
   const { data: sectors } = await sectorQuery;
 
@@ -449,15 +477,15 @@ async function handleMetricsDepartments(url: URL, deptId?: string) {
 
   const results = [];
   for (const s of sectors) {
-    const { count: userCount } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("sector_id", s.id).eq("is_active", true);
+    const { count: userCount } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("sector_id", s.id).eq("is_active", true).eq("company_id", companyId);
 
-    let msgQ = admin.from("messages").select("id", { count: "exact", head: true }).eq("sector_id", s.id);
+    let msgQ = admin.from("messages").select("id", { count: "exact", head: true }).eq("sector_id", s.id).eq("company_id", companyId);
     if (startDate) msgQ = msgQ.gte("created_at", startDate);
     if (endDate) msgQ = msgQ.lte("created_at", endDate);
     const { count: messages } = await msgQ;
 
     // Tasks in this sector
-    let taskQ = admin.from("tasks").select("id, completed_at, completed_late", { count: "exact" }).eq("sector_id", s.id).eq("is_template", false);
+    let taskQ = admin.from("tasks").select("id, completed_at, completed_late", { count: "exact" }).eq("sector_id", s.id).eq("is_template", false).eq("company_id", companyId);
     if (startDate) taskQ = taskQ.gte("created_at", startDate);
     if (endDate) taskQ = taskQ.lte("created_at", endDate);
     const { data: tasks, count: totalTasks } = await taskQ;
@@ -485,13 +513,19 @@ async function handleMetricsDepartments(url: URL, deptId?: string) {
   });
 }
 
-async function handleMetricsTeams(url: URL, teamSupervisorId?: string) {
+async function handleMetricsTeams(url: URL, companyId: string, teamSupervisorId?: string) {
   const admin = getAdminClient();
   const { startDate, endDate } = parseDateFilters(url);
 
+  // Restrict to supervisors belonging to this company
+  const { data: companyProfiles } = await admin.from("profiles").select("id, user_id").eq("company_id", companyId);
+  const companyUserIds = new Set((companyProfiles || []).map((p: any) => p.user_id));
+  const companyProfileIds = new Set((companyProfiles || []).map((p: any) => p.id));
+
   let teamQuery = admin.from("supervisor_team_members").select("supervisor_id, member_profile_id, team_name");
   if (teamSupervisorId) teamQuery = teamQuery.eq("supervisor_id", teamSupervisorId);
-  const { data: teamData } = await teamQuery;
+  const { data: rawTeamData } = await teamQuery;
+  const teamData = (rawTeamData || []).filter((t: any) => companyUserIds.has(t.supervisor_id) && companyProfileIds.has(t.member_profile_id));
 
   // Group by supervisor
   const teamMap = new Map<string, { name: string; memberIds: string[] }>();
@@ -504,7 +538,7 @@ async function handleMetricsTeams(url: URL, teamSupervisorId?: string) {
 
   // Get supervisor names
   const supervisorIds = [...teamMap.keys()];
-  const { data: supervisorProfiles } = await admin.from("profiles").select("user_id, name, display_name").in("user_id", supervisorIds);
+  const { data: supervisorProfiles } = await admin.from("profiles").select("user_id, name, display_name").in("user_id", supervisorIds).eq("company_id", companyId);
   const supervisorNameMap = new Map((supervisorProfiles || []).map((p: any) => [p.user_id, p.display_name || p.name]));
 
   const results = [];
@@ -527,7 +561,7 @@ async function handleMetricsTeams(url: URL, teamSupervisorId?: string) {
       const { data: assignees } = await admin.from("task_assignees").select("task_id").in("profile_id", memberIds);
       const taskIds = [...new Set((assignees || []).map((a: any) => a.task_id))];
       if (taskIds.length > 0) {
-        let tq = admin.from("tasks").select("id, completed_at, completed_late").in("id", taskIds).eq("is_template", false);
+        let tq = admin.from("tasks").select("id, completed_at, completed_late").in("id", taskIds).eq("is_template", false).eq("company_id", companyId);
         if (startDate) tq = tq.gte("created_at", startDate);
         if (endDate) tq = tq.lte("created_at", endDate);
         const { data: tasks } = await tq;
@@ -558,12 +592,12 @@ async function handleMetricsTeams(url: URL, teamSupervisorId?: string) {
   });
 }
 
-async function handleTasksSummary(url: URL) {
+async function handleTasksSummary(url: URL, companyId: string) {
   const admin = getAdminClient();
   const { startDate, endDate } = parseDateFilters(url);
   const status = url.searchParams.get("status"); // completed, pending, late
 
-  let query = admin.from("tasks").select("id, title, status, priority, completed_at, completed_late, due_date, created_at, assigned_to, board_id").eq("is_template", false);
+  let query = admin.from("tasks").select("id, title, status, priority, completed_at, completed_late, due_date, created_at, assigned_to, board_id").eq("is_template", false).eq("company_id", companyId);
   if (startDate) query = query.gte("created_at", startDate);
   if (endDate) query = query.lte("created_at", endDate);
   if (status === "completed") query = query.not("completed_at", "is", null);
@@ -591,24 +625,31 @@ async function handleTasksSummary(url: URL) {
   });
 }
 
-async function handleMessagesSummary(url: URL) {
+async function handleMessagesSummary(url: URL, companyId: string) {
   const admin = getAdminClient();
   const { startDate, endDate } = parseDateFilters(url);
 
-  let chatQ = admin.from("messages").select("id", { count: "exact", head: true });
+  let chatQ = admin.from("messages").select("id", { count: "exact", head: true }).eq("company_id", companyId);
   if (startDate) chatQ = chatQ.gte("created_at", startDate);
   if (endDate) chatQ = chatQ.lte("created_at", endDate);
   const { count: chatMessages } = await chatQ;
 
-  let dmQ = admin.from("direct_messages").select("id", { count: "exact", head: true });
+  let dmQ = admin.from("direct_messages").select("id", { count: "exact", head: true }).eq("company_id", companyId);
   if (startDate) dmQ = dmQ.gte("created_at", startDate);
   if (endDate) dmQ = dmQ.lte("created_at", endDate);
   const { count: directMessages } = await dmQ;
 
-  let groupQ = admin.from("private_group_messages").select("id", { count: "exact", head: true });
-  if (startDate) groupQ = groupQ.gte("created_at", startDate);
-  if (endDate) groupQ = groupQ.lte("created_at", endDate);
-  const { count: groupMessages } = await groupQ;
+  // private_group_messages has no company_id; scope via private_groups in this company
+  const { data: companyGroups } = await admin.from("private_groups").select("id").eq("company_id", companyId);
+  const groupIds = (companyGroups || []).map((g: any) => g.id);
+  let groupMessages = 0;
+  if (groupIds.length > 0) {
+    let groupQ = admin.from("private_group_messages").select("id", { count: "exact", head: true }).in("group_id", groupIds);
+    if (startDate) groupQ = groupQ.gte("created_at", startDate);
+    if (endDate) groupQ = groupQ.lte("created_at", endDate);
+    const { count } = await groupQ;
+    groupMessages = count || 0;
+  }
 
   return jsonResponse({
     status: "success",
@@ -616,18 +657,18 @@ async function handleMessagesSummary(url: URL) {
     data: {
       chat_messages: chatMessages || 0,
       direct_messages: directMessages || 0,
-      group_messages: groupMessages || 0,
-      total: (chatMessages || 0) + (directMessages || 0) + (groupMessages || 0),
+      group_messages: groupMessages,
+      total: (chatMessages || 0) + (directMessages || 0) + groupMessages,
       filters: { start_date: startDate, end_date: endDate },
     },
   });
 }
 
 // ===== USER DATA ENDPOINTS (for external system integration) =====
-async function handleUsersData(url: URL, userId?: string) {
+async function handleUsersData(url: URL, companyId: string, userId?: string) {
   const admin = getAdminClient();
 
-  let query = admin.from("profiles").select("id, user_id, name, display_name, email, phone, avatar_url, sector_id, autonomy_level, is_active, birth_date, company, address, registration_number, work_period, user_status, last_seen_at, created_at, updated_at, profile_type");
+  let query = admin.from("profiles").select("id, user_id, name, display_name, email, phone, avatar_url, sector_id, autonomy_level, is_active, birth_date, company, address, registration_number, work_period, user_status, last_seen_at, created_at, updated_at, profile_type").eq("company_id", companyId);
   if (userId) query = query.eq("id", userId);
   else query = query.eq("is_active", true);
   const { data: profiles, error } = await query.order("name");
@@ -637,7 +678,7 @@ async function handleUsersData(url: URL, userId?: string) {
 
   // Enrich with sector name, roles, teams, permissions
   const sectorIds = [...new Set((profiles || []).map((p: any) => p.sector_id).filter(Boolean))];
-  const { data: sectors } = sectorIds.length > 0 ? await admin.from("sectors").select("id, name, color").in("id", sectorIds) : { data: [] };
+  const { data: sectors } = sectorIds.length > 0 ? await admin.from("sectors").select("id, name, color").in("id", sectorIds).eq("company_id", companyId) : { data: [] };
   const sectorMap = new Map((sectors || []).map((s: any) => [s.id, s]));
 
   const userIds = profiles.map((p: any) => p.user_id);
@@ -650,6 +691,7 @@ async function handleUsersData(url: URL, userId?: string) {
 
   const profileIds = profiles.map((p: any) => p.id);
   const { data: teamData } = await admin.from("supervisor_team_members").select("member_profile_id, supervisor_id, team_name").in("member_profile_id", profileIds);
+  // (member_profile_id is already scoped to companyId's profiles via profileIds above)
   const teamMap = new Map<string, { team_name: string; supervisor_id: string }[]>();
   for (const t of teamData || []) {
     if (!teamMap.has(t.member_profile_id)) teamMap.set(t.member_profile_id, []);
@@ -691,24 +733,31 @@ async function handleUsersData(url: URL, userId?: string) {
   });
 }
 
-async function handleUsersSectors(url: URL) {
+async function handleUsersSectors(url: URL, companyId: string) {
   const admin = getAdminClient();
-  const { data, error } = await admin.from("sectors").select("id, name, color, icon, created_at").order("name");
+  const { data, error } = await admin.from("sectors").select("id, name, color, icon, created_at").eq("company_id", companyId).order("name");
   if (error) return jsonResponse({ status: "error", message: error.message }, 500);
 
   // Count users per sector
   const results = [];
   for (const s of data || []) {
-    const { count } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("sector_id", s.id).eq("is_active", true);
+    const { count } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("sector_id", s.id).eq("is_active", true).eq("company_id", companyId);
     results.push({ ...s, total_users: count || 0 });
   }
 
   return jsonResponse({ status: "success", data: results });
 }
 
-async function handleUsersTeams(url: URL) {
+async function handleUsersTeams(url: URL, companyId: string) {
   const admin = getAdminClient();
-  const { data: teamData } = await admin.from("supervisor_team_members").select("supervisor_id, member_profile_id, team_name");
+
+  // Restrict to profiles belonging to this company
+  const { data: companyProfiles } = await admin.from("profiles").select("id, user_id").eq("company_id", companyId);
+  const companyUserIds = new Set((companyProfiles || []).map((p: any) => p.user_id));
+  const companyProfileIds = new Set((companyProfiles || []).map((p: any) => p.id));
+
+  const { data: rawTeamData } = await admin.from("supervisor_team_members").select("supervisor_id, member_profile_id, team_name");
+  const teamData = (rawTeamData || []).filter((t: any) => companyUserIds.has(t.supervisor_id) && companyProfileIds.has(t.member_profile_id));
 
   const teamMap = new Map<string, { name: string; memberIds: string[] }>();
   for (const t of teamData || []) {
@@ -717,14 +766,14 @@ async function handleUsersTeams(url: URL) {
   }
 
   const supervisorIds = [...teamMap.keys()];
-  const { data: supervisorProfiles } = await admin.from("profiles").select("user_id, id, name, display_name, email").in("user_id", supervisorIds);
+  const { data: supervisorProfiles } = await admin.from("profiles").select("user_id, id, name, display_name, email").in("user_id", supervisorIds).eq("company_id", companyId);
   const supMap = new Map((supervisorProfiles || []).map((p: any) => [p.user_id, p]));
 
   const results = [];
   for (const [supId, team] of teamMap) {
     const sup = supMap.get(supId);
     // Get member details
-    const { data: memberProfiles } = await admin.from("profiles").select("id, name, display_name, email, avatar_url, autonomy_level").in("id", team.memberIds);
+    const { data: memberProfiles } = await admin.from("profiles").select("id, name, display_name, email, avatar_url, autonomy_level").in("id", team.memberIds).eq("company_id", companyId);
     results.push({
       supervisor_id: supId,
       supervisor_name: sup?.display_name || sup?.name || "Desconhecido",
@@ -761,10 +810,10 @@ Deno.serve(async (req) => {
       }
 
       if (path === "/admin/integrations" && method === "POST") {
-        return handleAdminCreateIntegration(req, auth.userId);
+        return handleAdminCreateIntegration(req, auth.userId, auth.companyId);
       }
       if (path === "/admin/integrations" && method === "GET") {
-        return handleAdminListIntegrations();
+        return handleAdminListIntegrations(auth.companyId, auth.isSuperAdmin);
       }
 
       const idMatch = path.match(/^\/admin\/integrations\/([^/]+)\/?(activate|deactivate|regenerate|history)?$/);
@@ -772,11 +821,11 @@ Deno.serve(async (req) => {
         const integrationId = idMatch[1];
         const action = idMatch[2];
 
-        if (action === "activate" && method === "PATCH") return handleAdminToggle(integrationId, true, auth.userId);
-        if (action === "deactivate" && method === "PATCH") return handleAdminToggle(integrationId, false, auth.userId);
-        if (action === "regenerate" && method === "PATCH") return handleAdminRegenerate(integrationId, auth.userId);
-        if (action === "history" && method === "GET") return handleAdminHistory(integrationId);
-        if (!action && method === "DELETE") return handleAdminDelete(integrationId, auth.userId);
+        if (action === "activate" && method === "PATCH") return handleAdminToggle(integrationId, true, auth.userId, auth.companyId, auth.isSuperAdmin);
+        if (action === "deactivate" && method === "PATCH") return handleAdminToggle(integrationId, false, auth.userId, auth.companyId, auth.isSuperAdmin);
+        if (action === "regenerate" && method === "PATCH") return handleAdminRegenerate(integrationId, auth.userId, auth.companyId, auth.isSuperAdmin);
+        if (action === "history" && method === "GET") return handleAdminHistory(integrationId, auth.companyId, auth.isSuperAdmin);
+        if (!action && method === "DELETE") return handleAdminDelete(integrationId, auth.userId, auth.companyId, auth.isSuperAdmin);
       }
 
       return jsonResponse({ status: "error", message: "Rota não encontrada." }, 404);
@@ -793,35 +842,35 @@ Deno.serve(async (req) => {
     let response: Response;
 
     if (path === "/metrics/general" && method === "GET") {
-      response = await handleMetricsGeneral(url);
+      response = await handleMetricsGeneral(url, apiAuth.companyId);
     } else if (path === "/metrics/users" && method === "GET") {
-      response = await handleMetricsUsers(url);
+      response = await handleMetricsUsers(url, apiAuth.companyId);
     } else if (path.match(/^\/metrics\/users\/(.+)$/) && method === "GET") {
       const uid = path.match(/^\/metrics\/users\/(.+)$/)![1];
-      response = await handleMetricsUsers(url, uid);
+      response = await handleMetricsUsers(url, apiAuth.companyId, uid);
     } else if (path === "/metrics/departments" && method === "GET") {
-      response = await handleMetricsDepartments(url);
+      response = await handleMetricsDepartments(url, apiAuth.companyId);
     } else if (path.match(/^\/metrics\/departments\/(.+)$/) && method === "GET") {
       const did = path.match(/^\/metrics\/departments\/(.+)$/)![1];
-      response = await handleMetricsDepartments(url, did);
+      response = await handleMetricsDepartments(url, apiAuth.companyId, did);
     } else if (path === "/metrics/teams" && method === "GET") {
-      response = await handleMetricsTeams(url);
+      response = await handleMetricsTeams(url, apiAuth.companyId);
     } else if (path.match(/^\/metrics\/teams\/(.+)$/) && method === "GET") {
       const tid = path.match(/^\/metrics\/teams\/(.+)$/)![1];
-      response = await handleMetricsTeams(url, tid);
+      response = await handleMetricsTeams(url, apiAuth.companyId, tid);
     } else if (path === "/tasks/summary" && method === "GET") {
-      response = await handleTasksSummary(url);
+      response = await handleTasksSummary(url, apiAuth.companyId);
     } else if (path === "/messages/summary" && method === "GET") {
-      response = await handleMessagesSummary(url);
+      response = await handleMessagesSummary(url, apiAuth.companyId);
     } else if (path === "/users/data" && method === "GET") {
-      response = await handleUsersData(url);
+      response = await handleUsersData(url, apiAuth.companyId);
     } else if (path.match(/^\/users\/data\/(.+)$/) && method === "GET") {
       const uid = path.match(/^\/users\/data\/(.+)$/)![1];
-      response = await handleUsersData(url, uid);
+      response = await handleUsersData(url, apiAuth.companyId, uid);
     } else if (path === "/users/sectors" && method === "GET") {
-      response = await handleUsersSectors(url);
+      response = await handleUsersSectors(url, apiAuth.companyId);
     } else if (path === "/users/teams" && method === "GET") {
-      response = await handleUsersTeams(url);
+      response = await handleUsersTeams(url, apiAuth.companyId);
     } else {
       response = jsonResponse({ status: "error", message: "Rota não encontrada." }, 404);
     }

@@ -33,6 +33,8 @@ import { WarRoomSection } from '@/components/sections/WarRoomSection';
 import { EvaluationsSection } from '@/components/sections/EvaluationsSection';
 import { NotesSection } from '@/components/sections/NotesSection';
 import { CompaniesManagementSection } from '@/components/sections/CompaniesManagementSection';
+import { SystemBroadcastsSection } from '@/components/sections/SystemBroadcastsSection';
+import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
 import { FloatingNoteWindow } from '@/components/notes/FloatingNoteWindow';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { SeasonalMarquee } from '@/components/seasonal/SeasonalMarquee';
@@ -71,6 +73,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
    'evaluations': { title: 'Avaliações', subtitle: 'Avaliação de desempenho e feedback' },
    'notes': { title: 'Anotações', subtitle: 'Suas notas pessoais e compartilhadas' },
    'companies': { title: 'Empresas', subtitle: 'Gestão de tenants do sistema' },
+   'system-broadcasts': { title: 'Comunicados Globais', subtitle: 'Avisos para todas as empresas' },
 };
 
 const Index = () => {
@@ -197,6 +200,8 @@ const Index = () => {
            return <NotesSection />;
          case 'companies':
            return <CompaniesManagementSection />;
+         case 'system-broadcasts':
+           return <SystemBroadcastsSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }
@@ -274,6 +279,7 @@ const Index = () => {
       
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} />
+        <SystemBroadcastBanner />
         <SeasonalMarquee />
         
         <main className="flex-1 overflow-auto">

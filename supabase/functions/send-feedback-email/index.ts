@@ -27,6 +27,32 @@ function getCurrentMonthLabel(d: Date): string {
   return `${MONTH_NAMES_DISPLAY[d.getMonth()]} de ${d.getFullYear()}`
 }
 
+// Brazil (America/Sao_Paulo) has used a fixed UTC-03:00 offset (no DST) since 2019.
+const SAO_PAULO_OFFSET_HOURS = 3
+
+/**
+ * Returns the start/end ISO timestamps (in UTC) that correspond to the previous
+ * full calendar month in America/Sao_Paulo local time, plus a display label.
+ * e.g. if run on any day of August, returns July 1st 00:00:00 -> July 31st 23:59:59 (SP time).
+ */
+function getPreviousMonthRangeSaoPaulo(brNow: Date): { startIso: string; endIso: string; monthLabel: string } {
+  const currentYear = brNow.getFullYear()
+  const currentMonth = brNow.getMonth() // 0-indexed, month of "now" in SP time
+
+  // Previous month (handling year rollover)
+  const prevMonthIndex = currentMonth === 0 ? 11 : currentMonth - 1
+  const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear
+
+  // SP local midnight of day 1 of prevMonth == UTC time at (day1, SAO_PAULO_OFFSET_HOURS:00:00)
+  const startIso = new Date(Date.UTC(prevYear, prevMonthIndex, 1, SAO_PAULO_OFFSET_HOURS, 0, 0)).toISOString()
+  // Last instant (23:59:59) of prevMonth in SP time == UTC time at (day1 of NEXT month, SAO_PAULO_OFFSET_HOURS - 1 : 59 : 59)
+  const endIso = new Date(Date.UTC(prevYear, prevMonthIndex + 1, 1, SAO_PAULO_OFFSET_HOURS - 1, 59, 59, 999)).toISOString()
+
+  const monthLabel = `${MONTH_NAMES_DISPLAY[prevMonthIndex]} de ${prevYear}`
+
+  return { startIso, endIso, monthLabel }
+}
+
 function sanitize(text: string): string {
   return text
     .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
@@ -381,11 +407,12 @@ Deno.serve(async (req) => {
 
     const companyName = 'Nuvexa'
     const brNow = getBrazilNow()
-    const currentMonth = getCurrentMonthLabel(brNow)
     const dateStr = formatBrDate(brNow)
     const now = new Date()
-    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString()
-    const endOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59)).toISOString()
+    // Metrics are always computed for the previous full calendar month (America/Sao_Paulo),
+    // e.g. running on any day of August reports on July 1st 00:00 -> July 31st 23:59:59.
+    const { startIso: startOfMonth, endIso: endOfMonth, monthLabel: currentMonth } = getPreviousMonthRangeSaoPaulo(brNow)
+    const referenceMonthEnd = new Date(endOfMonth)
 
     let sentEmailCount = 0
     let sentDmCount = 0
@@ -412,6 +439,8 @@ Deno.serve(async (req) => {
           .from('tasks')
           .select('id, status, completed_at, completed_late, due_date')
           .eq('assigned_to', profile.id)
+          .gte('created_at', startOfMonth)
+          .lte('created_at', endOfMonth)
 
         const totalTasks = tasksData?.length || 0
         const completedTasks = tasksData?.filter((t: any) => t.completed_at)?.length || 0
@@ -419,7 +448,7 @@ Deno.serve(async (req) => {
         const overdueTasks = tasksData?.filter((t: any) => {
           if (t.completed_at) return false
           if (!t.due_date) return false
-          return new Date(t.due_date) < now
+          return new Date(t.due_date) < referenceMonthEnd
         })?.length || 0
 
         const totalMessages = (sectorMsgCount || 0) + (dmCount || 0)

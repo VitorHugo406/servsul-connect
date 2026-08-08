@@ -166,8 +166,11 @@ export function NotificationPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[calc(100%-1rem)] max-w-sm rounded-l-[28px] border-border/60 bg-card/92 p-0 shadow-2xl backdrop-blur-2xl">
-        <SheetHeader className="p-4 border-b border-border">
+      <SheetContent
+        side="right"
+        className="z-[70] flex w-[calc(100%-1rem)] max-w-sm flex-col rounded-l-2xl border-border/60 bg-popover text-foreground p-0 shadow-2xl"
+      >
+        <SheetHeader className="shrink-0 p-4 pt-[calc(1rem+env(safe-area-inset-top))] border-b border-border bg-popover">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-2">
               <Bell className="h-5 w-5" />
@@ -202,10 +205,19 @@ export function NotificationPanel({
           </div>
         </SheetHeader>
 
-        <ScrollArea className="h-[calc(100vh-5rem)]">
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="pb-[calc(1rem+env(safe-area-inset-bottom))]">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <div className="space-y-2 p-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="glass-shimmer flex items-center gap-3 rounded-xl p-3">
+                  <div className="h-10 w-10 rounded-full bg-transparent" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 w-2/3 rounded bg-transparent" />
+                    <div className="h-3 w-1/3 rounded bg-transparent" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : counts.total === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
@@ -305,6 +317,7 @@ export function NotificationPanel({
               )}
             </div>
           )}
+          </div>
         </ScrollArea>
       </SheetContent>
     </Sheet>

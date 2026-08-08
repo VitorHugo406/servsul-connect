@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
-import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, LayoutDashboard, Globe, ClipboardCheck, StickyNote } from 'lucide-react';
+import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, LayoutDashboard, Globe, ClipboardCheck, StickyNote, Megaphone } from 'lucide-react';
 import appLogo from '@/assets/nuvexa-logo.png';
 import { 
   MessageSquare, 
@@ -40,6 +40,7 @@ const menuItems = [
   
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
   { id: 'companies', icon: Building2, label: 'Empresas', superAdminOnly: true },
+  { id: 'system-broadcasts', icon: Megaphone, label: 'Comunicados Globais', superAdminOnly: true },
   { id: 'sectors', icon: Building2, label: 'Gestão de Setores', adminOnly: true },
    { id: 'important-announcements', icon: Sparkles, label: 'Comunicados Importantes', adminOnly: true },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
@@ -141,7 +142,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-hidden p-3">
-        <ScrollArea className="h-full">
+        <ScrollArea className="h-full [&_[data-radix-scroll-area-scrollbar]]:hidden">
         <div className="space-y-1">
         {visibleMenuItems.map((item) => {
           const Icon = item.icon;

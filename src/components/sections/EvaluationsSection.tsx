@@ -588,20 +588,21 @@ export function EvaluationsSection() {
   const renderStars = (score: number | null, onChange?: (v: number) => void) => {
     const stars = [1, 2, 3, 4, 5];
     return (
-      <div className="flex gap-0.5">
+      <div className={cn("inline-flex items-center gap-0.5 rounded-full px-1.5 py-1", onChange && "bg-muted/50")}>
         {stars.map(s => (
           <button
             key={s}
             type="button"
             onClick={() => onChange?.(s)}
             disabled={!onChange}
+            aria-label={`Nota ${s}`}
             className={cn(
-              "transition-colors",
-              onChange ? "cursor-pointer hover:scale-110" : "cursor-default",
-              s <= (score || 0) ? "text-amber-500" : "text-muted-foreground/30"
+              "flex h-6 w-6 items-center justify-center rounded-full transition-all duration-150",
+              onChange ? "cursor-pointer hover:scale-125 active:scale-95" : "cursor-default",
+              s <= (score || 0) ? "text-amber-500" : "text-muted-foreground/25"
             )}
           >
-            <Star className={cn("h-5 w-5", s <= (score || 0) && "fill-amber-500")} />
+            <Star className={cn("h-4 w-4 transition-transform", s <= (score || 0) && "fill-amber-500")} />
           </button>
         ))}
       </div>
@@ -614,30 +615,38 @@ export function EvaluationsSection() {
   const canEdit = isEvaluator && currentEval && ['draft', 'in_progress'].includes(currentEval.status);
 
   // Render evaluation card list
+  const evalInitials = (name: string) => (name || '?').split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase();
+
   const renderEvalCard = (ev: Evaluation, showActions = true) => (
-    <div key={ev.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-primary/30 transition-colors">
+    <div
+      key={ev.id}
+      className="group flex items-center gap-3 rounded-2xl border border-border/60 bg-card/60 p-3.5 transition-all hover:border-primary/30 hover:bg-card hover:shadow-sm sm:p-4"
+    >
+      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+        {evalInitials(ev.evaluated_name)}
+      </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-foreground">{ev.evaluated_name}</p>
-        <div className="flex items-center gap-2 mt-1 flex-wrap">
-          <Badge className={cn("text-[10px]", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
+        <p className="truncate text-sm font-semibold text-foreground">{ev.evaluated_name}</p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <Badge className={cn("rounded-full text-[10px] font-medium", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
           {ev.position_name && <span className="text-xs text-muted-foreground">{ev.position_name}</span>}
-          {ev.overall_score != null && <span className="text-xs font-medium text-foreground">{ev.overall_score}/5</span>}
-          <span className="text-[10px] text-muted-foreground">{new Date(ev.created_at).toLocaleDateString('pt-BR')}</span>
+          {ev.overall_score != null && <span className="text-xs font-semibold text-foreground">{ev.overall_score}/5</span>}
+          <span className="text-[10px] text-muted-foreground/80">{new Date(ev.created_at).toLocaleDateString('pt-BR')}</span>
         </div>
       </div>
       {showActions && (
-        <div className="flex gap-1 flex-shrink-0">
-          <Button size="sm" variant="ghost" className="text-xs" onClick={() => openEvalDetail(ev.id)}>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          <Button size="sm" variant="ghost" className="rounded-xl text-xs" onClick={() => openEvalDetail(ev.id)}>
             <Eye className="h-4 w-4" />
           </Button>
           {ev.status === 'contested' && ev.evaluator_id === profile?.id && (
-            <Button size="sm" variant="outline" className="text-xs text-amber-600" onClick={() => openEvalDetail(ev.id)}>Responder</Button>
+            <Button size="sm" variant="outline" className="rounded-xl text-xs text-amber-600" onClick={() => openEvalDetail(ev.id)}>Responder</Button>
           )}
           {['approved', 'approved_with_obs'].includes(ev.status) && ev.evaluator_id === profile?.id && (
-            <Button size="sm" variant="outline" className="text-xs" onClick={() => finalizeEvaluation(ev.id)}>Finalizar</Button>
+            <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => finalizeEvaluation(ev.id)}>Finalizar</Button>
           )}
           {ev.status === 'finalized' && (
-            <Button size="sm" variant="ghost" className="text-xs" onClick={async () => {
+            <Button size="sm" variant="ghost" className="rounded-xl text-xs" onClick={async () => {
               const items = await fetchEvaluationItems(ev.id);
               generateFinalReport(ev, items);
             }}>
@@ -660,15 +669,17 @@ export function EvaluationsSection() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 md:p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="font-display text-2xl font-bold text-foreground flex items-center gap-2">
-            <ClipboardCheck className="h-7 w-7 text-primary" />
-            Avaliações de Desempenho
-          </h3>
-          <p className="text-muted-foreground text-sm mt-1">Gestão de avaliações, competências e feedbacks</p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl gradient-primary shadow-glow">
+            <ClipboardCheck className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h3 className="font-display text-xl sm:text-2xl font-bold text-foreground">Avaliações de Desempenho</h3>
+            <p className="text-muted-foreground text-sm mt-0.5">Gestão de avaliações, competências e feedbacks</p>
+          </div>
         </div>
         {canCreateEvaluations && (
-          <Button onClick={() => { fetchTeamMembers(); setShowNewEval(true); }} className="gap-2">
+          <Button onClick={() => { fetchTeamMembers(); setShowNewEval(true); }} className="gap-2 rounded-xl">
             <Plus className="h-4 w-4" /> Nova Avaliação
           </Button>
         )}
@@ -677,20 +688,20 @@ export function EvaluationsSection() {
       {/* Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: 'Pendências', value: totalPendencies, icon: Bell, color: 'text-amber-500' },
-          { label: 'Rascunhos', value: draftCount, icon: Settings2, color: 'text-blue-500' },
-          { label: 'Contestadas', value: contestedCount, icon: AlertTriangle, color: 'text-destructive' },
-          { label: 'Finalizadas', value: finalizedCount, icon: BarChart3, color: 'text-green-500' },
-          { label: 'Nota Média', value: avgScore || '-', icon: TrendingUp, color: 'text-primary' },
+          { label: 'Pendências', value: totalPendencies, icon: Bell, color: 'text-amber-500 bg-amber-500/10' },
+          { label: 'Rascunhos', value: draftCount, icon: Settings2, color: 'text-blue-500 bg-blue-500/10' },
+          { label: 'Contestadas', value: contestedCount, icon: AlertTriangle, color: 'text-destructive bg-destructive/10' },
+          { label: 'Finalizadas', value: finalizedCount, icon: BarChart3, color: 'text-green-500 bg-green-500/10' },
+          { label: 'Nota Média', value: avgScore || '-', icon: TrendingUp, color: 'text-primary bg-primary/10' },
         ].map(m => (
-          <Card key={m.label} className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => m.label === 'Pendências' && setActiveTab('pendencies')}>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className={cn("rounded-full p-2 bg-muted", m.color)}>
+          <Card key={m.label} className="group cursor-pointer rounded-2xl border-border/60 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-primary/30" onClick={() => m.label === 'Pendências' && setActiveTab('pendencies')}>
+            <CardContent className="p-3.5 sm:p-4 flex items-center gap-3">
+              <div className={cn("flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl", m.color)}>
                 <m.icon className="h-5 w-5" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{m.value}</p>
-                <p className="text-xs text-muted-foreground">{m.label}</p>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-foreground leading-tight">{m.value}</p>
+                <p className="text-xs text-muted-foreground truncate">{m.label}</p>
               </div>
             </CardContent>
           </Card>
@@ -700,42 +711,42 @@ export function EvaluationsSection() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <ScrollArea className="w-full">
-          <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))` }}>
-            <TabsTrigger value="dashboard" className="text-xs">Dashboard</TabsTrigger>
-            <TabsTrigger value="pendencies" className="text-xs relative">
+          <TabsList className="grid w-full rounded-xl bg-muted/60 p-1" style={{ gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))` }}>
+            <TabsTrigger value="dashboard" className="rounded-lg text-xs">Dashboard</TabsTrigger>
+            <TabsTrigger value="pendencies" className="rounded-lg text-xs relative">
               Pendências
               {totalPendencies > 0 && (
                 <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[9px] text-destructive-foreground flex items-center justify-center">{totalPendencies}</span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="my-evals" className="text-xs">Minhas Avaliações</TabsTrigger>
-            {canCreateEvaluations && <TabsTrigger value="team" className="text-xs">Avaliações da Equipe</TabsTrigger>}
-            {canManageStructure && <TabsTrigger value="structure" className="text-xs">Estrutura</TabsTrigger>}
+            <TabsTrigger value="my-evals" className="rounded-lg text-xs">Minhas Avaliações</TabsTrigger>
+            {canCreateEvaluations && <TabsTrigger value="team" className="rounded-lg text-xs">Avaliações da Equipe</TabsTrigger>}
+            {canManageStructure && <TabsTrigger value="structure" className="rounded-lg text-xs">Estrutura</TabsTrigger>}
           </TabsList>
         </ScrollArea>
 
         {/* ===== PENDENCIES TAB ===== */}
         <TabsContent value="pendencies" className="space-y-4">
-          <Card>
+          <Card className="rounded-2xl border-border/60 shadow-sm">
             <CardContent className="p-4">
               <Tabs value={pendencyTab} onValueChange={setPendencyTab}>
-                <TabsList className="grid w-full mb-4" style={{ gridTemplateColumns: `repeat(${canCreateEvaluations ? 4 : 2}, minmax(0, 1fr))` }}>
+                <TabsList className="grid w-full mb-4 rounded-xl bg-muted/60 p-1" style={{ gridTemplateColumns: `repeat(${canCreateEvaluations ? 4 : 2}, minmax(0, 1fr))` }}>
                   {canCreateEvaluations && (
-                    <TabsTrigger value="to-evaluate" className="text-[10px] md:text-xs relative">
+                    <TabsTrigger value="to-evaluate" className="rounded-lg text-[10px] md:text-xs relative">
                       Avaliar
                       {toEvaluate.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-blue-500 hover:bg-blue-500">{toEvaluate.length}</Badge>}
                     </TabsTrigger>
                   )}
-                  <TabsTrigger value="awaiting-approval" className="text-[10px] md:text-xs relative">
+                  <TabsTrigger value="awaiting-approval" className="rounded-lg text-[10px] md:text-xs relative">
                     Para Aprovar
                     {pendingApproval.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-amber-500 hover:bg-amber-500">{pendingApproval.length}</Badge>}
                   </TabsTrigger>
-                  <TabsTrigger value="contested" className="text-[10px] md:text-xs relative">
+                  <TabsTrigger value="contested" className="rounded-lg text-[10px] md:text-xs relative">
                     Contestadas
                     {contested.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-destructive hover:bg-destructive">{contested.length}</Badge>}
                   </TabsTrigger>
                   {canCreateEvaluations && (
-                    <TabsTrigger value="finalize" className="text-[10px] md:text-xs relative">
+                    <TabsTrigger value="finalize" className="rounded-lg text-[10px] md:text-xs relative">
                       Finalizar
                       {awaitingFinalization.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-green-500 hover:bg-green-500">{awaitingFinalization.length}</Badge>}
                     </TabsTrigger>
@@ -745,8 +756,8 @@ export function EvaluationsSection() {
                 {canCreateEvaluations && (
                   <TabsContent value="to-evaluate">
                     {toEvaluate.length === 0 ? (
-                      <div className="text-center py-8">
-                        <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
+                      <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-10 text-center">
+                        <CheckCircle2 className="h-9 w-9 text-green-500/60" />
                         <p className="text-sm text-muted-foreground">Nenhuma avaliação pendente de preenchimento.</p>
                       </div>
                     ) : (
@@ -757,10 +768,10 @@ export function EvaluationsSection() {
 
                 <TabsContent value="awaiting-approval">
                   {pendingApproval.length === 0 ? (
-                    <div className="text-center py-8">
-                      <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhuma avaliação aguardando sua aprovação.</p>
-                    </div>
+                    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-10 text-center">
+                        <CheckCircle2 className="h-9 w-9 text-green-500/60" />
+                        <p className="text-sm text-muted-foreground">Nenhuma avaliação aguardando sua aprovação.</p>
+                      </div>
                   ) : (
                     <div className="space-y-2">{pendingApproval.map(ev => renderEvalCard(ev))}</div>
                   )}
@@ -768,10 +779,10 @@ export function EvaluationsSection() {
 
                 <TabsContent value="contested">
                   {contested.length === 0 ? (
-                    <div className="text-center py-8">
-                      <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhuma avaliação contestada.</p>
-                    </div>
+                    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-10 text-center">
+                        <CheckCircle2 className="h-9 w-9 text-green-500/60" />
+                        <p className="text-sm text-muted-foreground">Nenhuma avaliação contestada.</p>
+                      </div>
                   ) : (
                     <div className="space-y-2">{contested.map(ev => renderEvalCard(ev))}</div>
                   )}
@@ -780,8 +791,8 @@ export function EvaluationsSection() {
                 {canCreateEvaluations && (
                   <TabsContent value="finalize">
                     {awaitingFinalization.length === 0 ? (
-                      <div className="text-center py-8">
-                        <CheckCircle2 className="h-10 w-10 mx-auto text-green-500 opacity-50 mb-2" />
+                      <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-10 text-center">
+                        <CheckCircle2 className="h-9 w-9 text-green-500/60" />
                         <p className="text-sm text-muted-foreground">Nenhuma avaliação aguardando finalização.</p>
                       </div>
                     ) : (
@@ -813,7 +824,7 @@ export function EvaluationsSection() {
 
           <div className="grid md:grid-cols-2 gap-4">
             {/* Score chart */}
-            <Card>
+            <Card className="rounded-2xl border-border/60 shadow-sm">
               <CardHeader><CardTitle className="text-sm">Notas por Colaborador</CardTitle></CardHeader>
               <CardContent>
                 {dashboardScores.length === 0 ? (
@@ -833,7 +844,7 @@ export function EvaluationsSection() {
             </Card>
 
             {/* Classification pie */}
-            <Card>
+            <Card className="rounded-2xl border-border/60 shadow-sm">
               <CardHeader><CardTitle className="text-sm">Distribuição por Classificação</CardTitle></CardHeader>
               <CardContent>
                 {classDistribution.length === 0 ? (
@@ -855,7 +866,7 @@ export function EvaluationsSection() {
 
           {/* Monthly avg by employee */}
           {monthlyAvgByEmployee.length > 0 && (
-            <Card>
+            <Card className="rounded-2xl border-border/60 shadow-sm">
               <CardHeader><CardTitle className="text-sm">Evolução Mensal de Notas por Colaborador</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
@@ -875,7 +886,7 @@ export function EvaluationsSection() {
           )}
 
           {/* Recent evaluations - last 10 with scroll */}
-          <Card>
+          <Card className="rounded-2xl border-border/60 shadow-sm">
             <CardHeader><CardTitle className="text-sm">Últimas Avaliações</CardTitle></CardHeader>
             <CardContent>
               <ScrollArea className="h-[300px]">
@@ -887,12 +898,12 @@ export function EvaluationsSection() {
                       <button
                         key={ev.id}
                         onClick={() => openEvalDetail(ev.id)}
-                        className="flex items-center justify-between w-full p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors text-left"
+                        className="flex w-full items-center justify-between rounded-2xl border border-border/60 bg-card/60 p-3.5 text-left transition-all hover:border-primary/30 hover:bg-muted/30"
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-medium text-foreground">{ev.evaluated_name}</p>
-                            <Badge className={cn("text-[10px]", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
+                            <Badge className={cn("rounded-full text-[10px]", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {ev.evaluator_name}{ev.overall_score != null && ` • ${ev.overall_score}/5`} • {new Date(ev.created_at).toLocaleDateString('pt-BR')}
@@ -909,7 +920,7 @@ export function EvaluationsSection() {
 
         {/* My Evaluations */}
         <TabsContent value="my-evals" className="space-y-4">
-          <Card>
+          <Card className="rounded-2xl border-border/60 shadow-sm">
             <CardHeader><CardTitle className="text-base">Avaliações Recebidas</CardTitle></CardHeader>
             <CardContent>
               {myEvaluations.length === 0 ? (
@@ -917,24 +928,24 @@ export function EvaluationsSection() {
               ) : (
                 <div className="space-y-2">
                   {myEvaluations.map(ev => (
-                    <div key={ev.id} className="p-4 rounded-xl border border-border space-y-3 hover:border-primary/30 transition-colors">
-                      <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div key={ev.id} className="rounded-2xl border border-border/60 bg-card/60 p-4 space-y-3 transition-all hover:border-primary/30 hover:shadow-sm sm:p-5">
+                      <div className="flex items-center justify-between flex-wrap gap-3">
                         <div>
-                          <Badge className={cn("text-[10px]", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <Badge className={cn("rounded-full text-[10px]", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
+                          <p className="text-xs text-muted-foreground mt-1.5">
                             Avaliador: {ev.evaluator_name} • {new Date(ev.created_at).toLocaleDateString('pt-BR')}
                             {ev.position_name && ` • Cargo: ${ev.position_name}`}
                           </p>
                         </div>
                         {ev.overall_score != null && (
                           <div className="text-right">
-                            <p className="text-2xl font-bold text-foreground">{ev.overall_score}</p>
+                            <p className="text-2xl font-bold text-foreground leading-tight">{ev.overall_score}</p>
                             <p className={cn("text-[10px] font-medium", classifyColor(classifyScore(ev.overall_score) || ''))}>{classifyLabel(classifyScore(ev.overall_score) || '')}</p>
                           </div>
                         )}
                       </div>
                       <div className="flex gap-2 flex-wrap">
-                        <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => openEvalDetail(ev.id)}>
+                        <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1" onClick={() => openEvalDetail(ev.id)}>
                           <Eye className="h-3.5 w-3.5" /> Ver Detalhes
                         </Button>
                       </div>
@@ -946,7 +957,7 @@ export function EvaluationsSection() {
           </Card>
 
           {myEvaluations.filter(e => e.overall_score != null).length > 1 && (
-            <Card>
+            <Card className="rounded-2xl border-border/60 shadow-sm">
               <CardHeader><CardTitle className="text-sm">Minha Evolução</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={200}>
@@ -969,7 +980,7 @@ export function EvaluationsSection() {
         {/* Team - renamed for clarity */}
         {canCreateEvaluations && (
           <TabsContent value="team" className="space-y-4">
-            <Card>
+            <Card className="rounded-2xl border-border/60 shadow-sm">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -996,7 +1007,7 @@ export function EvaluationsSection() {
           <TabsContent value="structure" className="space-y-4">
             <div className="grid md:grid-cols-3 gap-4">
               {/* Positions */}
-              <Card>
+              <Card className="rounded-2xl border-border/60 shadow-sm">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm">Cargos</CardTitle>
@@ -1040,7 +1051,7 @@ export function EvaluationsSection() {
               </Card>
 
               {/* Competencies */}
-              <Card>
+              <Card className="rounded-2xl border-border/60 shadow-sm">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm">Competências</CardTitle>
@@ -1076,7 +1087,7 @@ export function EvaluationsSection() {
               </Card>
 
               {/* Cycles */}
-              <Card>
+              <Card className="rounded-2xl border-border/60 shadow-sm">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm">Ciclos</CardTitle>
@@ -1121,7 +1132,7 @@ export function EvaluationsSection() {
 
       {/* New Position */}
       <Dialog open={showNewPosition} onOpenChange={setShowNewPosition}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader><DialogTitle>Novo Cargo</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={posName} onChange={e => setPosName(e.target.value)} placeholder="Ex: Atendente" /></div>
@@ -1136,7 +1147,7 @@ export function EvaluationsSection() {
 
       {/* Edit Position */}
       <Dialog open={!!showEditPosition} onOpenChange={() => setShowEditPosition(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader><DialogTitle>Editar Cargo</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={posName} onChange={e => setPosName(e.target.value)} /></div>
@@ -1151,7 +1162,7 @@ export function EvaluationsSection() {
 
       {/* New Competency */}
       <Dialog open={showNewCompetency} onOpenChange={setShowNewCompetency}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader><DialogTitle>Nova Competência</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={compName} onChange={e => setCompName(e.target.value)} placeholder="Ex: Comunicação" /></div>
@@ -1176,7 +1187,7 @@ export function EvaluationsSection() {
 
       {/* Edit Competency */}
       <Dialog open={!!showEditCompetency} onOpenChange={() => setShowEditCompetency(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader><DialogTitle>Editar Competência</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={compName} onChange={e => setCompName(e.target.value)} /></div>
@@ -1201,7 +1212,7 @@ export function EvaluationsSection() {
 
       {/* New Cycle */}
       <Dialog open={showNewCycle} onOpenChange={setShowNewCycle}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader><DialogTitle>Novo Ciclo</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={cycleName} onChange={e => setCycleName(e.target.value)} placeholder="Ex: 1º Semestre 2026" /></div>
@@ -1220,7 +1231,7 @@ export function EvaluationsSection() {
 
       {/* Edit Cycle */}
       <Dialog open={!!showEditCycle} onOpenChange={() => setShowEditCycle(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader><DialogTitle>Editar Ciclo</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={cycleName} onChange={e => setCycleName(e.target.value)} /></div>
@@ -1239,7 +1250,7 @@ export function EvaluationsSection() {
 
       {/* New Evaluation */}
       <Dialog open={showNewEval} onOpenChange={setShowNewEval}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader><DialogTitle>Nova Avaliação</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">
@@ -1287,7 +1298,7 @@ export function EvaluationsSection() {
 
       {/* Position Competencies Dialog */}
       <Dialog open={!!showPosCompetencies} onOpenChange={() => setShowPosCompetencies(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg rounded-2xl">
           <DialogHeader>
             <DialogTitle>Competências do Cargo: {positions.find(p => p.id === showPosCompetencies)?.name}</DialogTitle>
           </DialogHeader>
@@ -1332,7 +1343,7 @@ export function EvaluationsSection() {
 
       {/* ===== Evaluation Detail Dialog ===== */}
       <Dialog open={!!showEvalDetail} onOpenChange={() => setShowEvalDetail(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl">
           {currentEval && (
             <>
               <DialogHeader>
@@ -1357,7 +1368,7 @@ export function EvaluationsSection() {
                       {editingItems.map((item, idx) => {
                         const comp = competencies.find(c => c.id === item.competency_id);
                         return (
-                          <Card key={idx} className="border-border">
+                          <Card key={idx} className="rounded-2xl border-border/60">
                             <CardContent className="p-4 space-y-2">
                               <div className="flex items-center justify-between">
                                 <div>
@@ -1408,7 +1419,7 @@ export function EvaluationsSection() {
                               <div>
                                 <h4 className="text-sm font-semibold text-green-600 flex items-center gap-1 mb-2"><Star className="h-4 w-4" /> Excelente ({excellent.length})</h4>
                                 {excellent.map(i => (
-                                  <div key={i.id} className="p-3 rounded-lg border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20 mb-2">
+                                  <div key={i.id} className="rounded-2xl border border-green-200/70 dark:border-green-800/60 bg-green-50/60 dark:bg-green-950/20 p-3.5 mb-2">
                                     <div className="flex items-center justify-between">
                                       <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
                                       {renderStars(i.score)}
@@ -1424,7 +1435,7 @@ export function EvaluationsSection() {
                               <div>
                                 <h4 className="text-sm font-semibold text-amber-600 flex items-center gap-1 mb-2"><ThumbsUp className="h-4 w-4" /> Bom ({good.length})</h4>
                                 {good.map(i => (
-                                  <div key={i.id} className="p-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 mb-2">
+                                  <div key={i.id} className="rounded-2xl border border-amber-200/70 dark:border-amber-800/60 bg-amber-50/60 dark:bg-amber-950/20 p-3.5 mb-2">
                                     <div className="flex items-center justify-between">
                                       <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
                                       {renderStars(i.score)}
@@ -1440,7 +1451,7 @@ export function EvaluationsSection() {
                               <div>
                                 <h4 className="text-sm font-semibold text-destructive flex items-center gap-1 mb-2"><AlertTriangle className="h-4 w-4" /> Precisa Melhorar ({needsImprovement.length})</h4>
                                 {needsImprovement.map(i => (
-                                  <div key={i.id} className="p-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20 mb-2">
+                                  <div key={i.id} className="rounded-2xl border border-red-200/70 dark:border-red-800/60 bg-red-50/60 dark:bg-red-950/20 p-3.5 mb-2">
                                     <div className="flex items-center justify-between">
                                       <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
                                       {renderStars(i.score)}
@@ -1456,7 +1467,7 @@ export function EvaluationsSection() {
                               <div>
                                 <h4 className="text-sm font-semibold text-muted-foreground mb-2">Sem Avaliação</h4>
                                 {evalItems.filter(i => i.score == null).map(i => (
-                                  <div key={i.id} className="p-3 rounded-lg border border-border mb-2">
+                                  <div key={i.id} className="rounded-2xl border border-border/60 bg-muted/20 p-3.5 mb-2">
                                     <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
                                   </div>
                                 ))}
@@ -1467,26 +1478,26 @@ export function EvaluationsSection() {
                       })()}
 
                       {currentEval.overall_comment && (
-                        <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                        <div className="rounded-2xl bg-muted/40 border border-border/60 p-3.5">
                           <p className="text-xs font-medium text-muted-foreground mb-1">Observação Geral do Avaliador</p>
                           <p className="text-sm text-foreground">{currentEval.overall_comment}</p>
                         </div>
                       )}
                       {currentEval.evaluated_comment && (
-                        <div className="p-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                        <div className="rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-800/60 p-3.5">
                           <p className="text-xs font-medium text-amber-600 mb-1">Observação do Colaborador</p>
                           <p className="text-sm text-foreground">{currentEval.evaluated_comment}</p>
                         </div>
                       )}
                       {currentEval.evaluator_response && (
-                        <div className="p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                        <div className="rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-800/60 p-3.5">
                           <p className="text-xs font-medium text-blue-600 mb-1">Resposta do Avaliador</p>
                           <p className="text-sm text-foreground">{currentEval.evaluator_response}</p>
                         </div>
                       )}
 
                       {currentEval.overall_score != null && (
-                        <div className="flex items-center justify-center gap-4 p-4 rounded-xl bg-muted/30 border border-border">
+                        <div className="flex items-center justify-center gap-4 rounded-2xl bg-gradient-to-br from-muted/40 to-muted/10 border border-border/60 p-5">
                           <div className="text-center">
                             <p className="text-3xl font-bold text-foreground">{currentEval.overall_score}</p>
                             <p className={cn("text-sm font-medium", classifyColor(classifyScore(currentEval.overall_score) || ''))}>
@@ -1551,13 +1562,13 @@ export function EvaluationsSection() {
 
       {/* Contest Dialog */}
       <Dialog open={!!showContestDialog} onOpenChange={() => setShowContestDialog(null)}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col rounded-2xl">
           <DialogHeader><DialogTitle className="text-destructive">Contestar Avaliação</DialogTitle></DialogHeader>
           <ScrollArea className="flex-1 pr-2">
             <div className="space-y-4 pb-4">
               <p className="text-xs text-muted-foreground">Conteste competências específicas ou deixe uma observação geral.</p>
               {evalItems.filter(i => i.score != null).map(item => (
-                <div key={item.id} className="p-3 rounded-lg border border-border space-y-2">
+                <div key={item.id} className="rounded-2xl border border-border/60 bg-card/40 p-3.5 space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-foreground">{item.competency_name}</p>
                     <div className="flex items-center gap-2">
@@ -1591,13 +1602,13 @@ export function EvaluationsSection() {
 
       {/* Respond to Contestation Dialog */}
       <Dialog open={!!showRespondDialog} onOpenChange={() => setShowRespondDialog(null)}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col rounded-2xl">
           <DialogHeader><DialogTitle className="text-amber-600">Responder Contestação</DialogTitle></DialogHeader>
           <ScrollArea className="flex-1 pr-2">
             <div className="space-y-4 pb-4">
               <p className="text-xs text-muted-foreground">Revise as contestações e responda. Você pode ajustar notas.</p>
               {evalItems.filter(i => i.evaluated_response).map(item => (
-                <div key={item.id} className="p-3 rounded-lg border border-amber-200 dark:border-amber-800 space-y-2">
+                <div key={item.id} className="rounded-2xl border border-amber-200/70 dark:border-amber-800/60 bg-amber-50/30 dark:bg-amber-950/10 p-3.5 space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-foreground">{item.competency_name}</p>
                     {renderStars(item.score)}
