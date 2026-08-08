@@ -393,8 +393,9 @@ export function PeopleManagementSection() {
 
         <TabsContent value="reports" className="mt-4 space-y-6">
           {analyticsLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <div className="space-y-4 py-2">
+              <StatsSkeleton count={4} />
+              <ChartSkeleton />
             </div>
           ) : members.length === 0 ? (
             <Card>

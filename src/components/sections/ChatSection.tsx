@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { AlertCircle, Users, MessageSquare, ArrowLeft, UsersRound, Eye, EyeOff, Search, Calendar as CalendarIcon, Bot, FolderOpen } from 'lucide-react';
+import { ListSkeleton } from '@/components/ui/skeletons';
 import { ChatMediaFilter } from '@/components/chat/ChatMediaFilter';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -232,8 +233,9 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
 
   if (sectorsLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="flex h-full flex-col p-4 gap-4">
+        <div className="glass-shimmer h-10 w-full rounded-xl" />
+        <ListSkeleton rows={6} />
       </div>
     );
   }
