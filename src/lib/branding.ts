@@ -50,6 +50,10 @@ export function applyBrand(colors: BrandColors | null) {
   root.style.setProperty('--primary', `${p.h} ${p.s}% ${p.l}%`);
   root.style.setProperty('--secondary', `${s.h} ${s.s}% ${s.l}%`);
   root.style.setProperty('--ring', `${p.h} ${p.s}% ${p.l}%`);
+  // Active navigation item follows the company's secondary color
+  root.style.setProperty('--sidebar-primary', `${s.h} ${s.s}% ${s.l}%`);
+  root.style.setProperty('--sidebar-primary-foreground', s.l > 62 ? '222 30% 12%' : '0 0% 100%');
+  root.style.setProperty('--sidebar-ring', `${s.h} ${s.s}% ${s.l}%`);
 }
 
 export function resetBrand() {
