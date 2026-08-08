@@ -200,6 +200,8 @@ const Index = () => {
            return <NotesSection />;
          case 'companies':
            return <CompaniesManagementSection />;
+         case 'system-broadcasts':
+           return <SystemBroadcastsSection />;
       default:
         return <HomeSection onNavigate={setActiveSection} />;
     }
