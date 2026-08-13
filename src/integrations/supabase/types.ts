@@ -98,7 +98,7 @@ export type Database = {
         }
         Insert: {
           author_id: string
-          company_id?: string
+          company_id: string
           content: string
           created_at?: string
           expire_at?: string | null
@@ -230,7 +230,7 @@ export type Database = {
           api_key_hash: string
           api_key_hint: string
           api_token_hash: string
-          company_id?: string
+          company_id: string
           created_at?: string
           created_by: string
           id?: string
@@ -466,7 +466,7 @@ export type Database = {
         Insert: {
           all_day?: boolean
           color?: string
-          company_id?: string
+          company_id: string
           created_at?: string
           created_by: string
           description?: string | null
@@ -667,7 +667,7 @@ export type Database = {
           sender_id: string
         }
         Insert: {
-          company_id?: string
+          company_id: string
           content: string
           created_at?: string
           id?: string
@@ -721,7 +721,7 @@ export type Database = {
         }
         Insert: {
           category?: string
-          company_id?: string
+          company_id: string
           created_at?: string
           created_by: string
           description?: string | null
@@ -763,7 +763,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          company_id?: string
+          company_id: string
           created_at?: string
           created_by: string
           description?: string | null
@@ -854,7 +854,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          company_id?: string
+          company_id: string
           created_at?: string
           created_by: string
           description?: string | null
@@ -1011,7 +1011,7 @@ export type Database = {
           version: number
         }
         Insert: {
-          company_id?: string
+          company_id: string
           created_at?: string
           cycle_id?: string | null
           evaluated_comment?: string | null
@@ -1116,7 +1116,7 @@ export type Database = {
         }
         Insert: {
           border_style?: string
-          company_id?: string
+          company_id: string
           content: string
           created_at?: string
           created_by: string
@@ -1241,7 +1241,7 @@ export type Database = {
         }
         Insert: {
           author_id: string
-          company_id?: string
+          company_id: string
           content: string
           created_at?: string
           id?: string
@@ -1396,7 +1396,7 @@ export type Database = {
           background_color?: string
           background_image?: string | null
           background_texture?: string | null
-          company_id?: string
+          company_id: string
           content?: string
           created_at?: string
           id?: string
@@ -1546,7 +1546,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
-          company_id?: string
+          company_id: string
           created_at?: string
           created_by: string
           description?: string | null
@@ -1679,7 +1679,7 @@ export type Database = {
           weekday: number | null
         }
         Insert: {
-          company_id?: string
+          company_id: string
           created_at?: string
           created_by: string
           format?: string
@@ -1731,7 +1731,7 @@ export type Database = {
         }
         Insert: {
           color?: string
-          company_id?: string
+          company_id: string
           created_at?: string
           icon?: string | null
           id?: string
@@ -2173,7 +2173,7 @@ export type Database = {
         }
         Insert: {
           background_image?: string | null
-          company_id?: string
+          company_id: string
           created_at?: string
           description?: string | null
           id?: string
@@ -2237,6 +2237,35 @@ export type Database = {
             foreignKeyName: "task_comments_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_covers: {
+        Row: {
+          created_at: string
+          image: string
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          image: string
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          image?: string
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_covers_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: true
             referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
@@ -2406,6 +2435,7 @@ export type Database = {
           delay_days: number | null
           description: string | null
           due_date: string | null
+          has_cover: boolean
           id: string
           is_archived: boolean
           is_emergency: boolean
@@ -2422,7 +2452,7 @@ export type Database = {
         Insert: {
           assigned_to?: string | null
           board_id?: string | null
-          company_id?: string
+          company_id: string
           completed_at?: string | null
           completed_late?: boolean | null
           cover_image?: string | null
@@ -2431,6 +2461,7 @@ export type Database = {
           delay_days?: number | null
           description?: string | null
           due_date?: string | null
+          has_cover?: boolean
           id?: string
           is_archived?: boolean
           is_emergency?: boolean
@@ -2456,6 +2487,7 @@ export type Database = {
           delay_days?: number | null
           description?: string | null
           due_date?: string | null
+          has_cover?: boolean
           id?: string
           is_archived?: boolean
           is_emergency?: boolean
@@ -2547,7 +2579,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          company_id?: string
+          company_id: string
           created_at?: string
           description?: string | null
           id?: string
@@ -2900,7 +2932,7 @@ export type Database = {
         }
         Insert: {
           closed_at?: string | null
-          company_id?: string
+          company_id: string
           created_at?: string
           created_by: string
           description?: string | null
@@ -3064,6 +3096,7 @@ export type Database = {
           delay_days: number
           description: string
           due_date: string
+          has_cover: boolean
           id: string
           is_archived: boolean
           is_emergency: boolean
@@ -3128,6 +3161,7 @@ export type Database = {
           registration_number: string
         }[]
       }
+      get_task_cover: { Args: { _task_id: string }; Returns: string }
       has_autonomy_level: { Args: { required_level: string }; Returns: boolean }
       has_role: {
         Args: {
