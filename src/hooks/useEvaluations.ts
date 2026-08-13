@@ -204,7 +204,7 @@ export function useEvaluations() {
 
   const createPosition = async (data: { name: string; sector_id?: string; description?: string }) => {
     if (!profile) return;
-    const { error } = await supabase.from('eval_positions').insert({ ...data, created_by: profile.user_id });
+    const { error } = await supabase.from('eval_positions').insert(withCompany({ ...data, created_by: profile.user_id }));
     if (error) { toast.error('Erro ao criar cargo.'); return; }
     toast.success('Cargo criado!');
     fetchData();
@@ -212,7 +212,7 @@ export function useEvaluations() {
 
   const createCompetency = async (data: { name: string; description?: string; category: string }) => {
     if (!profile) return;
-    const { error } = await supabase.from('eval_competencies').insert({ ...data, created_by: profile.user_id });
+    const { error } = await supabase.from('eval_competencies').insert(withCompany({ ...data, created_by: profile.user_id }));
     if (error) { toast.error('Erro ao criar competência.'); return; }
     toast.success('Competência criada!');
     fetchData();
@@ -220,7 +220,7 @@ export function useEvaluations() {
 
   const createCycle = async (data: { name: string; start_date: string; end_date: string; description?: string }) => {
     if (!profile) return;
-    const { error } = await supabase.from('eval_cycles').insert({ ...data, created_by: profile.user_id });
+    const { error } = await supabase.from('eval_cycles').insert(withCompany({ ...data, created_by: profile.user_id }));
     if (error) { toast.error('Erro ao criar ciclo.'); return; }
     toast.success('Ciclo criado!');
     fetchData();
@@ -230,7 +230,7 @@ export function useEvaluations() {
     if (!profile) return null;
     const { data: newEval, error } = await supabase
       .from('evaluations')
-      .insert({ evaluator_id: profile.id, ...data })
+      .insert(withCompany({ evaluator_id: profile.id, ...data }))
       .select()
       .single();
 

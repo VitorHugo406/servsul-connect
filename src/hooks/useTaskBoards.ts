@@ -74,7 +74,7 @@ export function useTaskBoards() {
     try {
       const { data, error } = await supabase
         .from('task_boards')
-        .insert({ name, description: description || null, owner_id: user.id })
+        .insert(withCompany({ name, description: description || null, owner_id: user.id }))
         .select()
         .single();
       if (error) throw error;

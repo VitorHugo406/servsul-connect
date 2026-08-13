@@ -37,7 +37,7 @@
      try {
        const { data, error } = await supabase
          .from('sectors')
-         .insert({ name, color })
+         .insert(withCompany({ name, color }))
          .select()
          .single();
  

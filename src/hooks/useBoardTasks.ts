@@ -151,13 +151,13 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
     try {
       const { data, error } = await supabase
         .from('tasks')
-        .insert({
+        .insert(withCompany({
           ...task,
           board_id: boardId,
           created_by: profile.id,
           priority: task.priority || 'medium',
           position: tasksInCol.length,
-        })
+        }))
         .select()
         .single();
 
