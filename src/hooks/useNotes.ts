@@ -93,12 +93,12 @@ export function useNotes() {
     if (!user) return null;
     const { data, error } = await supabase
       .from('notes')
-      .insert({
+      .insert(withCompany({
         owner_id: user.id,
         title: 'Nova anotação',
         content: '',
         background_color: '#FFF9C4',
-      })
+      }))
       .select()
       .single();
     if (error) {

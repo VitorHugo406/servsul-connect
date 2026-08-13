@@ -93,12 +93,12 @@
      try {
        const { data, error } = await supabase
          .from('tasks')
-         .insert({
+         .insert(withCompany({
            ...task,
            created_by: profile.id,
            status: task.status || 'todo',
            priority: task.priority || 'medium',
-         })
+         }))
          .select()
          .single();
  

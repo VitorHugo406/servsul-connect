@@ -138,7 +138,7 @@ export function useTeams() {
     if (!user) return;
     const { data, error } = await supabase
       .from('teams')
-      .insert({ name, supervisor_id: user.id, description: description || null })
+      .insert(withCompany({ name, supervisor_id: user.id, description: description || null }))
       .select()
       .single();
 

@@ -193,11 +193,11 @@ export function useDirectMessages(partnerId?: string) {
     // Immediately add to local state for instant feedback
     setMessages(prev => [...prev, tempMessage]);
 
-    const { error } = await supabase.from('direct_messages').insert({
+    const { error } = await supabase.from('direct_messages').insert(withCompany({
       sender_id: profile.id,
       receiver_id: partnerId,
       content,
-    });
+    }));
 
     if (error) {
       // Remove optimistic message on error

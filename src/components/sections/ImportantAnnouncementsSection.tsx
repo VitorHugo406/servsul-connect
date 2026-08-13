@@ -96,14 +96,14 @@
        const titleWithEmoji = `${selectedEmoji} ${newTitle.trim()}`;
        const { data, error } = await supabase
          .from('important_announcements')
-         .insert({
+         .insert(withCompany({
            title: titleWithEmoji,
            content: newContent.trim(),
            border_style: newBorderStyle,
            created_by: user?.id,
            start_at: newStartAt ? new Date(newStartAt).toISOString() : null,
            expire_at: newExpireAt ? new Date(newExpireAt).toISOString() : null,
-         })
+         }))
          .select()
          .single();
        

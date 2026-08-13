@@ -118,7 +118,7 @@ export function useWarRooms() {
 
     const { data, error } = await supabase
       .from('tasks')
-      .insert({
+      .insert(withCompany({
         board_id: task.board_id,
         status: task.column_id,
         title: task.title,
@@ -128,7 +128,7 @@ export function useWarRooms() {
         created_by: profile.id,
         position: nextPosition,
         is_emergency: true,
-      })
+      }))
       .select('id, title, task_number, board_id, status')
       .single();
 
@@ -185,7 +185,7 @@ export function useWarRooms() {
 
     const { data: room, error } = await supabase
       .from('war_rooms')
-      .insert({ title, description, created_by: user.id })
+      .insert(withCompany({ title, description, created_by: user.id }))
       .select()
       .single();
 

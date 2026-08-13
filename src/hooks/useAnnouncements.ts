@@ -129,7 +129,7 @@ export function useAnnouncements() {
   ) => {
     if (!profile) return { error: new Error('Not authenticated') };
 
-    const { data, error } = await supabase.from('announcements').insert({
+    const { data, error } = await supabase.from('announcements').insert(withCompany({
       title,
       content,
       author_id: profile.id,
@@ -137,7 +137,7 @@ export function useAnnouncements() {
       is_pinned: isPinned,
       start_at: startAt || new Date().toISOString(),
       expire_at: expireAt || null,
-    }).select().single();
+    })).select().single();
 
     // Send email notification in background
     if (!error && data) {

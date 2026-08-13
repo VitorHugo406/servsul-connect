@@ -65,11 +65,11 @@ export function BirthdaysSection() {
     if (!message) { toast.error('Escreva uma mensagem antes de enviar.'); return; }
     setSendingId(person.id);
     const content = `🎉 Feliz aniversário, ${person.name}!\n\n${message}\n\n— ${profile.display_name || profile.name}`;
-    const { error } = await supabase.from('messages').insert({
+    const { error } = await supabase.from('messages').insert(withCompany({
       content,
       author_id: profile.id,
       sector_id: GERAL_SECTOR_ID,
-    });
+    }));
     setSendingId(null);
     if (error) { toast.error('Não foi possível enviar no chat Geral.'); return; }
     setMessages((prev) => ({ ...prev, [person.id]: '' }));
