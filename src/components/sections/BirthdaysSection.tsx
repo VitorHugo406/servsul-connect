@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { withCompany } from '@/lib/companyScope';
 import appLogo from '@/assets/nuvexa-logo.png';
 
 const monthThemes: Record<number, { name: string; emoji: string; accent: [number, number, number] }> = {
