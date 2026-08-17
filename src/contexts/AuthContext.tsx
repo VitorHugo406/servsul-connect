@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { setActiveCompanyId } from '@/lib/companyScope';
 
 const GERAL_SECTOR_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -190,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (profileData) {
         setProfile(profileData as Profile);
+        setActiveCompanyId(profileData.company_id ?? null);
 
         if (profileData.sector_id) {
           const { data: sectorData } = await supabase
@@ -263,6 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }, 0);
         } else {
           setProfile(null);
+          setActiveCompanyId(null);
           setSector(null);
           setAdditionalSectors([]);
           setRoles([]);
@@ -358,6 +361,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     setProfile(null);
+    setActiveCompanyId(null);
     setSector(null);
     setAdditionalSectors([]);
     setRoles([]);
