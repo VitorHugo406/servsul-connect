@@ -34,6 +34,7 @@ import { FacialLoginCamera } from '@/components/facial/FacialLoginCamera';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { applyBrand, resetBrand, BRAND_LOGO_URL, BRAND_PRIMARY, BRAND_SECONDARY } from '@/lib/branding';
+import { setActiveCompanyId } from '@/lib/companyScope';
 
 const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
 
@@ -122,6 +123,7 @@ const Auth = () => {
       const row = Array.isArray(data) ? data[0] : data;
       if (!error && row) {
         setCompanyBrand(row as CompanyBrand);
+        setActiveCompanyId((row as CompanyBrand).id);
         applyBrand(row as CompanyBrand);
       }
     })();

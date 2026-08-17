@@ -25,7 +25,8 @@ Deno.serve(async (req) => {
     let processed = 0;
     const alerts: any[] = [];
     const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+    const startOfToday = new Date(now);
+    startOfToday.setUTCHours(0, 0, 0, 0);
 
     // ===== PART 1: Process automation rules (SE → ENTÃO) =====
     let rulesQuery = adminClient
@@ -242,7 +243,7 @@ Deno.serve(async (req) => {
         .select('id')
         .eq('profile_id', alert.profile_id)
         .eq('alert_type', alert.alert_type)
-        .gte('created_at', oneHourAgo)
+        .gte('created_at', startOfToday.toISOString())
         .limit(1);
       
       if (alert.task_id) {
