@@ -255,7 +255,9 @@ export function CompaniesManagementSection() {
     const { data } = supabase.storage.from('company-logos').getPublicUrl(path);
     const publicUrl = `${data.publicUrl}?v=${Date.now()}`;
     try {
-      const response = await fetch(publicUrl, { method: 'HEAD', cache: 'no-store' });
+      // A CDN do Supabase pode responder 400/405 a HEAD mesmo quando o arquivo
+      // está disponível para GET. Validamos com GET para não apagar uploads válidos.
+      const response = await fetch(publicUrl, { method: 'GET', cache: 'no-store' });
       if (!response.ok) {
         await supabase.storage.from('company-logos').remove([path]);
         toast.error('A logo foi enviada, mas não ficou disponível publicamente. Verifique as policies do bucket company-logos.');
