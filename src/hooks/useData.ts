@@ -40,6 +40,9 @@ interface Message {
 export function useMessages(sectorId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const PAGE_SIZE = 100;
   const { profile, isAdmin } = useAuth();
 
   const hydrateMessages = useCallback(async (rows: any[]): Promise<Message[]> => {
@@ -89,39 +92,49 @@ export function useMessages(sectorId: string | null) {
     setLoading(true);
     const { data, error } = await supabase
       .from('messages')
-      .select(`
-        *,
-        author:profiles!messages_author_id_fkey(*)
-      `)
+      .select('id, content, author_id, sector_id, created_at, reply_to_id, author:profiles!messages_author_id_fkey(id, user_id, name, display_name, email, avatar_url, sector_id, autonomy_level, birth_date, company_id)')
       .eq('sector_id', sectorId)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false })
+      .limit(PAGE_SIZE);
 
     if (error) {
       console.error('Error fetching messages:', error);
     } else {
-      const hydratedMessages = await hydrateMessages((data as any[]) || []);
-
-      // Preserve temp messages and merge with real data
+      const hydratedMessages = await hydrateMessages(((data as any[]) || []).reverse());
+      setHasMore((data || []).length === PAGE_SIZE);
       setMessages(prev => {
-        const tempMessages = prev.filter(m => m.id.startsWith('temp-'));
-        const realMessages = hydratedMessages;
-
-        // Filter out temp messages that now have real counterparts
-        const filteredTemp = tempMessages.filter(temp =>
-          !realMessages.some(real =>
-            real.content === temp.content &&
-            real.author_id === temp.author_id &&
-            Math.abs(new Date(real.created_at).getTime() - new Date(temp.created_at).getTime()) < 5000
-          )
-        );
-
-        return [...realMessages, ...filteredTemp].sort((a, b) =>
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        );
+        const temps = prev.filter(m => m.id.startsWith('temp-'));
+        const byId = new Map(hydratedMessages.map(m => [m.id, m]));
+        temps.forEach(m => byId.set(m.id, m));
+        return Array.from(byId.values()).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       });
     }
     setLoading(false);
   }, [sectorId, hydrateMessages]);
+
+  const loadOlderMessages = useCallback(async () => {
+    if (!sectorId || loadingOlder || !hasMore) return;
+    const oldest = messages.find(m => !m.id.startsWith('temp-'));
+    if (!oldest) return;
+    setLoadingOlder(true);
+    const { data, error } = await supabase
+      .from('messages')
+      .select('id, content, author_id, sector_id, created_at, reply_to_id, author:profiles!messages_author_id_fkey(id, user_id, name, display_name, email, avatar_url, sector_id, autonomy_level, birth_date, company_id)')
+      .eq('sector_id', sectorId)
+      .or(`created_at.lt.${oldest.created_at},and(created_at.eq.${oldest.created_at},id.lt.${oldest.id})`)
+      .order('created_at', { ascending: false })
+      .limit(PAGE_SIZE);
+    if (!error && data) {
+      const older = await hydrateMessages((data as any[]).reverse());
+      setHasMore(data.length === PAGE_SIZE);
+      setMessages(prev => {
+        const byId = new Map(prev.map(m => [m.id, m]));
+        older.forEach(m => byId.set(m.id, m));
+        return Array.from(byId.values()).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      });
+    }
+    setLoadingOlder(false);
+  }, [sectorId, messages, loadingOlder, hasMore, hydrateMessages]);
 
   useEffect(() => {
     fetchMessages();
@@ -186,9 +199,15 @@ export function useMessages(sectorId: string | null) {
             });
           } else if (payload.eventType === 'DELETE') {
             setMessages(prev => prev.filter(m => m.id !== (payload.old as Message).id));
-          } else {
-            // For UPDATE, refetch
-            fetchMessages();
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as Message;
+            setMessages(prev => prev.map(message => message.id === updated.id ? {
+              ...message,
+              ...updated,
+              author: message.author,
+              reply_to: message.reply_to,
+              status: message.status === 'sending' ? message.status : 'delivered',
+            } : message));
           }
         }
       )
@@ -248,7 +267,7 @@ export function useMessages(sectorId: string | null) {
   // Check if user can send messages to this sector (including additional sectors)
   const { allAccessibleSectorIds } = useAuth();
   const canSendMessages = isAdmin || allAccessibleSectorIds.includes(sectorId || '');
-  return { messages, loading, sendMessage, refetch: fetchMessages, canSendMessages };
+  return { messages, loading, loadingOlder, hasMore, loadOlderMessages, sendMessage, refetch: fetchMessages, canSendMessages };
 }
 
 export function useSectors() {
