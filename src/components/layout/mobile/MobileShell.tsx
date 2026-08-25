@@ -128,7 +128,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -12, scale: 0.985 }}
             transition={{ type: 'spring', stiffness: 320, damping: 32, mass: 0.7 }}
-            className={isChat ? 'h-full flex flex-col pb-[var(--mobile-nav-h)]' : 'h-full overflow-y-auto pb-[calc(var(--mobile-nav-h)+16px)]'}
+            className={isChat ? 'h-full flex flex-col pb-[calc(var(--mobile-nav-h)+20px)]' : 'h-full overflow-y-auto pb-[calc(var(--mobile-nav-h)+28px)]'}
           >
             {renderContent()}
           </motion.div>
@@ -138,7 +138,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
       {/* Fixed full-width glass bottom nav */}
       <nav
         aria-label="Navegação principal"
-        className="glass-nav fixed inset-x-3 bottom-2 z-50 grid grid-cols-4 rounded-[24px] border border-border/60 px-1.5 pt-1 shadow-lg"
+        className="glass-nav fixed inset-x-4 bottom-4 z-50 grid grid-cols-4 rounded-[20px] border border-border/60 px-1 pt-0.5 shadow-lg"
         style={{ paddingBottom: 'max(0.25rem, env(safe-area-inset-bottom))' }}
       >
         {TABS.map((tab) => {
@@ -148,7 +148,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
             <button
               key={tab.id}
               onClick={() => onSectionChange(tab.id)}
-              className="relative flex h-11 flex-col items-center justify-center gap-0.5 rounded-[18px] transition-transform active:scale-95"
+              className="relative flex h-9 flex-col items-center justify-center gap-0 rounded-[16px] transition-transform active:scale-95"
             >
               {active && (
                 <motion.span

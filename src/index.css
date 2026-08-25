@@ -60,7 +60,7 @@
     --input: 220 15% 88%;
     --ring: 220 70% 45%;
 
-    --radius: 1rem;
+    --radius: 1.25rem;
 
     /* Mobile bottom navigation height (compact dock + safe area) */
     --mobile-nav-h: calc(3.5rem + env(safe-area-inset-bottom));
@@ -316,7 +316,7 @@
   -webkit-backdrop-filter: blur(28px) saturate(190%);
   border: 1px solid hsl(var(--background) / 0.85);
   box-shadow:
-    0 16px 38px -14px hsl(var(--foreground) / 0.35),
+    0 18px 42px -16px hsl(var(--foreground) / 0.42),
     inset 0 1px 0 hsl(var(--background) / 0.95),
     inset 0 -1px 0 hsl(var(--foreground) / 0.05);
 }
