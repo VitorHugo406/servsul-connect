@@ -116,7 +116,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
       initial={false}
       animate={{ width: isCollapsed ? 80 : 280 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="relative flex h-screen flex-col bg-sidebar text-sidebar-foreground"
+      className="relative m-3 flex h-[calc(100vh-1.5rem)] flex-col rounded-[28px] bg-sidebar text-sidebar-foreground shadow-xl"
     >
       {/* Logo Area */}
       <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
@@ -163,7 +163,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className={cn(
-                'group relative flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-all duration-200',
+                'group relative flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all duration-200',
                 isActive
                   ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-lg'
                   : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
@@ -213,7 +213,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
       <div className="border-t border-sidebar-border p-3">
         <motion.div
           className={cn(
-            'flex items-center gap-3 rounded-xl bg-sidebar-accent/50 p-3',
+            'flex items-center gap-3 rounded-2xl bg-sidebar-accent/60 p-3 shadow-sm',
             isCollapsed && 'justify-center'
           )}
         >

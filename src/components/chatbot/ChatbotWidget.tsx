@@ -403,7 +403,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.8 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed bottom-28 md:bottom-6 right-4 md:right-6 z-50 w-[calc(100vw-32px)] md:w-[360px] max-w-[360px] overflow-hidden rounded-[28px] border border-border/70 bg-card shadow-2xl"
+              className="fixed bottom-28 left-3 right-3 z-50 w-auto overflow-hidden rounded-[30px] border border-border/70 bg-card shadow-2xl md:bottom-6 md:left-auto md:right-6 md:w-[400px] md:max-w-[400px]"
             >
               {/* Header */}
               <div className="flex items-center justify-between gradient-primary p-4 text-white">
@@ -428,8 +428,8 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
 
               {/* Quick Stats */}
               <div className="grid grid-cols-2 gap-2 p-3 border-b border-border bg-muted/30">
-                <div className="flex items-center gap-2 rounded-lg bg-background p-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <div className="flex items-center gap-2 rounded-2xl bg-background p-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-primary/10">
                     <Megaphone className="h-4 w-4 text-primary" />
                   </div>
                   <div>
@@ -437,8 +437,8 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                     <p className="font-semibold text-foreground">{unreadCounts.announcements}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 rounded-lg bg-background p-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/10">
+                <div className="flex items-center gap-2 rounded-2xl bg-background p-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-secondary/10">
                     <MessageSquare className="h-4 w-4 text-secondary" />
                   </div>
                   <div>
@@ -449,12 +449,12 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
               </div>
 
               {/* Tabs */}
-              <div className="flex border-b border-border">
+              <div className="m-3 flex gap-1 rounded-2xl bg-muted/70 p-1">
                 <button
                   onClick={() => setActiveTab('notifications')}
                   className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors ${
                     activeTab === 'notifications'
-                      ? 'border-b-2 border-primary text-primary'
+                      ? 'rounded-xl bg-background text-primary shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -470,7 +470,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                   onClick={() => setActiveTab('help')}
                   className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors ${
                     activeTab === 'help'
-                      ? 'border-b-2 border-primary text-primary'
+                      ? 'rounded-xl bg-background text-primary shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -481,7 +481,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                   onClick={() => setActiveTab('sectors')}
                   className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors ${
                     activeTab === 'sectors'
-                      ? 'border-b-2 border-primary text-primary'
+                      ? 'rounded-xl bg-background text-primary shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -513,7 +513,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                           <motion.div
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3"
+                            className="rounded-2xl border border-blue-500/30 bg-blue-500/5 p-3"
                           >
                             <div className="flex items-center gap-2 mb-1">
                               <CalendarIcon className="h-4 w-4 text-blue-500" />
@@ -538,7 +538,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.05 }}
-                            className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3"
+                            className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3"
                           >
                             <div className="flex items-center gap-2">
                               <ListTodo className="h-4 w-4 text-amber-500" />
@@ -557,7 +557,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                           <motion.div
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="rounded-lg border border-primary/30 bg-primary/5 p-3"
+                            className="rounded-2xl border border-primary/30 bg-primary/5 p-3"
                           >
                             <div className="flex items-center gap-2">
                               <Megaphone className="h-4 w-4 text-primary" />
@@ -576,7 +576,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.1 }}
-                            className="rounded-lg border border-secondary/30 bg-secondary/5 p-3"
+                            className="rounded-2xl border border-secondary/30 bg-secondary/5 p-3"
                           >
                             <div className="flex items-center gap-2">
                               <MessageSquare className="h-4 w-4 text-secondary" />
@@ -595,7 +595,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.15 }}
-                            className="rounded-lg border border-destructive/30 bg-destructive/5 p-3"
+                            className="rounded-2xl border border-destructive/30 bg-destructive/5 p-3"
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex items-center gap-2">
@@ -625,7 +625,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.2 }}
-                            className={`rounded-lg border p-3 ${
+                            className={`rounded-2xl border p-3 ${
                               scoreFeedback.trend === 'up'
                                 ? 'border-green-500/30 bg-green-500/5'
                                 : scoreFeedback.trend === 'down'
@@ -656,7 +656,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                             key={notification.id}
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className={`rounded-lg border p-3 transition-colors ${
+                            className={`rounded-2xl border p-3 transition-colors ${
                               notification.is_read
                                 ? 'border-border bg-background'
                                 : 'border-primary/30 bg-primary/5'
@@ -703,7 +703,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="rounded-lg border border-border bg-background p-3"
+                        className="rounded-2xl border border-border bg-background p-3"
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <ChevronRight className="h-4 w-4 text-primary" />
@@ -725,7 +725,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                     <div className="space-y-2">
                       {/* Primary Sector */}
                       {sector && (
-                        <div className="flex items-center gap-3 rounded-lg border border-border bg-background p-3">
+                        <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3">
                           <div
                             className="h-4 w-4 rounded-full"
                             style={{ backgroundColor: sector.color }}
@@ -740,7 +740,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                       )}
 
                       {/* Geral Sector */}
-                      <div className="flex items-center gap-3 rounded-lg border border-border bg-background p-3">
+                      <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3">
                         <div className="h-4 w-4 rounded-full bg-blue-500" />
                         <div>
                           <span className="font-medium text-foreground">Geral</span>
@@ -754,7 +754,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                       {additionalSectors.map((s) => (
                         <div
                           key={s.id}
-                          className="flex items-center gap-3 rounded-lg border border-border bg-background p-3"
+                          className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3"
                         >
                           <div
                             className="h-4 w-4 rounded-full"

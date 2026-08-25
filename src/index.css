@@ -60,7 +60,7 @@
     --input: 220 15% 88%;
     --ring: 220 70% 45%;
 
-    --radius: 1.25rem;
+    --radius: 1.5rem;
 
     /* Mobile bottom navigation height (compact dock + safe area) */
     --mobile-nav-h: calc(3.5rem + env(safe-area-inset-bottom));
