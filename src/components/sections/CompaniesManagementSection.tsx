@@ -252,17 +252,9 @@ export function CompaniesManagementSection() {
       toast.error('Erro no upload: ' + upErr.message);
       return;
     }
-    const { data } = supabase.storage.from('company-logos').getPublicUrl(path);
-    if (!data.publicUrl) {
-      toast.error('O Supabase não retornou a URL pública da logo.');
-      return;
-    }
-
-    // Não remova o objeto com uma validação feita no navegador: a CDN pode
-    // responder 400/405 durante a propagação mesmo quando o upload já está correto.
-    // A policy pública do bucket é a fonte de autorização; a imagem será validada
-    // pelo próprio elemento <img> após o salvamento.
-    updateSelected({ logo_url: data.publicUrl });
+    // Salve somente o caminho do objeto. A URL pública é resolvida no render,
+    // usando sempre o projeto/bucket atuais, inclusive para logos antigas.
+    updateSelected({ logo_url: path });
     toast.success('Logo enviada — salve para aplicar');
   };
 
