@@ -253,21 +253,17 @@ export function CompaniesManagementSection() {
       return;
     }
     const { data } = supabase.storage.from('company-logos').getPublicUrl(path);
-    const publicUrl = `${data.publicUrl}?v=${Date.now()}`;
-    try {
-      const response = await fetch(publicUrl, { method: 'HEAD', cache: 'no-store' });
-      if (!response.ok) {
-        await supabase.storage.from('company-logos').remove([path]);
-        toast.error('A logo foi enviada, mas não ficou disponível publicamente. Verifique as policies do bucket company-logos.');
-        return;
-      }
-    } catch {
-      await supabase.storage.from('company-logos').remove([path]);
-      toast.error('Não foi possível validar o carregamento da logo.');
+    if (!data.publicUrl) {
+      toast.error('O Supabase não retornou a URL pública da logo.');
       return;
     }
+
+    // Não remova o objeto com uma validação feita no navegador: a CDN pode
+    // responder 400/405 durante a propagação mesmo quando o upload já está correto.
+    // A policy pública do bucket é a fonte de autorização; a imagem será validada
+    // pelo próprio elemento <img> após o salvamento.
     updateSelected({ logo_url: data.publicUrl });
-    toast.success('Logo enviada e validada — salve para aplicar');
+    toast.success('Logo enviada — salve para aplicar');
   };
 
   const handleCreateAdmin = async () => {
@@ -480,7 +476,7 @@ export function CompaniesManagementSection() {
                         style={{ background: `linear-gradient(140deg, ${selected.primary_color}, ${selected.secondary_color})` }}
                       >
                         {selected.logo_url ? (
-                          <img src={selected.logo_url} alt="" className="w-full h-full object-cover" />
+                          <img src={getCompanyLogoUrl(selected.logo_url) ?? undefined} alt={selected.name} className="w-full h-full object-contain" />
                         ) : (
                           <ImageIcon className="w-6 h-6 text-white" />
                         )}
