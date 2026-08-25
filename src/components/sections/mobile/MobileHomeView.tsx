@@ -60,7 +60,7 @@ export function MobileHomeView({ onNavigate }: Props) {
     <div className="px-5 pt-2 pb-6" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       {/* Hero */}
       <div
-        className="relative overflow-hidden rounded-3xl p-5 text-white mb-5"
+        className="relative mb-5 overflow-hidden rounded-[32px] border border-white/10 p-5 text-white shadow-lg"
         style={{
           background: 'linear-gradient(150deg, var(--brand-dark, hsl(var(--primary) / 0.85)), var(--brand, hsl(var(--primary))))',
           boxShadow: '0 16px 30px -14px var(--brand-glow, hsl(var(--primary) / 0.35))',
@@ -79,20 +79,20 @@ export function MobileHomeView({ onNavigate }: Props) {
             <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full border border-white/50">{level}</span>
           </div>
           <div className="grid grid-cols-2 gap-2.5">
-            <div className="bg-white/10 rounded-2xl p-3">
+            <div className="bg-white/10 rounded-[24px] p-3">
               <div className="text-[11px] opacity-75">Mensagens hoje</div>
               <div className="text-xl font-semibold mt-1" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
                 {messages.length}
               </div>
             </div>
-            <div className="bg-white/10 rounded-2xl p-3">
+            <div className="bg-white/10 rounded-[24px] p-3">
               <div className="text-[11px] opacity-75">Tarefas pendentes</div>
               <div className="text-xl font-semibold mt-1" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
                 {totalTasks}
               </div>
             </div>
             {overdueTasks > 0 && (
-              <div className="col-span-2 rounded-2xl p-3 flex items-center justify-between bg-red-500/25">
+              <div className="col-span-2 rounded-[24px] p-3 flex items-center justify-between bg-red-500/25">
                 <div>
                   <div className="text-[11px] opacity-80">Atrasadas</div>
                   <div className="text-xl font-semibold mt-1" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
@@ -131,7 +131,7 @@ export function MobileHomeView({ onNavigate }: Props) {
             <button
               key={row.id}
               onClick={() => onNavigate(row.id)}
-              className="flex items-center gap-3 bg-card border border-border p-3.5 rounded-2xl text-left"
+              className="flex items-center gap-3 rounded-[26px] border border-border/70 bg-card p-3.5 text-left shadow-sm transition-transform active:scale-[0.99]"
               style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.03)' }}
             >
               <div

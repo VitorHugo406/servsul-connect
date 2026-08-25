@@ -39,7 +39,7 @@ export function SectorTabs({ sectors, activeSector, onSectorChange }: SectorTabs
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className={cn(
-              'relative flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium transition-all sm:gap-2 sm:px-4 sm:py-2 sm:text-sm',
+              'relative flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-all sm:gap-2 sm:px-4 sm:py-2 sm:text-sm',
               isActive
                 ? 'text-white shadow-md'
                 : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'

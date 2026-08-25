@@ -282,7 +282,7 @@ const Index = () => {
         <SystemBroadcastBanner />
         <SeasonalMarquee />
         
-        <main className="flex-1 overflow-auto">
+        <main className="m-3 flex-1 overflow-auto rounded-[28px] border border-border/60 bg-card/30 shadow-sm">
           {renderSection()}
         </main>
       </div>

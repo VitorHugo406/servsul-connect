@@ -182,7 +182,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
 
   return (
     <div
-      className="relative shrink-0 border-t border-border/40 bg-card/70 px-2 pt-2 backdrop-blur-2xl sm:px-4 sm:pt-3"
+      className="relative shrink-0 border-t border-border/30 bg-transparent px-2 pt-2 backdrop-blur-2xl sm:px-4 sm:pt-3"
       style={{ paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom))' }}
       onSubmit={(e) => e.preventDefault()}
     >
@@ -231,7 +231,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
             className="mb-3 flex flex-wrap gap-2"
           >
             {attachments.map((attachment, index) => (
-              <div key={index} className="relative group rounded-lg border border-border bg-muted/50 p-2">
+              <div key={index} className="relative group rounded-2xl border border-border/60 bg-muted/50 p-2">
                 {attachment.preview ? (
                   <img src={attachment.preview} alt={attachment.file.name} className="h-16 w-16 rounded object-cover" />
                 ) : (
@@ -280,7 +280,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
         )}
       </AnimatePresence>
 
-      <div className="flex items-end gap-1 rounded-[28px] border border-background/70 bg-background/65 p-1.5 shadow-[0_10px_30px_-18px_hsl(var(--foreground)/0.5),inset_0_1px_0_hsl(var(--background)/0.9)] backdrop-blur-2xl transition-all focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15 sm:gap-1.5">
+      <div className="flex items-end gap-1 rounded-[30px] border border-border/50 bg-muted/35 p-1.5 shadow-[0_10px_30px_-18px_hsl(var(--foreground)/0.5),inset_0_1px_0_hsl(var(--background)/0.9)] backdrop-blur-2xl transition-all focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15 sm:gap-1.5">
         <div className="flex items-center gap-0.5 flex-shrink-0">
           <Button
             type="button" variant="ghost" size="icon"
