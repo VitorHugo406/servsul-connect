@@ -81,8 +81,10 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
 
   useEffect(() => {
     document.title = company?.name ? `${company.name} | Nuvexa` : 'Nuvexa - Comunicação Empresarial';
-    const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-    if (favicon && company?.logo_url) favicon.href = getCompanyLogoUrl(company.logo_url) ?? '/favicon.png';
+    const faviconUrl = getCompanyLogoUrl(company?.logo_url);
+    document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
+      link.href = faviconUrl ?? '';
+    });
   }, [company?.name, company?.logo_url]);
 
   useEffect(() => {

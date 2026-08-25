@@ -86,33 +86,27 @@ export default function SelectCompany() {
           'radial-gradient(circle at 12% 0%, hsla(220,60%,55%,0.10), transparent 45%), radial-gradient(circle at 88% 100%, hsla(220,60%,45%,0.08), transparent 40%), #F5F7FB',
       }}
     >
-      {/* Nuvexa logo with dynamic glow */}
-      <div className="relative mb-8 flex items-center justify-center">
-        <motion.div
-          initial={false}
-          animate={{
-            opacity: found ? 1 : 0,
-            scale: found ? 1 : 0.6,
-          }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="absolute inset-0 -m-20 rounded-full blur-3xl pointer-events-none"
-          style={{ background: glow }}
-        />
-        <motion.img
-          key={found?.id ?? 'default'}
-          src={getCompanyLogoUrl(found?.logo_url) ?? BRAND_LOGO_URL}
-          alt={found?.name ?? 'Nuvexa'}
-          onError={(event) => {
-            event.currentTarget.onerror = null;
-            event.currentTarget.src = BRAND_LOGO_URL;
-          }}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="h-24 md:h-28 object-contain relative z-10 drop-shadow-[0_10px_30px_rgba(15,23,42,0.15)]"
-          loading="eager"
-        />
-      </div>
+      {found?.logo_url && (
+        <div className="relative mb-8 flex items-center justify-center">
+          <motion.div
+            initial={false}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            className="absolute inset-0 -m-20 rounded-full blur-3xl pointer-events-none"
+            style={{ background: glow }}
+          />
+          <motion.img
+            key={found.id}
+            src={getCompanyLogoUrl(found.logo_url) ?? undefined}
+            alt={found.name}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="h-24 md:h-28 object-contain relative z-10 drop-shadow-[0_10px_30px_rgba(15,23,42,0.15)]"
+            loading="eager"
+          />
+        </div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 14 }}

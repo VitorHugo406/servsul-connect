@@ -33,7 +33,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { FacialLoginCamera } from '@/components/facial/FacialLoginCamera';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { applyBrand, resetBrand, BRAND_LOGO_URL, BRAND_PRIMARY, BRAND_SECONDARY } from '@/lib/branding';
+import { applyBrand, resetBrand, BRAND_PRIMARY, BRAND_SECONDARY } from '@/lib/branding';
 import { getCompanyLogoUrl } from '@/lib/companyLogo';
 import { setActiveCompanyId } from '@/lib/companyScope';
 
@@ -133,10 +133,10 @@ const Auth = () => {
 
 
   useEffect(() => {
-    const logoUrl = getCompanyLogoUrl(companyBrand?.logo_url) ?? '/favicon.png';
+    const logoUrl = getCompanyLogoUrl(companyBrand?.logo_url);
     document.title = companyBrand?.name ? `${companyBrand.name} | Nuvexa` : 'Nuvexa - Comunicação Empresarial';
     document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
-      link.href = logoUrl;
+      link.href = logoUrl ?? '';
     });
   }, [companyBrand]);
 
@@ -440,15 +440,13 @@ const Auth = () => {
           className="max-w-md text-white"
         >
           <div className="mb-8 flex items-center gap-4">
-            <img
-              src={getCompanyLogoUrl(companyBrand?.logo_url) ?? BRAND_LOGO_URL}
-                onError={(event) => {
-                  event.currentTarget.onerror = null;
-                  event.currentTarget.src = BRAND_LOGO_URL;
-                }}
-              alt={companyBrand?.name || 'Nuvexa'}
-              className="h-16 w-16 object-contain rounded-2xl bg-white/10 p-1"
-            />
+            {companyBrand?.logo_url && (
+              <img
+                src={getCompanyLogoUrl(companyBrand.logo_url) ?? undefined}
+                alt={companyBrand.name}
+                className="h-16 w-16 object-contain rounded-2xl bg-white/10 p-1"
+              />
+            )}
             <div>
               <h1 className="font-display text-4xl font-bold">
                 {companyBrand?.is_system ? 'Nuvexa' : (companyBrand?.name || 'Nuvexa')}
@@ -504,17 +502,15 @@ const Auth = () => {
               <ArrowLeft className="w-3 h-3" /> Trocar empresa
             </Link>
           </div>
-          {/* Mobile Logo - Larger and more prominent */}
+          {/* Logo da empresa selecionada no mobile */}
           <div className="mb-8 flex flex-col items-center justify-center gap-3 lg:hidden">
-            <img
-              src={getCompanyLogoUrl(companyBrand?.logo_url) ?? BRAND_LOGO_URL}
-                onError={(event) => {
-                  event.currentTarget.onerror = null;
-                  event.currentTarget.src = BRAND_LOGO_URL;
-                }}
-              alt={companyBrand?.name || 'Nuvexa'}
-              className="h-20 object-contain"
-            />
+            {companyBrand?.logo_url && (
+              <img
+                src={getCompanyLogoUrl(companyBrand.logo_url) ?? undefined}
+                alt={companyBrand.name}
+                className="h-20 object-contain"
+              />
+            )}
             <div className="text-center">
               <h1 className="font-display text-3xl font-bold text-foreground">
                 {companyBrand?.is_system ? 'Nuvexa' : (companyBrand?.name || 'Nuvexa')}
