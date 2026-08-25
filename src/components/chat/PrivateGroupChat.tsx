@@ -116,9 +116,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
            </p>
          )}
          {atts.map((att, i) => att.type === 'image' ? (
-           <SignedStorageLink key={i} url={att.url}><SignedStorageImage url={att.url} alt={att.name} className="max-w-full max-h-48 rounded-lg object-cover" /></SignedStorageLink>
+           <SignedStorageLink key={i} url={att.url}><SignedStorageImage url={att.url} alt={att.name} className="max-w-full max-h-48 rounded-2xl object-cover" /></SignedStorageLink>
          ) : (
-           <SignedStorageLink key={i} url={att.url} className={cn("flex items-center gap-2 rounded-lg p-2 text-xs", isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80")}>
+           <SignedStorageLink key={i} url={att.url} className={cn("flex items-center gap-2 rounded-2xl p-2 text-xs", isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80")}>
              <span>📎</span><span className="truncate">{att.name}</span>
            </SignedStorageLink>
          ))}
@@ -365,7 +365,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
                        return (
                          <div
                            key={member.id}
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer"
+                            className="flex items-center gap-3 p-2 rounded-2xl hover:bg-muted cursor-pointer"
                             onClick={() => !isCurrentUser && setPreviewUserId(memberProfile?.id || null)}
                          >
                            <Avatar className="h-10 w-10">
@@ -539,7 +539,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
  
                      <div
                        className={cn(
-                         'rounded-2xl px-4 py-2.5 shadow-sm max-w-[min(70vw,400px)] w-fit',
+                         'rounded-[26px] px-4 py-2.5 shadow-sm max-w-[min(70vw,400px)] w-fit',
                          isOwn
                            ? 'gradient-primary text-white rounded-tr-md'
                            : 'bg-card text-card-foreground rounded-tl-md border border-border'
@@ -598,7 +598,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
                        key={availableUser.id}
                                       onClick={() => handleAddMember(userId, availableUser.id)}
                        disabled={!!addingMember}
-                       className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-muted transition-colors disabled:opacity-50"
+                       className="flex w-full items-center gap-3 rounded-2xl p-3 text-left hover:bg-muted transition-colors disabled:opacity-50"
                      >
                        <Avatar className="h-10 w-10">
                          <AvatarImage src={availableUser.avatar_url || ''} />

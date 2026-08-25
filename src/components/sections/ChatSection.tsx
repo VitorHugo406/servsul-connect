@@ -262,7 +262,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
         className="flex h-full flex-col"
       >
         {/* Back button header */}
-        <div className="flex items-center gap-2 border-b border-border bg-card px-2 py-2">
+        <div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-3 py-2 backdrop-blur-xl">
           <Button
             variant="ghost"
             size="icon"
@@ -289,7 +289,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
         exit={{ opacity: 0, x: -20 }}
         className="flex h-full flex-col"
       >
-        <div className="flex items-center gap-2 border-b border-border bg-card px-2 py-2">
+        <div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-3 py-2 backdrop-blur-xl">
           <Button variant="ghost" size="icon" onClick={handleBack} className="h-10 w-10">
             <ArrowLeft className="h-5 w-5" />
           </Button>

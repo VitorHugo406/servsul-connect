@@ -85,9 +85,9 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
           </p>
         )}
         {attachments.map((att, i) => att.type === 'image' ? (
-          <SignedStorageLink key={i} url={att.url}><SignedStorageImage url={att.url} alt={att.name} className="max-w-full max-h-48 rounded-lg object-cover" /></SignedStorageLink>
+          <SignedStorageLink key={i} url={att.url}><SignedStorageImage url={att.url} alt={att.name} className="max-w-full max-h-48 rounded-2xl object-cover" /></SignedStorageLink>
         ) : (
-          <SignedStorageLink key={i} url={att.url} className={cn("flex items-center gap-2 rounded-lg p-2 text-xs", isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80")}>
+          <SignedStorageLink key={i} url={att.url} className={cn("flex items-center gap-2 rounded-2xl p-2 text-xs", isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80")}>
             <span>📎</span><span className="truncate">{att.name}</span>
           </SignedStorageLink>
         ))}
@@ -233,7 +233,7 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
 
                     <div
                       className={cn(
-                        'rounded-2xl px-4 py-2.5 shadow-sm max-w-[min(70vw,400px)] w-fit',
+                        'rounded-[26px] px-4 py-2.5 shadow-sm max-w-[min(70vw,400px)] w-fit',
                         isOwn
                           ? 'gradient-primary text-white rounded-tr-md'
                           : 'bg-card text-card-foreground rounded-tl-md border border-border'

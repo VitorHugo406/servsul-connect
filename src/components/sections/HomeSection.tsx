@@ -82,7 +82,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8 overflow-hidden rounded-2xl gradient-hero p-8 text-white"
+        className="mb-8 overflow-hidden rounded-[30px] gradient-hero p-8 text-white"
       >
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">

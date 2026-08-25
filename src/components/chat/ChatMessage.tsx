@@ -142,11 +142,11 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
         {attachments.map((att, i) => (
           att.type === 'image' ? (
             <SignedStorageLink key={i} url={att.url}>
-              <SignedStorageImage url={att.url} alt={att.name} className="max-w-full max-h-48 rounded-lg object-cover" />
+              <SignedStorageImage url={att.url} alt={att.name} className="max-w-full max-h-48 rounded-2xl object-cover" />
             </SignedStorageLink>
           ) : (
             <SignedStorageLink key={i} url={att.url}
-              className={cn("flex items-center gap-2 rounded-lg p-2 text-xs", isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80")}>
+              className={cn("flex items-center gap-2 rounded-2xl p-2 text-xs", isOwn ? "bg-white/10 hover:bg-white/20" : "bg-muted hover:bg-muted/80")}>
               <span>📎</span><span className="truncate">{att.name}</span>
             </SignedStorageLink>
           )
@@ -182,12 +182,12 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
         </div>
 
         <div className={cn('flex items-end gap-1.5', isOwn && 'flex-row-reverse')}>
-          <div className={cn('rounded-2xl px-4 py-3 shadow-sm max-w-[min(70vw,400px)] w-fit',
+          <div className={cn('rounded-[26px] px-4 py-3 shadow-sm max-w-[min(70vw,400px)] w-fit',
             isOwn ? 'gradient-primary text-white rounded-tr-md' : 'bg-card text-card-foreground rounded-tl-md border border-border')}>
             {/* Reply quote */}
             {message.reply_to && (
               <div
-                className={cn('mb-2 rounded-lg px-2 py-1.5 text-xs border-l-2 cursor-pointer transition-colors', isOwn ? 'bg-white/10 border-white/40 hover:bg-white/20' : 'bg-muted border-muted-foreground/30 hover:bg-muted/80')}
+                className={cn('mb-2 rounded-2xl px-2 py-1.5 text-xs border-l-2 cursor-pointer transition-colors', isOwn ? 'bg-white/10 border-white/40 hover:bg-white/20' : 'bg-muted border-muted-foreground/30 hover:bg-muted/80')}
                 onClick={() => message.reply_to?.id && onScrollToMessage?.(message.reply_to.id)}
               >
                 <span className="font-semibold">
@@ -209,13 +209,13 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
           {/* Action buttons on hover */}
           <div className={cn('flex items-center gap-0.5 transition-opacity', isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none')}>
             <button onClick={() => onReply?.(message)}
-              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              className="p-1.5 rounded-2xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
               title="Responder">
               <Reply className="h-3.5 w-3.5" />
             </button>
             <div className="relative">
               <button onClick={() => setShowReactionPicker(!showReactionPicker)}
-                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                className="p-1.5 rounded-2xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                 title="Reagir">
                 <SmilePlus className="h-3.5 w-3.5" />
               </button>
@@ -224,7 +224,7 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
                   isOwn ? 'right-0' : 'left-0')}>
                   {QUICK_REACTIONS.map(emoji => (
                     <button key={emoji} onClick={() => { onToggleReaction?.(message.id, emoji); setShowReactionPicker(false); }}
-                      className="text-lg hover:bg-muted rounded-lg p-1 transition-colors leading-none">
+                      className="text-lg hover:bg-muted rounded-2xl p-1 transition-colors leading-none">
                       {emoji}
                     </button>
                   ))}
@@ -307,7 +307,7 @@ export function DateSeparator({ date }: { date: string }) {
   };
   return (
     <div className="flex items-center justify-center my-4">
-      <span className="rounded-lg bg-muted px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm">{getLabel(date)}</span>
+      <span className="rounded-2xl bg-muted px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm">{getLabel(date)}</span>
     </div>
   );
 }

@@ -145,7 +145,7 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                       className={cn(
-                        'flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors min-h-[64px]',
+                        'flex w-full items-center gap-3 rounded-[22px] p-3 text-left transition-colors min-h-[64px]',
                         selectedUserId === conv.partnerId
                           ? 'bg-primary/10'
                           : 'hover:bg-muted'
@@ -211,7 +211,7 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                       className={cn(
-                        'flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors min-h-[64px]',
+                        'flex w-full items-center gap-3 rounded-[22px] p-3 text-left transition-colors min-h-[64px]',
                         selectedUserId === user.id
                           ? 'bg-primary/10'
                           : 'hover:bg-muted'
