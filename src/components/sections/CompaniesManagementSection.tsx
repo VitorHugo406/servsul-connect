@@ -253,8 +253,21 @@ export function CompaniesManagementSection() {
       return;
     }
     const { data } = supabase.storage.from('company-logos').getPublicUrl(path);
+    const publicUrl = `${data.publicUrl}?v=${Date.now()}`;
+    try {
+      const response = await fetch(publicUrl, { method: 'HEAD', cache: 'no-store' });
+      if (!response.ok) {
+        await supabase.storage.from('company-logos').remove([path]);
+        toast.error('A logo foi enviada, mas não ficou disponível publicamente. Verifique as policies do bucket company-logos.');
+        return;
+      }
+    } catch {
+      await supabase.storage.from('company-logos').remove([path]);
+      toast.error('Não foi possível validar o carregamento da logo.');
+      return;
+    }
     updateSelected({ logo_url: data.publicUrl });
-    toast.success('Logo enviado — salve para aplicar');
+    toast.success('Logo enviada e validada — salve para aplicar');
   };
 
   const handleCreateAdmin = async () => {
