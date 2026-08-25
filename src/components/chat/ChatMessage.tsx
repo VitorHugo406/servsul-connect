@@ -172,11 +172,11 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
 
   return (
     <div
-      className={cn('group flex min-w-0 gap-2.5 sm:gap-3', isOwn && 'flex-row-reverse')}
+      className={cn('group relative z-[101] flex min-w-0 items-start gap-2.5 sm:gap-3', isOwn && 'flex-row-reverse')}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => { setIsHovered(false); setShowReactionPicker(false); }}
     >
-      <Avatar className="h-9 w-9 shrink-0 ring-2 ring-border sm:h-10 sm:w-10">
+      <Avatar className="relative z-[102] h-9 w-9 shrink-0 ring-2 ring-border sm:h-10 sm:w-10">
         <AvatarImage src={author?.avatar_url || ''} alt={displayName} />
         <AvatarFallback className="text-sm font-semibold text-white"
           style={{ backgroundColor: authorSector?.color || '#6366f1' }}>
@@ -202,7 +202,7 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
             onTouchEnd={cancelLongPress}
             onTouchCancel={cancelLongPress}
             onContextMenu={(event) => { event.preventDefault(); setIsFocused(true); }}
-            className={cn('relative max-w-[calc(100vw-5rem)] rounded-[26px] px-4 py-3 shadow-sm w-fit select-none', isFocused && 'z-[101]',
+            className={cn('relative z-[102] max-w-[min(calc(100vw-4.5rem),400px)] min-w-0 rounded-[26px] px-4 py-3 shadow-sm w-fit select-none',
               isOwn ? 'gradient-primary text-white rounded-tr-md' : 'bg-card text-card-foreground rounded-tl-md border border-border')}>
 
             {/* Reply quote */}
@@ -226,10 +226,10 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
               </span>
             )}
             {isFocused && (
-              <div className={cn('absolute -bottom-14 flex items-center gap-2', isOwn ? 'right-2' : 'left-2')} onClick={(event) => event.stopPropagation()}>
+              <div className={cn('mt-2 flex max-w-full flex-wrap items-center gap-2', isOwn ? 'justify-end' : 'justify-start')} onClick={(event) => event.stopPropagation()}>
                 <button type="button" aria-label="Reagir à mensagem" className="flex h-11 w-11 items-center justify-center rounded-full bg-card text-foreground shadow-xl ring-1 ring-border animate-in zoom-in-75" onClick={() => setShowFocusedReactions((value) => !value)}><SmilePlus className="h-5 w-5" /></button>
                 <button type="button" aria-label="Responder à mensagem" className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl ring-1 ring-primary animate-in zoom-in-75 slide-in-from-bottom-2" onClick={() => { setIsFocused(false); onReply?.(message); }}><Reply className="h-5 w-5" /></button>
-                {showFocusedReactions && <div className="absolute bottom-14 left-0 flex gap-1 rounded-full bg-card p-2 shadow-xl ring-1 ring-border">{QUICK_REACTIONS.map((emoji) => <button key={emoji} type="button" className="p-1 text-lg" onClick={() => { onToggleReaction?.(message.id, emoji); setIsFocused(false); setShowFocusedReactions(false); }}>{emoji}</button>)}</div>}
+                {showFocusedReactions && <div className="order-last flex max-w-full flex-wrap gap-1 rounded-2xl bg-card p-2 shadow-xl ring-1 ring-border" role="group" aria-label="Escolher reação">{QUICK_REACTIONS.map((emoji) => <button key={emoji} type="button" className="h-9 w-9 rounded-full p-1 text-lg hover:bg-muted" onClick={() => { onToggleReaction?.(message.id, emoji); setIsFocused(false); setShowFocusedReactions(false); }}>{emoji}</button>)}</div>}
               </div>
             )}
           </div>
