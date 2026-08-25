@@ -202,7 +202,7 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
             onTouchEnd={cancelLongPress}
             onTouchCancel={cancelLongPress}
             onContextMenu={(event) => { event.preventDefault(); setIsFocused(true); }}
-            className={cn('rounded-[26px] px-4 py-3 shadow-sm max-w-[min(70vw,400px)] w-fit select-none',
+            className={cn('relative rounded-[26px] px-4 py-3 shadow-sm max-w-[min(70vw,400px)] w-fit select-none',
               isOwn ? 'gradient-primary text-white rounded-tr-md' : 'bg-card text-card-foreground rounded-tl-md border border-border')}>
 
             {/* Reply quote */}
@@ -314,26 +314,24 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
       </div>
 
       {isFocused && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/70 p-6 backdrop-blur-md md:hidden" onClick={() => setIsFocused(false)}>
-          <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-3 shadow-2xl" onClick={(event) => event.stopPropagation()}>
-            <div className="mb-3 rounded-2xl bg-muted/60 p-3 text-sm text-foreground">{message.content}</div>
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" className="flex items-center justify-center gap-2 rounded-2xl bg-muted px-4 py-3 text-sm font-medium" onClick={() => setShowFocusedReactions((value) => !value)}>
-                <SmilePlus className="h-4 w-4" /> Reagir
+        <div className="fixed inset-0 z-[100] bg-background/65 backdrop-blur-md md:hidden" onClick={() => { setIsFocused(false); setShowFocusedReactions(false); }} aria-label="Ações da mensagem">
+          <div className={cn('pointer-events-none fixed z-[101] flex items-center gap-2', isOwn ? 'right-4 flex-row-reverse' : 'left-4')} style={{ top: '50%', transform: 'translateY(-50%)' }} onClick={(event) => event.stopPropagation()}>
+            <div className="pointer-events-auto relative rounded-[26px] bg-card px-4 py-3 text-sm text-card-foreground shadow-2xl ring-1 ring-border/70">
+              {renderContent(message.content, isOwn)}
+            </div>
+            <div className="pointer-events-auto flex items-center gap-2">
+              <button type="button" aria-label="Reagir à mensagem" className="flex h-11 w-11 items-center justify-center rounded-full bg-card text-foreground shadow-xl ring-1 ring-border animate-in zoom-in-75 slide-in-from-bottom-2 duration-200" onClick={() => setShowFocusedReactions((value) => !value)}>
+                <SmilePlus className="h-5 w-5" />
               </button>
-              {showFocusedReactions && (
-                <div className="col-span-2 flex flex-wrap justify-center gap-2 rounded-2xl bg-muted/60 p-2">
-                  {QUICK_REACTIONS.map((emoji) => (
-                    <button key={emoji} type="button" className="rounded-xl p-2 text-xl hover:bg-background" onClick={() => { onToggleReaction?.(message.id, emoji); setIsFocused(false); setShowFocusedReactions(false); }}>
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <button type="button" className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground" onClick={() => { setIsFocused(false); onReply?.(message); }}>
-                <Reply className="h-4 w-4" /> Responder
+              <button type="button" aria-label="Responder à mensagem" className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl ring-1 ring-primary animate-in zoom-in-75 slide-in-from-bottom-4 duration-300" onClick={() => { setIsFocused(false); onReply?.(message); }}>
+                <Reply className="h-5 w-5" />
               </button>
             </div>
+            {showFocusedReactions && (
+              <div className="pointer-events-auto absolute bottom-14 left-1/2 flex -translate-x-1/2 gap-1 rounded-full bg-card p-2 shadow-xl ring-1 ring-border animate-in zoom-in-75">
+                {QUICK_REACTIONS.map((emoji) => <button key={emoji} type="button" className="rounded-full p-1.5 text-lg hover:bg-muted" onClick={() => { onToggleReaction?.(message.id, emoji); setIsFocused(false); setShowFocusedReactions(false); }}>{emoji}</button>)}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -14,6 +14,7 @@ import { ChatSection } from '@/components/sections/ChatSection';
 import { AnnouncementsSection } from '@/components/sections/AnnouncementsSection';
 import { BirthdaysSection } from '@/components/sections/BirthdaysSection';
 import { getCompanyLogoUrl } from '@/lib/companyLogo';
+import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
 
 const MOBILE_ALLOWED = new Set(['home', 'chat', 'announcements', 'birthdays']);
 
@@ -77,6 +78,8 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
+      <SystemBroadcastBanner />
+
       {/* Topbar — hidden on chat so the conversation gets the full screen */}
       {!isChat && (
         <header className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
@@ -121,7 +124,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
 
 
       {/* Main content */}
-      <main className="flex-1 overflow-hidden relative">
+      <main className="relative min-h-0 flex-1 overflow-hidden">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={current.id}
@@ -129,7 +132,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -12, scale: 0.985 }}
             transition={{ type: 'spring', stiffness: 320, damping: 32, mass: 0.7 }}
-            className={isChat ? 'h-full flex flex-col pb-[calc(var(--mobile-nav-h)+20px)]' : 'h-full overflow-y-auto pb-[calc(var(--mobile-nav-h)+28px)]'}
+            className={isChat ? 'flex h-full min-h-0 flex-col pb-[calc(var(--mobile-nav-h)+12px)]' : 'h-full overflow-y-auto pb-[calc(var(--mobile-nav-h)+28px)]'}
           >
             {renderContent()}
           </motion.div>
@@ -154,7 +157,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
               {active && (
                 <motion.span
                   layoutId="mobile-nav-pill"
-                  className="absolute inset-x-1 inset-y-0 rounded-2xl bg-secondary/15"
+                  className="absolute inset-x-1 inset-y-0 rounded-full bg-secondary/15"
                   transition={{ type: 'spring', stiffness: 420, damping: 34 }}
                 />
               )}
