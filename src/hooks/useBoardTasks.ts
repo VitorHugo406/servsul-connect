@@ -292,14 +292,26 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
   };
 
   const archiveColumnTasks = async (columnId: string) => {
-    try {
-      const colTaskIds = allTasks.filter((t) => t.status === columnId && !t.is_archived).map((t) => t.id);
-      if (colTaskIds.length === 0) return { error: null };
+    const previous = allTasks;
+    const colTaskIds = allTasks.filter((t) => t.status === columnId && !t.is_archived).map((t) => t.id);
+    if (colTaskIds.length === 0) return { error: null };
 
-      const { error } = await supabase.from('tasks').update({ is_archived: true }).in('id', colTaskIds);
+    setAllTasks((prev) => {
+      const next = prev.map((task) => colTaskIds.includes(task.id) ? { ...task, is_archived: true } : task);
+      if (boardId) boardTaskCache.set(boardId, next);
+      return next;
+    });
+
+    try {
+      let query = supabase.from('tasks').update({ is_archived: true }).in('id', colTaskIds);
+      if (boardId) query = query.eq('board_id', boardId) as typeof query;
+      if (profile?.company_id) query = query.eq('company_id', profile.company_id) as typeof query;
+      const { error } = await query;
       if (error) throw error;
       return { error: null };
     } catch (error) {
+      setAllTasks(previous);
+      if (boardId) boardTaskCache.set(boardId, previous);
       return { error };
     }
   };

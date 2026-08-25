@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
       birthDate, 
       sectorId, 
       registrationPassword,
+      companyId,
       // New fields
       phone,
       address,
@@ -41,7 +42,7 @@ Deno.serve(async (req) => {
     } = await req.json();
 
     // Validate required fields
-    if (!email || !password || !name || !birthDate || !sectorId || !registrationPassword) {
+    if (!email || !password || !name || !birthDate || !sectorId || !registrationPassword || !companyId) {
       return new Response(
         JSON.stringify({ error: "Todos os campos obrigatórios devem ser preenchidos" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -78,6 +79,7 @@ Deno.serve(async (req) => {
       user_metadata: {
         name,
         display_name: name.split(" ")[0],
+        company_id: companyId,
       },
     });
 
@@ -117,6 +119,7 @@ Deno.serve(async (req) => {
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
       .update({
+        company_id: companyId,
         birth_date: birthDate,
         sector_id: sectorId,
         phone: phone || null,

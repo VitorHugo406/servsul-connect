@@ -139,7 +139,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
       {/* Fixed full-width glass bottom nav */}
       <nav
         aria-label="Navegação principal"
-        className="glass-nav fixed bottom-5 left-1/2 z-50 grid w-[min(82vw,320px)] -translate-x-1/2 grid-cols-4 rounded-full border border-border/70 px-1 py-1 shadow-xl"
+        className="glass-nav fixed bottom-4 left-1/2 z-50 grid w-[min(88vw,360px)] -translate-x-1/2 grid-cols-4 rounded-full border border-border/70 px-1.5 py-1.5 shadow-xl"
         style={{ paddingBottom: 'max(0.25rem, env(safe-area-inset-bottom))' }}
       >
         {TABS.map((tab) => {
@@ -149,7 +149,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
             <button
               key={tab.id}
               onClick={() => onSectionChange(tab.id)}
-              className="relative flex h-10 flex-col items-center justify-center gap-0.5 rounded-full transition-all active:scale-90"
+              className="relative flex h-12 flex-col items-center justify-center gap-0.5 rounded-full transition-all active:scale-90"
             >
               {active && (
                 <motion.span

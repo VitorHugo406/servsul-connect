@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Check, CheckCheck, Reply, SmilePlus } from 'lucide-react';
@@ -57,6 +57,21 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
   const { sectors } = useSectors();
   const [isHovered, setIsHovered] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [showFocusedReactions, setShowFocusedReactions] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  }, []);
+
+  const startLongPress = () => {
+    longPressTimer.current = setTimeout(() => setIsFocused(true), 500);
+  };
+  const cancelLongPress = () => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    longPressTimer.current = null;
+  };
 
   const isOwn = message.author_id === profile?.id;
   const author = message.author;
@@ -73,7 +88,7 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
   const displayName = author?.display_name || author?.name || 'Usuário';
   const messageStatus = message.status || (message.id ? 'delivered' : 'sending');
 
-  const parseCardMention = (lines: string[]): any => {
+  const parseCardMention = (lines: string[]): { taskNumber: number; title: string; description?: string; labels?: string; priority: string; dueDate?: string; boardName: string } | null => {
     if (lines.length < 2) return null;
     const firstLine = lines[0];
     const match = firstLine.match(/^📋 Card #(\d+) — (.+)$/);
@@ -182,8 +197,14 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
         </div>
 
         <div className={cn('flex items-end gap-1.5', isOwn && 'flex-row-reverse')}>
-          <div className={cn('rounded-[26px] px-4 py-3 shadow-sm max-w-[min(70vw,400px)] w-fit',
-            isOwn ? 'gradient-primary text-white rounded-tr-md' : 'bg-card text-card-foreground rounded-tl-md border border-border')}>
+          <div
+            onTouchStart={startLongPress}
+            onTouchEnd={cancelLongPress}
+            onTouchCancel={cancelLongPress}
+            onContextMenu={(event) => { event.preventDefault(); setIsFocused(true); }}
+            className={cn('rounded-[26px] px-4 py-3 shadow-sm max-w-[min(70vw,400px)] w-fit select-none',
+              isOwn ? 'gradient-primary text-white rounded-tr-md' : 'bg-card text-card-foreground rounded-tl-md border border-border')}>
+
             {/* Reply quote */}
             {message.reply_to && (
               <div
@@ -291,6 +312,31 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
           </div>
         )}
       </div>
+
+      {isFocused && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/70 p-6 backdrop-blur-md md:hidden" onClick={() => setIsFocused(false)}>
+          <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-3 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-3 rounded-2xl bg-muted/60 p-3 text-sm text-foreground">{message.content}</div>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" className="flex items-center justify-center gap-2 rounded-2xl bg-muted px-4 py-3 text-sm font-medium" onClick={() => setShowFocusedReactions((value) => !value)}>
+                <SmilePlus className="h-4 w-4" /> Reagir
+              </button>
+              {showFocusedReactions && (
+                <div className="col-span-2 flex flex-wrap justify-center gap-2 rounded-2xl bg-muted/60 p-2">
+                  {QUICK_REACTIONS.map((emoji) => (
+                    <button key={emoji} type="button" className="rounded-xl p-2 text-xl hover:bg-background" onClick={() => { onToggleReaction?.(message.id, emoji); setIsFocused(false); setShowFocusedReactions(false); }}>
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button type="button" className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground" onClick={() => { setIsFocused(false); onReply?.(message); }}>
+                <Reply className="h-4 w-4" /> Responder
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
