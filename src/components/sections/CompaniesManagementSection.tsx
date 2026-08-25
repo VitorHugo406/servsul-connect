@@ -407,7 +407,7 @@ export function CompaniesManagementSection() {
                     style={{ background: `linear-gradient(140deg, ${selected.primary_color}, ${selected.secondary_color})` }}
                   >
                     {selected.logo_url ? (
-                      <img src={selected.logo_url} alt={selected.name} className="w-full h-full object-cover" />
+                      <img src={getCompanyLogoUrl(selected.logo_url) ?? undefined} alt={selected.name} className="w-full h-full object-contain" />
                     ) : (
                       <Building2 className="w-5 h-5 text-white" />
                     )}
