@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { getCompanyLogoPath, getCompanyLogoUrl } from '@/lib/companyLogo';
 
 interface CompanyStats {
   id: string;
@@ -235,11 +236,18 @@ export function CompaniesManagementSection() {
 
   const handleUploadLogo = async (file: File) => {
     if (!selected) return;
-    const ext = file.name.split('.').pop() || 'png';
-    const path = `${selected.slug}/${Date.now()}.${ext}`;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecione um arquivo de imagem válido');
+      return;
+    }
+    const path = getCompanyLogoPath(selected.slug, file);
     const { error: upErr } = await supabase.storage
       .from('company-logos')
-      .upload(path, file, { upsert: true });
+      .upload(path, file, {
+        upsert: true,
+        contentType: file.type,
+        cacheControl: '3600',
+      });
     if (upErr) {
       toast.error('Erro no upload: ' + upErr.message);
       return;
@@ -352,7 +360,7 @@ export function CompaniesManagementSection() {
                   style={{ background: `linear-gradient(140deg, ${c.primary_color}, ${c.secondary_color})` }}
                 >
                   {c.logo_url ? (
-                    <img src={c.logo_url} alt={c.name} className="w-full h-full object-cover" />
+                    <img src={getCompanyLogoUrl(c.logo_url) ?? undefined} alt={c.name} className="w-full h-full object-cover" />
                   ) : (
                     <ImageIcon className="w-5 h-5" />
                   )}
