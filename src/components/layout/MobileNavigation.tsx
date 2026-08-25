@@ -72,8 +72,8 @@ export function MobileNavigation({ activeSection, onSectionChange }: MobileNavig
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border safe-area-pb">
-        <div className="flex items-center justify-around h-16 px-2">
+      <nav aria-label="Navegação principal" className="fixed bottom-2 left-3 right-3 z-50 rounded-[24px] border border-border/60 bg-background/90 shadow-lg backdrop-blur-xl safe-area-pb">
+        <div className="flex items-center justify-around h-14 px-1.5">
           {mainNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeSection === item.id;
