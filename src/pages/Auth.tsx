@@ -34,6 +34,7 @@ import { FacialLoginCamera } from '@/components/facial/FacialLoginCamera';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { applyBrand, resetBrand, BRAND_LOGO_URL, BRAND_PRIMARY, BRAND_SECONDARY } from '@/lib/branding';
+import { getCompanyLogoUrl } from '@/lib/companyLogo';
 import { setActiveCompanyId } from '@/lib/companyScope';
 
 const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
@@ -130,6 +131,14 @@ const Auth = () => {
     return () => resetBrand();
   }, [companySlug]);
 
+
+  useEffect(() => {
+    const logoUrl = getCompanyLogoUrl(companyBrand?.logo_url) ?? '/favicon.png';
+    document.title = companyBrand?.name ? `${companyBrand.name} | Nuvexa` : 'Nuvexa - Comunicação Empresarial';
+    document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
+      link.href = logoUrl;
+    });
+  }, [companyBrand]);
 
   // Handle facial login success
   const handleFacialLoginSuccess = async (userId: string, email: string) => {
@@ -432,7 +441,11 @@ const Auth = () => {
         >
           <div className="mb-8 flex items-center gap-4">
             <img
-              src={companyBrand?.logo_url || BRAND_LOGO_URL}
+              src={getCompanyLogoUrl(companyBrand?.logo_url) ?? BRAND_LOGO_URL}
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = BRAND_LOGO_URL;
+                }}
               alt={companyBrand?.name || 'Nuvexa'}
               className="h-16 w-16 object-contain rounded-2xl bg-white/10 p-1"
             />
@@ -494,7 +507,11 @@ const Auth = () => {
           {/* Mobile Logo - Larger and more prominent */}
           <div className="mb-8 flex flex-col items-center justify-center gap-3 lg:hidden">
             <img
-              src={companyBrand?.logo_url || BRAND_LOGO_URL}
+              src={getCompanyLogoUrl(companyBrand?.logo_url) ?? BRAND_LOGO_URL}
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = BRAND_LOGO_URL;
+                }}
               alt={companyBrand?.name || 'Nuvexa'}
               className="h-20 object-contain"
             />

@@ -100,8 +100,12 @@ export default function SelectCompany() {
         />
         <motion.img
           key={found?.id ?? 'default'}
-          src={BRAND_LOGO_URL}
-          alt="Nuvexa"
+          src={getCompanyLogoUrl(found?.logo_url) ?? BRAND_LOGO_URL}
+          alt={found?.name ?? 'Nuvexa'}
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.src = BRAND_LOGO_URL;
+          }}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}

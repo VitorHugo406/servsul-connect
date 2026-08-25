@@ -15,7 +15,7 @@ export function SeasonalMarquee() {
 
   return (
     <div
-      className="relative w-full overflow-hidden border-b border-border bg-gradient-to-r from-amber-500/5 via-primary/5 to-amber-500/5 cursor-pointer select-none"
+      className="relative mx-3 w-auto overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-r from-amber-500/5 via-primary/5 to-amber-500/5 shadow-sm cursor-pointer select-none"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => setLocked((v) => !v)}
