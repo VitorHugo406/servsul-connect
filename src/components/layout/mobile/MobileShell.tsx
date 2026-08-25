@@ -13,6 +13,7 @@ import { MobileHomeView } from '@/components/sections/mobile/MobileHomeView';
 import { ChatSection } from '@/components/sections/ChatSection';
 import { AnnouncementsSection } from '@/components/sections/AnnouncementsSection';
 import { BirthdaysSection } from '@/components/sections/BirthdaysSection';
+import { getCompanyLogoUrl } from '@/lib/companyLogo';
 
 const MOBILE_ALLOWED = new Set(['home', 'chat', 'announcements', 'birthdays']);
 
@@ -219,7 +220,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
                 style={{ background: 'var(--brand-glow-soft, hsl(var(--primary) / 0.12))', color: 'var(--brand, hsl(var(--primary)))' }}
               >
                 {company.logo_url && (
-                  <img src={company.logo_url} alt={company.name} className="w-4 h-4 rounded object-cover" />
+                  <img src={getCompanyLogoUrl(company.logo_url) ?? undefined} alt={company.name} className="w-4 h-4 rounded object-cover" />
                 )}
                 {company.name}
               </div>

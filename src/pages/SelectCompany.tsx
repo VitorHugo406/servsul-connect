@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { BRAND_LOGO_URL, applyBrand, resetBrand } from '@/lib/branding';
+import { getCompanyLogoUrl } from '@/lib/companyLogo';
 
 interface FoundCompany {
   id: string;
@@ -164,7 +165,7 @@ export default function SelectCompany() {
                     }}
                   >
                     {found.logo_url ? (
-                      <img src={found.logo_url} alt={found.name} className="w-full h-full object-cover" />
+                      <img src={getCompanyLogoUrl(found.logo_url) ?? undefined} alt={found.name} className="w-full h-full object-cover" />
                     ) : (
                       <Building2 className="w-5 h-5 text-white" />
                     )}
