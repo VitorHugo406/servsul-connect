@@ -239,13 +239,17 @@ export function CompaniesManagementSection() {
     const path = `${selected.slug}/${Date.now()}.${ext}`;
     const { error: upErr } = await supabase.storage
       .from('company-logos')
-      .upload(path, file, { upsert: true });
+      .upload(path, file, {
+        upsert: true,
+        contentType: file.type || 'image/png',
+        cacheControl: '3600',
+      });
     if (upErr) {
       toast.error('Erro no upload: ' + upErr.message);
       return;
     }
     const { data } = supabase.storage.from('company-logos').getPublicUrl(path);
-    updateSelected({ logo_url: data.publicUrl });
+    updateSelected({ logo_url: `${data.publicUrl}?v=${Date.now()}` });
     toast.success('Logo enviado — salve para aplicar');
   };
 
