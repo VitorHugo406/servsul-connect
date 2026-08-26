@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
+import { useCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -74,6 +75,7 @@ export function UserRegistrationDialog({
   sectors,
   onSuccess 
 }: UserRegistrationDialogProps) {
+  const { company: currentCompany } = useCompany();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -204,6 +206,7 @@ export function UserRegistrationDialog({
           birthDate,
           sectorId,
           registrationPassword: settings.value,
+          companyId: currentCompany?.id,
           // Additional fields
           phone,
           address,

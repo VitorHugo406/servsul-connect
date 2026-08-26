@@ -13,6 +13,8 @@ import { MobileHomeView } from '@/components/sections/mobile/MobileHomeView';
 import { ChatSection } from '@/components/sections/ChatSection';
 import { AnnouncementsSection } from '@/components/sections/AnnouncementsSection';
 import { BirthdaysSection } from '@/components/sections/BirthdaysSection';
+import { getCompanyLogoUrl } from '@/lib/companyLogo';
+import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
 
 const MOBILE_ALLOWED = new Set(['home', 'chat', 'announcements', 'birthdays']);
 
@@ -76,6 +78,8 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
+      <SystemBroadcastBanner />
+
       {/* Topbar — hidden on chat so the conversation gets the full screen */}
       {!isChat && (
         <header className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
@@ -120,7 +124,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
 
 
       {/* Main content */}
-      <main className="flex-1 overflow-hidden relative">
+      <main className="relative min-h-0 flex-1 overflow-hidden">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={current.id}
@@ -128,7 +132,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -12, scale: 0.985 }}
             transition={{ type: 'spring', stiffness: 320, damping: 32, mass: 0.7 }}
-            className={isChat ? 'h-full flex flex-col pb-[calc(var(--mobile-nav-h)+20px)]' : 'h-full overflow-y-auto pb-[calc(var(--mobile-nav-h)+28px)]'}
+            className={isChat ? 'flex h-full min-h-0 flex-col pb-[calc(var(--mobile-nav-h)+20px)]' : 'h-full overflow-y-auto pb-[calc(var(--mobile-nav-h)+28px)]'}
           >
             {renderContent()}
           </motion.div>
@@ -138,7 +142,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
       {/* Fixed full-width glass bottom nav */}
       <nav
         aria-label="Navegação principal"
-        className="glass-nav fixed bottom-5 left-1/2 z-50 grid w-[min(82vw,320px)] -translate-x-1/2 grid-cols-4 rounded-full border border-border/70 px-1 py-1 shadow-xl"
+        className="glass-nav fixed bottom-4 left-1/2 z-50 grid w-[min(88vw,360px)] -translate-x-1/2 grid-cols-4 rounded-full border border-border/70 px-1.5 py-1.5 shadow-xl"
         style={{ paddingBottom: 'max(0.25rem, env(safe-area-inset-bottom))' }}
       >
         {TABS.map((tab) => {
@@ -148,12 +152,12 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
             <button
               key={tab.id}
               onClick={() => onSectionChange(tab.id)}
-              className="relative flex h-10 flex-col items-center justify-center gap-0.5 rounded-full transition-all active:scale-90"
+              className="relative flex h-12 flex-col items-center justify-center gap-0.5 rounded-full transition-all active:scale-90"
             >
               {active && (
                 <motion.span
                   layoutId="mobile-nav-pill"
-                  className="absolute inset-x-1 inset-y-0 rounded-2xl bg-secondary/15"
+                  className="absolute inset-x-1 inset-y-0 rounded-full bg-secondary/15"
                   transition={{ type: 'spring', stiffness: 420, damping: 34 }}
                 />
               )}
@@ -219,7 +223,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
                 style={{ background: 'var(--brand-glow-soft, hsl(var(--primary) / 0.12))', color: 'var(--brand, hsl(var(--primary)))' }}
               >
                 {company.logo_url && (
-                  <img src={company.logo_url} alt={company.name} className="w-4 h-4 rounded object-cover" />
+                  <img src={getCompanyLogoUrl(company.logo_url) ?? undefined} alt={company.name} className="w-4 h-4 rounded object-cover" />
                 )}
                 {company.name}
               </div>

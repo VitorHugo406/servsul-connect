@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
+import { getCompanyLogoUrl } from '@/lib/companyLogo';
 import { UserProfileDialog } from '@/components/user/UserProfileDialog';
 import { TeamHeaderButton } from '@/components/teams/TeamHeaderButton';
 import {
@@ -71,12 +72,20 @@ const ALL_SECTIONS: SectionDef[] = [
 export function Header({ title, subtitle, hideNotifications = false, searchQuery = '', onSearchChange, onNavigateToSection }: HeaderProps) {
   const { counts } = useNotifications();
   const { profile, isAdmin, canAccess } = useAuth();
-  const { hasModule } = useCompany();
+  const { company, hasModule } = useCompany();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showSectionSearch, setShowSectionSearch] = useState(false);
   const [showComingSoon, setShowComingSoon] = useState<string | null>(null);
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+
+  useEffect(() => {
+    document.title = company?.name ? `${company.name} | Nuvexa` : 'Nuvexa - Comunicação Empresarial';
+    const faviconUrl = getCompanyLogoUrl(company?.logo_url);
+    document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
+      link.href = faviconUrl ?? '';
+    });
+  }, [company?.name, company?.logo_url]);
 
   useEffect(() => {
     const saved = localStorage.getItem('theme');
@@ -144,11 +153,25 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex h-16 items-center justify-between border-b border-border bg-card px-6"
+        className="mx-3 mt-3 flex h-16 items-center justify-between rounded-2xl border border-border/70 bg-card px-6 shadow-sm"
       >
-        <div>
-          <h2 className="font-display text-xl font-bold text-foreground">{title}</h2>
-          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+        <div className="flex min-w-0 items-center gap-3">
+          {company && (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-muted/50">
+              {company.logo_url ? (
+                <img src={getCompanyLogoUrl(company.logo_url) ?? undefined} alt={company.name} className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-sm font-bold text-primary">{company.name.charAt(0)}</span>
+              )}
+            </div>
+          )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="font-display truncate text-xl font-bold text-foreground">{title}</h2>
+              {company && <span className="hidden truncate text-xs font-medium text-muted-foreground lg:inline">{company.name}</span>}
+            </div>
+            {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+          </div>
         </div>
         
         <div className="flex items-center gap-2">

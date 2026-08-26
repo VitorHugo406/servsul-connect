@@ -1,273 +1,71 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const corsHeaders = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' };
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
-
-    // Accept optional board_id filter for instant processing
-    let filterBoardId: string | null = null;
-    try {
-      const body = await req.json();
-      filterBoardId = body?.board_id || null;
-    } catch { /* no body = process all */ }
-
-    let processed = 0;
-    const alerts: any[] = [];
+    const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    let boardId: string | null = null;
+    try { boardId = (await req.json())?.board_id ?? null; } catch { /* body optional */ }
     const now = new Date();
-    const startOfToday = new Date(now);
-    startOfToday.setUTCHours(0, 0, 0, 0);
 
-    // ===== PART 1: Process automation rules (SE → ENTÃO) =====
-    let rulesQuery = adminClient
-      .from('task_automation_rules')
-      .select('*')
-      .eq('is_active', true);
-    
-    if (filterBoardId) {
-      rulesQuery = rulesQuery.eq('board_id', filterBoardId);
-    }
-
+    let rulesQuery = admin.from('task_automation_rules').select('id, board_id, task_id, trigger_type, trigger_config, action_type, action_config').eq('is_active', true);
+    if (boardId) rulesQuery = rulesQuery.eq('board_id', boardId);
     const { data: rules, error: rulesError } = await rulesQuery;
-
     if (rulesError) throw rulesError;
 
-    for (const rule of (rules || [])) {
-      const taskFilter = rule.task_id
-        ? adminClient.from('tasks').select('*').eq('id', rule.task_id).eq('is_archived', false)
-        : adminClient.from('tasks').select('*').eq('board_id', rule.board_id).eq('is_archived', false);
+    const boardIds = [...new Set((rules ?? []).map((r) => r.board_id).filter(Boolean))];
+    let tasksQuery = admin.from('tasks').select('id, title, task_number, assigned_to, board_id, due_date, updated_at, status, is_archived').eq('is_archived', false);
+    if (boardIds.length) tasksQuery = tasksQuery.in('board_id', boardIds);
+    if (boardId) tasksQuery = tasksQuery.eq('board_id', boardId);
+    const { data: tasks = [], error: tasksError } = await tasksQuery;
+    if (tasksError) throw tasksError;
 
-      const { data: tasks } = await taskFilter;
-      if (!tasks || tasks.length === 0) continue;
+    const taskIds = tasks.map((task) => task.id);
+    const [{ data: subtasks = [] }, { data: assignments = [] }] = await Promise.all([
+      taskIds.length ? admin.from('task_subtasks').select('task_id, is_completed').in('task_id', taskIds) : Promise.resolve({ data: [] }),
+      taskIds.length ? admin.from('task_label_assignments').select('task_id, task_labels(name)').in('task_id', taskIds) : Promise.resolve({ data: [] }),
+    ]);
+    const subtasksByTask = new Map<string, { is_completed: boolean }[]>();
+    for (const row of subtasks as any[]) subtasksByTask.set(row.task_id, [...(subtasksByTask.get(row.task_id) ?? []), row]);
+    const labelsByTask = new Map<string, any[]>();
+    for (const row of assignments as any[]) labelsByTask.set(row.task_id, [...(labelsByTask.get(row.task_id) ?? []), row]);
+    const profiles = [...new Set(tasks.map((task) => task.assigned_to).filter(Boolean))];
+    const { data: profileRows = [] } = profiles.length ? await admin.from('profiles').select('id, user_id').in('id', profiles) : { data: [] };
+    const userByProfile = new Map((profileRows as any[]).map((profile) => [profile.id, profile.user_id]));
 
-      for (const task of tasks) {
-        let triggered = false;
-
-        switch (rule.trigger_type) {
-          case 'deadline_approaching': {
-            if (!task.due_date) break;
-            const due = new Date(task.due_date);
-            const hoursLeft = (due.getTime() - now.getTime()) / (1000 * 60 * 60);
-            const threshold = rule.trigger_config?.hours || 24;
-            triggered = hoursLeft > 0 && hoursLeft <= threshold;
-            break;
-          }
-          case 'stuck_days': {
-            const updated = new Date(task.updated_at);
-            const daysSinceUpdate = (now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24);
-            const threshold = rule.trigger_config?.days || 3;
-            triggered = daysSinceUpdate >= threshold;
-            break;
-          }
-          case 'checklist_complete': {
-            const { data: subtasks } = await adminClient
-              .from('task_subtasks')
-              .select('is_completed')
-              .eq('task_id', task.id);
-            if (subtasks && subtasks.length > 0) {
-              triggered = subtasks.every(s => s.is_completed);
-            }
-            break;
-          }
-          case 'label_urgent': {
-            const { data: labelAssignments } = await adminClient
-              .from('task_label_assignments')
-              .select('label_id, task_labels(name)')
-              .eq('task_id', task.id);
-            if (labelAssignments) {
-              triggered = labelAssignments.some((la: any) =>
-                la.task_labels?.name?.toLowerCase().includes('urgent') ||
-                la.task_labels?.name?.toLowerCase().includes('urgente')
-              );
-            }
-            break;
-          }
-        }
-
-        if (!triggered) continue;
-
-        // Execute action
-        switch (rule.action_type) {
-          case 'notify': {
-            if (task.assigned_to) {
-              const { data: profile } = await adminClient
-                .from('profiles')
-                .select('user_id, display_name, name')
-                .eq('id', task.assigned_to)
-                .single();
-              
-              if (profile) {
-                await adminClient.from('user_notifications').insert({
-                  user_id: profile.user_id,
-                  type: 'automation',
-                  title: 'Automação ativada',
-                  message: `Regra "${rule.trigger_type}" ativada no card #${task.task_number} "${task.title}"`,
-                  reference_id: task.id,
-                });
-                processed++;
-              }
-            }
-            break;
-          }
-          case 'move_column': {
-            const targetCol = rule.action_config?.column_id;
-            if (targetCol && task.status !== targetCol) {
-              await adminClient.from('tasks').update({ status: targetCol, position: 0 }).eq('id', task.id);
-              processed++;
-            }
-            break;
-          }
-          case 'set_priority': {
-            const newPriority = rule.action_config?.priority;
-            if (newPriority && task.priority !== newPriority) {
-              await adminClient.from('tasks').update({ priority: newPriority }).eq('id', task.id);
-              processed++;
-            }
-            break;
-          }
-          case 'alert': {
-            if (task.assigned_to) {
-              alerts.push({
-                profile_id: task.assigned_to,
-                board_id: rule.board_id,
-                alert_type: rule.trigger_type === 'deadline_approaching' ? 'deadline_risk' :
-                            rule.trigger_type === 'stuck_days' ? 'stuck_task' : 'late_task',
-                message: `Card #${task.task_number} "${task.title}" - ${
-                  rule.trigger_type === 'deadline_approaching' ? 'Prazo se aproximando' :
-                  rule.trigger_type === 'stuck_days' ? 'Card parado por muito tempo' :
-                  'Ação necessária'
-                }`,
-                task_id: task.id,
-              });
-              processed++;
-            }
-            break;
-          }
-        }
-      }
+    const alerts: any[] = [];
+    const notificationRows: any[] = [];
+    let processed = 0;
+    const candidates = (rules ?? []).flatMap((rule) => tasks.filter((task) => rule.task_id ? task.id === rule.task_id : task.board_id === rule.board_id).map((task) => ({ rule, task })));
+    for (const { rule, task } of candidates) {
+      let triggered = false;
+      if (rule.trigger_type === 'deadline_approaching' && task.due_date) { const hours = (new Date(task.due_date).getTime() - now.getTime()) / 36e5; triggered = hours > 0 && hours <= (rule.trigger_config?.hours ?? 24); }
+      if (rule.trigger_type === 'stuck_days') triggered = (now.getTime() - new Date(task.updated_at).getTime()) / 864e5 >= (rule.trigger_config?.days ?? 3);
+      if (rule.trigger_type === 'checklist_complete') { const rows = subtasksByTask.get(task.id) ?? []; triggered = rows.length > 0 && rows.every((row) => row.is_completed); }
+      if (rule.trigger_type === 'label_urgent') triggered = (labelsByTask.get(task.id) ?? []).some((row) => { const name = row.task_labels?.name?.toLowerCase() ?? ''; return name.includes('urgent') || name.includes('urgente'); });
+      if (!triggered) continue;
+      if (rule.action_type === 'notify' && task.assigned_to && userByProfile.has(task.assigned_to)) notificationRows.push({ user_id: userByProfile.get(task.assigned_to), type: 'automation', title: 'Automação ativada', message: `Regra "${rule.trigger_type}" ativada no card #${task.task_number} "${task.title}"`, reference_id: task.id });
+      if (rule.action_type === 'move_column' && rule.action_config?.column_id && task.status !== rule.action_config.column_id) { await admin.from('tasks').update({ status: rule.action_config.column_id, position: 0 }).eq('id', task.id); processed++; }
+      if (rule.action_type === 'set_priority' && rule.action_config?.priority) { await admin.from('tasks').update({ priority: rule.action_config.priority }).eq('id', task.id).neq('priority', rule.action_config.priority); processed++; }
+      if (rule.action_type === 'alert' && task.assigned_to) { alerts.push({ profile_id: task.assigned_to, board_id: rule.board_id, alert_type: rule.trigger_type === 'deadline_approaching' ? 'deadline_risk' : rule.trigger_type === 'stuck_days' ? 'stuck_task' : 'late_task', message: `Card #${task.task_number} "${task.title}" requer atenção`, task_id: task.id }); processed++; }
     }
 
-    // ===== PART 2: Auto-detect overdue and approaching deadline tasks =====
-    let activeTasksQuery = adminClient
-      .from('tasks')
-      .select('id, title, task_number, assigned_to, board_id, due_date, updated_at, status')
-      .eq('is_archived', false)
-      .not('assigned_to', 'is', null);
-    
-    if (filterBoardId) {
-      activeTasksQuery = activeTasksQuery.eq('board_id', filterBoardId);
+    const counts = new Map<string, { count: number; board_id: string | null }>();
+    for (const task of tasks) if (task.assigned_to) { const current = counts.get(task.assigned_to) ?? { count: 0, board_id: task.board_id }; current.count++; counts.set(task.assigned_to, current);         if (task.due_date) { const overdue = now.getTime() - new Date(task.due_date).getTime(); alerts.push(overdue > 0 ? { profile_id: task.assigned_to, board_id: task.board_id, alert_type: 'late_task', message: `Card #${task.task_number} "${task.title}" está atrasado`, task_id: task.id } : overdue > -48 * 36e5 ? { profile_id: task.assigned_to, board_id: task.board_id, alert_type: 'deadline_risk', message: `Card #${task.task_number} "${task.title}" vence em breve`, task_id: task.id } : null); }
+        if ((now.getTime() - new Date(task.updated_at).getTime()) / 864e5 >= 3) alerts.push({ profile_id: task.assigned_to, board_id: task.board_id, alert_type: 'stuck_task', message: `Card #${task.task_number} "${task.title}" está parado há muito tempo`, task_id: task.id }); }
+    for (const [profile_id, value] of counts) if (value.count >= 5) alerts.push({ profile_id, board_id: value.board_id, alert_type: 'overloaded', message: `Colaborador com ${value.count} cards ativos — possível sobrecarga`, task_id: null });
+    const validAlerts = alerts.filter(Boolean);
+    if (notificationRows.length) await admin.from('user_notifications').insert(notificationRows);
+    if (validAlerts.length) {
+      const keys = new Set(validAlerts.map((a) => `${a.profile_id}:${a.alert_type}:${a.task_id ?? 'none'}`));
+      const { data: existing = [] } = await admin.from('workload_alerts').select('profile_id, alert_type, task_id').in('profile_id', [...new Set(validAlerts.map((a) => a.profile_id))]).gte('created_at', new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString());
+      const existingKeys = new Set((existing as any[]).map((a) => `${a.profile_id}:${a.alert_type}:${a.task_id ?? 'none'}`));
+      const fresh = validAlerts.filter((a) => keys.has(`${a.profile_id}:${a.alert_type}:${a.task_id ?? 'none'}`) && !existingKeys.has(`${a.profile_id}:${a.alert_type}:${a.task_id ?? 'none'}`));
+      if (fresh.length) await admin.from('workload_alerts').insert(fresh);
     }
-
-    const { data: allActiveTasks } = await activeTasksQuery;
-
-    if (allActiveTasks) {
-      const userTaskCounts: Record<string, { count: number; boards: Set<string> }> = {};
-
-      for (const t of allActiveTasks) {
-        if (!t.assigned_to) continue;
-        
-        // Count tasks per user for overload detection
-        if (!userTaskCounts[t.assigned_to]) userTaskCounts[t.assigned_to] = { count: 0, boards: new Set() };
-        userTaskCounts[t.assigned_to].count++;
-        if (t.board_id) userTaskCounts[t.assigned_to].boards.add(t.board_id);
-
-        // Check overdue tasks (due_date in the past)
-        if (t.due_date) {
-          const due = new Date(t.due_date);
-          const hoursOverdue = (now.getTime() - due.getTime()) / (1000 * 60 * 60);
-          
-          if (hoursOverdue > 0) {
-            // Task is overdue
-            const daysOverdue = Math.ceil(hoursOverdue / 24);
-            alerts.push({
-              profile_id: t.assigned_to,
-              board_id: t.board_id,
-              alert_type: 'late_task',
-              message: `Card #${t.task_number} "${t.title}" está atrasado há ${daysOverdue} dia(s)`,
-              task_id: t.id,
-            });
-          } else if (hoursOverdue > -48) {
-            // Task approaching deadline (within 48h)
-            const hoursLeft = Math.ceil(Math.abs(hoursOverdue));
-            alerts.push({
-              profile_id: t.assigned_to,
-              board_id: t.board_id,
-              alert_type: 'deadline_risk',
-              message: `Card #${t.task_number} "${t.title}" vence em ${hoursLeft}h`,
-              task_id: t.id,
-            });
-          }
-        }
-
-        // Check stuck tasks (not updated in 3+ days)
-        const daysSinceUpdate = (now.getTime() - new Date(t.updated_at).getTime()) / (1000 * 60 * 60 * 24);
-        if (daysSinceUpdate >= 3) {
-          alerts.push({
-            profile_id: t.assigned_to,
-            board_id: t.board_id,
-            alert_type: 'stuck_task',
-            message: `Card #${t.task_number} "${t.title}" está parado há ${Math.floor(daysSinceUpdate)} dia(s)`,
-            task_id: t.id,
-          });
-        }
-      }
-
-      // Overload detection (5+ active cards per user)
-      for (const [profileId, data] of Object.entries(userTaskCounts)) {
-        if (data.count >= 5) {
-          alerts.push({
-            profile_id: profileId,
-            board_id: [...data.boards][0] || null,
-            alert_type: 'overloaded',
-            message: `Colaborador com ${data.count} cards ativos — possível sobrecarga`,
-            task_id: null,
-          });
-        }
-      }
-    }
-
-    // ===== PART 3: Insert alerts (deduplicate by checking recent) =====
-    for (const alert of alerts) {
-      let query = adminClient
-        .from('workload_alerts')
-        .select('id')
-        .eq('profile_id', alert.profile_id)
-        .eq('alert_type', alert.alert_type)
-        .gte('created_at', startOfToday.toISOString())
-        .limit(1);
-      
-      if (alert.task_id) {
-        query = query.eq('task_id', alert.task_id);
-      } else {
-        query = query.is('task_id', null);
-      }
-      
-      const { data: existing } = await query;
-
-      if (!existing || existing.length === 0) {
-        await adminClient.from('workload_alerts').insert(alert);
-      }
-    }
-
-    return new Response(
-      JSON.stringify({ processed, alerts: alerts.length }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error('Error processing automations:', error);
-    return new Response(
-      JSON.stringify({ error: 'Erro interno do servidor' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
+    return json({ processed, alerts: validAlerts.length });
+  } catch (error) { console.error('Error processing automations:', error); return json({ error: 'Erro interno do servidor' }, 500); }
 });

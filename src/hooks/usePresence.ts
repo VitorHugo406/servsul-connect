@@ -134,7 +134,7 @@ export function useAllUsersPresence() {
   const [presenceMap, setPresenceMap] = useState<Record<string, { isOnline: boolean; lastHeartbeat: Date | null }>>({});
 
   const fetchAllPresence = useCallback(async () => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('user_presence')
       .select('user_id, is_online, last_heartbeat');
 
@@ -142,11 +142,7 @@ export function useAllUsersPresence() {
       const map: Record<string, { isOnline: boolean; lastHeartbeat: Date | null }> = {};
       data.forEach((p) => {
         const lastHeartbeat = new Date(p.last_heartbeat);
-        const isRecentlyActive = Date.now() - lastHeartbeat.getTime() < OFFLINE_THRESHOLD;
-        map[p.user_id] = {
-          isOnline: p.is_online && isRecentlyActive,
-          lastHeartbeat,
-        };
+        map[p.user_id] = { isOnline: p.is_online && Date.now() - lastHeartbeat.getTime() < OFFLINE_THRESHOLD, lastHeartbeat };
       });
       setPresenceMap(map);
     }
@@ -165,14 +161,29 @@ export function useAllUsersPresence() {
           schema: 'public',
           table: 'user_presence',
         },
-        () => {
-          fetchAllPresence();
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            setPresenceMap((current) => {
+              const next = { ...current };
+              delete next[(payload.old as UserPresence).user_id];
+              return next;
+            });
+            return;
+          }
+          const presence = payload.new as UserPresence;
+          const lastHeartbeat = new Date(presence.last_heartbeat);
+          setPresenceMap((current) => ({
+            ...current,
+            [presence.user_id]: { isOnline: presence.is_online && Date.now() - lastHeartbeat.getTime() < OFFLINE_THRESHOLD, lastHeartbeat },
+          }));
         }
       )
       .subscribe();
 
-    // Refresh periodically to detect stale connections
-    const refreshInterval = setInterval(fetchAllPresence, HEARTBEAT_INTERVAL);
+    // Recalcula expiração localmente sem consultar o banco a cada heartbeat.
+    const refreshInterval = setInterval(() => {
+      setPresenceMap((current) => Object.fromEntries(Object.entries(current).map(([id, value]) => [id, { ...value, isOnline: Boolean(value.lastHeartbeat && Date.now() - value.lastHeartbeat.getTime() < OFFLINE_THRESHOLD && value.isOnline) }])));
+    }, 15000);
 
     return () => {
       supabase.removeChannel(channel);
