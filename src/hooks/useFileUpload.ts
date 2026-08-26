@@ -218,10 +218,20 @@ export function useFileUpload() {
         .from('avatars')
         .getPublicUrl(data.path);
 
-      const { error: updateError } = await supabase
+      // Profiles are linked to Supabase Auth through `profiles.user_id`.
+      // The version query also invalidates cached avatar URLs after replacements.
+      const avatarUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+      const { data: updatedProfile, error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: urlData.publicUrl })
-        .eq('user_id', user.id);
+        .update({ avatar_url: avatarUrl })
+        .eq('user_id', user.id)
+        .select('avatar_url')
+        .maybeSingle();
+
+      if (!updateError && !updatedProfile) {
+        toast.error('Não foi possível localizar seu perfil para salvar a foto');
+        return null;
+      }
 
       if (updateError) {
         console.error('Profile update error:', updateError);
@@ -230,7 +240,7 @@ export function useFileUpload() {
       }
 
       toast.success('Avatar atualizado com sucesso!');
-      return urlData.publicUrl;
+      return avatarUrl;
     } catch (error) {
       console.error('Avatar upload error:', error);
       toast.error('Erro ao fazer upload do avatar');

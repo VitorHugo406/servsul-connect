@@ -245,7 +245,7 @@ export function CompaniesManagementSection() {
       .from('company-logos')
       .upload(path, file, {
         upsert: true,
-        contentType: file.type,
+        contentType: file.type || 'image/png',
         cacheControl: '3600',
       });
     if (upErr) {
@@ -258,11 +258,8 @@ export function CompaniesManagementSection() {
       return;
     }
 
-    // Não remova o objeto com uma validação feita no navegador: a CDN pode
-    // responder 400/405 durante a propagação mesmo quando o upload já está correto.
-    // A policy pública do bucket é a fonte de autorização; a imagem será validada
-    // pelo próprio elemento <img> após o salvamento.
-    updateSelected({ logo_url: data.publicUrl });
+    // A URL versionada garante que uma logo substituída não fique presa no cache.
+    updateSelected({ logo_url: `${data.publicUrl}?v=${Date.now()}` });
     toast.success('Logo enviada — salve para aplicar');
   };
 
