@@ -179,6 +179,10 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
       </div>
 
       <div className={cn('flex w-0 min-w-0 flex-1 flex-col', isOwn && 'items-end')}>
+        {isFocused && <div className="mobile-reaction-picker relative z-[320] mb-1.5 flex w-[min(94vw,520px)] max-w-[calc(100vw-24px)] self-center items-center gap-1.5 overflow-x-auto overflow-y-hidden rounded-2xl bg-background/35 px-2 py-1.5 shadow-lg backdrop-blur-md ring-1 ring-white/10 scrollbar-none sm:hidden" role="group" aria-label="Escolher reação" onClick={(event) => event.stopPropagation()} onTouchMove={(event) => event.stopPropagation()} style={{ touchAction: 'pan-x', overscrollBehaviorX: 'contain', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {QUICK_REACTIONS.map((emoji) => <button key={emoji} type="button" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-transparent text-[1.55rem] leading-none transition-transform active:scale-90 active:bg-white/10" onClick={() => selectReaction(emoji)}>{emoji}</button>)}
+        </div>}
+
         <div className={cn('relative z-10 mb-0.5 flex w-fit max-w-[82%] flex-wrap items-center gap-1.5', isOwn && 'flex-row-reverse')}>
           <span className="min-w-0 max-w-full truncate text-xs font-medium text-foreground sm:text-sm">{displayName}</span>
           {authorSector && <span className="max-w-full rounded-full px-1.5 py-0.5 text-[10px] font-medium sm:px-2 sm:text-xs" style={{ backgroundColor: `${authorSector.color}20`, color: authorSector.color }}>{authorSector.name}</span>}
@@ -197,10 +201,6 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
             </div>
 
             {isFocused && <div className="fixed inset-0 z-[100] bg-background/20 backdrop-blur-[1px] md:hidden" onClick={closeFocus} aria-label="Fechar ações da mensagem" />}
-
-            {isFocused && <div className="mobile-reaction-picker fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-1/2 z-[300] flex w-[min(94vw,520px)] -translate-x-1/2 items-center gap-1.5 overflow-x-auto overflow-y-hidden rounded-2xl bg-background/35 px-2 py-1.5 shadow-lg backdrop-blur-md ring-1 ring-white/10 scrollbar-none sm:hidden" role="group" aria-label="Escolher reação" onClick={(event) => event.stopPropagation()} onTouchMove={(event) => event.stopPropagation()} style={{ touchAction: 'pan-x', overscrollBehaviorX: 'contain' }}>
-              {QUICK_REACTIONS.map((emoji) => <button key={emoji} type="button" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-transparent text-[1.55rem] leading-none transition-transform active:scale-90 active:bg-white/10" onClick={() => selectReaction(emoji)}>{emoji}</button>)}
-            </div>}
 
             {isFocused && <div className="hidden sm:flex absolute top-1/2 z-[120] -translate-y-1/2 items-center gap-1.5 animate-in fade-in-0 zoom-in-75 duration-200" style={{ [isOwn ? 'right' : 'left']: '100%', marginLeft: isOwn ? undefined : '0.5rem', marginRight: isOwn ? '0.5rem' : undefined }} onClick={(event) => event.stopPropagation()}>
               <button type="button" aria-label="Reagir à mensagem" className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-foreground shadow-xl ring-1 ring-border transition-transform hover:scale-105 active:scale-95" onClick={() => setShowReactionPicker((value) => !value)}><SmilePlus className="h-4 w-4" /></button>
