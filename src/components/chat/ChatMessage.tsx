@@ -214,6 +214,7 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
               'relative min-w-0 max-w-full rounded-[26px] px-4 py-3 shadow-sm w-fit select-none',
               'sm:max-w-[400px]',
               isOwn ? 'gradient-primary text-white rounded-tr-md' : 'bg-card text-card-foreground rounded-tl-md border border-border',
+              isFocused && 'z-[102]',
             )}
           >
             {message.reply_to && (
@@ -319,7 +320,7 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
       </div>
 
       {isFocused && (
-        <div className="fixed inset-0 z-[100] bg-background/65 backdrop-blur-md md:hidden" onClick={() => { setIsFocused(false); setShowFocusedReactions(false); }} aria-label="Fechar ações da mensagem" />
+        <div className="fixed inset-0 z-[100] bg-background/45 backdrop-blur-[4px] md:hidden" onClick={() => { setIsFocused(false); setShowFocusedReactions(false); }} aria-label="Fechar ações da mensagem" />
       )}
     </div>
   );
