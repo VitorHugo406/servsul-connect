@@ -28,10 +28,9 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
   const loading = conversationsLoading || usersLoading;
 
   useEffect(() => {
-    const buttons = Array.from(document.querySelectorAll('button'));
-    const fakeConversationButton = buttons.find(button => button.textContent?.trim() === 'Conversas');
-    if (fakeConversationButton) fakeConversationButton.setAttribute('data-nuvexa-hide-direct-fake', 'true');
-    return () => fakeConversationButton?.removeAttribute('data-nuvexa-hide-direct-fake');
+    const fakeConversationButton = Array.from(document.querySelectorAll('button')).find(button => button.textContent?.trim() === 'Conversas');
+    if (fakeConversationButton) fakeConversationButton.style.display = 'none';
+    return () => { if (fakeConversationButton) fakeConversationButton.style.display = ''; };
   }, []);
 
   return <div className="flex h-full flex-col border-r border-border bg-card overflow-hidden">
