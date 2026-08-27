@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Users, Plus, Loader2 } from 'lucide-react';
+import { Search, Users, Plus, Loader2, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -27,8 +27,8 @@ export function PrivateGroupList({ selectedGroupId, onSelectGroup }: PrivateGrou
   return <div className="flex h-full flex-col border-r border-border bg-card overflow-hidden">
     <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl">
       <h3 className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-foreground">Grupos privados</h3>
-      <div className="relative w-[42%] min-w-[125px]"><Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Buscar" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="h-8 rounded-full border-border/60 bg-background/65 pl-8 pr-2 text-xs" /></div>
-      <button onClick={() => setShowCreateDialog(true)} aria-label="Configurações do grupo" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"><Users className="h-4 w-4" /></button>
+      <div className="relative w-[42%] min-w-[125px]"><Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Buscar grupos" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="h-8 rounded-full border-border/60 bg-background/65 pl-8 pr-2 text-xs" /></div>
+      <button aria-label="Configurações dos grupos" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/50 text-muted-foreground hover:bg-muted hover:text-foreground"><Settings className="h-4 w-4" /></button>
     </div>
     <div className="shrink-0 px-2 pt-2"><Button variant="outline" onClick={() => setShowCreateDialog(true)} className="h-9 w-full justify-center gap-2 rounded-xl text-sm"><Plus className="h-4 w-4" />Criar novo grupo</Button></div>
     <ScrollArea className="flex-1">
