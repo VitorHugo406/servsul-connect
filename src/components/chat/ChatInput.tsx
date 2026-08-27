@@ -42,7 +42,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const { uploadFile, uploading, isImage, limitReached, weeklyLimit, isMainAdmin } = useFileUpload();
+  const { uploadFile, uploading, limitReached, weeklyLimit, isMainAdmin } = useFileUpload();
   const effectiveLimitReached = limitReached && !isMainAdmin;
 
   const handleSubmit = useCallback(async () => {
@@ -83,9 +83,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
       e.stopPropagation();
       if (!showCardPicker) handleSubmit();
     }
-    if (e.key === 'Escape' && showCardPicker) {
-      setShowCardPicker(false);
-    }
+    if (e.key === 'Escape' && showCardPicker) setShowCardPicker(false);
   }, [handleSubmit, showCardPicker]);
 
   const adjustTextareaHeight = useCallback(() => {
@@ -93,21 +91,17 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
     if (!textarea) return;
     textarea.style.height = 'auto';
     const lineHeight = 20;
-    const maxHeight = lineHeight * 5 + 12; // 5 lines + padding
+    const maxHeight = lineHeight * 5 + 12;
     textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
     textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
   }, []);
 
-  useEffect(() => {
-    adjustTextareaHeight();
-  }, [message, adjustTextareaHeight]);
+  useEffect(() => { adjustTextareaHeight(); }, [message, adjustTextareaHeight]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setMessage(val);
     onTyping?.();
-
-    // Detect # trigger for cards
     const cursorPos = e.target.selectionStart;
     const textBeforeCursor = val.substring(0, cursorPos);
     const hashMatch = textBeforeCursor.match(/#(\w*)$/);
@@ -118,8 +112,6 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
       setShowCardPicker(false);
       setCardQuery('');
     }
-
-    // Detect @ trigger for user mentions
     const atMatch = textBeforeCursor.match(/@(\w*)$/);
     if (atMatch) {
       setShowUserPicker(true);
@@ -146,7 +138,6 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
 
   const handleCardSelect = (task: any) => {
     const mention = formatCardMention(task);
-    // Replace the #query with the formatted mention
     const cursorPos = inputRef.current?.selectionStart || message.length;
     const textBeforeCursor = message.substring(0, cursorPos);
     const hashIndex = textBeforeCursor.lastIndexOf('#');
@@ -182,169 +173,65 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
 
   return (
     <div
-      className="relative shrink-0 border-t border-border/30 bg-transparent px-2 pt-2 backdrop-blur-2xl sm:px-4 sm:pt-3"
+      className="relative z-[500] shrink-0 border-t border-border/30 bg-transparent px-2 pt-2 backdrop-blur-2xl sm:px-4 sm:pt-3"
       style={{ paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom))' }}
       onSubmit={(e) => e.preventDefault()}
     >
-      {/* Reply quote */}
       {replyTo && (
         <div className="mb-2 flex items-start gap-2 rounded-lg bg-muted/60 border-l-2 border-primary px-3 py-2">
           <div className="flex-1 min-w-0">
-            <span className="text-xs font-semibold text-primary">
-              {replyTo.author?.display_name || replyTo.author?.name || 'Usuário'}
-            </span>
+            <span className="text-xs font-semibold text-primary">{replyTo.author?.display_name || replyTo.author?.name || 'Usuário'}</span>
             <p className="text-xs text-muted-foreground truncate">{replyTo.content.substring(0, 120)}</p>
           </div>
-          <button onClick={onClearReply} className="text-muted-foreground hover:text-foreground flex-shrink-0">
-            <X className="h-4 w-4" />
-          </button>
+          <button onClick={onClearReply} className="text-muted-foreground hover:text-foreground flex-shrink-0"><X className="h-4 w-4" /></button>
         </div>
       )}
-      {/* Card Mention Picker */}
-      {showCardPicker && (
-        <CardMentionPicker
-          query={cardQuery}
-          onSelect={handleCardSelect}
-          onClose={() => setShowCardPicker(false)}
-        />
-      )}
-
-      {/* User Mention Picker */}
-      {showUserPicker && (
-        <UserMentionPicker
-          query={userQuery}
-          onSelect={handleUserSelect}
-          onClose={() => setShowUserPicker(false)}
-        />
-      )}
-
-      {/* Formatting Preview */}
+      {showCardPicker && <CardMentionPicker query={cardQuery} onSelect={handleCardSelect} onClose={() => setShowCardPicker(false)} />}
+      {showUserPicker && <UserMentionPicker query={userQuery} onSelect={handleUserSelect} onClose={() => setShowUserPicker(false)} />}
       <FormattingPreview text={message} />
 
-      {/* Attachments preview */}
       <AnimatePresence>
         {attachments.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-3 flex flex-wrap gap-2"
-          >
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-3 flex flex-wrap gap-2">
             {attachments.map((attachment, index) => (
               <div key={index} className="relative group rounded-2xl border border-border/60 bg-muted/50 p-2">
-                {attachment.preview ? (
-                  <img src={attachment.preview} alt={attachment.file.name} className="h-16 w-16 rounded object-cover" />
-                ) : (
-                  <div className="flex h-16 w-16 flex-col items-center justify-center gap-1">
-                    <FileText className="h-6 w-6 text-muted-foreground" />
-                    <span className="text-[10px] text-muted-foreground truncate w-14 text-center">
-                      {attachment.file.name.split('.').pop()?.toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => removeAttachment(index)}
-                  className="absolute -right-2 -top-2 rounded-full bg-destructive p-1 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                {attachment.preview ? <img src={attachment.preview} alt={attachment.file.name} className="h-16 w-16 rounded object-cover" /> : <div className="flex h-16 w-16 flex-col items-center justify-center gap-1"><FileText className="h-6 w-6 text-muted-foreground" /><span className="text-[10px] text-muted-foreground truncate w-14 text-center">{attachment.file.name.split('.').pop()?.toUpperCase()}</span></div>}
+                <button type="button" onClick={() => removeAttachment(index)} className="absolute -right-2 -top-2 rounded-full bg-destructive p-1 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-3 w-3" /></button>
               </div>
             ))}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Simple Emoji Picker */}
       <AnimatePresence>
         {showEmojiPicker && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="absolute bottom-full left-4 mb-2 z-50 bg-card border border-border rounded-xl shadow-lg p-3"
-          >
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-2 z-[600] mb-2 rounded-xl border border-border bg-card p-3 shadow-xl sm:left-4">
             <div className="grid grid-cols-8 gap-2">
-              {EMOJI_LIST.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => handleEmojiSelect(emoji)}
-                  className="text-xl hover:bg-muted rounded p-1 transition-colors"
-                >
-                  {emoji}
-                </button>
-              ))}
+              {EMOJI_LIST.map((emoji) => <button key={emoji} type="button" onClick={() => handleEmojiSelect(emoji)} className="rounded p-1 text-xl transition-colors hover:bg-muted">{emoji}</button>)}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="flex items-end gap-1 rounded-[30px] border border-border/50 bg-muted/35 p-1.5 shadow-[0_10px_30px_-18px_hsl(var(--foreground)/0.5),inset_0_1px_0_hsl(var(--background)/0.9)] backdrop-blur-2xl transition-all focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15 sm:gap-1.5">
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          <Button
-            type="button" variant="ghost" size="icon"
-            className="h-9 w-9 rounded-full text-muted-foreground hover:bg-background/70 hover:text-foreground"
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          >
+      <div className="relative z-[501] flex items-end gap-1 rounded-[30px] border border-border/50 bg-muted/35 p-1.5 shadow-[0_10px_30px_-18px_hsl(var(--foreground)/0.5),inset_0_1px_0_hsl(var(--background)/0.9)] backdrop-blur-2xl transition-all focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15 sm:gap-1.5">
+        <div className="flex shrink-0 items-center gap-0.5">
+          <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:bg-background/70 hover:text-foreground" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
             <Smile className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
-          {!hideAttachment && (
-            <>
-              <Button type="button" variant="ghost" size="icon"
-                className={`h-9 w-9 rounded-full ${effectiveLimitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
-                onClick={() => {
-                  if (effectiveLimitReached) {
-                    toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`);
-                    return;
-                  }
-                  fileInputRef.current?.click();
-                }}
-                disabled={uploading}
-              >
-                <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
-              </Button>
-              <Button type="button" variant="ghost" size="icon"
-                className={`h-9 w-9 rounded-full ${effectiveLimitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
-                onClick={() => {
-                  if (effectiveLimitReached) {
-                    toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`);
-                    return;
-                  }
-                  imageInputRef.current?.click();
-                }}
-                disabled={uploading}
-              >
-                <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-              </Button>
-            </>
-          )}
+          {!hideAttachment && <>
+            <Button type="button" variant="ghost" size="icon" className={`h-9 w-9 rounded-full ${effectiveLimitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => { if (effectiveLimitReached) { toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`); return; } fileInputRef.current?.click(); }} disabled={uploading}><Paperclip className="h-4 w-4 sm:h-5 sm:w-5" /></Button>
+            <Button type="button" variant="ghost" size="icon" className={`h-9 w-9 rounded-full ${effectiveLimitReached ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => { if (effectiveLimitReached) { toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`); return; } imageInputRef.current?.click(); }} disabled={uploading}><ImageIcon className="h-4 w-4 sm:h-5 sm:w-5" /></Button>
+          </>}
         </div>
 
         <input ref={fileInputRef} type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.txt" className="hidden" onChange={handleFileSelect} />
         <input ref={imageInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFileSelect} />
 
-        <div className="flex-1 min-w-0">
-          <textarea
-            ref={inputRef}
-            value={message}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            placeholder='Mensagem...'
-            rows={1}
-            style={{ overflow: 'hidden' }}
-            className="w-full resize-none border-0 bg-transparent px-2 py-2 text-[15px] leading-5 placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0 sm:text-sm"
-          />
+        <div className="min-w-0 flex-1">
+          <textarea ref={inputRef} value={message} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="Mensagem..." rows={1} style={{ overflow: 'hidden' }} className="w-full resize-none border-0 bg-transparent px-2 py-2 text-[15px] leading-5 placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0 sm:text-sm" />
         </div>
 
-        <Button
-          type="button"
-          onClick={handleSubmit}
-          disabled={(!message.trim() && attachments.length === 0) || uploading || isSending}
-          className="h-9 w-9 flex-shrink-0 rounded-full gradient-primary p-0 shadow-md transition-all hover:scale-105 hover:shadow-lg active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
+        <Button type="button" onClick={handleSubmit} disabled={(!message.trim() && attachments.length === 0) || uploading || isSending} className="h-9 w-9 shrink-0 rounded-full gradient-primary p-0 shadow-md transition-all hover:scale-105 hover:shadow-lg active:scale-95 disabled:opacity-40 disabled:hover:scale-100"><Send className="h-4 w-4" /></Button>
       </div>
     </div>
   );
