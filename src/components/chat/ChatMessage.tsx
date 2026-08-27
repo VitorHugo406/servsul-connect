@@ -186,15 +186,17 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => { setIsHovered(false); setShowReactionPicker(false); }}
     >
-      <Avatar className="h-9 w-9 shrink-0 ring-2 ring-border sm:h-10 sm:w-10">
-        <AvatarImage src={author?.avatar_url || ''} alt={displayName} />
-        <AvatarFallback className="text-sm font-semibold text-white" style={{ backgroundColor: authorSector?.color || '#6366f1' }}>
-          {getInitials(displayName)}
-        </AvatarFallback>
-      </Avatar>
+      <div className={cn('relative z-[103] shrink-0', isFocused && 'z-[103]')}>
+        <Avatar className="h-9 w-9 ring-2 ring-border sm:h-10 sm:w-10">
+          <AvatarImage src={author?.avatar_url || ''} alt={displayName} />
+          <AvatarFallback className="text-sm font-semibold text-white" style={{ backgroundColor: authorSector?.color || '#6366f1' }}>
+            {getInitials(displayName)}
+          </AvatarFallback>
+        </Avatar>
+      </div>
 
       <div className={cn('flex w-0 min-w-0 flex-1 flex-col', isOwn && 'items-end')}>
-        <div className={cn('mb-1 flex w-full max-w-full flex-wrap items-center gap-2', isOwn && 'flex-row-reverse')}>
+        <div className={cn('relative z-[103] mb-1 flex w-full max-w-full flex-wrap items-center gap-2', isOwn && 'flex-row-reverse')}>
           <span className="min-w-0 max-w-full truncate text-sm font-medium text-foreground">{displayName}</span>
           {authorSector && (
             <span className="max-w-full rounded-full px-2 py-0.5 text-xs font-medium" style={{ backgroundColor: `${authorSector.color}20`, color: authorSector.color }}>
@@ -205,47 +207,66 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
         </div>
 
         <div className={cn('flex w-full min-w-0 max-w-full items-end gap-1.5', isOwn && 'flex-row-reverse')}>
-          <div
-            onTouchStart={startLongPress}
-            onTouchEnd={cancelLongPress}
-            onTouchCancel={cancelLongPress}
-            onContextMenu={(event) => { event.preventDefault(); setIsFocused(true); }}
-            className={cn(
-              'relative min-w-0 max-w-full rounded-[26px] px-4 py-3 shadow-sm w-fit select-none',
-              'sm:max-w-[400px]',
-              isOwn ? 'gradient-primary text-white rounded-tr-md' : 'bg-card text-card-foreground rounded-tl-md border border-border',
-              isFocused && 'z-[102]',
-            )}
-          >
-            {message.reply_to && (
-              <div
-                className={cn('mb-2 max-w-full rounded-2xl px-2 py-1.5 text-xs border-l-2 cursor-pointer transition-colors', isOwn ? 'bg-white/10 border-white/40 hover:bg-white/20' : 'bg-muted border-muted-foreground/30 hover:bg-muted/80')}
-                onClick={() => message.reply_to?.id && onScrollToMessage?.(message.reply_to.id)}
-              >
-                <span className="font-semibold">
-                  {message.reply_to.reply_author?.display_name || message.reply_to.reply_author?.name || 'Usuário'}
+          <div className="relative min-w-0 max-w-full w-fit">
+            <div
+              onTouchStart={startLongPress}
+              onTouchEnd={cancelLongPress}
+              onTouchCancel={cancelLongPress}
+              onContextMenu={(event) => { event.preventDefault(); setIsFocused(true); }}
+              className={cn(
+                'relative min-w-0 max-w-full rounded-[26px] px-4 py-3 shadow-sm select-none',
+                'sm:max-w-[400px]',
+                isOwn ? 'gradient-primary text-white rounded-tr-md' : 'bg-card text-card-foreground rounded-tl-md border border-border',
+                isFocused && 'z-[102]',
+              )}
+            >
+              {message.reply_to && (
+                <div
+                  className={cn('mb-2 max-w-full rounded-2xl px-2 py-1.5 text-xs border-l-2 cursor-pointer transition-colors', isOwn ? 'bg-white/10 border-white/40 hover:bg-white/20' : 'bg-muted border-muted-foreground/30 hover:bg-muted/80')}
+                  onClick={() => message.reply_to?.id && onScrollToMessage?.(message.reply_to.id)}
+                >
+                  <span className="font-semibold">
+                    {message.reply_to.reply_author?.display_name || message.reply_to.reply_author?.name || 'Usuário'}
+                  </span>
+                  <p className="mt-0.5 truncate opacity-80">{message.reply_to.content.substring(0, 100)}</p>
+                </div>
+              )}
+              {renderContent(message.content, isOwn)}
+              {isOwn && (
+                <span className="ml-1 inline-flex items-center">
+                  {messageStatus === 'sending'
+                    ? <Check className="h-3.5 w-3.5 text-white/60" />
+                    : <CheckCheck className="h-3.5 w-3.5 text-white/80" />}
                 </span>
-                <p className="mt-0.5 truncate opacity-80">{message.reply_to.content.substring(0, 100)}</p>
-              </div>
-            )}
-            {renderContent(message.content, isOwn)}
-            {isOwn && (
-              <span className="ml-1 inline-flex items-center">
-                {messageStatus === 'sending'
-                  ? <Check className="h-3.5 w-3.5 text-white/60" />
-                  : <CheckCheck className="h-3.5 w-3.5 text-white/80" />}
-              </span>
-            )}
+              )}
+            </div>
+
             {isFocused && (
-              <div className={cn('mt-2 flex max-w-full flex-wrap items-center gap-2', isOwn ? 'justify-end' : 'justify-start')} onClick={(event) => event.stopPropagation()}>
-                <button type="button" aria-label="Reagir à mensagem" className="flex h-11 w-11 items-center justify-center rounded-full bg-card text-foreground shadow-xl ring-1 ring-border animate-in zoom-in-75" onClick={() => setShowFocusedReactions((value) => !value)}>
+              <div
+                className={cn(
+                  'absolute z-[104] -top-14 flex items-center gap-2 animate-in fade-in-0 zoom-in-75 slide-in-from-bottom-2 duration-200',
+                  isOwn ? 'right-1' : 'left-1',
+                )}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  aria-label="Reagir à mensagem"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-card text-foreground shadow-xl ring-1 ring-border transition-transform duration-200 hover:scale-105 active:scale-95"
+                  onClick={() => setShowFocusedReactions((value) => !value)}
+                >
                   <SmilePlus className="h-5 w-5" />
                 </button>
-                <button type="button" aria-label="Responder à mensagem" className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl ring-1 ring-primary animate-in zoom-in-75 slide-in-from-bottom-2" onClick={() => { setIsFocused(false); onReply?.(message); }}>
+                <button
+                  type="button"
+                  aria-label="Responder à mensagem"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl ring-1 ring-primary transition-transform duration-200 hover:scale-105 active:scale-95"
+                  onClick={() => { setIsFocused(false); setShowFocusedReactions(false); onReply?.(message); }}
+                >
                   <Reply className="h-5 w-5" />
                 </button>
                 {showFocusedReactions && (
-                  <div className="order-last flex max-w-full flex-wrap gap-1 rounded-2xl bg-card p-2 shadow-xl ring-1 ring-border" role="group" aria-label="Escolher reação">
+                  <div className="absolute bottom-12 left-0 flex max-w-[calc(100vw-2rem)] flex-wrap gap-1 rounded-2xl bg-card p-2 shadow-xl ring-1 ring-border animate-in fade-in-0 zoom-in-90 duration-150" role="group" aria-label="Escolher reação">
                     {QUICK_REACTIONS.map((emoji) => (
                       <button key={emoji} type="button" className="h-9 w-9 rounded-full p-1 text-lg hover:bg-muted" onClick={() => { onToggleReaction?.(message.id, emoji); setIsFocused(false); setShowFocusedReactions(false); }}>
                         {emoji}
@@ -320,7 +341,7 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
       </div>
 
       {isFocused && (
-        <div className="fixed inset-0 z-[100] bg-background/45 backdrop-blur-[4px] md:hidden" onClick={() => { setIsFocused(false); setShowFocusedReactions(false); }} aria-label="Fechar ações da mensagem" />
+        <div className="fixed inset-0 z-[100] bg-background/35 backdrop-blur-[2px] md:hidden" onClick={() => { setIsFocused(false); setShowFocusedReactions(false); }} aria-label="Fechar ações da mensagem" />
       )}
     </div>
   );
