@@ -11,8 +11,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap");
 
 @layer base {
-  :root { --background: 220 20% 97%; --foreground: 220 30% 15%; --card: 0 0% 100%; --card-foreground: 220 30% 15%; --popover: 0 0% 100%; --popover-foreground: 220 30% 15%; --primary: 220 70% 45%; --primary-foreground: 0 0% 100%; --secondary: 30 90% 55%; --secondary-foreground: 0 0% 100%; --muted: 220 15% 92%; --muted-foreground: 220 15% 45%; --accent: 210 100% 95%; --accent-foreground: 220 70% 35%; --destructive: 0 75% 55%; --destructive-foreground: 0 0% 100%; --success: 150 60% 45%; --success-foreground: 0 0% 100%; --warning: 40 95% 55%; --warning-foreground: 40 95% 15%; --border: 220 15% 88%; --input: 220 15% 88%; --ring: 220 70% 45%; --radius: 1.5rem; --mobile-nav-h: calc(3.5rem + env(safe-area-inset-bottom)); --sidebar-background: 220 35% 18%; --sidebar-foreground: 220 10% 90%; --sidebar-primary: 30 90% 55%; --sidebar-primary-foreground: 0 0% 100%; --sidebar-accent: 220 30% 25%; --sidebar-accent-foreground: 220 10% 95%; --sidebar-border: 220 25% 25%; --sidebar-ring: 30 90% 55%; --gradient-primary: linear-gradient(135deg,hsl(220,70%,45%) 0%,hsl(220,80%,35%) 100%); --gradient-secondary: linear-gradient(135deg,hsl(30,90%,55%) 0%,hsl(25,95%,50%) 100%); --gradient-hero: linear-gradient(135deg,hsl(220,35%,18%) 0%,hsl(220,40%,25%) 100%); --gradient-card: linear-gradient(180deg,hsl(0,0%,100%) 0%,hsl(220,20%,98%) 100%); --shadow-glow:0 0 20px hsl(30,90%,55%,.3); --font-sans:Lato,ui-sans-serif,system-ui,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji; --font-serif:Lora,ui-serif,Georgia,Cambria,Times New Roman,Times,serif; --font-mono:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; }
-  .dark { --background:220 35% 10%; --foreground:220 10% 95%; --card:220 30% 14%; --card-foreground:220 10% 95%; --popover:220 30% 14%; --popover-foreground:220 10% 95%; --muted:220 25% 20%; --muted-foreground:220 10% 60%; --accent:220 30% 22%; --accent-foreground:220 10% 95%; --destructive:0 70% 45%; --destructive-foreground:0 0% 100%; --border:220 25% 22%; --input:220 25% 22%; --ring:220 70% 55%; --sidebar-background:220 40% 8%; --sidebar-foreground:220 10% 90%; --sidebar-primary:30 85% 50%; --sidebar-primary-foreground:0 0% 100%; --sidebar-accent:220 35% 15%; --sidebar-accent-foreground:220 10% 95%; --sidebar-border:220 30% 18%; --sidebar-ring:30 85% 50%; }
+  :root { --background: 220 20% 97%; --foreground: 220 30% 15%; --card: 0 0% 100%; --card-foreground: 220 30% 15%; --popover: 0 0% 100%; --popover-foreground: 220 30% 15%; --primary: 220 70% 45%; --primary-foreground: 0 0% 100%; --secondary: 30 90% 55%; --secondary-foreground: 0 0% 100%; --muted: 220 15% 92%; --muted-foreground: 220 15% 45%; --accent: 210 100% 95%; --accent-foreground: 220 70% 35%; --destructive: 0 75% 55%; --destructive-foreground: 0 0% 100%; --success: 150 60% 45%; --success-foreground: 150 60% 45%; --warning: 40 95% 55%; --warning-foreground: 40 95% 15%; --border: 220 15% 88%; --input: 220 15% 88%; --ring: 220 70% 45%; --radius: 1.5rem; --mobile-nav-h: calc(3.5rem + env(safe-area-inset-bottom)); --sidebar-background: 220 35% 18%; --sidebar-foreground: 220 10% 90%; --sidebar-primary: 30 90% 55%; --sidebar-primary-foreground: 0 0% 100%; --sidebar-accent: 220 30% 25%; --sidebar-accent-foreground: 220 10% 95%; --sidebar-border: 220 25% 25%; --sidebar-ring: 30 90% 55%; --gradient-primary: linear-gradient(135deg,hsl(220,70%,45%) 0%,hsl(220,80%,35%) 100%); --gradient-secondary: linear-gradient(135deg,hsl(30,90%,55%) 0%,hsl(25,95%,50%) 100%); --gradient-hero: linear-gradient(135deg,hsl(220,35%,18%) 0%,hsl(220,40%,25%) 100%); --gradient-card: linear-gradient(180deg,hsl(0,0%,100%) 0%,hsl(220,20%,98%) 100%); --shadow-glow:0 0 20px hsl(30,90%,55%,.3); --font-sans:Lato,ui-sans-serif,system-ui,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji; --font-serif:Lora,ui-serif,Georgia,Cambria,Times New Roman,Times,serif; --font-mono:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; }
+  .dark { --background:220 35% 10%; --foreground:220 10% 95%; --card:220 30% 14%; --card-foreground:220 10% 95%; --popover:220 30% 14%; --popover-foreground:220 10% 95%; --primary:220 70% 55%; --primary-foreground:0 0% 100%; --secondary:30 85% 50%; --secondary-foreground:0 0% 100%; --muted:220 25% 20%; --muted-foreground:220 10% 60%; --accent:220 30% 22%; --accent-foreground:220 10% 95%; --destructive:0 70% 45%; --destructive-foreground:0 0% 100%; --border:220 25% 22%; --input:220 25% 22%; --ring:220 70% 55%; --sidebar-background:220 40% 8%; --sidebar-foreground:220 10% 90%; --sidebar-primary:30 85% 50%; --sidebar-primary-foreground:0 0% 100%; --sidebar-accent:220 35% 15%; --sidebar-accent-foreground:220 10% 95%; --sidebar-border:220 30% 18%; --sidebar-ring:30 85% 50%; }
 }
 @layer base { * { @apply border-border; } body { @apply bg-background text-foreground font-sans antialiased; font-family:'Inter',system-ui,sans-serif; } h1,h2,h3,h4,h5,h6 { font-family:'Plus Jakarta Sans',system-ui,sans-serif; } }
 @layer utilities { .gradient-primary{background:var(--gradient-primary)} .gradient-secondary{background:var(--gradient-secondary)} .gradient-hero{background:var(--gradient-hero)} .gradient-card{background:var(--gradient-card)} .shadow-glow{box-shadow:var(--shadow-glow)} .glass{background:hsl(0 0% 100%/.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)} .text-gradient{background:var(--gradient-secondary);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text} .scrollbar-none::-webkit-scrollbar{display:none}.scrollbar-none{-ms-overflow-style:none;scrollbar-width:none} }
@@ -32,14 +32,10 @@
 
 @media (min-width:768px){ .mobile-chat-message-focused .fixed.inset-0{z-index:9000!important} }
 
-/* Shared visual language for the private group chat: compact, clean header and a real flex boundary above the composer. */
 @layer components {
-  .group-chat-clean-header {
-    min-height: 58px;
-  }
+  .group-chat-clean-header { min-height: 58px; }
 }
 
-/* Targets the existing group header without changing its functionality. */
 .group-chat-clean-header,
 .flex.h-full.flex-col > .flex.items-center.justify-between.gap-3.border-b.border-border.bg-card.px-4.py-3 {
   min-height: 58px;
@@ -50,40 +46,77 @@
   -webkit-backdrop-filter: blur(16px);
 }
 
-.flex.h-full.flex-col > .flex.items-center.justify-between.gap-3.border-b.border-border.bg-card.px-4.py-3 > div:first-child {
+.flex.h-full.flex-col > .flex.items-center.justify-between.gap-3.border-b.border-border.bg-card.px-4.py-3 > div:first-child { min-width: 0; gap: .625rem; }
+.flex.h-full.flex-col > .flex.items-center.justify-between.gap-3.border-b.border-border.bg-card.px-4.py-3 > div:first-child > div:last-child { min-width: 0; }
+.flex.h-full.flex-col > .flex.items-center.justify-between.gap-3.border-b.border-border.bg-card.px-4.py-3 h3 { max-width: min(65vw, 420px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; }
+.flex.h-full.flex-col > .flex.items-center.justify-between.gap-3.border-b.border-border.bg-card.px-4.py-3 p { font-size: 10px; }
+.flex.h-full.flex-col > .flex.items-center.justify-between.gap-3.border-b.border-border.bg-card.px-4.py-3 > div:last-child button { height: 36px; width: 36px; flex-shrink: 0; border-radius: 9999px; }
+
+/* Compact conversation lists: title, search and group action share one row; tabs stay directly below. */
+.flex.flex-1.overflow-hidden > .w-80 > .flex.h-full.flex-col.border-r.border-border.bg-card,
+.flex.flex-1.overflow-hidden > .w-80 > .flex.h-full.flex-col.border-r.border-border.bg-card.overflow-hidden {
   min-width: 0;
-  gap: .625rem;
 }
-
-.flex.h-full.flex-col > .flex.items-center.justify-between.gap-3.border-b.border-border.bg-card.px-4.py-3 > div:first-child > div:last-child {
+.flex.flex-1.overflow-hidden > .w-80 > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> h3) {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(140px,1.35fr);
+  align-items: center;
+  gap: .5rem;
+  padding: .65rem .75rem;
+}
+.flex.flex-1.overflow-hidden > .w-80 > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> h3) > h3 {
+  margin: 0;
   min-width: 0;
+  font-size: .88rem;
+  line-height: 1.1;
 }
+.flex.flex-1.overflow-hidden > .w-80 > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> h3) > .relative { min-width: 0; }
+.flex.flex-1.overflow-hidden > .w-80 > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> h3) > .relative input { height: 34px; font-size: .75rem; }
 
-.flex.h-full.flex-col > .flex.items-center.justify-between.gap-3.border-b.border-border.bg-card.px-4.py-3 h3 {
-  max-width: min(65vw, 420px);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: .9rem;
+.flex.flex-1.overflow-hidden > .w-80 > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> div > h3) {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(140px,1.35fr) auto;
+  align-items: center;
+  gap: .5rem;
+  padding: .65rem .75rem;
 }
+.flex.flex-1.overflow-hidden > .w-80 > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> div > h3) > div:first-child { margin: 0; min-width: 0; }
+.flex.flex-1.overflow-hidden > .w-80 > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> div > h3) > div:first-child h3 { margin: 0; font-size: .88rem; line-height: 1.1; }
+.flex.flex-1.overflow-hidden > .w-80 > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> div > h3) > .relative { min-width: 0; }
+.flex.flex-1.overflow-hidden > .w-80 > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> div > h3) > .relative input { height: 34px; font-size: .75rem; }
+.flex.flex-1.overflow-hidden > .w-80 > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> div > h3) button { height: 34px; padding-inline: .65rem; }
 
-.flex.h-full.flex-col > .flex.items-center.justify-between.gap-3.border-b.border-border.bg-card.px-4.py-3 p {
-  font-size: 10px;
-}
-
-.flex.h-full.flex-col > .flex.items-center.justify-between.gap-3.border-b.border-border.bg-card.px-4.py-3 > div:last-child button {
-  height: 36px;
-  width: 36px;
-  flex-shrink: 0;
-  border-radius: 9999px;
-}
-
-@media (max-width: 767px) {
-  .flex.h-full.flex-col > .flex.items-center.justify-between.gap-3.border-b.border-border.bg-card.px-4.py-3 {
-    min-height: 54px;
-    padding: .375rem .625rem;
+/* Mobile selected-chat navigation becomes a single visual header: arrow overlays the chat identity header. */
+@media (max-width:767px) {
+  .flex.h-full.flex-col > .flex.items-center.gap-2.rounded-t-\[26px\].border-b.border-border\/40.bg-card\/60.px-3.py-2 {
+    position: absolute;
+    inset: 0 auto auto 0;
+    z-index: 20;
+    width: 48px;
+    height: 58px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    pointer-events: none;
   }
-  .flex.h-full.flex-col > .flex.items-center.justify-between.gap-3.border-b.border-border.bg-card.px-4.py-3 h3 {
-    max-width: 55vw;
+  .flex.h-full.flex-col > .flex.items-center.gap-2.rounded-t-\[26px\].border-b.border-border\/40.bg-card\/60.px-3.py-2 button {
+    width: 44px;
+    height: 52px;
+    margin: 3px 0 0 2px;
+    pointer-events: auto;
+    background: transparent;
   }
+  .flex.h-full.flex-col > .flex.items-center.gap-2.rounded-t-\[26px\].border-b.border-border\/40.bg-card\/60.px-3.py-2 span { display: none; }
+  .flex.h-full.flex-col > .flex.items-center.gap-2.rounded-t-\[26px\].border-b.border-border\/40.bg-card\/60.px-3.py-2 + .flex-1 { min-height: 0; }
+  .flex.h-full.flex-col > .flex.items-center.gap-2.rounded-t-\[26px\].border-b.border-border\/40.bg-card\/60.px-3.py-2 + .flex-1 > .flex.h-full.min-h-0.flex-col.overflow-hidden > .flex.shrink-0.items-center.gap-2.border-b.border-border\/50.bg-card\/65.px-3.py-2 { padding-left: 3.6rem; }
+  .flex.h-full.flex-col > .flex.items-center.gap-2.rounded-t-\[26px\].border-b.border-border\/40.bg-card\/60.px-3.py-2 + .flex-1 > .flex.h-full.min-h-0.flex-col.overflow-hidden > .flex.shrink-0.items-center.justify-between.gap-3.border-b.border-border.bg-card.px-4.py-3 { padding-left: 3.6rem; }
+
+  /* Keep the conversation list compact on mobile as well. */
+  .flex-1.overflow-hidden > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> h3) { display:grid; grid-template-columns:minmax(0,1fr) minmax(120px,1.25fr); align-items:center; gap:.4rem; padding:.6rem .65rem; }
+  .flex-1.overflow-hidden > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> h3) > h3 { margin:0; font-size:.82rem; }
+  .flex-1.overflow-hidden > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> h3) > .relative input { height:32px; font-size:.72rem; }
+  .flex-1.overflow-hidden > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> div > h3) { display:grid; grid-template-columns:minmax(0,1fr) minmax(115px,1.2fr) auto; align-items:center; gap:.35rem; padding:.6rem .65rem; }
+  .flex-1.overflow-hidden > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> div > h3) > div:first-child h3 { font-size:.82rem; }
+  .flex-1.overflow-hidden > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> div > h3) > .relative input { height:32px; font-size:.72rem; }
+  .flex-1.overflow-hidden > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> div > h3) button { height:32px; width:32px; padding:0; }
 }
