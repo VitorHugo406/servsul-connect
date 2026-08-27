@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Users, Plus, Loader2, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { usePrivateGroups, PrivateGroup } from '@/hooks/usePrivateGroups';
+import { usePrivateGroups } from '@/hooks/usePrivateGroups';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -23,6 +23,14 @@ export function PrivateGroupList({ selectedGroupId, onSelectGroup }: PrivateGrou
   const { groups, loading, createGroup } = usePrivateGroups();
   const filteredGroups = groups.filter(group => group.name.toLowerCase().includes(searchQuery.toLowerCase()));
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+
+  useEffect(() => {
+    const buttons = Array.from(document.querySelectorAll('button'));
+    const externalCreateButton = buttons.find(button => button.textContent?.trim() === 'Criar novo grupo');
+    if (externalCreateButton) externalCreateButton.style.display = 'none';
+    return () => { if (externalCreateButton) externalCreateButton.style.display = ''; };
+  }, []);
+
   const handleCreateGroup = async () => { if (!newName.trim()) { toast.error('Digite o nome do grupo'); return; } setCreating(true); const { data, error } = await createGroup(newName.trim(), newDescription.trim() || undefined); setCreating(false); if (error) toast.error('Erro ao criar grupo'); else { toast.success('Grupo criado com sucesso!'); setShowCreateDialog(false); setNewName(''); setNewDescription(''); if (data?.id) onSelectGroup(data.id); } };
   return <div className="flex h-full flex-col border-r border-border bg-card overflow-hidden">
     <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl">
