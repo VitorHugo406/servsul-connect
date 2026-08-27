@@ -9,7 +9,7 @@ import { CardMentionCard } from './CardMentionCard';
 import { formatText } from '@/lib/chatFormatUtils';
 import { SignedStorageImage, SignedStorageLink } from '@/components/common/SignedStorageMedia';
 
-const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '🚀'];
+const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '🚀', '😍', '🥰', '😘', '🤩', '😎', '🤔', '🙌', '💯', '🎉', '🥳', '🤣', '😅', '😡', '😱', '😭', '🙏', '🤝', '👀', '💪', '✨', '❤️‍🔥', '💙', '💚', '💛', '💜', '🫶', '😴', '🤗', '😏', '🤯', '🥹', '😇', '🤪', '😈', '🤍', '🖤', '💔', '👏🏻', '👍🏻'];
 
 interface Author { id: string; name: string; display_name: string | null; avatar_url: string | null; sector_id: string | null; }
 interface ReplyAuthor { name: string; display_name: string | null; }
@@ -198,8 +198,8 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
 
             {isFocused && <div className="fixed inset-0 z-[100] bg-background/20 backdrop-blur-[1px] md:hidden" onClick={closeFocus} aria-label="Fechar ações da mensagem" />}
 
-            {isFocused && <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-1/2 z-[300] grid w-[min(92vw,300px)] -translate-x-1/2 grid-cols-4 gap-1.5 rounded-3xl bg-card/98 p-3 shadow-2xl ring-1 ring-border backdrop-blur-xl sm:hidden" role="group" aria-label="Escolher reação" onClick={(event) => event.stopPropagation()}>
-              {QUICK_REACTIONS.map((emoji) => <button key={emoji} type="button" className="flex h-12 w-full items-center justify-center rounded-2xl text-2xl leading-none transition-transform active:scale-90 hover:bg-muted" onClick={() => selectReaction(emoji)}>{emoji}</button>)}
+            {isFocused && <div className="mobile-reaction-picker fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-1/2 z-[300] flex w-[min(94vw,520px)] -translate-x-1/2 items-center gap-1.5 overflow-x-auto overflow-y-hidden rounded-2xl bg-background/35 px-2 py-1.5 shadow-lg backdrop-blur-md ring-1 ring-white/10 scrollbar-none sm:hidden" role="group" aria-label="Escolher reação" onClick={(event) => event.stopPropagation()} onTouchMove={(event) => event.stopPropagation()} style={{ touchAction: 'pan-x', overscrollBehaviorX: 'contain' }}>
+              {QUICK_REACTIONS.map((emoji) => <button key={emoji} type="button" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-transparent text-[1.55rem] leading-none transition-transform active:scale-90 active:bg-white/10" onClick={() => selectReaction(emoji)}>{emoji}</button>)}
             </div>}
 
             {isFocused && <div className="hidden sm:flex absolute top-1/2 z-[120] -translate-y-1/2 items-center gap-1.5 animate-in fade-in-0 zoom-in-75 duration-200" style={{ [isOwn ? 'right' : 'left']: '100%', marginLeft: isOwn ? undefined : '0.5rem', marginRight: isOwn ? '0.5rem' : undefined }} onClick={(event) => event.stopPropagation()}>
