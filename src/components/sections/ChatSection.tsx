@@ -19,7 +19,7 @@ import { SectorUsersList } from '@/components/sector/SectorUsersList';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { AlertCircle, Users, MessageSquare, ArrowLeft, UsersRound, Eye, EyeOff, Search, Calendar as CalendarIcon, Bot, FolderOpen } from 'lucide-react';
 import { ListSkeleton } from '@/components/ui/skeletons';
 import { ChatMediaFilter } from '@/components/chat/ChatMediaFilter';
@@ -30,7 +30,7 @@ import { useConversations } from '@/hooks/useDirectMessages';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useMessageReactions } from '@/hooks/useMessageReactions';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 type ChatMode = 'sectors' | 'direct' | 'groups';
 
@@ -46,8 +46,9 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const [showSearch, setShowSearch] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
   const [searchDate, setSearchDate] = useState<string | null>(null);
+  const [showMobileAutomation, setShowMobileAutomation] = useState(false);
+  const [showMobileMedia, setShowMobileMedia] = useState(false);
   
-  // Global search no longer syncs to chat (now used for tab navigation)
   const isMobile = useIsMobile();
   const { playMessageSent } = useSound();
   const { groups, refetch: refetchGroups } = usePrivateGroups();
@@ -58,20 +59,16 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const mentionedUsersRef = useRef<{id: string; name: string}[]>([]);
 
-  // Filter sectors user can access using the new allAccessibleSectorIds
   const accessibleSectors = isAdmin 
     ? sectors 
     : sectors.filter(s => allAccessibleSectorIds.includes(s.id));
 
-  // Set initial sector based on user's sector or first available
   const effectiveSector = activeSector || profile?.sector_id || geralSectorId;
   const { typingUsers, sendTyping } = useTypingIndicator(`sector-${effectiveSector || 'none'}`);
-  
   const { messages, loading: messagesLoading, sendMessage, canSendMessages } = useMessages(effectiveSector);
   const { reactions, toggleReaction } = useMessageReactions(messages.map(m => m.id));
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; author?: { name: string; display_name: string | null } | null } | null>(null);
 
-  // Mark mention notifications as read when viewing a sector chat
   useEffect(() => {
     if (!user || !effectiveSector) return;
     const markMentionsRead = async () => {
@@ -89,7 +86,6 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     markMentionsRead();
   }, [user, effectiveSector, messages]);
 
-  // Scroll to bottom when messages change
   const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -100,15 +96,12 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     scrollToBottom();
   }, [messages]);
 
-  // Calculate unread DM count
   const unreadDmCount = conversations.reduce((acc, c) => acc + c.unreadCount, 0);
 
-  // Calculate unread group messages
   useEffect(() => {
     if (!profile || !user) return;
 
     const fetchGroupUnread = async () => {
-      // If we're currently viewing the groups tab, consider everything read
       if (chatMode === 'groups') {
         setUnreadGroupCount(0);
         return;
@@ -116,7 +109,6 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       
       let total = 0;
       for (const group of groups) {
-        // Get user's last read time for this group
         const { data: readData } = await supabase
           .from('private_group_message_reads')
           .select('last_read_at')
@@ -126,7 +118,6 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
 
         const lastReadAt = readData?.last_read_at || '1970-01-01T00:00:00Z';
 
-        // Count messages after last read
         const { count } = await supabase
           .from('private_group_messages')
           .select('*', { count: 'exact', head: true })
@@ -141,7 +132,6 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
 
     fetchGroupUnread();
 
-    // Subscribe to group messages
     const channel = supabase
       .channel('chat-section-group-unread')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'private_group_messages' }, () => {
@@ -165,10 +155,8 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     mentionedUsersRef.current = [];
     
     for (const mentionedUser of mentioned) {
-      // Check if the mention is actually in the content
       if (!content.includes(`@${mentionedUser.name}`)) continue;
       
-      // Get mentioned user's user_id from profiles
       const { data: mentionedProfile } = await supabase
         .from('profiles')
         .select('user_id')
@@ -177,7 +165,6 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       
       if (!mentionedProfile) continue;
       
-      // Insert notification via secure RPC
       await supabase.rpc('create_user_notification', {
         _target_user_id: mentionedProfile.user_id,
         _type: 'mention',
@@ -185,7 +172,6 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
         _message: `${profile.display_name || profile.name} mencionou você no chat: "${content.substring(0, 80)}${content.length > 80 ? '...' : ''}"`,
         _reference_id: null,
       });
-
     }
   }, [profile]);
 
@@ -211,20 +197,17 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const currentSector = sectors.find((s) => s.id === effectiveSector);
   const selectedGroup = groups.find(g => g.id === selectedGroupId) || null;
 
-  // Refetch groups when a group is selected but not found in the list
   useEffect(() => {
     if (selectedGroupId && !groups.find(g => g.id === selectedGroupId)) {
       refetchGroups();
     }
   }, [selectedGroupId, groups, refetchGroups]);
 
-  // Handle back button on mobile
   const handleBack = () => {
     setSelectedUserId(null);
     setSelectedGroupId(null);
   };
 
-  // Mark messages as read when user is selected on mobile
   useEffect(() => {
     if (isMobile && chatMode === 'direct' && selectedUserId) {
       markDirectMessagesAsRead(selectedUserId);
@@ -252,340 +235,220 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     );
   }
 
-  // Mobile Direct Message - Show Chat (when user is selected)
   if (isMobile && chatMode === 'direct' && selectedUserId) {
     return (
-      <motion.div
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -20 }}
-        className="flex h-full flex-col"
-      >
-        {/* Back button header */}
+      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex h-full flex-col">
         <div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-3 py-2 backdrop-blur-xl">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleBack}
-            className="h-10 w-10"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <Button variant="ghost" size="icon" onClick={handleBack} className="h-10 w-10"><ArrowLeft className="h-5 w-5" /></Button>
           <span className="font-medium text-foreground">Voltar</span>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <DirectMessageChat partnerId={selectedUserId} />
-        </div>
+        <div className="flex-1 overflow-hidden"><DirectMessageChat partnerId={selectedUserId} /></div>
       </motion.div>
     );
   }
 
-  // Mobile Group Chat
   if (isMobile && chatMode === 'groups' && selectedGroupId) {
     return (
-      <motion.div
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -20 }}
-        className="flex h-full flex-col"
-      >
+      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex h-full flex-col">
         <div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-3 py-2 backdrop-blur-xl">
-          <Button variant="ghost" size="icon" onClick={handleBack} className="h-10 w-10">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <Button variant="ghost" size="icon" onClick={handleBack} className="h-10 w-10"><ArrowLeft className="h-5 w-5" /></Button>
           <span className="font-medium text-foreground">Voltar</span>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <PrivateGroupChat group={selectedGroup} />
-        </div>
+        <div className="flex-1 overflow-hidden"><PrivateGroupChat group={selectedGroup} /></div>
       </motion.div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="flex h-full flex-col"
-    >
-      {/* Desktop mode toggle; mobile uses the Telegram-style settings menu. */}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex h-full flex-col">
       {!isMobile && <div className="flex border-b border-border bg-card shrink-0">
-        <button
-          onClick={() => setChatMode('sectors')}
-          className={cn(
-            'flex flex-1 items-center justify-center gap-2 font-medium transition-colors',
-            isMobile ? 'px-2 py-1.5 text-xs' : 'px-4 py-3 text-sm',
-            chatMode === 'sectors'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <Users className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
-          <span>Setores</span>
+        <button onClick={() => setChatMode('sectors')} className={cn('flex flex-1 items-center justify-center gap-2 font-medium transition-colors','px-4 py-3 text-sm',chatMode === 'sectors' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground')}>
+          <Users className="h-4 w-4" /><span>Setores</span>
         </button>
-        <button
-          onClick={() => setChatMode('direct')}
-          className={cn(
-            'flex flex-1 items-center justify-center gap-2 font-medium transition-colors',
-            isMobile ? 'px-2 py-1.5 text-xs' : 'px-4 py-3 text-sm',
-            chatMode === 'direct'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <MessageSquare className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
-          <span>Individual</span>
-          {unreadDmCount > 0 && chatMode !== 'direct' && (
-            <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />
-          )}
+        <button onClick={() => setChatMode('direct')} className={cn('flex flex-1 items-center justify-center gap-2 font-medium transition-colors','px-4 py-3 text-sm',chatMode === 'direct' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground')}>
+          <MessageSquare className="h-4 w-4" /><span>Individual</span>
+          {unreadDmCount > 0 && chatMode !== 'direct' && <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />}
         </button>
-        <button
-          onClick={() => setChatMode('groups')}
-          className={cn(
-            'flex flex-1 items-center justify-center gap-2 font-medium transition-colors',
-            isMobile ? 'px-2 py-1.5 text-xs' : 'px-4 py-3 text-sm',
-            chatMode === 'groups'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <UsersRound className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
-          <span>Grupos</span>
-          {unreadGroupCount > 0 && chatMode !== 'groups' && (
-            <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />
-          )}
+        <button onClick={() => setChatMode('groups')} className={cn('flex flex-1 items-center justify-center gap-2 font-medium transition-colors','px-4 py-3 text-sm',chatMode === 'groups' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground')}>
+          <UsersRound className="h-4 w-4" /><span>Grupos</span>
+          {unreadGroupCount > 0 && chatMode !== 'groups' && <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />}
         </button>
       </div>}
 
       {isMobile && (
-        <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-foreground">Conversas</p>
-            <p className="truncate text-[11px] text-muted-foreground">
-              {chatMode === 'direct' ? 'Individuais' : chatMode === 'groups' ? 'Grupos privados' : 'Canais da empresa'}
-            </p>
-          </div>
+        <>
+          <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl">
+            {chatMode === 'sectors' && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-10 min-w-0 flex-1 justify-start gap-2 rounded-full border border-border/60 bg-background/65 px-3 shadow-sm" aria-label="Selecionar setor">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-primary-foreground" style={{ backgroundColor: currentSector?.color }}>
+                      {currentSector?.name?.charAt(0)}
+                    </span>
+                    <span className="min-w-0 flex-1 text-left">
+                      <span className="block truncate text-sm font-semibold text-foreground">{currentSector?.name || 'Setor'}</span>
+                      <span className="block truncate text-[10px] text-muted-foreground">Canais da empresa</span>
+                    </span>
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="max-h-[60vh] w-[min(88vw,320px)] overflow-y-auto rounded-2xl border-border/60 bg-popover/95 p-2 shadow-2xl backdrop-blur-2xl">
+                  <DropdownMenuLabel>Canais da empresa</DropdownMenuLabel>
+                  {accessibleSectors.map((s: any) => (
+                    <DropdownMenuItem key={s.id} className="rounded-xl py-2.5" onSelect={() => setActiveSector(s.id)}>
+                      <span className="mr-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-primary-foreground" style={{ backgroundColor: s.color }}>{s.name.charAt(0)}</span>
+                      <span className="truncate">{s.name}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
-          {chatMode === 'sectors' && (
+            {chatMode === 'direct' && (
+              <div className="min-w-0 flex-1 px-1">
+                <p className="truncate text-sm font-semibold text-foreground">Mensagens individuais</p>
+                <p className="truncate text-[10px] text-muted-foreground">Conversas privadas</p>
+              </div>
+            )}
+            {chatMode === 'groups' && (
+              <div className="min-w-0 flex-1 px-1">
+                <p className="truncate text-sm font-semibold text-foreground">Grupos</p>
+                <p className="truncate text-[10px] text-muted-foreground">Grupos privados</p>
+              </div>
+            )}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="h-10 max-w-[45vw] gap-1.5 rounded-full border border-border/60 bg-background/65 px-3 shadow-sm"
-                  aria-label="Selecionar setor"
-                >
-                  <span
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-primary-foreground"
-                    style={{ backgroundColor: currentSector?.color }}
-                  >
-                    {currentSector?.name?.charAt(0)}
-                  </span>
-                  <span className="truncate text-xs font-semibold">{currentSector?.name || 'Setor'}</span>
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-full border border-border/60 bg-background/65 shadow-sm" aria-label="Opções da conversa">
+                  <Settings className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="max-h-[60vh] w-60 overflow-y-auto rounded-2xl border-border/60 bg-popover/90 p-2 shadow-2xl backdrop-blur-2xl">
-                <DropdownMenuLabel>Setores</DropdownMenuLabel>
-                {accessibleSectors.map((s: any) => (
-                  <DropdownMenuItem
-                    key={s.id}
-                    className="rounded-xl py-2.5"
-                    onSelect={() => setActiveSector(s.id)}
-                  >
-                    <span
-                      className="mr-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-primary-foreground"
-                      style={{ backgroundColor: s.color }}
-                    >
-                      {s.name.charAt(0)}
-                    </span>
-                    <span className="truncate">{s.name}</span>
-                  </DropdownMenuItem>
-                ))}
+              <DropdownMenuContent align="end" className="w-64 rounded-2xl border-border/60 bg-popover/95 p-2 shadow-2xl backdrop-blur-2xl">
+                <DropdownMenuLabel>Opções da conversa</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">Tipo de conversa</DropdownMenuLabel>
+                <DropdownMenuItem className="rounded-xl py-2.5" onSelect={() => setChatMode('direct')}><MessageSquare className="mr-2 h-4 w-4" /> Individuais</DropdownMenuItem>
+                <DropdownMenuItem className="rounded-xl py-2.5" onSelect={() => setChatMode('groups')}><UsersRound className="mr-2 h-4 w-4" /> Grupos</DropdownMenuItem>
+                <DropdownMenuItem className="rounded-xl py-2.5" onSelect={() => setChatMode('sectors')}><Users className="mr-2 h-4 w-4" /> Canais da empresa</DropdownMenuItem>
+
+                {chatMode === 'sectors' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">Ferramentas do canal</DropdownMenuLabel>
+                    <DropdownMenuItem className="rounded-xl py-2.5" onSelect={() => setShowSectorUsers(true)}>
+                      {showSectorUsers ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />} Usuários do canal
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="rounded-xl py-2.5" onSelect={() => setShowSearch(true)}>
+                      <Search className="mr-2 h-4 w-4" /> Pesquisar mensagens
+                    </DropdownMenuItem>
+                    {effectiveSector && effectiveSector !== geralSectorId && (
+                      <DropdownMenuItem className="rounded-xl py-2.5" onSelect={() => setShowMobileMedia(true)}>
+                        <FolderOpen className="mr-2 h-4 w-4" /> Mídia e arquivos
+                      </DropdownMenuItem>
+                    )}
+                    {isAdmin && effectiveSector && effectiveSector !== geralSectorId && (
+                      <DropdownMenuItem className="rounded-xl py-2.5" onSelect={() => setShowMobileAutomation(true)}>
+                        <Bot className="mr-2 h-4 w-4" /> Automações de resumo
+                      </DropdownMenuItem>
+                    )}
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
-          )}
+          </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-full border border-border/60 bg-background/65 shadow-sm" aria-label="Alternar tipo de conversa">
-                <Settings className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 rounded-2xl border-border/60 bg-popover/90 p-2 shadow-2xl backdrop-blur-2xl">
-              <DropdownMenuLabel>Tipo de conversa</DropdownMenuLabel>
-              <DropdownMenuItem className="rounded-xl py-2.5" onSelect={() => setChatMode('direct')}><MessageSquare className="mr-2 h-4 w-4" /> Individuais</DropdownMenuItem>
-              <DropdownMenuItem className="rounded-xl py-2.5" onSelect={() => setChatMode('groups')}><UsersRound className="mr-2 h-4 w-4" /> Grupos</DropdownMenuItem>
-              <DropdownMenuItem className="rounded-xl py-2.5" onSelect={() => setChatMode('sectors')}><Users className="mr-2 h-4 w-4" /> Canais da empresa</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+          <Sheet open={showMobileAutomation} onOpenChange={setShowMobileAutomation}>
+            <SheetContent>
+              <SheetHeader><SheetTitle>Automações - {currentSector?.name}</SheetTitle></SheetHeader>
+              {effectiveSector && <div className="mt-6"><ScheduledSummaryConfig targetType="sector" targetId={effectiveSector} targetName={currentSector?.name || 'Setor'} /></div>}
+            </SheetContent>
+          </Sheet>
+
+          <Sheet open={showMobileMedia} onOpenChange={setShowMobileMedia}>
+            <SheetContent>
+              <SheetHeader><SheetTitle>Mídia e Arquivos - {currentSector?.name}</SheetTitle></SheetHeader>
+              {effectiveSector && <div className="mt-6"><ChatMediaFilter chatType="sector" chatId={effectiveSector} /></div>}
+            </SheetContent>
+          </Sheet>
+        </>
       )}
-
-
 
       {chatMode === 'sectors' ? (
         <>
-          {/* Sector Tabs (desktop only; mobile uses the top dropdown) */}
-          {!isMobile && (
-            <SectorTabs
-              sectors={accessibleSectors}
-              activeSector={effectiveSector || ''}
-              onSectorChange={setActiveSector}
-            />
-          )}
+          {!isMobile && <SectorTabs sectors={accessibleSectors} activeSector={effectiveSector || ''} onSectorChange={setActiveSector} />}
 
-          
-          {/* Chat Header */}
-          <div className={cn(
-            'flex items-center gap-3 border-b border-border bg-card shrink-0',
-            isMobile ? 'px-3 py-1.5' : 'px-4 py-3',
-          )}>
-            <div
-              className={cn(
-                'flex items-center justify-center rounded-xl text-white shrink-0',
-                isMobile ? 'h-8 w-8' : 'h-10 w-10',
-              )}
-              style={{ backgroundColor: currentSector?.color }}
-            >
-              <span className={cn('font-bold', isMobile ? 'text-sm' : 'text-lg')}>{currentSector?.name.charAt(0)}</span>
+          <div className={cn('flex items-center gap-3 border-b border-border bg-card shrink-0', isMobile ? 'hidden' : 'px-4 py-3')}>
+            <div className="flex items-center justify-center rounded-xl text-white shrink-0 h-10 w-10" style={{ backgroundColor: currentSector?.color }}>
+              <span className="font-bold text-lg">{currentSector?.name.charAt(0)}</span>
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className={cn('font-display font-semibold text-foreground truncate', isMobile && 'text-sm')}>{currentSector?.name}</h3>
-              {!isMobile && (
-                <p className="text-xs text-muted-foreground">
-                  {messages.length} mensagens
-                </p>
-              )}
+              <h3 className="font-display font-semibold text-foreground truncate">{currentSector?.name}</h3>
+              <p className="text-xs text-muted-foreground">{messages.length} mensagens</p>
             </div>
             <div className="flex items-center gap-1 ml-auto">
-              {/* Scheduled Summary Config - only for admins, not Geral */}
               {isAdmin && effectiveSector && effectiveSector !== geralSectorId && (
                 <Sheet>
-                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" title="Automações de resumo">
-                      <Bot className="h-5 w-5" />
-                    </Button>
-                  </SheetTrigger>
                   <SheetContent>
-                    <SheetHeader>
-                      <SheetTitle>Automações - {currentSector?.name}</SheetTitle>
-                    </SheetHeader>
-                    <div className="mt-6">
-                      <ScheduledSummaryConfig
-                        targetType="sector"
-                        targetId={effectiveSector}
-                        targetName={currentSector?.name || 'Setor'}
-                      />
-                    </div>
+                    <SheetHeader><SheetTitle>Automações - {currentSector?.name}</SheetTitle></SheetHeader>
+                    <div className="mt-6"><ScheduledSummaryConfig targetType="sector" targetId={effectiveSector} targetName={currentSector?.name || 'Setor'} /></div>
                   </SheetContent>
+                  <Button variant="ghost" size="icon" title="Automações de resumo"><Bot className="h-5 w-5" /></Button>
                 </Sheet>
               )}
-              {/* Media Filter - for all sectors except Geral */}
               {effectiveSector && effectiveSector !== geralSectorId && (
                 <Sheet>
-                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" title="Mídia e arquivos">
-                      <FolderOpen className="h-5 w-5" />
-                    </Button>
-                  </SheetTrigger>
                   <SheetContent>
-                    <SheetHeader>
-                      <SheetTitle>Mídia e Arquivos - {currentSector?.name}</SheetTitle>
-                    </SheetHeader>
-                    <div className="mt-6">
-                      <ChatMediaFilter chatType="sector" chatId={effectiveSector} />
-                    </div>
+                    <SheetHeader><SheetTitle>Mídia e Arquivos - {currentSector?.name}</SheetTitle></SheetHeader>
+                    <div className="mt-6"><ChatMediaFilter chatType="sector" chatId={effectiveSector} /></div>
                   </SheetContent>
+                  <Button variant="ghost" size="icon" title="Mídia e arquivos"><FolderOpen className="h-5 w-5" /></Button>
                 </Sheet>
               )}
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => setShowSectorUsers(!showSectorUsers)}
-                title={showSectorUsers ? 'Ocultar membros' : 'Ver membros do setor'}
-              >
+              <Button variant="ghost" size="icon" onClick={() => setShowSectorUsers(!showSectorUsers)} title={showSectorUsers ? 'Ocultar membros' : 'Ver membros do setor'}>
                 {showSectorUsers ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </Button>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => { setShowSearch(!showSearch); if (showSearch) { setMessageSearchQuery(''); setSearchDate(null); } }}
-                title="Buscar mensagens"
-              >
-                <Search className="h-5 w-5" />
-              </Button>
+              <Button variant="ghost" size="icon" onClick={() => { setShowSearch(!showSearch); if (showSearch) { setMessageSearchQuery(''); setSearchDate(null); } }} title="Buscar mensagens"><Search className="h-5 w-5" /></Button>
             </div>
           </div>
 
-          {/* Search Bar */}
           {showSearch && (
             <div className="border-b border-border bg-card px-4 py-2">
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por mensagem..."
-                    value={messageSearchQuery}
-                    onChange={(e) => setMessageSearchQuery(e.target.value)}
-                    className="pl-9 h-9 text-sm"
-                    autoFocus
-                  />
+                  <Input placeholder="Buscar por mensagem..." value={messageSearchQuery} onChange={(e) => setMessageSearchQuery(e.target.value)} className="pl-9 h-9 text-sm" autoFocus />
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="date"
-                    value={searchDate || ''}
-                    onChange={(e) => setSearchDate(e.target.value || null)}
-                    className="w-[140px] h-9 text-xs"
-                  />
+                  <Input type="date" value={searchDate || ''} onChange={(e) => setSearchDate(e.target.value || null)} className="w-[140px] h-9 text-xs" />
                 </div>
-                {(messageSearchQuery || searchDate) && (
-                  <Button variant="ghost" size="sm" className="h-9 px-2 text-xs flex-shrink-0" onClick={() => { setMessageSearchQuery(''); setSearchDate(null); }}>
-                    Limpar
-                  </Button>
-                )}
+                {(messageSearchQuery || searchDate) && <Button variant="ghost" size="sm" className="h-9 px-2 text-xs flex-shrink-0" onClick={() => { setMessageSearchQuery(''); setSearchDate(null); }}>Limpar</Button>}
               </div>
             </div>
           )}
 
-          {/* Main Chat Area */}
           <div className="flex flex-1 overflow-hidden">
-            {/* Messages */}
-            <ScrollArea 
-              className={cn("flex-1 p-4", showSectorUsers && !isMobile && "border-r border-border")}
-              onScrollCapture={(e) => {
-                const target = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
-                if (target) {
-                  const { scrollTop, scrollHeight, clientHeight } = target as HTMLElement;
-                  setShowScrollToBottom(scrollHeight - scrollTop - clientHeight > 200);
-                }
-              }}
-            >
+            <ScrollArea className={cn("flex-1 p-4", showSectorUsers && !isMobile && "border-r border-border")} onScrollCapture={(e) => {
+              const target = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
+              if (target) {
+                const { scrollTop, scrollHeight, clientHeight } = target as HTMLElement;
+                setShowScrollToBottom(scrollHeight - scrollTop - clientHeight > 200);
+              }
+            }}>
               <div className="space-y-4">
                 {messagesLoading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                  </div>
+                  <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
                 ) : messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <div className="mb-4 rounded-full bg-muted p-4">
-                      <span className="text-4xl">💬</span>
-                    </div>
+                    <div className="mb-4 rounded-full bg-muted p-4"><span className="text-4xl">💬</span></div>
                     <h4 className="font-display text-lg font-semibold text-foreground">Nenhuma mensagem ainda</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {canSendMessages 
-                        ? 'Seja o primeiro a enviar uma mensagem neste setor!'
-                        : 'Aguarde mensagens da sua equipe'}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{canSendMessages ? 'Seja o primeiro a enviar uma mensagem neste setor!' : 'Aguarde mensagens da sua equipe'}</p>
                   </div>
                 ) : (
                   messages.filter(m => {
                     if (messageSearchQuery) {
                       const q = messageSearchQuery.toLowerCase();
-                      const matchText = m.content.toLowerCase().includes(q) || 
-                        (m.author?.name || '').toLowerCase().includes(q) ||
-                        (m.author?.display_name || '').toLowerCase().includes(q);
+                      const matchText = m.content.toLowerCase().includes(q) || (m.author?.name || '').toLowerCase().includes(q) || (m.author?.display_name || '').toLowerCase().includes(q);
                       if (!matchText) return false;
                     }
                     if (searchDate) {
@@ -601,121 +464,59 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                     const msgDate = new Date(message.created_at).toDateString();
                     const prevDate = prevMessage ? new Date(prevMessage.created_at).toDateString() : null;
                     const showDateSeparator = msgDate !== prevDate;
-
                     return (
                       <div key={message.id} id={`msg-${message.id}`} className="transition-colors duration-500 rounded-lg">
                         {showDateSeparator && <DateSeparator date={message.created_at} />}
-                        <ChatMessage
-                          message={message}
-                          index={index}
-                          onReply={(msg) => setReplyTo({ id: msg.id, content: msg.content, author: msg.author })}
-                          reactions={reactions[message.id]}
-                          onToggleReaction={toggleReaction}
-                          onScrollToMessage={(id) => {
-                            const el = document.getElementById(`msg-${id}`);
-                            if (el) {
-                              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              el.classList.add('bg-primary/10');
-                              setTimeout(() => el.classList.remove('bg-primary/10'), 2000);
-                            }
-                          }}
-                        />
+                        <ChatMessage message={message} index={index} onReply={(msg) => setReplyTo({ id: msg.id, content: msg.content, author: msg.author })} reactions={reactions[message.id]} onToggleReaction={toggleReaction} onScrollToMessage={(id) => {
+                          const el = document.getElementById(`msg-${id}`);
+                          if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('bg-primary/10'); setTimeout(() => el.classList.remove('bg-primary/10'), 2000); }
+                        }} />
                       </div>
                     );
                   })
                 )}
                 <div ref={messagesEndRef} />
               </div>
-
-              {/* Scroll to bottom button */}
-              {showScrollToBottom && (
-                <button
-                  onClick={scrollToBottom}
-                  className="fixed bottom-32 right-8 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all"
-                  title="Ir para o final"
-                >
-                  <ChevronDown className="h-5 w-5" />
-                </button>
-              )}
+              {showScrollToBottom && <button onClick={scrollToBottom} className="fixed bottom-32 right-8 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all" title="Ir para o final"><ChevronDown className="h-5 w-5" /></button>}
             </ScrollArea>
 
-            {/* Sector Users Panel */}
-            {showSectorUsers && !isMobile && (
-              <div className="w-72 flex-shrink-0">
-                <SectorUsersList sectorId={effectiveSector || ''} inline />
-              </div>
-            )}
+            {showSectorUsers && !isMobile && <div className="w-72 flex-shrink-0"><SectorUsersList sectorId={effectiveSector || ''} inline /></div>}
           </div>
 
-          {/* Mobile Sector Users Modal */}
           {showSectorUsers && isMobile && (
             <div className="absolute inset-0 z-50 bg-background">
               <div className="flex items-center justify-between border-b border-border p-3">
                 <h3 className="font-semibold">Membros do Setor</h3>
-                <Button variant="ghost" size="icon" onClick={() => setShowSectorUsers(false)}>
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setShowSectorUsers(false)}><ArrowLeft className="h-5 w-5" /></Button>
               </div>
-            <SectorUsersList sectorId={effectiveSector || ''} inline />
+              <SectorUsersList sectorId={effectiveSector || ''} inline />
             </div>
           )}
 
-          {/* Typing Indicator */}
           <TypingIndicator typingUsers={typingUsers} />
 
-          {/* Input */}
           {canSendMessages ? (
-            <ChatInput
-              onSendMessage={handleSendMessage}
-              onTyping={sendTyping}
-              onMention={handleMention}
-              replyTo={replyTo}
-              onClearReply={() => setReplyTo(null)}
-            />
+            <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} onMention={handleMention} replyTo={replyTo} onClearReply={() => setReplyTo(null)} />
           ) : (
-            <div className="border-t border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">
-              Você só pode enviar mensagens no seu próprio setor
-            </div>
+            <div className="border-t border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">Você só pode enviar mensagens no seu próprio setor</div>
           )}
         </>
       ) : chatMode === 'direct' ? (
-        // Direct Messages Mode
         isMobile ? (
-          // Mobile: Show only the list (chat is shown separately when user selected)
-          <div className="flex-1 overflow-hidden">
-            <DirectMessageList
-              selectedUserId={selectedUserId}
-              onSelectUser={setSelectedUserId}
-            />
-          </div>
+          <div className="flex-1 overflow-hidden"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div>
         ) : (
-          // Desktop: Side by side layout
           <div className="flex flex-1 overflow-hidden">
-            <div className="w-80 flex-shrink-0">
-              <DirectMessageList
-                selectedUserId={selectedUserId}
-                onSelectUser={setSelectedUserId}
-              />
-            </div>
-            <div className="flex-1">
-              <DirectMessageChat partnerId={selectedUserId} />
-            </div>
+            <div className="w-80 flex-shrink-0"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div>
+            <div className="flex-1"><DirectMessageChat partnerId={selectedUserId} /></div>
           </div>
         )
       ) : (
-        // Private Groups Mode
         isMobile ? (
-          <div className="flex-1 overflow-hidden">
-            <PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} />
-          </div>
+          <div className="flex-1 overflow-hidden"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div>
         ) : (
           <div className="flex flex-1 overflow-hidden">
-            <div className="w-80 flex-shrink-0">
-              <PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} />
-            </div>
-            <div className="flex-1">
-              <PrivateGroupChat group={selectedGroup} />
-            </div>
+            <div className="w-80 flex-shrink-0"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div>
+            <div className="flex-1"><PrivateGroupChat group={selectedGroup} /></div>
           </div>
         )
       )}
