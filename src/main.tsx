@@ -7,12 +7,20 @@ if (localStorage.getItem('theme') === 'dark') {
   document.documentElement.classList.add('dark');
 }
 
-// Offline caching is intentionally disabled: stale app shells caused blank mobile screens.
-if ('serviceWorker' in navigator) {
-  void navigator.serviceWorker.getRegistrations().then((registrations) => {
-    registrations.forEach((registration) => void registration.unregister());
-  });
-}
+// Register the service worker so the PWA can install and provide offline support.
+// Do this after the first render so a registration failure never blocks the app.
+const registerServiceWorker = async () => {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const registration = await navigator.serviceWorker.register('/sw.js', {
+      scope: '/',
+      updateViaCache: 'none',
+    });
+    void registration.update().catch(() => undefined);
+  } catch (error) {
+    console.error('Service Worker registration failed:', error);
+  }
+};
 
 // Make default favicon rounded
 function roundFavicon() {
@@ -49,3 +57,9 @@ function roundFavicon() {
 roundFavicon();
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+if (document.readyState === 'complete') {
+  void registerServiceWorker();
+} else {
+  window.addEventListener('load', () => void registerServiceWorker(), { once: true });
+}
