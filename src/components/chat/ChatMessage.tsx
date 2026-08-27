@@ -179,7 +179,7 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
   return (
     <div
       className={cn(
-        'group relative flex min-w-0 max-w-full items-start gap-2.5 sm:gap-3',
+        'group relative flex w-full min-w-0 max-w-full items-start gap-2.5 sm:gap-3',
         isOwn && 'flex-row-reverse',
         isFocused && 'z-[101]',
       )}
@@ -193,18 +193,18 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
         </AvatarFallback>
       </Avatar>
 
-      <div className={cn('flex min-w-0 max-w-full flex-col', isOwn && 'items-end')}>
-        <div className={cn('mb-1 flex max-w-full flex-wrap items-center gap-2', isOwn && 'flex-row-reverse')}>
-          <span className="max-w-full truncate text-sm font-medium text-foreground">{displayName}</span>
+      <div className={cn('flex w-0 min-w-0 flex-1 flex-col', isOwn && 'items-end')}>
+        <div className={cn('mb-1 flex w-full max-w-full flex-wrap items-center gap-2', isOwn && 'flex-row-reverse')}>
+          <span className="min-w-0 max-w-full truncate text-sm font-medium text-foreground">{displayName}</span>
           {authorSector && (
             <span className="max-w-full rounded-full px-2 py-0.5 text-xs font-medium" style={{ backgroundColor: `${authorSector.color}20`, color: authorSector.color }}>
               {authorSector.name}
             </span>
           )}
-          <span className="text-xs text-muted-foreground">{formatTime(message.created_at)}</span>
+          <span className="shrink-0 text-xs text-muted-foreground">{formatTime(message.created_at)}</span>
         </div>
 
-        <div className={cn('flex min-w-0 max-w-full items-end gap-1.5', isOwn && 'flex-row-reverse')}>
+        <div className={cn('flex w-full min-w-0 max-w-full items-end gap-1.5', isOwn && 'flex-row-reverse')}>
           <div
             onTouchStart={startLongPress}
             onTouchEnd={cancelLongPress}
@@ -256,7 +256,7 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
             )}
           </div>
 
-          <div className={cn('flex shrink-0 items-center gap-0.5 transition-opacity', isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none')}>
+          <div className={cn('hidden shrink-0 items-center gap-0.5 transition-opacity sm:flex', isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none')}>
             <button onClick={() => onReply?.(message)} className="p-1.5 rounded-2xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Responder">
               <Reply className="h-3.5 w-3.5" />
             </button>
