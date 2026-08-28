@@ -4,14 +4,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Check, CheckCheck, Reply, SmilePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSectors } from '@/hooks/useData';
 import { CardMentionCard } from './CardMentionCard';
 import { formatText } from '@/lib/chatFormatUtils';
 import { SignedStorageImage, SignedStorageLink } from '@/components/common/SignedStorageMedia';
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '🚀', '😍', '🥰', '😘', '🤩', '😎', '🤔', '🙌', '💯', '🎉', '🥳', '🤣', '😅', '😡', '😱', '😭', '🙏', '🤝', '👀', '💪', '✨', '❤️‍🔥', '💙', '💚', '💛', '💜', '🫶', '😴', '🤗', '😏', '🤯', '🥹', '😇', '🤪', '😈', '🤍', '🖤', '💔', '👏🏻', '👍🏻'];
 
-interface Author { id: string; name: string; display_name: string | null; avatar_url: string | null; sector_id: string | null; }
+interface Author { id: string; name: string; display_name: string | null; avatar_url: string | null; sector_id: string | null; sector_name?: string | null; sector_color?: string | null; }
 interface ReplyAuthor { name: string; display_name: string | null; }
 interface Message {
   id: string; content: string; author_id: string; sector_id: string; created_at: string;
@@ -31,7 +30,6 @@ interface ChatMessageProps {
 
 export function ChatMessage({ message, onReply, reactions, onToggleReaction, onScrollToMessage }: ChatMessageProps) {
   const { profile } = useAuth();
-  const { sectors } = useSectors();
   const [isHovered, setIsHovered] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -106,10 +104,11 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
 
   const isOwn = message.author_id === profile?.id;
   const author = message.author;
-  const authorSector = sectors.find((s) => s.id === author?.sector_id);
   const getInitials = (name: string) => name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
   const formatTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const displayName = author?.display_name || author?.name || 'Usuário';
+  const authorSectorName = author?.sector_name || null;
+  const authorSectorColor = author?.sector_color || '#6366f1';
   const messageStatus = message.status || (message.id ? 'delivered' : 'sending');
 
   const parseCardMention = (lines: string[]): { taskNumber: number; title: string; description?: string; labels?: string; priority: string; dueDate?: string; boardName: string } | null => {
@@ -174,7 +173,7 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
       <div className="relative z-10 shrink-0">
         <Avatar className="h-8 w-8 ring-2 ring-border sm:h-10 sm:w-10">
           <AvatarImage src={author?.avatar_url || ''} alt={displayName} />
-          <AvatarFallback className="text-xs font-semibold text-white sm:text-sm" style={{ backgroundColor: authorSector?.color || '#6366f1' }}>{getInitials(displayName)}</AvatarFallback>
+          <AvatarFallback className="text-xs font-semibold text-white sm:text-sm" style={{ backgroundColor: authorSectorColor }}>{getInitials(displayName)}</AvatarFallback>
         </Avatar>
       </div>
 
@@ -185,7 +184,7 @@ export function ChatMessage({ message, onReply, reactions, onToggleReaction, onS
 
         <div className={cn('relative z-10 mb-0.5 flex w-fit max-w-[82%] flex-wrap items-center gap-1.5', isOwn && 'flex-row-reverse')}>
           <span className="min-w-0 max-w-full truncate text-xs font-medium text-foreground sm:text-sm">{displayName}</span>
-          {authorSector && <span className="max-w-full rounded-full px-1.5 py-0.5 text-[10px] font-medium sm:px-2 sm:text-xs" style={{ backgroundColor: `${authorSector.color}20`, color: authorSector.color }}>{authorSector.name}</span>}
+          {authorSectorName && <span className="max-w-full rounded-full px-1.5 py-0.5 text-[10px] font-medium sm:px-2 sm:text-xs" style={{ backgroundColor: `${authorSectorColor}20`, color: authorSectorColor }}>{authorSectorName}</span>}
           <span className="shrink-0 text-[10px] text-muted-foreground sm:text-xs">{formatTime(message.created_at)}</span>
         </div>
 
