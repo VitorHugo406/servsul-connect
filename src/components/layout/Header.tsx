@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Bell, User, Moon, Sun, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction } from 'lucide-react';
+import { Search, Bell, User, Moon, Sun, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,18 +10,8 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { getCompanyLogoUrl } from '@/lib/companyLogo';
 import { UserProfileDialog } from '@/components/user/UserProfileDialog';
 import { TeamHeaderButton } from '@/components/teams/TeamHeaderButton';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface HeaderProps {
@@ -39,7 +29,6 @@ type SectionDef = {
   id: string;
   label: string;
   description: string;
-  // visibility flags
   adminOnly?: boolean;
   mainAdminOnly?: boolean;
   supervisorOnly?: boolean;
@@ -82,9 +71,7 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
   useEffect(() => {
     document.title = company?.name ? `${company.name} | Nuvexa` : 'Nuvexa - Comunicação Empresarial';
     const faviconUrl = getCompanyLogoUrl(company?.logo_url);
-    document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
-      link.href = faviconUrl ?? '';
-    });
+    document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach((link) => { link.href = faviconUrl ?? ''; });
   }, [company?.name, company?.logo_url]);
 
   useEffect(() => {
@@ -110,7 +97,6 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
   const isMainAdmin = profile?.email === ADMIN_EMAIL;
   const autonomy = profile?.autonomy_level;
 
-  // Filter sections by user permissions (mirror Sidebar visibility)
   const visibleSections = useMemo(() => {
     return ALL_SECTIONS.filter(s => {
       if (s.mainAdminOnly) return isAdmin && isMainAdmin;
@@ -131,9 +117,7 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
   const filteredSections = useMemo(() => {
     if (!searchQuery) return [];
     const q = searchQuery.toLowerCase();
-    return visibleSections.filter(s =>
-      s.label.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)
-    );
+    return visibleSections.filter(s => s.label.toLowerCase().includes(q) || s.description.toLowerCase().includes(q));
   }, [searchQuery, visibleSections]);
 
   const handleSelectSection = (sectionId: string) => {
@@ -142,208 +126,88 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
     setShowSectionSearch(false);
   };
 
-  // Atalhos só aparecem quando o módulo está habilitado NA EMPRESA e o usuário tem permissão individual.
   const showBiButton = hasModule('bi');
   const showBhButton = hasModule('bh') && (isAdmin || canAccess('can_access_bh' as any));
   const showFechamentoButton = hasModule('fechamento') && (isAdmin || canAccess('can_access_fechamento' as any));
   const showOrbsButton = hasModule('orbs') && (isAdmin || canAccess('can_access_orbs' as any));
+  const canCreateAnnouncement = isAdmin || canAccess('can_post_announcements');
+  const isAnnouncementsPage = title === 'Avisos Gerais';
+
+  const openNewAnnouncement = () => {
+    window.dispatchEvent(new CustomEvent('nuvexa:open-new-announcement'));
+  };
 
   return (
     <>
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mx-3 mt-3 flex h-16 items-center justify-between rounded-2xl border border-border/70 bg-card px-6 shadow-sm"
-      >
+      <motion.header initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mx-3 mt-3 flex h-16 items-center justify-between rounded-2xl border border-border/70 bg-card px-6 shadow-sm">
         <div className="flex min-w-0 items-center gap-3">
           {company && (
             <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-muted/50">
-              {company.logo_url ? (
-                <img src={getCompanyLogoUrl(company.logo_url) ?? undefined} alt={company.name} className="h-full w-full object-contain" />
-              ) : (
-                <span className="text-sm font-bold text-primary">{company.name.charAt(0)}</span>
-              )}
+              {company.logo_url ? <img src={getCompanyLogoUrl(company.logo_url) ?? undefined} alt={company.name} className="h-full w-full object-contain" /> : <span className="text-sm font-bold text-primary">{company.name.charAt(0)}</span>}
             </div>
           )}
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="font-display truncate text-xl font-bold text-foreground">{title}</h2>
               {company && <span className="hidden truncate text-xs font-medium text-muted-foreground lg:inline">{company.name}</span>}
+              {isAnnouncementsPage && canCreateAnnouncement && (
+                <Button onClick={openNewAnnouncement} size="sm" className="h-8 gap-1.5 rounded-lg px-3">
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Novo Aviso</span>
+                  <span className="sm:hidden">Novo</span>
+                </Button>
+              )}
             </div>
             {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          {/* Section Search */}
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Busca de Abas..."
-              value={searchQuery}
-              onChange={(e) => {
-                onSearchChange?.(e.target.value);
-                setShowSectionSearch(true);
-              }}
-              onFocus={() => { if (searchQuery) setShowSectionSearch(true); }}
-              onBlur={() => setTimeout(() => setShowSectionSearch(false), 200)}
-              className="w-56 bg-muted/50 pl-10 focus-visible:ring-primary"
-            />
+            <Input placeholder="Busca de Abas..." value={searchQuery} onChange={(e) => { onSearchChange?.(e.target.value); setShowSectionSearch(true); }} onFocus={() => { if (searchQuery) setShowSectionSearch(true); }} onBlur={() => setTimeout(() => setShowSectionSearch(false), 200)} className="w-56 bg-muted/50 pl-10 focus-visible:ring-primary" />
             {showSectionSearch && filteredSections.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-lg border border-border bg-card shadow-lg overflow-hidden">
                 {filteredSections.map(section => (
-                  <button
-                    key={section.id}
-                    onMouseDown={(e) => { e.preventDefault(); handleSelectSection(section.id); }}
-                    className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{section.label}</p>
-                      <p className="text-xs text-muted-foreground">{section.description}</p>
-                    </div>
+                  <button key={section.id} onMouseDown={(e) => { e.preventDefault(); handleSelectSection(section.id); }} className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors">
+                    <div><p className="text-sm font-medium text-foreground">{section.label}</p><p className="text-xs text-muted-foreground">{section.description}</p></div>
                   </button>
                 ))}
               </div>
             )}
-            {showSectionSearch && searchQuery && filteredSections.length === 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-lg border border-border bg-card shadow-lg p-4 text-center text-sm text-muted-foreground">
-                Nenhuma aba encontrada
-              </div>
-            )}
+            {showSectionSearch && searchQuery && filteredSections.length === 0 && <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-lg border border-border bg-card shadow-lg p-4 text-center text-sm text-muted-foreground">Nenhuma aba encontrada</div>}
           </div>
 
-          {/* External shortcut buttons */}
-          {showBiButton && (
-            <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" asChild>
-              <a href="https://drive-data-ace.vercel.app/login" target="_blank" rel="noopener noreferrer">
-                <BarChart3 className="h-4 w-4" />
-                Dash BI
-              </a>
-            </Button>
-          )}
+          {showBiButton && <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" asChild><a href="https://drive-data-ace.vercel.app/login" target="_blank" rel="noopener noreferrer"><BarChart3 className="h-4 w-4" />Dash BI</a></Button>}
+          {showBhButton && <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" asChild><a href="https://banco-de-horas-servchat.vercel.app/" target="_blank" rel="noopener noreferrer"><Briefcase className="h-4 w-4" />BH</a></Button>}
+          {showFechamentoButton && <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" onClick={() => setShowComingSoon('Fechamento')}><FileSpreadsheet className="h-4 w-4" />Fechamento</Button>}
+          {showOrbsButton && <Button variant="outline" size="sm" className="gap-1.5 hidden md:flex" asChild><a href="https://sync-synergy-flow.vercel.app/" target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />Orbs</a></Button>}
 
-          {showBhButton && (
-            <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" asChild>
-              <a href="https://banco-de-horas-servchat.vercel.app/" target="_blank" rel="noopener noreferrer">
-                <Briefcase className="h-4 w-4" />
-                BH
-              </a>
-            </Button>
-          )}
-
-          {showFechamentoButton && (
-            <Button variant="outline" size="sm" className="gap-1.5 hidden lg:flex" onClick={() => setShowComingSoon('Fechamento')}>
-              <FileSpreadsheet className="h-4 w-4" />
-              Fechamento
-            </Button>
-          )}
-
-          {showOrbsButton && (
-            <Button variant="outline" size="sm" className="gap-1.5 hidden md:flex" asChild>
-              <a href="https://sync-synergy-flow.vercel.app/" target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4" />
-                Orbs
-              </a>
-            </Button>
-          )}
-
-          {/* Team Header Button */}
           <TeamHeaderButton />
-          
-          {/* Notifications */}
+
           {!hideNotifications && (
             <Popover open={showNotifications} onOpenChange={setShowNotifications}>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
-                  {counts.total > 0 && (
-                    <Badge className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center bg-secondary p-0 text-xs">
-                      {counts.total > 99 ? '99+' : counts.total}
-                    </Badge>
-                  )}
-                </Button>
-              </PopoverTrigger>
+              <PopoverTrigger asChild><Button variant="ghost" size="icon" className="relative"><Bell className="h-5 w-5" />{counts.total > 0 && <Badge className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center bg-secondary p-0 text-xs">{counts.total > 99 ? '99+' : counts.total}</Badge>}</Button></PopoverTrigger>
               <PopoverContent className="w-80 p-0" align="end">
-                <div className="border-b border-border p-4">
-                  <h3 className="font-semibold">Notificacoes</h3>
-                </div>
-                <ScrollArea className="h-64">
-                  <div className="p-4 space-y-3">
-                    {counts.unreadMessages > 0 && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                        <div className="h-2 w-2 rounded-full bg-primary" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">Mensagens nao lidas</p>
-                          <p className="text-xs text-muted-foreground">
-                            {counts.unreadMessages} {counts.unreadMessages === 1 ? 'mensagem' : 'mensagens'}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {counts.unreadAnnouncements > 0 && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                        <div className="h-2 w-2 rounded-full bg-secondary" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">Avisos nao lidos</p>
-                          <p className="text-xs text-muted-foreground">
-                            {counts.unreadAnnouncements} {counts.unreadAnnouncements === 1 ? 'aviso' : 'avisos'}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {counts.total === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Nenhuma notificacao</p>
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
+                <div className="border-b border-border p-4"><h3 className="font-semibold">Notificacoes</h3></div>
+                <ScrollArea className="h-64"><div className="p-4 space-y-3">
+                  {counts.unreadMessages > 0 && <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"><div className="h-2 w-2 rounded-full bg-primary" /><div className="flex-1"><p className="text-sm font-medium">Mensagens nao lidas</p><p className="text-xs text-muted-foreground">{counts.unreadMessages} {counts.unreadMessages === 1 ? 'mensagem' : 'mensagens'}</p></div></div>}
+                  {counts.unreadAnnouncements > 0 && <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"><div className="h-2 w-2 rounded-full bg-secondary" /><div className="flex-1"><p className="text-sm font-medium">Avisos nao lidos</p><p className="text-xs text-muted-foreground">{counts.unreadAnnouncements} {counts.unreadAnnouncements === 1 ? 'aviso' : 'avisos'}</p></div></div>}
+                  {counts.total === 0 && <div className="text-center py-8 text-muted-foreground"><Bell className="h-8 w-8 mx-auto mb-2 opacity-50" /><p className="text-sm">Nenhuma notificacao</p></div>}
+                </div></ScrollArea>
               </PopoverContent>
             </Popover>
           )}
 
-          <Button variant="ghost" size="icon" onClick={toggleDarkMode} title={isDark ? 'Modo Claro' : 'Modo Noturno'}>
-            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </Button>
-
-          <Button variant="ghost" size="icon" onClick={() => setShowProfile(true)}>
-            <User className="h-5 w-5" />
-          </Button>
-          
-          <div className="hidden text-right xl:block">
-            <p className="text-sm font-medium text-foreground">
-              {new Date().toLocaleDateString('pt-BR', { weekday: 'long' })}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
-          </div>
+          <Button variant="ghost" size="icon" onClick={toggleDarkMode} title={isDark ? 'Modo Claro' : 'Modo Noturno'}>{isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}</Button>
+          <Button variant="ghost" size="icon" onClick={() => setShowProfile(true)}><User className="h-5 w-5" /></Button>
+          <div className="hidden text-right xl:block"><p className="text-sm font-medium text-foreground">{new Date().toLocaleDateString('pt-BR', { weekday: 'long' })}</p><p className="text-xs text-muted-foreground">{new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
         </div>
       </motion.header>
 
       <UserProfileDialog open={showProfile} onOpenChange={setShowProfile} />
-
       <Dialog open={showComingSoon !== null} onOpenChange={(open) => !open && setShowComingSoon(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Construction className="h-5 w-5 text-amber-500" />
-              {showComingSoon}
-            </DialogTitle>
-            <DialogDescription className="pt-2">
-              Aguarde, em fase de Implantação.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center py-6 text-center">
-            <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-4 mb-3">
-              <Construction className="h-10 w-10 text-amber-500" />
-            </div>
-            <p className="text-sm text-muted-foreground max-w-sm">
-              O módulo <strong>{showComingSoon}</strong> está sendo preparado e estará disponível em breve.
-            </p>
-          </div>
-        </DialogContent>
+        <DialogContent className="max-w-md"><DialogHeader><DialogTitle className="flex items-center gap-2"><Construction className="h-5 w-5 text-amber-500" />{showComingSoon}</DialogTitle><DialogDescription className="pt-2">Aguarde, em fase de Implantação.</DialogDescription></DialogHeader><div className="flex flex-col items-center py-6 text-center"><div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-4 mb-3"><Construction className="h-10 w-10 text-amber-500" /></div><p className="text-sm text-muted-foreground max-w-sm">O módulo <strong>{showComingSoon}</strong> está sendo preparado e estará disponível em breve.</p></div></DialogContent>
       </Dialog>
     </>
   );
