@@ -17,7 +17,6 @@ import { getCompanyLogoUrl } from '@/lib/companyLogo';
 import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
 
 const MOBILE_ALLOWED = new Set(['home', 'chat', 'announcements', 'birthdays']);
-
 const TABS: Array<{ id: 'home' | 'chat' | 'announcements' | 'birthdays'; label: string; icon: typeof Home; eyebrow: string }> = [
   { id: 'home', label: 'Início', icon: Home, eyebrow: 'Visão geral' },
   { id: 'chat', label: 'Chat', icon: MessageSquare, eyebrow: 'Setores' },
@@ -32,7 +31,7 @@ interface MobileShellProps {
   onOpenChatbot?: () => void;
 }
 
-export function MobileShell({ activeSection, onSectionChange, globalSearch, onOpenChatbot }: MobileShellProps) {
+export function MobileShell({ activeSection, onSectionChange, globalSearch }: MobileShellProps) {
   const { profile, signOut, isAdmin, canAccess } = useAuth();
   const { company } = useCompany();
   const { counts } = useNotifications();
@@ -50,9 +49,7 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
   const isChat = current.id === 'chat';
   const canCreateAnnouncement = isAdmin || canAccess('can_post_announcements');
 
-  const openNewAnnouncement = () => {
-    window.dispatchEvent(new CustomEvent('nuvexa:open-new-announcement'));
-  };
+  const openNewAnnouncement = () => window.dispatchEvent(new CustomEvent('nuvexa:open-new-announcement'));
 
   const renderContent = () => {
     switch (current.id) {
@@ -65,16 +62,13 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch, onOp
   };
 
   return (
-    <div
-      className="flex flex-col h-[100dvh] overflow-hidden"
-      style={{
-        background:
-          'radial-gradient(circle at 15% 0%, hsla(var(--company-hue,220), 70%, 60%, 0.10), transparent 45%)' +
-          'radial-gradient(circle at 85% 100%, hsla(var(--company-hue,220), 70%, 50%, 0.08), transparent 40%)' +
-          'hsl(var(--background))',
-        fontFamily: "'Inter', system-ui, sans-serif",
-      }}
-    >
+    <div className="flex flex-col h-[100dvh] overflow-hidden" style={{
+      background:
+        'radial-gradient(circle at 15% 0%, hsla(var(--company-hue,220), 70%, 60%, 0.10), transparent 45%),' +
+        'radial-gradient(circle at 85% 100%, hsla(var(--company-hue,220), 70%, 50%, 0.08), transparent 40%),' +
+        'hsl(var(--background))',
+      fontFamily: "'Inter', system-ui, sans-serif",
+    }}>
       <SystemBroadcastBanner />
 
       {!isChat && (
