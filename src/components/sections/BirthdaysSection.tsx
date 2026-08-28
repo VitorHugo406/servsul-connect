@@ -63,9 +63,9 @@ export function BirthdaysSection() {
   const handleCorporateImage = (file: File | null) => { if (!file) return; if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { toast.error('Use uma imagem JPG, PNG ou WEBP.'); return; } if (file.size > 3 * 1024 * 1024) { toast.error('A imagem deve ter no máximo 3MB.'); return; } const reader = new FileReader(); reader.onload = () => { const value = String(reader.result); try { localStorage.setItem(companyImageKey, value); setCorporateImage(value); toast.success('Imagem corporativa salva para este relatório.'); } catch { toast.error('Não foi possível salvar a imagem.'); } }; reader.readAsDataURL(file); };
   const clearCorporateImage = () => { try { localStorage.removeItem(companyImageKey); } catch {} setCorporateImage(null); toast.success('Imagem corporativa removida.'); };
 
-  const encodeShareData = (people: BirthdayPerson[]) => { const sectors = Array.from(new Set(people.map(p => p.sector || 'Sem setor'))); const compact = { c: company?.name || 'Empresa', m: new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }), t: pdfTheme.name, g: new Date().toISOString(), x: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).toISOString(), s: sectors, p: people.map(p => [p.id.replace(/-/g, ''), p.name, sectors.indexOf(p.sector || 'Sem setor'), p.birthDate, p.celebrationDate || '']) }; const bytes = new TextEncoder().encode(JSON.stringify(compact)); let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte); return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, ''); };
+  const encodeShareData = (people: BirthdayPerson[]) => { const sectors = Array.from(new Set(people.map(p => p.sector || 'Sem setor'))); const compact = { c: company?.name || 'Empresa', m: new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }), t: pdfTheme.name, g: new Date().toISOString(), x: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).toISOString(), s: sectors, p: people.map(p => [p.id.replace(/-/g, ''), p.name, sectors.indexOf(p.sector || 'Sem setor'), p.birthDate, p.celebrationDate || '', p.avatar || '']) }; const bytes = new TextEncoder().encode(JSON.stringify(compact)); let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte); return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, ''); };
   const getShareUrl = (people: BirthdayPerson[]) => `${window.location.origin}/birthday-report?data=${encodeShareData(people)}`;
-  const loadQrImage = (url: string) => loadImageElement(`https://quickchart.io/qr?text=${encodeURIComponent(url)}&size=300&margin=2&ecLevel=M`);
+  const loadQrImage = (url: string) => loadImageElement(`https://quickchart.io/qr?text=${encodeURIComponent(url)}&size=360&margin=2&ecLevel=M`);
 
   const PAGE_W = 210, PAGE_H = 297, MARGIN = 14, CONTENT_W = PAGE_W - MARGIN * 2;
   const setText = (doc: jsPDF, rgb: [number, number, number]) => doc.setTextColor(rgb[0], rgb[1], rgb[2]);
@@ -88,9 +88,9 @@ export function BirthdaysSection() {
   const makeCircularAvatar = async (src: string | null | undefined) => {
     if (!src) return null; const image = await loadImageElement(src); if (!image) return null;
     const size = 180; const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size; const ctx = canvas.getContext('2d'); if (!ctx) return null;
-    ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
+    ctx.clearRect(0, 0, size, size); ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
     const scale = Math.max(size / image.width, size / image.height); const w = image.width * scale; const h = image.height * scale; ctx.drawImage(image, (size - w) / 2, (size - h) / 2, w, h);
-    return canvas.toDataURL('image/jpeg', 0.9);
+    return canvas.toDataURL('image/png');
   };
 
   const drawBackgroundPhoto = async (doc: jsPDF, selected: PdfTheme, imageData?: string | null) => {
@@ -119,20 +119,21 @@ export function BirthdaysSection() {
 
   const drawPerson = async (doc: jsPDF, person: BirthdayPerson, x: number, y: number, w: number, h: number, selected: PdfTheme) => {
     const radius = 4.2;
-    setFill(doc, [255, 254, 251]); doc.roundedRect(x, y, w, h, radius, radius, 'F');
-    setDraw(doc, [226, 222, 213]); doc.setLineWidth(0.3); doc.roundedRect(x, y, w, h, radius, radius, 'S');
     const avatarSize = Math.min(17.5, h * 0.50, w * 0.40);
     const avatarX = x + 5.5; const avatarY = y + 4.2;
+    const dateW = 15.5; const dateH = Math.min(16.8, h * 0.56); const dateX = x + w - dateW - 5.5; const dateY = y + 4.2;
+    const nameY = avatarY + avatarSize + 3.2;
+    setFill(doc, [255, 254, 251]); doc.roundedRect(x, y, w, h, radius, radius, 'F');
+    setDraw(doc, [226, 222, 213]); doc.setLineWidth(0.3); doc.roundedRect(x, y, w, h, radius, radius, 'S');
     setFill(doc, [238, 238, 234]); doc.circle(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 'F');
     const avatar = await makeCircularAvatar(person.avatar);
-    if (avatar) { try { doc.addImage(avatar, 'JPEG', avatarX, avatarY, avatarSize, avatarSize, undefined, 'FAST'); } catch {} }
-    const dateW = 15.5; const dateH = Math.min(19.5, h * 0.64); const dateX = x + w - dateW - 5.5; const dateY = y + 4.2;
-    setFill(doc, selected.accent); doc.roundedRect(dateX, dateY, dateW, dateH, 3.2, 3.2, 'F');
-    setText(doc, [255,255,255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.7); doc.text(String(person.birthDay).padStart(2, '0'), dateX + dateW / 2, dateY + 8.1, { align: 'center' });
-    doc.setFontSize(4.1); doc.text(formatBirthday(person.birthDate).split(' de ')[1]?.toUpperCase() || '', dateX + dateW / 2, dateY + 13.9, { align: 'center' });
-    const nameY = avatarY + avatarSize + 4.1;
-    setText(doc, [32, 37, 46]); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.0); doc.text(truncate(doc, person.name, w - 11), x + 5.5, nameY);
-    setText(doc, [116, 121, 130]); doc.setFont('helvetica', 'normal'); doc.setFontSize(4.45); doc.text(truncate(doc, person.sector || 'Sem departamento', w - 11), x + 5.5, nameY + 4.6);
+    if (avatar) { try { doc.addImage(avatar, 'PNG', avatarX, avatarY, avatarSize, avatarSize, undefined, 'FAST'); } catch {} }
+    const blue = [38, 68, 101] as [number, number, number];
+    setFill(doc, [229, 236, 244]); doc.roundedRect(dateX, dateY, dateW, dateH, 3.2, 3.2, 'F');
+    setText(doc, blue); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.6); doc.text(String(person.birthDay).padStart(2, '0'), dateX + dateW / 2, dateY + 7.2, { align: 'center' });
+    doc.setFontSize(3.55); doc.text(formatBirthday(person.birthDate).split(' de ')[1]?.toUpperCase() || '', dateX + dateW / 2, dateY + 12.4, { align: 'center' });
+    setText(doc, blue); doc.setFont('helvetica', 'bold'); doc.setFontSize(5.65); doc.text(truncate(doc, person.name.slice(0, 24), w - 11), x + 5.5, nameY);
+    setText(doc, blue); doc.setFont('helvetica', 'normal'); doc.setFontSize(4.25); doc.text(truncate(doc, person.sector || 'Sem departamento', w - 11), x + 5.5, nameY + 4.4);
   };
 
   const drawFixedQrFooter = async (doc: jsPDF, url: string, selected: PdfTheme) => {
