@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pin, AlertTriangle, Clock, Trash2, Plus, X, Send, CalendarClock, Calendar, Edit2, Sparkles } from 'lucide-react';
+import { Pin, AlertTriangle, Clock, Trash2, Plus, X, Send, CalendarClock, Calendar, Sparkles } from 'lucide-react';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CardGridSkeleton } from '@/components/ui/skeletons';
@@ -43,14 +43,14 @@ const priorityLabels: Record<string, string> = {
 };
 
 export function AnnouncementsSection() {
-  const { 
-    announcements, 
-    scheduledAnnouncements, 
+  const {
+    announcements,
+    scheduledAnnouncements,
     expiredAnnouncements,
-    loading, 
-    createAnnouncement, 
+    loading,
+    createAnnouncement,
     deleteAnnouncement,
-    canManageAnnouncements 
+    canManageAnnouncements,
   } = useAnnouncements();
   const { sectors } = useSectors();
   const { profile, isAdmin } = useAuth();
@@ -58,12 +58,11 @@ export function AnnouncementsSection() {
   const { markAllAnnouncementsAsRead, refetch: refetchNotifications } = useNotifications();
   const [activeTab, setActiveTab] = useState('active');
 
-  // Mark all announcements as read when component mounts and refetch notifications
   useEffect(() => {
     markAllAnnouncementsAsRead();
     refetchNotifications();
   }, [markAllAnnouncementsAsRead, refetchNotifications]);
-  
+
   const [showForm, setShowForm] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [title, setTitle] = useState('');
@@ -72,6 +71,18 @@ export function AnnouncementsSection() {
   const [isPinned, setIsPinned] = useState(false);
   const [startAt, setStartAt] = useState('');
   const [expireAt, setExpireAt] = useState('');
+
+  // The create action lives in the main site header. Keep the form state here,
+  // where the existing create/update logic already lives, and expose only a
+  // small UI event so the header does not need to know anything about the form.
+  useEffect(() => {
+    const handleOpenNewAnnouncement = () => {
+      if (canManageAnnouncements) setShowForm(true);
+    };
+
+    window.addEventListener('nuvexa:open-new-announcement', handleOpenNewAnnouncement);
+    return () => window.removeEventListener('nuvexa:open-new-announcement', handleOpenNewAnnouncement);
+  }, [canManageAnnouncements]);
 
   const canDelete = (authorId: string) => {
     return profile?.id === authorId || isAdmin;
@@ -121,7 +132,7 @@ export function AnnouncementsSection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!title.trim() || !content.trim()) {
       toast.error('Preencha o título e o conteúdo');
       return;
@@ -134,14 +145,14 @@ export function AnnouncementsSection() {
 
     setFormLoading(true);
     const { error } = await createAnnouncement(
-      title, 
-      content, 
-      priority, 
+      title,
+      content,
+      priority,
       isPinned,
       new Date(startAt).toISOString(),
       expireAt ? new Date(expireAt).toISOString() : null
     );
-    
+
     if (error) {
       console.error('Error creating announcement:', error);
       toast.error('Erro ao criar aviso. Verifique suas permissões.');
@@ -158,20 +169,19 @@ export function AnnouncementsSection() {
     setFormLoading(false);
   };
 
-  // Set default start date to now when opening form
   useEffect(() => {
     if (showForm && !startAt) {
       const now = new Date();
       now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
       setStartAt(now.toISOString().slice(0, 16));
     }
-  }, [showForm]);
+  }, [showForm, startAt]);
 
   const renderAnnouncementCard = (announcement: any, showScheduleInfo = false, isExpired = false) => {
     const author = announcement.author;
     const authorSector = sectors.find((s) => s.id === author?.sector_id);
     const priorityKey = announcement.priority as keyof typeof priorityStyles;
-    
+
     return (
       <motion.div
         key={announcement.id}
@@ -190,12 +200,8 @@ export function AnnouncementsSection() {
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3 flex-1">
-                {announcement.is_pinned && (
-                  <Pin className="h-4 w-4 text-secondary flex-shrink-0" />
-                )}
-                <h4 className="font-display text-lg font-semibold text-foreground line-clamp-1">
-                  {announcement.title}
-                </h4>
+                {announcement.is_pinned && <Pin className="h-4 w-4 text-secondary flex-shrink-0" />}
+                <h4 className="font-display text-lg font-semibold text-foreground line-clamp-1">{announcement.title}</h4>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {showScheduleInfo && (
@@ -205,17 +211,10 @@ export function AnnouncementsSection() {
                   </Badge>
                 )}
                 {isExpired && (
-                  <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200">
-                    Expirado
-                  </Badge>
+                  <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200">Expirado</Badge>
                 )}
-                <Badge
-                  variant="outline"
-                  className={cn(priorityStyles[priorityKey]?.badge || priorityStyles.normal.badge)}
-                >
-                  {priorityKey === 'urgent' && (
-                    <AlertTriangle className="mr-1 h-3 w-3" />
-                  )}
+                <Badge variant="outline" className={cn(priorityStyles[priorityKey]?.badge || priorityStyles.normal.badge)}>
+                  {priorityKey === 'urgent' && <AlertTriangle className="mr-1 h-3 w-3" />}
                   {priorityLabels[priorityKey] || 'Normal'}
                 </Badge>
                 {canDelete(announcement.author_id) && (
@@ -232,11 +231,8 @@ export function AnnouncementsSection() {
             </div>
           </CardHeader>
           <CardContent>
-            <p className="mb-4 text-sm leading-relaxed text-muted-foreground line-clamp-3">
-              {announcement.content}
-            </p>
-            
-            {/* Schedule info */}
+            <p className="mb-4 text-sm leading-relaxed text-muted-foreground line-clamp-3">{announcement.content}</p>
+
             {(showScheduleInfo || announcement.expire_at) && (
               <div className="mb-4 flex flex-wrap gap-3 text-xs">
                 {showScheduleInfo && announcement.start_at && (
@@ -246,40 +242,28 @@ export function AnnouncementsSection() {
                   </div>
                 )}
                 {announcement.expire_at && (
-                  <div className={cn(
-                    "flex items-center gap-1 rounded-full px-2 py-1",
-                    isExpired ? "bg-gray-100 text-gray-600" : "bg-amber-50 text-amber-600"
-                  )}>
+                  <div className={cn('flex items-center gap-1 rounded-full px-2 py-1', isExpired ? 'bg-gray-100 text-gray-600' : 'bg-amber-50 text-amber-600')}>
                     <Clock className="h-3 w-3" />
                     {isExpired ? 'Expirou' : 'Expira'}: {formatDateShort(announcement.expire_at)}
                   </div>
                 )}
               </div>
             )}
-            
+
             <div className="flex items-center justify-between border-t border-border pt-4">
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={author?.avatar_url || ''} />
-                  <AvatarFallback 
-                    className="text-xs text-white"
-                    style={{ backgroundColor: authorSector?.color || '#6366f1' }}
-                  >
+                  <AvatarFallback className="text-xs text-white" style={{ backgroundColor: authorSector?.color || '#6366f1' }}>
                     {getInitials(author?.display_name || author?.name || 'U')}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {author?.display_name || author?.name}
-                  </p>
-                  {authorSector && (
-                    <p className="text-xs text-muted-foreground">
-                      {authorSector.name}
-                    </p>
-                  )}
+                  <p className="text-sm font-medium text-foreground">{author?.display_name || author?.name}</p>
+                  {authorSector && <p className="text-xs text-muted-foreground">{authorSector.name}</p>}
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
                 {formatDate(announcement.created_at)}
@@ -294,10 +278,6 @@ export function AnnouncementsSection() {
   if (loading) {
     return (
       <div className="flex flex-col h-full">
-        <div className="p-4 sm:p-6 border-b border-border bg-card space-y-2">
-          <Skeleton className="h-7 w-48 rounded-md" />
-          <Skeleton className="h-4 w-64 rounded-md" />
-        </div>
         <div className="p-4 sm:p-6">
           <CardGridSkeleton count={4} columns="md:grid-cols-2" cardHeight="h-32" />
         </div>
@@ -306,42 +286,8 @@ export function AnnouncementsSection() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="flex flex-col h-full"
-    >
-      <div className="p-4 sm:p-6 border-b border-border bg-card">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h3 className="font-display text-xl sm:text-2xl font-bold text-foreground">Avisos Gerais</h3>
-            <p className="text-sm text-muted-foreground">Comunicados oficiais do Nuvexa</p>
-          </div>
-          
-          {canManageAnnouncements && (
-            <Button
-              onClick={() => setShowForm(!showForm)}
-              className="gap-2 w-full sm:w-auto"
-              variant={showForm ? 'outline' : 'default'}
-            >
-              {showForm ? (
-                <>
-                  <X className="h-4 w-4" />
-                  Cancelar
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4" />
-                  Novo Aviso
-                </>
-              )}
-            </Button>
-          )}
-        </div>
-      </div>
-
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
       <div className="flex-1 overflow-auto p-4 sm:p-6">
-        {/* Create Announcement Form */}
         <AnimatePresence>
           {showForm && canManageAnnouncements && (
             <motion.div
@@ -352,67 +298,35 @@ export function AnnouncementsSection() {
             >
               <Card className="border-2 border-primary/20">
                 <CardHeader className="pb-3">
-                  <h4 className="font-display text-lg font-semibold text-foreground">
-                    Criar Novo Aviso
-                  </h4>
+                  <div className="flex items-center justify-between gap-3">
+                    <h4 className="font-display text-lg font-semibold text-foreground">Criar Novo Aviso</h4>
+                    <Button variant="ghost" size="icon" onClick={() => setShowForm(false)} aria-label="Fechar formulário">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="title">Título *</Label>
-                      <Input
-                        id="title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder="Título do aviso"
-                        className="h-11"
-                        required
-                      />
+                      <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título do aviso" className="h-11" required />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="content">Conteúdo *</Label>
-                      <Textarea
-                        id="content"
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        placeholder="Escreva o conteúdo do aviso..."
-                        rows={4}
-                        required
-                      />
+                      <Textarea id="content" value={content} onChange={(e) => setContent(e.target.value)} placeholder="Escreva o conteúdo do aviso..." rows={4} required />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="startAt">
-                          <CalendarClock className="inline h-4 w-4 mr-1" />
-                          Data/Hora de início *
-                        </Label>
-                        <Input
-                          id="startAt"
-                          type="datetime-local"
-                          value={startAt}
-                          onChange={(e) => setStartAt(e.target.value)}
-                          className="h-11"
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Agende para o futuro ou publique agora
-                        </p>
+                        <Label htmlFor="startAt"><CalendarClock className="inline h-4 w-4 mr-1" />Data/Hora de início *</Label>
+                        <Input id="startAt" type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} className="h-11" required />
+                        <p className="text-xs text-muted-foreground">Agende para o futuro ou publique agora</p>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="expireAt">
-                          <CalendarClock className="inline h-4 w-4 mr-1" />
-                          Data/Hora de expiração
-                        </Label>
-                        <Input
-                          id="expireAt"
-                          type="datetime-local"
-                          value={expireAt}
-                          onChange={(e) => setExpireAt(e.target.value)}
-                          className="h-11"
-                        />
+                        <Label htmlFor="expireAt"><CalendarClock className="inline h-4 w-4 mr-1" />Data/Hora de expiração</Label>
+                        <Input id="expireAt" type="datetime-local" value={expireAt} onChange={(e) => setExpireAt(e.target.value)} className="h-11" />
                         <p className="text-xs text-muted-foreground">Deixe em branco para não expirar</p>
                       </div>
                     </div>
@@ -421,9 +335,7 @@ export function AnnouncementsSection() {
                       <div className="space-y-2">
                         <Label>Prioridade</Label>
                         <Select value={priority} onValueChange={(v) => setPriority(v as typeof priority)}>
-                          <SelectTrigger className="h-11">
-                            <SelectValue />
-                          </SelectTrigger>
+                          <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="normal">Normal</SelectItem>
                             <SelectItem value="important">Importante</SelectItem>
@@ -433,15 +345,8 @@ export function AnnouncementsSection() {
                       </div>
 
                       <div className="flex items-center gap-3 pt-0 sm:pt-6">
-                        <Switch
-                          id="pinned"
-                          checked={isPinned}
-                          onCheckedChange={setIsPinned}
-                        />
-                        <Label htmlFor="pinned" className="cursor-pointer">
-                          <Pin className="inline h-4 w-4 mr-1" />
-                          Fixar no topo
-                        </Label>
+                        <Switch id="pinned" checked={isPinned} onCheckedChange={setIsPinned} />
+                        <Label htmlFor="pinned" className="cursor-pointer"><Pin className="inline h-4 w-4 mr-1" />Fixar no topo</Label>
                       </div>
                     </div>
 
@@ -462,94 +367,52 @@ export function AnnouncementsSection() {
           )}
         </AnimatePresence>
 
-        {/* Tabs for different announcement states */}
         {canManageAnnouncements ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full grid grid-cols-3 mb-6">
-              <TabsTrigger value="active" className="gap-1">
-                Ativos
-                {announcements.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                    {announcements.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="scheduled" className="gap-1">
-                Agendados
-                {scheduledAnnouncements.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                    {scheduledAnnouncements.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="expired" className="gap-1">
-                Expirados
-                {expiredAnnouncements.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                    {expiredAnnouncements.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
+              <TabsTrigger value="active" className="gap-1">Ativos{announcements.length > 0 && <Badge variant="secondary" className="ml-1 h-5 px-1.5">{announcements.length}</Badge>}</TabsTrigger>
+              <TabsTrigger value="scheduled" className="gap-1">Agendados{scheduledAnnouncements.length > 0 && <Badge variant="secondary" className="ml-1 h-5 px-1.5">{scheduledAnnouncements.length}</Badge>}</TabsTrigger>
+              <TabsTrigger value="expired" className="gap-1">Expirados{expiredAnnouncements.length > 0 && <Badge variant="secondary" className="ml-1 h-5 px-1.5">{expiredAnnouncements.length}</Badge>}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="active" className="mt-0">
               {announcements.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="mb-4 rounded-full bg-muted p-4">
-                    <span className="text-4xl">📢</span>
-                  </div>
+                  <div className="mb-4 rounded-full bg-muted p-4"><span className="text-4xl">📢</span></div>
                   <h4 className="font-display text-lg font-semibold text-foreground">Nenhum aviso ativo</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Clique em "Novo Aviso" para criar um comunicado
-                  </p>
+                  <p className="text-sm text-muted-foreground">Clique em "+ Novo Aviso" no cabeçalho para criar um comunicado</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {announcements.map((announcement) => renderAnnouncementCard(announcement))}
-                </div>
+                <div className="space-y-4">{announcements.map((announcement) => renderAnnouncementCard(announcement))}</div>
               )}
             </TabsContent>
 
             <TabsContent value="scheduled" className="mt-0">
               {scheduledAnnouncements.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="mb-4 rounded-full bg-muted p-4">
-                    <Calendar className="h-8 w-8 text-muted-foreground" />
-                  </div>
+                  <div className="mb-4 rounded-full bg-muted p-4"><Calendar className="h-8 w-8 text-muted-foreground" /></div>
                   <h4 className="font-display text-lg font-semibold text-foreground">Nenhum aviso agendado</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Avisos com data futura aparecerão aqui
-                  </p>
+                  <p className="text-sm text-muted-foreground">Avisos com data futura aparecerão aqui</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {scheduledAnnouncements.map((announcement) => renderAnnouncementCard(announcement, true))}
-                </div>
+                <div className="space-y-4">{scheduledAnnouncements.map((announcement) => renderAnnouncementCard(announcement, true))}</div>
               )}
             </TabsContent>
 
             <TabsContent value="expired" className="mt-0">
               {expiredAnnouncements.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="mb-4 rounded-full bg-muted p-4">
-                    <Clock className="h-8 w-8 text-muted-foreground" />
-                  </div>
+                  <div className="mb-4 rounded-full bg-muted p-4"><Clock className="h-8 w-8 text-muted-foreground" /></div>
                   <h4 className="font-display text-lg font-semibold text-foreground">Nenhum aviso expirado</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Avisos expirados dos últimos 30 dias aparecerão aqui
-                  </p>
+                  <p className="text-sm text-muted-foreground">Avisos expirados dos últimos 30 dias aparecerão aqui</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {expiredAnnouncements.map((announcement) => renderAnnouncementCard(announcement, false, true))}
-                </div>
+                <div className="space-y-4">{expiredAnnouncements.map((announcement) => renderAnnouncementCard(announcement, false, true))}</div>
               )}
             </TabsContent>
           </Tabs>
         ) : (
-          // Regular user view - show important announcements + active announcements
           <div className="space-y-6">
-            {/* Important Announcements Section */}
             {importantAnnouncements.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-4">
@@ -562,17 +425,11 @@ export function AnnouncementsSection() {
                     <Card key={ia.id} className={cn('overflow-hidden border-2 border-primary/30 bg-primary/5')}>
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 flex-shrink-0">
-                            <Sparkles className="h-5 w-5 text-primary" />
-                          </div>
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 flex-shrink-0"><Sparkles className="h-5 w-5 text-primary" /></div>
                           <div className="flex-1 min-w-0">
                             <h4 className="font-semibold text-foreground mb-1">{ia.title}</h4>
                             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{ia.content}</p>
-                            <p className="text-xs text-muted-foreground mt-2">
-                              {new Date(ia.created_at).toLocaleDateString('pt-BR', {
-                                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                              })}
-                            </p>
+                            <p className="text-xs text-muted-foreground mt-2">{new Date(ia.created_at).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                           </div>
                         </div>
                       </CardContent>
@@ -582,7 +439,6 @@ export function AnnouncementsSection() {
               </div>
             )}
 
-            {/* Regular Announcements */}
             {importantAnnouncements.length > 0 && announcements.length > 0 && (
               <div className="flex items-center gap-2">
                 <Pin className="h-5 w-5 text-muted-foreground" />
@@ -593,18 +449,12 @@ export function AnnouncementsSection() {
 
             {announcements.length === 0 && importantAnnouncements.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="mb-4 rounded-full bg-muted p-4">
-                  <span className="text-4xl">📢</span>
-                </div>
+                <div className="mb-4 rounded-full bg-muted p-4"><span className="text-4xl">📢</span></div>
                 <h4 className="font-display text-lg font-semibold text-foreground">Nenhum aviso</h4>
-                <p className="text-sm text-muted-foreground">
-                  Não há avisos publicados ainda
-                </p>
+                <p className="text-sm text-muted-foreground">Não há avisos publicados ainda</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {announcements.map((announcement) => renderAnnouncementCard(announcement))}
-              </div>
+              <div className="space-y-4">{announcements.map((announcement) => renderAnnouncementCard(announcement))}</div>
             )}
           </div>
         )}
