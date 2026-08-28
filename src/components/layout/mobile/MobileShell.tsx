@@ -73,15 +73,15 @@ export function MobileShell({ activeSection, onSectionChange, globalSearch }: Mo
 
       {!isChat && (
         <header className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
-          <div className="min-w-0 flex items-center gap-2">
+          <div className="min-w-0 flex items-center gap-3">
             <div className="min-w-0">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">{current.eyebrow}</div>
               <div className="font-bold text-foreground truncate text-[18px]" style={{ fontFamily: "'Sora', system-ui, sans-serif" }}>{current.label}</div>
             </div>
             {current.id === 'announcements' && canCreateAnnouncement && (
-              <Button onClick={openNewAnnouncement} size="sm" className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5">
-                <Plus className="h-4 w-4" />
-                <span>Novo Aviso</span>
+              <Button onClick={openNewAnnouncement} size="sm" aria-label="Novo aviso" className="h-10 shrink-0 gap-2 rounded-xl border border-border/60 bg-muted/35 px-3.5 text-foreground shadow-sm backdrop-blur-md hover:bg-muted/55 hover:shadow-md active:scale-[0.97]">
+                <Plus className="h-[18px] w-[18px]" />
+                <span className="font-semibold">Novo Aviso</span>
               </Button>
             )}
           </div>
