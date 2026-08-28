@@ -28,7 +28,7 @@ const pdfThemes = [
   { id: 'junina', name: 'Festa Junina', accent: [132,82,52] as [number,number,number], soft: [248,239,225] as [number,number,number], highlight: [91,123,82] as [number,number,number], photo: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1600&q=82' },
   { id: 'christmas', name: 'Natal', accent: [47,91,68] as [number,number,number], soft: [239,244,239] as [number,number,number], highlight: [161,93,91] as [number,number,number], photo: 'https://images.unsplash.com/photo-1512389142860-9c449e58a543?auto=format&fit=crop&w=1600&q=82' },
   { id: 'newyear', name: 'Ano Novo', accent: [112,92,55] as [number,number,number], soft: [247,244,235] as [number,number,number], highlight: [76,82,91] as [number,number,number], photo: 'https://images.unsplash.com/photo-1485872299829-c673f5194813?auto=format&fit=crop&w=1600&q=82' },
-  { id: 'spring', name: 'Primavera', accent: [126,76,104] as [number,number,number], soft: [248,240,246] as [number,number,number], highlight: [91,123,103] as [number,123,103] as [number,number,number], photo: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1600&q=82' },
+  { id: 'spring', name: 'Primavera', accent: [126,76,104] as [number,number,number], soft: [248,240,246] as [number,number,number], highlight: [91,123,103] as [number,number,number], photo: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1600&q=82' },
 ];
 type BirthdayPerson = ReturnType<typeof useBirthdays>['birthdayPeople'][number];
 type PdfTheme = typeof pdfThemes[number];
