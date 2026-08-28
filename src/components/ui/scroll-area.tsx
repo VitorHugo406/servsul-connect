@@ -9,6 +9,7 @@ const ScrollArea = React.forwardRef<
 >(({ className, children, ...props }, ref) => {
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const autoScrollDoneRef = React.useRef(false);
+  const settleUntilRef = React.useRef(0);
   const settleTimerRef = React.useRef<number | null>(null);
 
   const setRefs = React.useCallback((node: HTMLDivElement | null) => {
@@ -24,43 +25,55 @@ const ScrollArea = React.forwardRef<
     const viewport = root.querySelector<HTMLElement>("[data-radix-scroll-area-viewport]");
     if (!viewport) return;
 
-    const scrollToEndAfterLayout = () => {
-      if (settleTimerRef.current !== null) window.clearTimeout(settleTimerRef.current);
+    const keepAtEndWhileSettling = () => {
+      const messageNodes = viewport.querySelectorAll('[id^="msg-"]');
+      if (!messageNodes.length) return;
 
-      const settle = () => {
-        const messageNodes = viewport.querySelectorAll('[id^="msg-"]');
-        if (!messageNodes.length || autoScrollDoneRef.current) return;
-
-        // Wait for React layout and media dimensions to settle before choosing
-        // the initial position. This prevents the chat from stopping a few
-        // pixels short when message content grows after the first paint.
+      const now = performance.now();
+      if (!settleUntilRef.current) settleUntilRef.current = now + 1200;
+      if (now >= settleUntilRef.current) {
         viewport.scrollTop = viewport.scrollHeight;
-        window.requestAnimationFrame(() => {
-          viewport.scrollTop = viewport.scrollHeight;
-          autoScrollDoneRef.current = true;
-        });
-      };
+        autoScrollDoneRef.current = true;
+        settleUntilRef.current = 0;
+        return;
+      }
 
-      settleTimerRef.current = window.setTimeout(settle, 0);
+      // Force the viewport to the actual current end. This is intentionally
+      // done without smooth scrolling while the initial message layout is
+      // settling, so late-loading media cannot leave a small gap at the bottom.
+      viewport.scrollTop = viewport.scrollHeight;
+      autoScrollDoneRef.current = false;
+
+      if (settleTimerRef.current !== null) window.clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = window.setTimeout(() => {
+        window.requestAnimationFrame(keepAtEndWhileSettling);
+      }, 32);
+    };
+
+    const beginInitialScroll = () => {
+      autoScrollDoneRef.current = false;
+      settleUntilRef.current = performance.now() + 1200;
+      keepAtEndWhileSettling();
     };
 
     const mutationObserver = new MutationObserver(() => {
       const hasMessages = viewport.querySelector('[id^="msg-"]') !== null;
       if (!hasMessages) {
         autoScrollDoneRef.current = false;
+        settleUntilRef.current = 0;
         return;
       }
-      scrollToEndAfterLayout();
+      if (!autoScrollDoneRef.current) beginInitialScroll();
     });
 
     const resizeObserver = new ResizeObserver(() => {
-      if (!autoScrollDoneRef.current) scrollToEndAfterLayout();
+      if (!autoScrollDoneRef.current) keepAtEndWhileSettling();
     });
 
     mutationObserver.observe(viewport, { childList: true, subtree: true });
     resizeObserver.observe(viewport);
 
-    scrollToEndAfterLayout();
+    beginInitialScroll();
 
     return () => {
       mutationObserver.disconnect();
