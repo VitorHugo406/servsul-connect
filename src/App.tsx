@@ -10,6 +10,7 @@ import { FloatingNoteProvider } from "@/contexts/FloatingNoteContext";
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
 const SelectCompany = lazy(() => import("./pages/SelectCompany"));
+const BirthdayShare = lazy(() => import("./pages/BirthdayShare"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ function AppRoutes() {
           </PublicRoute>
         }
       />
+      <Route path="/birthday-report" element={<BirthdayShare />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
