@@ -109,34 +109,32 @@ export function BirthdaysSection() {
   const drawHeader = async (doc: jsPDF, monthName: string, count: number, selected: PdfTheme) => {
     await drawLogo(doc, selected);
     setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(5.7); doc.text('COMUNICAÇÃO INTERNA', MARGIN + 24, 12);
-    setText(doc, [177, 137, 73]); doc.setFont('times', 'italic'); doc.setFontSize(19.5); doc.text('Aniversariantes', MARGIN, 34);
-    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.text('DO MÊS', MARGIN, 48);
-    setText(doc, [157, 121, 67]); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.4); doc.text(monthName.toUpperCase().replace(' DE ', '  •  '), MARGIN + 1, 55);
-    setText(doc, [71, 76, 84]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.1); doc.text('Celebrar a vida é reconhecer histórias que inspiram todos os dias.', MARGIN + 1, 64);
+    setText(doc, [177, 137, 73]); doc.setFont('times', 'italic'); doc.setFontSize(22.5); doc.text('Aniversariantes', MARGIN, 33.5);
+    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(22.5); doc.text('DO MÊS', MARGIN, 47);
+    setText(doc, [157, 121, 67]); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.text(monthName.toUpperCase().replace(' DE ', '  •  '), MARGIN + 1, 53.5);
+    setText(doc, [71, 76, 84]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.1); doc.text('Celebrar a vida é reconhecer histórias que inspiram todos os dias.', MARGIN + 1, 62);
     setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.text(truncate(doc, company?.name || 'Nuvexa', 58), PAGE_W - MARGIN, 13, { align: 'right' });
     setText(doc, [125, 130, 140]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.4); doc.text(`${count} pessoa${count === 1 ? '' : 's'} celebrando`, PAGE_W - MARGIN, 19.5, { align: 'right' });
   };
 
-  // Card vertical inspirado diretamente na referência: foto e data no topo, nome e setor abaixo.
   const drawPerson = async (doc: jsPDF, person: BirthdayPerson, x: number, y: number, w: number, h: number, selected: PdfTheme) => {
     const radius = 4.2;
     setFill(doc, [255, 254, 251]); doc.roundedRect(x, y, w, h, radius, radius, 'F');
     setDraw(doc, [226, 222, 213]); doc.setLineWidth(0.3); doc.roundedRect(x, y, w, h, radius, radius, 'S');
     const avatarSize = Math.min(16.5, h * 0.48, w * 0.38);
-    const avatarX = x + 5.5; const avatarY = y + 5;
+    const avatarX = x + 5.5; const avatarY = y + 4.8;
     setFill(doc, [238, 238, 234]); doc.circle(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 'F');
     const avatar = await makeCircularAvatar(person.avatar);
     if (avatar) { try { doc.addImage(avatar, 'JPEG', avatarX, avatarY, avatarSize, avatarSize, undefined, 'FAST'); } catch {} }
-    const dateW = 14.5; const dateH = Math.min(20.5, h * 0.62); const dateX = x + w - dateW - 5.5; const dateY = y + 5;
+    const dateW = 14.5; const dateH = Math.min(20.5, h * 0.62); const dateX = x + w - dateW - 5.5; const dateY = y + 4.8;
     setFill(doc, selected.accent); doc.roundedRect(dateX, dateY, dateW, dateH, 3.2, 3.2, 'F');
     setText(doc, [255,255,255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.text(String(person.birthDay).padStart(2, '0'), dateX + dateW / 2, dateY + 8.3, { align: 'center' });
     doc.setFontSize(4.1); doc.text(formatBirthday(person.birthDate).split(' de ')[1]?.toUpperCase() || '', dateX + dateW / 2, dateY + 14.2, { align: 'center' });
-    const nameY = y + h - 8.2;
+    const nameY = avatarY + avatarSize + 5.2;
     setText(doc, [32, 37, 46]); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.2); doc.text(truncate(doc, person.name, w - 11), x + 5.5, nameY);
     setText(doc, [116, 121, 130]); doc.setFont('helvetica', 'normal'); doc.setFontSize(4.6); doc.text(truncate(doc, person.sector || 'Sem departamento', w - 11), x + 5.5, nameY + 5.2);
   };
 
-  // QR aprovado pelo usuário: apenas aumentamos a área para melhorar a leitura, mantendo a faixa e a posição no rodapé.
   const drawFixedQrFooter = async (doc: jsPDF, url: string, selected: PdfTheme) => {
     const qr = await loadQrImage(url); const y = PAGE_H - 40; const qrSize = 29;
     setFill(doc, [248, 249, 251]); doc.roundedRect(MARGIN, y, CONTENT_W, 27, 5, 5, 'F'); setDraw(doc, [226, 228, 233]); doc.setLineWidth(0.3); doc.roundedRect(MARGIN, y, CONTENT_W, 27, 5, 5, 'S');
@@ -153,17 +151,15 @@ export function BirthdaysSection() {
       const monthName = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
       await drawBackgroundPhoto(doc, pdfTheme, pdfTheme.id === 'corporate' ? corporateImage : null);
       await drawHeader(doc, monthName, birthdayPeople.length, pdfTheme);
-      const titleY = 76;
+      const titleY = 67;
       const cols = 4;
       const gap = 4;
       const cardW = (CONTENT_W - gap * (cols - 1)) / cols;
       const footerTop = PAGE_H - 44;
-      const gridY = titleY + 5;
+      const gridY = titleY + 4;
       const rows = Math.max(1, Math.ceil(birthdayPeople.length / cols));
       const available = footerTop - gridY - 3;
       const cardH = Math.max(25, Math.min(29, (available - gap * Math.max(0, rows - 1)) / rows));
-      setText(doc, pdfTheme.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.text('CELEBRAÇÕES DO MÊS', MARGIN, titleY);
-      setText(doc, [153, 157, 163]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.2); doc.text('Uma lembrança especial para cada pessoa que faz parte da nossa equipe.', PAGE_W - MARGIN, titleY, { align: 'right' });
       if (birthdayPeople.length === 0) {
         setFill(doc, pdfTheme.soft); doc.roundedRect(MARGIN, gridY, CONTENT_W, 28, 5, 5, 'F'); setText(doc, pdfTheme.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('Nenhum aniversariante neste mês', PAGE_W / 2, gridY + 16, { align: 'center' });
       } else {
