@@ -102,18 +102,18 @@ export function BirthdaysSection() {
 
   const drawLogo = async (doc: jsPDF, selected: PdfTheme) => {
     const logoUrl = company?.logo_url ? getCompanyLogoUrl(company.logo_url) : null; const logo = logoUrl ? await loadImage(logoUrl) : null;
-    if (logo) { try { doc.addImage(logo, 'PNG', MARGIN, 7, 25, 18, undefined, 'FAST'); return; } catch {} }
-    setFill(doc, selected.soft); doc.roundedRect(MARGIN, 7, 25, 18, 3.5, 3.5, 'F'); setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.text(getInitials(company?.name || 'Nuvexa'), MARGIN + 12.5, 18, { align: 'center' });
+    if (logo) { try { doc.addImage(logo, 'PNG', MARGIN, 5.5, 29, 21, undefined, 'FAST'); return; } catch {} }
+    setFill(doc, selected.soft); doc.roundedRect(MARGIN, 5.5, 29, 21, 4, 4, 'F'); setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.text(getInitials(company?.name || 'Nuvexa'), MARGIN + 14.5, 18, { align: 'center' });
   };
 
   const drawHeader = async (doc: jsPDF, monthName: string, count: number, selected: PdfTheme) => {
     await drawLogo(doc, selected);
-    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.2); doc.text('COMUNICAÇÃO INTERNA', MARGIN + 29, 11);
+    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.2); doc.text('COMUNICAÇÃO INTERNA', MARGIN + 33, 11);
     setText(doc, [177, 137, 73]); doc.setFont('times', 'italic'); doc.setFontSize(25); doc.text('Aniversariantes', MARGIN, 34);
     setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.text('DO MÊS', MARGIN, 44.5);
     setText(doc, [157, 121, 67]); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.text(monthName.toUpperCase().replace(' DE ', '  •  '), MARGIN + 1, 50.5);
     setText(doc, [71, 76, 84]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.1); doc.text('Celebrar a vida é reconhecer histórias que inspiram todos os dias.', MARGIN + 1, 59);
-    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.text(truncate(doc, company?.name || 'Nuvexa', 72), PAGE_W - MARGIN, 15, { align: 'right' });
+    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(truncate(doc, company?.name || 'Nuvexa', 76), PAGE_W - MARGIN, 15, { align: 'right' });
     setText(doc, [125, 130, 140]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.4); doc.text(`${count} pessoa${count === 1 ? '' : 's'} celebrando`, PAGE_W - MARGIN, 21, { align: 'right' });
   };
 
@@ -132,14 +132,14 @@ export function BirthdaysSection() {
     setFill(doc, [229, 236, 244]); doc.roundedRect(dateX, dateY, dateW, dateH, 3.2, 3.2, 'F');
     setText(doc, blue); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.2); doc.text(String(person.birthDay).padStart(2, '0'), dateX + dateW / 2, dateY + 6.7, { align: 'center' });
     doc.setFontSize(3.25); doc.text(formatBirthday(person.birthDate).split(' de ')[1]?.toUpperCase() || '', dateX + dateW / 2, dateY + 11.5, { align: 'center' });
-    setText(doc, blue); doc.setFont('helvetica', 'bold'); doc.setFontSize(5.65); doc.text(truncate(doc, person.name.slice(0, 24), w - 11), x + 5.5, nameY);
+    setText(doc, blue); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.4); doc.text(truncate(doc, person.name.slice(0, 24), w - 11), x + 5.5, nameY);
     setText(doc, blue); doc.setFont('helvetica', 'normal'); doc.setFontSize(4.25); doc.text(truncate(doc, person.sector || 'Sem departamento', w - 11), x + 5.5, nameY + 4.4);
   };
 
   const drawFixedQrFooter = async (doc: jsPDF, url: string, selected: PdfTheme) => {
-    const qr = await loadQrImage(url); const y = PAGE_H - 40; const qrSize = 29;
-    setFill(doc, [248, 249, 251]); doc.roundedRect(MARGIN, y, CONTENT_W, 34, 5, 5, 'F'); setDraw(doc, [226, 228, 233]); doc.setLineWidth(0.3); doc.roundedRect(MARGIN, y, CONTENT_W, 34, 5, 5, 'S');
-    if (qr) { try { doc.addImage(qr, 'PNG', MARGIN + 3, y - 1, qrSize, qrSize, undefined, 'FAST'); } catch {} }
+    const qr = await loadQrImage(url); const y = PAGE_H - 42; const footerH = 34; const qrSize = 29;
+    setFill(doc, [248, 249, 251]); doc.roundedRect(MARGIN, y, CONTENT_W, footerH, 5, 5, 'F'); setDraw(doc, [226, 228, 233]); doc.setLineWidth(0.3); doc.roundedRect(MARGIN, y, CONTENT_W, footerH, 5, 5, 'S');
+    if (qr) { try { doc.addImage(qr, 'PNG', MARGIN + 3, y + (footerH - qrSize) / 2, qrSize, qrSize, undefined, 'FAST'); } catch {} }
     setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.text('Consulte no celular', MARGIN + 36, y + 8);
     setText(doc, [100, 106, 118]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.7); doc.text('Leia o QR Code para filtrar por setor e ver os aniversariantes.', MARGIN + 36, y + 14); doc.text('O botão de mensagem aparece apenas no período de celebração.', MARGIN + 36, y + 19);
     setText(doc, [135, 141, 151]); doc.setFontSize(5.2); doc.text('É necessário entrar no Nuvexa para enviar uma mensagem.', MARGIN + 36, y + 23.5);
