@@ -51,18 +51,16 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const [mobileListSearch, setMobileListSearch] = useState('');
   const [showSectorPersonalization, setShowSectorPersonalization] = useState(false);
   const [sectorBackground, setSectorBackground] = useState('');
-
   const isMobile = useIsMobile();
   const { playMessageSent } = useSound();
   const { groups, refetch: refetchGroups } = usePrivateGroups();
   const { conversations } = useConversations();
   const [unreadGroupCount, setUnreadGroupCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const shouldAutoScrollRef = useRef(true);
+  const shouldAutoScrollRef = useRef(false);
   const hasInitializedScrollRef = useRef(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const mentionedUsersRef = useRef<{id: string; name: string}[]>([]);
-
   const accessibleSectors = isAdmin ? sectors : sectors.filter(s => allAccessibleSectorIds.includes(s.id));
   const effectiveSector = activeSector || profile?.sector_id || geralSectorId;
   const { typingUsers, sendTyping } = useTypingIndicator(`sector-${effectiveSector || 'none'}`);
@@ -85,34 +83,29 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     markMentionsRead();
   }, [user, effectiveSector, messages]);
 
-  // Only auto-scroll on the first successful load or when the user is already
-  // near the bottom. Never force the viewport while the user is reading history.
-  const scrollToBottom = useCallback(() => {
-    shouldAutoScrollRef.current = true;
-    requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
-      setShowScrollToBottom(false);
-    });
+  // The chat must never reposition itself when messages change. Only the explicit
+  // down-arrow action is allowed to use smooth scrolling.
+  const scrollToBottom = useCallback((smooth = false) => {
+    const el = messagesEndRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'end' });
+    setShowScrollToBottom(false);
   }, []);
 
+  // Initial load only. After initialization, message updates are intentionally ignored.
   useEffect(() => {
-    if (messagesLoading || messages.length === 0) return;
-    if (!hasInitializedScrollRef.current) {
-      hasInitializedScrollRef.current = true;
-      scrollToBottom();
-      return;
-    }
-    if (shouldAutoScrollRef.current) scrollToBottom();
-  }, [messages.length, messagesLoading, scrollToBottom]);
+    if (messagesLoading || messages.length === 0 || hasInitializedScrollRef.current) return;
+    hasInitializedScrollRef.current = true;
+    requestAnimationFrame(() => scrollToBottom(false));
+  }, [messagesLoading, messages.length, scrollToBottom]);
 
   useEffect(() => {
     hasInitializedScrollRef.current = false;
-    shouldAutoScrollRef.current = true;
+    shouldAutoScrollRef.current = false;
     setShowScrollToBottom(false);
   }, [effectiveSector]);
 
   const unreadDmCount = conversations.reduce((acc, c) => acc + c.unreadCount, 0);
-
   useEffect(() => {
     if (!profile || !user) return;
     const fetchGroupUnread = async () => {
@@ -157,30 +150,23 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
 
   return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex h-full flex-col">
     {!isMobile && <div className="flex border-b border-border bg-card shrink-0"><button onClick={() => setChatMode('sectors')} className={cn('flex flex-1 items-center justify-center gap-2 font-medium transition-colors','px-4 py-3 text-sm',chatMode === 'sectors' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground')}><Users className="h-4 w-4" /><span>Setores</span></button><button onClick={() => setChatMode('direct')} className={cn('flex flex-1 items-center justify-center gap-2 font-medium transition-colors','px-4 py-3 text-sm',chatMode === 'direct' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground')}><MessageSquare className="h-4 w-4" /><span>Individual</span>{unreadDmCount > 0 && chatMode !== 'direct' && <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />}</button><button onClick={() => setChatMode('groups')} className={cn('flex flex-1 items-center justify-center gap-2 font-medium transition-colors','px-4 py-3 text-sm',chatMode === 'groups' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground')}><UsersRound className="h-4 w-4" /><span>Grupos</span>{unreadGroupCount > 0 && chatMode !== 'groups' && <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />}</button></div>}
-    {isMobile && <>
-      <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl">
-        {chatMode === 'sectors' && <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-10 min-w-0 flex-1 justify-start gap-2 rounded-full border border-border/60 bg-background/65 px-3 shadow-sm"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-primary-foreground" style={{ backgroundColor: currentSector?.color }}>{currentSector?.name?.charAt(0)}</span><span className="min-w-0 flex-1 text-left"><span className="block truncate text-sm font-semibold text-foreground">{currentSector?.name || 'Setor'}</span><span className="block truncate text-[10px] text-muted-foreground">Canais da empresa</span></span><ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" /></Button></DropdownMenuTrigger><DropdownMenuContent align="start" className="max-h-[60vh] w-[min(88vw,320px)] overflow-y-auto rounded-2xl border-border/60 bg-popover/95 p-2 shadow-2xl backdrop-blur-2xl"><DropdownMenuLabel>Canais da empresa</DropdownMenuLabel>{accessibleSectors.map((s: any) => <DropdownMenuItem key={s.id} className="rounded-xl py-2.5" onSelect={() => setActiveSector(s.id)}><span className="mr-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-primary-foreground" style={{ backgroundColor: s.color }}>{s.name.charAt(0)}</span><span className="truncate">{s.name}</span></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>}
-        {chatMode === 'direct' && <><div className="min-w-0 flex-1 px-1"><p className="truncate text-sm font-semibold text-foreground">Mensagens individuais</p></div><div className="relative w-[38%] min-w-[130px]"><Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" /><Input value={mobileListSearch} onChange={e => setMobileListSearch(e.target.value)} placeholder="Buscar" className="h-8 rounded-full border-border/60 bg-background/65 pl-8 pr-2 text-xs" /></div></>}
-        {chatMode === 'groups' && <><div className="min-w-0 flex-1 px-1"><p className="truncate text-sm font-semibold text-foreground">Grupos privados</p></div><div className="relative w-[38%] min-w-[125px]"><Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" /><Input value={mobileListSearch} onChange={e => setMobileListSearch(e.target.value)} placeholder="Buscar" className="h-8 rounded-full border-border/60 bg-background/65 pl-8 pr-2 text-xs" /></div></>}
-        <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full border border-border/60 bg-background/65 shadow-sm"><Settings className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-64 rounded-2xl border-border/60 bg-popover/95 p-2 shadow-2xl backdrop-blur-2xl"><DropdownMenuLabel>Opções da conversa</DropdownMenuLabel><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => setChatMode('direct')}><MessageSquare className="mr-2 h-4 w-4" /> Individuais</DropdownMenuItem><DropdownMenuItem onSelect={() => setChatMode('groups')}><UsersRound className="mr-2 h-4 w-4" /> Grupos</DropdownMenuItem><DropdownMenuItem onSelect={() => setChatMode('sectors')}><Users className="mr-2 h-4 w-4" /> Canais da empresa</DropdownMenuItem>{chatMode === 'sectors' && <><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => setShowSectorUsers(true)}><Eye className="mr-2 h-4 w-4" /> Usuários do canal</DropdownMenuItem><DropdownMenuItem onSelect={() => setShowSearch(true)}><Search className="mr-2 h-4 w-4" /> Pesquisar mensagens</DropdownMenuItem>{effectiveSector && effectiveSector !== geralSectorId && <DropdownMenuItem onSelect={() => setShowMobileMedia(true)}><FolderOpen className="mr-2 h-4 w-4" /> Mídia e arquivos</DropdownMenuItem>}{isAdmin && effectiveSector && effectiveSector !== geralSectorId && <DropdownMenuItem onSelect={() => setShowMobileAutomation(true)}><Bot className="mr-2 h-4 w-4" /> Automações de resumo</DropdownMenuItem>}<DropdownMenuItem onSelect={() => setShowSectorPersonalization(true)}><Palette className="mr-2 h-4 w-4" /> Personalizar fundo</DropdownMenuItem></>}</DropdownMenuContent></DropdownMenu>
+    {isMobile && <><div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl"><span className="text-sm font-semibold">{chatMode === 'sectors' ? (currentSector?.name || 'Setor') : chatMode === 'direct' ? 'Mensagens individuais' : 'Grupos'}</span></div></>}
+    {chatMode === 'sectors' && <>
+      {!isMobile && <SectorTabs sectors={accessibleSectors} activeSector={effectiveSector} onSelect={setActiveSector} />}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+        {sectorBackground && <div className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: `url(${sectorBackground})` }} />}
+        <ScrollArea className="relative flex-1 min-h-0">
+          <div className="flex flex-col px-3 py-4 md:px-6">
+            {messages.map((message, index) => { const prev = messages[index - 1]; const showDate = !prev || new Date(message.created_at).toDateString() !== new Date(prev.created_at).toDateString(); return <div key={message.id}>{showDate && <DateSeparator date={message.created_at} />}<ChatMessage message={message} reactions={reactions[message.id] || []} onReaction={(emoji) => toggleReaction(message.id, emoji)} onReply={() => setReplyTo({ id: message.id, content: message.content, author: message.author })} /></div>; })}
+            <div ref={messagesEndRef} className="h-px w-full" />
+          </div>
+        </ScrollArea>
+        {showScrollToBottom && <Button onClick={() => scrollToBottom(true)} size="icon" className="absolute bottom-24 right-4 z-20 rounded-full shadow-lg"><ChevronDown className="h-5 w-5" /></Button>}
+        <TypingIndicator users={typingUsers} />
+        <ChatInput onSend={handleSendMessage} onTyping={sendTyping} onMention={handleMention} disabled={!canSendMessages} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
       </div>
-      {chatMode === 'groups' && <button onClick={() => { const b = Array.from(document.querySelectorAll('button')).find(x => x.textContent?.trim().startsWith('Novo')); (b as HTMLButtonElement | undefined)?.click(); }} className="mx-3 mt-2 flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 text-sm font-medium text-primary hover:bg-primary/10"><UsersRound className="h-4 w-4" /> Criar novo grupo</button>}
-      <Sheet open={showMobileAutomation} onOpenChange={setShowMobileAutomation}><SheetContent><SheetHeader><SheetTitle>Automações - {currentSector?.name}</SheetTitle></SheetHeader>{effectiveSector && <div className="mt-6"><ScheduledSummaryConfig targetType="sector" targetId={effectiveSector} targetName={currentSector?.name || 'Setor'} /></div>}</SheetContent></Sheet>
-      <Sheet open={showMobileMedia} onOpenChange={setShowMobileMedia}><SheetContent><SheetHeader><SheetTitle>Mídia e Arquivos - {currentSector?.name}</SheetTitle></SheetHeader>{effectiveSector && <div className="mt-6"><ChatMediaFilter chatType="sector" chatId={effectiveSector} /></div>}</SheetContent></Sheet>
     </>}
-
-    {chatMode === 'sectors' ? <>
-      {!isMobile && <SectorTabs sectors={accessibleSectors} activeSector={effectiveSector || ''} onSectorChange={setActiveSector} />}
-      <div className={cn('flex items-center gap-3 border-b border-border bg-card shrink-0', isMobile ? 'hidden' : 'px-4 py-3')}>
-        <div className="flex items-center justify-center rounded-xl text-white shrink-0 h-10 w-10" style={{ backgroundColor: currentSector?.color }}><span className="font-bold text-lg">{currentSector?.name.charAt(0)}</span></div>
-        <div className="flex-1 min-w-0"><h3 className="font-display font-semibold text-foreground truncate">{currentSector?.name}</h3><p className="text-xs text-muted-foreground">{messages.length} mensagens</p></div>
-        <div className="flex items-center gap-1 ml-auto"><Sheet><SheetTrigger asChild><Button variant="ghost" size="icon" title="Personalizar chat" onClick={() => setShowSectorPersonalization(true)}><Palette className="h-5 w-5" /></Button></SheetTrigger></Sheet>{isAdmin && effectiveSector && effectiveSector !== geralSectorId && <Sheet><SheetTrigger asChild><Button variant="ghost" size="icon" title="Automações de resumo"><Bot className="h-5 w-5" /></Button></SheetTrigger><SheetContent><SheetHeader><SheetTitle>Automações - {currentSector?.name}</SheetTitle></SheetHeader><div className="mt-6"><ScheduledSummaryConfig targetType="sector" targetId={effectiveSector} targetName={currentSector?.name || 'Setor'} /></div></SheetContent></Sheet>}{effectiveSector && effectiveSector !== geralSectorId && <Sheet><SheetTrigger asChild><Button variant="ghost" size="icon" title="Mídia e arquivos"><FolderOpen className="h-5 w-5" /></Button></SheetTrigger><SheetContent><SheetHeader><SheetTitle>Mídia e Arquivos - {currentSector?.name}</SheetTitle></SheetHeader><div className="mt-6"><ChatMediaFilter chatType="sector" chatId={effectiveSector} /></div></SheetContent></Sheet>}<Button variant="ghost" size="icon" onClick={() => setShowSectorUsers(!showSectorUsers)} title={showSectorUsers ? 'Ocultar membros' : 'Ver membros do setor'}>{showSectorUsers ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button><Button variant="ghost" size="icon" onClick={() => { setShowSearch(!showSearch); if (showSearch) { setMessageSearchQuery(''); setSearchDate(null); } }} title="Buscar mensagens"><Search className="h-5 w-5" /></Button></div>
-      </div>
-      {showSearch && <div className="border-b border-border bg-card px-4 py-2"><div className="flex items-center gap-2"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Buscar por mensagem..." value={messageSearchQuery} onChange={e => setMessageSearchQuery(e.target.value)} className="pl-9 h-9 text-sm" autoFocus /></div><div className="flex items-center gap-1 flex-shrink-0"><CalendarIcon className="h-4 w-4 text-muted-foreground" /><Input type="date" value={searchDate || ''} onChange={e => setSearchDate(e.target.value || null)} className="w-[140px] h-9 text-xs" /></div>{(messageSearchQuery || searchDate) && <Button variant="ghost" size="sm" className="h-9 px-2 text-xs flex-shrink-0" onClick={() => { setMessageSearchQuery(''); setSearchDate(null); }}>Limpar</Button>}</div></div>}
-      <div className="flex flex-1 overflow-hidden" style={sectorBackground ? { backgroundImage: `linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)), url(${sectorBackground})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' } : undefined}><ScrollArea className={cn('flex-1 p-4', showSectorUsers && !isMobile && 'border-r border-border')} onScrollCapture={e => { const target = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]'); if (target) { const { scrollTop, scrollHeight, clientHeight } = target as HTMLElement; const distance = scrollHeight - scrollTop - clientHeight; const nearBottom = distance <= 120; shouldAutoScrollRef.current = nearBottom; setShowScrollToBottom(distance > 200); } }}><div className="space-y-4">{messagesLoading ? <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div> : messages.length === 0 ? <div className="flex flex-col items-center justify-center py-20 text-center"><div className="mb-4 rounded-full bg-muted p-4"><span className="text-4xl">💬</span></div><h4 className="font-display text-lg font-semibold text-foreground">Nenhuma mensagem ainda</h4><p className="text-sm text-muted-foreground">{canSendMessages ? 'Seja o primeiro a enviar uma mensagem neste setor!' : 'Aguarde mensagens da sua equipe'}</p></div> : messages.filter(m => { if (messageSearchQuery) { const q = messageSearchQuery.toLowerCase(); const matchText = m.content.toLowerCase().includes(q) || (m.author?.name || '').toLowerCase().includes(q) || (m.author?.display_name || '').toLowerCase().includes(q); if (!matchText) return false; } if (searchDate) { const msgDate = new Date(m.created_at); const filterDate = new Date(searchDate + 'T00:00:00'); const msgDateStr = `${msgDate.getFullYear()}-${String(msgDate.getMonth() + 1).padStart(2, '0')}-${String(msgDate.getDate()).padStart(2, '0')}`; const filterDateStr = `${filterDate.getFullYear()}-${String(filterDate.getMonth() + 1).padStart(2, '0')}-${String(filterDate.getDate()).padStart(2, '0')}`; if (msgDateStr !== filterDateStr) return false; } return true; }).map((message, index, filteredArr) => { const prevMessage = index > 0 ? filteredArr[index - 1] : null; const msgDate = new Date(message.created_at).toDateString(); const prevDate = prevMessage ? new Date(prevMessage.created_at).toDateString() : null; const showDateSeparator = msgDate !== prevDate; return <div key={message.id} id={`msg-${message.id}`} className="transition-colors duration-500 rounded-lg">{showDateSeparator && <DateSeparator date={message.created_at} />}<ChatMessage message={message} index={index} onReply={msg => setReplyTo({ id: msg.id, content: msg.content, author: msg.author })} reactions={reactions[message.id]} onToggleReaction={toggleReaction} onScrollToMessage={id => { const el = document.getElementById(`msg-${id}`); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('bg-primary/10'); setTimeout(() => el.classList.remove('bg-primary/10'), 2000); } }} /></div>; })}<div ref={messagesEndRef} /></div>{showScrollToBottom && <button onClick={scrollToBottom} className="fixed bottom-32 right-8 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all" title="Ir para o final"><ChevronDown className="h-5 w-5" /></button>}</ScrollArea>{showSectorUsers && !isMobile && <div className="w-72 flex-shrink-0"><SectorUsersList sectorId={effectiveSector || ''} inline /></div>}</div>
-      {showSectorUsers && isMobile && <div className="absolute inset-0 z-50 bg-background"><div className="flex items-center justify-between border-b border-border p-3"><h3 className="font-semibold">Membros do Setor</h3><Button variant="ghost" size="icon" onClick={() => setShowSectorUsers(false)}><ArrowLeft className="h-5 w-5" /></Button></div><SectorUsersList sectorId={effectiveSector || ''} inline /></div>}
-      <TypingIndicator typingUsers={typingUsers} />{canSendMessages ? <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} onMention={handleMention} replyTo={replyTo} onClearReply={() => setReplyTo(null)} /> : <div className="border-t border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">Você só pode enviar mensagens no seu próprio setor</div>}
-      <ChatPersonalizationDialog open={showSectorPersonalization} onOpenChange={setShowSectorPersonalization} chatId={effectiveSector ? `sector-${effectiveSector}` : null} chatName={currentSector?.name || 'Setor'} />
-    </> : chatMode === 'direct' ? (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden [&>div>div:nth-child(2)]:hidden"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div> : <div className="flex flex-1 overflow-hidden"><div className="w-80 flex-shrink-0"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div><div className="flex-1"><DirectMessageChat partnerId={selectedUserId} /></div></div>) : (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div> : <div className="flex flex-1 overflow-hidden"><div className="w-80 flex-shrink-0"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div><div className="flex-1"><PrivateGroupChat group={selectedGroup} /></div></div>)}
+    {chatMode === 'direct' && <DirectMessageList search={globalSearch} onSelect={(id) => setSelectedUserId(id)} />}
+    {chatMode === 'groups' && <PrivateGroupList groups={groups} onSelect={(id) => setSelectedGroupId(id)} />}
   </motion.div>;
 }
