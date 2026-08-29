@@ -15,22 +15,33 @@ const PRESETS: ThemePreset[] = [
 ];
 const KEY = 'nuvexa:ui-personalization';
 
+const applyPresetToDocument = (preset: ThemePreset) => {
+  const root = document.documentElement;
+  root.style.setProperty('--background', preset.background);
+  root.style.setProperty('--card', preset.card);
+  root.style.setProperty('--popover', preset.card);
+  root.style.setProperty('--muted', preset.muted);
+  root.style.setProperty('--accent', preset.accent);
+  document.body.style.backgroundImage = preset.texture;
+  document.body.style.backgroundAttachment = preset.texture === 'none' ? '' : 'fixed';
+};
+
 export function AppearancePersonalizationDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [selected, setSelected] = useState('default');
+
+  useEffect(() => {
+    const saved = localStorage.getItem(KEY) || 'default';
+    const preset = PRESETS.find(p => p.id === saved) || PRESETS[0];
+    setSelected(preset.id);
+    if (preset.id !== 'default') applyPresetToDocument(preset);
+  }, []);
 
   useEffect(() => {
     if (open) setSelected(localStorage.getItem(KEY) || 'default');
   }, [open]);
 
   const applyPreset = (preset: ThemePreset) => {
-    const root = document.documentElement;
-    root.style.setProperty('--background', preset.background);
-    root.style.setProperty('--card', preset.card);
-    root.style.setProperty('--popover', preset.card);
-    root.style.setProperty('--muted', preset.muted);
-    root.style.setProperty('--accent', preset.accent);
-    document.body.style.backgroundImage = preset.texture;
-    document.body.style.backgroundAttachment = preset.texture === 'none' ? '' : 'fixed';
+    applyPresetToDocument(preset);
     localStorage.setItem(KEY, preset.id);
     setSelected(preset.id);
     window.dispatchEvent(new CustomEvent('nuvexa:ui-personalization-changed'));
