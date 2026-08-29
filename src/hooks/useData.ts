@@ -64,16 +64,10 @@ export function useMessages(sectorId: string | null) {
       }
     }
 
-    // The message query already loads the complete sender profile. Preload the
-    // department metadata once for the whole page so each message can render
-    // its sender + department together, without per-message lookups.
     const sectorIds = Array.from(new Set(baseMessages.map((m) => m.author?.sector_id).filter((id): id is string => Boolean(id))));
     const sectorMap = new Map<string, Sector>();
     if (sectorIds.length > 0) {
-      const { data: sectorRows, error: sectorsError } = await supabase
-        .from('sectors')
-        .select('id, name, color, icon')
-        .in('id', sectorIds);
+      const { data: sectorRows, error: sectorsError } = await supabase.from('sectors').select('id, name, color, icon').in('id', sectorIds);
       if (sectorsError) console.error('Error fetching message author sectors:', sectorsError);
       else for (const sector of (sectorRows as Sector[]) || []) sectorMap.set(sector.id, sector);
     }
@@ -85,17 +79,17 @@ export function useMessages(sectorId: string | null) {
         author.sector_name = authorSector?.name ?? null;
         author.sector_color = authorSector?.color ?? null;
       }
-      return {
-        ...m,
-        author,
-        reply_to: m.reply_to_id ? (replyMap.get(m.reply_to_id) ?? null) : null,
-        status: 'delivered' as const,
-      };
+      return { ...m, author, reply_to: m.reply_to_id ? (replyMap.get(m.reply_to_id) ?? null) : null, status: 'delivered' as const };
     });
   }, []);
 
   const fetchMessages = useCallback(async () => {
-    if (!sectorId) return;
+    if (!sectorId) {
+      setMessages([]);
+      setHasMore(false);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase
       .from('messages')
@@ -104,8 +98,10 @@ export function useMessages(sectorId: string | null) {
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE);
 
-    if (error) console.error('Error fetching messages:', error);
-    else {
+    if (error) {
+      console.error('Error fetching messages:', error);
+      setMessages([]);
+    } else {
       const hydratedMessages = await hydrateMessages(((data as any[]) || []).reverse());
       setHasMore((data || []).length === PAGE_SIZE);
       setMessages(prev => {
@@ -143,35 +139,40 @@ export function useMessages(sectorId: string | null) {
   }, [sectorId, messages, loadingOlder, hasMore, hydrateMessages]);
 
   useEffect(() => {
-    fetchMessages();
-    const channel = supabase.channel(`messages-${sectorId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `sector_id=eq.${sectorId}` }, (payload) => {
-      if (payload.eventType === 'INSERT') {
-        const newMessage = payload.new as Message;
-        setMessages(prev => {
-          const existingIndex = prev.findIndex(m => m.id === newMessage.id || (m.id.startsWith('temp-') && m.content === newMessage.content && m.author_id === newMessage.author_id));
-          if (existingIndex >= 0) {
-            const updated = [...prev];
-            updated[existingIndex] = { ...newMessage, author: prev[existingIndex].author, reply_to: prev[existingIndex].reply_to, status: 'delivered' };
-            return updated;
-          }
-          const cachedAuthor = prev.find(m => m.author_id === newMessage.author_id)?.author;
-          if (cachedAuthor) return [...prev, { ...newMessage, author: cachedAuthor, status: 'delivered' as const }];
-          supabase.from('messages').select(`*, author:profiles!messages_author_id_fkey(*)`).eq('id', newMessage.id).single().then(async ({ data }) => {
-            if (data) {
-              const [normalized] = await hydrateMessages([data as any]);
-              if (normalized) setMessages(p => p.map(m => m.id === newMessage.id ? normalized : m));
+    if (!sectorId) return;
+    void fetchMessages();
+    const channel = supabase
+      .channel(`messages-${sectorId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `sector_id=eq.${sectorId}` }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newMessage = payload.new as Message;
+          setMessages(prev => {
+            const existingIndex = prev.findIndex(m => m.id === newMessage.id || (m.id.startsWith('temp-') && m.content === newMessage.content && m.author_id === newMessage.author_id));
+            if (existingIndex >= 0) {
+              const updated = [...prev];
+              updated[existingIndex] = { ...newMessage, author: prev[existingIndex].author, reply_to: prev[existingIndex].reply_to, status: 'delivered' };
+              return updated;
             }
+            const cachedAuthor = prev.find(m => m.author_id === newMessage.author_id)?.author;
+            if (cachedAuthor) return [...prev, { ...newMessage, author: cachedAuthor, status: 'delivered' as const }];
+            void supabase.from('messages').select(`*, author:profiles!messages_author_id_fkey(*)`).eq('id', newMessage.id).single().then(async ({ data }) => {
+              if (data) {
+                const [normalized] = await hydrateMessages([data as any]);
+                if (normalized) setMessages(p => p.map(m => m.id === newMessage.id ? normalized : m));
+              }
+            });
+            return [...prev, { ...newMessage, status: 'delivered' as const }];
           });
-          return [...prev, { ...newMessage, status: 'delivered' as const }];
-        });
-      } else if (payload.eventType === 'DELETE') setMessages(prev => prev.filter(m => m.id !== (payload.old as Message).id));
-      else if (payload.eventType === 'UPDATE') {
-        const updated = payload.new as Message;
-        setMessages(prev => prev.map(message => message.id === updated.id ? { ...message, ...updated, author: message.author, reply_to: message.reply_to, status: message.status === 'sending' ? message.status : 'delivered' } : message));
-      }
-    }).subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [sectorId, fetchMessages]);
+        } else if (payload.eventType === 'DELETE') {
+          setMessages(prev => prev.filter(m => m.id !== (payload.old as Message).id));
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = payload.new as Message;
+          setMessages(prev => prev.map(message => message.id === updated.id ? { ...message, ...updated, author: message.author, reply_to: message.reply_to, status: message.status === 'sending' ? message.status : 'delivered' } : message));
+        }
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [sectorId, fetchMessages, hydrateMessages]);
 
   const sendMessage = async (content: string, options?: { reply_to_id?: string }) => {
     if (!profile || !sectorId) return { error: new Error('Not authenticated') };
@@ -191,7 +192,7 @@ export function useMessages(sectorId: string | null) {
   };
 
   const { allAccessibleSectorIds } = useAuth();
-  const canSendMessages = isAdmin || allAccessibleSectorIds.includes(sectorId || '');
+  const canSendMessages = isAdmin || allAccessibleSectorIds?.includes(sectorId || '');
   return { messages, loading, loadingOlder, hasMore, loadOlderMessages, sendMessage, refetch: fetchMessages, canSendMessages };
 }
 
@@ -205,7 +206,7 @@ export function useSectors() {
       else setSectors(data || []);
       setLoading(false);
     };
-    fetchSectors();
+    void fetchSectors();
   }, []);
   return { sectors, loading };
 }
@@ -222,7 +223,7 @@ export function useProfiles() {
       else setProfiles(data || []);
       setLoading(false);
     };
-    fetchProfiles();
+    void fetchProfiles();
   }, [profile?.company_id]);
   return { profiles, loading };
 }
@@ -237,13 +238,9 @@ export function useBirthdays() {
     .filter((p) => p.birth_date && (p as { is_active?: boolean }).is_active !== false)
     .map((p) => {
       const [, month, day] = p.birth_date!.split('-').map(Number);
-      const birthMonth = month;
-      const birthDay = day;
       const celebrationDate = getCelebrationDate(p.birth_date!);
-      const isToday = birthMonth === currentMonth && birthDay === currentDay;
-      const isThisMonth = birthMonth === currentMonth;
       const sector = sectors.find((s) => s.id === p.sector_id);
-      return { id: p.id, name: p.name, avatar: p.avatar_url || '', sector: sector?.name || 'Sem setor', birthDate: p.birth_date!, birthDay, birthMonth, isToday, isCelebrationToday: isCelebrationToday(p.birth_date!), celebrationDate, celebrationDay: celebrationDate.getDate(), isThisMonth };
+      return { id: p.id, name: p.name, avatar: p.avatar_url || '', sector: sector?.name || 'Sem setor', birthDate: p.birth_date!, birthDay: day, birthMonth: month, isToday: month === currentMonth && day === currentDay, isCelebrationToday: isCelebrationToday(p.birth_date!), celebrationDate, celebrationDay: celebrationDate.getDate(), isThisMonth: month === currentMonth };
     })
     .filter((p) => p.isThisMonth)
     .sort((a, b) => a.birthDay - b.birthDay);
