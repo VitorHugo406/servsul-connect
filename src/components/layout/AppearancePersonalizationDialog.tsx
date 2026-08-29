@@ -19,27 +19,39 @@ const PRESETS: ThemePreset[] = [
   { id: 'rose-strong', name: 'Rosa queimado', background: '345 34% 93%', card: '345 38% 98%', muted: '345 25% 84%', accent: '345 52% 88%', texture: 'none' },
   { id: 'amber-strong', name: 'Âmbar', background: '38 45% 92%', card: '38 50% 98%', muted: '38 32% 83%', accent: '38 62% 86%', texture: 'none' },
   { id: 'graphite', name: 'Grafite', background: '220 14% 88%', card: '220 12% 96%', muted: '220 12% 79%', accent: '220 18% 82%', texture: 'none' },
+  { id: 'red-strong', name: 'Vermelho intenso', background: '0 38% 92%', card: '0 42% 98%', muted: '0 30% 83%', accent: '0 58% 87%', texture: 'none' },
+  { id: 'orange-strong', name: 'Laranja intenso', background: '24 42% 91%', card: '24 46% 98%', muted: '24 32% 81%', accent: '24 62% 85%', texture: 'none' },
+  { id: 'yellow-strong', name: 'Amarelo dourado', background: '48 48% 91%', card: '48 52% 98%', muted: '48 35% 81%', accent: '48 65% 85%', texture: 'none' },
+  { id: 'cyan-strong', name: 'Ciano intenso', background: '190 44% 90%', card: '190 48% 97%', muted: '190 34% 80%', accent: '190 64% 84%', texture: 'none' },
+  { id: 'indigo-strong', name: 'Índigo intenso', background: '235 40% 91%', card: '235 45% 98%', muted: '235 30% 81%', accent: '235 62% 86%', texture: 'none' },
+  { id: 'violet-strong', name: 'Violeta intenso', background: '285 38% 92%', card: '285 43% 98%', muted: '285 30% 83%', accent: '285 60% 87%', texture: 'none' },
+  { id: 'magenta-strong', name: 'Magenta intenso', background: '315 38% 92%', card: '315 43% 98%', muted: '315 30% 83%', accent: '315 58% 87%', texture: 'none' },
+  { id: 'olive', name: 'Oliva', background: '78 28% 90%', card: '78 34% 97%', muted: '78 22% 79%', accent: '78 42% 83%', texture: 'none' },
+  { id: 'navy', name: 'Azul marinho', background: '220 32% 86%', card: '220 35% 96%', muted: '220 25% 76%', accent: '220 48% 81%', texture: 'none' },
+  { id: 'brown', name: 'Cacau', background: '25 28% 88%', card: '25 32% 96%', muted: '25 22% 77%', accent: '25 42% 81%', texture: 'none' },
 ];
 const KEY = 'nuvexa:ui-personalization';
 
 const applyPresetToDocument = (preset: ThemePreset) => {
   const root = document.documentElement;
+  // Personalização altera apenas superfícies do sistema. As variáveis de marca
+  // (--primary, --secondary, --brand e sidebar) permanecem sob controle da empresa.
   root.style.setProperty('--background', preset.background);
   root.style.setProperty('--card', preset.card);
   root.style.setProperty('--popover', preset.card);
   root.style.setProperty('--muted', preset.muted);
-  root.style.setProperty('--accent', preset.accent);
+  root.style.setProperty('--nuvexa-personalization-accent', preset.accent);
   document.body.style.backgroundImage = preset.texture;
   document.body.style.backgroundAttachment = preset.texture === 'none' ? '' : 'fixed';
   let style = document.getElementById('nuvexa-ui-personalization') as HTMLStyleElement | null;
   if (!style) { style = document.createElement('style'); style.id = 'nuvexa-ui-personalization'; document.head.appendChild(style); }
-  style.textContent = `.nuvexa-ui-personalized [class*="border-b-2"][class*="border-primary"]{background-color:hsl(${preset.accent})!important;background-image:${preset.texture === 'none' ? 'none' : preset.texture}!important;background-size:14px 14px;border-radius:10px 10px 0 0}`;
+  style.textContent = `.nuvexa-ui-personalized [class*="border-b-2"][class*="border-primary"]{background-color:hsl(var(--nuvexa-personalization-accent))!important;background-image:${preset.texture === 'none' ? 'none' : preset.texture}!important;background-size:14px 14px;border-radius:10px 10px 0 0}`;
   root.classList.add('nuvexa-ui-personalized');
 };
 
 const clearPresetFromDocument = () => {
   const root = document.documentElement;
-  ['--background','--card','--popover','--muted','--accent'].forEach(v => root.style.removeProperty(v));
+  ['--background','--card','--popover','--muted','--nuvexa-personalization-accent'].forEach(v => root.style.removeProperty(v));
   document.body.style.backgroundImage = '';
   document.body.style.backgroundAttachment = '';
   document.getElementById('nuvexa-ui-personalization')?.remove();
@@ -48,17 +60,9 @@ const clearPresetFromDocument = () => {
 
 export function AppearancePersonalizationDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [selected, setSelected] = useState('default');
-
-  useEffect(() => {
-    const saved = localStorage.getItem(KEY) || 'default';
-    const preset = PRESETS.find(p => p.id === saved) || PRESETS[0];
-    setSelected(preset.id);
-    if (preset.id !== 'default') applyPresetToDocument(preset);
-  }, []);
+  useEffect(() => { const saved = localStorage.getItem(KEY) || 'default'; const preset = PRESETS.find(p => p.id === saved) || PRESETS[0]; setSelected(preset.id); if (preset.id !== 'default') applyPresetToDocument(preset); }, []);
   useEffect(() => { if (open) setSelected(localStorage.getItem(KEY) || 'default'); }, [open]);
-
-  const applyPreset = (preset: ThemePreset) => { applyPresetToDocument(preset); localStorage.setItem(KEY, preset.id); setSelected(preset.id); window.dispatchEvent(new CustomEvent('nuvexa:ui-personalization-changed')); toast.success(`Visual ${preset.name.toLowerCase()} aplicado.`); };
+  const applyPreset = (preset: ThemePreset) => { if (preset.id === 'default') clearPresetFromDocument(); else applyPresetToDocument(preset); localStorage.setItem(KEY, preset.id); setSelected(preset.id); window.dispatchEvent(new CustomEvent('nuvexa:ui-personalization-changed')); toast.success(`Visual ${preset.name.toLowerCase()} aplicado.`); };
   const reset = () => { clearPresetFromDocument(); localStorage.removeItem(KEY); setSelected('default'); window.dispatchEvent(new CustomEvent('nuvexa:ui-personalization-changed')); toast.success('Visual padrão restaurado.'); };
-
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto rounded-2xl"><DialogHeader><DialogTitle className="flex items-center gap-2"><Palette className="h-5 w-5 text-primary" /> Personalização do sistema</DialogTitle><DialogDescription>Escolha uma cor, textura ou fundo mais marcante para as áreas de visualização, painéis e abas selecionadas. A escolha fica salva somente neste navegador.</DialogDescription></DialogHeader><div className="space-y-5"><div><Label className="text-sm font-medium">Estilo visual</Label><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">{PRESETS.map(p => <button key={p.id} type="button" onClick={() => applyPreset(p)} className="group relative overflow-hidden rounded-xl border border-border p-2 text-left transition-all hover:border-primary/50"><div className="h-16 rounded-lg border border-border/60" style={{ backgroundColor: `hsl(${p.background})`, backgroundImage: p.texture, backgroundSize: p.id === 'grid' ? '14px 14px' : p.id === 'mist' ? '10px 10px' : undefined }}><div className="mx-2 mt-3 h-8 rounded-lg border border-border/50" style={{ backgroundColor: `hsl(${p.card})` }} /></div><span className="mt-2 block text-xs font-medium">{p.name}</span>{selected === p.id && <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-3 w-3" /></span>}</button>)}</div></div><Button type="button" variant="outline" className="w-full gap-2" onClick={reset}><RotateCcw className="h-4 w-4" /> Restaurar visual padrão</Button></div></DialogContent></Dialog>;
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-2xl"><DialogHeader><DialogTitle className="flex items-center gap-2"><Palette className="h-5 w-5 text-primary" /> Personalização do sistema</DialogTitle><DialogDescription>Escolha uma cor, textura ou fundo mais marcante. A identidade visual e as cores oficiais da empresa continuam preservadas.</DialogDescription></DialogHeader><div className="space-y-5"><div><Label className="text-sm font-medium">Estilo visual</Label><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">{PRESETS.map(p => <button key={p.id} type="button" onClick={() => applyPreset(p)} className="group relative overflow-hidden rounded-xl border border-border p-2 text-left transition-all hover:border-primary/50"><div className="h-16 rounded-lg border border-border/60" style={{ backgroundColor: `hsl(${p.background})`, backgroundImage: p.texture, backgroundSize: p.id === 'grid' ? '14px 14px' : p.id === 'mist' ? '10px 10px' : undefined }}><div className="mx-2 mt-3 h-8 rounded-lg border border-border/50" style={{ backgroundColor: `hsl(${p.card})` }} /></div><span className="mt-2 block text-xs font-medium">{p.name}</span>{selected === p.id && <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-3 w-3" /></span>}</button>)}</div></div><Button type="button" variant="outline" className="w-full gap-2" onClick={reset}><RotateCcw className="h-4 w-4" /> Restaurar visual padrão da empresa</Button></div></DialogContent></Dialog>;
 }
