@@ -24,10 +24,19 @@ import { useSound } from '@/hooks/useSound';
 import { useConversations } from '@/hooks/useDirectMessages';
 import { supabase } from '@/integrations/supabase/client';
 import { useMessageReactions } from '@/hooks/useMessageReactions';
+import { ChatErrorBoundary } from '@/components/chat/ChatErrorBoundary';
 
 type ChatMode = 'sectors' | 'direct' | 'groups';
 
 export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
+  return (
+    <ChatErrorBoundary>
+      <ChatSectionContent globalSearch={globalSearch} />
+    </ChatErrorBoundary>
+  );
+}
+
+function ChatSectionContent({ globalSearch = '' }: { globalSearch?: string }) {
   const { profile, isAdmin, geralSectorId, allAccessibleSectorIds, user } = useAuth();
   const { sectors, loading: sectorsLoading } = useSectors();
   const { markDirectMessagesAsRead } = useNotifications();
@@ -61,11 +70,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       return;
     }
     const key = getChatBackgroundKey(`sector-${effectiveSector}`);
-    try {
-      setSectorBackground(localStorage.getItem(key) || '');
-    } catch {
-      setSectorBackground('');
-    }
+    try { setSectorBackground(localStorage.getItem(key) || ''); } catch { setSectorBackground(''); }
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<{ chatId?: string; background?: string }>).detail;
       if (detail?.chatId === `sector-${effectiveSector}`) setSectorBackground(detail.background || '');
@@ -76,12 +81,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
 
   useEffect(() => {
     if (!user || !effectiveSector) return;
-    void supabase
-      .from('user_notifications')
-      .update({ is_read: true })
-      .eq('user_id', user.id)
-      .eq('type', 'mention')
-      .eq('is_read', false);
+    void supabase.from('user_notifications').update({ is_read: true }).eq('user_id', user.id).eq('type', 'mention').eq('is_read', false);
   }, [user, effectiveSector, messages]);
 
   const scrollToBottom = useCallback((smooth = false) => {
@@ -106,41 +106,22 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   useEffect(() => {
     if (!profile || !user) return;
     const fetchGroupUnread = async () => {
-      if (chatMode === 'groups') {
-        setUnreadGroupCount(0);
-        return;
-      }
+      if (chatMode === 'groups') { setUnreadGroupCount(0); return; }
       let total = 0;
       for (const group of groups) {
-        const { data: readData } = await supabase
-          .from('private_group_message_reads')
-          .select('last_read_at')
-          .eq('group_id', group.id)
-          .eq('user_id', user.id)
-          .maybeSingle();
+        const { data: readData } = await supabase.from('private_group_message_reads').select('last_read_at').eq('group_id', group.id).eq('user_id', user.id).maybeSingle();
         const lastReadAt = readData?.last_read_at || '1970-01-01T00:00:00Z';
-        const { count } = await supabase
-          .from('private_group_messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('group_id', group.id)
-          .gt('created_at', lastReadAt)
-          .neq('sender_id', profile.id);
+        const { count } = await supabase.from('private_group_messages').select('*', { count: 'exact', head: true }).eq('group_id', group.id).gt('created_at', lastReadAt).neq('sender_id', profile.id);
         total += count || 0;
       }
       setUnreadGroupCount(total);
     };
     void fetchGroupUnread();
-    const channel = supabase
-      .channel('chat-section-group-unread')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'private_group_messages' }, () => void fetchGroupUnread())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'private_group_message_reads' }, () => void fetchGroupUnread())
-      .subscribe();
+    const channel = supabase.channel('chat-section-group-unread').on('postgres_changes', { event: '*', schema: 'public', table: 'private_group_messages' }, () => void fetchGroupUnread()).on('postgres_changes', { event: '*', schema: 'public', table: 'private_group_message_reads' }, () => void fetchGroupUnread()).subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [profile, user, groups, chatMode]);
 
-  const handleMention = useCallback((userId: string, userName: string) => {
-    mentionedUsersRef.current.push({ id: userId, name: userName });
-  }, []);
+  const handleMention = useCallback((userId: string, userName: string) => { mentionedUsersRef.current.push({ id: userId, name: userName }); }, []);
 
   const sendMentionNotifications = useCallback(async (content: string) => {
     if (!profile || mentionedUsersRef.current.length === 0) return;
@@ -150,35 +131,16 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       if (!content.includes(`@${mentionedUser.name}`)) continue;
       const { data: mentionedProfile } = await supabase.from('profiles').select('user_id').eq('id', mentionedUser.id).single();
       if (!mentionedProfile) continue;
-      await supabase.rpc('create_user_notification', {
-        _target_user_id: mentionedProfile.user_id,
-        _type: 'mention',
-        _title: 'Você foi mencionado',
-        _message: `${profile.display_name || profile.name} mencionou você no chat: "${content.substring(0, 80)}${content.length > 80 ? '...' : ''}"`,
-        _reference_id: null,
-      });
+      await supabase.rpc('create_user_notification', { _target_user_id: mentionedProfile.user_id, _type: 'mention', _title: 'Você foi mencionado', _message: `${profile.display_name || profile.name} mencionou você no chat: "${content.substring(0, 80)}${content.length > 80 ? '...' : ''}"`, _reference_id: null });
     }
   }, [profile]);
 
-  const handleSendMessage = async (
-    content: string,
-    attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[],
-    replyToId?: string,
-  ) => {
+  const handleSendMessage = async (content: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[], replyToId?: string) => {
     playMessageSent();
     let fullContent = content;
-    if (attachments?.length) {
-      fullContent += attachments
-        .map((attachment) => attachment.fileType.startsWith('image/')
-          ? `\n📷 [${attachment.fileName}](${attachment.url})`
-          : `\n📎 [${attachment.fileName}](${attachment.url})`)
-        .join('');
-    }
+    if (attachments?.length) fullContent += attachments.map((attachment) => attachment.fileType.startsWith('image/') ? `\n📷 [${attachment.fileName}](${attachment.url})` : `\n📎 [${attachment.fileName}](${attachment.url})`).join('');
     const { error } = await sendMessage(fullContent, { reply_to_id: replyToId });
-    if (error) {
-      console.error('Error sending message:', error);
-      return;
-    }
+    if (error) { console.error('Error sending message:', error); return; }
     setReplyTo(null);
     await sendMentionNotifications(fullContent);
   };
@@ -188,33 +150,18 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     if (selectedGroupId && !groups.some((group) => group.id === selectedGroupId)) void refetchGroups();
   }, [selectedGroupId, groups, refetchGroups]);
 
-  const handleBack = () => {
-    setSelectedUserId(null);
-    setSelectedGroupId(null);
-  };
-
+  const handleBack = () => { setSelectedUserId(null); setSelectedGroupId(null); };
   useEffect(() => {
     if (isMobile && chatMode === 'direct' && selectedUserId) void markDirectMessagesAsRead(selectedUserId);
   }, [isMobile, chatMode, selectedUserId, markDirectMessagesAsRead]);
 
-  if (sectorsLoading) {
-    return <div className="flex h-full flex-col gap-4 p-4"><div className="glass-shimmer h-10 w-full rounded-xl" /><ListSkeleton rows={6} /></div>;
-  }
+  if (sectorsLoading) return <div className="flex h-full flex-col gap-4 p-4"><div className="glass-shimmer h-10 w-full rounded-xl" /><ListSkeleton rows={6} /></div>;
+  if (!profile?.sector_id && !isAdmin && !geralSectorId) return <div className="flex h-full flex-col items-center justify-center p-8 text-center"><AlertCircle className="mb-4 h-12 w-12 text-warning" /><h3 className="font-display text-xl font-semibold text-foreground">Setor não definido</h3><p className="mt-2 text-muted-foreground">Você ainda não foi associado a um setor. Entre em contato com o administrador.</p></div>;
 
-  if (!profile?.sector_id && !isAdmin && !geralSectorId) {
-    return <div className="flex h-full flex-col items-center justify-center p-8 text-center"><AlertCircle className="mb-4 h-12 w-12 text-warning" /><h3 className="font-display text-xl font-semibold text-foreground">Setor não definido</h3><p className="mt-2 text-muted-foreground">Você ainda não foi associado a um setor. Entre em contato com o administrador.</p></div>;
-  }
-
-  if (isMobile && chatMode === 'direct' && selectedUserId) {
-    return <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex h-full flex-col"><div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-2 py-1.5 backdrop-blur-xl"><Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 shrink-0 rounded-full p-0"><ArrowLeft className="h-4 w-4" /></Button><div className="min-w-0 flex-1 overflow-hidden"><DirectMessageChat partnerId={selectedUserId} /></div></div></motion.div>;
-  }
-
-  if (isMobile && chatMode === 'groups' && selectedGroupId) {
-    return <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex h-full flex-col"><div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-2 py-1.5 backdrop-blur-xl"><Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 shrink-0 rounded-full p-0"><ArrowLeft className="h-4 w-4" /></Button><div className="min-w-0 flex-1"><PrivateGroupChat group={selectedGroup} /></div></div></motion.div>;
-  }
+  if (isMobile && chatMode === 'direct' && selectedUserId) return <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex h-full flex-col"><div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-2 py-1.5 backdrop-blur-xl"><Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 shrink-0 rounded-full p-0"><ArrowLeft className="h-4 w-4" /></Button><div className="min-w-0 flex-1 overflow-hidden"><DirectMessageChat partnerId={selectedUserId} /></div></div></motion.div>;
+  if (isMobile && chatMode === 'groups' && selectedGroupId) return <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex h-full flex-col"><div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-2 py-1.5 backdrop-blur-xl"><Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 shrink-0 rounded-full p-0"><ArrowLeft className="h-4 w-4" /></Button><div className="min-w-0 flex-1"><PrivateGroupChat group={selectedGroup} /></div></div></motion.div>;
 
   const currentSector = sectors.find((sector) => sector.id === effectiveSector);
-
   return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex h-full min-h-0 flex-col">
     {!isMobile && <div className="flex shrink-0 border-b border-border bg-card">
       <button onClick={() => setChatMode('sectors')} className={cn('flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors', chatMode === 'sectors' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground')}><Users className="h-4 w-4" /><span>Setores</span></button>
@@ -222,7 +169,6 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       <button onClick={() => setChatMode('groups')} className={cn('flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors', chatMode === 'groups' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground')}><UsersRound className="h-4 w-4" /><span>Grupos</span>{unreadGroupCount > 0 && chatMode !== 'groups' && <span className="h-2 w-2 shrink-0 rounded-full bg-orange-500" />}</button>
     </div>}
     {isMobile && <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl"><span className="text-sm font-semibold">{chatMode === 'sectors' ? (currentSector?.name || 'Setor') : chatMode === 'direct' ? 'Mensagens individuais' : 'Grupos'}</span></div>}
-
     {chatMode === 'sectors' && <div className="flex min-h-0 flex-1 flex-col">
       {!isMobile && <SectorTabs sectors={accessibleSectors} activeSector={effectiveSector || ''} onSectorChange={setActiveSector} />}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
