@@ -39,8 +39,12 @@ export function CardMentionCard({ taskNumber, title, description, labels, priori
 
   useEffect(() => {
     if (!isMobile) return;
-    if (previewOpen || editOpen) document.body.classList.add('card-preview-open');
-    else document.body.classList.remove('card-preview-open');
+    if (previewOpen || editOpen) {
+      document.body.classList.add('card-preview-open');
+      window.dispatchEvent(new CustomEvent('nuvexa:card-preview-open'));
+    } else {
+      document.body.classList.remove('card-preview-open');
+    }
     return () => document.body.classList.remove('card-preview-open');
   }, [previewOpen, editOpen, isMobile]);
 
@@ -58,7 +62,11 @@ export function CardMentionCard({ taskNumber, title, description, labels, priori
 
   const openCard = (event: React.MouseEvent) => {
     event.stopPropagation();
-    if (isMobile) setPreviewOpen(true); else void openTaskInBoard();
+    if (isMobile) {
+      setPreviewOpen(true);
+    } else {
+      void openTaskInBoard();
+    }
   };
 
   const saveEdit = async () => {
@@ -106,38 +114,17 @@ export function CardMentionCard({ taskNumber, title, description, labels, priori
             <DialogDescription className="text-left">Prévia completa do card</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className={cn('rounded-xl p-3', isOwnMessage ? 'bg-white/10' : 'bg-muted/50')}>
-              <p className={cn('text-xs font-medium uppercase tracking-wide', muted)}>Quadro</p>
-              <p className={cn('mt-1 text-sm font-semibold', foreground)}>{boardName}</p>
-            </div>
-            <div>
-              <p className={cn('text-xs font-medium uppercase tracking-wide', muted)}>Título</p>
-              <p className={cn('mt-1 whitespace-pre-wrap text-sm', foreground)}>{title}</p>
-            </div>
+            <div className={cn('rounded-xl p-3', isOwnMessage ? 'bg-white/10' : 'bg-muted/50')}><p className={cn('text-xs font-medium uppercase tracking-wide', muted)}>Quadro</p><p className={cn('mt-1 text-sm font-semibold', foreground)}>{boardName}</p></div>
+            <div><p className={cn('text-xs font-medium uppercase tracking-wide', muted)}>Título</p><p className={cn('mt-1 whitespace-pre-wrap text-sm', foreground)}>{title}</p></div>
             {description && <div><p className={cn('text-xs font-medium uppercase tracking-wide', muted)}>Descrição</p><p className={cn('mt-1 whitespace-pre-wrap text-sm leading-6', foreground)}>{description}</p></div>}
             {labels && <div><p className={cn('text-xs font-medium uppercase tracking-wide', muted)}>Etiquetas</p><div className="mt-2 flex flex-wrap gap-1.5">{labels.split(', ').map((l, i) => <Badge key={i} variant="secondary">🏷️ {l}</Badge>)}</div></div>}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-border p-3"><p className="text-xs text-muted-foreground">Prioridade</p><Badge className={cn('mt-2 text-white', PRIORITY_COLORS[priority])}>{PRIORITY_LABELS[priority]}</Badge></div>
-              <div className="rounded-xl border border-border p-3"><p className="text-xs text-muted-foreground">Prazo</p><p className="mt-2 text-sm font-medium">{dueDate || 'Não informado'}</p></div>
-            </div>
-            <div className="flex gap-2 pt-1">
-              {canEditCard && <Button variant="outline" className="flex-1 gap-2" onClick={() => { setEditTitle(title); setEditDescription(description || ''); setEditOpen(true); }}><Pencil className="h-4 w-4" /> Editar</Button>}
-              <Button className="flex-1" onClick={() => setPreviewOpen(false)}>Fechar</Button>
-            </div>
+            <div className="grid grid-cols-2 gap-3"><div className="rounded-xl border border-border p-3"><p className="text-xs text-muted-foreground">Prioridade</p><Badge className={cn('mt-2 text-white', PRIORITY_COLORS[priority])}>{PRIORITY_LABELS[priority]}</Badge></div><div className="rounded-xl border border-border p-3"><p className="text-xs text-muted-foreground">Prazo</p><p className="mt-2 text-sm font-medium">{dueDate || 'Não informado'}</p></div></div>
+            <div className="flex gap-2 pt-1">{canEditCard && <Button variant="outline" className="flex-1 gap-2" onClick={() => { setEditTitle(title); setEditDescription(description || ''); setEditOpen(true); }}><Pencil className="h-4 w-4" /> Editar</Button>}<Button className="flex-1" onClick={() => setPreviewOpen(false)}>Fechar</Button></div>
           </div>
         </DialogContent>
       </Dialog>}
 
-      {isMobile && <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="w-[calc(100%-24px)] max-w-md rounded-2xl">
-          <DialogHeader><DialogTitle>Editar card #{taskNumber}</DialogTitle><DialogDescription>Altere as informações permitidas e salve.</DialogDescription></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2"><label className="text-sm font-medium">Título</label><Input value={editTitle} onChange={e => setEditTitle(e.target.value)} /></div>
-            <div className="space-y-2"><label className="text-sm font-medium">Descrição</label><Textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} className="min-h-[120px]" /></div>
-            <Button className="w-full" disabled={editLoading || !editTitle.trim()} onClick={saveEdit}>{editLoading ? 'Salvando...' : 'Salvar alterações'}</Button>
-          </div>
-        </DialogContent>
-      </Dialog>}
+      {isMobile && <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent className="w-[calc(100%-24px)] max-w-md rounded-2xl"><DialogHeader><DialogTitle>Editar card #{taskNumber}</DialogTitle><DialogDescription>Altere as informações permitidas e salve.</DialogDescription></DialogHeader><div className="space-y-4"><div className="space-y-2"><label className="text-sm font-medium">Título</label><Input value={editTitle} onChange={e => setEditTitle(e.target.value)} /></div><div className="space-y-2"><label className="text-sm font-medium">Descrição</label><Textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} className="min-h-[120px]" /></div><Button className="w-full" disabled={editLoading || !editTitle.trim()} onClick={saveEdit}>{editLoading ? 'Salvando...' : 'Salvar alterações'}</Button></div></DialogContent></Dialog>}
     </>
   );
 }
