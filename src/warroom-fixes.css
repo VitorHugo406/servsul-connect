@@ -1,0 +1,8 @@
+/* War Room: long descriptions must wrap inside the available viewport instead of creating horizontal overflow. */
+p.text-sm.text-muted-foreground.truncate {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-overflow: clip;
+  overflow: visible;
+}
