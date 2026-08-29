@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
 import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, LayoutDashboard, Globe, ClipboardCheck, StickyNote, Megaphone } from 'lucide-react';
-import appLogo from '@/assets/nuvexa-logo.png';
 import { 
   MessageSquare, 
   Bell, 
@@ -22,6 +21,8 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
+import { getCompanyLogoUrl } from '@/lib/companyLogo';
 import { useNotifications } from '@/hooks/useNotifications';
 
 interface SidebarProps {
@@ -35,14 +36,13 @@ const menuItems = [
   { id: 'announcements', icon: Bell, label: 'Avisos' },
   { id: 'birthdays', icon: Cake, label: 'Aniversariantes' },
   { id: 'war-room', icon: Shield, label: 'War Room' },
-   { id: 'tasks', icon: ListTodo, label: 'Tarefas' },
+  { id: 'tasks', icon: ListTodo, label: 'Tarefas' },
   { id: 'people-management', icon: UsersRound, label: 'Gestão de Pessoas', supervisorOnly: true },
-  
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
   { id: 'companies', icon: Building2, label: 'Empresas', superAdminOnly: true },
   { id: 'system-broadcasts', icon: Megaphone, label: 'Comunicados Globais', superAdminOnly: true },
   { id: 'sectors', icon: Building2, label: 'Gestão de Setores', adminOnly: true },
-   { id: 'important-announcements', icon: Sparkles, label: 'Comunicados Importantes', adminOnly: true },
+  { id: 'important-announcements', icon: Sparkles, label: 'Comunicados Importantes', adminOnly: true },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
   { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
   { id: 'my-dashboard', icon: LayoutDashboard, label: 'Meu Painel' },
@@ -59,8 +59,8 @@ const menuItems = [
 const autonomyLevelLabels: Record<string, string> = {
   admin: 'Administrador',
   gerente: 'Gerente',
-   gestor: 'Gestor',
-   diretoria: 'Diretoria',
+  gestor: 'Gestor',
+  diretoria: 'Diretoria',
   supervisor: 'Supervisor',
   colaborador: 'Colaborador',
 };
@@ -68,6 +68,7 @@ const autonomyLevelLabels: Record<string, string> = {
 export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { profile, signOut, isAdmin, canAccess, roles } = useAuth();
+  const { company } = useCompany();
   const { counts } = useNotifications();
   const isSuperAdmin = roles.some((r: any) => (r.role as string) === 'super_admin');
 
@@ -82,6 +83,8 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
   const displayName = profile?.display_name || profile?.name || 'Usuário';
   const autonomyLevel = profile?.autonomy_level || 'colaborador';
+  const companyName = company?.name || 'Nuvexa';
+  const companyLogoUrl = getCompanyLogoUrl(company?.logo_url);
 
   // Filter menu items based on permissions
   const visibleMenuItems = menuItems.filter((item) => {
@@ -125,10 +128,16 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
           animate={{ opacity: isCollapsed ? 0 : 1, width: isCollapsed ? 0 : 'auto' }}
           className="flex items-center gap-3 overflow-hidden"
         >
-          <img src={appLogo} alt="Nuvexa" className="h-10 w-10 object-contain rounded-xl" />
-          <div>
-            <h1 className="font-display text-lg font-bold text-sidebar-foreground">Nuvexa</h1>
-            <p className="text-xs text-sidebar-foreground/60">Nuvexa</p>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-sidebar-border/70 bg-sidebar-accent/50">
+            {companyLogoUrl ? (
+              <img src={companyLogoUrl} alt={`Logo ${companyName}`} className="h-full w-full object-contain" />
+            ) : (
+              <span className="text-sm font-bold text-sidebar-primary">{companyName.charAt(0).toUpperCase()}</span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <h1 className="font-display truncate text-xl font-bold leading-tight text-sidebar-foreground">{companyName}</h1>
+            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-sidebar-foreground/45">Nuvexa</p>
           </div>
         </motion.div>
         
@@ -143,64 +152,64 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
       {/* Navigation */}
       <nav className="flex-1 overflow-hidden p-3">
         <ScrollArea className="h-full [&_[data-radix-scroll-area-scrollbar]]:hidden">
-        <div className="space-y-1">
-        {visibleMenuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeSection === item.id;
-          
-          // Get badge count for this item
-          let badgeCount = 0;
-          if (item.id === 'chat') {
-            badgeCount = counts.unreadMessages;
-          } else if (item.id === 'announcements') {
-            badgeCount = counts.unreadAnnouncements;
-          }
-          
-          return (
-            <motion.button
-              key={item.id}
-              onClick={() => onSectionChange(item.id)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={cn(
-                'group relative flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all duration-200',
-                isActive
-                  ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-lg'
-                  : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-              )}
-            >
-              <div className="relative">
-                <Icon className={cn('h-5 w-5 flex-shrink-0', isActive && 'text-sidebar-primary-foreground')} />
-                {badgeCount > 0 && !isCollapsed && (
-                  <Badge 
-                    variant="secondary" 
-                    className="absolute -right-2 -top-2 h-4 min-w-4 p-0 flex items-center justify-center text-[10px] bg-secondary text-secondary-foreground"
-                  >
-                    {badgeCount > 99 ? '99+' : badgeCount}
-                  </Badge>
-                )}
-              </div>
+          <div className="space-y-1">
+            {visibleMenuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeSection === item.id;
               
-              <motion.span
-                initial={false}
-                animate={{ opacity: isCollapsed ? 0 : 1, width: isCollapsed ? 0 : 'auto' }}
-                className="overflow-hidden whitespace-nowrap font-medium"
-              >
-                {item.label}
-              </motion.span>
-
-              {badgeCount > 0 && isCollapsed && (
-                <Badge 
-                  variant="secondary" 
-                  className="absolute right-1 top-1 h-4 min-w-4 p-0 flex items-center justify-center text-[10px] bg-secondary text-secondary-foreground"
+              // Get badge count for this item
+              let badgeCount = 0;
+              if (item.id === 'chat') {
+                badgeCount = counts.unreadMessages;
+              } else if (item.id === 'announcements') {
+                badgeCount = counts.unreadAnnouncements;
+              }
+              
+              return (
+                <motion.button
+                  key={item.id}
+                  onClick={() => onSectionChange(item.id)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={cn(
+                    'group relative flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all duration-200',
+                    isActive
+                      ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-lg'
+                      : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                  )}
                 >
-                  {badgeCount > 99 ? '99+' : badgeCount}
-                </Badge>
-              )}
-            </motion.button>
-          );
-        })}
-        </div>
+                  <div className="relative">
+                    <Icon className={cn('h-5 w-5 flex-shrink-0', isActive && 'text-sidebar-primary-foreground')} />
+                    {badgeCount > 0 && !isCollapsed && (
+                      <Badge 
+                        variant="secondary" 
+                        className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center bg-secondary p-0 text-[10px] text-secondary-foreground"
+                      >
+                        {badgeCount > 99 ? '99+' : badgeCount}
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <motion.span
+                    initial={false}
+                    animate={{ opacity: isCollapsed ? 0 : 1, width: isCollapsed ? 0 : 'auto' }}
+                    className="overflow-hidden whitespace-nowrap font-medium"
+                  >
+                    {item.label}
+                  </motion.span>
+
+                  {badgeCount > 0 && isCollapsed && (
+                    <Badge 
+                      variant="secondary" 
+                      className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center bg-secondary p-0 text-[10px] text-secondary-foreground"
+                    >
+                      {badgeCount > 99 ? '99+' : badgeCount}
+                    </Badge>
+                  )}
+                </motion.button>
+              );
+            })}
+          </div>
         </ScrollArea>
       </nav>
 
