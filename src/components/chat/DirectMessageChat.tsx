@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MessageCircle, Check, CheckCheck, FolderOpen } from 'lucide-react';
+import { MessageCircle, Check, CheckCheck, FolderOpen, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ChatMediaFilter } from '@/components/chat/ChatMediaFilter';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
+import { ChatPersonalizationDialog } from '@/components/chat/ChatPersonalizationDialog';
 import { useDirectMessages, useActiveUsers } from '@/hooks/useDirectMessages';
 import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,6 +35,7 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
   const partner = users.find(u => u.id === partnerId);
   const partnerSector = sectors.find(s => s.id === partner?.sector_id);
   const [chatBackground, setChatBackground] = useState('');
+  const [showPersonalization, setShowPersonalization] = useState(false);
 
   useEffect(() => {
     if (!partnerId) {
@@ -97,6 +99,7 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
     <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl sm:px-4">
       <div className="relative shrink-0"><Avatar className="h-9 w-9 sm:h-10 sm:w-10"><AvatarImage src={partner?.avatar_url || ''} /><AvatarFallback className="text-xs text-white" style={{ backgroundColor: partnerSector?.color || '#6366f1' }}>{getInitials(displayName)}</AvatarFallback></Avatar>{partner && <PresenceIndicator isOnline={presence?.isOnline || false} lastHeartbeat={presence?.lastHeartbeat} />}</div>
       <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-semibold text-foreground sm:text-[15px]">{displayName}</h3><p className="truncate text-[10px] text-muted-foreground sm:text-xs">{status}{partnerSector && ` • ${partnerSector.name}`}</p></div>
+      <button type="button" onClick={() => setShowPersonalization(true)} title="Personalizar chat" aria-label="Personalizar chat" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/65 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"><Settings className="h-4 w-4 sm:h-5 sm:w-5" /></button>
       <Sheet><SheetTrigger asChild><Button variant="ghost" size="icon" title="Mídia e arquivos" className="h-9 w-9 shrink-0 rounded-full text-muted-foreground hover:bg-background/70 hover:text-foreground"><FolderOpen className="h-4 w-4 sm:h-5 sm:w-5" /></Button></SheetTrigger><SheetContent className="w-full sm:max-w-md"><SheetHeader><SheetTitle>Mídia e Arquivos</SheetTitle></SheetHeader><div className="mt-6"><ChatMediaFilter chatType="direct" chatId={partnerId} profileId={profile?.id} /></div></SheetContent></Sheet>
     </div>
 
@@ -119,5 +122,6 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
     </div>
     <div className="shrink-0"><TypingIndicator typingUsers={typingUsers} /></div>
     <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} />
+    <ChatPersonalizationDialog open={showPersonalization} onOpenChange={setShowPersonalization} chatId={partnerId} chatName={displayName} />
   </div>;
 }
