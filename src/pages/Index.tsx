@@ -278,9 +278,13 @@ const Index = () => {
       <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
       
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} />
-        <SystemBroadcastBanner />
-        <SeasonalMarquee />
+        {isHomePage && (
+          <>
+            <Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} />
+            <SystemBroadcastBanner />
+            <SeasonalMarquee />
+          </>
+        )}
         
         <main className="m-3 flex-1 overflow-auto rounded-[28px] border border-border/60 bg-card/30 shadow-sm">
           {renderSection()}
