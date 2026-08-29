@@ -47,7 +47,7 @@ const cacheCompany = (company: Company) => {
 };
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -86,7 +86,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, [profile]);
 
-  // Restore the last known company branding before the first browser paint.
+  // Restore the last known official branding before the first browser paint.
   // This prevents the default Nuvexa palette from flashing while Supabase responds.
   useLayoutEffect(() => {
     const companyId = (profile as any)?.company_id as string | undefined;
@@ -110,13 +110,13 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
   const hasModule = (m: string) => company?.enabled_modules?.includes(m) ?? false;
 
-  // Never render the app with fictitious/default company colors on a cold load.
-  // Returning users get the cached official colors immediately while fresh data updates in background.
-  if (loading && !company) {
+  // Only gate the authenticated company shell on a cold load. Public routes must remain available.
+  const hasCompanyId = Boolean((profile as any)?.company_id);
+  if (loading && user && hasCompanyId && !company) {
     return (
       <CompanyContext.Provider value={{ company: null, loading: true, refresh: load, hasModule: () => false }}>
         <div className="flex min-h-screen items-center justify-center bg-background">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" aria-label="Carregando identidade da empresa" />
+          <div className="flex flex-col items-center gap-3"><div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" aria-label="Carregando identidade da empresa" /><p className="text-sm text-muted-foreground">Carregando identidade da empresa...</p></div>
         </div>
       </CompanyContext.Provider>
     );
