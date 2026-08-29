@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useState, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { applyBrand, resetBrand } from '@/lib/branding';
@@ -23,6 +23,28 @@ interface CompanyContextType {
 }
 
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
+const COMPANY_CACHE_PREFIX = 'nuvexa:company:';
+
+const readCachedCompany = (companyId: string): Company | null => {
+  try {
+    const raw = localStorage.getItem(`${COMPANY_CACHE_PREFIX}${companyId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Company;
+    if (!parsed?.id || parsed.id !== companyId || !parsed.primary_color || !parsed.secondary_color) return null;
+    parsed.enabled_modules = Array.isArray(parsed.enabled_modules) ? parsed.enabled_modules : [];
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const cacheCompany = (company: Company) => {
+  try {
+    localStorage.setItem(`${COMPANY_CACHE_PREFIX}${company.id}`, JSON.stringify(company));
+  } catch {
+    // Ignore storage quota/private-mode errors; the network source remains authoritative.
+  }
+};
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
@@ -37,19 +59,44 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
+
+    const cached = readCachedCompany(companyId);
+    if (cached) {
+      setCompany(cached);
+      applyBrand(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     const { data, error } = await (supabase as any)
       .from('companies')
       .select('*')
       .eq('id', companyId)
       .maybeSingle();
+
     if (!error && data) {
-      const c = data as Company;
-      // Normalize enabled_modules
-      c.enabled_modules = Array.isArray(c.enabled_modules) ? c.enabled_modules : [];
-      setCompany(c);
-      applyBrand(c);
+      const freshCompany = data as Company;
+      freshCompany.enabled_modules = Array.isArray(freshCompany.enabled_modules) ? freshCompany.enabled_modules : [];
+      cacheCompany(freshCompany);
+      setCompany(freshCompany);
+      applyBrand(freshCompany);
     }
+
     setLoading(false);
+  }, [profile]);
+
+  // Restore the last known company branding before the first browser paint.
+  // This prevents the default Nuvexa palette from flashing while Supabase responds.
+  useLayoutEffect(() => {
+    const companyId = (profile as any)?.company_id as string | undefined;
+    if (!companyId) return;
+    const cached = readCachedCompany(companyId);
+    if (cached) {
+      setCompany(cached);
+      applyBrand(cached);
+      setLoading(false);
+    }
   }, [profile]);
 
   useEffect(() => {
@@ -61,11 +108,19 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     return () => resetBrand();
   }, []);
 
-  const hasModule = (m: string) => {
-    if (!company) return false;
-    // Super admin's system company: hide most modules
-    return company.enabled_modules?.includes(m) ?? false;
-  };
+  const hasModule = (m: string) => company?.enabled_modules?.includes(m) ?? false;
+
+  // Never render the app with fictitious/default company colors on a cold load.
+  // Returning users get the cached official colors immediately while fresh data updates in background.
+  if (loading && !company) {
+    return (
+      <CompanyContext.Provider value={{ company: null, loading: true, refresh: load, hasModule: () => false }}>
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" aria-label="Carregando identidade da empresa" />
+        </div>
+      </CompanyContext.Provider>
+    );
+  }
 
   return (
     <CompanyContext.Provider value={{ company, loading, refresh: load, hasModule }}>
