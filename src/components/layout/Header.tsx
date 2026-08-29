@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Bell, User, Moon, Sun, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction, Plus, Palette } from 'lucide-react';
+import { Search, Bell, User, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction, Plus, Palette } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,10 +24,8 @@ const ALL_SECTIONS: SectionDef[] = [
 
 export function Header({ title, subtitle, hideNotifications = false, searchQuery = '', onSearchChange, onNavigateToSection }: HeaderProps) {
   const { counts } = useNotifications(); const { profile, isAdmin, canAccess } = useAuth(); const { company, hasModule } = useCompany();
-  const [showNotifications, setShowNotifications] = useState(false); const [showProfile, setShowProfile] = useState(false); const [showSectionSearch, setShowSectionSearch] = useState(false); const [showComingSoon, setShowComingSoon] = useState<string | null>(null); const [showAppearance, setShowAppearance] = useState(false); const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const [showNotifications, setShowNotifications] = useState(false); const [showProfile, setShowProfile] = useState(false); const [showSectionSearch, setShowSectionSearch] = useState(false); const [showComingSoon, setShowComingSoon] = useState<string | null>(null); const [showAppearance, setShowAppearance] = useState(false);
   useEffect(() => { document.title = company?.name ? `${company.name} | Nuvexa` : 'Nuvexa - Comunicação Empresarial'; const faviconUrl = getCompanyLogoUrl(company?.logo_url); document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach(link => { link.href = faviconUrl ?? ''; }); }, [company?.name, company?.logo_url]);
-  useEffect(() => { if (localStorage.getItem('theme') === 'dark') { document.documentElement.classList.add('dark'); setIsDark(true); } }, []);
-  const toggleDarkMode = () => { const next = !isDark; setIsDark(next); document.documentElement.classList.toggle('dark', next); localStorage.setItem('theme', next ? 'dark' : 'light'); };
   const isMainAdmin = profile?.email === ADMIN_EMAIL; const autonomy = profile?.autonomy_level;
   const visibleSections = useMemo(() => ALL_SECTIONS.filter(s => { if (s.mainAdminOnly) return isAdmin && isMainAdmin; if (s.adminOnly) return isAdmin; if (s.supervisorOnly) return isAdmin || ['supervisor','gerente','gestor','diretoria'].includes(autonomy || ''); if (s.permission) return isAdmin || autonomy === 'diretoria' || canAccess(s.permission); return true; }), [isAdmin, isMainAdmin, autonomy, canAccess]);
   const filteredSections = useMemo(() => { if (!searchQuery) return []; const q = searchQuery.toLowerCase(); return visibleSections.filter(s => s.label.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)); }, [searchQuery, visibleSections]);
@@ -47,7 +45,6 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
           <TeamHeaderButton />
           <Button variant="ghost" size="icon" onClick={() => setShowAppearance(true)} title="Personalizar visual"><Palette className="h-5 w-5" /></Button>
           {!hideNotifications && <Popover open={showNotifications} onOpenChange={setShowNotifications}><PopoverTrigger asChild><Button variant="ghost" size="icon" className="relative"><Bell className="h-5 w-5" />{counts.total > 0 && <Badge className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center bg-secondary p-0 text-xs">{counts.total > 99 ? '99+' : counts.total}</Badge>}</Button></PopoverTrigger><PopoverContent className="w-80 p-0" align="end"><div className="border-b border-border p-4"><h3 className="font-semibold">Notificacoes</h3></div><ScrollArea className="h-64"><div className="space-y-3 p-4">{counts.unreadMessages > 0 && <div className="rounded-lg bg-muted/50 p-3 text-sm">{counts.unreadMessages} mensagens nao lidas</div>}{counts.unreadAnnouncements > 0 && <div className="rounded-lg bg-muted/50 p-3 text-sm">{counts.unreadAnnouncements} avisos nao lidos</div>}{counts.total === 0 && <div className="py-8 text-center text-muted-foreground"><Bell className="mx-auto mb-2 h-8 w-8 opacity-50" /><p className="text-sm">Nenhuma notificacao</p></div>}</div></ScrollArea></PopoverContent></Popover>}
-          <Button variant="ghost" size="icon" onClick={toggleDarkMode} title={isDark ? 'Modo Claro' : 'Modo Noturno'}>{isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}</Button>
           <Button variant="ghost" size="icon" onClick={() => setShowProfile(true)}><User className="h-5 w-5" /></Button>
         </div>
       </div>
