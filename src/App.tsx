@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { applyBrand, getCachedBrand } from "@/lib/branding";
 import { AdminBirthdayPdfGuard } from "@/components/birthday/AdminBirthdayPdfGuard";
 import { ChatbotNotificationCleanup } from "@/components/chatbot/ChatbotNotificationCleanup";
+import { CardPreviewInteractionGuard } from "@/components/chat/CardPreviewInteractionGuard";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -27,6 +28,6 @@ function CompanyBrandGate({ children }: { children: React.ReactNode }) {
 }
 function ProtectedRoute({ children }: { children: React.ReactNode }) { const { user, loading, verifying } = useAuth(); if (loading || verifying) return <LoadingScreen />; if (!user) return <Navigate to="/select-company" replace />; return <>{children}</>; }
 function PublicRoute({ children }: { children: React.ReactNode }) { const { user, loading, verifying } = useAuth(); if (loading) return <LoadingScreen message="Verificando acesso..." />; if (user && !verifying) return <Navigate to="/" replace />; return <>{children}</>; }
-function AppRoutes() { const location = useLocation(); const authContent = <PublicRoute><Auth /></PublicRoute>; return <Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><ChatbotNotificationCleanup /><Routes><Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} /><Route path="/auth" element={location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={<PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="*" element={<NotFound />} /></Routes></Suspense>; }
+function AppRoutes() { const location = useLocation(); const authContent = <PublicRoute><Auth /></PublicRoute>; return <Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><ChatbotNotificationCleanup /><CardPreviewInteractionGuard /><Routes><Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} /><Route path="/auth" element={location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={<PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="*" element={<NotFound />} /></Routes></Suspense>; }
 const App = () => (<QueryClientProvider client={queryClient}><TooltipProvider><Toaster /><Sonner /><BrowserRouter><AuthProvider><CompanyProvider><FloatingNoteProvider><AppRoutes /></FloatingNoteProvider></CompanyProvider></AuthProvider></BrowserRouter></TooltipProvider></QueryClientProvider>);
 export default App;
