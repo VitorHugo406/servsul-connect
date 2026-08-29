@@ -1,0 +1,1 @@
+// Intentionally empty. Chat scrolling is handled by the chat components.
