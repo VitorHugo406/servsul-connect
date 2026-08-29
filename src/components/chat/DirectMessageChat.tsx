@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { MessageCircle, Check, CheckCheck, FolderOpen } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -17,6 +17,7 @@ import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 import { formatText } from '@/lib/chatFormatUtils';
 import { cn } from '@/lib/utils';
 import { SignedStorageImage, SignedStorageLink } from '@/components/common/SignedStorageMedia';
+import { getChatBackgroundKey } from '@/components/chat/ChatPersonalizationDialog';
 
 interface DirectMessageChatProps { partnerId: string | null; }
 
@@ -32,6 +33,21 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
   const { typingUsers, sendTyping } = useTypingIndicator(`dm-${channelId}`);
   const partner = users.find(u => u.id === partnerId);
   const partnerSector = sectors.find(s => s.id === partner?.sector_id);
+  const [chatBackground, setChatBackground] = useState('');
+
+  useEffect(() => {
+    if (!partnerId) {
+      setChatBackground('');
+      return;
+    }
+    setChatBackground(localStorage.getItem(getChatBackgroundKey(partnerId)) || '');
+    const handleBackgroundChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ chatId?: string; background?: string }>;
+      if (customEvent.detail?.chatId === partnerId) setChatBackground(customEvent.detail.background || '');
+    };
+    window.addEventListener('nuvexa:chat-background-changed', handleBackgroundChange);
+    return () => window.removeEventListener('nuvexa:chat-background-changed', handleBackgroundChange);
+  }, [partnerId]);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -65,9 +81,7 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
   const handleSendMessage = async (content: string, attachments?: { url: string; fileName: string; fileType: string; fileSize: number }[]) => {
     playMessageSent();
     let fullContent = content;
-    if (attachments?.length) {
-      fullContent += attachments.map(a => a.fileType.startsWith('image/') ? `\n📷 [${a.fileName}](${a.url})` : `\n📎 [${a.fileName}](${a.url})`).join('');
-    }
+    if (attachments?.length) fullContent += attachments.map(a => a.fileType.startsWith('image/') ? `\n📷 [${a.fileName}](${a.url})` : `\n📎 [${a.fileName}](${a.url})`).join('');
     const { error } = await sendMessage(fullContent);
     if (error) console.error('Error sending message:', error);
   };
@@ -77,6 +91,7 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
   const displayName = partner?.display_name || partner?.name || 'Usuário';
   const presence = partner ? getUserPresence(partner.user_id || partner.id) : null;
   const status = !partner ? 'Offline' : presence?.isOnline && presence.lastHeartbeat ? (Date.now() - presence.lastHeartbeat.getTime() < 120000 ? 'Online' : 'Inativo') : 'Offline';
+  const backgroundStyle = chatBackground ? { backgroundImage: `linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)), url(${chatBackground})` } : undefined;
 
   return <div className="flex h-full min-h-0 flex-col overflow-hidden">
     <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl sm:px-4">
@@ -85,19 +100,23 @@ export function DirectMessageChat({ partnerId }: DirectMessageChatProps) {
       <Sheet><SheetTrigger asChild><Button variant="ghost" size="icon" title="Mídia e arquivos" className="h-9 w-9 shrink-0 rounded-full text-muted-foreground hover:bg-background/70 hover:text-foreground"><FolderOpen className="h-4 w-4 sm:h-5 sm:w-5" /></Button></SheetTrigger><SheetContent className="w-full sm:max-w-md"><SheetHeader><SheetTitle>Mídia e Arquivos</SheetTitle></SheetHeader><div className="mt-6"><ChatMediaFilter chatType="direct" chatId={partnerId} profileId={profile?.id} /></div></SheetContent></Sheet>
     </div>
 
-    <ScrollArea className="min-h-0 flex-1 px-3 py-3 sm:p-4">
-      {loading ? <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div> : messages.length === 0 ? <div className="flex flex-col items-center justify-center py-20 text-center"><div className="mb-4 rounded-full bg-muted p-4"><span className="text-4xl">👋</span></div><h4 className="font-display text-lg font-semibold text-foreground">Inicie a conversa</h4><p className="text-sm text-muted-foreground">Envie uma mensagem para {displayName}</p></div> : <div className="space-y-4">
-        {messages.map(message => {
-          const isOwn = message.sender_id === profile?.id;
-          const sender = isOwn ? profile : partner;
-          const senderSector = sectors.find(s => s.id === sender?.sector_id);
-          const senderName = sender?.display_name || sender?.name || 'Usuário';
-          return <div key={message.id} className={cn('flex gap-3', isOwn && 'flex-row-reverse')}>
-            <Avatar className="h-8 w-8 shrink-0"><AvatarImage src={sender?.avatar_url || ''} /><AvatarFallback className="text-xs text-white" style={{ backgroundColor: senderSector?.color || '#6366f1' }}>{getInitials(senderName)}</AvatarFallback></Avatar>
-            <div className={cn('flex min-w-0 flex-col', isOwn && 'items-end')}><div className={cn('mb-1 flex items-center gap-2', isOwn && 'flex-row-reverse')}><span className="text-xs text-muted-foreground">{formatTime(message.created_at)}</span></div><div className={cn('w-fit max-w-[min(78vw,400px)] rounded-[24px] px-4 py-2.5 shadow-sm', isOwn ? 'gradient-primary rounded-tr-md text-white' : 'rounded-tl-md border border-border bg-card text-card-foreground')}>{renderMessageContent(message.content, isOwn)}{isOwn && <span className="ml-1 inline-flex items-center">{message.id.startsWith('temp-') ? <Check className="h-3.5 w-3.5 text-white/60" /> : <CheckCheck className="h-3.5 w-3.5 text-white/80" />}</span>}</div></div>
-          </div>;
-        })}<div ref={scrollRef} /></div>}
-    </ScrollArea>
+    <div className="min-h-0 flex-1 bg-cover bg-center bg-fixed" style={backgroundStyle}>
+      <ScrollArea className="h-full px-3 py-3 sm:p-4">
+        {loading ? <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div> : messages.length === 0 ? <div className="flex flex-col items-center justify-center py-20 text-center"><div className="mb-4 rounded-full bg-muted p-4"><span className="text-4xl">👋</span></div><h4 className="font-display text-lg font-semibold text-foreground">Inicie a conversa</h4><p className="text-sm text-muted-foreground">Envie uma mensagem para {displayName}</p></div> : <div className="space-y-4">
+          {messages.map(message => {
+            const isOwn = message.sender_id === profile?.id;
+            const sender = isOwn ? profile : partner;
+            const senderSector = sectors.find(s => s.id === sender?.sector_id);
+            const senderName = sender?.display_name || sender?.name || 'Usuário';
+            return <div key={message.id} className={cn('flex gap-3', isOwn && 'flex-row-reverse')}>
+              <Avatar className="h-8 w-8 shrink-0"><AvatarImage src={sender?.avatar_url || ''} /><AvatarFallback className="text-xs text-white" style={{ backgroundColor: senderSector?.color || '#6366f1' }}>{getInitials(senderName)}</AvatarFallback></Avatar>
+              <div className={cn('flex min-w-0 flex-col', isOwn && 'items-end')}><div className={cn('mb-1 flex items-center gap-2', isOwn && 'flex-row-reverse')}><span className="text-xs text-muted-foreground">{formatTime(message.created_at)}</span></div><div className={cn('w-fit max-w-[min(78vw,400px)] rounded-[24px] px-4 py-2.5 shadow-sm', isOwn ? 'gradient-primary rounded-tr-md text-white' : 'rounded-tl-md border border-border bg-card text-card-foreground')}>{renderMessageContent(message.content, isOwn)}{isOwn && <span className="ml-1 inline-flex items-center">{message.id.startsWith('temp-') ? <Check className="h-3.5 w-3.5 text-white/60" /> : <CheckCheck className="h-3.5 w-3.5 text-white/80" />}</span>}</div></div>
+            </div>;
+          })}
+          <div ref={scrollRef} />
+        </div>}
+      </ScrollArea>
+    </div>
     <div className="shrink-0"><TypingIndicator typingUsers={typingUsers} /></div>
     <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} />
   </div>;
