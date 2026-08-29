@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,13 @@ export function CardMentionCard({ taskNumber, title, description, labels, priori
   const { isAdmin, canAccess } = useAuth();
   const isMobile = useIsMobile();
   const canEditCard = isAdmin || canAccess('can_access_management');
+
+  useEffect(() => {
+    if (!isMobile) return;
+    if (previewOpen || editOpen) document.body.classList.add('card-preview-open');
+    else document.body.classList.remove('card-preview-open');
+    return () => document.body.classList.remove('card-preview-open');
+  }, [previewOpen, editOpen, isMobile]);
 
   const openTaskInBoard = async () => {
     setLoading(true);
@@ -93,7 +100,7 @@ export function CardMentionCard({ taskNumber, title, description, labels, priori
       </div>
 
       {isMobile && <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-h-[88vh] w-[calc(100%-24px)] max-w-md overflow-y-auto rounded-2xl p-5">
+        <DialogContent data-card-preview-dialog className="max-h-[88vh] w-[calc(100%-24px)] max-w-md overflow-y-auto rounded-2xl p-5">
           <DialogHeader>
             <DialogTitle className="pr-6 text-left">#{taskNumber} · {title}</DialogTitle>
             <DialogDescription className="text-left">Prévia completa do card</DialogDescription>
