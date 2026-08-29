@@ -32,13 +32,12 @@ export function getCachedBrand(): (BrandColors & { id?: string; name?: string; s
   try {
     const lastRaw = localStorage.getItem(LAST_COMPANY_KEY);
     if (lastRaw) { const last = JSON.parse(lastRaw); if (last?.primary_color && last?.secondary_color) return last; }
-    for (let i = 0; i < localStorage.length; i++) { const key = localStorage.key(i); if (!key?.startsWith(COMPANY_CACHE_PREFIX)) continue; const raw = localStorage.getItem(key); if (!raw) continue; const company = JSON.parse(raw); if (company?.primary_color && company?.secondary_color) return company; }
   } catch {}
   return null;
 }
 
-if (typeof window !== 'undefined') { const cached = getCachedBrand(); if (cached) applyBrand(cached); }
+// Do not apply an arbitrary cached company at module initialization. The
+// authenticated company is resolved by AuthContext and applied with its ID.
+// This prevents another company's colors from flashing during login/session hydration.
 
-// Clearing branding must never show a fake Nuvexa company color. Use a neutral
-// fallback until the real company identity is available.
 export function resetBrand() { applyBrand({ primary_color: NEUTRAL_PRIMARY, secondary_color: NEUTRAL_SECONDARY }); }
