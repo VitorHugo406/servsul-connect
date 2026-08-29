@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, MessageCircle, User as UserIcon, Settings } from 'lucide-react';
+import { Search, MessageCircle, User as UserIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,6 @@ import { useConversations, useActiveUsers } from '@/hooks/useDirectMessages';
 import { useSectors } from '@/hooks/useData';
 import { useAllUsersPresence } from '@/hooks/usePresence';
 import { PresenceIndicator } from '@/components/user/PresenceIndicator';
-import { ChatPersonalizationDialog } from '@/components/chat/ChatPersonalizationDialog';
 import { cn } from '@/lib/utils';
 
 interface DirectMessageListProps { selectedUserId: string | null; onSelectUser: (userId: string) => void; }
@@ -17,7 +16,6 @@ interface DirectMessageListProps { selectedUserId: string | null; onSelectUser: 
 export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessageListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAllUsers, setShowAllUsers] = useState(false);
-  const [showPersonalization, setShowPersonalization] = useState(false);
   const { conversations, loading: conversationsLoading } = useConversations();
   const { users, loading: usersLoading } = useActiveUsers();
   const { sectors } = useSectors();
@@ -28,8 +26,6 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
   const filteredConversations = conversations.filter(conv => (conv.partner.display_name || conv.partner.name || '').toLowerCase().includes(query));
   const filteredUsers = users.filter(user => { const name = user.display_name || user.name || ''; const hasConversation = conversations.some(c => c.partnerId === user.id); return name.toLowerCase().includes(query) && !hasConversation; });
   const loading = conversationsLoading || usersLoading;
-  const selectedPartner = users.find(user => user.id === selectedUserId) || conversations.find(conv => conv.partnerId === selectedUserId)?.partner;
-  const selectedPartnerName = selectedPartner?.display_name || selectedPartner?.name || 'Conversa individual';
 
   useEffect(() => {
     const fakeConversationButton = Array.from(document.querySelectorAll('button')).find(button => button.textContent?.trim() === 'Conversas');
@@ -41,7 +37,6 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
     <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl">
       <h3 className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-foreground">Mensagens individuais</h3>
       <div className="relative w-[42%] min-w-[130px]"><Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Buscar conversas..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="h-8 rounded-full border-border/60 bg-background/65 pl-8 pr-2 text-xs" /></div>
-      <button type="button" onClick={() => setShowPersonalization(true)} title="Personalizar chat" aria-label="Personalizar chat" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/65 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Settings className="h-4 w-4" /></button>
     </div>
     <div className="hidden h-0" aria-hidden="true" />
     <div className="flex min-h-0 flex-1 flex-col">
@@ -70,6 +65,5 @@ export function DirectMessageList({ selectedUserId, onSelectUser }: DirectMessag
         </div>}
       </ScrollArea>
     </div>
-    <ChatPersonalizationDialog open={showPersonalization} onOpenChange={setShowPersonalization} chatId={selectedUserId} chatName={selectedPartnerName} />
   </div>;
 }
