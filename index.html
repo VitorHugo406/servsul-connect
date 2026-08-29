@@ -3,48 +3,51 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    
     <title>Nuvexa - Comunicação Empresarial</title>
     <meta name="description" content="Sistema de comunicação empresarial com chat por setores, avisos gerais e reconhecimento facial" />
     <meta name="author" content="Nuvexa" />
-
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#3D2FD6" />
+    <meta name="theme-color" content="#64748B" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Nuvexa" />
     <meta name="application-name" content="Nuvexa" />
-    <meta name="msapplication-TileColor" content="#3D2FD6" />
+    <meta name="msapplication-TileColor" content="#64748B" />
     <meta name="msapplication-tap-highlight" content="no" />
     <meta name="format-detection" content="telephone=no" />
-
-    <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
-    
-    <!-- Icons -->
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/logo-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/logo-512.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-
-    <!-- Open Graph -->
     <meta property="og:title" content="Nuvexa - Comunicação Empresarial" />
     <meta property="og:description" content="Sistema de comunicação empresarial com chat por setores, avisos e reconhecimento facial" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/icons/logo-512.png" />
-
-    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Nuvexa - Comunicação Empresarial" />
     <meta name="twitter:description" content="Sistema de comunicação empresarial com chat por setores, avisos e reconhecimento facial" />
     <meta name="twitter:image" content="/icons/logo-512.png" />
-
-    <!-- Splash Screens for iOS -->
     <link rel="apple-touch-startup-image" href="/icons/logo-512.png" />
+    <script>
+      (function () {
+        try {
+          var p = JSON.parse(localStorage.getItem('nuvexa:profile:' + (JSON.parse(localStorage.getItem('sb-') || 'null') || {}).user_id) || 'null');
+          var companyId = p && p.company_id;
+          var c = companyId ? JSON.parse(localStorage.getItem('nuvexa:company:' + companyId) || 'null') : null;
+          if (!c || !c.primary_color || !c.secondary_color) return;
+          function h(hex){var x=String(hex).replace('#','');if(x.length===3)x=x.split('').map(function(v){return v+v}).join('');var r=parseInt(x.slice(0,2),16)/255,g=parseInt(x.slice(2,4),16)/255,b=parseInt(x.slice(4,6),16)/255,max=Math.max(r,g,b),min=Math.min(r,g,b),l=(max+min)/2,s=0,hh=0;if(max!==min){var d=max-min;s=l>.5?d/(2-max-min):d/(max+min);if(max===r)hh=(g-b)/d+(g<b?6:0);else if(max===g)hh=(b-r)/d+2;else hh=(r-g)/d+4;hh*=60}return Math.round(hh)+' '+Math.round(s*100)+'% '+Math.round(l*100)+'%'}
+          document.documentElement.style.setProperty('--primary',h(c.primary_color));
+          document.documentElement.style.setProperty('--secondary',h(c.secondary_color));
+          document.documentElement.style.setProperty('--ring',h(c.primary_color));
+          document.documentElement.style.setProperty('--sidebar-primary',h(c.secondary_color));
+          document.documentElement.style.setProperty('--sidebar-ring',h(c.secondary_color));
+          document.documentElement.dataset.companyBrand='ready';
+        } catch (_) {}
+      })();
+    </script>
   </head>
-
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
