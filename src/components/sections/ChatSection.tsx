@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { Component, type ErrorInfo, type ReactNode, useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronDown, AlertCircle, Users, MessageSquare, ArrowLeft, UsersRound } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useMessages, useSectors } from '@/hooks/useData';
@@ -27,7 +27,37 @@ import { useMessageReactions } from '@/hooks/useMessageReactions';
 
 type ChatMode = 'sectors' | 'direct' | 'groups';
 
-export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
+class ChatSectionErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('[ChatSection] runtime error:', error, info.componentStack);
+  }
+
+  handleRetry = () => {
+    this.setState({ hasError: false });
+  };
+
+  render() {
+    if (!this.state.hasError) return this.props.children;
+    return (
+      <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-3 p-6 text-center">
+        <AlertCircle className="h-10 w-10 text-warning" />
+        <div>
+          <h3 className="font-semibold text-foreground">Não foi possível carregar o chat</h3>
+          <p className="mt-1 text-sm text-muted-foreground">O restante do sistema continua disponível. Tente carregar o chat novamente.</p>
+        </div>
+        <Button type="button" variant="outline" onClick={this.handleRetry}>Tentar novamente</Button>
+      </div>
+    );
+  }
+}
+
+function ChatSectionContent({ globalSearch = '' }: { globalSearch?: string }) {
   const { profile, isAdmin, geralSectorId, allAccessibleSectorIds, user } = useAuth();
   const { sectors, loading: sectorsLoading } = useSectors();
   const { markDirectMessagesAsRead } = useNotifications();
@@ -46,9 +76,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const mentionedUsersRef = useRef<{ id: string; name: string }[]>([]);
 
-  const accessibleSectors = isAdmin
-    ? sectors
-    : sectors.filter((sector) => allAccessibleSectorIds?.includes(sector.id));
+  const accessibleSectors = isAdmin ? sectors : sectors.filter((sector) => allAccessibleSectorIds?.includes(sector.id));
   const effectiveSector = activeSector || profile?.sector_id || geralSectorId || null;
   const { typingUsers, sendTyping } = useTypingIndicator(`sector-${effectiveSector || 'none'}`);
   const { messages, loading: messagesLoading, sendMessage, canSendMessages } = useMessages(effectiveSector);
@@ -56,10 +84,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; author?: { name: string; display_name: string | null } | null } | null>(null);
 
   useEffect(() => {
-    if (!effectiveSector) {
-      setSectorBackground('');
-      return;
-    }
+    if (!effectiveSector) { setSectorBackground(''); return; }
     const key = getChatBackgroundKey(`sector-${effectiveSector}`);
     try { setSectorBackground(localStorage.getItem(key) || ''); } catch { setSectorBackground(''); }
     const handler = (event: Event) => {
@@ -182,4 +207,12 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     {chatMode === 'direct' && <DirectMessageList search={globalSearch} onSelect={setSelectedUserId} />}
     {chatMode === 'groups' && <PrivateGroupList groups={groups} onSelect={setSelectedGroupId} />}
   </motion.div>;
+}
+
+export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
+  return (
+    <ChatSectionErrorBoundary>
+      <ChatSectionContent globalSearch={globalSearch} />
+    </ChatSectionErrorBoundary>
+  );
 }
