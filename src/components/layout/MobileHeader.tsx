@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Bell, LogOut, Mail, Building2, Calendar, Moon, Sun, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction } from 'lucide-react';
+import { useState } from 'react';
+import { Bell, LogOut, Mail, Building2, Calendar, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction, Palette } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useSectors } from '@/hooks/useData';
 import { NotificationPanel } from './NotificationPanel';
+import { AppearancePersonalizationDialog } from './AppearancePersonalizationDialog';
 
 interface MobileHeaderProps {
   title: string;
@@ -34,33 +35,12 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
   const { sectors } = useSectors();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   const [showComingSoon, setShowComingSoon] = useState<string | null>(null);
+  const [showAppearance, setShowAppearance] = useState(false);
   const showBiButton = hasModule('bi');
   const showBhButton = hasModule('bh') && (isAdmin || canAccess('can_access_bh' as any));
   const showFechamentoButton = hasModule('fechamento') && (isAdmin || canAccess('can_access_fechamento' as any));
   const showOrbsButton = hasModule('orbs') && (isAdmin || canAccess('can_access_orbs' as any));
-
-
-  useEffect(() => {
-    const saved = localStorage.getItem('theme');
-    if (saved === 'dark') {
-      document.documentElement.classList.add('dark');
-      setIsDark(true);
-    }
-  }, []);
-
-  const toggleDarkMode = () => {
-    const next = !isDark;
-    setIsDark(next);
-    if (next) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
 
   const getInitials = (name: string) => {
     return name
@@ -95,70 +75,38 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
 
           <div className="flex items-center gap-1">
             {showBiButton && (
-              <a
-                href="https://drive-data-ace.vercel.app/login"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 rounded-full hover:bg-accent"
-                title="Dash BI"
-              >
+              <a href="https://drive-data-ace.vercel.app/login" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full hover:bg-accent" title="Dash BI">
                 <BarChart3 className="h-5 w-5 text-muted-foreground" />
               </a>
             )}
             {showBhButton && (
-              <a
-                href="https://banco-de-horas-servchat.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 rounded-full hover:bg-accent"
-                title="BH"
-              >
+              <a href="https://banco-de-horas-servchat.vercel.app/" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full hover:bg-accent" title="BH">
                 <Briefcase className="h-5 w-5 text-muted-foreground" />
               </a>
             )}
             {showFechamentoButton && (
-              <button
-                onClick={() => setShowComingSoon('Fechamento')}
-                className="p-2 rounded-full hover:bg-accent"
-                title="Fechamento"
-              >
+              <button onClick={() => setShowComingSoon('Fechamento')} className="p-2 rounded-full hover:bg-accent" title="Fechamento">
                 <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
               </button>
             )}
             {showOrbsButton && (
-              <a
-                href="https://sync-synergy-flow.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 rounded-full hover:bg-accent"
-                title="Orbs"
-              >
+              <a href="https://sync-synergy-flow.vercel.app/" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full hover:bg-accent" title="Orbs">
                 <ExternalLink className="h-5 w-5 text-muted-foreground" />
               </a>
             )}
-            <button
-              className="p-2 rounded-full hover:bg-accent"
-              onClick={toggleDarkMode}
-              title={isDark ? 'Modo Claro' : 'Modo Noturno'}
-            >
-              {isDark ? <Sun className="h-5 w-5 text-muted-foreground" /> : <Moon className="h-5 w-5 text-muted-foreground" />}
+            <button className="p-2 rounded-full hover:bg-accent" onClick={() => setShowAppearance(true)} title="Personalizar visual" aria-label="Personalizar visual">
+              <Palette className="h-5 w-5 text-muted-foreground" />
             </button>
-            <button 
-              className="relative p-2 rounded-full hover:bg-accent"
-              onClick={() => setShowNotifications(true)}
-            >
+            <button className="relative p-2 rounded-full hover:bg-accent" onClick={() => setShowNotifications(true)} aria-label="Notificações">
               <Bell className="h-5 w-5 text-muted-foreground" />
               {totalNotifications > 0 && (
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -right-1 h-4 min-w-4 p-0 flex items-center justify-center text-[10px]"
-                >
+                <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 min-w-4 p-0 flex items-center justify-center text-[10px]">
                   {totalNotifications > 99 ? '99+' : totalNotifications}
                 </Badge>
               )}
             </button>
 
-            <button onClick={() => setShowProfile(true)}>
+            <button onClick={() => setShowProfile(true)} aria-label="Abrir perfil">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={profile?.avatar_url || ''} alt={displayName} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
@@ -167,10 +115,9 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
               </Avatar>
             </button>
           </div>
-          </div>
+        </div>
       </header>
 
-      {/* Profile Sheet */}
       <Sheet open={showProfile} onOpenChange={setShowProfile}>
         <SheetContent side="right" className="w-full max-w-sm">
           <SheetHeader className="text-left">
@@ -199,9 +146,7 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground">Email</p>
-                <p className="text-sm font-medium text-foreground truncate">
-                  {profile?.email || 'Não informado'}
-                </p>
+                <p className="text-sm font-medium text-foreground truncate">{profile?.email || 'Não informado'}</p>
               </div>
             </div>
 
@@ -212,15 +157,8 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground">Setor</p>
                 <div className="flex items-center gap-2">
-                  {userSector && (
-                    <div 
-                      className="h-3 w-3 rounded-full" 
-                      style={{ backgroundColor: userSector.color }}
-                    />
-                  )}
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {userSector?.name || 'Não definido'}
-                  </p>
+                  {userSector && <div className="h-3 w-3 rounded-full" style={{ backgroundColor: userSector.color }} />}
+                  <p className="text-sm font-medium text-foreground truncate">{userSector?.name || 'Não definido'}</p>
                 </div>
               </div>
             </div>
@@ -231,53 +169,33 @@ export function MobileHeader({ title, subtitle, onNavigateToChat, onNavigateToAn
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground">Aniversário</p>
-                <p className="text-sm font-medium text-foreground truncate">
-                  {formatBirthDate(profile?.birth_date || null)}
-                </p>
+                <p className="text-sm font-medium text-foreground truncate">{formatBirthDate(profile?.birth_date || null)}</p>
               </div>
             </div>
           </div>
 
           <Separator className="my-6" />
 
-          <Button 
-            variant="destructive" 
-            className="w-full gap-2"
-            onClick={() => {
-              setShowProfile(false);
-              signOut();
-            }}
-          >
+          <Button variant="destructive" className="w-full gap-2" onClick={() => { setShowProfile(false); signOut(); }}>
             <LogOut className="h-4 w-4" />
             Sair da conta
           </Button>
         </SheetContent>
       </Sheet>
 
-      {/* Notification Panel */}
-      <NotificationPanel
-        open={showNotifications}
-        onOpenChange={setShowNotifications}
-        onNavigateToChat={onNavigateToChat}
-        onNavigateToAnnouncements={onNavigateToAnnouncements}
-      />
+      <NotificationPanel open={showNotifications} onOpenChange={setShowNotifications} onNavigateToChat={onNavigateToChat} onNavigateToAnnouncements={onNavigateToAnnouncements} />
+
+      <AppearancePersonalizationDialog open={showAppearance} onOpenChange={setShowAppearance} />
 
       <Dialog open={showComingSoon !== null} onOpenChange={(open) => !open && setShowComingSoon(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Construction className="h-5 w-5 text-amber-500" />
-              {showComingSoon}
-            </DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Construction className="h-5 w-5 text-amber-500" />{showComingSoon}</DialogTitle>
             <DialogDescription className="pt-2">Aguarde, em fase de Implantação.</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center py-4 text-center">
-            <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-4 mb-3">
-              <Construction className="h-8 w-8 text-amber-500" />
-            </div>
-            <p className="text-sm text-muted-foreground">
-              O módulo <strong>{showComingSoon}</strong> está sendo preparado e estará disponível em breve.
-            </p>
+            <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-4 mb-3"><Construction className="h-8 w-8 text-amber-500" /></div>
+            <p className="text-sm text-muted-foreground">O módulo <strong>{showComingSoon}</strong> está sendo preparado e estará disponível em breve.</p>
           </div>
         </DialogContent>
       </Dialog>
