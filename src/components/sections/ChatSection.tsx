@@ -57,7 +57,6 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const { conversations } = useConversations();
   const [unreadGroupCount, setUnreadGroupCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const shouldAutoScrollRef = useRef(false);
   const hasInitializedScrollRef = useRef(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const mentionedUsersRef = useRef<{id: string; name: string}[]>([]);
@@ -83,8 +82,8 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     markMentionsRead();
   }, [user, effectiveSector, messages]);
 
-  // The chat must never reposition itself when messages change. Only the explicit
-  // down-arrow action is allowed to use smooth scrolling.
+  // Automatic positioning is intentionally limited to the first successful load.
+  // Message updates and realtime events must never move a user who is reading history.
   const scrollToBottom = useCallback((smooth = false) => {
     const el = messagesEndRef.current;
     if (!el) return;
@@ -92,7 +91,6 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     setShowScrollToBottom(false);
   }, []);
 
-  // Initial load only. After initialization, message updates are intentionally ignored.
   useEffect(() => {
     if (messagesLoading || messages.length === 0 || hasInitializedScrollRef.current) return;
     hasInitializedScrollRef.current = true;
@@ -101,7 +99,6 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
 
   useEffect(() => {
     hasInitializedScrollRef.current = false;
-    shouldAutoScrollRef.current = false;
     setShowScrollToBottom(false);
   }, [effectiveSector]);
 
@@ -146,26 +143,12 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   if (!profile?.sector_id && !isAdmin) return <div className="flex h-full flex-col items-center justify-center p-8 text-center"><AlertCircle className="mb-4 h-12 w-12 text-warning" /><h3 className="font-display text-xl font-semibold text-foreground">Setor não definido</h3><p className="mt-2 text-muted-foreground">Você ainda não foi associado a um setor. Entre em contato com o administrador.</p></div>;
 
   if (isMobile && chatMode === 'direct' && selectedUserId) return <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex h-full flex-col"><div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-2 py-1.5 backdrop-blur-xl"><Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 shrink-0 rounded-full p-0 hover:bg-transparent"><ArrowLeft className="h-4 w-4" /></Button><div className="flex-1 overflow-hidden"><DirectMessageChat partnerId={selectedUserId} /></div></div></motion.div>;
-  if (isMobile && chatMode === 'groups' && selectedGroupId) return <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 0 + 1, x: 0 }} className="flex h-full flex-col"><div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-2 py-1.5 backdrop-blur-xl"><Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 shrink-0 rounded-full p-0 hover:bg-transparent"><ArrowLeft className="h-4 w-4" /></Button><div className="flex-1 min-w-0"><PrivateGroupChat group={selectedGroup} /></div></div></motion.div>;
+  if (isMobile && chatMode === 'groups' && selectedGroupId) return <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex h-full flex-col"><div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-2 py-1.5 backdrop-blur-xl"><Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 shrink-0 rounded-full p-0 hover:bg-transparent"><ArrowLeft className="h-4 w-4" /></Button><div className="flex-1 min-w-0"><PrivateGroupChat group={selectedGroup} /></div></div></motion.div>;
 
   return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex h-full flex-col">
     {!isMobile && <div className="flex border-b border-border bg-card shrink-0"><button onClick={() => setChatMode('sectors')} className={cn('flex flex-1 items-center justify-center gap-2 font-medium transition-colors','px-4 py-3 text-sm',chatMode === 'sectors' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground')}><Users className="h-4 w-4" /><span>Setores</span></button><button onClick={() => setChatMode('direct')} className={cn('flex flex-1 items-center justify-center gap-2 font-medium transition-colors','px-4 py-3 text-sm',chatMode === 'direct' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground')}><MessageSquare className="h-4 w-4" /><span>Individual</span>{unreadDmCount > 0 && chatMode !== 'direct' && <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />}</button><button onClick={() => setChatMode('groups')} className={cn('flex flex-1 items-center justify-center gap-2 font-medium transition-colors','px-4 py-3 text-sm',chatMode === 'groups' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground')}><UsersRound className="h-4 w-4" /><span>Grupos</span>{unreadGroupCount > 0 && chatMode !== 'groups' && <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />}</button></div>}
-    {isMobile && <><div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl"><span className="text-sm font-semibold">{chatMode === 'sectors' ? (currentSector?.name || 'Setor') : chatMode === 'direct' ? 'Mensagens individuais' : 'Grupos'}</span></div></>}
-    {chatMode === 'sectors' && <>
-      {!isMobile && <SectorTabs sectors={accessibleSectors} activeSector={effectiveSector} onSelect={setActiveSector} />}
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-        {sectorBackground && <div className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: `url(${sectorBackground})` }} />}
-        <ScrollArea className="relative flex-1 min-h-0">
-          <div className="flex flex-col px-3 py-4 md:px-6">
-            {messages.map((message, index) => { const prev = messages[index - 1]; const showDate = !prev || new Date(message.created_at).toDateString() !== new Date(prev.created_at).toDateString(); return <div key={message.id}>{showDate && <DateSeparator date={message.created_at} />}<ChatMessage message={message} reactions={reactions[message.id] || []} onReaction={(emoji) => toggleReaction(message.id, emoji)} onReply={() => setReplyTo({ id: message.id, content: message.content, author: message.author })} /></div>; })}
-            <div ref={messagesEndRef} className="h-px w-full" />
-          </div>
-        </ScrollArea>
-        {showScrollToBottom && <Button onClick={() => scrollToBottom(true)} size="icon" className="absolute bottom-24 right-4 z-20 rounded-full shadow-lg"><ChevronDown className="h-5 w-5" /></Button>}
-        <TypingIndicator users={typingUsers} />
-        <ChatInput onSend={handleSendMessage} onTyping={sendTyping} onMention={handleMention} disabled={!canSendMessages} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
-      </div>
-    </>}
+    {isMobile && <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl"><span className="text-sm font-semibold">{chatMode === 'sectors' ? (currentSector?.name || 'Setor') : chatMode === 'direct' ? 'Mensagens individuais' : 'Grupos'}</span></div>}
+    {chatMode === 'sectors' && <><div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">{sectorBackground && <div className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: `url(${sectorBackground})` }} />}<ScrollArea className="relative flex-1 min-h-0"><div className="flex flex-col px-3 py-4 md:px-6">{messages.map((message, index) => { const prev = messages[index - 1]; const showDate = !prev || new Date(message.created_at).toDateString() !== new Date(prev.created_at).toDateString(); return <div key={message.id}>{showDate && <DateSeparator date={message.created_at} />}<ChatMessage message={message} reactions={reactions[message.id] || []} onReaction={(emoji) => toggleReaction(message.id, emoji)} onReply={() => setReplyTo({ id: message.id, content: message.content, author: message.author })} /></div>; })}<div ref={messagesEndRef} className="h-px w-full" /></div></ScrollArea>{showScrollToBottom && <Button onClick={() => scrollToBottom(true)} size="icon" className="absolute bottom-24 right-4 z-20 rounded-full shadow-lg"><ChevronDown className="h-5 w-5" /></Button>}<TypingIndicator users={typingUsers} /><ChatInput onSend={handleSendMessage} onTyping={sendTyping} onMention={handleMention} disabled={!canSendMessages} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} /></div></>}
     {chatMode === 'direct' && <DirectMessageList search={globalSearch} onSelect={(id) => setSelectedUserId(id)} />}
     {chatMode === 'groups' && <PrivateGroupList groups={groups} onSelect={(id) => setSelectedGroupId(id)} />}
   </motion.div>;
