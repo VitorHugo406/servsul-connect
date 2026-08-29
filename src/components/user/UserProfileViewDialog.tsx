@@ -24,6 +24,7 @@ interface PublicProfile {
 }
 
 const OPTIONAL_PROFILE_KEY = (userId: string) => `nuvexa:profile-extra:${userId}`;
+const PROFILE_FIELDS = 'user_id,name,display_name,avatar_url,cover_url,work_period,birth_date,email';
 
 export function UserProfileViewDialog({ userId, displayName, avatarUrl, open, onOpenChange }: UserProfileViewDialogProps) {
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -35,22 +36,24 @@ export function UserProfileViewDialog({ userId, displayName, avatarUrl, open, on
     const load = async () => {
       setLoading(true);
       let data: any = null;
+
       if (userId) {
-        const result = await supabase.from('profiles').select('user_id,name,display_name,avatar_url,work_period,birth_date,email').eq('user_id', userId).maybeSingle();
+        const result = await supabase.from('profiles').select(PROFILE_FIELDS).eq('user_id', userId).maybeSingle();
         data = result.data;
       }
       if (!data && avatarUrl) {
-        const result = await supabase.from('profiles').select('user_id,name,display_name,avatar_url,work_period,birth_date,email').eq('avatar_url', avatarUrl).maybeSingle();
+        const result = await supabase.from('profiles').select(PROFILE_FIELDS).eq('avatar_url', avatarUrl).maybeSingle();
         data = result.data;
       }
       if (!data && displayName) {
-        const byDisplay = await supabase.from('profiles').select('user_id,name,display_name,avatar_url,work_period,birth_date,email').eq('display_name', displayName).maybeSingle();
+        const byDisplay = await supabase.from('profiles').select(PROFILE_FIELDS).eq('display_name', displayName).maybeSingle();
         data = byDisplay.data;
         if (!data) {
-          const byName = await supabase.from('profiles').select('user_id,name,display_name,avatar_url,work_period,birth_date,email').eq('name', displayName).maybeSingle();
+          const byName = await supabase.from('profiles').select(PROFILE_FIELDS).eq('name', displayName).maybeSingle();
           data = byName.data;
         }
       }
+
       if (cancelled) return;
       if (data) {
         let extra: any = {};
