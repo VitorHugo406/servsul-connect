@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ImagePlus, Palette, RotateCcw, Upload } from 'lucide-react';
+import { Palette, RotateCcw, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,41 +77,16 @@ export function ChatPersonalizationDialog({ open, onOpenChange, chatId, chatName
       <DialogContent className="max-w-md rounded-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Palette className="h-5 w-5 text-primary" /> Personalização do chat</DialogTitle>
-          <DialogDescription>
-            Personalize somente esta conversa. A escolha fica salva neste navegador e não altera o chat dos outros usuários.
-          </DialogDescription>
+          <DialogDescription>Personalize somente esta conversa. A escolha fica salva neste navegador e não altera o chat dos outros usuários.</DialogDescription>
         </DialogHeader>
-
         {!chatId ? (
           <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">Selecione uma conversa individual para personalizar o fundo.</div>
         ) : (
           <div className="space-y-5">
-            <div className="rounded-xl border border-border bg-muted/30 p-3">
-              <p className="text-sm font-medium text-foreground">{chatName || 'Conversa individual'}</p>
-              <p className="text-xs text-muted-foreground">A personalização é exclusiva desta conversa.</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="chat-background-upload">Imagem de fundo</Label>
-              <label htmlFor="chat-background-upload" className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-5 text-sm font-medium transition-colors hover:bg-muted/60">
-                <Upload className="h-4 w-4" /> Escolher imagem do computador
-              </label>
-              <Input id="chat-background-upload" type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e.target.files?.[0])} />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="chat-background-url">Ou usar uma URL de imagem</Label>
-              <div className="flex gap-2"><Input id="chat-background-url" placeholder="https://..." value={url} onChange={(e) => setUrl(e.target.value)} /><Button type="button" onClick={handleUrl}>Aplicar</Button></div>
-            </div>
-
-            {background && (
-              <div className="overflow-hidden rounded-xl border border-border">
-                <div className="flex h-32 items-center justify-center bg-cover bg-center" style={{ backgroundImage: `url(${background})` }}>
-                  <div className="rounded-full bg-background/80 px-3 py-1 text-xs font-medium backdrop-blur">Pré-visualização</div>
-                </div>
-              </div>
-            )}
-
+            <div className="rounded-xl border border-border bg-muted/30 p-3"><p className="text-sm font-medium text-foreground">{chatName || 'Conversa individual'}</p><p className="text-xs text-muted-foreground">A personalização é exclusiva desta conversa.</p></div>
+            <div className="space-y-2"><Label htmlFor="chat-background-upload">Imagem de fundo</Label><label htmlFor="chat-background-upload" className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-5 text-sm font-medium transition-colors hover:bg-muted/60"><Upload className="h-4 w-4" /> Escolher imagem do computador</label><Input id="chat-background-upload" type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e.target.files?.[0])} /></div>
+            <div className="space-y-2"><Label htmlFor="chat-background-url">Ou usar uma URL de imagem</Label><div className="flex gap-2"><Input id="chat-background-url" placeholder="https://..." value={url} onChange={(e) => setUrl(e.target.value)} /><Button type="button" onClick={handleUrl}>Aplicar</Button></div></div>
+            {background && <div className="overflow-hidden rounded-xl border border-border"><div className="flex h-32 items-center justify-center bg-cover bg-center" style={{ backgroundImage: `url(${background})` }}><div className="rounded-full bg-background/80 px-3 py-1 text-xs font-medium backdrop-blur">Pré-visualização</div></div></div>}
             <Button type="button" variant="outline" className="w-full gap-2" onClick={handleReset}><RotateCcw className="h-4 w-4" /> Restaurar fundo padrão</Button>
           </div>
         )}
