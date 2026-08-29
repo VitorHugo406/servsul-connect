@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Bell, User, Moon, Sun, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction, Plus } from 'lucide-react';
+import { Search, Bell, User, Moon, Sun, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction, Plus, Palette } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { getCompanyLogoUrl } from '@/lib/companyLogo';
 import { UserProfileDialog } from '@/components/user/UserProfileDialog';
+import { AppearancePersonalizationDialog } from '@/components/layout/AppearancePersonalizationDialog';
 import { TeamHeaderButton } from '@/components/teams/TeamHeaderButton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -23,7 +24,7 @@ const ALL_SECTIONS: SectionDef[] = [
 
 export function Header({ title, subtitle, hideNotifications = false, searchQuery = '', onSearchChange, onNavigateToSection }: HeaderProps) {
   const { counts } = useNotifications(); const { profile, isAdmin, canAccess } = useAuth(); const { company, hasModule } = useCompany();
-  const [showNotifications, setShowNotifications] = useState(false); const [showProfile, setShowProfile] = useState(false); const [showSectionSearch, setShowSectionSearch] = useState(false); const [showComingSoon, setShowComingSoon] = useState<string | null>(null); const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const [showNotifications, setShowNotifications] = useState(false); const [showProfile, setShowProfile] = useState(false); const [showSectionSearch, setShowSectionSearch] = useState(false); const [showComingSoon, setShowComingSoon] = useState<string | null>(null); const [showAppearance, setShowAppearance] = useState(false); const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   useEffect(() => { document.title = company?.name ? `${company.name} | Nuvexa` : 'Nuvexa - Comunicação Empresarial'; const faviconUrl = getCompanyLogoUrl(company?.logo_url); document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach(link => { link.href = faviconUrl ?? ''; }); }, [company?.name, company?.logo_url]);
   useEffect(() => { if (localStorage.getItem('theme') === 'dark') { document.documentElement.classList.add('dark'); setIsDark(true); } }, []);
   const toggleDarkMode = () => { const next = !isDark; setIsDark(next); document.documentElement.classList.toggle('dark', next); localStorage.setItem('theme', next ? 'dark' : 'light'); };
@@ -36,11 +37,7 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
   return (<>
     <motion.header initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mx-3 mt-3 flex h-16 items-center justify-between rounded-2xl border border-border/70 bg-card px-6 shadow-sm">
       <div className="flex w-full min-w-0 items-center justify-between gap-4">
-        <div className="relative hidden shrink-0 md:block">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Busca de Abas..." value={searchQuery} onChange={e => { onSearchChange?.(e.target.value); setShowSectionSearch(true); }} onFocus={() => searchQuery && setShowSectionSearch(true)} onBlur={() => setTimeout(() => setShowSectionSearch(false), 200)} className="w-56 bg-muted/50 pl-10 focus-visible:ring-primary" />
-          {showSectionSearch && <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border border-border bg-card shadow-lg">{filteredSections.length ? filteredSections.map(s => <button key={s.id} onMouseDown={e => { e.preventDefault(); selectSection(s.id); }} className="flex w-full items-start px-4 py-3 text-left hover:bg-muted/50"><div><p className="text-sm font-medium">{s.label}</p><p className="text-xs text-muted-foreground">{s.description}</p></div></button>) : searchQuery ? <div className="p-4 text-center text-sm text-muted-foreground">Nenhuma aba encontrada</div> : null}</div>}
-        </div>
+        <div className="relative hidden shrink-0 md:block"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Busca de Abas..." value={searchQuery} onChange={e => { onSearchChange?.(e.target.value); setShowSectionSearch(true); }} onFocus={() => searchQuery && setShowSectionSearch(true)} onBlur={() => setTimeout(() => setShowSectionSearch(false), 200)} className="w-56 bg-muted/50 pl-10 focus-visible:ring-primary" />{showSectionSearch && <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border border-border bg-card shadow-lg">{filteredSections.length ? filteredSections.map(s => <button key={s.id} onMouseDown={e => { e.preventDefault(); selectSection(s.id); }} className="flex w-full items-start px-4 py-3 text-left hover:bg-muted/50"><div><p className="text-sm font-medium">{s.label}</p><p className="text-xs text-muted-foreground">{s.description}</p></div></button>) : searchQuery ? <div className="p-4 text-center text-sm text-muted-foreground">Nenhuma aba encontrada</div> : null}</div>}</div>
         <div className="flex min-w-0 items-center justify-end gap-2">
           {title === 'Avisos Gerais' && canCreateAnnouncement && <Button onClick={openNewAnnouncement} size="sm" className="h-8 gap-1.5 rounded-lg px-3"><Plus className="h-4 w-4" /><span className="hidden sm:inline">Novo Aviso</span><span className="sm:hidden">Novo</span></Button>}
           {showBiButton && <Button variant="outline" size="sm" className="hidden gap-1.5 lg:flex" asChild><a href="https://drive-data-ace.vercel.app/login" target="_blank" rel="noopener noreferrer"><BarChart3 className="h-4 w-4" />Dash BI</a></Button>}
@@ -48,12 +45,14 @@ export function Header({ title, subtitle, hideNotifications = false, searchQuery
           {showFechamentoButton && <Button variant="outline" size="sm" className="hidden gap-1.5 lg:flex" onClick={() => setShowComingSoon('Fechamento')}><FileSpreadsheet className="h-4 w-4" />Fechamento</Button>}
           {showOrbsButton && <Button variant="outline" size="sm" className="hidden gap-1.5 md:flex" asChild><a href="https://sync-synergy-flow.vercel.app/" target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />Orbs</a></Button>}
           <TeamHeaderButton />
+          <Button variant="ghost" size="icon" onClick={() => setShowAppearance(true)} title="Personalizar visual"><Palette className="h-5 w-5" /></Button>
           {!hideNotifications && <Popover open={showNotifications} onOpenChange={setShowNotifications}><PopoverTrigger asChild><Button variant="ghost" size="icon" className="relative"><Bell className="h-5 w-5" />{counts.total > 0 && <Badge className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center bg-secondary p-0 text-xs">{counts.total > 99 ? '99+' : counts.total}</Badge>}</Button></PopoverTrigger><PopoverContent className="w-80 p-0" align="end"><div className="border-b border-border p-4"><h3 className="font-semibold">Notificacoes</h3></div><ScrollArea className="h-64"><div className="space-y-3 p-4">{counts.unreadMessages > 0 && <div className="rounded-lg bg-muted/50 p-3 text-sm">{counts.unreadMessages} mensagens nao lidas</div>}{counts.unreadAnnouncements > 0 && <div className="rounded-lg bg-muted/50 p-3 text-sm">{counts.unreadAnnouncements} avisos nao lidos</div>}{counts.total === 0 && <div className="py-8 text-center text-muted-foreground"><Bell className="mx-auto mb-2 h-8 w-8 opacity-50" /><p className="text-sm">Nenhuma notificacao</p></div>}</div></ScrollArea></PopoverContent></Popover>}
           <Button variant="ghost" size="icon" onClick={toggleDarkMode} title={isDark ? 'Modo Claro' : 'Modo Noturno'}>{isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}</Button>
           <Button variant="ghost" size="icon" onClick={() => setShowProfile(true)}><User className="h-5 w-5" /></Button>
         </div>
       </div>
     </motion.header>
+    <AppearancePersonalizationDialog open={showAppearance} onOpenChange={setShowAppearance} />
     <UserProfileDialog open={showProfile} onOpenChange={setShowProfile} />
     <Dialog open={showComingSoon !== null} onOpenChange={open => !open && setShowComingSoon(null)}><DialogContent className="max-w-md"><DialogHeader><DialogTitle className="flex items-center gap-2"><Construction className="h-5 w-5 text-amber-500" />{showComingSoon}</DialogTitle><DialogDescription className="pt-2">Aguarde, em fase de Implantação.</DialogDescription></DialogHeader><div className="flex flex-col items-center py-6 text-center"><Construction className="mb-3 h-10 w-10 text-amber-500" /><p className="text-sm text-muted-foreground">O módulo <strong>{showComingSoon}</strong> está sendo preparado e estará disponível em breve.</p></div></DialogContent></Dialog>
   </>);
