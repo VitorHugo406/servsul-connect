@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import "./warroom-fixes.css";
 
 // Initialize dark mode from localStorage before render to prevent flash
 if (localStorage.getItem('theme') === 'dark') {
