@@ -24,19 +24,10 @@ import { useSound } from '@/hooks/useSound';
 import { useConversations } from '@/hooks/useDirectMessages';
 import { supabase } from '@/integrations/supabase/client';
 import { useMessageReactions } from '@/hooks/useMessageReactions';
-import { ChatErrorBoundary } from '@/components/chat/ChatErrorBoundary';
 
 type ChatMode = 'sectors' | 'direct' | 'groups';
 
 export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
-  return (
-    <ChatErrorBoundary>
-      <ChatSectionContent globalSearch={globalSearch} />
-    </ChatErrorBoundary>
-  );
-}
-
-function ChatSectionContent({ globalSearch = '' }: { globalSearch?: string }) {
   const { profile, isAdmin, geralSectorId, allAccessibleSectorIds, user } = useAuth();
   const { sectors, loading: sectorsLoading } = useSectors();
   const { markDirectMessagesAsRead } = useNotifications();
