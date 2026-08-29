@@ -65,6 +65,12 @@ const DARK_PRESETS: ThemePreset[] = [
 const ALL_PRESETS = [...LIGHT_PRESETS, ...DARK_PRESETS];
 const KEY = 'nuvexa:ui-personalization';
 
+const getInitialThemeId = () => {
+  const saved = localStorage.getItem(KEY);
+  if (saved && ALL_PRESETS.some(p => p.id === saved)) return saved;
+  return localStorage.getItem('theme') === 'dark' ? 'night' : 'default';
+};
+
 const applyPresetToDocument = (preset: ThemePreset) => {
   const root = document.documentElement;
   const values: Record<string, string> = {
@@ -111,21 +117,17 @@ const clearPresetFromDocument = () => {
 };
 
 export function AppearancePersonalizationDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const [selected, setSelected] = useState('default');
+  const [selected, setSelected] = useState(getInitialThemeId);
 
   useEffect(() => {
-    const saved = localStorage.getItem(KEY);
-    const legacyDark = localStorage.getItem('theme') === 'dark';
-    const savedId = saved || (legacyDark ? 'night' : 'default');
-    const preset = ALL_PRESETS.find(p => p.id === savedId) || LIGHT_PRESETS[0];
-    setSelected(preset.id);
+    const preset = ALL_PRESETS.find(p => p.id === selected) || LIGHT_PRESETS[0];
     applyPresetToDocument(preset);
     localStorage.setItem(KEY, preset.id);
     localStorage.removeItem('theme');
   }, []);
 
   useEffect(() => {
-    if (open) setSelected(localStorage.getItem(KEY) || 'default');
+    if (open) setSelected(getInitialThemeId());
   }, [open]);
 
   const applyPreset = (preset: ThemePreset) => {
@@ -160,6 +162,8 @@ export function AppearancePersonalizationDialog({ open, onOpenChange }: { open: 
     </div>
   );
 
+  const isDarkSelected = DARK_PRESETS.some(p => p.id === selected);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-2xl">
@@ -167,7 +171,7 @@ export function AppearancePersonalizationDialog({ open, onOpenChange }: { open: 
           <DialogTitle className="flex items-center gap-2"><Palette className="h-5 w-5 text-primary" /> Personalização do sistema</DialogTitle>
           <DialogDescription>Escolha o modo de exibição e personalize o visual. A identidade visual e as cores oficiais da empresa continuam preservadas.</DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue={selected.startsWith('night') || DARK_PRESETS.some(p => p.id === selected) ? 'dark' : 'light'} className="w-full">
+        <Tabs defaultValue={isDarkSelected ? 'dark' : 'light'} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="light" className="gap-2"><Sun className="h-4 w-4" /> Modo claro</TabsTrigger>
             <TabsTrigger value="dark" className="gap-2"><Moon className="h-4 w-4" /> Modo noturno</TabsTrigger>
