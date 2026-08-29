@@ -33,17 +33,20 @@
     <script>
       (function () {
         try {
-          var p = JSON.parse(localStorage.getItem('nuvexa:profile:' + (JSON.parse(localStorage.getItem('sb-') || 'null') || {}).user_id) || 'null');
-          var companyId = p && p.company_id;
-          var c = companyId ? JSON.parse(localStorage.getItem('nuvexa:company:' + companyId) || 'null') : null;
-          if (!c || !c.primary_color || !c.secondary_color) return;
-          function h(hex){var x=String(hex).replace('#','');if(x.length===3)x=x.split('').map(function(v){return v+v}).join('');var r=parseInt(x.slice(0,2),16)/255,g=parseInt(x.slice(2,4),16)/255,b=parseInt(x.slice(4,6),16)/255,max=Math.max(r,g,b),min=Math.min(r,g,b),l=(max+min)/2,s=0,hh=0;if(max!==min){var d=max-min;s=l>.5?d/(2-max-min):d/(max+min);if(max===r)hh=(g-b)/d+(g<b?6:0);else if(max===g)hh=(b-r)/d+2;else hh=(r-g)/d+4;hh*=60}return Math.round(hh)+' '+Math.round(s*100)+'% '+Math.round(l*100)+'%'}
-          document.documentElement.style.setProperty('--primary',h(c.primary_color));
-          document.documentElement.style.setProperty('--secondary',h(c.secondary_color));
-          document.documentElement.style.setProperty('--ring',h(c.primary_color));
-          document.documentElement.style.setProperty('--sidebar-primary',h(c.secondary_color));
-          document.documentElement.style.setProperty('--sidebar-ring',h(c.secondary_color));
-          document.documentElement.dataset.companyBrand='ready';
+          var company = null;
+          for (var i = 0; i < localStorage.length; i++) {
+            var key = localStorage.key(i) || '';
+            if (key.indexOf('nuvexa:profile:') !== 0) continue;
+            var profile = JSON.parse(localStorage.getItem(key) || 'null');
+            if (!profile || !profile.company_id) continue;
+            var cached = JSON.parse(localStorage.getItem('nuvexa:company:' + profile.company_id) || 'null');
+            if (cached && cached.primary_color && cached.secondary_color) { company = cached; break; }
+          }
+          if (!company) return;
+          function h(hex){var x=String(hex).replace('#','');if(x.length===3)x=x.split('').map(function(v){return v+v}).join('');if(x.length!==6)return null;var r=parseInt(x.slice(0,2),16)/255,g=parseInt(x.slice(2,4),16)/255,b=parseInt(x.slice(4,6),16)/255,max=Math.max(r,g,b),min=Math.min(r,g,b),l=(max+min)/2,s=0,hh=0;if(max!==min){var d=max-min;s=l>.5?d/(2-max-min):d/(max+min);if(max===r)hh=(g-b)/d+(g<b?6:0);else if(max===g)hh=(b-r)/d+2;else hh=(r-g)/d+4;hh*=60}return Math.round(hh)+' '+Math.round(s*100)+'% '+Math.round(l*100)+'%'}
+          var primary=h(company.primary_color),secondary=h(company.secondary_color); if(!primary||!secondary)return;
+          var root=document.documentElement;
+          root.style.setProperty('--primary',primary);root.style.setProperty('--secondary',secondary);root.style.setProperty('--ring',primary);root.style.setProperty('--sidebar-primary',secondary);root.style.setProperty('--sidebar-ring',secondary);root.dataset.companyBrand='ready';
         } catch (_) {}
       })();
     </script>
