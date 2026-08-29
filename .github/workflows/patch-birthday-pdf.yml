@@ -1,0 +1,46 @@
+name: Apply birthday PDF layout patch
+on:
+  push:
+    branches: [V2]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.event.head_commit.message != 'chore: apply birthday PDF layout patch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch only PDF layout
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/sections/BirthdaysSection.tsx')
+          s = p.read_text()
+          replacements = {
+            "const dateW = 15.5; const dateH = Math.min(16.8, h * 0.56);": "const dateW = 13.5; const dateH = Math.min(14.8, h * 0.52);",
+            "doc.addImage(logo, 'PNG', MARGIN, 8, 19, 14, undefined, 'FAST')": "doc.addImage(logo, 'PNG', MARGIN, 7, 25, 18, undefined, 'FAST')",
+            "doc.roundedRect(MARGIN, 8, 19, 14, 3.5, 3.5, 'F')": "doc.roundedRect(MARGIN, 7, 25, 18, 3.5, 3.5, 'F')",
+            "doc.text(getInitials(company?.name || 'Nuvexa'), MARGIN + 9.5, 17, { align: 'center' })": "doc.text(getInitials(company?.name || 'Nuvexa'), MARGIN + 12.5, 18, { align: 'center' })",
+            "doc.setFontSize(5.7); doc.text('COMUNICAÇÃO INTERNA', MARGIN + 24, 12);": "doc.setFontSize(6.2); doc.text('COMUNICAÇÃO INTERNA', MARGIN + 29, 11);",
+            "doc.setFontSize(8.5); doc.text(truncate(doc, company?.name || 'Nuvexa', 58), PAGE_W - MARGIN, 13": "doc.setFontSize(10.5); doc.text(truncate(doc, company?.name || 'Nuvexa', 72), PAGE_W - MARGIN, 15",
+            "const y = PAGE_H - 40; const qrSize = 29;": "const y = PAGE_H - 40; const qrSize = 29;",
+            "doc.roundedRect(MARGIN, y, CONTENT_W, 27, 5, 5, 'F')": "doc.roundedRect(MARGIN, y, CONTENT_W, 34, 5, 5, 'F')",
+            "doc.roundedRect(MARGIN, y, CONTENT_W, 27, 5, 5, 'S')": "doc.roundedRect(MARGIN, y, CONTENT_W, 34, 5, 5, 'S')",
+            "const cols = 4;": "const cols = 3;",
+          }
+          for old, new in replacements.items():
+              if old not in s:
+                  raise SystemExit(f'Missing expected source fragment: {old}')
+              s = s.replace(old, new, 1)
+          p.write_text(s)
+          PY
+      - name: Commit patch and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/sections/BirthdaysSection.tsx
+          git rm .github/workflows/patch-birthday-pdf.yml
+          git commit -m "fix: refine birthday PDF cards branding and QR footer"
+          git push
