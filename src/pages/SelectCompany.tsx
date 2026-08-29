@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Loader2, Search, Check, X, Building2 } from 'lucide-react';
-import { Input } from '@/components/ui/input'; import { Button } from '@/components/ui/button'; import { supabase } from '@/integrations/supabase/client'; import { BRAND_LOGO_URL, applyBrand, resetBrand } from '@/lib/branding'; import { getCompanyLogoUrl } from '@/lib/companyLogo';
-interface FoundCompany { id:string; name:string; slug:string; logo_url:string|null; primary_color:string; secondary_color:string; is_system:boolean; }
-const PUBLIC_COMPANY_CACHE='nuvexa:public-company:';
+import { Input } from '@/components/ui/input'; import { Button } from '@/components/ui/button'; import { supabase } from '@/integrations/supabase/client'; import { applyBrand, resetBrand } from '@/lib/branding'; import { getCompanyLogoUrl } from '@/lib/companyLogo';
+interface FoundCompany { id:string; name:string; slug:string; logo_url:string|null; primary_color:string; secondary_color:string; is_system:boolean; enabled_modules?:string[]; is_active?:boolean; }
+const PUBLIC_COMPANY_CACHE='nuvexa:public-company:'; const COMPANY_CACHE='nuvexa:company:';
 const readPublicCached=(query:string):FoundCompany|null=>{try{const raw=localStorage.getItem(`${PUBLIC_COMPANY_CACHE}${query.toLowerCase()}`);if(!raw)return null;const c=JSON.parse(raw) as FoundCompany;return c?.id&&c?.primary_color&&c?.secondary_color?c:null;}catch{return null;}};
-const cachePublic=(query:string,c:FoundCompany)=>{try{localStorage.setItem(`${PUBLIC_COMPANY_CACHE}${query.toLowerCase()}`,JSON.stringify(c));}catch{}};
+const cachePublic=(query:string,c:FoundCompany)=>{try{localStorage.setItem(`${PUBLIC_COMPANY_CACHE}${query.toLowerCase()}`,JSON.stringify(c));localStorage.setItem(`${COMPANY_CACHE}${c.id}`,JSON.stringify(c));}catch{}};
 export default function SelectCompany(){const navigate=useNavigate();const[query,setQuery]=useState('');const[debounced,setDebounced]=useState('');const[found,setFound]=useState<FoundCompany|null>(null);const[notFound,setNotFound]=useState(false);const[searching,setSearching]=useState(false);const[continuing,setContinuing]=useState(false);
  useEffect(()=>{const t=setTimeout(()=>setDebounced(query.trim()),120);return()=>clearTimeout(t)},[query]);
  useEffect(()=>{if(!debounced){setFound(null);setNotFound(false);resetBrand();return;}const cached=readPublicCached(debounced);if(cached){setFound(cached);setNotFound(false);applyBrand(cached);}let cancelled=false;setSearching(!cached);(async()=>{const{data,error}=await(supabase as any).rpc('public_find_company',{_query:debounced});if(cancelled)return;const row=Array.isArray(data)?data[0]:data;if(!error&&row){const company=row as FoundCompany;cachePublic(debounced,company);setFound(company);setNotFound(false);applyBrand(company);}else if(!cached){setFound(null);setNotFound(true);resetBrand();}setSearching(false)})();return()=>{cancelled=true}},[debounced]);
