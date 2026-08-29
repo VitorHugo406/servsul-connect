@@ -118,7 +118,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
       <div className={cn('pb-1', isCollapsed ? 'flex justify-center px-0' : 'px-3')}><SeasonalEffectsButton collapsed={isCollapsed} /></div>
 
       <div className="border-t border-sidebar-border p-3">
-        <motion.div className={cn('flex items-center rounded-2xl bg-sidebar-accent/60 p-3 shadow-sm', isCollapsed ? 'w-12 justify-center px-0' : 'w-full gap-3 justify-start')}>
+        <motion.div className={cn('flex items-center rounded-2xl bg-sidebar-accent/60 p-3 shadow-sm', isCollapsed ? 'w-full justify-center' : 'w-full gap-3 justify-start')}>
           <div className="relative flex h-10 w-10 shrink-0 items-center justify-center">
             <Avatar className="h-10 w-10 ring-2 ring-sidebar-primary ring-offset-2 ring-offset-sidebar">
               <AvatarImage src={profile?.avatar_url || ''} alt={displayName} className="object-cover" />
