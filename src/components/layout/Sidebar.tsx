@@ -44,12 +44,7 @@ const menuItems = [
 ];
 
 const autonomyLevelLabels: Record<string, string> = {
-  admin: 'Administrador',
-  gerente: 'Gerente',
-  gestor: 'Gestor',
-  diretoria: 'Diretoria',
-  supervisor: 'Supervisor',
-  colaborador: 'Colaborador',
+  admin: 'Administrador', gerente: 'Gerente', gestor: 'Gestor', diretoria: 'Diretoria', supervisor: 'Supervisor', colaborador: 'Colaborador',
 };
 
 export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
@@ -59,10 +54,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const { counts } = useNotifications();
   const isSuperAdmin = roles.some((r: any) => (r.role as string) === 'super_admin');
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
-  };
-
+  const getInitials = (name: string) => name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
   const displayName = profile?.display_name || profile?.name || 'Usuário';
   const autonomyLevel = profile?.autonomy_level || 'colaborador';
   const companyName = company?.name || 'Nuvexa';
@@ -92,18 +84,14 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
       transition={{ duration: 0.3, ease: 'easeInOut' }}
       className="relative m-3 flex h-[calc(100vh-1.5rem)] flex-col rounded-[28px] bg-sidebar text-sidebar-foreground shadow-xl"
     >
-      <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
+      <div className={cn('relative flex h-16 items-center border-b border-sidebar-border', isCollapsed ? 'justify-center px-0' : 'justify-between px-4')}>
         <motion.div
           initial={false}
           animate={{ opacity: isCollapsed ? 0 : 1, width: isCollapsed ? 0 : 'auto' }}
           className="flex items-center gap-3 overflow-hidden"
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-sidebar-border/70 bg-sidebar-accent/50">
-            {companyLogoUrl ? (
-              <img src={companyLogoUrl} alt={`Logo ${companyName}`} className="h-full w-full object-contain" />
-            ) : (
-              <span className="text-sm font-bold text-sidebar-primary">{companyName.charAt(0).toUpperCase()}</span>
-            )}
+            {companyLogoUrl ? <img src={companyLogoUrl} alt={`Logo ${companyName}`} className="h-full w-full object-contain" /> : <span className="text-sm font-bold text-sidebar-primary">{companyName.charAt(0).toUpperCase()}</span>}
           </div>
           <div className="min-w-0">
             <h1 className="font-display truncate text-xl font-bold leading-tight text-sidebar-foreground">{companyName}</h1>
@@ -112,7 +100,12 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
         </motion.div>
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-foreground transition-colors hover:bg-sidebar-accent/80"
+          aria-label={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
+          title={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
+          className={cn(
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-foreground transition-colors hover:bg-sidebar-accent/80',
+            isCollapsed && 'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'
+          )}
         >
           {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
@@ -137,33 +130,15 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                   className={cn(
                     'group relative flex w-full items-center rounded-2xl py-3 text-left transition-all duration-200',
                     isCollapsed ? 'justify-center px-0' : 'gap-3 px-4',
-                    isActive
-                      ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-lg'
-                      : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                    isActive ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-lg' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
                   )}
                 >
                   <div className="relative flex h-5 w-5 shrink-0 items-center justify-center">
                     <Icon className={cn('h-5 w-5', isActive && 'text-sidebar-primary-foreground')} />
-                    {badgeCount > 0 && !isCollapsed && (
-                      <Badge variant="secondary" className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center bg-secondary p-0 text-[10px] text-secondary-foreground">
-                        {badgeCount > 99 ? '99+' : badgeCount}
-                      </Badge>
-                    )}
+                    {badgeCount > 0 && !isCollapsed && <Badge variant="secondary" className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center bg-secondary p-0 text-[10px] text-secondary-foreground">{badgeCount > 99 ? '99+' : badgeCount}</Badge>}
                   </div>
-
-                  <motion.span
-                    initial={false}
-                    animate={{ opacity: isCollapsed ? 0 : 1, width: isCollapsed ? 0 : 'auto' }}
-                    className="overflow-hidden whitespace-nowrap font-medium"
-                  >
-                    {item.label}
-                  </motion.span>
-
-                  {badgeCount > 0 && isCollapsed && (
-                    <Badge variant="secondary" className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center bg-secondary p-0 text-[10px] text-secondary-foreground">
-                      {badgeCount > 99 ? '99+' : badgeCount}
-                    </Badge>
-                  )}
+                  <motion.span initial={false} animate={{ opacity: isCollapsed ? 0 : 1, width: isCollapsed ? 0 : 'auto' }} className="overflow-hidden whitespace-nowrap font-medium">{item.label}</motion.span>
+                  {badgeCount > 0 && isCollapsed && <Badge variant="secondary" className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center bg-secondary p-0 text-[10px] text-secondary-foreground">{badgeCount > 99 ? '99+' : badgeCount}</Badge>}
                 </motion.button>
               );
             })}
@@ -171,23 +146,16 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
         </ScrollArea>
       </nav>
 
-      <div className="flex justify-center px-3 pb-1">
+      <div className={cn('pb-1', isCollapsed ? 'flex justify-center px-0' : 'px-3')}>
         <SeasonalEffectsButton collapsed={isCollapsed} />
       </div>
 
-      <div className="border-t border-sidebar-border p-3">
-        <motion.div
-          className={cn(
-            'flex items-center gap-3 rounded-2xl bg-sidebar-accent/60 p-3 shadow-sm',
-            isCollapsed && 'justify-center'
-          )}
-        >
+      <div className={cn('border-t border-sidebar-border', isCollapsed ? 'p-3' : 'p-3')}>
+        <motion.div className={cn('flex items-center gap-3 rounded-2xl bg-sidebar-accent/60 p-3 shadow-sm', isCollapsed ? 'justify-center px-0' : 'justify-start')}>
           <div className="relative shrink-0">
             <Avatar className="h-10 w-10 ring-2 ring-sidebar-primary ring-offset-2 ring-offset-sidebar">
               <AvatarImage src={profile?.avatar_url || ''} alt={displayName} />
-              <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-sm font-semibold">
-                {getInitials(displayName)}
-              </AvatarFallback>
+              <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-sm font-semibold">{getInitials(displayName)}</AvatarFallback>
             </Avatar>
             <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-sidebar bg-success" />
           </div>
@@ -200,11 +168,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
             <p className="truncate text-xs text-sidebar-foreground/60">{autonomyLevelLabels[autonomyLevel]}</p>
           </motion.div>
           {!isCollapsed && (
-            <button
-              onClick={signOut}
-              className="rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              title="Sair"
-            >
+            <button onClick={signOut} className="rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground" title="Sair">
               <LogOut className="h-4 w-4" />
             </button>
           )}
