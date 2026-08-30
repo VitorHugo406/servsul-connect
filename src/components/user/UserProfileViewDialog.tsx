@@ -17,14 +17,14 @@ interface PublicProfile {
   name: string;
   display_name: string | null;
   avatar_url: string | null;
-  cover_url?: string | null;
+  cover_url: string | null;
   work_period: string | null;
   birth_date: string | null;
   email: string | null;
 }
 
 const OPTIONAL_PROFILE_KEY = (userId: string) => `nuvexa:profile-extra:${userId}`;
-const PROFILE_FIELDS = 'user_id,name,display_name,avatar_url,cover_url,work_period,birth_date,email';
+const BASE_FIELDS = 'user_id,name,display_name,avatar_url,work_period,birth_date,email';
 
 export function UserProfileViewDialog({ userId, displayName, avatarUrl, open, onOpenChange }: UserProfileViewDialogProps) {
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -33,37 +33,53 @@ export function UserProfileViewDialog({ userId, displayName, avatarUrl, open, on
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
+
     const load = async () => {
       setLoading(true);
       let data: any = null;
 
+      // Never make the complete profile depend on the optional cover column.
       if (userId) {
-        const result = await supabase.from('profiles').select(PROFILE_FIELDS).eq('user_id', userId).maybeSingle();
+        const result = await supabase.from('profiles').select(BASE_FIELDS).eq('user_id', userId).maybeSingle();
         data = result.data;
       }
+
       if (!data && avatarUrl) {
-        const result = await supabase.from('profiles').select(PROFILE_FIELDS).eq('avatar_url', avatarUrl).maybeSingle();
+        const result = await supabase.from('profiles').select(BASE_FIELDS).eq('avatar_url', avatarUrl).maybeSingle();
         data = result.data;
       }
+
       if (!data && displayName) {
-        const byDisplay = await supabase.from('profiles').select(PROFILE_FIELDS).eq('display_name', displayName).maybeSingle();
+        const byDisplay = await supabase.from('profiles').select(BASE_FIELDS).eq('display_name', displayName).maybeSingle();
         data = byDisplay.data;
         if (!data) {
-          const byName = await supabase.from('profiles').select(PROFILE_FIELDS).eq('name', displayName).maybeSingle();
+          const byName = await supabase.from('profiles').select(BASE_FIELDS).eq('name', displayName).maybeSingle();
           data = byName.data;
         }
       }
 
       if (cancelled) return;
+
       if (data) {
-        let extra: any = {};
-        try { extra = JSON.parse(localStorage.getItem(OPTIONAL_PROFILE_KEY(data.user_id)) || '{}'); } catch {}
-        setProfile({ ...data, cover_url: data.cover_url || extra.cover_url || null });
+        let coverUrl: string | null = null;
+        try {
+          const coverResult = await supabase.from('profiles').select('cover_url').eq('user_id', data.user_id).maybeSingle();
+          coverUrl = coverResult.data?.cover_url || null;
+        } catch {
+          // Keep the main profile usable if the optional column is unavailable.
+        }
+        try {
+          const extra = JSON.parse(localStorage.getItem(OPTIONAL_PROFILE_KEY(data.user_id)) || '{}');
+          coverUrl = coverUrl || extra.cover_url || null;
+        } catch {}
+
+        setProfile({ ...data, cover_url: coverUrl });
       } else {
         setProfile(null);
       }
       setLoading(false);
     };
+
     void load();
     return () => { cancelled = true; };
   }, [open, userId, displayName, avatarUrl]);
