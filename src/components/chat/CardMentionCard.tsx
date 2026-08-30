@@ -61,12 +61,22 @@ export function CardMentionCard({ taskNumber, title, description, labels, priori
   };
 
   const openCard = (event: React.MouseEvent) => {
+    event.preventDefault();
     event.stopPropagation();
     if (isMobile) {
+      // Lock the background before React paints the dialog. This prevents a
+      // long-press timer from the parent ChatMessage from winning the race.
+      document.body.classList.add('card-preview-open');
       setPreviewOpen(true);
     } else {
       void openTaskInBoard();
     }
+  };
+
+  const closePreview = () => {
+    document.body.classList.remove('card-preview-open');
+    setPreviewOpen(false);
+    setEditOpen(false);
   };
 
   const saveEdit = async () => {
@@ -75,8 +85,7 @@ export function CardMentionCard({ taskNumber, title, description, labels, priori
     const { error } = await supabase.from('tasks').update({ title: editTitle.trim(), description: editDescription.trim() }).eq('task_number', taskNumber);
     setEditLoading(false);
     if (error) return;
-    setEditOpen(false);
-    setPreviewOpen(false);
+    closePreview();
     window.location.reload();
   };
 
@@ -100,15 +109,15 @@ export function CardMentionCard({ taskNumber, title, description, labels, priori
           </div>
           <div className="flex items-center justify-between pt-1">
             <span className={cn(muted, isMobile ? 'text-[9px]' : 'text-[10px]')}>📌 {boardName}</span>
-            <Button variant="ghost" size="sm" disabled={loading} className={cn('gap-1', isMobile ? 'h-5 text-[10px] px-1.5' : 'h-6 text-xs px-2', isOwnMessage ? 'text-white/70 hover:text-white hover:bg-white/10' : '')} onClick={openCard}>
+            <Button variant="ghost" size="sm" disabled={loading} className={cn('gap-1', isMobile ? 'h-5 text-[10px] px-1.5' : 'h-6 text-xs px-2', isOwnMessage ? 'text-white/70 hover:text-white hover:bg-white/10' : '')} onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()} onClick={openCard}>
               <Eye className={cn(isMobile ? 'h-3 w-3' : 'h-3.5 w-3.5')} /> Abrir
             </Button>
           </div>
         </div>
       </div>
 
-      {isMobile && <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent data-card-preview-dialog className="max-h-[88vh] w-[calc(100%-24px)] max-w-md overflow-y-auto rounded-2xl p-5">
+      {isMobile && <Dialog open={previewOpen} onOpenChange={(open) => open ? setPreviewOpen(true) : closePreview()}>
+        <DialogContent data-card-preview-dialog className="z-[1001] max-h-[88vh] w-[calc(100%-24px)] max-w-md overflow-y-auto rounded-2xl p-5">
           <DialogHeader>
             <DialogTitle className="pr-6 text-left">#{taskNumber} · {title}</DialogTitle>
             <DialogDescription className="text-left">Prévia completa do card</DialogDescription>
@@ -119,7 +128,7 @@ export function CardMentionCard({ taskNumber, title, description, labels, priori
             {description && <div><p className={cn('text-xs font-medium uppercase tracking-wide', muted)}>Descrição</p><p className={cn('mt-1 whitespace-pre-wrap text-sm leading-6', foreground)}>{description}</p></div>}
             {labels && <div><p className={cn('text-xs font-medium uppercase tracking-wide', muted)}>Etiquetas</p><div className="mt-2 flex flex-wrap gap-1.5">{labels.split(', ').map((l, i) => <Badge key={i} variant="secondary">🏷️ {l}</Badge>)}</div></div>}
             <div className="grid grid-cols-2 gap-3"><div className="rounded-xl border border-border p-3"><p className="text-xs text-muted-foreground">Prioridade</p><Badge className={cn('mt-2 text-white', PRIORITY_COLORS[priority])}>{PRIORITY_LABELS[priority]}</Badge></div><div className="rounded-xl border border-border p-3"><p className="text-xs text-muted-foreground">Prazo</p><p className="mt-2 text-sm font-medium">{dueDate || 'Não informado'}</p></div></div>
-            <div className="flex gap-2 pt-1">{canEditCard && <Button variant="outline" className="flex-1 gap-2" onClick={() => { setEditTitle(title); setEditDescription(description || ''); setEditOpen(true); }}><Pencil className="h-4 w-4" /> Editar</Button>}<Button className="flex-1" onClick={() => setPreviewOpen(false)}>Fechar</Button></div>
+            <div className="flex gap-2 pt-1">{canEditCard && <Button variant="outline" className="flex-1 gap-2" onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onClick={() => { setEditTitle(title); setEditDescription(description || ''); setEditOpen(true); }}><Pencil className="h-4 w-4" /> Editar</Button>}<Button className="flex-1" onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onClick={closePreview}>Fechar</Button></div>
           </div>
         </DialogContent>
       </Dialog>}
