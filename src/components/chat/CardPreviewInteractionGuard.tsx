@@ -1,71 +1,74 @@
 import { useEffect } from 'react';
 
-const CARD_DIALOG_SELECTOR = '[data-card-preview-dialog]';
-
+/**
+ * Keeps the chat completely inert while a mobile card preview is open.
+ * The dialog itself is rendered by Radix in a portal, so we deliberately do
+ * not install a document-level click/touch interceptor: doing that can eat
+ * the very event that opens/closes the dialog and leave React in a bad state.
+ */
 export function CardPreviewInteractionGuard() {
   useEffect(() => {
-    let wasOpen = false;
+    let locked = false;
+    let previousOverflow = '';
+    let previousTouchAction = '';
+
+    const lock = () => {
+      if (locked) return;
+      locked = true;
+      previousOverflow = document.body.style.overflow;
+      previousTouchAction = document.body.style.touchAction;
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      document.documentElement.style.overscrollBehavior = 'none';
+
+      document.querySelectorAll<HTMLElement>('.mobile-chat-message').forEach((message) => {
+        message.setAttribute('inert', '');
+        message.setAttribute('aria-hidden', 'true');
+      });
+
+      document.querySelectorAll<HTMLElement>('.mobile-reaction-picker').forEach((element) => {
+        element.setAttribute('inert', '');
+        element.setAttribute('aria-hidden', 'true');
+      });
+    };
+
+    const unlock = () => {
+      if (!locked) return;
+      locked = false;
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+      document.documentElement.style.overscrollBehavior = '';
+
+      document.querySelectorAll<HTMLElement>('.mobile-chat-message').forEach((message) => {
+        message.removeAttribute('inert');
+        message.removeAttribute('aria-hidden');
+      });
+      document.querySelectorAll<HTMLElement>('.mobile-reaction-picker').forEach((element) => {
+        element.removeAttribute('inert');
+        element.removeAttribute('aria-hidden');
+      });
+    };
 
     const sync = () => {
       const isOpen = document.body.classList.contains('card-preview-open');
-
-      document.querySelectorAll<HTMLElement>('.mobile-chat-message').forEach((message) => {
-        if (isOpen) {
-          message.style.setProperty('pointer-events', 'none', 'important');
-        } else {
-          message.style.removeProperty('pointer-events');
-        }
-      });
-
-      if (isOpen) {
-        // Close any message-action/reaction state that was already open before the card.
-        document.querySelectorAll<HTMLElement>('.mobile-chat-message .fixed.inset-0[aria-label="Fechar ações da mensagem"]').forEach((backdrop) => {
-          backdrop.click();
-        });
-      } else if (wasOpen) {
-        document.querySelectorAll<HTMLElement>('.mobile-chat-message .fixed.inset-0[aria-label="Fechar ações da mensagem"]').forEach((backdrop) => {
-          backdrop.click();
-        });
-      }
-
-      document.querySelectorAll<HTMLElement>('.mobile-reaction-picker').forEach((element) => {
-        if (isOpen) {
-          element.style.setProperty('display', 'none', 'important');
-          element.style.setProperty('pointer-events', 'none', 'important');
-        } else {
-          element.style.removeProperty('display');
-          element.style.removeProperty('pointer-events');
-        }
-      });
-
-      if (isOpen) {
-        document.querySelectorAll<HTMLElement>('.mobile-chat-message-focused').forEach((element) => {
-          element.classList.remove('mobile-chat-message-focused');
-        });
-      }
-
-      wasOpen = isOpen;
-    };
-
-    const blockBackgroundInteraction = (event: Event) => {
-      if (!document.body.classList.contains('card-preview-open')) return;
-      const target = event.target;
-      if (target instanceof Node && (target as Element).closest?.(CARD_DIALOG_SELECTOR)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if ('stopImmediatePropagation' in event) event.stopImmediatePropagation();
+      if (isOpen) lock();
+      else unlock();
     };
 
     const observer = new MutationObserver(sync);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-    const events: Array<keyof DocumentEventMap> = ['click', 'pointerdown', 'pointerup', 'touchstart', 'touchmove', 'touchend', 'contextmenu'];
-    events.forEach((eventName) => document.addEventListener(eventName, blockBackgroundInteraction, true));
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
     sync();
 
     return () => {
       observer.disconnect();
-      document.querySelectorAll<HTMLElement>('.mobile-chat-message').forEach((message) => message.style.removeProperty('pointer-events'));
-      events.forEach((eventName) => document.removeEventListener(eventName, blockBackgroundInteraction, true));
+      unlock();
+      document.documentElement.style.overscrollBehavior = '';
     };
   }, []);
 
