@@ -14,6 +14,7 @@ import { UserStatusSelector } from './UserStatusSelector';
 
 interface UserProfileDialogProps { open:boolean; onOpenChange:(open:boolean)=>void; }
 const OPTIONAL_PROFILE_KEY=(userId:string)=>`nuvexa:profile-extra:${userId}`;
+const EDITABLE_PROFILE_FIELDS='id,user_id,name,display_name,email,avatar_url,cover_url,birth_date,work_period,phone,address,description';
 
 export function UserProfileDialog({open,onOpenChange}:UserProfileDialogProps){
  const{user,profile,refreshProfile}=useAuth();
@@ -22,8 +23,11 @@ export function UserProfileDialog({open,onOpenChange}:UserProfileDialogProps){
  const[name,setName]=useState('');const[displayName,setDisplayName]=useState('');const[workPeriod,setWorkPeriod]=useState('');const[phone,setPhone]=useState('');const[address,setAddress]=useState('');const[birthDate,setBirthDate]=useState('');const[description,setDescription]=useState('');const[avatarUrl,setAvatarUrl]=useState('');const[coverUrl,setCoverUrl]=useState('');const[saving,setSaving]=useState(false);const[loadingProfile,setLoadingProfile]=useState(false);
 
  useEffect(()=>{if(!open||!user)return;let cancelled=false;
-   const load=async()=>{setLoadingProfile(true);let data:any=profile;
-     if(!data||data.user_id!==user.id){const{data:remote}=await supabase.from('profiles').select('id,user_id,name,display_name,email,avatar_url,cover_url,birth_date,work_period,phone,address,description').eq('user_id',user.id).maybeSingle();data=remote||profile;}
+   const load=async()=>{setLoadingProfile(true);
+     // The AuthContext profile is a cache and does not contain the extended editor fields.
+     // Always load the authoritative editable profile row when this dialog opens.
+     const{data:remote,error}=await supabase.from('profiles').select(EDITABLE_PROFILE_FIELDS).eq('user_id',user.id).maybeSingle();
+     const data:any=(!error&&remote)?remote:profile;
      let extra:any={};try{extra=JSON.parse(localStorage.getItem(OPTIONAL_PROFILE_KEY(user.id))||'{}')}catch{}
      if(!cancelled){setName(data?.name||'');setDisplayName(data?.display_name||'');setWorkPeriod(data?.work_period||'');setPhone(data?.phone||'');setBirthDate(data?.birth_date||'');setAddress(data?.address||extra.address||'');setDescription(data?.description||extra.description||'');setAvatarUrl(data?.avatar_url||'');setCoverUrl(data?.cover_url||extra.cover_url||'');setLoadingProfile(false);}
    };void load();return()=>{cancelled=true;};
@@ -31,7 +35,7 @@ export function UserProfileDialog({open,onOpenChange}:UserProfileDialogProps){
 
  const getInitials=(value:string)=>value.split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
  const handleAvatarChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;const url=await uploadAvatar(file);if(url){setAvatarUrl(url);await refreshProfile();}};
- const handleCoverChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];e.target.value='';if(!file||!user)return;const result=await uploadFile(file,'avatars');if(!result)return;setCoverUrl(`${result.url}?v=${Date.now()}`);const{error}=await supabase.from('profiles').update({cover_url:`${result.url}?v=${Date.now()}`} as any).eq('user_id',user.id);if(error){console.error('Cover update error:',error);const previous=JSON.parse(localStorage.getItem(OPTIONAL_PROFILE_KEY(user.id))||'{}');localStorage.setItem(OPTIONAL_PROFILE_KEY(user.id),JSON.stringify({...previous,cover_url:result.url}));}else{await refreshProfile();}toast.success('Capa atualizada!');};
+ const handleCoverChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];e.target.value='';if(!file||!user)return;const result=await uploadFile(file,'avatars');if(!result)return;const nextUrl=`${result.url}?v=${Date.now()}`;setCoverUrl(nextUrl);const{error}=await supabase.from('profiles').update({cover_url:nextUrl} as any).eq('user_id',user.id);if(error){console.error('Cover update error:',error);const previous=JSON.parse(localStorage.getItem(OPTIONAL_PROFILE_KEY(user.id))||'{}');localStorage.setItem(OPTIONAL_PROFILE_KEY(user.id),JSON.stringify({...previous,cover_url:result.url}));}else{await refreshProfile();}toast.success('Capa atualizada!');};
  const handleSave=async()=>{if(!user)return;setSaving(true);try{const{error}=await supabase.from('profiles').update({name:name.trim()||user.email?.split('@')[0]||'Usuário',display_name:displayName.trim()||null,work_period:workPeriod.trim()||null,phone:phone.trim()||null,birth_date:birthDate||null} as any).eq('user_id',user.id);if(error)throw error;const extra={address:address.trim(),description:description.trim(),cover_url:coverUrl};try{const{error:optionalError}=await supabase.from('profiles').update(extra as any).eq('user_id',user.id);if(optionalError)throw optionalError;}catch{localStorage.setItem(OPTIONAL_PROFILE_KEY(user.id),JSON.stringify(extra));}await refreshProfile();toast.success('Perfil atualizado com sucesso!');onOpenChange(false);}catch(error){console.error('Error updating profile:',error);toast.error(error instanceof Error?`Erro ao atualizar perfil: ${error.message}`:'Erro ao atualizar perfil.');}finally{setSaving(false);}};
 
  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="w-[calc(100vw-1rem)] max-w-lg max-h-[92vh] overflow-y-auto rounded-2xl"><DialogHeader><DialogTitle>Meu Perfil</DialogTitle><DialogDescription>Atualize suas informações pessoais, foto, capa e descrição.</DialogDescription></DialogHeader><div className="space-y-5">
