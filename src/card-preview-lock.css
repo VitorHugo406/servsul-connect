@@ -1,4 +1,4 @@
-/* Mobile card preview: the chat behind the modal must never react visually or to touch. */
+/* Mobile card preview is a hard modal boundary: the chat behind it must not receive input or visual state changes. */
 @media (max-width: 767px) {
   body.card-preview-open {
     overflow: hidden !important;
@@ -6,25 +6,38 @@
     touch-action: none !important;
   }
 
+  /* Radix Dialog uses z-50 for its overlay. Chat messages must never sit above it,
+     especially the long-press focused message which normally receives z-[101]. */
   body.card-preview-open .mobile-chat-message,
-  body.card-preview-open .mobile-chat-message * {
+  body.card-preview-open .mobile-chat-message-focused {
+    z-index: 0 !important;
+    pointer-events: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+    transform: none !important;
     -webkit-user-select: none !important;
     user-select: none !important;
   }
 
-  body.card-preview-open .mobile-chat-message,
-  body.card-preview-open .mobile-chat-message:hover,
-  body.card-preview-open .mobile-chat-message:active,
-  body.card-preview-open .mobile-chat-message:focus,
-  body.card-preview-open .mobile-chat-message:focus-within,
-  body.card-preview-open .mobile-chat-message-focused {
+  body.card-preview-open .mobile-chat-message *,
+  body.card-preview-open .mobile-chat-message *::before,
+  body.card-preview-open .mobile-chat-message *::after {
+    pointer-events: none !important;
     filter: none !important;
     opacity: 1 !important;
-    transform: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    transition: none !important;
   }
 
-  body.card-preview-open .mobile-chat-message * {
-    transition: none !important;
+  /* The preview itself is portaled outside the chat and remains fully interactive. */
+  body.card-preview-open [data-card-preview-dialog] {
+    z-index: 100 !important;
+    pointer-events: auto !important;
+  }
+
+  body.card-preview-open [data-card-preview-dialog] * {
+    pointer-events: auto;
   }
 
   body.card-preview-open .mobile-reaction-picker {
