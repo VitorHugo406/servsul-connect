@@ -9,42 +9,64 @@ export function UserProfileAvatarManager() {
     const handleClick = async (event: MouseEvent) => {
       const target = event.target as Element | null;
       if (!target) return;
+
       const message = target.closest('.mobile-chat-message');
       if (!message) return;
 
-      // Only the avatar opens the profile; clicking the message bubble must keep
-      // its existing chat/reaction behavior.
-      const avatar = message.querySelector('.relative.z-10 img[alt]') as HTMLImageElement | null;
-      if (!avatar || !avatar.contains(target) && !target.closest('.relative.z-10')) return;
+      // Resolve the image that was actually clicked instead of assuming a
+      // particular parent class. This survives small chat layout changes.
+      const avatar = target.closest('img[alt]') as HTMLImageElement | null;
+      if (!avatar || !message.contains(avatar)) return;
 
-      const displayName = avatar.alt || 'Usuário';
-      const avatarUrl = avatar.getAttribute('src') || null;
-      const headerName = message.querySelector('span.text-xs.font-medium, span.sm\\:text-sm') as HTMLElement | null;
-      const resolvedName = headerName?.textContent?.trim() || displayName;
+      const avatarUrl = avatar.currentSrc || avatar.src || avatar.getAttribute('src') || null;
+      const displayName = avatar.alt?.trim() || 'Usuário';
 
+      // The avatar click is intentionally handled here, but the message itself
+      // keeps its normal click/reaction behavior when another element is used.
       event.preventDefault();
       event.stopPropagation();
 
       let userId: string | null = null;
       try {
         if (avatarUrl) {
-          const { data } = await supabase.from('profiles').select('user_id').eq('avatar_url', avatarUrl).maybeSingle();
+          const cleanUrl = avatarUrl.split('?')[0];
+          const { data } = await supabase
+            .from('profiles')
+            .select('user_id,avatar_url')
+            .or(`avatar_url.eq.${avatarUrl},avatar_url.eq.${cleanUrl}`)
+            .limit(1)
+            .maybeSingle();
           userId = data?.user_id || null;
         }
+
         if (!userId) {
-          const { data } = await supabase.from('profiles').select('user_id').or(`display_name.eq.${resolvedName},name.eq.${resolvedName}`).limit(1).maybeSingle();
+          const escaped = displayName.replace(/,/g, '\\,');
+          const { data } = await supabase
+            .from('profiles')
+            .select('user_id,name,display_name')
+            .or(`display_name.eq.${escaped},name.eq.${escaped}`)
+            .limit(1)
+            .maybeSingle();
           userId = data?.user_id || null;
         }
-      } catch {
-        // The profile dialog can still resolve the user from the display name/avatar.
+      } catch (error) {
+        console.warn('Could not resolve clicked avatar profile:', error);
       }
 
-      setSelected({ userId, displayName: resolvedName, avatarUrl });
+      setSelected({ userId, displayName, avatarUrl });
     };
 
     document.addEventListener('click', handleClick, true);
     return () => document.removeEventListener('click', handleClick, true);
   }, []);
 
-  return <UserProfileViewDialog userId={selected?.userId} displayName={selected?.displayName} avatarUrl={selected?.avatarUrl} open={Boolean(selected)} onOpenChange={(open) => { if (!open) setSelected(null); }} />;
+  return (
+    <UserProfileViewDialog
+      userId={selected?.userId}
+      displayName={selected?.displayName}
+      avatarUrl={selected?.avatarUrl}
+      open={Boolean(selected)}
+      onOpenChange={(open) => { if (!open) setSelected(null); }}
+    />
+  );
 }
