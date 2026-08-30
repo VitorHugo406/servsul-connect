@@ -4,6 +4,7 @@ import "./index.css";
 import "./brand-bootstrap.css";
 import "./warroom-fixes.css";
 import "./chat-runtime-fixes.css";
+import "./card-preview-lock.css";
 
 if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
 const registerServiceWorker=async()=>{if(!('serviceWorker' in navigator))return;try{const registration=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});void registration.update().catch(()=>undefined);}catch(error){console.error('Service Worker registration failed:',error);}};
