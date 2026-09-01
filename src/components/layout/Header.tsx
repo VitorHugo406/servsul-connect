@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
-import { getCompanyLogoUrl } from '@/lib/companyLogo';
+import { createCompanyLogoUrl } from '@/lib/companyLogo';
 import { UserProfileDialog } from '@/components/user/UserProfileDialog';
 import { AppearancePersonalizationDialog } from '@/components/layout/AppearancePersonalizationDialog';
 import { TeamHeaderButton } from '@/components/teams/TeamHeaderButton';
@@ -26,7 +26,7 @@ const ALL_SECTIONS: SectionDef[] = [
 export function Header({ title, subtitle, hideNotifications = false, searchQuery = '', onSearchChange, onNavigateToSection }: HeaderProps) {
   const { counts } = useNotifications(); const { profile, isAdmin, canAccess } = useAuth(); const { company, hasModule } = useCompany();
   const [showNotifications, setShowNotifications] = useState(false); const [showProfile, setShowProfile] = useState(false); const [showSectionSearch, setShowSectionSearch] = useState(false); const [showComingSoon, setShowComingSoon] = useState<string | null>(null); const [showAppearance, setShowAppearance] = useState(false);
-  useEffect(() => { document.title = company?.name ? `${company.name} | Nuvexa` : 'Nuvexa - Comunicação Empresarial'; const faviconUrl = getCompanyLogoUrl(company?.logo_url); document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach(link => { link.href = faviconUrl ?? ''; }); }, [company?.name, company?.logo_url]);
+  useEffect(() => { document.title = company?.name ? `${company.name} | Nuvexa` : 'Nuvexa - Comunicação Empresarial'; void createCompanyLogoUrl(company?.logo_url).then(faviconUrl => { if (!faviconUrl) return; document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach(link => { link.href = faviconUrl; }); }); }, [company?.name, company?.logo_url]);
   const isMainAdmin = profile?.email === ADMIN_EMAIL; const autonomy = profile?.autonomy_level;
   const visibleSections = useMemo(() => ALL_SECTIONS.filter(s => { if (s.mainAdminOnly) return isAdmin && isMainAdmin; if (s.adminOnly) return isAdmin; if (s.supervisorOnly) return isAdmin || ['supervisor','gerente','gestor','diretoria'].includes(autonomy || ''); if (s.permission) return isAdmin || autonomy === 'diretoria' || canAccess(s.permission); return true; }), [isAdmin, isMainAdmin, autonomy, canAccess]);
   const filteredSections = useMemo(() => { if (!searchQuery) return []; const q = searchQuery.toLowerCase(); return visibleSections.filter(s => s.label.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)); }, [searchQuery, visibleSections]);
