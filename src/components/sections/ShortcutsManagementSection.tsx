@@ -96,6 +96,11 @@ export function ShortcutsManagementSection() {
 
   const toggle = (value: string, list: string[], setList: (next: string[]) => void) => setList(list.includes(value) ? list.filter(x => x !== value) : [...list, value]);
   const profileLabel = (p: Profile) => p.display_name || p.name;
+  const filteredProfiles = useMemo(() => {
+    const q = userSearch.trim().toLowerCase();
+    if (!q) return profiles;
+    return profiles.filter(p => `${p.name} ${p.display_name ?? ''} ${p.email}`.toLowerCase().includes(q));
+  }, [profiles, userSearch]);
   const accessSummary = useMemo(() => `${selectedUsers.length} usuário(s) • ${selectedSectors.length} setor(es)`, [selectedUsers.length, selectedSectors.length]);
 
   if (!isAdmin) return null;
