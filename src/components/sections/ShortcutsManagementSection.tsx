@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, Link, Pencil, Plus, Save, Trash2, Users, Building2 } from 'lucide-react';
+import { ExternalLink, Link, Pencil, Plus, Save, Trash2, Users, Building2, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,6 +35,7 @@ export function ShortcutsManagementSection() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
 
   const load = async () => {
     if (!profile?.id || !company?.id || !isAdmin) return;
@@ -112,7 +113,7 @@ export function ShortcutsManagementSection() {
         <div className="space-y-2"><Label>Hiperlink</Label><Input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://sistema.empresa.com" /></div>
         <div className="space-y-2"><Label>Ícone</Label><div className="grid grid-cols-2 gap-2">{ICON_OPTIONS.map(option => { const Icon = getShortcutIcon(option.id); return <button type="button" key={option.id} onClick={() => setIcon(option.id)} className={cn('flex items-center gap-2 rounded-xl border p-2.5 text-sm transition-colors', icon === option.id ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-muted')}><Icon className="h-4 w-4" />{option.label}</button>; })}</div></div>
         <Separator />
-        <div className="space-y-2"><Label className="flex items-center gap-2"><Users className="h-4 w-4" /> Usuários com acesso</Label><div className="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-border p-2">{profiles.map(p => <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-lg p-2 hover:bg-muted"><Checkbox checked={selectedUsers.includes(p.id)} onCheckedChange={() => toggle(p.id, selectedUsers, setSelectedUsers)} /><span className="min-w-0 flex-1 truncate text-sm">{profileLabel(p)}</span><span className="text-[10px] text-muted-foreground">{p.email}</span></label>)}</div></div>
+        <div className="space-y-2"><div className="flex items-center justify-between gap-2"><Label className="flex items-center gap-2"><Users className="h-4 w-4" /> Usuários com acesso</Label><button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setSelectedUsers(selectedUsers.length === filteredProfiles.length ? [] : filteredProfiles.map(p => p.id))}>{selectedUsers.length === filteredProfiles.length && filteredProfiles.length > 0 ? 'Limpar' : 'Selecionar todos'}</button></div><div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={userSearch} onChange={e => setUserSearch(e.target.value)} placeholder="Pesquisar por nome ou e-mail" className="h-10 rounded-xl pl-9" /></div><div className="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-border p-2">{filteredProfiles.length === 0 && <p className="p-2 text-xs text-muted-foreground">Nenhum usuário encontrado.</p>}{filteredProfiles.map(p => <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-lg p-2 hover:bg-muted"><Checkbox checked={selectedUsers.includes(p.id)} onCheckedChange={() => toggle(p.id, selectedUsers, setSelectedUsers)} /><span className="min-w-0 flex-1 truncate text-sm">{profileLabel(p)}</span><span className="text-[10px] text-muted-foreground">{p.email}</span></label>)}</div></div>
         <div className="space-y-2"><Label className="flex items-center gap-2"><Building2 className="h-4 w-4" /> Setores com acesso</Label><div className="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-border p-2">{sectors.map(s => <label key={s.id} className="flex cursor-pointer items-center gap-2 rounded-lg p-2 hover:bg-muted"><Checkbox checked={selectedSectors.includes(s.id)} onCheckedChange={() => toggle(s.id, selectedSectors, setSelectedSectors)} /><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} /><span className="text-sm">{s.name}</span></label>)}</div></div>
         <p className="text-xs text-muted-foreground">Acesso selecionado: {accessSummary}. Se um usuário estiver selecionado diretamente ou pertencer a um setor selecionado, ele verá o atalho.</p>
         <div className="flex gap-2"><Button className="flex-1 gap-2" onClick={saveShortcut} disabled={saving}><Save className="h-4 w-4" />{saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Criar atalho'}</Button>{editingId && <Button variant="outline" onClick={resetForm}>Cancelar</Button>}</div>
