@@ -224,6 +224,7 @@ export type Database = {
           is_active: boolean
           last_used_at: string | null
           name: string
+          scope_all_companies: boolean
           updated_at: string
         }
         Insert: {
@@ -237,6 +238,7 @@ export type Database = {
           is_active?: boolean
           last_used_at?: string | null
           name: string
+          scope_all_companies?: boolean
           updated_at?: string
         }
         Update: {
@@ -250,6 +252,7 @@ export type Database = {
           is_active?: boolean
           last_used_at?: string | null
           name?: string
+          scope_all_companies?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -1882,6 +1885,122 @@ export type Database = {
         }
         Relationships: []
       }
+      system_shortcut_sectors: {
+        Row: {
+          created_at: string
+          id: string
+          sector_id: string
+          shortcut_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          sector_id: string
+          shortcut_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sector_id?: string
+          shortcut_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_shortcut_sectors_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_shortcut_sectors_shortcut_id_fkey"
+            columns: ["shortcut_id"]
+            isOneToOne: false
+            referencedRelation: "system_shortcuts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_shortcut_users: {
+        Row: {
+          created_at: string
+          id: string
+          shortcut_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          shortcut_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          shortcut_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_shortcut_users_shortcut_id_fkey"
+            columns: ["shortcut_id"]
+            isOneToOne: false
+            referencedRelation: "system_shortcuts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_shortcut_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_shortcuts: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string
+          icon: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_shortcuts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_activities: {
         Row: {
           action_type: string
@@ -3066,6 +3185,7 @@ export type Database = {
         Returns: boolean
       }
       can_view_note: { Args: { _note_id: string }; Returns: boolean }
+      can_view_shortcut: { Args: { _shortcut_id: string }; Returns: boolean }
       check_user_is_active: { Args: never; Returns: boolean }
       create_user_notification: {
         Args: {
