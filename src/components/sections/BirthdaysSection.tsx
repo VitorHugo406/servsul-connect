@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { withCompany } from '@/lib/companyScope';
-import { getCompanyLogoUrl } from '@/lib/companyLogo';
+import { createCompanyLogoUrl } from '@/lib/companyLogo';
 
 const monthThemes: Record<number, { name: string; emoji: string }> = {
   1: { name: 'Verão Corporativo', emoji: '☀️' }, 2: { name: 'Carnaval de Conquistas', emoji: '🎭' }, 3: { name: 'Ciclo de Renovação', emoji: '🌿' }, 4: { name: 'Celebração Especial', emoji: '🎁' }, 5: { name: 'Mês de Reconhecimento', emoji: '🌟' }, 6: { name: 'Festa Junina', emoji: '🌽' }, 7: { name: 'Arraiá de Talentos', emoji: '🎊' }, 8: { name: 'Mês de Excelência', emoji: '🏆' }, 9: { name: 'Primavera', emoji: '🌸' }, 10: { name: 'Energia da Equipe', emoji: '⚡' }, 11: { name: 'Gratidão e Parceria', emoji: '🤝' }, 12: { name: 'Natal', emoji: '🎄' },
@@ -101,7 +101,7 @@ export function BirthdaysSection() {
   };
 
   const drawLogo = async (doc: jsPDF, selected: PdfTheme) => {
-    const logoUrl = company?.logo_url ? getCompanyLogoUrl(company.logo_url) : null; const logo = logoUrl ? await loadImage(logoUrl) : null;
+    const logoUrl = company?.logo_url ? await createCompanyLogoUrl(company.logo_url) : null; const logo = logoUrl ? await loadImage(logoUrl) : null;
     if (logo) { try { doc.addImage(logo, 'PNG', MARGIN, 5.5, 29, 21, undefined, 'FAST'); return; } catch {} }
     setFill(doc, selected.soft); doc.roundedRect(MARGIN, 5.5, 29, 21, 4, 4, 'F'); setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.text(getInitials(company?.name || 'Nuvexa'), MARGIN + 14.5, 18, { align: 'center' });
   };

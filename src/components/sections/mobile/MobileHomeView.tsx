@@ -1,3 +1,4 @@
+import { CompanyLogo } from '@/components/common/CompanyLogo';
 import { useEffect, useState } from 'react';
 import { MessageSquare, Bell, Cake, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -110,7 +111,7 @@ export function MobileHomeView({ onNavigate }: Props) {
       {company && (
         <div className="flex items-center justify-center gap-2 mb-4 text-[11px] text-muted-foreground">
           {company.logo_url ? (
-            <img src={company.logo_url} alt={company.name} className="w-4 h-4 rounded object-cover" />
+            <CompanyLogo value={company.logo_url} alt={company.name} className="w-4 h-4 rounded object-cover" />
           ) : (
             <span
               className="w-2 h-2 rounded-full"
