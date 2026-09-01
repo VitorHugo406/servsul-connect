@@ -34,7 +34,7 @@ import { FacialLoginCamera } from '@/components/facial/FacialLoginCamera';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { applyBrand, resetBrand, BRAND_PRIMARY, BRAND_SECONDARY } from '@/lib/branding';
-import { getCompanyLogoUrl } from '@/lib/companyLogo';
+import { createCompanyLogoUrl, useCompanyLogoUrl } from '@/lib/companyLogo';
 import { setActiveCompanyId } from '@/lib/companyScope';
 
 const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
@@ -109,6 +109,7 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const companySlug = searchParams.get('company');
   const [companyBrand, setCompanyBrand] = useState<CompanyBrand | null>(null);
+  const companyLogoUrl = useCompanyLogoUrl(companyBrand?.logo_url);
 
   // Load company brand from ?company=slug
   useEffect(() => {
@@ -133,12 +134,12 @@ const Auth = () => {
 
 
   useEffect(() => {
-    const logoUrl = getCompanyLogoUrl(companyBrand?.logo_url);
+    const logoUrl = companyLogoUrl;
     document.title = companyBrand?.name ? `${companyBrand.name} | Nuvexa` : 'Nuvexa - Comunicação Empresarial';
     document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
       link.href = logoUrl ?? '';
     });
-  }, [companyBrand]);
+  }, [companyBrand, companyLogoUrl]);
 
   // Handle facial login success
   const handleFacialLoginSuccess = async (userId: string, email: string) => {
@@ -442,7 +443,7 @@ const Auth = () => {
           <div className="mb-8 flex items-center gap-4">
             {companyBrand?.logo_url && (
               <img
-                src={getCompanyLogoUrl(companyBrand.logo_url) ?? undefined}
+                src={companyLogoUrl ?? undefined}
                 alt={companyBrand.name}
                 className="h-16 w-16 object-contain rounded-2xl bg-white/10 p-1"
               />
@@ -506,7 +507,7 @@ const Auth = () => {
           <div className="mb-8 flex flex-col items-center justify-center gap-3 lg:hidden">
             {companyBrand?.logo_url && (
               <img
-                src={getCompanyLogoUrl(companyBrand.logo_url) ?? undefined}
+                src={companyLogoUrl ?? undefined}
                 alt={companyBrand.name}
                 className="h-20 object-contain"
               />

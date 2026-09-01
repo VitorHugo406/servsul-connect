@@ -44,7 +44,8 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { getCompanyLogoPath, getCompanyLogoUrl } from '@/lib/companyLogo';
+import { getCompanyLogoPath } from '@/lib/companyLogo';
+import { CompanyLogo } from '@/components/common/CompanyLogo';
 
 interface CompanyStats {
   id: string;
@@ -252,14 +253,8 @@ export function CompaniesManagementSection() {
       toast.error('Erro no upload: ' + upErr.message);
       return;
     }
-    const { data } = supabase.storage.from('company-logos').getPublicUrl(path);
-    if (!data.publicUrl) {
-      toast.error('O Supabase não retornou a URL pública da logo.');
-      return;
-    }
-
-    // A URL versionada garante que uma logo substituída não fique presa no cache.
-    updateSelected({ logo_url: `${data.publicUrl}?v=${Date.now()}` });
+    // Guardamos apenas o caminho: o bucket é privado e a URL é assinada na leitura.
+    updateSelected({ logo_url: path });
     toast.success('Logo enviada — salve para aplicar');
   };
 
@@ -366,7 +361,7 @@ export function CompaniesManagementSection() {
                   style={{ background: `linear-gradient(140deg, ${c.primary_color}, ${c.secondary_color})` }}
                 >
                   {c.logo_url ? (
-                    <img src={getCompanyLogoUrl(c.logo_url) ?? undefined} alt={c.name} className="w-full h-full object-cover" />
+                    <CompanyLogo value={c.logo_url} alt={c.name} className="w-full h-full object-cover" />
                   ) : (
                     <ImageIcon className="w-5 h-5" />
                   )}
@@ -413,7 +408,7 @@ export function CompaniesManagementSection() {
                     style={{ background: `linear-gradient(140deg, ${selected.primary_color}, ${selected.secondary_color})` }}
                   >
                     {selected.logo_url ? (
-                      <img src={getCompanyLogoUrl(selected.logo_url) ?? undefined} alt={selected.name} className="w-full h-full object-contain" />
+                      <CompanyLogo value={selected.logo_url} alt={selected.name} className="w-full h-full object-contain" />
                     ) : (
                       <Building2 className="w-5 h-5 text-white" />
                     )}
@@ -473,7 +468,7 @@ export function CompaniesManagementSection() {
                         style={{ background: `linear-gradient(140deg, ${selected.primary_color}, ${selected.secondary_color})` }}
                       >
                         {selected.logo_url ? (
-                          <img src={getCompanyLogoUrl(selected.logo_url) ?? undefined} alt={selected.name} className="w-full h-full object-contain" />
+                          <CompanyLogo value={selected.logo_url} alt={selected.name} className="w-full h-full object-contain" />
                         ) : (
                           <ImageIcon className="w-6 h-6 text-white" />
                         )}
