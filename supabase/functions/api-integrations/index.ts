@@ -93,7 +93,7 @@ async function validateAdminAuth(req: Request): Promise<{ userId: string; compan
   return { userId, companyId: profile.company_id, isSuperAdmin: roles.includes("super_admin") };
 }
 
-async function validateApiAuth(req: Request): Promise<{ integrationId: string; companyId: string } | null> {
+async function validateApiAuth(req: Request): Promise<{ integrationId: string; companyId: string; scopeAll: boolean } | null> {
   const apiKey = req.headers.get("X-API-KEY");
   const apiToken = req.headers.get("X-API-TOKEN");
   if (!apiKey || !apiToken) return null;
@@ -102,7 +102,7 @@ async function validateApiAuth(req: Request): Promise<{ integrationId: string; c
   const apiKeyHash = await hashToken(apiKey);
   const { data: integration } = await admin
     .from("api_integrations")
-    .select("id, is_active, api_token_hash, company_id")
+    .select("id, is_active, api_token_hash, company_id, scope_all_companies")
     .eq("api_key_hash", apiKeyHash)
     .maybeSingle();
 
@@ -114,7 +114,7 @@ async function validateApiAuth(req: Request): Promise<{ integrationId: string; c
 
   await admin.from("api_integrations").update({ last_used_at: new Date().toISOString() }).eq("id", integration.id);
 
-  return { integrationId: integration.id, companyId: integration.company_id };
+  return { integrationId: integration.id, companyId: integration.company_id, scopeAll: integration.scope_all_companies === true };
 }
 
 async function logAccess(integrationId: string, endpoint: string, method: string, statusCode: number, ip: string | null) {
@@ -129,9 +129,10 @@ async function logAccess(integrationId: string, endpoint: string, method: string
 }
 
 // ===== ADMIN ENDPOINTS =====
-async function handleAdminCreateIntegration(req: Request, userId: string, companyId: string) {
+async function handleAdminCreateIntegration(req: Request, userId: string, companyId: string, isSuperAdmin: boolean) {
   const body = await req.json();
   const name = body.name?.trim();
+  const scopeAll = isSuperAdmin && body.scope_all_companies === true;
   if (!name) return jsonResponse({ status: "error", message: "Nome é obrigatório." }, 400);
 
   const apiKey = generateKey("sk");
@@ -147,6 +148,7 @@ async function handleAdminCreateIntegration(req: Request, userId: string, compan
     api_token_hash: tokenHash,
     created_by: userId,
     company_id: companyId,
+    scope_all_companies: scopeAll,
   }).select().single();
 
   if (error) {
@@ -182,7 +184,7 @@ async function handleAdminListIntegrations(companyId: string, isSuperAdmin: bool
   const admin = getAdminClient();
   let query = admin
     .from("api_integrations")
-    .select("id, name, is_active, created_by, created_at, updated_at, last_used_at, company_id")
+    .select("id, name, is_active, created_by, created_at, updated_at, last_used_at, company_id, scope_all_companies")
     .order("created_at", { ascending: false });
   if (!isSuperAdmin) query = query.eq("company_id", companyId);
   const { data, error } = await query;
@@ -320,16 +322,16 @@ function parseDateFilters(url: URL) {
   return { startDate, endDate };
 }
 
-async function handleMetricsGeneral(url: URL, companyId: string) {
+async function handleMetricsGeneral(url: URL, companyIds: string[]) {
   const admin = getAdminClient();
   const { startDate, endDate } = parseDateFilters(url);
 
   // Total users
-  const { count: totalUsers } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("is_active", true).eq("company_id", companyId);
+  const { count: totalUsers } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("is_active", true).in("company_id", companyIds);
   // Total sectors
-  const { count: totalSectors } = await admin.from("sectors").select("id", { count: "exact", head: true }).eq("company_id", companyId);
+  const { count: totalSectors } = await admin.from("sectors").select("id", { count: "exact", head: true }).in("company_id", companyIds);
   // Total teams (unique supervisors with team_name) - scope by company via supervisor profiles
-  const { data: companySupervisors } = await admin.from("profiles").select("user_id").eq("company_id", companyId);
+  const { data: companySupervisors } = await admin.from("profiles").select("user_id").in("company_id", companyIds);
   const supervisorUserIds = (companySupervisors || []).map((p: any) => p.user_id);
   let uniqueTeams = new Set<string>();
   if (supervisorUserIds.length > 0) {
@@ -338,23 +340,23 @@ async function handleMetricsGeneral(url: URL, companyId: string) {
   }
 
   // Messages
-  let msgQuery = admin.from("messages").select("id", { count: "exact", head: true }).eq("company_id", companyId);
+  let msgQuery = admin.from("messages").select("id", { count: "exact", head: true }).in("company_id", companyIds);
   if (startDate) msgQuery = msgQuery.gte("created_at", startDate);
   if (endDate) msgQuery = msgQuery.lte("created_at", endDate);
   const { count: totalMessages } = await msgQuery;
 
   // Tasks
-  let taskQuery = admin.from("tasks").select("id", { count: "exact", head: true }).eq("is_template", false).eq("company_id", companyId);
+  let taskQuery = admin.from("tasks").select("id", { count: "exact", head: true }).eq("is_template", false).in("company_id", companyIds);
   if (startDate) taskQuery = taskQuery.gte("created_at", startDate);
   if (endDate) taskQuery = taskQuery.lte("created_at", endDate);
   const { count: totalTasks } = await taskQuery;
 
-  let completedQuery = admin.from("tasks").select("id", { count: "exact", head: true }).eq("is_template", false).eq("company_id", companyId).not("completed_at", "is", null);
+  let completedQuery = admin.from("tasks").select("id", { count: "exact", head: true }).eq("is_template", false).in("company_id", companyIds).not("completed_at", "is", null);
   if (startDate) completedQuery = completedQuery.gte("created_at", startDate);
   if (endDate) completedQuery = completedQuery.lte("created_at", endDate);
   const { count: completedTasks } = await completedQuery;
 
-  let lateQuery = admin.from("tasks").select("id", { count: "exact", head: true }).eq("is_template", false).eq("company_id", companyId).eq("completed_late", true);
+  let lateQuery = admin.from("tasks").select("id", { count: "exact", head: true }).eq("is_template", false).in("company_id", companyIds).eq("completed_late", true);
   if (startDate) lateQuery = lateQuery.gte("created_at", startDate);
   if (endDate) lateQuery = lateQuery.lte("created_at", endDate);
   const { count: lateTasks } = await lateQuery;
@@ -378,11 +380,11 @@ async function handleMetricsGeneral(url: URL, companyId: string) {
   });
 }
 
-async function handleMetricsUsers(url: URL, companyId: string, userId?: string) {
+async function handleMetricsUsers(url: URL, companyIds: string[], userId?: string) {
   const admin = getAdminClient();
   const { startDate, endDate } = parseDateFilters(url);
 
-  let profileQuery = admin.from("profiles").select("id, user_id, name, display_name, email, sector_id, autonomy_level, last_seen_at, user_status, is_active").eq("is_active", true).eq("company_id", companyId);
+  let profileQuery = admin.from("profiles").select("id, user_id, name, display_name, email, sector_id, autonomy_level, last_seen_at, user_status, is_active").eq("is_active", true).in("company_id", companyIds);
   if (userId) profileQuery = profileQuery.eq("id", userId);
   const { data: profiles } = await profileQuery;
 
@@ -410,26 +412,36 @@ async function handleMetricsUsers(url: URL, companyId: string, userId?: string) 
     if (endDate) dmRecvQuery = dmRecvQuery.lte("created_at", endDate);
     const { count: dmsReceived } = await dmRecvQuery;
 
-    // Tasks assigned
+    // Tasks assigned (primary assignee on tasks.assigned_to + co-assignees on task_assignees)
     const { data: taskAssignees } = await admin.from("task_assignees").select("task_id").eq("profile_id", p.id);
-    const assignedTaskIds = (taskAssignees || []).map((t: any) => t.task_id);
-    
-    let assignedCount = 0, completedCount = 0, pendingCount = 0, lateCount = 0;
-    if (assignedTaskIds.length > 0) {
-      let tq = admin.from("tasks").select("id, completed_at, completed_late").in("id", assignedTaskIds).eq("is_template", false).eq("company_id", companyId);
+    const coAssignedIds = (taskAssignees || []).map((t: any) => t.task_id);
+
+    let primaryQ = admin.from("tasks").select("id, completed_at, completed_late").eq("assigned_to", p.id).eq("is_template", false).in("company_id", companyIds);
+    if (startDate) primaryQ = primaryQ.gte("created_at", startDate);
+    if (endDate) primaryQ = primaryQ.lte("created_at", endDate);
+    const { data: primaryTasks } = await primaryQ;
+
+    let coTasks: any[] = [];
+    if (coAssignedIds.length > 0) {
+      let tq = admin.from("tasks").select("id, completed_at, completed_late").in("id", coAssignedIds).eq("is_template", false).in("company_id", companyIds);
       if (startDate) tq = tq.gte("created_at", startDate);
       if (endDate) tq = tq.lte("created_at", endDate);
-      const { data: tasks } = await tq;
-      assignedCount = (tasks || []).length;
-      completedCount = (tasks || []).filter((t: any) => t.completed_at).length;
-      pendingCount = assignedCount - completedCount;
-      lateCount = (tasks || []).filter((t: any) => t.completed_late).length;
+      const { data } = await tq;
+      coTasks = data || [];
     }
+
+    const taskMap = new Map<string, any>();
+    for (const t of [...(primaryTasks || []), ...coTasks]) taskMap.set(t.id, t);
+    const userTasks = [...taskMap.values()];
+    const assignedCount = userTasks.length;
+    const completedCount = userTasks.filter((t: any) => t.completed_at).length;
+    const pendingCount = assignedCount - completedCount;
+    const lateCount = userTasks.filter((t: any) => t.completed_late).length;
 
     // Sector name
     let sectorName = null;
     if (p.sector_id) {
-      const { data: sector } = await admin.from("sectors").select("name").eq("id", p.sector_id).eq("company_id", companyId).maybeSingle();
+      const { data: sector } = await admin.from("sectors").select("name").eq("id", p.sector_id).in("company_id", companyIds).maybeSingle();
       sectorName = sector?.name;
     }
 
@@ -463,11 +475,11 @@ async function handleMetricsUsers(url: URL, companyId: string, userId?: string) 
   });
 }
 
-async function handleMetricsDepartments(url: URL, companyId: string, deptId?: string) {
+async function handleMetricsDepartments(url: URL, companyIds: string[], deptId?: string) {
   const admin = getAdminClient();
   const { startDate, endDate } = parseDateFilters(url);
 
-  let sectorQuery = admin.from("sectors").select("*").eq("company_id", companyId);
+  let sectorQuery = admin.from("sectors").select("*").in("company_id", companyIds);
   if (deptId) sectorQuery = sectorQuery.eq("id", deptId);
   const { data: sectors } = await sectorQuery;
 
@@ -477,15 +489,15 @@ async function handleMetricsDepartments(url: URL, companyId: string, deptId?: st
 
   const results = [];
   for (const s of sectors) {
-    const { count: userCount } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("sector_id", s.id).eq("is_active", true).eq("company_id", companyId);
+    const { count: userCount } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("sector_id", s.id).eq("is_active", true).in("company_id", companyIds);
 
-    let msgQ = admin.from("messages").select("id", { count: "exact", head: true }).eq("sector_id", s.id).eq("company_id", companyId);
+    let msgQ = admin.from("messages").select("id", { count: "exact", head: true }).eq("sector_id", s.id).in("company_id", companyIds);
     if (startDate) msgQ = msgQ.gte("created_at", startDate);
     if (endDate) msgQ = msgQ.lte("created_at", endDate);
     const { count: messages } = await msgQ;
 
     // Tasks in this sector
-    let taskQ = admin.from("tasks").select("id, completed_at, completed_late", { count: "exact" }).eq("sector_id", s.id).eq("is_template", false).eq("company_id", companyId);
+    let taskQ = admin.from("tasks").select("id, completed_at, completed_late", { count: "exact" }).eq("sector_id", s.id).eq("is_template", false).in("company_id", companyIds);
     if (startDate) taskQ = taskQ.gte("created_at", startDate);
     if (endDate) taskQ = taskQ.lte("created_at", endDate);
     const { data: tasks, count: totalTasks } = await taskQ;
@@ -513,12 +525,12 @@ async function handleMetricsDepartments(url: URL, companyId: string, deptId?: st
   });
 }
 
-async function handleMetricsTeams(url: URL, companyId: string, teamSupervisorId?: string) {
+async function handleMetricsTeams(url: URL, companyIds: string[], teamSupervisorId?: string) {
   const admin = getAdminClient();
   const { startDate, endDate } = parseDateFilters(url);
 
   // Restrict to supervisors belonging to this company
-  const { data: companyProfiles } = await admin.from("profiles").select("id, user_id").eq("company_id", companyId);
+  const { data: companyProfiles } = await admin.from("profiles").select("id, user_id").in("company_id", companyIds);
   const companyUserIds = new Set((companyProfiles || []).map((p: any) => p.user_id));
   const companyProfileIds = new Set((companyProfiles || []).map((p: any) => p.id));
 
@@ -538,7 +550,7 @@ async function handleMetricsTeams(url: URL, companyId: string, teamSupervisorId?
 
   // Get supervisor names
   const supervisorIds = [...teamMap.keys()];
-  const { data: supervisorProfiles } = await admin.from("profiles").select("user_id, name, display_name").in("user_id", supervisorIds).eq("company_id", companyId);
+  const { data: supervisorProfiles } = await admin.from("profiles").select("user_id, name, display_name").in("user_id", supervisorIds).in("company_id", companyIds);
   const supervisorNameMap = new Map((supervisorProfiles || []).map((p: any) => [p.user_id, p.display_name || p.name]));
 
   const results = [];
@@ -561,7 +573,7 @@ async function handleMetricsTeams(url: URL, companyId: string, teamSupervisorId?
       const { data: assignees } = await admin.from("task_assignees").select("task_id").in("profile_id", memberIds);
       const taskIds = [...new Set((assignees || []).map((a: any) => a.task_id))];
       if (taskIds.length > 0) {
-        let tq = admin.from("tasks").select("id, completed_at, completed_late").in("id", taskIds).eq("is_template", false).eq("company_id", companyId);
+        let tq = admin.from("tasks").select("id, completed_at, completed_late").in("id", taskIds).eq("is_template", false).in("company_id", companyIds);
         if (startDate) tq = tq.gte("created_at", startDate);
         if (endDate) tq = tq.lte("created_at", endDate);
         const { data: tasks } = await tq;
@@ -592,12 +604,12 @@ async function handleMetricsTeams(url: URL, companyId: string, teamSupervisorId?
   });
 }
 
-async function handleTasksSummary(url: URL, companyId: string) {
+async function handleTasksSummary(url: URL, companyIds: string[]) {
   const admin = getAdminClient();
   const { startDate, endDate } = parseDateFilters(url);
   const status = url.searchParams.get("status"); // completed, pending, late
 
-  let query = admin.from("tasks").select("id, title, status, priority, completed_at, completed_late, due_date, created_at, assigned_to, board_id").eq("is_template", false).eq("company_id", companyId);
+  let query = admin.from("tasks").select("id, title, status, priority, completed_at, completed_late, due_date, created_at, assigned_to, board_id").eq("is_template", false).in("company_id", companyIds);
   if (startDate) query = query.gte("created_at", startDate);
   if (endDate) query = query.lte("created_at", endDate);
   if (status === "completed") query = query.not("completed_at", "is", null);
@@ -605,6 +617,21 @@ async function handleTasksSummary(url: URL, companyId: string) {
   if (status === "late") query = query.eq("completed_late", true);
 
   const { data: tasks, count } = await query.limit(500);
+
+  const assigneeIds = [...new Set((tasks || []).map((t: any) => t.assigned_to).filter(Boolean))];
+  const { data: assigneeProfiles } = assigneeIds.length > 0
+    ? await admin.from("profiles").select("id, name, display_name, email").in("id", assigneeIds)
+    : { data: [] };
+  const assigneeMap = new Map((assigneeProfiles || []).map((p: any) => [p.id, p]));
+
+  const taskIds = (tasks || []).map((t: any) => t.id);
+  const { data: extraAssignees } = taskIds.length > 0
+    ? await admin.from("task_assignees").select("task_id, profile_id").in("task_id", taskIds)
+    : { data: [] };
+  const extraByTask = new Map<string, string[]>();
+  for (const row of (extraAssignees || []) as any[]) {
+    extraByTask.set(row.task_id, [...(extraByTask.get(row.task_id) ?? []), row.profile_id]);
+  }
 
   return jsonResponse({
     status: "success",
@@ -620,27 +647,32 @@ async function handleTasksSummary(url: URL, companyId: string) {
         completed_late: t.completed_late,
         due_date: t.due_date,
         created_at: t.created_at,
+        board_id: t.board_id,
+        assignee_id: t.assigned_to || null,
+        assignee_name: t.assigned_to ? (assigneeMap.get(t.assigned_to)?.display_name || assigneeMap.get(t.assigned_to)?.name || null) : null,
+        assignee_email: t.assigned_to ? (assigneeMap.get(t.assigned_to)?.email || null) : null,
+        co_assignee_ids: extraByTask.get(t.id) ?? [],
       })),
     },
   });
 }
 
-async function handleMessagesSummary(url: URL, companyId: string) {
+async function handleMessagesSummary(url: URL, companyIds: string[]) {
   const admin = getAdminClient();
   const { startDate, endDate } = parseDateFilters(url);
 
-  let chatQ = admin.from("messages").select("id", { count: "exact", head: true }).eq("company_id", companyId);
+  let chatQ = admin.from("messages").select("id", { count: "exact", head: true }).in("company_id", companyIds);
   if (startDate) chatQ = chatQ.gte("created_at", startDate);
   if (endDate) chatQ = chatQ.lte("created_at", endDate);
   const { count: chatMessages } = await chatQ;
 
-  let dmQ = admin.from("direct_messages").select("id", { count: "exact", head: true }).eq("company_id", companyId);
+  let dmQ = admin.from("direct_messages").select("id", { count: "exact", head: true }).in("company_id", companyIds);
   if (startDate) dmQ = dmQ.gte("created_at", startDate);
   if (endDate) dmQ = dmQ.lte("created_at", endDate);
   const { count: directMessages } = await dmQ;
 
   // private_group_messages has no company_id; scope via private_groups in this company
-  const { data: companyGroups } = await admin.from("private_groups").select("id").eq("company_id", companyId);
+  const { data: companyGroups } = await admin.from("private_groups").select("id").in("company_id", companyIds);
   const groupIds = (companyGroups || []).map((g: any) => g.id);
   let groupMessages = 0;
   if (groupIds.length > 0) {
@@ -665,10 +697,10 @@ async function handleMessagesSummary(url: URL, companyId: string) {
 }
 
 // ===== USER DATA ENDPOINTS (for external system integration) =====
-async function handleUsersData(url: URL, companyId: string, userId?: string) {
+async function handleUsersData(url: URL, companyIds: string[], userId?: string) {
   const admin = getAdminClient();
 
-  let query = admin.from("profiles").select("id, user_id, name, display_name, email, phone, avatar_url, sector_id, autonomy_level, is_active, birth_date, company, address, registration_number, work_period, user_status, last_seen_at, created_at, updated_at, profile_type").eq("company_id", companyId);
+  let query = admin.from("profiles").select("id, user_id, name, display_name, email, phone, avatar_url, sector_id, autonomy_level, is_active, birth_date, company, address, registration_number, work_period, user_status, last_seen_at, created_at, updated_at, profile_type").in("company_id", companyIds);
   if (userId) query = query.eq("id", userId);
   else query = query.eq("is_active", true);
   const { data: profiles, error } = await query.order("name");
@@ -678,7 +710,7 @@ async function handleUsersData(url: URL, companyId: string, userId?: string) {
 
   // Enrich with sector name, roles, teams, permissions
   const sectorIds = [...new Set((profiles || []).map((p: any) => p.sector_id).filter(Boolean))];
-  const { data: sectors } = sectorIds.length > 0 ? await admin.from("sectors").select("id, name, color").in("id", sectorIds).eq("company_id", companyId) : { data: [] };
+  const { data: sectors } = sectorIds.length > 0 ? await admin.from("sectors").select("id, name, color").in("id", sectorIds).in("company_id", companyIds) : { data: [] };
   const sectorMap = new Map((sectors || []).map((s: any) => [s.id, s]));
 
   const userIds = profiles.map((p: any) => p.user_id);
@@ -733,26 +765,26 @@ async function handleUsersData(url: URL, companyId: string, userId?: string) {
   });
 }
 
-async function handleUsersSectors(url: URL, companyId: string) {
+async function handleUsersSectors(url: URL, companyIds: string[]) {
   const admin = getAdminClient();
-  const { data, error } = await admin.from("sectors").select("id, name, color, icon, created_at").eq("company_id", companyId).order("name");
+  const { data, error } = await admin.from("sectors").select("id, name, color, icon, created_at").in("company_id", companyIds).order("name");
   if (error) return jsonResponse({ status: "error", message: error.message }, 500);
 
   // Count users per sector
   const results = [];
   for (const s of data || []) {
-    const { count } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("sector_id", s.id).eq("is_active", true).eq("company_id", companyId);
+    const { count } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("sector_id", s.id).eq("is_active", true).in("company_id", companyIds);
     results.push({ ...s, total_users: count || 0 });
   }
 
   return jsonResponse({ status: "success", data: results });
 }
 
-async function handleUsersTeams(url: URL, companyId: string) {
+async function handleUsersTeams(url: URL, companyIds: string[]) {
   const admin = getAdminClient();
 
   // Restrict to profiles belonging to this company
-  const { data: companyProfiles } = await admin.from("profiles").select("id, user_id").eq("company_id", companyId);
+  const { data: companyProfiles } = await admin.from("profiles").select("id, user_id").in("company_id", companyIds);
   const companyUserIds = new Set((companyProfiles || []).map((p: any) => p.user_id));
   const companyProfileIds = new Set((companyProfiles || []).map((p: any) => p.id));
 
@@ -766,14 +798,14 @@ async function handleUsersTeams(url: URL, companyId: string) {
   }
 
   const supervisorIds = [...teamMap.keys()];
-  const { data: supervisorProfiles } = await admin.from("profiles").select("user_id, id, name, display_name, email").in("user_id", supervisorIds).eq("company_id", companyId);
+  const { data: supervisorProfiles } = await admin.from("profiles").select("user_id, id, name, display_name, email").in("user_id", supervisorIds).in("company_id", companyIds);
   const supMap = new Map((supervisorProfiles || []).map((p: any) => [p.user_id, p]));
 
   const results = [];
   for (const [supId, team] of teamMap) {
     const sup = supMap.get(supId);
     // Get member details
-    const { data: memberProfiles } = await admin.from("profiles").select("id, name, display_name, email, avatar_url, autonomy_level").in("id", team.memberIds).eq("company_id", companyId);
+    const { data: memberProfiles } = await admin.from("profiles").select("id, name, display_name, email, avatar_url, autonomy_level").in("id", team.memberIds).in("company_id", companyIds);
     results.push({
       supervisor_id: supId,
       supervisor_name: sup?.display_name || sup?.name || "Desconhecido",
@@ -810,7 +842,7 @@ Deno.serve(async (req) => {
       }
 
       if (path === "/admin/integrations" && method === "POST") {
-        return handleAdminCreateIntegration(req, auth.userId, auth.companyId);
+        return handleAdminCreateIntegration(req, auth.userId, auth.companyId, auth.isSuperAdmin);
       }
       if (path === "/admin/integrations" && method === "GET") {
         return handleAdminListIntegrations(auth.companyId, auth.isSuperAdmin);
@@ -839,38 +871,45 @@ Deno.serve(async (req) => {
       return jsonResponse({ status: "unauthorized", message: "Credenciais inválidas ou não autorizadas." }, 401);
     }
 
+    let companyIds: string[] = [apiAuth.companyId];
+    if (apiAuth.scopeAll) {
+      const { data: allCompanies } = await getAdminClient().from("companies").select("id").eq("is_active", true);
+      companyIds = (allCompanies || []).map((c: any) => c.id);
+      if (companyIds.length === 0) companyIds = [apiAuth.companyId];
+    }
+
     let response: Response;
 
     if (path === "/metrics/general" && method === "GET") {
-      response = await handleMetricsGeneral(url, apiAuth.companyId);
+      response = await handleMetricsGeneral(url, companyIds);
     } else if (path === "/metrics/users" && method === "GET") {
-      response = await handleMetricsUsers(url, apiAuth.companyId);
+      response = await handleMetricsUsers(url, companyIds);
     } else if (path.match(/^\/metrics\/users\/(.+)$/) && method === "GET") {
       const uid = path.match(/^\/metrics\/users\/(.+)$/)![1];
-      response = await handleMetricsUsers(url, apiAuth.companyId, uid);
+      response = await handleMetricsUsers(url, companyIds, uid);
     } else if (path === "/metrics/departments" && method === "GET") {
-      response = await handleMetricsDepartments(url, apiAuth.companyId);
+      response = await handleMetricsDepartments(url, companyIds);
     } else if (path.match(/^\/metrics\/departments\/(.+)$/) && method === "GET") {
       const did = path.match(/^\/metrics\/departments\/(.+)$/)![1];
-      response = await handleMetricsDepartments(url, apiAuth.companyId, did);
+      response = await handleMetricsDepartments(url, companyIds, did);
     } else if (path === "/metrics/teams" && method === "GET") {
-      response = await handleMetricsTeams(url, apiAuth.companyId);
+      response = await handleMetricsTeams(url, companyIds);
     } else if (path.match(/^\/metrics\/teams\/(.+)$/) && method === "GET") {
       const tid = path.match(/^\/metrics\/teams\/(.+)$/)![1];
-      response = await handleMetricsTeams(url, apiAuth.companyId, tid);
+      response = await handleMetricsTeams(url, companyIds, tid);
     } else if (path === "/tasks/summary" && method === "GET") {
-      response = await handleTasksSummary(url, apiAuth.companyId);
+      response = await handleTasksSummary(url, companyIds);
     } else if (path === "/messages/summary" && method === "GET") {
-      response = await handleMessagesSummary(url, apiAuth.companyId);
+      response = await handleMessagesSummary(url, companyIds);
     } else if (path === "/users/data" && method === "GET") {
-      response = await handleUsersData(url, apiAuth.companyId);
+      response = await handleUsersData(url, companyIds);
     } else if (path.match(/^\/users\/data\/(.+)$/) && method === "GET") {
       const uid = path.match(/^\/users\/data\/(.+)$/)![1];
-      response = await handleUsersData(url, apiAuth.companyId, uid);
+      response = await handleUsersData(url, companyIds, uid);
     } else if (path === "/users/sectors" && method === "GET") {
-      response = await handleUsersSectors(url, apiAuth.companyId);
+      response = await handleUsersSectors(url, companyIds);
     } else if (path === "/users/teams" && method === "GET") {
-      response = await handleUsersTeams(url, apiAuth.companyId);
+      response = await handleUsersTeams(url, companyIds);
     } else {
       response = jsonResponse({ status: "error", message: "Rota não encontrada." }, 404);
     }
