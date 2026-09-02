@@ -25,6 +25,7 @@ interface Integration {
   created_at: string;
   updated_at: string;
   last_used_at: string | null;
+  scope_all_companies?: boolean;
 }
 
 interface NewCredentials {
@@ -64,7 +65,8 @@ async function apiCall(path: string, method = 'GET', body?: any) {
 }
 
 export function ApiManagementSection() {
-  const { isAdmin, profile } = useAuth();
+  const { isAdmin, profile, roles } = useAuth();
+  const isSuperAdmin = roles.some(r => r.role === 'super_admin');
   const isMobile = useIsMobile();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +75,7 @@ export function ApiManagementSection() {
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [newIntegrationName, setNewIntegrationName] = useState('');
+  const [newScopeAll, setNewScopeAll] = useState(false);
   const [newCredentials, setNewCredentials] = useState<NewCredentials | null>(null);
   const [credentialsCopied, setCredentialsCopied] = useState<Record<string, boolean>>({});
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -106,12 +109,13 @@ export function ApiManagementSection() {
     }
     setActionLoading('create');
     try {
-      const result = await apiCall('/admin/integrations', 'POST', { name: newIntegrationName.trim() });
+      const result = await apiCall('/admin/integrations', 'POST', { name: newIntegrationName.trim(), scope_all_companies: isSuperAdmin && newScopeAll });
       if (result.status === 'success') {
         setNewCredentials(result.data);
         setShowCreateDialog(false);
         setShowCredentialsDialog(true);
         setNewIntegrationName('');
+        setNewScopeAll(false);
         fetchIntegrations();
         toast.success('Integração criada com sucesso!');
       } else {
@@ -417,6 +421,22 @@ export function ApiManagementSection() {
                 onKeyDown={e => e.key === 'Enter' && handleCreate()}
               />
             </div>
+            {isSuperAdmin && (
+              <label className="flex items-start gap-3 rounded-xl border border-border p-3 cursor-pointer hover:bg-muted/40 transition-colors">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 accent-primary"
+                  checked={newScopeAll}
+                  onChange={e => setNewScopeAll(e.target.checked)}
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-foreground">Acesso global (todas as empresas)</span>
+                  <span className="block text-xs text-muted-foreground">
+                    Disponível apenas para o admin master. Sem esta opção, a integração retorna somente os dados da própria empresa.
+                  </span>
+                </span>
+              </label>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancelar</Button>
