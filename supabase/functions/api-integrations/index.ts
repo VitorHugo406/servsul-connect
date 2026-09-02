@@ -93,7 +93,7 @@ async function validateAdminAuth(req: Request): Promise<{ userId: string; compan
   return { userId, companyId: profile.company_id, isSuperAdmin: roles.includes("super_admin") };
 }
 
-async function validateApiAuth(req: Request): Promise<{ integrationId: string; companyId: string } | null> {
+async function validateApiAuth(req: Request): Promise<{ integrationId: string; companyId: string; scopeAll: boolean } | null> {
   const apiKey = req.headers.get("X-API-KEY");
   const apiToken = req.headers.get("X-API-TOKEN");
   if (!apiKey || !apiToken) return null;
@@ -102,7 +102,7 @@ async function validateApiAuth(req: Request): Promise<{ integrationId: string; c
   const apiKeyHash = await hashToken(apiKey);
   const { data: integration } = await admin
     .from("api_integrations")
-    .select("id, is_active, api_token_hash, company_id")
+    .select("id, is_active, api_token_hash, company_id, scope_all_companies")
     .eq("api_key_hash", apiKeyHash)
     .maybeSingle();
 
@@ -114,7 +114,7 @@ async function validateApiAuth(req: Request): Promise<{ integrationId: string; c
 
   await admin.from("api_integrations").update({ last_used_at: new Date().toISOString() }).eq("id", integration.id);
 
-  return { integrationId: integration.id, companyId: integration.company_id };
+  return { integrationId: integration.id, companyId: integration.company_id, scopeAll: integration.scope_all_companies === true };
 }
 
 async function logAccess(integrationId: string, endpoint: string, method: string, statusCode: number, ip: string | null) {
@@ -129,9 +129,10 @@ async function logAccess(integrationId: string, endpoint: string, method: string
 }
 
 // ===== ADMIN ENDPOINTS =====
-async function handleAdminCreateIntegration(req: Request, userId: string, companyId: string) {
+async function handleAdminCreateIntegration(req: Request, userId: string, companyId: string, isSuperAdmin: boolean) {
   const body = await req.json();
   const name = body.name?.trim();
+  const scopeAll = isSuperAdmin && body.scope_all_companies === true;
   if (!name) return jsonResponse({ status: "error", message: "Nome é obrigatório." }, 400);
 
   const apiKey = generateKey("sk");
@@ -147,6 +148,7 @@ async function handleAdminCreateIntegration(req: Request, userId: string, compan
     api_token_hash: tokenHash,
     created_by: userId,
     company_id: companyId,
+    scope_all_companies: scopeAll,
   }).select().single();
 
   if (error) {
@@ -182,7 +184,7 @@ async function handleAdminListIntegrations(companyId: string, isSuperAdmin: bool
   const admin = getAdminClient();
   let query = admin
     .from("api_integrations")
-    .select("id, name, is_active, created_by, created_at, updated_at, last_used_at, company_id")
+    .select("id, name, is_active, created_by, created_at, updated_at, last_used_at, company_id, scope_all_companies")
     .order("created_at", { ascending: false });
   if (!isSuperAdmin) query = query.eq("company_id", companyId);
   const { data, error } = await query;
@@ -410,21 +412,31 @@ async function handleMetricsUsers(url: URL, companyIds: string[], userId?: strin
     if (endDate) dmRecvQuery = dmRecvQuery.lte("created_at", endDate);
     const { count: dmsReceived } = await dmRecvQuery;
 
-    // Tasks assigned
+    // Tasks assigned (primary assignee on tasks.assigned_to + co-assignees on task_assignees)
     const { data: taskAssignees } = await admin.from("task_assignees").select("task_id").eq("profile_id", p.id);
-    const assignedTaskIds = (taskAssignees || []).map((t: any) => t.task_id);
-    
-    let assignedCount = 0, completedCount = 0, pendingCount = 0, lateCount = 0;
-    if (assignedTaskIds.length > 0) {
-      let tq = admin.from("tasks").select("id, completed_at, completed_late").in("id", assignedTaskIds).eq("is_template", false).in("company_id", companyIds);
+    const coAssignedIds = (taskAssignees || []).map((t: any) => t.task_id);
+
+    let primaryQ = admin.from("tasks").select("id, completed_at, completed_late").eq("assigned_to", p.id).eq("is_template", false).in("company_id", companyIds);
+    if (startDate) primaryQ = primaryQ.gte("created_at", startDate);
+    if (endDate) primaryQ = primaryQ.lte("created_at", endDate);
+    const { data: primaryTasks } = await primaryQ;
+
+    let coTasks: any[] = [];
+    if (coAssignedIds.length > 0) {
+      let tq = admin.from("tasks").select("id, completed_at, completed_late").in("id", coAssignedIds).eq("is_template", false).in("company_id", companyIds);
       if (startDate) tq = tq.gte("created_at", startDate);
       if (endDate) tq = tq.lte("created_at", endDate);
-      const { data: tasks } = await tq;
-      assignedCount = (tasks || []).length;
-      completedCount = (tasks || []).filter((t: any) => t.completed_at).length;
-      pendingCount = assignedCount - completedCount;
-      lateCount = (tasks || []).filter((t: any) => t.completed_late).length;
+      const { data } = await tq;
+      coTasks = data || [];
     }
+
+    const taskMap = new Map<string, any>();
+    for (const t of [...(primaryTasks || []), ...coTasks]) taskMap.set(t.id, t);
+    const userTasks = [...taskMap.values()];
+    const assignedCount = userTasks.length;
+    const completedCount = userTasks.filter((t: any) => t.completed_at).length;
+    const pendingCount = assignedCount - completedCount;
+    const lateCount = userTasks.filter((t: any) => t.completed_late).length;
 
     // Sector name
     let sectorName = null;
@@ -606,6 +618,21 @@ async function handleTasksSummary(url: URL, companyIds: string[]) {
 
   const { data: tasks, count } = await query.limit(500);
 
+  const assigneeIds = [...new Set((tasks || []).map((t: any) => t.assigned_to).filter(Boolean))];
+  const { data: assigneeProfiles } = assigneeIds.length > 0
+    ? await admin.from("profiles").select("id, name, display_name, email").in("id", assigneeIds)
+    : { data: [] };
+  const assigneeMap = new Map((assigneeProfiles || []).map((p: any) => [p.id, p]));
+
+  const taskIds = (tasks || []).map((t: any) => t.id);
+  const { data: extraAssignees } = taskIds.length > 0
+    ? await admin.from("task_assignees").select("task_id, profile_id").in("task_id", taskIds)
+    : { data: [] };
+  const extraByTask = new Map<string, string[]>();
+  for (const row of (extraAssignees || []) as any[]) {
+    extraByTask.set(row.task_id, [...(extraByTask.get(row.task_id) ?? []), row.profile_id]);
+  }
+
   return jsonResponse({
     status: "success",
     message: "Consulta realizada com sucesso.",
@@ -620,6 +647,11 @@ async function handleTasksSummary(url: URL, companyIds: string[]) {
         completed_late: t.completed_late,
         due_date: t.due_date,
         created_at: t.created_at,
+        board_id: t.board_id,
+        assignee_id: t.assigned_to || null,
+        assignee_name: t.assigned_to ? (assigneeMap.get(t.assigned_to)?.display_name || assigneeMap.get(t.assigned_to)?.name || null) : null,
+        assignee_email: t.assigned_to ? (assigneeMap.get(t.assigned_to)?.email || null) : null,
+        co_assignee_ids: extraByTask.get(t.id) ?? [],
       })),
     },
   });
@@ -810,7 +842,7 @@ Deno.serve(async (req) => {
       }
 
       if (path === "/admin/integrations" && method === "POST") {
-        return handleAdminCreateIntegration(req, auth.userId, auth.companyId);
+        return handleAdminCreateIntegration(req, auth.userId, auth.companyId, auth.isSuperAdmin);
       }
       if (path === "/admin/integrations" && method === "GET") {
         return handleAdminListIntegrations(auth.companyId, auth.isSuperAdmin);
@@ -837,6 +869,13 @@ Deno.serve(async (req) => {
 
     if (!apiAuth) {
       return jsonResponse({ status: "unauthorized", message: "Credenciais inválidas ou não autorizadas." }, 401);
+    }
+
+    let companyIds: string[] = [apiAuth.companyId];
+    if (apiAuth.scopeAll) {
+      const { data: allCompanies } = await getAdminClient().from("companies").select("id").eq("is_active", true);
+      companyIds = (allCompanies || []).map((c: any) => c.id);
+      if (companyIds.length === 0) companyIds = [apiAuth.companyId];
     }
 
     let response: Response;
