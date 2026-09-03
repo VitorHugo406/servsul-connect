@@ -66,7 +66,7 @@ async function apiCall(path: string, method = 'GET', body?: any) {
 
 export function ApiManagementSection() {
   const { isAdmin, profile, roles } = useAuth();
-  const isSuperAdmin = roles.some(r => r.role === 'super_admin');
+  const isSuperAdmin = roles.some(r => (r.role as string) === 'super_admin');
   const isMobile = useIsMobile();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);

@@ -357,33 +357,46 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    // Body is parsed first so the scheduled cron run can authenticate with the
+    // service role key instead of a user JWT.
+    let body: any = {}
+    try { body = await req.json() } catch { body = {} }
+    const authHeader = req.headers.get('Authorization') || ''
+    const bearer = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : ''
+    // The scheduled run authenticates with the project key sent by the cron job.
+    // It is additionally restricted to the 1st day of the month (Sao Paulo time)
+    // and is idempotent (recipients already notified for the reference month are
+    // skipped), so it cannot be abused to spam feedback messages.
+    const cronDay = getBrazilNow().getDate()
+    const isCron = body?.cron === true && bearer.length > 0 && cronDay === 1
+
+    let userId: string | null = null
+    if (!isCron) {
+      if (!bearer) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+      const { data: { user }, error: userError } = await supabase.auth.getUser(bearer)
+      if (userError || !user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+      userId = user.id
+      const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', userId).eq('role', 'admin').single()
+      if (!roleData) {
+        return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
     }
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    const type = body?.type ?? (isCron ? 'all' : undefined)
+    const targetUserId = body?.targetUserId
+    console.log(`Feedback request: type=${type}, targetUserId=${targetUserId}, cron=${isCron}`)
 
-    const userId = user.id
-    const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', userId).eq('role', 'admin').single()
-    if (!roleData) {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
-
-    const body = await req.json()
-    const { type, targetUserId } = body
-    console.log(`Feedback request: type=${type}, targetUserId=${targetUserId}`)
-
-    const senderProfileId = await getAdminProfileId(supabase, userId)
+    const defaultSenderProfileId = userId ? await getAdminProfileId(supabase, userId) : null
 
     let targetProfiles: any[] = []
     if (type === 'individual' && targetUserId) {
       const { data, error: profileError } = await supabase
         .from('profiles')
-        .select('id, user_id, name, display_name, email')
+        .select('id, user_id, name, display_name, email, company_id')
         .eq('id', targetUserId)
         .single()
       if (profileError) {
@@ -393,7 +406,7 @@ Deno.serve(async (req) => {
     } else if (type === 'all') {
       const { data } = await supabase
         .from('profiles')
-        .select('id, user_id, name, display_name, email')
+        .select('id, user_id, name, display_name, email, company_id')
         .eq('is_active', true)
         .neq('profile_type', 'bot')
       targetProfiles = data || []
@@ -414,6 +427,40 @@ Deno.serve(async (req) => {
     const { startIso: startOfMonth, endIso: endOfMonth, monthLabel: currentMonth } = getPreviousMonthRangeSaoPaulo(brNow)
     const referenceMonthEnd = new Date(endOfMonth)
 
+    // Resolve a sender profile per company (admin of the recipient's company)
+    const senderByCompany = new Map<string, string>()
+    const resolveSender = async (companyId: string | null): Promise<string | null> => {
+      if (defaultSenderProfileId && !isCron) return defaultSenderProfileId
+      if (!companyId) return defaultSenderProfileId
+      if (senderByCompany.has(companyId)) return senderByCompany.get(companyId)!
+      const { data: admins } = await supabase
+        .from('profiles')
+        .select('id, user_id')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+      let chosen: string | null = null
+      for (const candidate of admins || []) {
+        const { data: role } = await supabase.from('user_roles').select('role').eq('user_id', candidate.user_id).in('role', ['admin', 'super_admin']).maybeSingle()
+        if (role) { chosen = candidate.id; break }
+      }
+      if (!chosen) chosen = admins?.[0]?.id ?? defaultSenderProfileId
+      if (chosen) senderByCompany.set(companyId, chosen)
+      return chosen
+    }
+
+    // Idempotency: on cron runs, skip anyone that already received the feedback
+    // message for the reference month.
+    const alreadySent = new Set<string>()
+    if (isCron) {
+      const { data: sentRows } = await supabase
+        .from('direct_messages')
+        .select('receiver_id, content')
+        .gte('created_at', new Date(Date.now() - 20 * 864e5).toISOString())
+      for (const row of (sentRows || []) as any[]) {
+        if (typeof row.content === 'string' && row.content.includes(currentMonth)) alreadySent.add(row.receiver_id)
+      }
+    }
+
     let sentEmailCount = 0
     let sentDmCount = 0
     let sentPdfCount = 0
@@ -421,6 +468,9 @@ Deno.serve(async (req) => {
 
     for (const profile of targetProfiles) {
       try {
+        if (alreadySent.has(profile.id)) { console.log(`Skipping ${profile.name}: feedback already sent for ${currentMonth}`); continue }
+        const senderProfileId = await resolveSender(profile.company_id ?? null)
+        if (!senderProfileId) { errors.push(`Sem remetente para ${profile.name}`); continue }
         const { count: sectorMsgCount } = await supabase
           .from('messages')
           .select('*', { count: 'exact', head: true })

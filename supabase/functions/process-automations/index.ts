@@ -8,7 +8,12 @@ Deno.serve(async (req) => {
   try {
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     let boardId: string | null = null;
-    try { boardId = (await req.json())?.board_id ?? null; } catch { /* body optional */ }
+    let scheduled = false;
+    try {
+      const body = await req.json();
+      boardId = body?.board_id ?? null;
+      scheduled = body?.time === 'scheduled' || body?.cron === true || body?.scheduled === true;
+    } catch { /* body optional */ }
     const now = new Date();
 
     let rulesQuery = admin.from('task_automation_rules').select('id, board_id, task_id, trigger_type, trigger_config, action_type, action_config').eq('is_active', true);
@@ -53,10 +58,15 @@ Deno.serve(async (req) => {
       if (rule.action_type === 'alert' && task.assigned_to) { alerts.push({ profile_id: task.assigned_to, board_id: rule.board_id, alert_type: rule.trigger_type === 'deadline_approaching' ? 'deadline_risk' : rule.trigger_type === 'stuck_days' ? 'stuck_task' : 'late_task', message: `Card #${task.task_number} "${task.title}" requer atenção`, task_id: task.id }); processed++; }
     }
 
-    const counts = new Map<string, { count: number; board_id: string | null }>();
-    for (const task of tasks) if (task.assigned_to) { const current = counts.get(task.assigned_to) ?? { count: 0, board_id: task.board_id }; current.count++; counts.set(task.assigned_to, current);         if (task.due_date) { const overdue = now.getTime() - new Date(task.due_date).getTime(); alerts.push(overdue > 0 ? { profile_id: task.assigned_to, board_id: task.board_id, alert_type: 'late_task', message: `Card #${task.task_number} "${task.title}" está atrasado`, task_id: task.id } : overdue > -48 * 36e5 ? { profile_id: task.assigned_to, board_id: task.board_id, alert_type: 'deadline_risk', message: `Card #${task.task_number} "${task.title}" vence em breve`, task_id: task.id } : null); }
-        if ((now.getTime() - new Date(task.updated_at).getTime()) / 864e5 >= 3) alerts.push({ profile_id: task.assigned_to, board_id: task.board_id, alert_type: 'stuck_task', message: `Card #${task.task_number} "${task.title}" está parado há muito tempo`, task_id: task.id }); }
-    for (const [profile_id, value] of counts) if (value.count >= 5) alerts.push({ profile_id, board_id: value.board_id, alert_type: 'overloaded', message: `Colaborador com ${value.count} cards ativos — possível sobrecarga`, task_id: null });
+    // Mass workload/deadline alerts are expensive and noisy — only the scheduled
+    // cron run (06/12/18h) generates them.
+    if (scheduled) {
+      const counts = new Map<string, { count: number; board_id: string | null }>();
+      for (const task of tasks) if (task.assigned_to) { const current = counts.get(task.assigned_to) ?? { count: 0, board_id: task.board_id }; current.count++; counts.set(task.assigned_to, current);
+          if (task.due_date) { const overdue = now.getTime() - new Date(task.due_date).getTime(); alerts.push(overdue > 0 ? { profile_id: task.assigned_to, board_id: task.board_id, alert_type: 'late_task', message: `Card #${task.task_number} "${task.title}" está atrasado`, task_id: task.id } : overdue > -48 * 36e5 ? { profile_id: task.assigned_to, board_id: task.board_id, alert_type: 'deadline_risk', message: `Card #${task.task_number} "${task.title}" vence em breve`, task_id: task.id } : null); }
+          if ((now.getTime() - new Date(task.updated_at).getTime()) / 864e5 >= 3) alerts.push({ profile_id: task.assigned_to, board_id: task.board_id, alert_type: 'stuck_task', message: `Card #${task.task_number} "${task.title}" está parado há muito tempo`, task_id: task.id }); }
+      for (const [profile_id, value] of counts) if (value.count >= 5) alerts.push({ profile_id, board_id: value.board_id, alert_type: 'overloaded', message: `Colaborador com ${value.count} cards ativos — possível sobrecarga`, task_id: null });
+    }
     const validAlerts = alerts.filter(Boolean);
     if (notificationRows.length) await admin.from('user_notifications').insert(notificationRows);
     if (validAlerts.length) {

@@ -36,21 +36,10 @@ export interface BoardTask {
 // Debounced/coalesced automation trigger — one call per board within a window
 const automationTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const boardTaskCache = new Map<string, BoardTask[]>();
-const triggerAutomations = (boardId: string, delay = 1500) => {
-  const existing = automationTimers.get(boardId);
-  if (existing) clearTimeout(existing);
-  const t = setTimeout(async () => {
-    automationTimers.delete(boardId);
-    try {
-      await supabase.functions.invoke('process-automations', {
-        body: { board_id: boardId },
-      });
-    } catch (err) {
-      console.error('Error triggering automations:', err);
-    }
-  }, delay);
-  automationTimers.set(boardId, t);
-};
+// Automations are executed by the scheduled cron (06/12/18h). Calling the edge
+// function from the client on every card mutation was the main source of the
+// extreme slowness on the board, so it is intentionally a no-op here.
+const triggerAutomations = (_boardId: string) => {};
 
 export function useBoardTasks(boardId: string | null, restrictTaskId?: string | null) {
   const { profile } = useAuth();
@@ -208,6 +197,13 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
   };
 
   const moveTask = async (taskId: string, newStatus: string, newPosition: number) => {
+    const previous = allTasks;
+    // Optimistic move first: the card follows the drop instantly.
+    setAllTasks((prev) => {
+      const next = prev.map((t) => (t.id === taskId ? { ...t, status: newStatus, position: newPosition } : t));
+      if (boardId) boardTaskCache.set(boardId, next);
+      return next;
+    });
     try {
       const { error } = await supabase
         .from('tasks')
@@ -215,16 +211,10 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
         .eq('id', taskId);
 
       if (error) throw error;
-
-      setAllTasks((prev) => {
-        const next = prev.map((t) => (t.id === taskId ? { ...t, status: newStatus, position: newPosition } : t));
-        if (boardId) boardTaskCache.set(boardId, next);
-        return next;
-      });
-
-      if (boardId) triggerAutomations(boardId);
       return { error: null };
     } catch (error) {
+      setAllTasks(previous);
+      if (boardId) boardTaskCache.set(boardId, previous);
       return { error };
     }
   };
