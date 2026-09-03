@@ -28,7 +28,7 @@ interface ChatMessageProps {
   onScrollToMessage?: (messageId: string) => void;
 }
 
-export function ChatMessage({ message, onReply, reactions, onToggleReaction, onScrollToMessage }: ChatMessageProps) {
+function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScrollToMessage }: ChatMessageProps) {
   const { profile } = useAuth();
   const [isHovered, setIsHovered] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
@@ -237,3 +237,13 @@ export function DateSeparator({ date }: { date: string }) {
   };
   return <div className="flex items-center justify-center my-4"><span className="rounded-2xl bg-muted px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm">{getLabel(date)}</span></div>;
 }
+// Memoized: re-rendering every bubble on each parent state change (scroll,
+// typing, presence) was freezing the chat scroll.
+export const ChatMessage = memo(ChatMessageBase, (prev, next) =>
+  prev.message.id === next.message.id &&
+  prev.message.content === next.message.content &&
+  prev.reactions === next.reactions &&
+  prev.onReply === next.onReply &&
+  prev.onToggleReaction === next.onToggleReaction &&
+  prev.onScrollToMessage === next.onScrollToMessage
+);
