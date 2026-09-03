@@ -17,17 +17,9 @@ export function useSubtasks(taskId: string | null, boardId?: string | null) {
   const boardIdRef = useRef(boardId);
   boardIdRef.current = boardId;
 
-  const triggerAutomationsForBoard = useCallback(async () => {
-    const bid = boardIdRef.current;
-    if (!bid) return;
-    try {
-      await supabase.functions.invoke('process-automations', {
-        body: { board_id: bid },
-      });
-    } catch (err) {
-      console.error('Error triggering automations from subtask:', err);
-    }
-  }, []);
+  // Automations run on the scheduled cron (06/12/18h). Invoking the edge
+  // function on every subtask mutation made the board feel extremely slow.
+  const triggerAutomationsForBoard = useCallback(() => {}, []);
 
   const fetchSubtasks = useCallback(async () => {
     if (!taskId) { setSubtasks([]); setLoading(false); return; }
