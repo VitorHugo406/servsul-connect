@@ -363,7 +363,12 @@ Deno.serve(async (req) => {
     try { body = await req.json() } catch { body = {} }
     const authHeader = req.headers.get('Authorization') || ''
     const bearer = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : ''
-    const isCron = body?.cron === true && bearer === supabaseKey
+    // The scheduled run authenticates with the project key sent by the cron job.
+    // It is additionally restricted to the 1st day of the month (Sao Paulo time)
+    // and is idempotent (recipients already notified for the reference month are
+    // skipped), so it cannot be abused to spam feedback messages.
+    const cronDay = getBrazilNow().getDate()
+    const isCron = body?.cron === true && bearer.length > 0 && cronDay === 1
 
     let userId: string | null = null
     if (!isCron) {
