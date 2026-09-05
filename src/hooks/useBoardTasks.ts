@@ -129,10 +129,12 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
             next = prev.filter((task) => task.id !== (payload.old as { id?: string }).id);
           } else {
             const incoming = payload.new as Partial<BoardTask>;
+            if (isLocallyFresh(incoming.id)) return prev;
             const existing = prev.find((task) => task.id === incoming.id);
             if (existing) next = prev.map((task) => (task.id === incoming.id ? { ...task, ...incoming, assignee: existing.assignee } : task));
             else { scheduleRefetch(); return prev; }
           }
+
           boardTaskCache.set(boardId, next);
           return next;
         });
