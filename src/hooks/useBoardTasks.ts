@@ -183,12 +183,14 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
 
   const updateTask = async (id: string, updates: Partial<BoardTask>) => {
     const previous = allTasks;
+    markLocal(id);
     setAllTasks((prev) => {
       const next = prev.map((t) => (t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t));
       if (boardId) boardTaskCache.set(boardId, next);
       return next;
     });
     try {
+
       const { error } = await supabase.from('tasks').update(updates).eq('id', id);
       if (error) throw error;
       if (boardId) triggerAutomations(boardId);
