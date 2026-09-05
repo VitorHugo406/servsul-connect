@@ -36,10 +36,30 @@ export interface BoardTask {
 // Debounced/coalesced automation trigger — one call per board within a window
 const automationTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const boardTaskCache = new Map<string, BoardTask[]>();
-// Automations are executed by the scheduled cron (06/12/18h). Calling the edge
-// function from the client on every card mutation was the main source of the
-// extreme slowness on the board, so it is intentionally a no-op here.
-const triggerAutomations = (_boardId: string) => {};
+// Tasks mutated locally are protected from stale realtime echoes for a moment,
+// otherwise a late broadcast rolls the card back to its previous column.
+const localMutations = new Map<string, number>();
+const markLocal = (taskId: string) => localMutations.set(taskId, Date.now());
+const isLocallyFresh = (taskId?: string) => {
+  if (!taskId) return false;
+  const at = localMutations.get(taskId);
+  if (!at) return false;
+  if (Date.now() - at > 5000) { localMutations.delete(taskId); return false; }
+  return true;
+};
+// Heavy scans run on the scheduled cron; per-board runs are fired in the
+// background (fire and forget) so the board never waits for them.
+const triggerAutomations = (boardId: string) => {
+  if (!boardId || automationTimers.has(boardId)) return;
+  automationTimers.set(
+    boardId,
+    setTimeout(() => {
+      automationTimers.delete(boardId);
+      void supabase.functions.invoke('process-automations', { body: { board_id: boardId } }).catch(() => {});
+    }, 4000),
+  );
+};
+
 
 export function useBoardTasks(boardId: string | null, restrictTaskId?: string | null) {
   const { profile } = useAuth();
