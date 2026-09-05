@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react';
 import { MessageSquare, Bell, Cake, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
-import { useMessages, useBirthdays } from '@/hooks/useData';
+import { useBirthdays } from '@/hooks/useData';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
+import { useTodayMessages } from '@/hooks/useTodayMessages';
 import { supabase } from '@/integrations/supabase/client';
 
 const autonomyLabels: Record<string, string> = {
@@ -22,7 +23,7 @@ interface Props {
 export function MobileHomeView({ onNavigate }: Props) {
   const { profile, sector } = useAuth();
   const { company } = useCompany();
-  const { messages } = useMessages(sector?.id || null);
+  const { todayMessages } = useTodayMessages();
   const { announcements } = useAnnouncements();
   const { birthdayPeople } = useBirthdays();
   const [totalTasks, setTotalTasks] = useState(0);
@@ -52,7 +53,7 @@ export function MobileHomeView({ onNavigate }: Props) {
   const todayBdays = birthdayPeople.filter((p) => p.isToday).length;
 
   const rows = [
-    { id: 'chat', label: 'Chat', icon: MessageSquare, sub: `${messages.length} mensagens hoje`, count: messages.length, hueShift: 0 },
+    { id: 'chat', label: 'Chat', icon: MessageSquare, sub: `${todayMessages} mensagens hoje`, count: todayMessages, hueShift: 0 },
     { id: 'announcements', label: 'Avisos', icon: Bell, sub: announcements.length ? `${announcements.length} publicados` : 'Tudo em dia', count: announcements.length, hueShift: 40 },
     { id: 'birthdays', label: 'Aniversariantes', icon: Cake, sub: todayBdays ? `${todayBdays} hoje` : `${birthdayPeople.length} este mês`, count: todayBdays || birthdayPeople.length, hueShift: 150 },
   ];
@@ -83,7 +84,7 @@ export function MobileHomeView({ onNavigate }: Props) {
             <div className="bg-white/10 rounded-[24px] p-3">
               <div className="text-[11px] opacity-75">Mensagens hoje</div>
               <div className="text-xl font-semibold mt-1" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                {messages.length}
+                {todayMessages}
               </div>
             </div>
             <div className="bg-white/10 rounded-[24px] p-3">

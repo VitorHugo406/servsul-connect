@@ -83,9 +83,12 @@ export function useMessageReactions(messageIds: string[]) {
     setReactions(grouped);
   }, [profile?.id]);
 
+  const idsKey = messageIds.join(',');
   useEffect(() => {
-    fetchReactions();
-  }, [messageIds.join(','), fetchReactions]);
+    // Debounced: bursts of new messages must not fire a query per render.
+    const timer = setTimeout(() => { fetchReactions(); }, 300);
+    return () => clearTimeout(timer);
+  }, [idsKey, fetchReactions]);
 
   useEffect(() => {
     const channel = supabase

@@ -104,7 +104,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     if (!user || !effectiveSector) return;
     const markMentionsRead = async () => { try { await supabase.from('user_notifications').update({ is_read: true }).eq('user_id', user.id).eq('type', 'mention').eq('is_read', false); } catch (e) {} };
     markMentionsRead();
-  }, [user, effectiveSector, messages.length]);
+  }, [user, effectiveSector]);
 
   const handleReply = useCallback((msg: any) => setReplyTo({ id: msg.id, content: msg.content, author: msg.author }), []);
   const handleScrollToMessage = useCallback((id: string) => {

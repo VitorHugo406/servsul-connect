@@ -1,3 +1,4 @@
+import { scrollChatToBottom, isNearBottom } from '@/lib/chatScroll';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Settings, UserPlus, Check, CheckCheck, Crown, Loader2, Trash2, Image, Eye, Palette } from 'lucide-react';
@@ -55,7 +56,7 @@ export function PrivateGroupChat({ group }: PrivateGroupChatProps) {
   const isAdmin = members.some(m => m.user_id === user?.id && m.role === 'admin');
   const currentMember = members.find(m => m.user_id === user?.id);
 
-  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => { if (isNearBottom(scrollRef.current)) requestAnimationFrame(() => scrollChatToBottom(scrollRef.current)); }, [messages.length]);
   useEffect(() => { if (group?.avatar_url) setAvatarUrl(group.avatar_url); }, [group?.avatar_url]);
   useEffect(() => {
     if (!group?.id) { setChatBackground(''); return; }

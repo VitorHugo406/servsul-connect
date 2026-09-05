@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { useMessages, useBirthdays, useSectors } from '@/hooks/useData';
+import { useBirthdays, useSectors } from '@/hooks/useData';
+import { useTodayMessages } from '@/hooks/useTodayMessages';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -31,7 +32,7 @@ const autonomyLevelLabels: Record<string, string> = {
 export function HomeSection({ onNavigate }: HomeSectionProps) {
   const { profile, sector } = useAuth();
   const { sectors } = useSectors();
-  const { messages } = useMessages(sector?.id || null);
+  const { todayMessages } = useTodayMessages();
   const { announcements } = useAnnouncements();
   const { birthdayPeople } = useBirthdays();
   const [overdueTasks, setOverdueTasks] = useState(0);
@@ -114,7 +115,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
           <div className="flex flex-wrap gap-4">
             <div className="rounded-xl bg-white/10 px-6 py-4 backdrop-blur-sm">
               <p className="text-sm text-white/70">Mensagens Hoje</p>
-              <p className="font-display text-3xl font-bold">{messages.length}</p>
+              <p className="font-display text-3xl font-bold">{todayMessages}</p>
             </div>
             <div className="rounded-xl bg-white/10 px-6 py-4 backdrop-blur-sm">
               <p className="text-sm text-white/70">Avisos</p>
@@ -137,7 +138,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
       {/* Quick Actions */}
       <div className="mb-8 grid gap-4 md:grid-cols-4">
         {[
-          { id: 'chat', icon: MessageSquare, label: 'Chat', color: 'bg-primary', count: messages.length },
+          { id: 'chat', icon: MessageSquare, label: 'Chat', color: 'bg-primary', count: todayMessages },
           { id: 'announcements', icon: Bell, label: 'Avisos', color: 'bg-secondary', count: announcements.length },
           { id: 'tasks', icon: ListTodo, label: 'Tarefas', color: 'bg-purple-500', count: totalTasks > 0 ? totalTasks : null },
           { id: 'birthdays', icon: Cake, label: 'Aniversariantes', color: 'bg-success', count: birthdayPeople.length },

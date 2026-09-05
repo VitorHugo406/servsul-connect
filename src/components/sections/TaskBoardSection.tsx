@@ -1093,74 +1093,87 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     if (position !== undefined) setDragOverPosition(position);
   };
   const handleDragLeave = () => { setDragOverColumn(null); setDragOverPosition(null); };
-  const handleDrop = async (e: React.DragEvent, colId: string, position?: number) => {
+  const handleDrop = (e: React.DragEvent, colId: string, position?: number) => {
     e.preventDefault();
     setDragOverColumn(null); setDragOverPosition(null);
     if (!draggedTask) return;
-    if (draggedTask.status === colId && position !== undefined) {
-      await reorderInColumn(draggedTask.id, position);
-    } else if (draggedTask.status !== colId) {
-      // Workflow rule check
-      const moveCheck = canMoveToColumn(draggedTask.status, colId);
-      if (!moveCheck.allowed) {
-        toast.error(moveCheck.reason || 'Movimento bloqueado por regra de workflow');
-        setDraggedTask(null);
-        return;
+    const task = draggedTask;
+    // The visual state is released immediately; everything else runs in background.
+    setDraggedTask(null);
+
+    if (task.status === colId && position !== undefined) {
+      void reorderInColumn(task.id, position);
+      return;
+    }
+    if (task.status === colId) return;
+
+    // Workflow rule check
+    const moveCheck = canMoveToColumn(task.status, colId);
+    if (!moveCheck.allowed) {
+      toast.error(moveCheck.reason || 'Movimento bloqueado por regra de workflow');
+      return;
+    }
+
+    const sourceCol = columns.find(c => c.id === task.status);
+    const targetCol = columns.find(c => c.id === colId);
+    const colTasks = tasks.filter(t => t.status === colId);
+
+    // Optimistic move (updates local state synchronously inside the hook)
+    const movePromise = moveTask(task.id, colId, position ?? colTasks.length);
+
+    const autoUpdates: Record<string, any> = {};
+    if (targetCol) {
+      if (targetCol.auto_assign_to) autoUpdates.assigned_to = targetCol.auto_assign_to;
+      if (targetCol.auto_cover) autoUpdates.cover_image = targetCol.auto_cover;
+      if ((targetCol as any).is_template_column) autoUpdates.is_template = true;
+
+      if (targetCol.is_conclusion) {
+        autoUpdates.completed_at = new Date().toISOString();
+        if (task.due_date) {
+          const due = new Date(task.due_date);
+          const now = new Date();
+          due.setHours(0, 0, 0, 0);
+          now.setHours(0, 0, 0, 0);
+          const diffDays = Math.ceil((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+          autoUpdates.completed_late = diffDays > 0;
+          autoUpdates.delay_days = diffDays > 0 ? diffDays : 0;
+        } else {
+          autoUpdates.completed_late = false;
+          autoUpdates.delay_days = 0;
+        }
       }
-      const colTasks = tasks.filter(t => t.status === colId);
-      await moveTask(draggedTask.id, colId, position ?? colTasks.length);
 
-      // Log activity
-      const sourceCol = columns.find(c => c.id === draggedTask.status);
-      const targetCol = columns.find(c => c.id === colId);
-      if (profile && targetCol) {
-        await logTaskActivity(
-          draggedTask.id,
-          profile.id,
-          profile.display_name || profile.name,
-          'move',
-          `moveu de "${sourceCol?.title || '?'}" para "${targetCol.title}"`
-        );
-      }
-
-      // Apply column automations on drag
-      if (targetCol) {
-        const autoUpdates: Record<string, any> = {};
-        if (targetCol.auto_assign_to) autoUpdates.assigned_to = targetCol.auto_assign_to;
-        if (targetCol.auto_cover) autoUpdates.cover_image = targetCol.auto_cover;
-        if ((targetCol as any).is_template_column) autoUpdates.is_template = true;
-
+      if (Object.keys(autoUpdates).length > 0) {
         if (targetCol.is_conclusion) {
-          autoUpdates.completed_at = new Date().toISOString();
-          if (draggedTask.due_date) {
-            const due = new Date(draggedTask.due_date);
-            const now = new Date();
-            due.setHours(0, 0, 0, 0);
-            now.setHours(0, 0, 0, 0);
-            const diffDays = Math.ceil((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
-            autoUpdates.completed_late = diffDays > 0;
-            autoUpdates.delay_days = diffDays > 0 ? diffDays : 0;
-          } else {
-            autoUpdates.completed_late = false;
-            autoUpdates.delay_days = 0;
-          }
+          toast.info(autoUpdates.completed_late ? `Concluída com ${autoUpdates.delay_days} dia(s) de atraso` : 'Concluída no prazo!');
+        } else {
+          toast.info('Automações da coluna aplicadas');
         }
-
-        if (Object.keys(autoUpdates).length > 0) {
-          await updateTask(draggedTask.id, autoUpdates);
-          if (targetCol.is_conclusion) {
-            toast.info(autoUpdates.completed_late ? `Concluída com ${autoUpdates.delay_days} dia(s) de atraso` : 'Concluída no prazo!');
-          } else {
-            toast.info('Automações da coluna aplicadas');
-          }
-        }
-
-        // Apply auto-subtasks
-        await applyColumnAutoSubtasks(draggedTask.id, colId);
       }
     }
-    setDraggedTask(null);
+
+    void (async () => {
+      try {
+        await movePromise;
+        if (profile && targetCol) {
+          void logTaskActivity(
+            task.id,
+            profile.id,
+            profile.display_name || profile.name,
+            'move',
+            `moveu de "${sourceCol?.title || '?'}" para "${targetCol.title}"`
+          );
+        }
+        if (targetCol) {
+          if (Object.keys(autoUpdates).length > 0) await updateTask(task.id, autoUpdates);
+          await applyColumnAutoSubtasks(task.id, colId);
+        }
+      } catch (err) {
+        console.error('Erro ao concluir movimentação do card:', err);
+      }
+    })();
   };
+
   const handleDragEnd = () => { setDraggedTask(null); setDragOverColumn(null); setDragOverPosition(null); };
 
   const boardBg = getBoardBg(board.background_image);

@@ -36,10 +36,30 @@ export interface BoardTask {
 // Debounced/coalesced automation trigger — one call per board within a window
 const automationTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const boardTaskCache = new Map<string, BoardTask[]>();
-// Automations are executed by the scheduled cron (06/12/18h). Calling the edge
-// function from the client on every card mutation was the main source of the
-// extreme slowness on the board, so it is intentionally a no-op here.
-const triggerAutomations = (_boardId: string) => {};
+// Tasks mutated locally are protected from stale realtime echoes for a moment,
+// otherwise a late broadcast rolls the card back to its previous column.
+const localMutations = new Map<string, number>();
+const markLocal = (taskId: string) => localMutations.set(taskId, Date.now());
+const isLocallyFresh = (taskId?: string) => {
+  if (!taskId) return false;
+  const at = localMutations.get(taskId);
+  if (!at) return false;
+  if (Date.now() - at > 5000) { localMutations.delete(taskId); return false; }
+  return true;
+};
+// Heavy scans run on the scheduled cron; per-board runs are fired in the
+// background (fire and forget) so the board never waits for them.
+const triggerAutomations = (boardId: string) => {
+  if (!boardId || automationTimers.has(boardId)) return;
+  automationTimers.set(
+    boardId,
+    setTimeout(() => {
+      automationTimers.delete(boardId);
+      void supabase.functions.invoke('process-automations', { body: { board_id: boardId } }).catch(() => {});
+    }, 4000),
+  );
+};
+
 
 export function useBoardTasks(boardId: string | null, restrictTaskId?: string | null) {
   const { profile } = useAuth();
@@ -109,10 +129,12 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
             next = prev.filter((task) => task.id !== (payload.old as { id?: string }).id);
           } else {
             const incoming = payload.new as Partial<BoardTask>;
+            if (isLocallyFresh(incoming.id)) return prev;
             const existing = prev.find((task) => task.id === incoming.id);
             if (existing) next = prev.map((task) => (task.id === incoming.id ? { ...task, ...incoming, assignee: existing.assignee } : task));
             else { scheduleRefetch(); return prev; }
           }
+
           boardTaskCache.set(boardId, next);
           return next;
         });
@@ -161,12 +183,14 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
 
   const updateTask = async (id: string, updates: Partial<BoardTask>) => {
     const previous = allTasks;
+    markLocal(id);
     setAllTasks((prev) => {
       const next = prev.map((t) => (t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t));
       if (boardId) boardTaskCache.set(boardId, next);
       return next;
     });
     try {
+
       const { error } = await supabase.from('tasks').update(updates).eq('id', id);
       if (error) throw error;
       if (boardId) triggerAutomations(boardId);
@@ -198,6 +222,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
 
   const moveTask = async (taskId: string, newStatus: string, newPosition: number) => {
     const previous = allTasks;
+    markLocal(taskId);
     // Optimistic move first: the card follows the drop instantly.
     setAllTasks((prev) => {
       const next = prev.map((t) => (t.id === taskId ? { ...t, status: newStatus, position: newPosition } : t));
@@ -211,6 +236,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
         .eq('id', taskId);
 
       if (error) throw error;
+      if (boardId) triggerAutomations(boardId);
       return { error: null };
     } catch (error) {
       setAllTasks(previous);
@@ -230,6 +256,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
     columnTasks.splice(newPosition, 0, task);
 
     // Optimistic UI first — feels instant
+    columnTasks.forEach((t) => markLocal(t.id));
     setAllTasks((prev) => {
       const other = prev.filter((t) => t.status !== task.status);
       const next = [...other, ...columnTasks.map((t, i) => ({ ...t, position: i }))];
@@ -237,13 +264,13 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       return next;
     });
 
-    // Persist in parallel instead of sequentially
-    await Promise.all(
-      columnTasks.map((t, i) =>
-        t.position === i ? Promise.resolve() : supabase.from('tasks').update({ position: i }).eq('id', t.id)
-      )
-    );
+    // Persist only the rows whose position actually changed, in background.
+    const changed = columnTasks.filter((t, i) => t.position !== i);
+    void Promise.all(
+      changed.map((t) => supabase.from('tasks').update({ position: columnTasks.indexOf(t) }).eq('id', t.id)),
+    ).catch(() => {});
   };
+
 
   const archiveTask = async (id: string) => {
     const previous = allTasks;
