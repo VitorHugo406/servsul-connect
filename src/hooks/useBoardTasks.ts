@@ -222,6 +222,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
 
   const moveTask = async (taskId: string, newStatus: string, newPosition: number) => {
     const previous = allTasks;
+    markLocal(taskId);
     // Optimistic move first: the card follows the drop instantly.
     setAllTasks((prev) => {
       const next = prev.map((t) => (t.id === taskId ? { ...t, status: newStatus, position: newPosition } : t));
@@ -235,6 +236,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
         .eq('id', taskId);
 
       if (error) throw error;
+      if (boardId) triggerAutomations(boardId);
       return { error: null };
     } catch (error) {
       setAllTasks(previous);
@@ -254,6 +256,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
     columnTasks.splice(newPosition, 0, task);
 
     // Optimistic UI first — feels instant
+    columnTasks.forEach((t) => markLocal(t.id));
     setAllTasks((prev) => {
       const other = prev.filter((t) => t.status !== task.status);
       const next = [...other, ...columnTasks.map((t, i) => ({ ...t, position: i }))];
@@ -261,13 +264,13 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       return next;
     });
 
-    // Persist in parallel instead of sequentially
-    await Promise.all(
-      columnTasks.map((t, i) =>
-        t.position === i ? Promise.resolve() : supabase.from('tasks').update({ position: i }).eq('id', t.id)
-      )
-    );
+    // Persist only the rows whose position actually changed, in background.
+    const changed = columnTasks.filter((t, i) => t.position !== i);
+    void Promise.all(
+      changed.map((t) => supabase.from('tasks').update({ position: columnTasks.indexOf(t) }).eq('id', t.id)),
+    ).catch(() => {});
   };
+
 
   const archiveTask = async (id: string) => {
     const previous = allTasks;
