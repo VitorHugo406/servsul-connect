@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { MessageSquare, Bell, Cake, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
-import { useMessages, useBirthdays } from '@/hooks/useData';
+import { useBirthdays } from '@/hooks/useData';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { useTodayMessages } from '@/hooks/useTodayMessages';
 import { supabase } from '@/integrations/supabase/client';

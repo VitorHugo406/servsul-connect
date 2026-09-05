@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { useMessages, useBirthdays, useSectors } from '@/hooks/useData';
+import { useBirthdays, useSectors } from '@/hooks/useData';
+import { useTodayMessages } from '@/hooks/useTodayMessages';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { supabase } from '@/integrations/supabase/client';
 
