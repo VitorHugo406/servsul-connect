@@ -11,11 +11,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { applyBrand, getCachedBrand } from "@/lib/branding";
 import { AdminBirthdayPdfGuard } from "@/components/birthday/AdminBirthdayPdfGuard";
 
-const Index = lazy(() => import("./pages/Index"));
-const Auth = lazy(() => import("./pages/Auth"));
-const SelectCompany = lazy(() => import("./pages/SelectCompany"));
-const BirthdayShare = lazy(() => import("./pages/BirthdayShare"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+// Recarrega uma única vez quando um pedaço antigo do app ficou em cache (deploy novo)
+function lazyWithRetry<T extends { default: React.ComponentType<any> }>(factory: () => Promise<T>) {
+  return lazy(async () => {
+    try {
+      return await factory();
+    } catch (err) {
+      const key = 'nuvexa:chunk-reloaded';
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, '1');
+        window.location.reload();
+        return await new Promise<T>(() => {});
+      }
+      throw err;
+    }
+  });
+}
+
+const Index = lazyWithRetry(() => import("./pages/Index"));
+const Auth = lazyWithRetry(() => import("./pages/Auth"));
+const SelectCompany = lazyWithRetry(() => import("./pages/SelectCompany"));
+const BirthdayShare = lazyWithRetry(() => import("./pages/BirthdayShare"));
+const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 function LoadingScreen({ message = 'Carregando ambiente da empresa...' }: { message?: string }) { return <div className="flex min-h-screen items-center justify-center bg-white dark:bg-slate-950"><div className="flex flex-col items-center gap-4"><div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-400 dark:border-slate-800 dark:border-t-slate-500"/><p className="text-sm text-slate-500 dark:text-slate-400">{message}</p></div></div>; }
