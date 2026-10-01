@@ -53,20 +53,34 @@ const ScrollArea = React.forwardRef<
       keepAtEndWhileSettling();
     };
 
+    // As soon as the user touches/scrolls, stop pinning to the bottom for good
+    // (until the message list is replaced, e.g. switching chats).
+    let userTookOver = false;
+    const takeOver = () => {
+      userTookOver = true;
+      autoScrollDoneRef.current = true;
+      settleUntilRef.current = 0;
+      if (settleTimerRef.current !== null) window.clearTimeout(settleTimerRef.current);
+    };
+
     const mutationObserver = new MutationObserver(() => {
       const hasMessages = viewport.querySelector('[id^="msg-"]') !== null;
       if (!hasMessages) {
+        userTookOver = false;
         autoScrollDoneRef.current = false;
         settleUntilRef.current = 0;
         return;
       }
-      if (!autoScrollDoneRef.current) beginInitialScroll();
+      if (!autoScrollDoneRef.current && !userTookOver) beginInitialScroll();
     });
 
     const resizeObserver = new ResizeObserver(() => {
-      if (!autoScrollDoneRef.current) keepAtEndWhileSettling();
+      if (!autoScrollDoneRef.current && !userTookOver) keepAtEndWhileSettling();
     });
 
+    viewport.addEventListener("touchstart", takeOver, { passive: true });
+    viewport.addEventListener("wheel", takeOver, { passive: true });
+    viewport.addEventListener("pointerdown", takeOver, { passive: true });
     mutationObserver.observe(viewport, { childList: true, subtree: true });
     resizeObserver.observe(viewport);
     beginInitialScroll();
@@ -74,6 +88,9 @@ const ScrollArea = React.forwardRef<
     return () => {
       mutationObserver.disconnect();
       resizeObserver.disconnect();
+      viewport.removeEventListener("touchstart", takeOver);
+      viewport.removeEventListener("wheel", takeOver);
+      viewport.removeEventListener("pointerdown", takeOver);
       if (settleTimerRef.current !== null) window.clearTimeout(settleTimerRef.current);
     };
   }, []);
