@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCelebrationDate, isCelebrationToday } from '@/lib/birthdayUtils';
@@ -94,9 +94,10 @@ export function useMessages(sectorId: string | null) {
     });
   }, []);
 
+  const loadedSectorRef = useRef<string | null>(null);
   const fetchMessages = useCallback(async () => {
     if (!sectorId) return;
-    setLoading(true);
+    if (loadedSectorRef.current !== sectorId) setLoading(true);
     const { data, error } = await supabase
       .from('messages')
       .select('id, content, author_id, sector_id, created_at, reply_to_id, author:profiles!messages_author_id_fkey(id, user_id, name, display_name, email, avatar_url, sector_id, autonomy_level, birth_date, company_id)')
@@ -115,6 +116,7 @@ export function useMessages(sectorId: string | null) {
         return Array.from(byId.values()).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       });
     }
+    loadedSectorRef.current = sectorId;
     setLoading(false);
   }, [sectorId, hydrateMessages]);
 
