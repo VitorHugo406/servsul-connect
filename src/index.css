@@ -74,3 +74,4 @@
   .flex-1.overflow-hidden > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> div > h3) > .relative input { height:32px; font-size:.72rem; }
   .flex-1.overflow-hidden > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> div > h3) button { height:32px; width:32px; padding:0; }
 }
+[data-radix-scroll-area-viewport]{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
