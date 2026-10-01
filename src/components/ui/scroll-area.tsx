@@ -26,6 +26,7 @@ const ScrollArea = React.forwardRef<
     if (!viewport) return;
 
     const keepAtEndWhileSettling = () => {
+      if (userTookOver) return;
       const messageNodes = viewport.querySelectorAll('[id^="msg-"]');
       if (!messageNodes.length) return;
 
