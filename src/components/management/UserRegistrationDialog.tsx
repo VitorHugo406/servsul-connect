@@ -186,16 +186,6 @@ export function UserRegistrationDialog({
     setLoading(true);
     try {
       // Get registration password from system settings
-      const { data: settings } = await supabase
-        .from('system_settings')
-        .select('value')
-        .eq('key', 'registration_password')
-        .single();
-
-      if (!settings) {
-        toast.error('Erro ao obter configurações do sistema');
-        return;
-      }
 
       // Call the edge function to create the user
       const response = await supabase.functions.invoke('register-user', {
@@ -205,7 +195,7 @@ export function UserRegistrationDialog({
           name,
           birthDate,
           sectorId,
-          registrationPassword: settings.value,
+          
           companyId: currentCompany?.id,
           // Additional fields
           phone,
