@@ -277,19 +277,20 @@ Deno.serve(async (req) => {
 
       // Send message to the target
       if (summary.target_type === 'group') {
-        await admin.from('private_group_messages').insert({
+        const { error: insErr } = await admin.from('private_group_messages').insert({
           group_id: summary.target_id,
           sender_id: adminProfile.id,
           content: messageContent,
         });
-        sent++;
+        if (insErr) console.error('summary group insert error', insErr); else sent++;
       } else if (summary.target_type === 'sector') {
-        await admin.from('messages').insert({
+        const { error: insErr } = await admin.from('messages').insert({
           sector_id: summary.target_id,
           author_id: adminProfile.id,
           content: messageContent,
+          company_id: summary.company_id,
         });
-        sent++;
+        if (insErr) console.error('summary sector insert error', insErr); else sent++;
       }
     }
 
