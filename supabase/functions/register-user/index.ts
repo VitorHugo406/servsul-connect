@@ -22,7 +22,23 @@ Deno.serve(async (req) => {
       },
     });
 
-    const { 
+    const json = (b: unknown, status: number) => new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const { data: callerData } = token ? await supabaseAdmin.auth.getUser(token) : { data: { user: null } } as any;
+    const callerId = callerData?.user?.id;
+    if (!callerId) return json({ error: "Não autorizado" }, 401);
+    const [{ data: callerRoles }, { data: callerProfile }, { data: callerPerms }] = await Promise.all([
+      supabaseAdmin.from("user_roles").select("role").eq("user_id", callerId),
+      supabaseAdmin.from("profiles").select("company_id, autonomy_level").eq("user_id", callerId).maybeSingle(),
+      supabaseAdmin.from("user_permissions").select("can_access_management").eq("user_id", callerId).maybeSingle(),
+    ]);
+    const roleNames = (callerRoles || []).map((r: any) => r.role);
+    const callerIsSuper = roleNames.includes("super_admin");
+    const callerCompanyId = callerProfile?.company_id;
+    const callerAllowed = callerIsSuper || roleNames.includes("admin") || callerProfile?.autonomy_level === "admin" || callerPerms?.can_access_management === true;
+
+    let {
       email, 
       password, 
       name, 
@@ -42,35 +58,23 @@ Deno.serve(async (req) => {
     } = await req.json();
 
     // Validate required fields
-    if (!email || !password || !name || !birthDate || !sectorId || !registrationPassword || !companyId) {
+    if (!email || !password || !name || !birthDate || !sectorId) {
       return new Response(
         JSON.stringify({ error: "Todos os campos obrigatórios devem ser preenchidos" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Validate registration password
-    const { data: settings, error: settingsError } = await supabaseAdmin
-      .from("system_settings")
-      .select("value")
-      .eq("key", "registration_password")
-      .single();
-
-    if (settingsError || !settings) {
-      console.error("Error fetching registration password:", settingsError);
+    if (!callerAllowed) {
       return new Response(
-        JSON.stringify({ error: "Erro ao validar senha de cadastro" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (registrationPassword !== settings.value) {
-      return new Response(
-        JSON.stringify({ error: "Senha de autorização inválida" }),
+        JSON.stringify({ error: "Você não tem permissão para cadastrar usuários" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    // Non super admins can only create users in their own company
+    if (!callerIsSuper) companyId = callerCompanyId;
 
+    if (!companyId) return json({ error: "Empresa não identificada" }, 400);
     // Create the user with admin API
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
