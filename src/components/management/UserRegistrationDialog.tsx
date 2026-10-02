@@ -215,7 +215,9 @@ export function UserRegistrationDialog({
       });
 
       if (response.error) {
-        toast.error(response.error.message || 'Erro ao criar usuário');
+        let msg = response.error.message || 'Erro ao criar usuário';
+        try { const b = await (response.error as any).context?.json?.(); if (b?.error) msg = b.error; } catch { /* ignore */ }
+        toast.error(msg);
         return;
       }
 
