@@ -17,19 +17,21 @@ interface TeamMember {
   };
 }
 
-export function useSupervisorTeam() {
+export function useSupervisorTeam(teamId?: string | null) {
   const { user } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchTeam = useCallback(async () => {
     if (!user) return;
+    if (!teamId) { setMembers([]); setLoading(false); return; }
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('supervisor_team_members')
         .select('id, member_profile_id')
-        .eq('supervisor_id', user.id);
+        .eq('supervisor_id', user.id)
+        .eq('team_id', teamId);
 
       if (error) throw error;
 
@@ -60,18 +62,18 @@ export function useSupervisorTeam() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, teamId]);
 
   useEffect(() => {
     fetchTeam();
   }, [fetchTeam]);
 
   const addMember = async (profileId: string) => {
-    if (!user) return;
+    if (!user || !teamId) return;
     try {
       const { error } = await supabase
         .from('supervisor_team_members')
-        .insert({ supervisor_id: user.id, member_profile_id: profileId });
+        .insert({ supervisor_id: user.id, member_profile_id: profileId, team_id: teamId });
       if (error) throw error;
       await fetchTeam();
       return { error: null };
