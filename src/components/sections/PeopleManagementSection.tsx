@@ -105,6 +105,7 @@ export function PeopleManagementSection() {
   };
 
   const openAddDialog = () => {
+    if (!selectedTeamId) { toast({ title: 'Crie uma equipe primeiro', description: 'Use o botão "+ Nova equipe".' }); return; }
     setShowAddDialog(true);
     fetchAvailableProfiles();
   };
