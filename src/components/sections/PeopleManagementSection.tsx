@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSupervisorTeam } from '@/hooks/useSupervisorTeam';
 import { useTeamAnalytics } from '@/hooks/useTeamAnalytics';
 import { useWorkloadAlerts } from '@/hooks/useWorkloadAlerts';
+import { useTeams } from '@/hooks/useTeams';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
