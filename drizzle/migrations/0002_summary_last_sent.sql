@@ -1,0 +1,1 @@
+ALTER TABLE public.scheduled_summaries ADD COLUMN IF NOT EXISTS last_sent_on date;

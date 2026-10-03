@@ -1673,6 +1673,7 @@ export type Database = {
           frequency: string
           id: string
           is_active: boolean
+          last_sent_on: string | null
           metrics: Json
           month_day: number | null
           send_time: string
@@ -1689,6 +1690,7 @@ export type Database = {
           frequency: string
           id?: string
           is_active?: boolean
+          last_sent_on?: string | null
           metrics?: Json
           month_day?: number | null
           send_time?: string
@@ -1705,6 +1707,7 @@ export type Database = {
           frequency?: string
           id?: string
           is_active?: boolean
+          last_sent_on?: string | null
           metrics?: Json
           month_day?: number | null
           send_time?: string
