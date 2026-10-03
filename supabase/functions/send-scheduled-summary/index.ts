@@ -24,12 +24,14 @@ Deno.serve(async (req) => {
     const currentWeekday = brasiliaTime.getUTCDay();
     const currentMonthDay = brasiliaTime.getUTCDate();
 
-    // Fetch active summaries that match current time
+    const today = brasiliaTime.toISOString().slice(0, 10);
+    // Send anything whose time already passed today and wasn't sent yet (robust to missed cron ticks)
     const { data: summaries, error } = await admin
       .from('scheduled_summaries')
       .select('*')
       .eq('is_active', true)
-      .eq('send_time', currentTime);
+      .lte('send_time', currentTime)
+      .or(`last_sent_on.is.null,last_sent_on.lt.${today}`);
 
     if (error) throw error;
 
@@ -39,6 +41,10 @@ Deno.serve(async (req) => {
       // Check frequency match
       if (summary.frequency === 'weekly' && summary.weekday !== currentWeekday) continue;
       if (summary.frequency === 'monthly' && summary.month_day !== currentMonthDay) continue;
+      // Claim it first so parallel runs don't double-send
+      const { data: claimed } = await admin.from('scheduled_summaries').update({ last_sent_on: today })
+        .eq('id', summary.id).or(`last_sent_on.is.null,last_sent_on.lt.${today}`).select('id');
+      if (!claimed?.length) continue;
 
       // Get the admin profile (sender)
       const { data: adminProfile } = await admin
