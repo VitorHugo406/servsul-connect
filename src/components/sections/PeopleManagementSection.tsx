@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSupervisorTeam } from '@/hooks/useSupervisorTeam';
 import { useTeamAnalytics } from '@/hooks/useTeamAnalytics';
 import { useWorkloadAlerts } from '@/hooks/useWorkloadAlerts';
+import { useTeams } from '@/hooks/useTeams';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -37,10 +38,17 @@ const CHART_COLORS = [
 export function PeopleManagementSection() {
   const { profile, user } = useAuth();
   const isMobile = useIsMobile();
-  const { members, loading, addMember, removeMember } = useSupervisorTeam();
+  const { teams, selectedTeam, selectedTeamId, setSelectedTeamId, createTeam, updateTeam } = useTeams();
+  const { members, loading, addMember, removeMember } = useSupervisorTeam(selectedTeamId);
   const memberIds = members.map(m => m.member_profile_id);
   const { analytics, loading: analyticsLoading } = useTeamAnalytics(memberIds);
-  const { alerts, unreadCount, markAsRead, dismissAlert } = useWorkloadAlerts(memberIds);
+  const [alertsEnabled, setAlertsEnabled] = useState<boolean>(!!(profile as any)?.team_alerts_enabled);
+  useEffect(() => { setAlertsEnabled(!!(profile as any)?.team_alerts_enabled); }, [profile]);
+  const toggleAlerts = async (v: boolean) => {
+    setAlertsEnabled(v);
+    if (profile) await supabase.from('profiles').update({ team_alerts_enabled: v } as any).eq('id', profile.id);
+  };
+  const { alerts, unreadCount, markAsRead, dismissAlert } = useWorkloadAlerts(alertsEnabled ? memberIds : []);
   const { scores: globalScores, monthlyHistory: globalScoreHistory, loading: globalScoresLoading } = useGlobalScores(memberIds);
   
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -51,39 +59,12 @@ export function PeopleManagementSection() {
   const [editingTeamName, setEditingTeamName] = useState(false);
   const [savingTeamName, setSavingTeamName] = useState(false);
 
-  // Load team name from first member's record
-  useEffect(() => {
-    if (members.length > 0) {
-      const loadTeamName = async () => {
-        if (!user) return;
-        const { data } = await supabase
-          .from('supervisor_team_members')
-          .select('team_name')
-          .eq('supervisor_id', user.id)
-          .limit(1)
-          .maybeSingle();
-        if (data?.team_name) setTeamName(data.team_name);
-      };
-      loadTeamName();
-    }
-  }, [members, user]);
-
   const saveTeamName = async () => {
-    if (!user) return;
+    if (!selectedTeam || !teamName.trim()) return;
     setSavingTeamName(true);
-    try {
-      const { error } = await supabase
-        .from('supervisor_team_members')
-        .update({ team_name: teamName.trim() || null })
-        .eq('supervisor_id', user.id);
-      if (error) throw error;
-      toast({ title: 'Nome da equipe atualizado.' });
-      setEditingTeamName(false);
-    } catch (e) {
-      toast({ title: 'Erro', description: 'Não foi possível salvar.', variant: 'destructive' });
-    } finally {
-      setSavingTeamName(false);
-    }
+    await updateTeam(selectedTeam.id, { name: teamName.trim() });
+    setEditingTeamName(false);
+    setSavingTeamName(false);
   };
 
   const getInitials = (name: string) =>
@@ -124,6 +105,7 @@ export function PeopleManagementSection() {
   };
 
   const openAddDialog = () => {
+    if (!selectedTeamId) { toast({ title: 'Crie uma equipe primeiro', description: 'Use o botão "+ Nova equipe".' }); return; }
     setShowAddDialog(true);
     fetchAvailableProfiles();
   };
@@ -183,16 +165,32 @@ export function PeopleManagementSection() {
                   <X className="h-3.5 w-3.5" />
                 </Button>
               </div>
-            ) : (
-              <Button size="sm" variant="ghost" className="gap-1.5 text-xs text-muted-foreground" onClick={() => setEditingTeamName(true)}>
+            ) : selectedTeam ? (
+              <Button size="sm" variant="ghost" className="gap-1.5 text-xs text-muted-foreground" onClick={() => { setTeamName(selectedTeam.name); setEditingTeamName(true); }}>
                 <Edit2 className="h-3 w-3" />
-                {teamName || 'Nomear equipe'}
+                Renomear
               </Button>
-            )}
+            ) : null}
           </div>
-          <p className="text-muted-foreground">
-            {teamName ? `Equipe: ${teamName}` : 'Gerencie sua equipe e acompanhe métricas'}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {teams.length > 0 && (
+              <select
+                value={selectedTeamId || ''}
+                onChange={e => setSelectedTeamId(e.target.value)}
+                className="h-8 rounded-full border border-input bg-background px-3 text-sm text-foreground"
+              >
+                {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            )}
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={async () => {
+              const name = prompt('Nome da nova equipe:');
+              if (name?.trim()) { const t = await createTeam(name.trim()); if (t) setSelectedTeamId(t.id); }
+            }}>+ Nova equipe</Button>
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <input type="checkbox" checked={alertsEnabled} onChange={e => toggleAlerts(e.target.checked)} />
+              Receber avisos da equipe
+            </label>
+          </div>
         </div>
         <Button onClick={openAddDialog} className="gap-2">
           <UserPlus className="h-4 w-4" />
