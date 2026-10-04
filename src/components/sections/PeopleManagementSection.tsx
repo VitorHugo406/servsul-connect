@@ -1,3 +1,4 @@
+import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search, CalendarDays, AlertTriangle, Bell, X, Trophy, CheckCheck, Filter, Edit2, Save, Clock, Plus } from 'lucide-react';
@@ -43,6 +44,8 @@ export function PeopleManagementSection() {
   const memberIds = members.map(m => m.member_profile_id);
   const { analytics, loading: analyticsLoading } = useTeamAnalytics(memberIds);
   const [alertsEnabled, setAlertsEnabled] = useState<boolean>(!!(profile as any)?.team_alerts_enabled);
+  const [alertTimes, setAlertTimes] = useState<string[]>((profile as any)?.team_alert_times || ["09:00"]);
+  const updateAlertTimes = async (times: string[]) => { setAlertTimes(times); if (profile) await supabase.from("profiles").update({ team_alert_times: times } as any).eq("id", profile.id); };
   const [alertTimes, setAlertTimes] = useState<string[]>((profile as any)?.team_alert_times || ["09:00"]);
   useEffect(() => { setAlertsEnabled(!!(profile as any)?.team_alerts_enabled); }, [profile]);
   const toggleAlerts = async (v: boolean) => {
@@ -188,10 +191,43 @@ export function PeopleManagementSection() {
               const name = prompt('Nome da nova equipe:');
               if (name?.trim()) { const t = await createTeam(name.trim()); if (t) setSelectedTeamId(t.id); }
             }}>+ Nova equipe</Button>
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <input type="checkbox" checked={alertsEnabled} onChange={e => toggleAlerts(e.target.checked)} />
-              Receber avisos da equipe
-            </label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 border rounded-full px-3 py-1 bg-background">
+                {alertsEnabled ? <BellRing className="h-3.5 w-3.5 text-primary" /> : <BellOff className="h-3.5 w-3.5 text-muted-foreground" />}
+                <span className="text-xs font-medium">{alertsEnabled ? "Alertas Ativos" : "Alertas Inativos"}</span>
+                <Switch checked={alertsEnabled} onCheckedChange={toggleAlerts} className="scale-75" />
+              </div>
+              
+              {alertsEnabled && (
+                <div className="flex items-center gap-2">
+                  {alertTimes.map((time, idx) => (
+                    <div key={idx} className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded-md text-[10px] font-bold">
+                      <Clock className="h-3 w-3" />
+                      <input 
+                        type="time" 
+                        value={time} 
+                        onChange={(e) => {
+                          const newTimes = [...alertTimes];
+                          newTimes[idx] = e.target.value;
+                          updateAlertTimes(newTimes);
+                        }}
+                        className="bg-transparent border-none p-0 w-[45px] focus:ring-0"
+                      />
+                      {alertTimes.length > 1 && (
+                        <button onClick={() => updateAlertTimes(alertTimes.filter((_, i) => i !== idx))} className="hover:text-destructive">
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {alertTimes.length < 3 && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full bg-muted" onClick={() => updateAlertTimes([...alertTimes, "09:00"])}>
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <Button onClick={openAddDialog} className="gap-2">
