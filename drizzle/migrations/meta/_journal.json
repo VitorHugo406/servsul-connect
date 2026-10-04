@@ -29,6 +29,13 @@
       "when": 1790989463851,
       "tag": "0003_team_id_and_alert_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791074253238,
+      "tag": "0004_add_team_alert_times",
+      "breakpoints": true
     }
   ]
 }

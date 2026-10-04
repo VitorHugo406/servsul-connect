@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search, CalendarDays, AlertTriangle, Bell, X, Trophy, CheckCheck, Filter, Edit2, Save } from 'lucide-react';
+import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search, CalendarDays, AlertTriangle, Bell, X, Trophy, CheckCheck, Filter, Edit2, Save, Clock, Plus } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CardGridSkeleton, StatsSkeleton, ChartSkeleton, ListSkeleton } from '@/components/ui/skeletons';
@@ -38,13 +38,15 @@ const CHART_COLORS = [
 export function PeopleManagementSection() {
   const { profile, user } = useAuth();
   const isMobile = useIsMobile();
-  const { teams, selectedTeam, selectedTeamId, setSelectedTeamId, createTeam, updateTeam } = useTeams();
+  const { teams, selectedTeam, selectedTeamId, setSelectedTeamId, createTeam, updateTeam, deleteTeam } = useTeams();
   const { members, loading, addMember, removeMember } = useSupervisorTeam(selectedTeamId);
   const memberIds = members.map(m => m.member_profile_id);
   const { analytics, loading: analyticsLoading } = useTeamAnalytics(memberIds);
   const [alertsEnabled, setAlertsEnabled] = useState<boolean>(!!(profile as any)?.team_alerts_enabled);
+  const [alertTimes, setAlertTimes] = useState<string[]>((profile as any)?.team_alert_times || ["09:00"]);
   useEffect(() => { setAlertsEnabled(!!(profile as any)?.team_alerts_enabled); }, [profile]);
   const toggleAlerts = async (v: boolean) => {
+  const updateAlertTimes = async (times: string[]) => { setAlertTimes(times); if (profile) await supabase.from("profiles").update({ team_alert_times: times } as any).eq("id", profile.id); };
     setAlertsEnabled(v);
     if (profile) await supabase.from('profiles').update({ team_alerts_enabled: v } as any).eq('id', profile.id);
   };
