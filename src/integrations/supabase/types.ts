@@ -1596,6 +1596,7 @@ export type Database = {
           profile_type: string
           registration_number: string | null
           sector_id: string | null
+          team_alert_times: string[]
           team_alerts_enabled: boolean
           updated_at: string
           user_id: string
@@ -1620,6 +1621,7 @@ export type Database = {
           profile_type?: string
           registration_number?: string | null
           sector_id?: string | null
+          team_alert_times?: string[]
           team_alerts_enabled?: boolean
           updated_at?: string
           user_id: string
@@ -1644,6 +1646,7 @@ export type Database = {
           profile_type?: string
           registration_number?: string | null
           sector_id?: string | null
+          team_alert_times?: string[]
           team_alerts_enabled?: boolean
           updated_at?: string
           user_id?: string
@@ -3179,6 +3182,7 @@ export type Database = {
           profile_type: string
           registration_number: string | null
           sector_id: string | null
+          team_alert_times: string[]
           team_alerts_enabled: boolean
           updated_at: string
           user_id: string
@@ -3279,6 +3283,7 @@ export type Database = {
           profile_type: string
           registration_number: string | null
           sector_id: string | null
+          team_alert_times: string[]
           team_alerts_enabled: boolean
           updated_at: string
           user_id: string

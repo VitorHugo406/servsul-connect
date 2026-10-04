@@ -7,7 +7,7 @@ import { applyBrand } from '@/lib/branding';
 const GERAL_SECTOR_ID='00000000-0000-0000-0000-000000000001';
 const PROFILE_CACHE_PREFIX='nuvexa:profile:';
 const COMPANY_CACHE_PREFIX='nuvexa:company:';
-interface Profile{id:string;user_id:string;name:string;display_name:string|null;email:string;avatar_url:string|null;sector_id:string|null;autonomy_level:string;birth_date:string|null;is_active:boolean;profile_type:string;created_at:string;updated_at:string;last_seen_at:string|null;user_status:string|null;work_period:string|null;company_id:string;}
+interface Profile{id:string;user_id:string;name:string;display_name:string|null;email:string;avatar_url:string|null;sector_id:string|null;autonomy_level:string;birth_date:string|null;is_active:boolean;profile_type:string;created_at:string;updated_at:string;last_seen_at:string|null;user_status:string|null;work_period:string|null;company_id:string;team_alerts_enabled:boolean;team_alert_times:string[];}
 interface Sector{id:string;name:string;color:string;icon:string|null;}
 interface UserRole{role:'admin'|'gerente'|'supervisor'|'colaborador';}
 interface UserPermissions{can_post_announcements:boolean;can_delete_messages:boolean;can_access_management:boolean;can_access_password_change:boolean;can_create_war_room:boolean;can_access_bh:boolean;can_access_fechamento:boolean;can_access_orbs:boolean;}
