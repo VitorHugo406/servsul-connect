@@ -466,7 +466,7 @@ const Auth = () => {
             e mantenha sua identidade digital.
           </p>
           
-          <div className="space-y-4">
+          <div className="space-y-2">
             {[
               'Chat por setores com emojis',
               'Avisos gerais da empresa',
@@ -504,7 +504,7 @@ const Auth = () => {
             </Link>
           </div>
           {/* Logo da empresa selecionada no mobile */}
-          <div className="mb-4 flex flex-col items-center justify-center gap-2 lg:hidden">
+          <div className="mb-2 flex flex-col items-center justify-center gap-1 lg:hidden">
             {companyBrand?.logo_url && (
               <img
                 src={companyLogoUrl ?? undefined}
@@ -523,8 +523,8 @@ const Auth = () => {
           </div>
 
 
-          <Card className="border-0 shadow-xl">
-            <CardHeader className="text-center pb-4 px-4 sm:px-6">
+          <Card className="border-0 shadow-none sm:shadow-xl">
+            <CardHeader className="text-center pb-2 pt-0 px-4 sm:px-6">
               <CardTitle className="font-display text-xl sm:text-2xl">
                 {isLogin ? 'Bem-vindo de volta!' : 'Criar conta'}
               </CardTitle>
@@ -537,7 +537,7 @@ const Auth = () => {
               </CardDescription>
             </CardHeader>
             
-            <CardContent className="px-4 sm:px-6">
+            <CardContent className="px-4 pb-2 sm:px-6">
               {/* Progress bar for signup */}
               {!isLogin && (
                 <div className="mb-6">
@@ -706,7 +706,7 @@ const Auth = () => {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
                       transition={{ duration: 0.2 }}
-                      className="space-y-4"
+                      className="space-y-2"
                     >
                       {/* Registration Password */}
                       <div className="space-y-2">
@@ -842,7 +842,7 @@ const Auth = () => {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.2 }}
-                      className="space-y-4"
+                      className="space-y-2"
                     >
                       {/* Sector */}
                       <div className="space-y-2">
@@ -949,7 +949,7 @@ const Auth = () => {
                           type="button"
                           variant="outline"
                           onClick={handleBack}
-                          className="h-12 flex-1 gap-2 text-base font-medium touch-manipulation"
+                          className="h-10 flex-1 gap-2 text-sm font-medium touch-manipulation"
                         >
                           <ChevronLeft className="h-5 w-5" />
                           Voltar
@@ -980,7 +980,7 @@ const Auth = () => {
               )}
 
               {/* Toggle Login/Signup */}
-              <div className="mt-6 text-center">
+              <div className="mt-2 text-center">
                 <span className="text-sm text-muted-foreground">
                   {isLogin ? 'Não tem uma conta?' : 'Já tem uma conta?'}
                 </span>
@@ -995,7 +995,7 @@ const Auth = () => {
             </CardContent>
           </Card>
 
-          <p className="mt-6 text-center text-xs text-muted-foreground">
+          <p className="mt-2 text-center text-xs text-muted-foreground">
             © 2026 Nuvexa. Todos os direitos reservados.
           </p>
         </motion.div>
