@@ -440,7 +440,7 @@ const Auth = () => {
           transition={{ duration: 0.6 }}
           className="max-w-md text-white"
         >
-          <div className="mb-8 flex items-center gap-4">
+          <div className="mb-4 flex items-center gap-4">
             {companyBrand?.logo_url && (
               <img
                 src={companyLogoUrl ?? undefined}
@@ -491,7 +491,7 @@ const Auth = () => {
       </div>
 
       {/* Right Panel - Auth Form - Full width on mobile */}
-      <div className="flex min-h-screen w-full items-center justify-center bg-background px-4 py-8 sm:px-8 lg:min-h-0 lg:w-1/2">
+      <div className="flex min-h-[100dvh] w-full items-center justify-center bg-background px-4 py-4 sm:px-8 lg:min-h-0 lg:w-1/2">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -504,12 +504,12 @@ const Auth = () => {
             </Link>
           </div>
           {/* Logo da empresa selecionada no mobile */}
-          <div className="mb-8 flex flex-col items-center justify-center gap-3 lg:hidden">
+          <div className="mb-4 flex flex-col items-center justify-center gap-2 lg:hidden">
             {companyBrand?.logo_url && (
               <img
                 src={companyLogoUrl ?? undefined}
                 alt={companyBrand.name}
-                className="h-20 object-contain"
+                className="h-12 object-contain"
               />
             )}
             <div className="text-center">
