@@ -617,8 +617,8 @@ const Auth = () => {
                 />
               ) : isLogin ? (
                 /* Login Form */
-                <form onSubmit={handleLoginSubmit} className="space-y-5">
-                  <div className="space-y-2">
+                <form onSubmit={handleLoginSubmit} className="space-y-3">
+                  <div className="space-y-1">
                     <Label htmlFor="loginEmail" className="text-sm font-medium">Email corporativo</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -636,7 +636,7 @@ const Auth = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label htmlFor="loginPassword" className="text-sm font-medium">Senha</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -678,7 +678,7 @@ const Auth = () => {
                   </Button>
 
                   {/* Facial Login Button */}
-                  <div className="relative my-4">
+                  <div className="relative my-2">
                     <Separator />
                     <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
                       ou
