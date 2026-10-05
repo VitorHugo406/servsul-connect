@@ -167,6 +167,7 @@ export function useTeams() {
   };
 
   const deleteTeam = async (teamId: string) => {
+    await supabase.from('supervisor_team_members').delete().eq('team_id', teamId);
     const { error } = await supabase.from('teams').delete().eq('id', teamId);
     if (error) {
       toast.error('Erro ao excluir equipe.');
