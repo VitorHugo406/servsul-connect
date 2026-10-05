@@ -9,16 +9,19 @@ Deno.serve(async (req) => {
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     let boardId: string | null = null;
     let scheduled = false;
+    let alertsOnly = false;
     try {
       const body = await req.json();
       boardId = body?.board_id ?? null;
-      scheduled = body?.time === 'scheduled' || body?.cron === true || body?.scheduled === true;
+      scheduled = body?.time === 'scheduled' || body?.time === 'alerts' || body?.cron === true || body?.scheduled === true;
+      alertsOnly = body?.time === 'alerts';
     } catch { /* body optional */ }
     const now = new Date();
 
     let rulesQuery = admin.from('task_automation_rules').select('id, board_id, task_id, trigger_type, trigger_config, action_type, action_config').eq('is_active', true);
     if (boardId) rulesQuery = rulesQuery.eq('board_id', boardId);
-    const { data: rules, error: rulesError } = await rulesQuery;
+    const { data: rulesRaw, error: rulesError } = await rulesQuery;
+    const rules = alertsOnly ? [] : rulesRaw;
     if (rulesError) throw rulesError;
 
     const boardIds = [...new Set((rules ?? []).map((r) => r.board_id).filter(Boolean))];
@@ -60,9 +63,16 @@ Deno.serve(async (req) => {
 
     // Mass workload/deadline alerts are expensive and noisy — only the scheduled
     // cron run (06/12/18h) generates them.
+    let allowed = new Set<string>();
     if (scheduled) {
+      const hhmm = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+      const { data: mgrs = [] } = await admin.from('profiles').select('id, team_alert_times').eq('team_alerts_enabled', true);
+      const due = (mgrs as any[]).filter((m) => (m.team_alert_times ?? []).includes(hhmm)).map((m) => m.id);
+      if (due.length) { const { data: mem = [] } = await admin.from('supervisor_team_members').select('member_profile_id').in('supervisor_id', due); allowed = new Set((mem as any[]).map((m) => m.member_profile_id)); }
+    }
+    if (scheduled && allowed.size) {
       const counts = new Map<string, { count: number; board_id: string | null }>();
-      for (const task of tasks) if (task.assigned_to) { const current = counts.get(task.assigned_to) ?? { count: 0, board_id: task.board_id }; current.count++; counts.set(task.assigned_to, current);
+      for (const task of tasks) if (task.assigned_to && allowed.has(task.assigned_to)) { const current = counts.get(task.assigned_to) ?? { count: 0, board_id: task.board_id }; current.count++; counts.set(task.assigned_to, current);
           if (task.due_date) { const overdue = now.getTime() - new Date(task.due_date).getTime(); alerts.push(overdue > 0 ? { profile_id: task.assigned_to, board_id: task.board_id, alert_type: 'late_task', message: `Card #${task.task_number} "${task.title}" está atrasado`, task_id: task.id } : overdue > -48 * 36e5 ? { profile_id: task.assigned_to, board_id: task.board_id, alert_type: 'deadline_risk', message: `Card #${task.task_number} "${task.title}" vence em breve`, task_id: task.id } : null); }
           if ((now.getTime() - new Date(task.updated_at).getTime()) / 864e5 >= 3) alerts.push({ profile_id: task.assigned_to, board_id: task.board_id, alert_type: 'stuck_task', message: `Card #${task.task_number} "${task.title}" está parado há muito tempo`, task_id: task.id }); }
       for (const [profile_id, value] of counts) if (value.count >= 5) alerts.push({ profile_id, board_id: value.board_id, alert_type: 'overloaded', message: `Colaborador com ${value.count} cards ativos — possível sobrecarga`, task_id: null });
