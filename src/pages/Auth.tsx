@@ -491,7 +491,7 @@ const Auth = () => {
       </div>
 
       {/* Right Panel - Auth Form - Full width on mobile */}
-      <div className="flex min-h-[100dvh] w-full items-center justify-center bg-background px-4 py-4 sm:px-8 lg:min-h-0 lg:w-1/2">
+      <div className="flex min-h-[100dvh] w-full items-center justify-center bg-background px-4 py-2 sm:px-8 lg:min-h-0 lg:w-1/2">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -509,7 +509,7 @@ const Auth = () => {
               <img
                 src={companyLogoUrl ?? undefined}
                 alt={companyBrand.name}
-                className="h-12 object-contain"
+                className="h-10 object-contain"
               />
             )}
             <div className="text-center">
@@ -630,7 +630,7 @@ const Auth = () => {
                         placeholder="seu.email@exemplo.com"
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
-                        className="h-12 pl-10 text-base"
+                        className="h-10 pl-10 text-base"
                         required
                       />
                     </div>
@@ -647,7 +647,7 @@ const Auth = () => {
                         placeholder="••••••••"
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
-                        className="h-12 pl-10 pr-12 text-base"
+                        className="h-10 pl-10 pr-12 text-base"
                         required
                       />
                       <button
@@ -663,7 +663,7 @@ const Auth = () => {
 
                   <Button
                     type="submit"
-                    className="h-12 w-full gradient-primary text-base font-medium touch-manipulation"
+                    className="h-10 w-full gradient-primary text-base font-medium touch-manipulation"
                     disabled={loading}
                   >
                     {loading ? (
@@ -688,7 +688,7 @@ const Auth = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-12 w-full text-base font-medium touch-manipulation"
+                    className="h-10 w-full text-base font-medium touch-manipulation"
                     onClick={() => setShowFacialLogin(true)}
                     disabled={loading}
                   >
