@@ -34,6 +34,7 @@ function calculateScore(totalTasks: number, completedTasks: number, lateTasks: n
 
 // Only count as late if delivered 1+ day after the deadline
 function isTaskLate(task: { completed_at: string | null; due_date: string | null; completed_late: boolean | null }): boolean {
+  if (task.completed_late) return true;
   if (!task.completed_at || !task.due_date) return false;
   const completedDate = new Date(task.completed_at);
   const dueDate = new Date(task.due_date);
@@ -182,7 +183,7 @@ export function useGlobalScores(memberProfileIds: string[]) {
         // Fetch ALL tasks across all boards for these members
         const { data: tasks } = await supabase
           .from('tasks')
-          .select('id, assigned_to, status, completed_at, completed_late, board_id')
+          .select('id, assigned_to, status, completed_at, completed_late, due_date, board_id')
           .in('assigned_to', memberProfileIds)
           .eq('is_template', false)
           .eq('is_archived', false);
