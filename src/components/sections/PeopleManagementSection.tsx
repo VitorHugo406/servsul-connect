@@ -1,7 +1,7 @@
 import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search, CalendarDays, AlertTriangle, Bell, X, Trophy, CheckCheck, Filter, Edit2, Save, Clock, Plus } from 'lucide-react';
+import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search, CalendarDays, AlertTriangle, Bell, X, Trophy, CheckCheck, Filter, Edit2, Save, Clock, Plus, BellRing, BellOff } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CardGridSkeleton, StatsSkeleton, ChartSkeleton, ListSkeleton } from '@/components/ui/skeletons';
@@ -46,10 +46,8 @@ export function PeopleManagementSection() {
   const [alertsEnabled, setAlertsEnabled] = useState<boolean>(!!(profile as any)?.team_alerts_enabled);
   const [alertTimes, setAlertTimes] = useState<string[]>((profile as any)?.team_alert_times || ["09:00"]);
   const updateAlertTimes = async (times: string[]) => { setAlertTimes(times); if (profile) await supabase.from("profiles").update({ team_alert_times: times } as any).eq("id", profile.id); };
-  const [alertTimes, setAlertTimes] = useState<string[]>((profile as any)?.team_alert_times || ["09:00"]);
   useEffect(() => { setAlertsEnabled(!!(profile as any)?.team_alerts_enabled); }, [profile]);
   const toggleAlerts = async (v: boolean) => {
-  const updateAlertTimes = async (times: string[]) => { setAlertTimes(times); if (profile) await supabase.from("profiles").update({ team_alert_times: times } as any).eq("id", profile.id); };
     setAlertsEnabled(v);
     if (profile) await supabase.from('profiles').update({ team_alerts_enabled: v } as any).eq('id', profile.id);
   };
@@ -176,6 +174,12 @@ export function PeopleManagementSection() {
                 Renomear
               </Button>
             ) : null}
+            {selectedTeam && !editingTeamName && (
+              <Button size="sm" variant="ghost" className="gap-1.5 text-xs text-destructive" onClick={async () => { if (confirm(`Excluir a equipe "${selectedTeam.name}"? Os membros serão desvinculados.`)) await deleteTeam(selectedTeam.id); }}>
+                <Trash2 className="h-3 w-3" />
+                Excluir
+              </Button>
+            )}
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {teams.length > 0 && (
