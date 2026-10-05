@@ -46,7 +46,7 @@ export function PeopleManagementSection() {
   const [alertsEnabled, setAlertsEnabled] = useState<boolean>(!!(profile as any)?.team_alerts_enabled);
   const [alertTimes, setAlertTimes] = useState<string[]>((profile as any)?.team_alert_times || ["09:00"]);
   const updateAlertTimes = async (times: string[]) => { setAlertTimes(times); if (profile) await supabase.from("profiles").update({ team_alert_times: times } as any).eq("id", profile.id); };
-  useEffect(() => { setAlertsEnabled(!!(profile as any)?.team_alerts_enabled); }, [profile]);
+  useEffect(() => { if (!profile?.id) return; supabase.from('profiles').select('team_alerts_enabled, team_alert_times').eq('id', profile.id).maybeSingle().then(({ data }: any) => { if (data) { setAlertsEnabled(!!data.team_alerts_enabled); if (data.team_alert_times?.length) setAlertTimes(data.team_alert_times); } }); }, [profile?.id]);
   const toggleAlerts = async (v: boolean) => {
     setAlertsEnabled(v);
     if (profile) await supabase.from('profiles').update({ team_alerts_enabled: v } as any).eq('id', profile.id);
