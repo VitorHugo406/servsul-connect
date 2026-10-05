@@ -491,14 +491,14 @@ const Auth = () => {
       </div>
 
       {/* Right Panel - Auth Form - Full width on mobile */}
-      <div className="flex min-h-[100dvh] w-full items-center justify-center bg-background px-4 py-4 sm:px-8 lg:min-h-0 lg:w-1/2">
+      <div className="flex min-h-[100dvh] w-full items-center justify-center bg-background px-4 py-2 sm:px-8 lg:min-h-0 lg:w-1/2">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          <div className="mb-4 flex justify-start lg:hidden">
+          <div className="mb-1 flex justify-start lg:hidden">
             <Link to="/select-company" className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:text-foreground">
               <ArrowLeft className="w-3 h-3" /> Trocar empresa
             </Link>
@@ -509,15 +509,15 @@ const Auth = () => {
               <img
                 src={companyLogoUrl ?? undefined}
                 alt={companyBrand.name}
-                className="h-12 object-contain"
+                className="h-10 object-contain"
               />
             )}
             <div className="text-center">
-              <h1 className="font-display text-3xl font-bold text-foreground">
+              <h1 className="font-display text-xl sm:text-3xl font-bold text-foreground">
                 {companyBrand?.is_system ? 'Nuvexa' : (companyBrand?.name || 'Nuvexa')}
               </h1>
               {companyBrand && !companyBrand.is_system && (
-                <p className="text-sm text-muted-foreground">Entrar na empresa</p>
+                <p className="text-xs text-muted-foreground">Entrar na empresa</p>
               )}
             </div>
           </div>
@@ -528,7 +528,7 @@ const Auth = () => {
               <CardTitle className="font-display text-xl sm:text-2xl">
                 {isLogin ? 'Bem-vindo de volta!' : 'Criar conta'}
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 {isLogin
                   ? 'Entre com suas credenciais para acessar'
                   : step === 1
@@ -617,8 +617,8 @@ const Auth = () => {
                 />
               ) : isLogin ? (
                 /* Login Form */
-                <form onSubmit={handleLoginSubmit} className="space-y-5">
-                  <div className="space-y-2">
+                <form onSubmit={handleLoginSubmit} className="space-y-3">
+                  <div className="space-y-1">
                     <Label htmlFor="loginEmail" className="text-sm font-medium">Email corporativo</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -630,13 +630,13 @@ const Auth = () => {
                         placeholder="seu.email@exemplo.com"
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
-                        className="h-12 pl-10 text-base"
+                        className="h-10 pl-10 text-base"
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label htmlFor="loginPassword" className="text-sm font-medium">Senha</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -647,7 +647,7 @@ const Auth = () => {
                         placeholder="••••••••"
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
-                        className="h-12 pl-10 pr-12 text-base"
+                        className="h-10 pl-10 pr-12 text-base"
                         required
                       />
                       <button
@@ -663,7 +663,7 @@ const Auth = () => {
 
                   <Button
                     type="submit"
-                    className="h-12 w-full gradient-primary text-base font-medium touch-manipulation"
+                    className="h-10 w-full gradient-primary text-base font-medium touch-manipulation"
                     disabled={loading}
                   >
                     {loading ? (
@@ -678,7 +678,7 @@ const Auth = () => {
                   </Button>
 
                   {/* Facial Login Button */}
-                  <div className="relative my-4">
+                  <div className="relative my-2">
                     <Separator />
                     <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
                       ou
@@ -688,7 +688,7 @@ const Auth = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-12 w-full text-base font-medium touch-manipulation"
+                    className="h-10 w-full text-base font-medium touch-manipulation"
                     onClick={() => setShowFacialLogin(true)}
                     disabled={loading}
                   >
