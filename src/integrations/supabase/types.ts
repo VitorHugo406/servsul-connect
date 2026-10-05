@@ -3313,6 +3313,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_active_company_logo: { Args: { _name: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_board_admin_or_owner: {
         Args: { check_board_id: string }
