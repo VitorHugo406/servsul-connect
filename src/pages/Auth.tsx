@@ -498,7 +498,7 @@ const Auth = () => {
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          <div className="mb-4 flex justify-start lg:hidden">
+          <div className="mb-1 flex justify-start lg:hidden">
             <Link to="/select-company" className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:text-foreground">
               <ArrowLeft className="w-3 h-3" /> Trocar empresa
             </Link>
@@ -513,11 +513,11 @@ const Auth = () => {
               />
             )}
             <div className="text-center">
-              <h1 className="font-display text-3xl font-bold text-foreground">
+              <h1 className="font-display text-xl sm:text-3xl font-bold text-foreground">
                 {companyBrand?.is_system ? 'Nuvexa' : (companyBrand?.name || 'Nuvexa')}
               </h1>
               {companyBrand && !companyBrand.is_system && (
-                <p className="text-sm text-muted-foreground">Entrar na empresa</p>
+                <p className="text-xs text-muted-foreground">Entrar na empresa</p>
               )}
             </div>
           </div>
@@ -528,7 +528,7 @@ const Auth = () => {
               <CardTitle className="font-display text-xl sm:text-2xl">
                 {isLogin ? 'Bem-vindo de volta!' : 'Criar conta'}
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 {isLogin
                   ? 'Entre com suas credenciais para acessar'
                   : step === 1
