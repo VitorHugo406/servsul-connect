@@ -66,8 +66,8 @@ Deno.serve(async (req) => {
     let allowed = new Set<string>();
     if (scheduled) {
       const hhmm = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
-      const { data: mgrs = [] } = await admin.from('profiles').select('id, team_alert_times').eq('team_alerts_enabled', true);
-      const due = (mgrs as any[]).filter((m) => (m.team_alert_times ?? []).includes(hhmm)).map((m) => m.id);
+      const { data: mgrs = [] } = await admin.from('profiles').select('user_id, team_alert_times').eq('team_alerts_enabled', true);
+      const due = (mgrs as any[]).filter((m) => (m.team_alert_times ?? []).includes(hhmm)).map((m) => m.user_id);
       if (due.length) { const { data: mem = [] } = await admin.from('supervisor_team_members').select('member_profile_id').in('supervisor_id', due); allowed = new Set((mem as any[]).map((m) => m.member_profile_id)); }
     }
     if (scheduled && allowed.size) {
