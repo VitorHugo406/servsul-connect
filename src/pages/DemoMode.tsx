@@ -106,7 +106,7 @@ export default function DemoMode() {
   };
   const visibleTasks = useMemo(() => tasks.filter(t => t.title.toLowerCase().includes(search.toLowerCase())), [tasks, search]);
 
-  if (!started) return <div className="min-h-screen bg-[#f4f6fa] px-4 py-10 text-[#17243b]">
+  if (!started && !expired) return <div className="min-h-screen bg-[#f4f6fa] px-4 py-10 text-[#17243b]">
     <div className="mx-auto flex min-h-[80vh] max-w-2xl items-center justify-center">
       <div className="w-full rounded-3xl border border-slate-200 bg-white p-7 shadow-xl sm:p-10">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#172b4d] text-white"><LockKeyhole size={22}/></div>
