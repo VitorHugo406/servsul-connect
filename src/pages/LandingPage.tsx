@@ -41,13 +41,13 @@ export default function LandingPage() {
     <main className="min-h-screen overflow-hidden bg-[#f7f9fc] text-[#101828]">
       <div className="h-[76px] md:h-[88px]">
         <header className={`fixed left-1/2 top-3 z-50 grid w-[calc(100%-1.5rem)] max-w-7xl -translate-x-1/2 grid-cols-[1fr_auto] items-center gap-x-3 rounded-[1.35rem] border px-4 transition-all duration-500 ease-in-out md:top-4 md:grid-cols-[1fr_auto_1fr] md:px-7 ${scrolled
-          ? "translate-y-0 scale-[0.96] border-white/25 bg-slate-100/15 py-2 shadow-[0_12px_40px_-18px_rgba(15,35,70,.25)] backdrop-blur-xl"
+          ? "translate-y-0 scale-[0.96] border-white/15 bg-gradient-to-r from-[#172b4d]/95 via-[#111827]/95 to-black/95 py-2 shadow-[0_12px_40px_-18px_rgba(0,0,0,.55)] backdrop-blur-xl"
           : "translate-y-0 scale-100 border-transparent bg-transparent py-3 shadow-none backdrop-blur-0"}`}>
           <a href="#inicio" className="flex shrink-0 items-center gap-2.5" aria-label="Nuvexa início">
             <span className={`flex items-center justify-center rounded-2xl bg-[#172b4d] text-white shadow-lg shadow-blue-950/10 transition-all duration-500 ${scrolled ? "h-9 w-9" : "h-10 w-10"}`}><Zap size={20} /></span>
             <span className="flex items-center gap-2 font-bold tracking-tight">
-              <span className={`transition-all duration-500 ${scrolled ? "text-lg" : "text-xl"}`}>nuvexa<span className="text-blue-600">.</span></span>
-              <span className={`border-l border-slate-400/50 pl-2 font-sans text-[9px] font-medium uppercase tracking-[.18em] text-slate-500 ${scrolled ? "hidden" : "inline-block"}`}>Gestão de operações</span>
+              <span className={`transition-all duration-500 ${scrolled ? "text-lg text-white" : "text-xl text-[#101828]"}`}>nuvexa<span className="text-blue-400">.</span></span>
+              <span className={`border-l pl-2 font-sans text-[9px] font-medium uppercase tracking-[.18em] transition-colors duration-300 ${scrolled ? "hidden border-white/20 text-white/70" : "inline-block border-slate-400/50 text-slate-500"}`}>Gestão de operações</span>
             </span>
           </a>
           <nav className={`hidden items-center justify-self-center gap-8 text-sm font-medium transition-colors duration-300 md:flex ${scrolled ? "text-white" : "text-slate-700"}`}>
@@ -78,9 +78,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="relative z-10 mx-auto w-full max-w-3xl [perspective:1200px]">
-          <div className="absolute -inset-8 rounded-[3rem] bg-blue-300/25 blur-3xl" />
-          <div className="absolute -right-5 top-12 z-20 hidden h-20 w-20 rotate-12 rounded-2xl border border-white/60 bg-gradient-to-br from-sky-300/80 to-indigo-500/80 shadow-[0_20px_45px_-18px_rgba(37,99,235,.7)] [transform:rotateY(-18deg)_rotateX(12deg)] md:block" />
-          <div className="absolute -left-6 bottom-16 z-20 hidden h-14 w-14 -rotate-12 rounded-full border border-white/70 bg-gradient-to-br from-cyan-200 to-blue-500 shadow-[0_18px_40px_-16px_rgba(37,99,235,.8)] [transform:rotateY(20deg)_rotateX(-10deg)] md:block" />
+          
           <div className="relative overflow-hidden rounded-[1.5rem] border border-white/70 bg-[#f8f9fb] shadow-[0_35px_100px_-35px_rgba(15,35,70,.45)] [transform:rotateY(-5deg)_rotateX(2deg)]">
             <div className="flex min-h-[420px] sm:min-h-[490px]">
               <aside className="flex w-12 shrink-0 flex-col items-center gap-4 bg-[#1d293f] py-3 text-slate-300 sm:w-[62px] sm:gap-[18px] sm:py-4">
