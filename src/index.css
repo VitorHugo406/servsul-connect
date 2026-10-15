@@ -1,7 +1,3 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap');
 @import url("https://fonts.googleapis.com/css2?family=Open+Sans&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond&display=swap");
@@ -9,6 +5,10 @@
 @import url("https://fonts.googleapis.com/css2?family=Lato&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Lora&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   :root { --background: 220 20% 97%; --foreground: 220 30% 15%; --card: 0 0% 100%; --card-foreground: 220 30% 15%; --popover: 0 0% 100%; --popover-foreground: 220 30% 15%; --primary: 220 70% 45%; --primary-foreground: 0 0% 100%; --secondary: 30 90% 55%; --secondary-foreground: 0 0% 100%; --muted: 220 15% 92%; --muted-foreground: 220 15% 45%; --accent: 210 100% 95%; --accent-foreground: 220 70% 35%; --destructive: 0 75% 55%; --destructive-foreground: 0 0% 100%; --success: 150 60% 45%; --success-foreground: 150 60% 45%; --warning: 40 95% 55%; --warning-foreground: 40 95% 15%; --border: 220 15% 88%; --input: 220 15% 88%; --ring: 220 70% 45%; --radius: 1.5rem; --mobile-nav-h: calc(3.5rem + env(safe-area-inset-bottom)); --sidebar-background: 220 35% 18%; --sidebar-foreground: 220 10% 90%; --sidebar-primary: 30 90% 55%; --sidebar-primary-foreground: 0 0% 100%; --sidebar-accent: 220 30% 25%; --sidebar-accent-foreground: 220 10% 95%; --sidebar-border: 220 25% 25%; --sidebar-ring: 30 90% 55%; --gradient-primary: linear-gradient(135deg,hsl(220,70%,45%) 0%,hsl(220,80%,35%) 100%); --gradient-secondary: linear-gradient(135deg,hsl(30,90%,55%) 0%,hsl(25,95%,50%) 100%); --gradient-hero: linear-gradient(135deg,hsl(220,35%,18%) 0%,hsl(220,40%,25%) 100%); --gradient-card: linear-gradient(180deg,hsl(0,0%,100%) 0%,hsl(220,20%,98%) 100%); --shadow-glow:0 0 20px hsl(30,90%,55%,.3); --font-sans:Lato,ui-sans-serif,system-ui,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji; --font-serif:Lora,ui-serif,Georgia,Cambria,Times New Roman,Times,serif; --font-mono:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; }
