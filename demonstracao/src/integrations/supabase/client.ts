@@ -2,7 +2,20 @@
 type Row = Record<string, any>;
 const PREFIX = "nuvexa-local-demo:v1:";
 const listeners = new Set<(event: any) => void>();
-const read = (key: string): Row[] => { try { const v = localStorage.getItem(PREFIX + key); return v ? JSON.parse(v) : []; } catch { return []; } };
+const read = (key: string): Row[] => {
+ try {
+  const v = localStorage.getItem(PREFIX + key);
+  if (v) return JSON.parse(v);
+  const seeds: Record<string, Row[]> = {
+   companies: [{ id:"demo-company", name:"Nuvexa", slug:"nuvexa", logo_url:null, primary_color:"#172554", secondary_color:"#2563eb", is_active:true, is_system:true, enabled_modules:[] }],
+   sectors: [{ id:"00000000-0000-0000-0000-000000000001", name:"Geral", color:"#2563eb", icon:"building-2" }],
+   profiles: [{ id:"demo-profile", user_id:"demo-user", name:"Vitor Hugo", display_name:"Vitor Hugo", email:"demo@nuvexa.local", avatar_url:null, sector_id:"00000000-0000-0000-0000-000000000001", autonomy_level:"admin", is_active:true, profile_type:"admin", company_id:"demo-company", created_at:new Date(0).toISOString(), updated_at:new Date().toISOString(), team_alerts_enabled:false, team_alert_times:[] }],
+   user_roles: [{ id:"demo-role", user_id:"demo-user", role:"admin" }],
+   user_permissions: [{ user_id:"demo-user", can_post_announcements:true, can_delete_messages:true, can_access_management:true, can_access_password_change:true, can_create_war_room:true, can_access_bh:true, can_access_fechamento:true, can_access_orbs:true }]
+  };
+  return seeds[key] ?? [];
+ } catch { return []; }
+}
 const write = (key: string, rows: Row[]) => { try { localStorage.setItem(PREFIX + key, JSON.stringify(rows)); window.dispatchEvent(new CustomEvent("nuvexa-local-change", { detail: { table: key } })); } catch (e) { console.error("Não foi possível salvar dados da demonstração", e); } };
 const uid = () => globalThis.crypto?.randomUUID?.() ?? `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const matches = (row: Row, filters: Array<(r: Row) => boolean>) => filters.every(fn => fn(row));
