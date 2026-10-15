@@ -28,7 +28,10 @@ const plans = [
 ];
 
 export default function LandingPage() {
-  const [scrolled, setScrolled] = useState(false);\n  const [activeFeature, setActiveFeature] = useState(0);\n  const showcaseFeatures = features;\n  const currentFeature = showcaseFeatures[activeFeature];
+  const [scrolled, setScrolled] = useState(false);
+  const [activeFeature, setActiveFeature] = useState(0);
+  const showcaseFeatures = features;
+  const currentFeature = showcaseFeatures[activeFeature];
 
   useEffect(() => {
     const updateScroll = () => setScrolled(window.scrollY > 28);
