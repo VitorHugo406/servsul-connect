@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Check, ShieldCheck, MessageSquare, LayoutDashboard, Users,
@@ -27,23 +28,36 @@ const plans = [
 ];
 
 export default function LandingPage() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const updateScroll = () => setScrolled(window.scrollY > 28);
+    updateScroll();
+    window.addEventListener("scroll", updateScroll, { passive: true });
+    return () => window.removeEventListener("scroll", updateScroll);
+  }, []);
+
   return (
     <main className="min-h-screen overflow-hidden bg-[#f7f9fc] text-[#101828]">
-      <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 md:px-8">
-        <a href="#inicio" className="flex items-center gap-2.5" aria-label="Nuvexa início">
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#172b4d] text-white shadow-lg shadow-blue-950/10"><Zap size={21} /></span>
-          <span className="text-xl font-bold tracking-tight">nuvexa<span className="text-blue-600">.</span><span className="mt-0.5 block text-[10px] font-medium uppercase tracking-[.22em] text-slate-500">Gestão de operações</span></span>
-        </a>
-        <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
-          <a className="transition hover:text-blue-700" href="#recursos">Recursos</a>
-          <a className="transition hover:text-blue-700" href="#como-funciona">Como funciona</a>
-          <a className="transition hover:text-blue-700" href="#planos">Planos</a>
-        </nav>
-        <div className="flex items-center gap-2">
-          <Link to="/select-company" className="hidden rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 sm:inline-flex">Entrar</Link>
-          <Link to="/select-company" className="inline-flex items-center gap-2 rounded-xl bg-[#172b4d] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition hover:-translate-y-0.5 hover:bg-blue-900">Testar grátis <ArrowRight size={16} /></Link>
-        </div>
-      </header>
+      <div className={`relative z-50 mx-auto max-w-7xl px-5 transition-all duration-500 ease-out md:px-8 ${scrolled ? "h-0" : "h-auto"}`}>
+        <header className={`flex items-center justify-between transition-all duration-500 ease-out ${scrolled
+          ? "fixed left-1/2 top-3 w-[calc(100%-1.5rem)] max-w-5xl -translate-x-1/2 rounded-[1.35rem] border border-white/50 bg-white/65 px-4 py-2.5 shadow-[0_12px_40px_-18px_rgba(15,35,70,.35)] backdrop-blur-xl md:top-4 md:px-6"
+          : "px-0 py-5"}`}>
+          <a href="#inicio" className="flex shrink-0 items-center gap-2.5" aria-label="Nuvexa início">
+            <span className={`flex items-center justify-center rounded-2xl bg-[#172b4d] text-white shadow-lg shadow-blue-950/10 transition-all duration-500 ${scrolled ? "h-9 w-9" : "h-10 w-10"}`}><Zap size={20} /></span>
+            <span className={`font-bold tracking-tight transition-all duration-500 ${scrolled ? "text-lg" : "text-xl"}`}>nuvexa<span className="text-blue-600">.</span><span className={`block overflow-hidden text-[9px] font-medium uppercase tracking-[.2em] text-slate-500 transition-all duration-300 ${scrolled ? "max-h-0 opacity-0" : "mt-0.5 max-h-5 opacity-100"}`}>Gestão de operações</span></span>
+          </a>
+          <nav className="hidden items-center gap-7 text-sm font-medium text-slate-700 md:flex">
+            <a className="transition hover:text-blue-700" href="#recursos">Recursos</a>
+            <a className="transition hover:text-blue-700" href="#como-funciona">Como funciona</a>
+            <a className="transition hover:text-blue-700" href="#planos">Planos</a>
+          </nav>
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <Link to="/select-company" className="hidden rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white/60 sm:inline-flex">Entrar</Link>
+            <Link to="/select-company" className={`inline-flex items-center gap-1.5 rounded-xl bg-[#172b4d] px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-950/15 transition hover:bg-blue-900 sm:px-4 sm:text-sm ${scrolled ? "sm:py-2" : "sm:py-2.5"}`}>Testar grátis <ArrowRight size={15} /></Link>
+          </div>
+        </header>
+      </div>
 
       <section id="inicio" className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 pb-20 pt-12 md:grid-cols-[1.03fr_.97fr] md:px-8 md:pb-28 md:pt-20">
         <div className="pointer-events-none absolute -left-40 top-10 h-96 w-96 rounded-full bg-blue-200/40 blur-3xl" />
