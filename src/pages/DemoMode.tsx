@@ -9,6 +9,7 @@ import {
 
 const PREFIX = "nuvexa-demo:v1:";
 const SESSION_KEY = PREFIX + "session-start";
+const SESSION_EXPIRED_KEY = PREFIX + "session-expired";
 const DURATION_MS = 3 * 60 * 60 * 1000;
 const DEFAULT_TASKS = [
   { id: "t1", title: "Revisar solicitação interna", owner: "Mariana Costa", status: "Em andamento", date: "Hoje" },
@@ -57,9 +58,10 @@ export default function DemoMode() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
+    if (localStorage.getItem(SESSION_EXPIRED_KEY) === "1") { setExpired(true); return; }
     const startedAt = Number(localStorage.getItem(SESSION_KEY));
     if (startedAt && Date.now() - startedAt < DURATION_MS) setStarted(true);
-    else if (startedAt) { setExpired(true); localStorage.removeItem(SESSION_KEY); }
+    else if (startedAt) { setExpired(true); localStorage.setItem(SESSION_EXPIRED_KEY, "1"); localStorage.removeItem(SESSION_KEY); }
   }, []);
   useEffect(() => {
     if (!started) return;
@@ -75,17 +77,18 @@ export default function DemoMode() {
   useEffect(() => {
     if (started && remaining <= 0) {
       setStarted(false); setExpired(true);
+      localStorage.setItem(SESSION_EXPIRED_KEY, "1");
       localStorage.removeItem(SESSION_KEY);
     }
   }, [started, remaining]);
 
   const begin = () => {
+    if (localStorage.getItem(SESSION_EXPIRED_KEY) === "1") { setExpired(true); return; }
     const time = Date.now();
     localStorage.setItem(SESSION_KEY, String(time));
     setNow(time); setExpired(false); setStarted(true);
   };
   const leaveDemo = () => {
-    localStorage.removeItem(SESSION_KEY);
     setStarted(false);
     navigate("/");
   };
