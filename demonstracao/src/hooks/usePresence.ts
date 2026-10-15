@@ -1,0 +1,203 @@
+import { useEffect, useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface UserPresence {
+  user_id: string;
+  is_online: boolean;
+  last_heartbeat: string;
+}
+
+const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+const OFFLINE_THRESHOLD = 60000; // 60 seconds
+
+export function usePresence() {
+  const { user, profile } = useAuth();
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Initialize or update presence on mount
+    const initPresence = async () => {
+      const { data, error } = await supabase
+        .from('user_presence')
+        .upsert({
+          user_id: user.id,
+          is_online: true,
+          last_heartbeat: new Date().toISOString(),
+        }, { onConflict: 'user_id' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error initializing presence:', error);
+      }
+    };
+
+    initPresence();
+
+    // Set up heartbeat interval
+    const heartbeatInterval = setInterval(async () => {
+      const { error } = await supabase
+        .from('user_presence')
+        .update({
+          is_online: true,
+          last_heartbeat: new Date().toISOString(),
+        })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating heartbeat:', error);
+      }
+    }, HEARTBEAT_INTERVAL);
+
+    // Set offline on beforeunload
+    const handleBeforeUnload = () => {
+      navigator.sendBeacon && navigator.sendBeacon(
+        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_presence?user_id=eq.${user.id}`,
+        JSON.stringify({ is_online: false })
+      );
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      
+      // Set offline on cleanup
+      supabase
+        .from('user_presence')
+        .update({ is_online: false })
+        .eq('user_id', user.id)
+        .then();
+    };
+  }, [user]);
+
+  return null;
+}
+
+export function useUserPresence(userId?: string) {
+  const [isOnline, setIsOnline] = useState(false);
+  const [lastSeen, setLastSeen] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchPresence = async () => {
+      const { data, error } = await supabase
+        .from('user_presence')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (data) {
+        const lastHeartbeat = new Date(data.last_heartbeat);
+        const isRecentlyActive = Date.now() - lastHeartbeat.getTime() < OFFLINE_THRESHOLD;
+        setIsOnline(data.is_online && isRecentlyActive);
+        setLastSeen(lastHeartbeat);
+      }
+    };
+
+    fetchPresence();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel(`presence-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_presence',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const presence = payload.new as UserPresence;
+          const lastHeartbeat = new Date(presence.last_heartbeat);
+          const isRecentlyActive = Date.now() - lastHeartbeat.getTime() < OFFLINE_THRESHOLD;
+          setIsOnline(presence.is_online && isRecentlyActive);
+          setLastSeen(lastHeartbeat);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
+  return { isOnline, lastSeen };
+}
+
+export function useAllUsersPresence() {
+  const [presenceMap, setPresenceMap] = useState<Record<string, { isOnline: boolean; lastHeartbeat: Date | null }>>({});
+
+  const fetchAllPresence = useCallback(async () => {
+    const { data } = await supabase
+      .from('user_presence')
+      .select('user_id, is_online, last_heartbeat');
+
+    if (data) {
+      const map: Record<string, { isOnline: boolean; lastHeartbeat: Date | null }> = {};
+      data.forEach((p) => {
+        const lastHeartbeat = new Date(p.last_heartbeat);
+        map[p.user_id] = { isOnline: p.is_online && Date.now() - lastHeartbeat.getTime() < OFFLINE_THRESHOLD, lastHeartbeat };
+      });
+      setPresenceMap(map);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAllPresence();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('all-presence')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_presence',
+        },
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            setPresenceMap((current) => {
+              const next = { ...current };
+              delete next[(payload.old as UserPresence).user_id];
+              return next;
+            });
+            return;
+          }
+          const presence = payload.new as UserPresence;
+          const lastHeartbeat = new Date(presence.last_heartbeat);
+          setPresenceMap((current) => ({
+            ...current,
+            [presence.user_id]: { isOnline: presence.is_online && Date.now() - lastHeartbeat.getTime() < OFFLINE_THRESHOLD, lastHeartbeat },
+          }));
+        }
+      )
+      .subscribe();
+
+    // Recalcula expiração localmente sem consultar o banco a cada heartbeat.
+    const refreshInterval = setInterval(() => {
+      setPresenceMap((current) => Object.fromEntries(Object.entries(current).map(([id, value]) => [id, { ...value, isOnline: Boolean(value.lastHeartbeat && Date.now() - value.lastHeartbeat.getTime() < OFFLINE_THRESHOLD && value.isOnline) }])));
+    }, 15000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(refreshInterval);
+    };
+  }, [fetchAllPresence]);
+
+  const isUserOnline = useCallback((userId: string) => {
+    return presenceMap[userId]?.isOnline ?? false;
+  }, [presenceMap]);
+
+  const getUserPresence = useCallback((userId: string) => {
+    return presenceMap[userId] ?? { isOnline: false, lastHeartbeat: null };
+  }, [presenceMap]);
+
+  return { presenceMap, isUserOnline, getUserPresence, refetch: fetchAllPresence };
+}
