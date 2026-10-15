@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowRight, Check, ShieldCheck, MessageSquare, LayoutDashboard, Users,
+  ArrowRight, ChevronLeft, ChevronRight, Check, ShieldCheck, MessageSquare, LayoutDashboard, Users,
   CalendarDays, ClipboardCheck, Workflow, BarChart3, Clock3, Building2,
   Smartphone, PanelsTopLeft, FileText, Bell, Zap
 } from "lucide-react";
@@ -28,7 +28,7 @@ const plans = [
 ];
 
 export default function LandingPage() {
-  const [scrolled, setScrolled] = useState(false);
+  const [scrolled, setScrolled] = useState(false);\n  const [activeFeature, setActiveFeature] = useState(0);\n  const showcaseFeatures = features;\n  const currentFeature = showcaseFeatures[activeFeature];
 
   useEffect(() => {
     const updateScroll = () => setScrolled(window.scrollY > 28);
@@ -114,65 +114,68 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="recursos" className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
-        <div className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[.16em] text-blue-700">Conheça a plataforma</p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#111d33] sm:text-4xl">Uma visão mais próxima da sua operação.</h2>
-          <p className="mt-4 max-w-xl leading-7 text-slate-600">Interfaces objetivas para comunicação, organização de equipes e acompanhamento da rotina. Sem enfeites desnecessários.</p>
+      <section id="recursos" className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-24">
+        <div className="grid items-end gap-5 border-b border-slate-200 pb-6 md:grid-cols-[1fr_auto]">
+          <div>
+            <p className="text-sm font-medium text-blue-700">Funcionalidades</p>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-[#111d33] sm:text-4xl">Feita para a rotina da sua equipe.</h2>
+          </div>
+          <p className="max-w-md text-sm leading-6 text-slate-600">Conheça algumas áreas da plataforma. Use as setas para navegar entre as funcionalidades.</p>
         </div>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-2">
-          <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><MessageSquare size={18}/></span><div><h3 className="text-sm font-semibold text-slate-900">Comunicação por setor</h3><p className="text-xs text-slate-500">Conversas individuais, grupos e canais</p></div></div>
-              <span className="hidden rounded-full border border-slate-200 px-2.5 py-1 text-[10px] text-slate-500 sm:inline-flex">Prévia ilustrativa</span>
+        <div className="mt-8 grid overflow-hidden rounded-2xl border border-slate-200 bg-white lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,.75fr)]">
+          <div className="min-w-0 border-b border-slate-200 bg-[#f5f6f8] p-3 sm:p-5 lg:border-b-0 lg:border-r">
+            <div className="mb-3 flex items-center justify-between px-1">
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-slate-300"/><span className="h-2 w-2 rounded-full bg-slate-300"/><span className="h-2 w-2 rounded-full bg-slate-300"/><span className="ml-2 text-[11px] text-slate-500">Prévia da plataforma</span></div>
+              <span className="text-xs tabular-nums text-slate-500">{String(activeFeature+1).padStart(2,"0")} / {String(showcaseFeatures.length).padStart(2,"0")}</span>
             </div>
-            <div className="bg-[#f7f8fa] p-3 sm:p-4">
-              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-                <div className="grid grid-cols-[112px_1fr] sm:grid-cols-[145px_1fr]">
-                  <aside className="border-r border-slate-200 bg-white p-2">
-                    <div className="mb-3 rounded-lg bg-blue-50 px-2 py-2 text-[10px] font-semibold text-blue-700"><Users size={12} className="mr-1 inline"/> Setores</div>
-                    <div className="space-y-1 text-[10px] text-slate-600"><div className="rounded-md bg-slate-100 px-2 py-1.5 font-medium text-slate-800">◉ Geral</div><div className="px-2 py-1.5">▤ Admissão</div><div className="px-2 py-1.5">♧ Folha</div><div className="px-2 py-1.5">⌁ Operacional</div></div>
-                  </aside>
-                  <div className="flex min-h-[245px] flex-col">
-                    <div className="border-b border-slate-200 px-3 py-3"><p className="text-xs font-semibold text-slate-900">Geral</p><p className="text-[10px] text-slate-500">Canal do setor · 8 participantes</p></div>
-                    <div className="flex-1 space-y-4 p-3">
-                      <div className="flex items-start gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[9px] font-semibold text-slate-600">MC</span><div><p className="text-[10px] font-semibold text-slate-700">Mariana Costa <span className="ml-1 font-normal text-slate-400">09:14</span></p><div className="mt-1 rounded-r-xl rounded-bl-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-600">Bom dia! O comunicado já está disponível no mural.</div></div></div>
-                      <div className="flex items-start justify-end gap-2"><div className="max-w-[85%]"><p className="text-right text-[10px] font-semibold text-slate-700">Você <span className="ml-1 font-normal text-slate-400">09:16</span></p><div className="mt-1 rounded-l-xl rounded-br-xl bg-blue-600 px-3 py-2 text-[11px] text-white">Perfeito, vou encaminhar para a equipe.</div></div><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[9px] font-semibold text-blue-700">VH</span></div>
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex min-h-[330px] sm:min-h-[390px]">
+                <aside className="flex w-10 shrink-0 flex-col items-center gap-4 bg-[#1d293f] py-3 text-slate-300 sm:w-12 sm:gap-[18px] sm:py-4">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-xs">›</span>
+                  <LayoutDashboard size={15}/><MessageSquare size={15}/><Bell size={15}/><CalendarDays size={15}/>
+                  <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${activeFeature===0 ? "bg-orange-500 text-white" : "text-slate-300"}`}><ClipboardCheck size={15}/></span>
+                  <Users size={15}/><ShieldCheck size={15}/>
+                </aside>
+                <div className="min-w-0 flex-1">
+                  {activeFeature===0 ? <>
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-3 py-3 sm:px-4">
+                      <div className="flex items-center gap-2 text-xs text-slate-700"><Users size={14}/> <span className="rounded-md bg-blue-50 px-2 py-1 font-medium text-blue-700">Setores</span><span className="hidden sm:inline">Individual</span><span className="hidden sm:inline">Grupos</span></div>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-200 px-3 py-3 sm:px-4"><div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-500 text-xs font-semibold text-white">G</span><div><p className="text-xs font-semibold text-slate-800">Geral</p><p className="text-[10px] text-slate-500">Canal da equipe</p></div></div><div className="flex gap-3 text-xs text-slate-400"><span>◉</span><span>⌕</span></div></div>
+                    <div className="space-y-5 bg-[#f8f9fb] p-3 sm:p-4">
+                      <div className="flex items-start gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-300 text-[9px] font-semibold text-slate-700">MC</span><div><p className="text-[10px] font-semibold text-slate-700">Mariana Costa <span className="ml-1 font-normal text-slate-400">09:14</span></p><div className="mt-1 rounded-r-xl rounded-bl-xl border border-slate-200 bg-white px-3 py-2 text-[11px] leading-5 text-slate-700">Bom dia! A atualização da equipe já está disponível.</div></div></div>
+                      <div className="flex items-start justify-end gap-2"><div className="max-w-[85%]"><p className="text-right text-[10px] font-semibold text-slate-700">Você <span className="ml-1 font-normal text-slate-400">09:16</span></p><div className="mt-1 rounded-l-xl rounded-br-xl bg-blue-600 px-3 py-2 text-[11px] leading-5 text-white">Obrigado! Vou compartilhar com o pessoal.</div></div><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[9px] font-semibold text-blue-700">VH</span></div>
                     </div>
                     <div className="border-t border-slate-200 p-2"><div className="rounded-lg border border-slate-200 px-3 py-2 text-[10px] text-slate-400">Mensagem...</div></div>
-                  </div>
+                  </> : activeFeature===3 ? <>
+                    <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-gradient-to-r from-orange-50 to-white px-3 py-4 sm:px-4"><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-600"><Zap size={16}/></span><div><p className="text-xs font-semibold text-slate-900">Painel de Aniversariantes</p><p className="text-[10px] text-slate-500">Mensagens da equipe</p></div></div><span className="hidden rounded-md bg-blue-600 px-2 py-1 text-[9px] font-medium text-white sm:inline-flex">Corporativo</span></div>
+                    <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-4 sm:p-4">{[{n:"4",t:"No mês"},{n:"1",t:"Hoje"},{n:"2",t:"Mensagens"},{n:"3",t:"Setores"}].map((item)=><div key={item.t} className="rounded-lg border border-slate-200 p-2"><p className="text-lg font-semibold text-slate-900">{item.n}</p><p className="text-[10px] text-slate-500">{item.t}</p></div>)}</div>
+                    <div className="px-3 pb-3 sm:px-4"><p className="mb-2 text-xs font-semibold text-slate-800">Aniversariantes do mês</p>{[{i:"AS",n:"Ana Souza",d:"14 de outubro"},{i:"RM",n:"Rafael Martins",d:"22 de outubro"}].map(person=><div key={person.n} className="mb-2 flex items-center gap-3 rounded-lg border border-slate-200 p-2.5"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-[10px] font-semibold text-white">{person.i}</span><div className="min-w-0 flex-1"><p className="text-[11px] font-medium text-slate-800">{person.n}</p><p className="text-[10px] text-slate-500">Equipe de operações</p></div><span className="text-[9px] text-slate-500">{person.d}</span></div>)}</div>
+                  </> : <>
+                    <div className="border-b border-slate-200 px-4 py-4"><p className="text-xs font-semibold text-slate-900">{currentFeature.title}</p><p className="mt-1 text-[10px] text-slate-500">Visão geral · Nuvexa</p></div>
+                    <div className="space-y-3 bg-[#f8f9fb] p-4">
+                      <div className="grid grid-cols-2 gap-3"><div className="rounded-lg border border-slate-200 bg-white p-3"><p className="text-[10px] text-slate-500">Em acompanhamento</p><p className="mt-2 text-xl font-semibold text-slate-800">08</p></div><div className="rounded-lg border border-slate-200 bg-white p-3"><p className="text-[10px] text-slate-500">Atualizações recentes</p><p className="mt-2 text-xl font-semibold text-slate-800">12</p></div></div>
+                      <div className="rounded-lg border border-slate-200 bg-white p-3"><p className="mb-3 text-xs font-semibold text-slate-700">Atividade recente</p>{["Revisar informações da equipe","Atualização de rotina interna","Acompanhar pendências"].map((item,i)=><div key={item} className="flex items-center gap-2 border-t border-slate-100 py-3 text-[11px] text-slate-600"><span className={`h-2 w-2 rounded-full ${["bg-blue-500","bg-amber-400","bg-emerald-500"][i]}`}/>{item}<span className="ml-auto text-[10px] text-slate-400">{["Hoje","Ontem","Esta semana"][i]}</span></div>)}</div>
+                    </div>
+                  </>}
                 </div>
               </div>
             </div>
-            <div className="px-5 py-4"><p className="text-sm leading-6 text-slate-600">Organize conversas e mantenha a comunicação de cada equipe no contexto certo.</p></div>
-          </article>
-
-          <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><CalendarDays size={18}/></span><div><h3 className="text-sm font-semibold text-slate-900">Painel de aniversariantes</h3><p className="text-xs text-slate-500">Datas e mensagens da equipe</p></div></div>
-              <span className="hidden rounded-full border border-slate-200 px-2.5 py-1 text-[10px] text-slate-500 sm:inline-flex">Prévia ilustrativa</span>
+          </div>
+          <div className="flex flex-col justify-between p-6 sm:p-8 lg:p-9">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[.12em] text-slate-500">Funcionalidade {String(activeFeature+1).padStart(2,"0")}</p>
+              <div className="mt-5 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><currentFeature.icon size={21}/></div>
+              <h3 className="mt-5 text-2xl font-semibold tracking-tight text-[#111d33]">{currentFeature.title}</h3>
+              <p className="mt-4 text-sm leading-7 text-slate-600">{currentFeature.text}</p>
+              <p className="mt-4 text-xs leading-5 text-slate-500">Prévia demonstrativa com conteúdo fictício. A disposição representa a experiência da plataforma.</p>
             </div>
-            <div className="bg-[#f7f8fa] p-3 sm:p-4">
-              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-orange-100 bg-gradient-to-r from-orange-50 to-white p-3">
-                  <div className="flex items-center gap-2.5"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-orange-600"><Zap size={17}/></span><div><p className="text-xs font-semibold text-slate-900">Painel de Aniversariantes</p><p className="text-[10px] text-slate-500">Energia da equipe</p></div></div><span className="rounded-md bg-blue-600 px-2 py-1 text-[9px] font-medium text-white">Corporativo</span>
-                </div>
-                <div className="mt-3 grid grid-cols-4 gap-2">
-                  <div className="rounded-lg border border-slate-200 p-2"><Users size={13} className="text-blue-600"/><p className="mt-1 text-base font-semibold text-slate-900">4</p><p className="text-[9px] text-slate-500">No mês</p></div>
-                  <div className="rounded-lg border border-slate-200 p-2"><Zap size={13} className="text-blue-600"/><p className="mt-1 text-base font-semibold text-slate-900">1</p><p className="text-[9px] text-slate-500">Hoje</p></div>
-                  <div className="rounded-lg border border-slate-200 p-2"><MessageSquare size={13} className="text-blue-600"/><p className="mt-1 text-base font-semibold text-slate-900">2</p><p className="text-[9px] text-slate-500">Mensagens</p></div>
-                  <div className="rounded-lg border border-slate-200 p-2"><Building2 size={13} className="text-blue-600"/><p className="mt-1 text-base font-semibold text-slate-900">3</p><p className="text-[9px] text-slate-500">Setores</p></div>
-                </div>
-                <div className="mt-4"><p className="text-xs font-semibold text-slate-800">Aniversariantes do mês</p><div className="mt-2 flex items-center gap-3 rounded-lg border border-slate-200 p-3"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-500 text-[10px] font-semibold text-white">AS</span><div className="min-w-0 flex-1"><p className="text-[11px] font-semibold text-slate-800">Ana Souza</p><p className="text-[10px] text-slate-500">Recursos Humanos</p></div><span className="rounded-full bg-orange-50 px-2 py-1 text-[9px] font-medium text-orange-700">14 de outubro</span></div><div className="mt-2 flex items-center gap-3 rounded-lg border border-slate-200 p-3"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-[10px] font-semibold text-blue-700">RM</span><div className="min-w-0 flex-1"><p className="text-[11px] font-semibold text-slate-800">Rafael Martins</p><p className="text-[10px] text-slate-500">Operações</p></div><span className="rounded-full bg-orange-50 px-2 py-1 text-[9px] font-medium text-orange-700">22 de outubro</span></div></div>
-              </div>
+            <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-5">
+              <div className="flex gap-1.5">{showcaseFeatures.map((item,i)=><button key={item.title} aria-label={`Mostrar ${item.title}`} onClick={()=>setActiveFeature(i)} className={`h-1.5 rounded-full transition-all ${activeFeature===i ? "w-6 bg-blue-700" : "w-1.5 bg-slate-300 hover:bg-slate-400"}`}/>)}</div>
+              <div className="flex gap-2"><button aria-label="Funcionalidade anterior" onClick={()=>setActiveFeature((activeFeature-1+showcaseFeatures.length)%showcaseFeatures.length)} className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 text-slate-700 transition hover:border-slate-500 hover:bg-slate-50"><ChevronLeft size={18}/></button><button aria-label="Próxima funcionalidade" onClick={()=>setActiveFeature((activeFeature+1)%showcaseFeatures.length)} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#172b4d] text-white transition hover:bg-blue-900"><ChevronRight size={18}/></button></div>
             </div>
-            <div className="px-5 py-4"><p className="text-sm leading-6 text-slate-600">Visualize datas importantes e recursos de comunicação interna em uma tela única.</p></div>
-          </article>
-        </div>
-
-        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {features.filter((feature) => !["Comunicação centralizada","Calendário da equipe"].includes(feature.title)).map(({icon:Icon,title,text}) => <div key={title} className="flex gap-3 rounded-xl border border-slate-200 bg-white p-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-600"><Icon size={17}/></span><div><h3 className="text-sm font-semibold text-slate-900">{title}</h3><p className="mt-1 text-xs leading-5 text-slate-600">{text}</p></div></div>)}
+          </div>
         </div>
       </section>
 
