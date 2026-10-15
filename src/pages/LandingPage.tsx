@@ -40,7 +40,7 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen overflow-hidden bg-[#f7f9fc] text-[#101828]">
       <div className="h-[76px] md:h-[88px]">
-        <header className={`fixed left-1/2 top-3 z-50 flex w-[calc(100%-1.5rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-[1.35rem] border px-4 transition-all duration-500 ease-in-out md:top-4 md:px-7 ${scrolled
+        <header className={`fixed left-1/2 top-3 z-50 grid w-[calc(100%-1.5rem)] max-w-7xl -translate-x-1/2 grid-cols-[1fr_auto] items-center gap-x-3 rounded-[1.35rem] border px-4 transition-all duration-500 ease-in-out md:top-4 md:grid-cols-[1fr_auto_1fr] md:px-7 ${scrolled
           ? "translate-y-0 scale-[0.96] border-white/25 bg-slate-100/15 py-2 shadow-[0_12px_40px_-18px_rgba(15,35,70,.25)] backdrop-blur-xl"
           : "translate-y-0 scale-100 border-transparent bg-transparent py-3 shadow-none backdrop-blur-0"}`}>
           <a href="#inicio" className="flex shrink-0 items-center gap-2.5" aria-label="Nuvexa início">
@@ -50,12 +50,12 @@ export default function LandingPage() {
               <span className={`border-l border-slate-400/50 pl-2 font-sans text-[9px] font-medium uppercase tracking-[.18em] text-slate-500 ${scrolled ? "hidden" : "inline-block"}`}>Gestão de operações</span>
             </span>
           </a>
-          <nav className="hidden items-center gap-8 text-sm font-medium text-slate-700 md:flex">
+          <nav className="hidden items-center justify-self-center gap-8 text-sm font-medium text-slate-700 md:flex">
             <a className="transition hover:text-blue-700" href="#recursos">Recursos</a>
             <a className="transition hover:text-blue-700" href="#como-funciona">Como funciona</a>
             <a className="transition hover:text-blue-700" href="#planos">Planos</a>
           </nav>
-          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <div className="flex shrink-0 items-center justify-self-end gap-1 sm:gap-2">
             <Link to="/select-company" className="hidden rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white/10 sm:inline-flex">Entrar</Link>
             <Link to="/select-company" className="inline-flex items-center gap-2 rounded-xl bg-[#172b4d] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition hover:bg-blue-900">Testar grátis <ArrowRight size={16} /></Link>
           </div>
@@ -77,33 +77,56 @@ export default function LandingPage() {
             <span className="inline-flex items-center gap-1.5"><Check size={14} className="text-emerald-600" /> Recursos integrados</span>
           </div>
         </div>
-        <div className="relative z-10 mx-auto w-full max-w-xl">
-          <div className="absolute -inset-5 rounded-[2.5rem] bg-gradient-to-br from-blue-200/60 via-indigo-100/40 to-sky-100/70 blur-2xl" />
-          <div className="relative rounded-[1.8rem] border border-white bg-white/90 p-3 shadow-[0_30px_100px_-35px_rgba(25,55,105,.35)] backdrop-blur">
-            <div className="flex items-center justify-between border-b border-slate-100 px-3 pb-4 pt-2">
-              <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-rose-400"/><span className="h-2.5 w-2.5 rounded-full bg-amber-400"/><span className="h-2.5 w-2.5 rounded-full bg-emerald-400"/></div>
-              <span className="text-[11px] font-semibold tracking-wide text-slate-400">NUVEXA WORKSPACE</span>
-              <span className="h-7 w-7 rounded-full bg-blue-50" />
-            </div>
-            <div className="grid grid-cols-[68px_1fr] gap-3 p-2 sm:grid-cols-[84px_1fr] sm:p-4">
-              <aside className="flex flex-col items-center gap-3 rounded-2xl bg-[#172b4d] py-4 text-white">
-                <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-white/15"><Zap size={17}/></span>
-                {[LayoutDashboard, MessageSquare, Users, CalendarDays, ClipboardCheck].map((Icon, i) => <span key={i} className={`flex h-9 w-9 items-center justify-center rounded-xl ${i===0 ? "bg-white text-blue-800" : "text-blue-100/80"}`}><Icon size={17}/></span>)}
+        <div className="relative z-10 mx-auto w-full max-w-3xl">
+          <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-blue-200/35 via-slate-100/30 to-indigo-100/40 blur-2xl" />
+          <div className="relative overflow-hidden rounded-[1.5rem] border border-slate-200 bg-[#f8f9fb] shadow-[0_25px_75px_-35px_rgba(15,35,70,.3)]">
+            <div className="flex min-h-[420px] sm:min-h-[490px]">
+              <aside className="flex w-12 shrink-0 flex-col items-center gap-4 bg-[#1d293f] py-3 text-slate-300 sm:w-[62px] sm:gap-[18px] sm:py-4">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-xs">›</span>
+                <span className="mt-1"><LayoutDashboard size={16}/></span>
+                <span><MessageSquare size={16}/></span>
+                <span><Bell size={16}/></span>
+                <span><CalendarDays size={16}/></span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500 text-white"><ClipboardCheck size={16}/></span>
+                <span><CalendarDays size={16}/></span>
+                <span><PanelsTopLeft size={16}/></span>
+                <span><FileText size={16}/></span>
+                <span><Users size={16}/></span>
+                <span><ShieldCheck size={16}/></span>
+                <span><Zap size={16}/></span>
+                <span className="mt-auto flex h-8 w-8 items-center justify-center rounded-full border-2 border-orange-400 bg-slate-700 text-[10px] text-white">N</span>
               </aside>
-              <div className="min-w-0 py-1">
-                <div className="flex items-start justify-between gap-2"><div><p className="text-[11px] font-medium text-slate-400">VISÃO GERAL</p><h3 className="mt-1 text-lg font-bold tracking-tight sm:text-xl">Painel de operações</h3></div><span className="rounded-lg bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700">Visão geral</span></div>
-                <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3">
-                  {[["Tarefas abertas","24","+4 nesta semana"],["Mensagens","18","3 não lidas"],["Avaliações","92%","respostas registradas"],["Setores ativos","06","equipe conectada"]].map(([label,value,sub],i)=><div key={label} className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm"><p className="text-[10px] text-slate-500 sm:text-xs">{label}</p><p className="mt-1 text-xl font-bold tracking-tight text-slate-800">{value}</p><p className={`mt-1 text-[9px] sm:text-[10px] ${i===1?"text-amber-600":"text-emerald-600"}`}>{sub}</p></div>)}
+              <div className="min-w-0 flex-1 p-3 sm:p-4">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700"><ClipboardCheck size={17}/></span>
+                    <div className="min-w-0"><h3 className="truncate text-sm font-bold text-slate-900 sm:text-base">Gestão de Tarefas</h3><p className="text-[10px] text-slate-500 sm:text-xs">7 murais</p></div>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-2 text-[10px] font-semibold text-white sm:px-3 sm:text-xs"><span>+</span> Novo Mural</span>
                 </div>
-                <div className="mt-3 rounded-xl border border-slate-100 p-3">
-                  <div className="mb-3 flex items-center justify-between"><p className="text-xs font-bold text-slate-700">Demandas recentes</p><span className="text-[10px] text-blue-700">Ver tarefas</span></div>
-                  {["Revisar solicitação interna","Atualizar comunicado da equipe","Conferir pendências do setor"].map((item,i)=><div key={item} className="flex items-center gap-2 border-t border-slate-50 py-2 first:border-0"><span className={`h-2 w-2 rounded-full ${i===0?"bg-amber-400":i===1?"bg-blue-500":"bg-emerald-500"}`}/><span className="truncate text-[10px] text-slate-600 sm:text-xs">{item}</span><span className="ml-auto rounded-md bg-slate-50 px-1.5 py-1 text-[9px] text-slate-500">{i===0?"Em andamento":i===1?"Novo":"Concluído"}</span></div>)}
+                <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  <article className="rounded-2xl border border-slate-200 bg-[#f0f1f4] px-3 py-3 shadow-sm sm:px-4">
+                    <div className="flex items-start gap-2"><span className="text-slate-400">⠿</span><div><p className="text-xs font-semibold text-slate-800">__diag3</p><p className="mt-2 text-[10px] text-slate-500">13/08/2026</p></div><span className="ml-auto text-slate-500">⋮</span></div>
+                  </article>
+                  <article className="rounded-2xl border border-slate-200 bg-[#f0f1f4] px-3 py-3 shadow-sm sm:px-4">
+                    <div className="flex items-start gap-2"><span className="text-slate-400">⠿</span><div><p className="text-xs font-semibold text-slate-800">Teste</p><p className="mt-2 text-[10px] text-slate-500">Teste empresa admin</p><p className="mt-1 text-[10px] text-slate-500">08/08/2026</p></div><span className="ml-auto text-slate-500">⋮</span></div>
+                  </article>
+                  <article className="relative flex min-h-[76px] items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-700 p-3 text-white shadow-sm sm:col-span-1 sm:min-h-[88px] sm:p-4" style={{backgroundImage:"linear-gradient(90deg,rgba(15,23,42,.65),rgba(15,23,42,.12)),url(https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=900&q=80)",backgroundPosition:"center",backgroundSize:"cover"}}>
+                    <div><p className="text-xs font-semibold">Implantações de Contratos</p><p className="mt-1 text-[10px] text-white/85">Painel focado na integração de novos contratos</p><p className="mt-1 text-[9px] text-white/80">05/03/2026</p></div>
+                  </article>
+                  <article className="relative flex min-h-[76px] items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-700 p-3 text-white shadow-sm sm:min-h-[88px] sm:p-4" style={{backgroundImage:"linear-gradient(90deg,rgba(15,23,42,.6),rgba(15,23,42,.08)),url(https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80)",backgroundPosition:"center",backgroundSize:"cover"}}>
+                    <div><p className="text-xs font-semibold">Gestão de Tarefas</p><p className="mt-1 text-[9px] text-white/80">03/03/2026</p></div>
+                  </article>
+                  <article className="relative flex min-h-[76px] items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-700 p-3 text-white shadow-sm sm:min-h-[88px] sm:p-4" style={{backgroundImage:"linear-gradient(90deg,rgba(15,23,42,.65),rgba(15,23,42,.1)),url(https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=900&q=80)",backgroundPosition:"center",backgroundSize:"cover"}}>
+                    <div><p className="text-xs font-semibold">Transferências</p><p className="mt-1 text-[10px] text-white/85">Quadro focado em transferência de funcionários</p><p className="mt-1 text-[9px] text-white/80">09/03/2026</p></div>
+                  </article>
+                  <article className="relative flex min-h-[76px] items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-700 p-3 text-white shadow-sm sm:min-h-[88px] sm:p-4" style={{backgroundImage:"linear-gradient(90deg,rgba(15,23,42,.65),rgba(15,23,42,.1)),url(https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=80)",backgroundPosition:"center",backgroundSize:"cover"}}>
+                    <div><p className="text-xs font-semibold">CCO - Centro de Controle Operacional</p><p className="mt-1 text-[9px] text-white/80">20/02/2026</p></div>
+                  </article>
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[10px] text-slate-400"><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500"/> Ambiente organizado</span><span>Um espaço para cada equipe</span></div>
           </div>
-          <div className="absolute -right-3 top-16 hidden rounded-2xl border border-white bg-white p-3 shadow-xl sm:block"><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Check size={16}/></span><div><p className="text-xs font-bold text-slate-800">Tudo conectado</p><p className="text-[10px] text-slate-500">Equipes e rotinas</p></div></div></div>
         </div>
       </section>
 
