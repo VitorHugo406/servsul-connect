@@ -47,7 +47,7 @@ export default function LandingPage() {
             <span className={`flex items-center justify-center rounded-2xl bg-[#172b4d] text-white shadow-lg shadow-blue-950/10 transition-all duration-500 ${scrolled ? "h-9 w-9" : "h-10 w-10"}`}><Zap size={20} /></span>
             <span className="flex items-center gap-2 font-bold tracking-tight">
               <span className={`transition-all duration-500 ${scrolled ? "text-lg" : "text-xl"}`}>nuvexa<span className="text-blue-600">.</span></span>
-              <span className={`border-l border-slate-400/50 pl-2 font-sans text-[9px] font-medium uppercase tracking-[.18em] text-slate-500 transition-all duration-300 ${scrolled ? "max-w-0 translate-x-1 overflow-hidden border-transparent pl-0 opacity-0" : "max-w-40 opacity-100"}`}>Gestão de operações</span>
+              <span className={`border-l border-slate-400/50 pl-2 font-sans text-[9px] font-medium uppercase tracking-[.18em] text-slate-500 ${scrolled ? "hidden" : "inline-block"}`}>Gestão de operações</span>
             </span>
           </a>
           <nav className="hidden items-center gap-8 text-sm font-medium text-slate-700 md:flex">
