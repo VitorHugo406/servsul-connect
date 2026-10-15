@@ -50,13 +50,13 @@ export default function LandingPage() {
               <span className={`border-l border-slate-400/50 pl-2 font-sans text-[9px] font-medium uppercase tracking-[.18em] text-slate-500 ${scrolled ? "hidden" : "inline-block"}`}>Gestão de operações</span>
             </span>
           </a>
-          <nav className="hidden items-center justify-self-center gap-8 text-sm font-medium text-slate-700 md:flex">
-            <a className="transition hover:text-blue-700" href="#recursos">Recursos</a>
-            <a className="transition hover:text-blue-700" href="#como-funciona">Como funciona</a>
-            <a className="transition hover:text-blue-700" href="#planos">Planos</a>
+          <nav className="hidden items-center justify-self-center gap-8 text-sm font-medium transition-colors duration-300 md:flex ${scrolled ? "text-white" : "text-slate-700"}">
+            <a className={`transition hover:text-blue-300 ${scrolled ? "text-white" : "text-slate-700 hover:text-blue-700"}`} href="#recursos">Recursos</a>
+            <a className={`transition hover:text-blue-300 ${scrolled ? "text-white" : "text-slate-700 hover:text-blue-700"}`} href="#como-funciona">Como funciona</a>
+            <a className={`transition hover:text-blue-300 ${scrolled ? "text-white" : "text-slate-700 hover:text-blue-700"}`} href="#planos">Planos</a>
           </nav>
           <div className="flex shrink-0 items-center justify-self-end gap-1 sm:gap-2">
-            <Link to="/select-company" className="hidden rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white/10 sm:inline-flex">Entrar</Link>
+            <Link to="/select-company" className={`hidden rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-white/10 sm:inline-flex ${scrolled ? "text-white" : "text-slate-700"}`}>Entrar</Link>
             <Link to="/select-company" className="inline-flex items-center gap-2 rounded-xl bg-[#172b4d] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition hover:bg-blue-900">Testar grátis <ArrowRight size={16} /></Link>
           </div>
         </header>
@@ -77,56 +77,36 @@ export default function LandingPage() {
             <span className="inline-flex items-center gap-1.5"><Check size={14} className="text-emerald-600" /> Recursos integrados</span>
           </div>
         </div>
-        <div className="relative z-10 mx-auto w-full max-w-3xl">
-          <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-blue-200/35 via-slate-100/30 to-indigo-100/40 blur-2xl" />
-          <div className="relative overflow-hidden rounded-[1.5rem] border border-slate-200 bg-[#f8f9fb] shadow-[0_25px_75px_-35px_rgba(15,35,70,.3)]">
+        <div className="relative z-10 mx-auto w-full max-w-3xl [perspective:1200px]">
+          <div className="absolute -inset-8 rounded-[3rem] bg-blue-300/25 blur-3xl" />
+          <div className="absolute -right-5 top-12 z-20 hidden h-20 w-20 rotate-12 rounded-2xl border border-white/60 bg-gradient-to-br from-sky-300/80 to-indigo-500/80 shadow-[0_20px_45px_-18px_rgba(37,99,235,.7)] [transform:rotateY(-18deg)_rotateX(12deg)] md:block" />
+          <div className="absolute -left-6 bottom-16 z-20 hidden h-14 w-14 -rotate-12 rounded-full border border-white/70 bg-gradient-to-br from-cyan-200 to-blue-500 shadow-[0_18px_40px_-16px_rgba(37,99,235,.8)] [transform:rotateY(20deg)_rotateX(-10deg)] md:block" />
+          <div className="relative overflow-hidden rounded-[1.5rem] border border-white/70 bg-[#f8f9fb] shadow-[0_35px_100px_-35px_rgba(15,35,70,.45)] [transform:rotateY(-5deg)_rotateX(2deg)]">
             <div className="flex min-h-[420px] sm:min-h-[490px]">
               <aside className="flex w-12 shrink-0 flex-col items-center gap-4 bg-[#1d293f] py-3 text-slate-300 sm:w-[62px] sm:gap-[18px] sm:py-4">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-xs">›</span>
-                <span className="mt-1"><LayoutDashboard size={16}/></span>
-                <span><MessageSquare size={16}/></span>
-                <span><Bell size={16}/></span>
-                <span><CalendarDays size={16}/></span>
+                <span className="mt-1"><LayoutDashboard size={16}/></span><span><MessageSquare size={16}/></span><span><Bell size={16}/></span><span><CalendarDays size={16}/></span>
                 <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500 text-white"><ClipboardCheck size={16}/></span>
-                <span><CalendarDays size={16}/></span>
-                <span><PanelsTopLeft size={16}/></span>
-                <span><FileText size={16}/></span>
-                <span><Users size={16}/></span>
-                <span><ShieldCheck size={16}/></span>
-                <span><Zap size={16}/></span>
+                <span><CalendarDays size={16}/></span><span><PanelsTopLeft size={16}/></span><span><FileText size={16}/></span><span><Users size={16}/></span><span><ShieldCheck size={16}/></span><span><Zap size={16}/></span>
                 <span className="mt-auto flex h-8 w-8 items-center justify-center rounded-full border-2 border-orange-400 bg-slate-700 text-[10px] text-white">N</span>
               </aside>
               <div className="min-w-0 flex-1 p-3 sm:p-4">
                 <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-3">
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700"><ClipboardCheck size={17}/></span>
-                    <div className="min-w-0"><h3 className="truncate text-sm font-bold text-slate-900 sm:text-base">Gestão de Tarefas</h3><p className="text-[10px] text-slate-500 sm:text-xs">7 murais</p></div>
-                  </div>
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-2 text-[10px] font-semibold text-white sm:px-3 sm:text-xs"><span>+</span> Novo Mural</span>
+                  <div className="flex min-w-0 items-center gap-2.5"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700"><ClipboardCheck size={17}/></span><div><h3 className="truncate text-sm font-bold text-slate-900 sm:text-base">Central de Projetos</h3><p className="text-[10px] text-slate-500 sm:text-xs">6 espaços de trabalho</p></div></div>
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-2 text-[10px] font-semibold text-white sm:px-3 sm:text-xs"><span>+</span> Novo espaço</span>
                 </div>
                 <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                  <article className="rounded-2xl border border-slate-200 bg-[#f0f1f4] px-3 py-3 shadow-sm sm:px-4">
-                    <div className="flex items-start gap-2"><span className="text-slate-400">⠿</span><div><p className="text-xs font-semibold text-slate-800">__diag3</p><p className="mt-2 text-[10px] text-slate-500">13/08/2026</p></div><span className="ml-auto text-slate-500">⋮</span></div>
-                  </article>
-                  <article className="rounded-2xl border border-slate-200 bg-[#f0f1f4] px-3 py-3 shadow-sm sm:px-4">
-                    <div className="flex items-start gap-2"><span className="text-slate-400">⠿</span><div><p className="text-xs font-semibold text-slate-800">Teste</p><p className="mt-2 text-[10px] text-slate-500">Teste empresa admin</p><p className="mt-1 text-[10px] text-slate-500">08/08/2026</p></div><span className="ml-auto text-slate-500">⋮</span></div>
-                  </article>
-                  <article className="relative flex min-h-[76px] items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-700 p-3 text-white shadow-sm sm:col-span-1 sm:min-h-[88px] sm:p-4" style={{backgroundImage:"linear-gradient(90deg,rgba(15,23,42,.65),rgba(15,23,42,.12)),url(https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=900&q=80)",backgroundPosition:"center",backgroundSize:"cover"}}>
-                    <div><p className="text-xs font-semibold">Implantações de Contratos</p><p className="mt-1 text-[10px] text-white/85">Painel focado na integração de novos contratos</p><p className="mt-1 text-[9px] text-white/80">05/03/2026</p></div>
-                  </article>
-                  <article className="relative flex min-h-[76px] items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-700 p-3 text-white shadow-sm sm:min-h-[88px] sm:p-4" style={{backgroundImage:"linear-gradient(90deg,rgba(15,23,42,.6),rgba(15,23,42,.08)),url(https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80)",backgroundPosition:"center",backgroundSize:"cover"}}>
-                    <div><p className="text-xs font-semibold">Gestão de Tarefas</p><p className="mt-1 text-[9px] text-white/80">03/03/2026</p></div>
-                  </article>
-                  <article className="relative flex min-h-[76px] items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-700 p-3 text-white shadow-sm sm:min-h-[88px] sm:p-4" style={{backgroundImage:"linear-gradient(90deg,rgba(15,23,42,.65),rgba(15,23,42,.1)),url(https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=900&q=80)",backgroundPosition:"center",backgroundSize:"cover"}}>
-                    <div><p className="text-xs font-semibold">Transferências</p><p className="mt-1 text-[10px] text-white/85">Quadro focado em transferência de funcionários</p><p className="mt-1 text-[9px] text-white/80">09/03/2026</p></div>
-                  </article>
-                  <article className="relative flex min-h-[76px] items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-700 p-3 text-white shadow-sm sm:min-h-[88px] sm:p-4" style={{backgroundImage:"linear-gradient(90deg,rgba(15,23,42,.65),rgba(15,23,42,.1)),url(https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=80)",backgroundPosition:"center",backgroundSize:"cover"}}>
-                    <div><p className="text-xs font-semibold">CCO - Centro de Controle Operacional</p><p className="mt-1 text-[9px] text-white/80">20/02/2026</p></div>
-                  </article>
+                  <article className="rounded-2xl border border-slate-200 bg-[#f0f1f4] px-3 py-3 shadow-sm sm:px-4"><div className="flex items-start gap-2"><span className="text-slate-400">⠿</span><div><p className="text-xs font-semibold text-slate-800">Rotina de integração</p><p className="mt-2 text-[10px] text-slate-500">Atualizado hoje</p></div><span className="ml-auto text-slate-500">⋮</span></div></article>
+                  <article className="rounded-2xl border border-slate-200 bg-[#f0f1f4] px-3 py-3 shadow-sm sm:px-4"><div className="flex items-start gap-2"><span className="text-slate-400">⠿</span><div><p className="text-xs font-semibold text-slate-800">Planejamento mensal</p><p className="mt-2 text-[10px] text-slate-500">Equipe de operações</p></div><span className="ml-auto text-slate-500">⋮</span></div></article>
+                  <article className="relative flex min-h-[76px] items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-700 p-3 text-white shadow-sm sm:min-h-[88px] sm:p-4" style={{backgroundImage:"linear-gradient(90deg,rgba(15,23,42,.55),rgba(15,23,42,.08)),url(https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=900&q=80)",backgroundPosition:"center",backgroundSize:"cover"}}><div><p className="text-xs font-semibold">Integração de equipes</p><p className="mt-1 text-[10px] text-white/85">Materiais e etapas de implantação</p><p className="mt-1 text-[9px] text-white/80">Atualizado recentemente</p></div></article>
+                  <article className="relative flex min-h-[76px] items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-700 p-3 text-white shadow-sm sm:min-h-[88px] sm:p-4" style={{backgroundImage:"linear-gradient(90deg,rgba(15,23,42,.55),rgba(15,23,42,.08)),url(https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80)",backgroundPosition:"center",backgroundSize:"cover"}}><div><p className="text-xs font-semibold">Organização interna</p><p className="mt-1 text-[9px] text-white/80">Fluxos e responsabilidades</p></div></article>
+                  <article className="relative flex min-h-[76px] items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-700 p-3 text-white shadow-sm sm:min-h-[88px] sm:p-4" style={{backgroundImage:"linear-gradient(90deg,rgba(15,23,42,.6),rgba(15,23,42,.08)),url(https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=900&q=80)",backgroundPosition:"center",backgroundSize:"cover"}}><div><p className="text-xs font-semibold">Indicadores operacionais</p><p className="mt-1 text-[10px] text-white/85">Acompanhamento da rotina</p></div></article>
+                  <article className="relative flex min-h-[76px] items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-700 p-3 text-white shadow-sm sm:min-h-[88px] sm:p-4" style={{backgroundImage:"linear-gradient(90deg,rgba(15,23,42,.6),rgba(15,23,42,.08)),url(https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=80)",backgroundPosition:"center",backgroundSize:"cover"}}><div><p className="text-xs font-semibold">Desenvolvimento de processos</p><p className="mt-1 text-[9px] text-white/80">Documentação da equipe</p></div></article>
                 </div>
               </div>
             </div>
           </div>
+          <div className="absolute -right-1 top-14 z-30 hidden items-center gap-2 rounded-2xl border border-white/70 bg-white/90 p-3 shadow-xl backdrop-blur-md sm:flex"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Check size={16}/></span><div><p className="text-xs font-bold text-slate-800">Tudo organizado</p><p className="text-[10px] text-slate-500">Projetos e equipes</p></div></div>
         </div>
       </section>
 
