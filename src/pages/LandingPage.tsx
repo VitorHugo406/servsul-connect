@@ -40,12 +40,15 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen overflow-hidden bg-[#f7f9fc] text-[#101828]">
       <div className="h-[76px] md:h-[88px]">
-        <header className={`fixed left-1/2 top-3 z-50 flex w-[calc(100%-1.5rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-[1.35rem] border px-4 py-2.5 transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-out md:top-4 md:px-7 md:py-3 ${scrolled
-          ? "border-white/60 bg-white/70 shadow-[0_12px_40px_-18px_rgba(15,35,70,.35)] backdrop-blur-xl"
-          : "border-transparent bg-white/0 shadow-none backdrop-blur-0"}`}>
+        <header className={`fixed left-1/2 top-3 z-50 flex w-[calc(100%-1.5rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-[1.35rem] border px-4 transition-all duration-500 ease-in-out md:top-4 md:px-7 ${scrolled
+          ? "translate-y-0 scale-[0.96] border-white/25 bg-slate-100/15 py-2 shadow-[0_12px_40px_-18px_rgba(15,35,70,.25)] backdrop-blur-xl"
+          : "translate-y-0 scale-100 border-transparent bg-transparent py-3 shadow-none backdrop-blur-0"}`}>
           <a href="#inicio" className="flex shrink-0 items-center gap-2.5" aria-label="Nuvexa início">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#172b4d] text-white shadow-lg shadow-blue-950/10"><Zap size={21} /></span>
-            <span className="text-xl font-bold tracking-tight">nuvexa<span className="text-blue-600">.</span><span className={`mt-0.5 block overflow-hidden text-[10px] font-medium uppercase tracking-[.22em] text-slate-500 transition-opacity duration-200 ${scrolled ? "h-0 opacity-0" : "h-3 opacity-100"}`}>Gestão de operações</span></span>
+            <span className={`flex items-center justify-center rounded-2xl bg-[#172b4d] text-white shadow-lg shadow-blue-950/10 transition-all duration-500 ${scrolled ? "h-9 w-9" : "h-10 w-10"}`}><Zap size={20} /></span>
+            <span className="flex items-center gap-2 font-bold tracking-tight">
+              <span className={`transition-all duration-500 ${scrolled ? "text-lg" : "text-xl"}`}>nuvexa<span className="text-blue-600">.</span></span>
+              <span className={`border-l border-slate-400/50 pl-2 font-sans text-[9px] font-medium uppercase tracking-[.18em] text-slate-500 transition-all duration-300 ${scrolled ? "max-w-0 translate-x-1 overflow-hidden border-transparent pl-0 opacity-0" : "max-w-40 opacity-100"}`}>Gestão de operações</span>
+            </span>
           </a>
           <nav className="hidden items-center gap-8 text-sm font-medium text-slate-700 md:flex">
             <a className="transition hover:text-blue-700" href="#recursos">Recursos</a>
@@ -53,7 +56,7 @@ export default function LandingPage() {
             <a className="transition hover:text-blue-700" href="#planos">Planos</a>
           </nav>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-            <Link to="/select-company" className="hidden rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100/70 sm:inline-flex">Entrar</Link>
+            <Link to="/select-company" className="hidden rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white/10 sm:inline-flex">Entrar</Link>
             <Link to="/select-company" className="inline-flex items-center gap-2 rounded-xl bg-[#172b4d] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition hover:bg-blue-900">Testar grátis <ArrowRight size={16} /></Link>
           </div>
         </header>
