@@ -29,6 +29,7 @@ function lazyWithRetry<T extends { default: React.ComponentType<any> }>(factory:
 }
 
 const Index = lazyWithRetry(() => import("./pages/Index"));
+const LandingPage = lazyWithRetry(() => import("./pages/LandingPage"));
 const Auth = lazyWithRetry(() => import("./pages/Auth"));
 const SelectCompany = lazyWithRetry(() => import("./pages/SelectCompany"));
 const BirthdayShare = lazyWithRetry(() => import("./pages/BirthdayShare"));
@@ -43,6 +44,7 @@ function CompanyBrandGate({ children }: { children: React.ReactNode }) {
 }
 function ProtectedRoute({ children }: { children: React.ReactNode }) { const { user, loading, verifying } = useAuth(); if (loading || verifying) return <LoadingScreen />; if (!user) return <Navigate to="/select-company" replace />; return <>{children}</>; }
 function PublicRoute({ children }: { children: React.ReactNode }) { const { user, loading, verifying } = useAuth(); if (loading) return <LoadingScreen message="Verificando acesso..." />; if (user && !verifying) return <Navigate to="/" replace />; return <>{children}</>; }
-function AppRoutes() { const location = useLocation(); const authContent = <PublicRoute><Auth /></PublicRoute>; return <Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><Routes><Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} /><Route path="/auth" element={location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={<PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="*" element={<NotFound />} /></Routes></Suspense>; }
+function RootRoute() { const { user, loading, verifying } = useAuth(); if (loading || verifying) return <LoadingScreen message="Preparando seu ambiente..." />; return user ? <Index /> : <LandingPage />; }
+function AppRoutes() { const location = useLocation(); const authContent = <PublicRoute><Auth /></PublicRoute>; return <Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><Routes><Route path="/" element={<RootRoute />} /><Route path="/auth" element={location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={<PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="*" element={<NotFound />} /></Routes></Suspense>; }
 const App = () => (<QueryClientProvider client={queryClient}><TooltipProvider><Toaster /><Sonner /><BrowserRouter><AuthProvider><CompanyProvider><FloatingNoteProvider><AppRoutes /></FloatingNoteProvider></CompanyProvider></AuthProvider></BrowserRouter></TooltipProvider></QueryClientProvider>);
 export default App;
