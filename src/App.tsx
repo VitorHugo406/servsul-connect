@@ -30,7 +30,6 @@ function lazyWithRetry<T extends { default: React.ComponentType<any> }>(factory:
 
 const Index = lazyWithRetry(() => import("./pages/Index"));
 const LandingPage = lazyWithRetry(() => import("./pages/LandingPage"));
-const DemoMode = lazyWithRetry(() => import("./pages/DemoMode"));
 const Auth = lazyWithRetry(() => import("./pages/Auth"));
 const SelectCompany = lazyWithRetry(() => import("./pages/SelectCompany"));
 const BirthdayShare = lazyWithRetry(() => import("./pages/BirthdayShare"));
@@ -44,8 +43,21 @@ function CompanyBrandGate({ children }: { children: React.ReactNode }) {
   if (!ready) return <LoadingScreen />; return <>{children}</>;
 }
 function PublicRoute({ children }: { children: React.ReactNode }) { const { user, loading, verifying } = useAuth(); if (loading) return <LoadingScreen message="Verificando acesso..." />; if (user && !verifying) return <Navigate to="/" replace />; return <>{children}</>; }
-function RootRoute() { const { user, loading, verifying } = useAuth(); if (loading || verifying) return <LoadingScreen message="Preparando seu ambiente..." />; return user ? <Index /> : <LandingPage />; }
+function RootRoute() {
+  const { user, loading, verifying } = useAuth();
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  if (loading || verifying) return <LoadingScreen message="Preparando seu ambiente..." />;
+  if (user) return <Index />;
+  return isMobile ? <Auth /> : <LandingPage />;
+}
 function AppRoutes() { const location = useLocation(); const authContent = <PublicRoute><Auth /></PublicRoute>; return <Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><Routes><Route path="/" element={<RootRoute />} /><Route path="/auth" element={location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={<PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="*" element={<NotFound />} /></Routes></Suspense>; }
-function AppShell() { const location = useLocation(); if (location.pathname === "/teste-gratis") return <Suspense fallback={<LoadingScreen message="Preparando demonstração local..." />}><DemoMode /></Suspense>; return <AuthProvider><CompanyProvider><FloatingNoteProvider><AppRoutes /></FloatingNoteProvider></CompanyProvider></AuthProvider>; }
+function AppShell() { return <AuthProvider><CompanyProvider><FloatingNoteProvider><AppRoutes /></FloatingNoteProvider></CompanyProvider></AuthProvider>; }
 const App = () => (<QueryClientProvider client={queryClient}><TooltipProvider><Toaster /><Sonner /><BrowserRouter><AppShell /></BrowserRouter></TooltipProvider></QueryClientProvider>);
 export default App;
