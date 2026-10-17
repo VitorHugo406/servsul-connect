@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, ChevronLeft, ChevronRight, Check, ShieldCheck, MessageSquare, LayoutDashboard, Users,
-  CalendarDays, ClipboardCheck, Workflow, BarChart3, Clock3, Building2,
+  CalendarDays, ClipboardCheck, Workflow, BarChart3, Building2,
   Smartphone, PanelsTopLeft, FileText, Bell, Zap
 } from "lucide-react";
 
@@ -10,9 +10,8 @@ const features = [
   { icon: MessageSquare, title: "Comunicação centralizada", text: "Conversas individuais, grupos e canais por setor em um só ambiente." },
   { icon: Bell, title: "Mural e comunicados", text: "Compartilhe avisos importantes e mantenha as equipes alinhadas." },
   { icon: Workflow, title: "Kanban e tarefas", text: "Organize demandas, acompanhe responsáveis e visualize o andamento." },
-  { icon: CalendarDays, title: "Calendário da equipe", text: "Consulte eventos, datas importantes e aniversariantes." },
+  { icon: CalendarDays, title: "Calendário", text: "Visualize eventos e compromissos da equipe em uma agenda organizada." },
   { icon: ClipboardCheck, title: "Avaliações e formulários", text: "Centralize avaliações e acompanhe respostas em um fluxo organizado." },
-  { icon: Clock3, title: "Banco de horas e jornada", text: "Apoie o acompanhamento de horas e rotinas operacionais." },
   { icon: BarChart3, title: "Indicadores e relatórios", text: "Reúna informações operacionais para facilitar a análise e a tomada de decisão." },
   { icon: Users, title: "Gestão por setores", text: "Estruture equipes, usuários e permissões conforme a organização." },
   { icon: PanelsTopLeft, title: "Painéis personalizados", text: "Tenha uma visão prática das atividades e informações relevantes." },
@@ -32,6 +31,20 @@ export default function LandingPage() {
   const [activeFeature, setActiveFeature] = useState(0);
   const showcaseFeatures = features;
   const currentFeature = showcaseFeatures[activeFeature];
+  const screenContent = [
+    { heading: "Comunicação centralizada", subheading: "Conversas e canais", metrics: [["Conversas", "12"], ["Não lidas", "03"]], section: "Conversas recentes", rows: ["Setor Administrativo", "Comercial", "Equipe Geral"], tags: ["Agora", "Há 8 min", "Há 25 min"] },
+    { heading: "Mural e comunicados", subheading: "Avisos publicados", metrics: [["Publicados", "08"], ["Rascunhos", "02"]], section: "Comunicados recentes", rows: ["Atualização de procedimento", "Reunião de alinhamento", "Aviso para todos os setores"], tags: ["Hoje", "Ontem", "Esta semana"] },
+    { heading: "Kanban e tarefas", subheading: "Quadro de tarefas", metrics: [["A fazer", "04"], ["Em andamento", "03"]], section: "Tarefas do quadro", rows: ["Conferir documentos", "Atualizar cadastro", "Revisar solicitação"], tags: ["Pendente", "Em andamento", "Concluída"] },
+    { heading: "Calendário", subheading: "Agenda da equipe", metrics: [["Eventos no mês", "06"], ["Próximos", "02"]], section: "Próximos compromissos", rows: ["Reunião de equipe", "Prazo de entrega", "Planejamento semanal"], tags: ["20 out · 10:00", "22 out · 15:00", "26 out · 09:30"] },
+    { heading: "Avaliações e formulários", subheading: "Formulários e respostas", metrics: [["Formulários", "05"], ["Respostas", "24"]], section: "Formulários recentes", rows: ["Avaliação de integração", "Pesquisa de satisfação", "Checklist operacional"], tags: ["Ativo", "Em andamento", "Rascunho"] },
+    { heading: "Indicadores e relatórios", subheading: "Visão dos indicadores", metrics: [["Relatórios", "08"], ["Atualizados", "Hoje"]], section: "Relatórios disponíveis", rows: ["Resumo operacional", "Acompanhamento de demandas", "Atividades por setor"], tags: ["PDF", "Planilha", "Painel"] },
+    { heading: "Gestão por setores", subheading: "Estrutura da empresa", metrics: [["Setores", "06"], ["Usuários", "42"]], section: "Setores cadastrados", rows: ["Administrativo", "Recursos Humanos", "Operações"], tags: ["12 pessoas", "8 pessoas", "15 pessoas"] },
+    { heading: "Painéis personalizados", subheading: "Painel de acompanhamento", metrics: [["Widgets", "06"], ["Atalhos", "04"]], section: "Seus painéis", rows: ["Visão geral", "Demandas prioritárias", "Atividade recente"], tags: ["Padrão", "Personalizado", "Compartilhado"] },
+    { heading: "Controles e documentos", subheading: "Arquivos e controles", metrics: [["Documentos", "18"], ["Pastas", "05"]], section: "Itens recentes", rows: ["Procedimentos internos", "Controle de solicitações", "Documentos da equipe"], tags: ["PDF", "Planilha", "Documento"] },
+    { heading: "Acesso pelo celular", subheading: "Acesso responsivo", metrics: [["Acesso", "Web"], ["Interface", "Mobile"]], section: "Acesso rápido", rows: ["Conversas", "Tarefas", "Comunicados"], tags: ["Disponível", "Disponível", "Disponível"] },
+    { heading: "Ambientes separados", subheading: "Organização por empresa", metrics: [["Empresas", "02"], ["Isolamento", "Ativo"]], section: "Ambientes", rows: ["Empresa principal", "Unidade operacional", "Permissões de acesso"], tags: ["Ativo", "Ativo", "Configurável"] },
+  ];
+  const activeScreen = screenContent[activeFeature] ?? screenContent[0];
 
   useEffect(() => {
     const updateScroll = () => setScrolled(window.scrollY > 28);
@@ -152,14 +165,17 @@ export default function LandingPage() {
                     </div>
                     <div className="border-t border-slate-200 p-2"><div className="rounded-lg border border-slate-200 px-3 py-2 text-[10px] text-slate-400">Mensagem...</div></div>
                   </> : activeFeature===3 ? <>
-                    <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-gradient-to-r from-orange-50 to-white px-3 py-4 sm:px-4"><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-600"><Zap size={16}/></span><div><p className="text-xs font-semibold text-slate-900">Painel de Aniversariantes</p><p className="text-[10px] text-slate-500">Mensagens da equipe</p></div></div><span className="hidden rounded-md bg-blue-600 px-2 py-1 text-[9px] font-medium text-white sm:inline-flex">Corporativo</span></div>
-                    <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-4 sm:p-4">{[{n:"4",t:"No mês"},{n:"1",t:"Hoje"},{n:"2",t:"Mensagens"},{n:"3",t:"Setores"}].map((item)=><div key={item.t} className="rounded-lg border border-slate-200 p-2"><p className="text-lg font-semibold text-slate-900">{item.n}</p><p className="text-[10px] text-slate-500">{item.t}</p></div>)}</div>
-                    <div className="px-3 pb-3 sm:px-4"><p className="mb-2 text-xs font-semibold text-slate-800">Aniversariantes do mês</p>{[{i:"AS",n:"Ana Souza",d:"14 de outubro"},{i:"RM",n:"Rafael Martins",d:"22 de outubro"}].map(person=><div key={person.n} className="mb-2 flex items-center gap-3 rounded-lg border border-slate-200 p-2.5"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-[10px] font-semibold text-white">{person.i}</span><div className="min-w-0 flex-1"><p className="text-[11px] font-medium text-slate-800">{person.n}</p><p className="text-[10px] text-slate-500">Equipe de operações</p></div><span className="text-[9px] text-slate-500">{person.d}</span></div>)}</div>
+                    <div className="flex items-center justify-between border-b border-slate-200 px-3 py-3 sm:px-4"><div><p className="text-xs font-semibold text-slate-900">Calendário</p><p className="text-[10px] text-slate-500">Agenda e compromissos</p></div><span className="rounded-lg bg-blue-600 px-2.5 py-1.5 text-[10px] font-semibold text-white">+ Evento</span></div>
+                    <div className="p-3 sm:p-4">
+                      <div className="mb-3 flex items-center justify-between"><button className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-500">‹</button><p className="text-xs font-semibold text-slate-800">Outubro 2026</p><button className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-500">›</button></div>
+                      <div className="grid grid-cols-7 gap-1 text-center text-[9px] text-slate-500">{["D","S","T","Q","Q","S","S"].map((day,i)=><span key={day+i} className="py-1 font-semibold">{day}</span>)}{Array.from({length:35},(_,i)=>i).map((day)=><span key={day} className={`relative flex h-7 items-center justify-center rounded-md text-[10px] ${[4,9,14,20,22,26].includes(day) ? "bg-blue-50 font-semibold text-blue-700" : "text-slate-600"}`}>{day<3?"":day-2}{[4,9,14,20,22,26].includes(day)&&<span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-blue-600"/>}</span>)}</div>
+                      <div className="mt-4 rounded-lg border border-slate-200 p-3"><p className="mb-2 text-[11px] font-semibold text-slate-800">Próximos compromissos</p>{[{t:"Reunião de equipe",d:"20 out · 10:00"},{t:"Prazo de entrega",d:"22 out · 15:00"},{t:"Planejamento semanal",d:"26 out · 09:30"}].map((event,i)=><div key={event.t} className="flex items-center gap-2 border-t border-slate-100 py-2"><span className={`h-7 w-1 rounded-full ${["bg-blue-500","bg-amber-400","bg-emerald-500"][i]}`}/><div className="min-w-0 flex-1"><p className="text-[10px] font-medium text-slate-800">{event.t}</p><p className="text-[9px] text-slate-500">{event.d}</p></div></div>)}</div>
+                    </div>
                   </> : <>
-                    <div className="border-b border-slate-200 px-4 py-4"><p className="text-xs font-semibold text-slate-900">{currentFeature.title}</p><p className="mt-1 text-[10px] text-slate-500">Visão geral · Nuvexa</p></div>
-                    <div className="space-y-3 bg-[#f8f9fb] p-4">
-                      <div className="grid grid-cols-2 gap-3"><div className="rounded-lg border border-slate-200 bg-white p-3"><p className="text-[10px] text-slate-500">Em acompanhamento</p><p className="mt-2 text-xl font-semibold text-slate-800">08</p></div><div className="rounded-lg border border-slate-200 bg-white p-3"><p className="text-[10px] text-slate-500">Atualizações recentes</p><p className="mt-2 text-xl font-semibold text-slate-800">12</p></div></div>
-                      <div className="rounded-lg border border-slate-200 bg-white p-3"><p className="mb-3 text-xs font-semibold text-slate-700">Atividade recente</p>{["Revisar informações da equipe","Atualização de rotina interna","Acompanhar pendências"].map((item,i)=><div key={item} className="flex items-center gap-2 border-t border-slate-100 py-3 text-[11px] text-slate-600"><span className={`h-2 w-2 rounded-full ${["bg-blue-500","bg-amber-400","bg-emerald-500"][i]}`}/>{item}<span className="ml-auto text-[10px] text-slate-400">{["Hoje","Ontem","Esta semana"][i]}</span></div>)}</div>
+                    <div className="border-b border-slate-200 px-3 py-3 sm:px-4"><p className="text-xs font-semibold text-slate-900">{activeScreen.heading}</p><p className="mt-1 text-[10px] text-slate-500">{activeScreen.subheading}</p></div>
+                    <div className="space-y-3 bg-[#f8f9fb] p-3 sm:p-4">
+                      <div className="grid grid-cols-2 gap-2">{activeScreen.metrics.map(([label,value])=><div key={label} className="rounded-lg border border-slate-200 bg-white p-3"><p className="text-[10px] text-slate-500">{label}</p><p className="mt-2 text-xl font-semibold text-slate-800">{value}</p></div>)}</div>
+                      <div className="rounded-lg border border-slate-200 bg-white p-3"><p className="mb-2 text-[11px] font-semibold text-slate-700">{activeScreen.section}</p>{activeScreen.rows.map((item,i)=><div key={item} className="flex items-center gap-2 border-t border-slate-100 py-3 text-[10px] text-slate-700"><span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${["bg-blue-50 text-blue-700","bg-amber-50 text-amber-700","bg-emerald-50 text-emerald-700"][i]}`}><currentFeature.icon size={13}/></span><span className="min-w-0 flex-1">{item}</span><span className="text-[9px] text-slate-400">{activeScreen.tags[i]}</span></div>)}</div>
                     </div>
                   </>}
                 </div>
