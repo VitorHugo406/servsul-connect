@@ -56,24 +56,22 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen overflow-hidden bg-[#f7f9fc] text-[#101828]">
       <div className="h-[76px] md:h-[88px]">
-        <header className={`fixed left-1/2 top-3 z-50 grid w-[calc(100%-1.5rem)] max-w-7xl -translate-x-1/2 grid-cols-[1fr_auto] items-center gap-x-3 rounded-[1.35rem] border px-4 transition-all duration-500 ease-in-out md:top-4 md:grid-cols-[1fr_auto_1fr] md:px-7 ${scrolled
-          ? "translate-y-0 scale-[0.96] border-white/15 bg-gradient-to-r from-[#172b4d]/95 via-[#111827]/95 to-black/95 py-2 shadow-[0_12px_40px_-18px_rgba(0,0,0,.55)] backdrop-blur-xl"
-          : "translate-y-0 scale-100 border-transparent bg-transparent py-3 shadow-none backdrop-blur-0"}`}>
+        <header className={`fixed left-1/2 top-3 z-50 grid w-[calc(100%-1.5rem)] max-w-7xl -translate-x-1/2 grid-cols-[1fr_auto] items-center gap-x-3 rounded-[1.35rem] border border-white/25 bg-white/15 px-4 py-3 shadow-[0_8px_32px_rgba(15,23,42,.10)] backdrop-blur-2xl transition-all duration-500 ease-in-out md:top-4 md:grid-cols-[1fr_auto_1fr] md:px-7 ${scrolled ? "translate-y-0 scale-[0.98] bg-white/10 shadow-[0_12px_40px_-18px_rgba(0,0,0,.20)]" : "translate-y-0 scale-100 bg-white/15 shadow-none"}`}>
           <a href="#inicio" className="flex shrink-0 items-center gap-2.5" aria-label="Nuvexa início">
-            <span className={`flex items-center justify-center rounded-2xl bg-[#172b4d] text-white shadow-lg shadow-blue-950/10 transition-all duration-500 ${scrolled ? "h-9 w-9" : "h-10 w-10"}`}><Zap size={20} /></span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/25 bg-slate-900/10 text-current transition-all duration-500"><Zap size={20} /></span>
             <span className="flex items-center gap-2 font-bold tracking-tight">
-              <span className={`transition-all duration-500 ${scrolled ? "text-lg text-white" : "text-xl text-[#101828]"}`}>nuvexa<span className="text-blue-400">.</span></span>
-              <span className={`border-l pl-2 font-sans text-[9px] font-medium uppercase tracking-[.18em] transition-colors duration-300 ${scrolled ? "hidden border-white/20 text-white/70" : "inline-block border-slate-400/50 text-slate-500"}`}>Gestão de operações</span>
+              <span className="text-lg text-current transition-all duration-500 md:text-xl">nuvexa<span className="text-blue-500">.</span></span>
+              <span className={`border-l pl-2 font-sans text-[9px] font-medium uppercase tracking-[.18em] transition-all duration-300 ${scrolled ? "hidden border-current/20 opacity-0" : "inline-block border-current/30 opacity-70"}`}>Gestão de operações</span>
             </span>
           </a>
-          <nav className={`hidden items-center justify-self-center gap-8 text-sm font-medium transition-colors duration-300 md:flex ${scrolled ? "text-white" : "text-slate-700"}`}>
-            <a className={`transition hover:text-blue-300 ${scrolled ? "text-white" : "text-slate-700 hover:text-blue-700"}`} href="#recursos">Recursos</a>
-            <a className={`transition hover:text-blue-300 ${scrolled ? "text-white" : "text-slate-700 hover:text-blue-700"}`} href="#como-funciona">Como funciona</a>
-            <a className={`transition hover:text-blue-300 ${scrolled ? "text-white" : "text-slate-700 hover:text-blue-700"}`} href="#planos">Planos</a>
+          <nav className="hidden items-center justify-self-center gap-8 text-sm font-medium text-current md:flex">
+            <a className="transition hover:opacity-65" href="#recursos">Recursos</a>
+            <a className="transition hover:opacity-65" href="#como-funciona">Como funciona</a>
+            <a className="transition hover:opacity-65" href="#planos">Planos</a>
           </nav>
           <div className="flex shrink-0 items-center justify-self-end gap-1 sm:gap-2">
-            <Link to="/select-company" className={`hidden rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-white/10 sm:inline-flex ${scrolled ? "text-white" : "text-slate-700"}`}>Entrar</Link>
-            <Link to="/auth" className="inline-flex items-center gap-2 rounded-xl bg-[#172b4d] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-950/15 transition hover:bg-blue-900">Testar grátis <ArrowRight size={16} /></Link>
+            <Link to="/select-company" className="hidden rounded-xl px-3 py-2.5 text-sm font-semibold text-current transition hover:bg-white/15 sm:inline-flex">Entrar</Link>
+            <Link to="/auth" className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-slate-900/85 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-slate-800">Testar grátis <ArrowRight size={16} /></Link>
           </div>
         </header>
       </div>
