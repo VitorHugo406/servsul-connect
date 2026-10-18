@@ -6,7 +6,9 @@ Deno.serve(async (req) => {
   const from = Number(new URL(req.url).searchParams.get("from") ?? "0");
   const sql = postgres(Deno.env.get("SUPABASE_DB_URL")!, { max: 1, prepare: false });
   const results: any[] = [];
+  const t0 = Date.now();
   for (let i = from; i < MIGRATIONS.length; i++) {
+    if (Date.now() - t0 > 90000) { results.push({ i, ok: true, paused: true }); break; }
     const [name, body] = MIGRATIONS[i];
     try { await sql.begin(async (tx) => { await tx.unsafe(body); }); results.push({ i, name, ok: true }); }
     catch (e) { results.push({ i, name, ok: false, error: String((e as any)?.message ?? e) }); break; }
