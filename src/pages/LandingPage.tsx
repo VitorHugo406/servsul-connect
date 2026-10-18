@@ -21,9 +21,30 @@ const features = [
 ];
 
 const plans = [
-  { name: "Essencial", description: "Para equipes que querem organizar a rotina.", points: ["Comunicação e mural", "Organização de tarefas", "Calendário e avisos"], featured: false },
-  { name: "Profissional", description: "Para operações que precisam de mais controle.", points: ["Recursos do Essencial", "Controles operacionais", "Relatórios e acompanhamento"], featured: true },
-  { name: "Corporativo", description: "Para estruturas com vários setores e necessidades.", points: ["Organização por departamentos", "Permissões e gestão ampliada", "Avaliação de necessidades da empresa"], featured: false },
+  { name: "Essencial", description: "Para equipes que querem organizar a rotina.", price: "R$ 89", users: "Até 10 usuários", sectors: "Até 3 setores", storage: "2 GB", featured: false },
+  { name: "Profissional", description: "Para operações que precisam de mais controle.", price: "R$ 219", users: "Até 30 usuários", sectors: "Até 7 setores", storage: "10 GB", featured: true },
+  { name: "Empresarial", description: "Para empresas com operações e equipes maiores.", price: "R$ 399", users: "Até 100 usuários", sectors: "Até 15 setores", storage: "30 GB", featured: false },
+];
+
+const planFeatures = [
+  { category: "Comunicação e organização", items: [
+    { name: "Início", essential: true, professional: true, enterprise: true },
+    { name: "Chat", essential: true, professional: true, enterprise: true },
+    { name: "Avisos gerais", essential: true, professional: true, enterprise: true },
+    { name: "Comunicados importantes", essential: true, professional: true, enterprise: true },
+    { name: "Tarefas e Kanban", essential: true, professional: true, enterprise: true },
+    { name: "Avaliações", essential: true, professional: true, enterprise: true },
+    { name: "Anotações", essential: true, professional: true, enterprise: true },
+    { name: "Personalização de temas", essential: true, professional: true, enterprise: true },
+  ]},
+  { category: "Recursos adicionais", items: [
+    { name: "Aniversariantes", essential: false, professional: true, enterprise: true },
+    { name: "Calendário", essential: false, professional: true, enterprise: true },
+    { name: "Atalhos do sistema", essential: false, professional: true, enterprise: true },
+    { name: "Dashboard de métricas do sistema", essential: false, professional: true, enterprise: true },
+    { name: "Gestão de Pessoas", essential: false, professional: false, enterprise: true },
+    { name: "War Room", essential: false, professional: false, enterprise: true },
+  ]},
 ];
 
 export default function LandingPage() {
@@ -216,9 +237,18 @@ export default function LandingPage() {
       </section>
 
       <section id="planos" className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
-        <div className="mx-auto max-w-2xl text-center"><p className="text-xs font-bold uppercase tracking-[.2em] text-blue-700">Planos</p><h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#111d33] sm:text-4xl">Um formato que acompanha sua operação.</h2><p className="mt-4 leading-7 text-slate-600">Conheça as opções e escolha o conjunto de recursos adequado para sua empresa. Os valores e condições devem ser confirmados com a equipe comercial.</p></div>
-        <div className="mt-12 grid gap-5 lg:grid-cols-3">{plans.map(plan=><article key={plan.name} className={`relative flex flex-col rounded-3xl border p-7 ${plan.featured?"border-blue-600 bg-white shadow-2xl shadow-blue-900/10 ring-1 ring-blue-600":"border-slate-200 bg-white"}`}>{plan.featured&&<span className="absolute -top-3 left-6 rounded-full bg-blue-700 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">Mais recursos</span>}<h3 className="text-xl font-bold text-slate-900">{plan.name}</h3><p className="mt-2 min-h-12 text-sm leading-6 text-slate-600">{plan.description}</p><p className="mt-5 text-2xl font-semibold tracking-tight text-[#172b4d]">Consulte valores</p><p className="mt-1 text-xs text-slate-500">Condições conforme a necessidade</p><ul className="my-7 flex-1 space-y-3">{plan.points.map(point=><li key={point} className="flex gap-2 text-sm text-slate-600"><Check size={17} className="mt-0.5 shrink-0 text-emerald-600"/>{point}</li>)}</ul><Link to="/select-company" className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${plan.featured?"bg-blue-700 text-white hover:bg-blue-800":"border border-slate-200 text-slate-700 hover:bg-slate-50"}`}>Tenho interesse <ArrowRight size={16}/></Link></article>)}</div>
-        <p className="mt-5 text-center text-xs leading-5 text-slate-500">Os planos acima apresentam categorias de referência. Disponibilidade de módulos, valores, período de avaliação e condições comerciais precisam ser definidos antes da contratação.</p>
+        <div className="mx-auto max-w-2xl text-center"><p className="text-xs font-bold uppercase tracking-[.2em] text-blue-700">Planos</p><h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#111d33] sm:text-4xl">Escolha o plano para sua operação.</h2><p className="mt-4 leading-7 text-slate-600">Compare os recursos, a capacidade e o espaço disponíveis em cada plano.</p></div>
+        <div className="mt-12 grid gap-5 lg:grid-cols-3">{plans.map(plan=><article key={plan.name} className={`relative flex flex-col rounded-3xl border p-7 ${plan.featured?"border-blue-600 bg-white shadow-2xl shadow-blue-900/10 ring-1 ring-blue-600":"border-slate-200 bg-white"}`}>{plan.featured&&<span className="absolute -top-3 left-6 rounded-full bg-blue-700 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">Mais escolhido</span>}<h3 className="text-xl font-bold text-slate-900">{plan.name}</h3><p className="mt-2 min-h-12 text-sm leading-6 text-slate-600">{plan.description}</p><p className="mt-5 text-3xl font-semibold tracking-tight text-[#172b4d]">{plan.price}<span className="text-sm font-medium text-slate-500">/mês</span></p><ul className="my-6 flex-1 space-y-3 text-sm text-slate-600"><li className="flex gap-2"><Users size={17} className="shrink-0 text-blue-700"/>{plan.users}</li><li className="flex gap-2"><Building2 size={17} className="shrink-0 text-blue-700"/>{plan.sectors}</li><li className="flex gap-2"><ShieldCheck size={17} className="shrink-0 text-blue-700"/>{plan.storage} de armazenamento</li></ul><Link to="/select-company" className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${plan.featured?"bg-blue-700 text-white hover:bg-blue-800":"border border-slate-200 text-slate-700 hover:bg-slate-50"}`}>Tenho interesse <ArrowRight size={16}/></Link></article>)}</div>
+        <div className="mt-16">
+          <div className="mx-auto max-w-2xl text-center"><h3 className="text-2xl font-semibold tracking-tight text-[#111d33] sm:text-3xl">Compare as funcionalidades</h3><p className="mt-3 text-sm leading-6 text-slate-600">Veja o que está incluído em cada plano.</p></div>
+          <div className="mt-7 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-x-auto"><table className="w-full min-w-[620px] border-collapse text-left text-sm">
+              <thead><tr className="border-b border-slate-200 bg-slate-50"><th className="px-5 py-4 font-semibold text-slate-700">Funcionalidades</th><th className="px-4 py-4 text-center font-semibold text-slate-700">Essencial</th><th className="px-4 py-4 text-center font-semibold text-blue-800">Profissional</th><th className="px-4 py-4 text-center font-semibold text-slate-700">Empresarial</th></tr></thead>
+              <tbody>{planFeatures.map(group=><>{<tr key={group.category} className="border-y border-slate-100 bg-slate-50/70"><td colSpan={4} className="px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">{group.category}</td></tr>}{group.items.map(item=><tr key={item.name} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60"><td className="px-5 py-3.5 text-slate-700">{item.name}</td>{([item.essential,item.professional,item.enterprise]).map((enabled,i)=><td key={i} className="px-4 py-3.5 text-center"><span aria-label={enabled?"Incluído":"Não incluído"} className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold ${enabled?"bg-emerald-50 text-emerald-700":"bg-rose-50 text-rose-600"}`}>{enabled?"✓":"×"}</span></td>)}</tr>)}</>)}</tbody>
+            </table></div>
+          </div>
+          <p className="mt-3 text-xs text-slate-500">✓ Incluído no plano · × Não incluído. Limites de usuários, setores e armazenamento variam conforme o plano.</p>
+        </div>
       </section>
 
       <section className="px-5 pb-20 md:px-8 md:pb-28"><div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 rounded-[2rem] bg-gradient-to-br from-blue-700 to-[#172b4d] p-8 text-white shadow-2xl shadow-blue-900/15 sm:p-12 md:flex-row md:items-center"><div className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[.2em] text-blue-200">Nuvexa · Gestão de operações</p><h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Sua equipe pode trabalhar com mais clareza.</h2><p className="mt-3 leading-7 text-blue-100">Centralize informações, conecte departamentos e dê mais visibilidade à rotina.</p></div><Link to="/auth" className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-3.5 text-sm font-bold text-blue-800 transition hover:bg-blue-50">Começar agora <ArrowRight size={16}/></Link></div></section>
