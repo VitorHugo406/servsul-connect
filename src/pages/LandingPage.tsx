@@ -196,8 +196,23 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="como-funciona" className="bg-[#101f39] py-20 text-white md:py-24">
-        <div className="mx-auto max-w-7xl px-5 md:px-8"><div className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[.2em] text-blue-300">Comece com simplicidade</p><h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Da sua empresa para uma rotina mais organizada.</h2><p className="mt-4 leading-7 text-slate-300">A Nuvexa foi pensada para acompanhar a estrutura da organização, de equipes menores a operações com vários departamentos.</p></div><div className="mt-10 max-w-5xl"><ol className="divide-y divide-white/15 md:grid md:grid-cols-3 md:divide-y-0 md:divide-x">{[{n:"01",title:"Encontre seu ambiente",text:"Informe o nome da empresa para localizar o espaço corporativo."},{n:"02",title:"Acesse sua equipe",text:"Entre com sua conta e visualize os recursos liberados para seu ambiente."},{n:"03",title:"Organize o trabalho",text:"Centralize conversas, demandas e controles da operação."}].map(s=><li key={s.n} className="py-5 md:px-6 md:py-1 md:first:pl-0 md:last:pr-0"><div className="flex items-baseline gap-3"><span className="font-mono text-xs text-blue-300/80">{s.n}</span><h3 className="text-lg font-medium tracking-tight text-white">{s.title}</h3></div><p className="mt-2 pl-9 text-sm leading-6 text-slate-300">{s.text}</p></li>)}</ol></div><div className="mt-8"><Link to="/select-company" className="inline-flex items-center gap-2 border-b border-white/50 pb-2 text-sm font-medium text-white transition hover:border-white hover:text-blue-200">Acessar minha empresa <ArrowRight size={16}/></Link></div></div>
+      <section id="como-funciona" className="bg-[#101f39] py-20 text-white md:py-28">
+        <div className="mx-auto max-w-7xl px-5 md:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-xs font-bold uppercase tracking-[.2em] text-blue-300">Comece com simplicidade</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Da sua empresa para uma rotina mais organizada.</h2>
+            <p className="mx-auto mt-4 max-w-2xl leading-7 text-slate-300">A Nuvexa foi pensada para acompanhar a estrutura da organização, de equipes menores a operações com vários departamentos.</p>
+          </div>
+          <div className="mx-auto mt-12 max-w-6xl">
+            <ol className="divide-y divide-white/15 md:grid md:grid-cols-3 md:divide-y-0 md:divide-x">
+              {[{n:"01",title:"Encontre seu ambiente",text:"Informe o nome da empresa para localizar o espaço corporativo."},{n:"02",title:"Acesse sua equipe",text:"Entre com sua conta e visualize os recursos liberados para seu ambiente."},{n:"03",title:"Organize o trabalho",text:"Centralize conversas, demandas e controles da operação."}].map(s=><li key={s.n} className="py-5 md:px-8 md:py-1 md:first:pl-0 md:last:pr-0">
+                <div className="flex items-baseline justify-center gap-3 md:justify-start"><span className="font-mono text-xs text-blue-300/80">{s.n}</span><h3 className="text-lg font-medium tracking-tight text-white">{s.title}</h3></div>
+                <p className="mx-auto mt-2 max-w-xs text-center text-sm leading-6 text-slate-300 md:text-left">{s.text}</p>
+              </li>)}
+            </ol>
+          </div>
+          <div className="mt-10 text-center"><Link to="/select-company" className="inline-flex items-center gap-2 border-b border-white/50 pb-2 text-sm font-medium text-white transition hover:border-white hover:text-blue-200">Acessar minha empresa <ArrowRight size={16}/></Link></div>
+        </div>
       </section>
 
       <section id="planos" className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
