@@ -3,7 +3,7 @@ import { AlertTriangle, Info, Megaphone, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSystemBroadcasts } from '@/hooks/useSystemBroadcasts';
 
-const DISMISS_KEY = 'nuvexa-dismissed-broadcasts';
+const DISMISS_KEY = 'ewvor-dismissed-broadcasts';
 
 export function SystemBroadcastBanner() {
   const { broadcasts } = useSystemBroadcasts(true);
