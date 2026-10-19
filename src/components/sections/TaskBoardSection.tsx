@@ -1060,24 +1060,58 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
   const applyColumnAutoSubtasks = async (taskId: string, columnId: string) => {
     try {
-      const { data: autoSubs } = await supabase.from('column_auto_subtasks').select('*').eq('column_id', columnId).order('group_title').order('position');
-      if (!autoSubs || autoSubs.length === 0) return;
-      const { data: existing } = await supabase.from('task_subtasks').select('id').eq('task_id', taskId).limit(1);
-      if (existing && existing.length > 0) return;
+      const { data: autoSubs, error: configError } = await supabase
+        .from('column_auto_subtasks')
+        .select('*')
+        .eq('column_id', columnId)
+        .order('group_title')
+        .order('position');
+      if (configError) throw configError;
+      if (!autoSubs?.length) return;
+
+      const { data: existing, error: existingError } = await supabase
+        .from('task_subtasks')
+        .select('id')
+        .eq('task_id', taskId)
+        .limit(1);
+      if (existingError) throw existingError;
+      if (existing?.length) return;
+
       const groupMap = new Map<string, any[]>();
-      autoSubs.forEach((s: any) => {
-        if (!groupMap.has(s.group_title)) groupMap.set(s.group_title, []);
-        groupMap.get(s.group_title)!.push(s);
-      });
-      let pos = 0;
-      for (const [title, items] of groupMap) {
-        const { data: group } = await supabase.from('subtask_groups').insert({ task_id: taskId, title, position: pos++ }).select().single();
-        if (group) {
-          await supabase.from('task_subtasks').insert(items.map((item: any, idx: number) => ({ task_id: taskId, title: item.title, position: idx, group_id: group.id })));
-        }
+      for (const item of autoSubs) {
+        const title = item.group_title || 'Geral';
+        if (!groupMap.has(title)) groupMap.set(title, []);
+        groupMap.get(title)!.push(item);
       }
+
+      const groupRows = Array.from(groupMap.keys()).map((title, position) => ({
+        task_id: taskId,
+        title,
+        position,
+      }));
+      const { data: groups, error: groupsError } = await supabase
+        .from('subtask_groups')
+        .insert(groupRows)
+        .select('id, title');
+      if (groupsError) throw groupsError;
+      if (!groups?.length) return;
+
+      const groupIds = new Map(groups.map((group) => [group.title, group.id]));
+      const subtaskRows = Array.from(groupMap.entries()).flatMap(([title, items]) =>
+        items.map((item: any, position: number) => ({
+          task_id: taskId,
+          title: item.title,
+          position,
+          group_id: groupIds.get(title),
+        })),
+      );
+      const { error: subtasksError } = await supabase.from('task_subtasks').insert(subtaskRows);
+      if (subtasksError) throw subtasksError;
       toast.info('Subtarefas automáticas aplicadas');
-    } catch (err) { console.error('Error applying auto subtasks:', err); }
+    } catch (err) {
+      console.error('Error applying auto subtasks:', err);
+      toast.error('Não foi possível aplicar as subtarefas automáticas.');
+    }
   };
 
   // Drag and drop
