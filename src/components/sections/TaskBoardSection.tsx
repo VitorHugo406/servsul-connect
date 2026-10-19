@@ -1077,7 +1077,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       if (existingError) throw existingError;
       if (existing?.length) return;
 
-      const groupMap = new Map<string, any[]>();
+      const groupMap = new Map<string, Array<{ title: string; position: number }>>();
       for (const item of autoSubs) {
         const title = item.group_title || 'Geral';
         if (!groupMap.has(title)) groupMap.set(title, []);
@@ -1098,7 +1098,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
       const groupIds = new Map(groups.map((group) => [group.title, group.id]));
       const subtaskRows = Array.from(groupMap.entries()).flatMap(([title, items]) =>
-        items.map((item: any, position: number) => ({
+        items.map((item, position: number) => ({
           task_id: taskId,
           title: item.title,
           position,
