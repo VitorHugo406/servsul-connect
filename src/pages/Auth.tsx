@@ -135,7 +135,7 @@ const Auth = () => {
 
   useEffect(() => {
     const logoUrl = companyLogoUrl;
-    document.title = companyBrand?.name ? `${companyBrand.name} | Nuvexa` : 'Nuvexa - Comunicação Empresarial';
+    document.title = companyBrand?.name ? `${companyBrand.name} | Ewvor` : 'Ewvor - Comunicação Empresarial';
     document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
       link.href = logoUrl ?? '';
     });
@@ -450,7 +450,7 @@ const Auth = () => {
             )}
             <div>
               <h1 className="font-display text-4xl font-bold">
-                {companyBrand?.is_system ? 'Nuvexa' : (companyBrand?.name || 'Nuvexa')}
+                {companyBrand?.is_system ? 'Ewvor' : (companyBrand?.name || 'Ewvor')}
               </h1>
               <p className="text-white/70">
                 {companyBrand?.is_system ? 'Painel de administração' : (companyBrand ? 'Ambiente corporativo' : 'Plataforma corporativa')}
@@ -514,7 +514,7 @@ const Auth = () => {
             )}
             <div className="text-center">
               <h1 className="font-display text-xl sm:text-3xl font-bold text-foreground">
-                {companyBrand?.is_system ? 'Nuvexa' : (companyBrand?.name || 'Nuvexa')}
+                {companyBrand?.is_system ? 'Ewvor' : (companyBrand?.name || 'Ewvor')}
               </h1>
               {companyBrand && !companyBrand.is_system && (
                 <p className="text-xs text-muted-foreground">Entrar na empresa</p>
@@ -996,7 +996,7 @@ const Auth = () => {
           </Card>
 
           <p className="mt-2 text-center text-xs text-muted-foreground">
-            © 2026 Nuvexa. Todos os direitos reservados.
+            © 2026 Ewvor. Todos os direitos reservados.
           </p>
         </motion.div>
       </div>
