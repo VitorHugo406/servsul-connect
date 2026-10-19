@@ -1,4 +1,4 @@
-const KEY = 'nuvexa_active_company_id';
+const KEY = 'ewvor_active_company_id';
 
 let active: string | null = typeof localStorage !== 'undefined' ? localStorage.getItem(KEY) : null;
 
