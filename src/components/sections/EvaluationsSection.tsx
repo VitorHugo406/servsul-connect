@@ -22,7 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import appLogo from '@/assets/nuvexa-logo.png';
+import appLogo from '@/assets/ewvor-logo.png';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend,
@@ -261,7 +261,7 @@ export function EvaluationsSection() {
     doc.setFontSize(13);
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.text('Nuvexa', 34, 13);
+    doc.text('Ewvor', 34, 13);
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.text('Plataforma de Gestão • Relatórios', 34, 19);
@@ -289,7 +289,7 @@ export function EvaluationsSection() {
     doc.line(14, h - 15, 196, h - 15);
     doc.setFontSize(7);
     doc.setTextColor(100, 116, 139);
-    doc.text('Nuvexa • Avaliação de Desempenho', 14, h - 10);
+    doc.text('Ewvor • Avaliação de Desempenho', 14, h - 10);
     doc.text(`Página ${pageNum} de ${totalPages}`, 196, h - 10, { align: 'right' });
   };
 
