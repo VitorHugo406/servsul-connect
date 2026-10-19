@@ -122,7 +122,9 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       setAllTasks(boardTaskCache.get(boardId) || []);
       setLoading(false);
     } else {
-      setLoading(true);
+      // Never display the previous board's tasks while the next board loads.
+      setAllTasks([]);
+      setLoading(!!boardId);
     }
     fetchTasks();
     if (!boardId) return;
