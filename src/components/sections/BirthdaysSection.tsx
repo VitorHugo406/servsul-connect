@@ -43,7 +43,7 @@ export function BirthdaysSection() {
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [selectedPdfTheme, setSelectedPdfTheme] = useState('corporate');
-  const companyImageKey = `nuvexa:birthday-pdf:corporate-image:${company?.id || 'default'}`;
+  const companyImageKey = `ewvor:birthday-pdf:corporate-image:${company?.id || 'default'}`;
   const [corporateImage, setCorporateImage] = useState<string | null>(() => { try { return localStorage.getItem(companyImageKey); } catch { return null; } });
   const currentMonth = new Date().getMonth() + 1;
   const theme = monthThemes[currentMonth];
@@ -103,7 +103,7 @@ export function BirthdaysSection() {
   const drawLogo = async (doc: jsPDF, selected: PdfTheme) => {
     const logoUrl = company?.logo_url ? await createCompanyLogoUrl(company.logo_url) : null; const logo = logoUrl ? await loadImage(logoUrl) : null;
     if (logo) { try { doc.addImage(logo, 'PNG', MARGIN, 5.5, 29, 21, undefined, 'FAST'); return; } catch {} }
-    setFill(doc, selected.soft); doc.roundedRect(MARGIN, 5.5, 29, 21, 4, 4, 'F'); setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.text(getInitials(company?.name || 'Nuvexa'), MARGIN + 14.5, 18, { align: 'center' });
+    setFill(doc, selected.soft); doc.roundedRect(MARGIN, 5.5, 29, 21, 4, 4, 'F'); setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.text(getInitials(company?.name || 'Ewvor'), MARGIN + 14.5, 18, { align: 'center' });
   };
 
   const drawHeader = async (doc: jsPDF, monthName: string, count: number, selected: PdfTheme) => {
@@ -113,7 +113,7 @@ export function BirthdaysSection() {
     setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.text('DO MÊS', MARGIN, 44.5);
     setText(doc, [157, 121, 67]); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.text(monthName.toUpperCase().replace(' DE ', '  •  '), MARGIN + 1, 50.5);
     setText(doc, [71, 76, 84]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.1); doc.text('Celebrar a vida é reconhecer histórias que inspiram todos os dias.', MARGIN + 1, 59);
-    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(truncate(doc, company?.name || 'Nuvexa', 76), PAGE_W - MARGIN, 15, { align: 'right' });
+    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(truncate(doc, company?.name || 'Ewvor', 76), PAGE_W - MARGIN, 15, { align: 'right' });
     setText(doc, [125, 130, 140]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.4); doc.text(`${count} pessoa${count === 1 ? '' : 's'} celebrando`, PAGE_W - MARGIN, 21, { align: 'right' });
   };
 
@@ -142,7 +142,7 @@ export function BirthdaysSection() {
     if (qr) { try { doc.addImage(qr, 'PNG', MARGIN + 3, y + (footerH - qrSize) / 2, qrSize, qrSize, undefined, 'FAST'); } catch {} }
     setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.text('Consulte no celular', MARGIN + 36, y + 8);
     setText(doc, [100, 106, 118]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.7); doc.text('Leia o QR Code para filtrar por setor e ver os aniversariantes.', MARGIN + 36, y + 14); doc.text('O botão de mensagem aparece apenas no período de celebração.', MARGIN + 36, y + 19);
-    setText(doc, [135, 141, 151]); doc.setFontSize(5.2); doc.text('É necessário entrar no Nuvexa para enviar uma mensagem.', MARGIN + 36, y + 23.5);
+    setText(doc, [135, 141, 151]); doc.setFontSize(5.2); doc.text('É necessário entrar no Ewvor para enviar uma mensagem.', MARGIN + 36, y + 23.5);
   };
 
   const generateMonthlyPdf = async () => {
@@ -171,8 +171,8 @@ export function BirthdaysSection() {
         }
       }
       await drawFixedQrFooter(doc, getShareUrl(birthdayPeople), pdfTheme);
-      setText(doc, [135, 141, 151]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.3); doc.text(`${company?.name || 'Nuvexa'} • Uso interno • 1/1`, PAGE_W - MARGIN, PAGE_H - 7, { align: 'right' });
-      const companySlug = (company?.name || 'nuvexa').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      setText(doc, [135, 141, 151]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.3); doc.text(`${company?.name || 'Ewvor'} • Uso interno • 1/1`, PAGE_W - MARGIN, PAGE_H - 7, { align: 'right' });
+      const companySlug = (company?.name || 'ewvor').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const monthSlug = monthName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
       doc.save(`aniversariantes_${companySlug}_${monthSlug}_${pdfTheme.id}.pdf`);
       toast.success(`PDF ${pdfTheme.name} gerado em uma página com 3 aniversariantes por fileira!`);
