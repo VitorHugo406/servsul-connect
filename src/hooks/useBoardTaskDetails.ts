@@ -58,6 +58,7 @@ export function useBoardTaskDetails(boardId: string | null) {
 
   const fetchDetails = useCallback(async () => {
     if (!boardId) {
+      requestVersion.current += 1;
       setDetails(emptyDetails);
       setLoading(false);
       return;
@@ -177,11 +178,17 @@ export function useBoardTaskDetails(boardId: string | null) {
   };
 
   const setTaskAssignees = async (taskId: string, profileIds: string[]) => {
-    await supabase.from('task_assignees').delete().eq('task_id', taskId);
+    const { error: deleteError } = await supabase.from('task_assignees').delete().eq('task_id', taskId);
+    if (deleteError) return { error: deleteError };
     if (profileIds.length > 0) {
-      await supabase.from('task_assignees').insert(profileIds.map((profileId) => ({ task_id: taskId, profile_id: profileId })));
+      const { error: insertError } = await supabase.from('task_assignees').insert(profileIds.map((profileId) => ({ task_id: taskId, profile_id: profileId })));
+      if (insertError) {
+        await fetchDetails();
+        return { error: insertError };
+      }
     }
     await fetchDetails();
+    return { error: null };
   };
 
   return {
