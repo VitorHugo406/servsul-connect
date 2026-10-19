@@ -230,7 +230,6 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
   };
 
   const deleteTask = async (id: string) => {
-    const previous = allTasks;
     setAllTasks((prev) => {
       const next = prev.filter((t) => t.id !== id);
       if (boardId) boardTaskCache.set(boardId, next);
@@ -241,8 +240,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      setAllTasks(previous);
-      if (boardId) boardTaskCache.set(boardId, previous);
+      scheduleRefetch();
       return { error };
     }
   };
@@ -319,7 +317,6 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
 
 
   const archiveTask = async (id: string) => {
-    const previous = allTasks;
     setAllTasks((prev) => {
       const next = prev.map((t) => (t.id === id ? { ...t, is_archived: true } : t));
       if (boardId) boardTaskCache.set(boardId, next);
@@ -330,14 +327,12 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      setAllTasks(previous);
-      if (boardId) boardTaskCache.set(boardId, previous);
+      scheduleRefetch();
       return { error };
     }
   };
 
   const unarchiveTask = async (id: string) => {
-    const previous = allTasks;
     setAllTasks((prev) => {
       const next = prev.map((t) => (t.id === id ? { ...t, is_archived: false } : t));
       if (boardId) boardTaskCache.set(boardId, next);
@@ -348,14 +343,12 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      setAllTasks(previous);
-      if (boardId) boardTaskCache.set(boardId, previous);
+      scheduleRefetch();
       return { error };
     }
   };
 
   const archiveColumnTasks = async (columnId: string) => {
-    const previous = allTasks;
     const colTaskIds = allTasks.filter((t) => t.status === columnId && !t.is_archived).map((t) => t.id);
     if (colTaskIds.length === 0) return { error: null };
 
@@ -373,8 +366,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      setAllTasks(previous);
-      if (boardId) boardTaskCache.set(boardId, previous);
+      scheduleRefetch();
       return { error };
     }
   };
