@@ -23,7 +23,9 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("@supabase/")) return "supabase-vendor";
           if (id.includes("react-router")) return "router-vendor";
           if (id.includes("recharts") || id.includes("/d3-")) return "charts-vendor";
-          if (id.includes("xlsx") || id.includes("jspdf") || id.includes("html2canvas")) return "export-vendor";
+          if (id.includes("xlsx")) return "xlsx-vendor";
+          if (id.includes("jspdf") || id.includes("jspdf-autotable")) return "pdf-vendor";
+          if (id.includes("html2canvas")) return "html2canvas-vendor";
           if (id.includes("@radix-ui/")) return "radix-vendor";
         },
       },
