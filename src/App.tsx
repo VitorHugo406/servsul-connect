@@ -43,7 +43,18 @@ function CompanyBrandGate({ children }: { children: React.ReactNode }) {
   if (!ready) return <LoadingScreen />; return <>{children}</>;
 }
 function PublicRoute({ children }: { children: React.ReactNode }) { const { user, loading, verifying } = useAuth(); if (loading) return <LoadingScreen message="Verificando acesso..." />; if (user && !verifying) return <Navigate to="/" replace />; return <>{children}</>; }
+const validAppSections = new Set([
+  'my-dashboard', 'chat', 'announcements', 'birthdays', 'management',
+  'shortcuts', 'facial', 'data-management', 'sectors', 'important-announcements',
+  'tasks', 'people-management', 'feedback-email', 'calendar', 'system-logs',
+  'storage', 'event-history', 'documentation', 'war-room', 'api-management',
+  'evaluations', 'notes', 'companies', 'system-broadcasts',
+]);
+
 function RootRoute() {
+  const location = useLocation();
+  const section = location.pathname.split('/').filter(Boolean)[0];
+  const isKnownRoute = !section || validAppSections.has(section);
   const { user, loading, verifying } = useAuth();
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches);
   useEffect(() => {
@@ -53,6 +64,7 @@ function RootRoute() {
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
   }, []);
+  if (!isKnownRoute) return <NotFound />;
   if (loading || verifying) return <LoadingScreen message="Preparando seu ambiente..." />;
   if (user) return <Index />;
   return isMobile ? <Auth /> : <LandingPage />;
