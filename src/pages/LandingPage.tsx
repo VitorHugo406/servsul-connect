@@ -22,9 +22,9 @@ const features = [
 ];
 
 const plans = [
-  { name: "Essencial", description: "Para equipes que querem organizar a rotina.", price: "R$ 89", perUser: "R$ 8,90", users: "Até 10 usuários", sectors: "Até 3 setores", storage: "2 GB", detail: "Para equipes pequenas: comunicação, avisos, tarefas, Kanban, avaliações e anotações, com até 10 usuários, 3 setores e 2 GB.", featured: false },
+  { name: "Essencial", description: "Para equipes que querem organizar a rotina.", price: "R$ 89", perUser: "R$ 8,90", users: "Até 10 usuários", sectors: "Até 3 setores", storage: "2 GB", detail: "Para equipes pequenas: comunicação, avisos, tarefas, Kanban e anotações, com até 10 usuários, 3 setores e 2 GB.", featured: false },
   { name: "Profissional", description: "Para operações que precisam de mais controle.", price: "R$ 219", perUser: "R$ 7,30", users: "Até 30 usuários", sectors: "Até 7 setores", storage: "10 GB", detail: "Mais recursos para equipes em crescimento: inclui calendário, aniversariantes, atalhos e dashboard de métricas, com até 30 usuários, 7 setores e 10 GB.", featured: true },
-  { name: "Empresarial", description: "Para empresas com operações e equipes maiores.", price: "R$ 599", perUser: "R$ 5,99", users: "Até 100 usuários", sectors: "Até 15 setores", storage: "30 GB", detail: "Capacidade para operações maiores, com até 100 usuários, 15 setores, 30 GB de armazenamento, Gestão de Pessoas e War Room.", featured: false },
+  { name: "Empresarial", description: "Para empresas com operações e equipes maiores.", price: "R$ 599", perUser: "R$ 5,99", users: "Até 100 usuários", sectors: "Até 15 setores", storage: "30 GB", detail: "Capacidade para operações maiores, com até 100 usuários, 15 setores, 30 GB de armazenamento, Gestão de Pessoas, War Room e avaliações de desempenho.", featured: false },
 ];
 
 const planFeatures = [
@@ -34,7 +34,7 @@ const planFeatures = [
     { name: "Avisos gerais", essential: true, professional: true, enterprise: true },
     { name: "Comunicados importantes", essential: true, professional: true, enterprise: true },
     { name: "Tarefas e Kanban", essential: true, professional: true, enterprise: true },
-    { name: "Avaliações", essential: true, professional: true, enterprise: true },
+    { name: "Avaliações", essential: false, professional: false, enterprise: true },
     { name: "Anotações", essential: true, professional: true, enterprise: true },
     { name: "Personalização de temas", essential: true, professional: true, enterprise: true },
   ]},
