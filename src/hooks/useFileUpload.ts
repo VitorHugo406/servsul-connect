@@ -199,8 +199,8 @@ export function useFileUpload() {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/avatar.${fileExt}`;
 
-      await supabase.storage.from('avatars').remove([fileName]);
-
+      // Keep the current avatar intact until the replacement upload succeeds.
+      // Supabase Storage can replace this path with upsert enabled.
       const { data, error } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, {
