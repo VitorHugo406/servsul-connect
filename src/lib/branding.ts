@@ -1,4 +1,4 @@
-import brandLogo from '@/assets/ewvor-logo.png';
+import brandLogo from '@/assets/nuvexa-logo.png';
 
 export const BRAND_LOGO_URL = brandLogo;
 export const BRAND_PRIMARY = '#3D2FD6';
