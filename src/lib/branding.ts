@@ -1,10 +1,10 @@
-import brandLogo from '@/assets/nuvexa-logo.png';
+import brandLogo from '@/assets/ewvor-logo.png';
 
 export const BRAND_LOGO_URL = brandLogo;
 export const BRAND_PRIMARY = '#3D2FD6';
 export const BRAND_SECONDARY = '#12C2F0';
-const COMPANY_CACHE_PREFIX = 'nuvexa:company:';
-const LAST_COMPANY_KEY = 'nuvexa:last-company';
+const COMPANY_CACHE_PREFIX = 'ewvor:company:';
+const LAST_COMPANY_KEY = 'ewvor:last-company';
 const NEUTRAL_PRIMARY = '#64748B';
 const NEUTRAL_SECONDARY = '#94A3B8';
 
