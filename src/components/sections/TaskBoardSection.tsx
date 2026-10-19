@@ -363,7 +363,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const restrictedTaskId = searchParams.get('task');
 
   const { columns, addColumn, updateColumn, deleteColumn, refetch: refetchColumns } = useBoardColumns(board.id);
-  const { tasks, archivedTasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: refetchTasks } = useBoardTasks(board.id, restrictedTaskId);
+  const { tasks, allTasks, archivedTasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: refetchTasks } = useBoardTasks(board.id, restrictedTaskId);
   const { members, addMember, removeMember, updateMemberRole } = useBoardMembers(board.id);
   const {
     labels,
@@ -375,7 +375,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     removeLabel,
     getTaskAssignees,
     setTaskAssignees: setTaskAssigneesDb,
-  } = useBoardTaskDetails(board.id);
+  } = useBoardTaskDetails(board.id, useMemo(() => new Set(allTasks.map((task) => task.id)), [allTasks]));
   const { createDuplication, deleteDuplication, getTaskDuplication } = useCardDuplications(board.id);
   const { rules: workflowRules, canMoveToColumn } = useWorkflowRules(board.id);
   const { users: allUsers } = useActiveUsers();
