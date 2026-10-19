@@ -98,6 +98,8 @@ export function useBoardTaskDetails(boardId: string | null) {
       setDetails(detailsCache.get(boardId)!);
       setLoading(false);
     } else {
+      // Avoid showing labels/assignees from the previous board during loading.
+      setDetails(emptyDetails);
       setLoading(!!boardId);
     }
 
