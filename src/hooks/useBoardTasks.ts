@@ -67,6 +67,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
   const [loading, setLoading] = useState(() => (boardId ? !boardTaskCache.has(boardId) : false));
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlight = useRef<string | null>(null);
+  const refetchRequested = useRef(false);
   const requestVersion = useRef(0);
 
   const fetchTasks = useCallback(async () => {
@@ -78,7 +79,11 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       return;
     }
 
-    if (inFlight.current === boardId) return;
+    if (inFlight.current === boardId) {
+      // Preserve invalidations raised while the current request is running.
+      refetchRequested.current = true;
+      return;
+    }
     const requestId = ++requestVersion.current;
     inFlight.current = boardId;
     try {
@@ -105,6 +110,11 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
     } finally {
       if (inFlight.current === boardId) inFlight.current = null;
       if (requestId === requestVersion.current) setLoading(false);
+      if (refetchRequested.current && requestId === requestVersion.current) {
+        refetchRequested.current = false;
+        // Run one follow-up read after the in-flight request settles.
+        Promise.resolve().then(() => fetchTasks());
+      }
     }
   }, [boardId]);
 
