@@ -66,21 +66,21 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
   const [allTasks, setAllTasks] = useState<BoardTask[]>(() => (boardId ? boardTaskCache.get(boardId) || [] : []));
   const [loading, setLoading] = useState(() => (boardId ? !boardTaskCache.has(boardId) : false));
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inFlight = useRef(false);
+  const inFlight = useRef<string | null>(null);
   const requestVersion = useRef(0);
 
   const fetchTasks = useCallback(async () => {
     if (!boardId) {
       requestVersion.current += 1;
-      inFlight.current = false;
+      inFlight.current = null;
       setAllTasks([]);
       setLoading(false);
       return;
     }
 
+    if (inFlight.current === boardId) return;
     const requestId = ++requestVersion.current;
-    if (inFlight.current) return;
-    inFlight.current = true;
+    inFlight.current = boardId;
     try {
       const { data, error } = await supabase.rpc('get_board_tasks_fast' as any, { _board_id: boardId });
 
@@ -103,10 +103,8 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
         if (cached) setAllTasks(cached);
       }
     } finally {
-      if (requestId === requestVersion.current) {
-        inFlight.current = false;
-        setLoading(false);
-      }
+      if (inFlight.current === boardId) inFlight.current = null;
+      if (requestId === requestVersion.current) setLoading(false);
     }
   }, [boardId]);
 
