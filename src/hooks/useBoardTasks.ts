@@ -208,7 +208,6 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
   };
 
   const updateTask = async (id: string, updates: Partial<BoardTask>) => {
-    const previous = allTasks;
     markLocal(id);
     setAllTasks((prev) => {
       const next = prev.map((t) => (t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t));
@@ -246,7 +245,6 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
   };
 
   const moveTask = async (taskId: string, newStatus: string, newPosition: number) => {
-    const previous = allTasks;
     markLocal(taskId);
     // Optimistic move first: the card follows the drop instantly.
     setAllTasks((prev) => {
