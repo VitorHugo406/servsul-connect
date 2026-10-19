@@ -1,130 +1,101 @@
-const CACHE_NAME = 'ewvor-runtime-v3';
-const STATIC_ASSETS = [
-  '/manifest.json',
-  '/icons/logo-192.png',
-  '/icons/logo-512.png',
-  '/apple-touch-icon.png'
-];
+const CACHE_NAME = 'ewvor-runtime-v4';
+const APP_SHELL = ['/', '/index.html', '/manifest.json', '/icons/logo-192.png', '/icons/logo-512.png', '/apple-touch-icon.png'];
 
-// Install event - cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('Caching static assets');
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .catch((error) => {
+        // A missing optional icon must not prevent the new worker from installing.
+        console.warn('Some offline assets could not be cached:', error);
+      })
   );
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      );
-    })
+    caches.keys().then((cacheNames) =>
+      Promise.all(cacheNames.filter((name) => name.startsWith('ewvor-runtime-') && name !== CACHE_NAME).map((name) => caches.delete(name)))
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Fetch event - never cache app shell or Vite bundles, so published updates appear immediately.
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  // Never cache API/auth/function responses or URLs carrying credentials/tokens.
+  if (/\/(rest|auth|functions|storage|graphql)\//i.test(url.pathname) || url.searchParams.has('token') || url.searchParams.has('access_token')) return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).then((response) => {
+        if (response.ok) {
+          const copy = response.clone();
+          void caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
+        }
+        return response;
+      }).catch(async () => (await caches.match('/index.html')) || (await caches.match('/')))
+    );
     return;
   }
 
-  // Skip cross-origin requests
-  if (!event.request.url.startsWith(self.location.origin)) {
-    return;
-  }
+  // Cache only static same-origin files. Fingerprinted Vite assets are immutable,
+  // while other static files use network-first to make updates visible promptly.
+  const isStaticFile = /\.(?:avif|css|eot|gif|ico|jpe?g|js|json|png|svg|webp|woff2?|ttf)$/i.test(url.pathname);
+  if (!isStaticFile) return;
 
-  // Skip API requests - always go to network
-  if (event.request.url.includes('/rest/') || 
-      event.request.url.includes('/auth/') ||
-      event.request.url.includes('/functions/')) {
-    return;
-  }
-
-  if (event.request.mode === 'navigate' || event.request.url.includes('/assets/') || event.request.url.endsWith('/index.html')) {
-    event.respondWith(fetch(event.request).catch(() => caches.match('/index.html')));
+  const isFingerprintAsset = url.pathname.startsWith('/assets/') && /-[A-Za-z0-9_-]{8,}\./.test(url.pathname);
+  if (isFingerprintAsset) {
+    event.respondWith(
+      caches.match(request).then((cached) => cached || fetch(request).then((response) => {
+        if (response.ok) void caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
+        return response;
+      }))
+    );
     return;
   }
 
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Clone the response before caching
-        const responseClone = response.clone();
-        
-        // Only cache successful responses
-        if (response.status === 200) {
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-        }
-        
-        return response;
-      })
-      .catch(() => {
-        // Network failed, try cache
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          
-          // For navigation requests, return the cached index.html
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-          
-          return new Response('Offline', { status: 503 });
-        });
-      })
+    fetch(request).then((response) => {
+      if (response.ok) void caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
+      return response;
+    }).catch(async () => (await caches.match(request)) || new Response('Offline', { status: 503, statusText: 'Offline' }))
   );
 });
 
-// Handle push notifications (for future use)
 self.addEventListener('push', (event) => {
-  if (event.data) {
-    const data = event.data.json();
-    
-    const options = {
-      body: data.body || 'Nova notificação',
-      icon: '/icons/logo-192.png',
-      badge: '/icons/logo-192.png',
-      vibrate: [100, 50, 100],
-      data: {
-        url: data.url || '/'
-      }
-    };
-    
-    event.waitUntil(
-      self.registration.showNotification(data.title || 'Ewvor', options)
-    );
-  }
+  if (!event.data) return;
+  let data;
+  try { data = event.data.json(); } catch { data = { body: event.data.text() }; }
+  const targetUrl = typeof data.url === 'string' && data.url.startsWith('/') ? data.url : '/';
+  event.waitUntil(self.registration.showNotification(data.title || 'Ewvor', {
+    body: data.body || 'Nova notificação',
+    icon: '/icons/logo-192.png',
+    badge: '/icons/logo-192.png',
+    vibrate: [100, 50, 100],
+    data: { url: targetUrl },
+  }));
 });
 
-// Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  
+  const rawUrl = event.notification.data?.url;
+  const targetUrl = typeof rawUrl === 'string' && rawUrl.startsWith('/') ? new URL(rawUrl, self.location.origin).href : self.location.origin + '/';
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
-      // If a window is already open, focus it
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
       for (const client of clientList) {
-        if (client.url === event.notification.data.url && 'focus' in client) {
-          return client.focus();
+        if (new URL(client.url).origin === self.location.origin && 'focus' in client) {
+          await client.focus();
+          if ('navigate' in client) return client.navigate(targetUrl);
+          return;
         }
       }
-      // Otherwise, open a new window
-      if (clients.openWindow) {
-        return clients.openWindow(event.notification.data.url);
-      }
+      return self.clients.openWindow(targetUrl);
     })
   );
 });
