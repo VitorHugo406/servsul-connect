@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, ChevronDown, ChevronRight, BookOpen, Database, Code2, Layers, Shield, Zap, Users, MessageSquare, Bell, ListTodo, CalendarDays, FileText, HardDrive, Building2, Sparkles, Mail, Cake, Home, Settings, Trash2, Eye, Lock, Server, Globe, Smartphone, BarChart2, Siren, Trophy, ClipboardCheck } from 'lucide-react';
-import appLogo from '@/assets/ewvor-logo.png';
+import appLogo from '@/assets/nuvexa-logo.png';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
