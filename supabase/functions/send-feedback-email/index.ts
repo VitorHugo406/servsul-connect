@@ -104,7 +104,7 @@ function buildChatMessage(displayName: string, stats: any, recommendations: stri
     recommendations.forEach(r => { msg += `_${r}_\n` })
   }
   if (pdfUrl) msg += `\n[Baixar Relatorio PDF](${pdfUrl})`
-  msg += `\n\n_Mensagem automatica do Nuvexa_`
+  msg += `\n\n_Mensagem automatica do Ewvor_`
   return msg
 }
 
@@ -114,7 +114,7 @@ function buildEmailHtml(displayName: string, stats: any, recommendations: string
 <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
     <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px 16px 0 0;padding:40px 32px;text-align:center;">
-      <h1 style="color:white;margin:0;font-size:28px;font-weight:700;">Nuvexa</h1>
+      <h1 style="color:white;margin:0;font-size:28px;font-weight:700;">Ewvor</h1>
       <p style="color:rgba(255,255,255,0.8);margin:8px 0 0;font-size:14px;">${companyName}</p>
     </div>
     <div style="background:white;border-radius:0 0 16px 16px;padding:32px;box-shadow:0 4px 6px rgba(0,0,0,0.05);">
@@ -145,7 +145,7 @@ function buildEmailHtml(displayName: string, stats: any, recommendations: string
         <ul style="color:#4b5563;margin:0;padding:0 0 0 20px;line-height:1.8;">${recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
       </div>` : ''}
       <div style="text-align:center;padding:16px 0;">
-        <p style="color:#9ca3af;font-size:12px;margin:0;">Este e-mail foi enviado automaticamente pelo sistema Nuvexa.<br>2026 ${companyName}.</p>
+        <p style="color:#9ca3af;font-size:12px;margin:0;">Este e-mail foi enviado automaticamente pelo sistema Ewvor.<br>2026 ${companyName}.</p>
       </div>
     </div>
   </div>
@@ -203,7 +203,7 @@ async function generatePdf(displayName: string, stats: any, recommendations: str
   drawRoundedRect(page, 30, height - 140, width - 60, 110, 12, headerBlue)
 
   // Header content - centered
-  const titleText = 'Nuvexa'
+  const titleText = 'Ewvor'
   const titleWidth = helveticaBold.widthOfTextAtSize(titleText, 30)
   page.drawText(titleText, { x: (width - titleWidth) / 2, y: height - 60, size: 30, font: helveticaBold, color: white })
 
@@ -335,7 +335,7 @@ async function generatePdf(displayName: string, stats: any, recommendations: str
   }
 
   // === FOOTER ===
-  const footerText = `Relatorio gerado automaticamente pelo Nuvexa em ${dateStr}`
+  const footerText = `Relatorio gerado automaticamente pelo Ewvor em ${dateStr}`
   const fWidth = helvetica.widthOfTextAtSize(footerText, 8)
   page.drawText(footerText, { x: (width - fWidth) / 2, y: 40, size: 8, font: helvetica, color: lightText })
 
@@ -418,7 +418,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'No recipients found' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const companyName = 'Nuvexa'
+    const companyName = 'Ewvor'
     const brNow = getBrazilNow()
     const dateStr = formatBrDate(brNow)
     const now = new Date()
@@ -556,9 +556,9 @@ Deno.serve(async (req) => {
             const resend = new Resend(resendApiKey)
             const emailHtml = buildEmailHtml(displayName, stats, recommendations, currentMonth, companyName)
             const { error: emailError } = await resend.emails.send({
-              from: 'Nuvexa <onboarding@resend.dev>',
+              from: 'Ewvor <onboarding@resend.dev>',
               to: [profile.email],
-              subject: `Feedback Mensal - ${currentMonth} | Nuvexa`,
+              subject: `Feedback Mensal - ${currentMonth} | Ewvor`,
               html: emailHtml,
             })
             if (emailError) {
