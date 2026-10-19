@@ -49,6 +49,7 @@ export function useBoardTaskDetails(boardId: string | null) {
   const [details, setDetails] = useState<BoardTaskDetails>(() => (boardId ? detailsCache.get(boardId) || emptyDetails : emptyDetails));
   const [loading, setLoading] = useState(() => (boardId ? !detailsCache.has(boardId) : false));
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestVersion = useRef(0);
 
   const applyDetails = useCallback((next: BoardTaskDetails) => {
     if (boardId) detailsCache.set(boardId, next);
@@ -62,9 +63,11 @@ export function useBoardTaskDetails(boardId: string | null) {
       return;
     }
 
+    const requestId = ++requestVersion.current;
     try {
       const { data, error } = await (supabase as any).rpc('get_board_task_details_fast', { _board_id: boardId });
       if (error) throw error;
+      if (requestId !== requestVersion.current) return;
       applyDetails({
         labels: data?.labels || [],
         label_assignments: data?.label_assignments || [],
@@ -73,10 +76,12 @@ export function useBoardTaskDetails(boardId: string | null) {
       });
     } catch (error) {
       console.error('Error fetching board task details:', error);
-      const cached = detailsCache.get(boardId);
-      if (cached) setDetails(cached);
+      if (requestId === requestVersion.current) {
+        const cached = detailsCache.get(boardId);
+        if (cached) setDetails(cached);
+      }
     } finally {
-      setLoading(false);
+      if (requestId === requestVersion.current) setLoading(false);
     }
   }, [applyDetails, boardId]);
 
