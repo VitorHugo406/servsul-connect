@@ -212,8 +212,9 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       if (boardId) triggerAutomations(boardId);
       return { error: null };
     } catch (error) {
-      setAllTasks(previous);
-      if (boardId) boardTaskCache.set(boardId, previous);
+      // Do not restore a stale full-list snapshot: another mutation may have
+      // completed while this request was pending. Reconcile from the server.
+      scheduleRefetch();
       return { error };
     }
   };
@@ -255,8 +256,8 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       if (boardId) triggerAutomations(boardId);
       return { error: null };
     } catch (error) {
-      setAllTasks(previous);
-      if (boardId) boardTaskCache.set(boardId, previous);
+      // A full snapshot rollback can erase concurrent task changes.
+      scheduleRefetch();
       return { error };
     }
   };
