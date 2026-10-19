@@ -45,11 +45,13 @@ const emptyDetails: BoardTaskDetails = {
 
 const detailsCache = new Map<string, BoardTaskDetails>();
 
-export function useBoardTaskDetails(boardId: string | null) {
+export function useBoardTaskDetails(boardId: string | null, taskIds: ReadonlySet<string> = new Set()) {
   const [details, setDetails] = useState<BoardTaskDetails>(() => (boardId ? detailsCache.get(boardId) || emptyDetails : emptyDetails));
   const [loading, setLoading] = useState(() => (boardId ? !detailsCache.has(boardId) : false));
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestVersion = useRef(0);
+  const taskIdsRef = useRef<ReadonlySet<string>>(taskIds);
+  taskIdsRef.current = taskIds;
 
   const applyDetails = useCallback((next: BoardTaskDetails) => {
     if (boardId) detailsCache.set(boardId, next);
@@ -107,12 +109,19 @@ export function useBoardTaskDetails(boardId: string | null) {
     fetchDetails();
     if (!boardId) return;
 
+    const handleTaskScopedChange = (payload: { new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
+      const taskId = String(payload.new?.task_id || payload.old?.task_id || '');
+      // DELETE payloads may omit non-primary-key columns unless replica identity is FULL.
+      // If the task id is unavailable, refresh conservatively to avoid stale details.
+      if (!taskId || taskIdsRef.current.has(taskId)) scheduleRefetch();
+    };
+
     const channel = supabase
       .channel(`board-task-details-${boardId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'task_labels', filter: `board_id=eq.${boardId}` }, scheduleRefetch)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_label_assignments' }, scheduleRefetch)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignees' }, scheduleRefetch)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_subtasks' }, scheduleRefetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_label_assignments' }, handleTaskScopedChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignees' }, handleTaskScopedChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_subtasks' }, handleTaskScopedChange)
       .subscribe();
 
     return () => {
