@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { usePresence } from '@/hooks/usePresence';
 import { useMeetingStatus } from '@/hooks/useMeetingStatus';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -76,19 +76,32 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   'system-broadcasts': { title: 'Comunicados Globais', subtitle: 'Avisos para todas as empresas' },
 };
 
+const sectionPaths: Record<string, string> = Object.fromEntries(Object.keys(sectionTitles).map((key) => [key, key === 'home' ? '/' : `/${key}`]));
+const pathSections: Record<string, string> = Object.fromEntries(Object.entries(sectionPaths).map(([key, path]) => [path, key]));
+
 const Index = () => {
-  const [activeSection, setActiveSection] = useState('home');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState(() => pathSections[location.pathname] || 'home');
   const [globalSearch, setGlobalSearch] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
   const joinToken = searchParams.get('join');
 
   useEffect(() => {
-    const sectionParam = searchParams.get('section');
-    if (sectionParam && sectionParam in sectionTitles) setActiveSection(sectionParam);
-  }, [searchParams]);
+    const pathSection = pathSections[location.pathname];
+    const legacySection = searchParams.get('section');
+    if (pathSection && pathSection in sectionTitles) setActiveSection(pathSection);
+    else if (legacySection && legacySection in sectionTitles) setActiveSection(legacySection);
+    else if (location.pathname === '/') setActiveSection('home');
+  }, [location.pathname, searchParams]);
 
   const handleSectionChange = (section: string) => {
-    const next = new URLSearchParams(searchParams); next.delete('section'); next.delete('board'); next.delete('task'); setSearchParams(next, { replace: true }); setActiveSection(section);
+    const next = new URLSearchParams(searchParams);
+    next.delete('section'); next.delete('board'); next.delete('task');
+    const query = next.toString();
+    const path = sectionPaths[section] || '/';
+    navigate(`${path}${query ? `?${query}` : ''}`, { replace: true });
+    setActiveSection(section);
   };
   const handleCloseJoinDialog = () => { searchParams.delete('join'); setSearchParams(searchParams, { replace: true }); };
   const handleNavigateToTasks = () => handleSectionChange('tasks');
