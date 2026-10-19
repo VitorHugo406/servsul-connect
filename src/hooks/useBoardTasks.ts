@@ -278,11 +278,30 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       return next;
     });
 
-    // Persist only the rows whose position actually changed, in background.
-    const changed = columnTasks.filter((t, i) => t.position !== i);
+    // Persist only rows whose position changed. Supabase reports per-query errors
+    // in the resolved result, so Promise.all alone is not enough to detect failures.
+    const changed = columnTasks
+      .map((task, position) => ({ task, position }))
+      .filter(({ task, position }) => task.position !== position);
+
     void Promise.all(
-      changed.map((t) => supabase.from('tasks').update({ position: columnTasks.indexOf(t) }).eq('id', t.id)),
-    ).catch(() => {});
+      changed.map(({ task, position }) =>
+        supabase.from('tasks').update({ position }).eq('id', task.id),
+      ),
+    ).then((results) => {
+      const failed = results.some(({ error }) => Boolean(error));
+      if (failed) {
+        console.error('Some task positions could not be saved; refreshing board data.');
+        // Reconcile with the server instead of leaving an optimistic state that
+        // looks saved even though one or more writes failed.
+        scheduleRefetch();
+      } else if (boardId) {
+        triggerAutomations(boardId);
+      }
+    }).catch((error) => {
+      console.error('Failed to persist task ordering:', error);
+      scheduleRefetch();
+    });
   };
 
 
