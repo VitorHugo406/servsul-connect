@@ -67,14 +67,18 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
   const [loading, setLoading] = useState(() => (boardId ? !boardTaskCache.has(boardId) : false));
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlight = useRef(false);
+  const requestVersion = useRef(0);
 
   const fetchTasks = useCallback(async () => {
     if (!boardId) {
+      requestVersion.current += 1;
+      inFlight.current = false;
       setAllTasks([]);
       setLoading(false);
       return;
     }
 
+    const requestId = ++requestVersion.current;
     if (inFlight.current) return;
     inFlight.current = true;
     try {
@@ -82,6 +86,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
 
       if (error) throw error;
 
+      if (requestId !== requestVersion.current) return;
       const normalized = ((data || []) as any[]).map((t) => ({
           ...t,
           priority: t.priority || 'medium',
@@ -93,11 +98,15 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       setAllTasks(normalized);
     } catch (error) {
       console.error('Error fetching board tasks:', error);
-      const cached = boardTaskCache.get(boardId);
-      if (cached) setAllTasks(cached);
+      if (requestId === requestVersion.current) {
+        const cached = boardTaskCache.get(boardId);
+        if (cached) setAllTasks(cached);
+      }
     } finally {
-      inFlight.current = false;
-      setLoading(false);
+      if (requestId === requestVersion.current) {
+        inFlight.current = false;
+        setLoading(false);
+      }
     }
   }, [boardId]);
 
@@ -174,8 +183,15 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
         .single();
 
       if (error) throw error;
+      // Insert the returned row into the local board immediately instead of waiting for Realtime.
+      const created = { ...(data as BoardTask), priority: (data as BoardTask).priority || 'medium', is_archived: (data as BoardTask).is_archived ?? false, is_template: (data as BoardTask).is_template ?? false, is_emergency: (data as BoardTask).is_emergency ?? false } as BoardTask;
+      setAllTasks((prev) => {
+        const next = [...prev, created];
+        boardTaskCache.set(boardId, next);
+        return next;
+      });
       if (boardId) triggerAutomations(boardId);
-      return { data, error: null };
+      return { data: created, error: null };
     } catch (error) {
       return { data: null, error };
     }
