@@ -63,33 +63,29 @@ export function StorageMonitoringSection() {
 
       for (const bucket of bucketNames) {
         try {
-          // List all files recursively
-          const { data } = await supabase.storage.from(bucket).list('', { limit: 1000 });
+          // Percorre pastas em qualquer profundidade para não subcontar arquivos.
           let totalSize = 0;
           let fileCount = 0;
-          
-          if (data && data.length > 0) {
-            // For each top-level item, if it's a folder list its contents
+          const visitedPrefixes = new Set<string>();
+
+          const collectFiles = async (prefix = ''): Promise<void> => {
+            if (visitedPrefixes.has(prefix)) return;
+            visitedPrefixes.add(prefix);
+            const { data, error } = await supabase.storage.from(bucket).list(prefix, { limit: 1000 });
+            if (error || !data) return;
+
             for (const item of data) {
               if (item.id) {
-                // It's a file at root level
-                totalSize += (item.metadata?.size || 0);
+                totalSize += Number(item.metadata?.size || 0);
                 fileCount++;
               } else {
-                // It's a folder - list its contents
-                const { data: subFiles } = await supabase.storage.from(bucket).list(item.name, { limit: 1000 });
-                if (subFiles) {
-                  for (const subFile of subFiles) {
-                    if (subFile.id) {
-                      totalSize += (subFile.metadata?.size || 0);
-                      fileCount++;
-                    }
-                  }
-                }
+                const nestedPrefix = prefix ? `${prefix}/${item.name}` : item.name;
+                await collectFiles(nestedPrefix);
               }
             }
-          }
-          
+          };
+
+          await collectFiles();
           const sizeMb = totalSize / (1024 * 1024);
           bucketStats.push({ name: bucket, count: fileCount, sizeMb: Math.round(sizeMb * 100) / 100 });
         } catch {
