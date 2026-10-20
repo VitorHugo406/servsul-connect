@@ -97,8 +97,19 @@ export function useFileUpload() {
       return null;
     }
 
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error('O arquivo é muito grande. O tamanho máximo é 2MB.');
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      toast.error('Tipo de arquivo não permitido.');
+      return null;
+    }
+
+    // Imagens raster podem ser reduzidas antes do limite final; documentos e GIFs
+    // continuam sujeitos ao limite de 2 MB desde a origem.
+    const canOptimize = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
+    const sourceLimit = canOptimize ? 10 * 1024 * 1024 : MAX_FILE_SIZE;
+    if (file.size > sourceLimit) {
+      toast.error(canOptimize
+        ? 'A imagem original deve ter no máximo 10MB para ser otimizada.'
+        : 'O arquivo é muito grande. O tamanho máximo é 2MB.');
       return null;
     }
 
@@ -121,11 +132,6 @@ export function useFileUpload() {
         toast.error(`Limite semanal de ${weeklyLimit} arquivos atingido. Tente novamente na próxima semana.`);
         return null;
       }
-    }
-
-    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-      toast.error('Tipo de arquivo não permitido.');
-      return null;
     }
 
     setUploading(true);
@@ -194,8 +200,10 @@ export function useFileUpload() {
       return null;
     }
 
-    if (file.size > 1 * 1024 * 1024) {
-      toast.error('A imagem é muito grande. O tamanho máximo é 1MB.');
+    // Permite uma imagem original maior apenas para tentar comprimi-la no cliente.
+    // O limite de 1 MB continua obrigatório para o arquivo efetivamente enviado.
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('A imagem original deve ter no máximo 10MB.');
       return null;
     }
 
