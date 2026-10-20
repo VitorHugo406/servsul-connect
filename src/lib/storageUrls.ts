@@ -14,10 +14,14 @@ export function getStorageTarget(value?: string | null): StorageTarget | null {
   const match = value.match(/\/storage\/v1\/object\/(?:public|sign)\/(attachments|avatars)\/([^?]+)/);
   if (!match) return null;
 
-  return {
-    bucket: match[1] as StorageTarget['bucket'],
-    path: decodeURIComponent(match[2]),
-  };
+  try {
+    return {
+      bucket: match[1] as StorageTarget['bucket'],
+      path: decodeURIComponent(match[2]),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function createSignedStorageUrl(value?: string | null): Promise<string> {
@@ -28,18 +32,29 @@ export async function createSignedStorageUrl(value?: string | null): Promise<str
   const cached = signedUrlCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now() + CACHE_SAFETY_MS) return cached.url;
 
-  const { data, error } = await supabase.storage
-    .from(target.bucket)
-    .createSignedUrl(target.path, SIGNED_URL_TTL_SECONDS);
+  try {
+    const { data, error } = await supabase.storage
+      .from(target.bucket)
+      .createSignedUrl(target.path, SIGNED_URL_TTL_SECONDS);
 
-  if (error || !data?.signedUrl) return value;
+    // Fail closed: never fall back to an original public/object URL if signing fails.
+    if (error || !data?.signedUrl) {
+      signedUrlCache.delete(cacheKey);
+      console.error('Unable to create a signed storage URL.');
+      return '';
+    }
 
-  signedUrlCache.set(cacheKey, {
-    url: data.signedUrl,
-    expiresAt: Date.now() + SIGNED_URL_TTL_SECONDS * 1000,
-  });
+    signedUrlCache.set(cacheKey, {
+      url: data.signedUrl,
+      expiresAt: Date.now() + SIGNED_URL_TTL_SECONDS * 1000,
+    });
 
-  return data.signedUrl;
+    return data.signedUrl;
+  } catch (error) {
+    signedUrlCache.delete(cacheKey);
+    console.error('Unable to create a signed storage URL.', error);
+    return '';
+  }
 }
 
 export function useSignedStorageUrl(value?: string | null) {
@@ -47,13 +62,16 @@ export function useSignedStorageUrl(value?: string | null) {
     const target = getStorageTarget(value);
     return target ? `${target.bucket}:${target.path}` : value || '';
   }, [value]);
-  const [signedUrl, setSignedUrl] = useState(value || '');
+  const [signedUrl, setSignedUrl] = useState(() => {
+    return getStorageTarget(value) ? '' : value || '';
+  });
 
   useEffect(() => {
     let alive = true;
-    setSignedUrl(value || '');
+    const target = getStorageTarget(value);
+    setSignedUrl(target ? '' : value || '');
 
-    if (!value || !getStorageTarget(value)) return;
+    if (!value || !target) return;
 
     createSignedStorageUrl(value).then((url) => {
       if (alive) setSignedUrl(url);
