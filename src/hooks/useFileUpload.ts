@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { cacheOwnUploadedAttachment } from '@/lib/localAttachmentStorage';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -145,6 +146,16 @@ export function useFileUpload() {
         console.error('Upload error:', error);
         toast.error('Erro ao fazer upload do arquivo');
         return null;
+      }
+
+      // Save this user's own copy locally immediately. The same local cache
+      // is also populated for received files when they are opened in chat.
+      if (bucket === 'attachments') {
+        try {
+          await cacheOwnUploadedAttachment(user.id, data.path, file);
+        } catch (localCacheError) {
+          console.warn('Could not cache uploaded attachment locally:', localCacheError);
+        }
       }
 
       // Chat attachments must be registered server-side so the 24-hour
