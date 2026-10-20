@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import plannerEmptyIllustration from '@/assets/planner-empty-illustration.png';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -54,11 +54,16 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CheckSquare, CheckCircle2 } from 'lucide-react';
 
+const slugifyBoardName = (name: string) => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
 export function TaskBoardSection() {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { boards, loading: boardsLoading, createBoard, updateBoard, deleteBoard } = useTaskBoards();
   const isMobile = useIsMobile();
+  const boardSlugFromPath = location.pathname.match(/^\/tarefas\/([^/]+)$/)?.[1] || null;
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
   const [showCreateBoard, setShowCreateBoard] = useState(false);
   const [boardName, setBoardName] = useState('');
@@ -68,14 +73,24 @@ export function TaskBoardSection() {
   const [boardOrder, setBoardOrder] = useState<string[]>([]);
   const [draggedBoardIdx, setDraggedBoardIdx] = useState<number | null>(null);
 
-  // Permite abrir um mural específico via URL (?section=tasks&board=...)
+  // Deep link por slug do mural, com ID no final para evitar colisões de nomes.
   useEffect(() => {
-    const section = searchParams.get('section');
-    const board = searchParams.get('board');
-    if (section === 'tasks' && board && board !== selectedBoardId) {
-      setSelectedBoardId(board);
+    const legacyBoardId = searchParams.get('board');
+    if (legacyBoardId) {
+      const legacyBoard = boards.find(b => b.id === legacyBoardId);
+      if (legacyBoard) {
+        navigate('/tarefas/' + slugifyBoardName(legacyBoard.name) + '-' + legacyBoard.id, { replace: true });
+        setSelectedBoardId(legacyBoard.id);
+        return;
+      }
     }
-  }, [searchParams, selectedBoardId]);
+    if (!boardSlugFromPath) {
+      if (selectedBoardId !== null) setSelectedBoardId(null);
+      return;
+    }
+    const matchedBoard = boards.find(b => slugifyBoardName(b.name) + '-' + b.id === boardSlugFromPath);
+    if (matchedBoard && matchedBoard.id !== selectedBoardId) setSelectedBoardId(matchedBoard.id);
+  }, [boards, boardSlugFromPath, searchParams, navigate, selectedBoardId]);
 
   // Persist board order in localStorage
   const ORDER_KEY = 'board_order';
@@ -144,7 +159,7 @@ export function TaskBoardSection() {
     const { error } = await deleteBoard(id);
     if (error) { toast.error('Erro ao excluir mural'); return; }
     toast.success('Mural excluído com sucesso!');
-    if (selectedBoardId === id) setSelectedBoardId(null);
+    if (selectedBoardId === id) { setSelectedBoardId(null); navigate('/tarefas', { replace: true }); }
   };
 
   const handleEditBoard = async () => {
@@ -168,13 +183,13 @@ export function TaskBoardSection() {
 
   if (selectedBoardId) {
     const board = boards.find(b => b.id === selectedBoardId);
-    if (!board) { setSelectedBoardId(null); return null; }
+    if (!board) return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
     return (
       <BoardView
         board={board}
         boards={boards}
-        onBack={() => setSelectedBoardId(null)}
-        onSelectBoard={(id: string) => setSelectedBoardId(id)}
+        onBack={() => { setSelectedBoardId(null); navigate('/tarefas'); }}
+        onSelectBoard={(id: string) => { const nextBoard = boards.find(b => b.id === id); if (nextBoard) { setSelectedBoardId(id); navigate('/tarefas/' + slugifyBoardName(nextBoard.name) + '-' + nextBoard.id); } }}
         onUpdateBoard={updateBoard}
         isOwner={board.owner_id === user?.id}
         currentUserId={user?.id || ''}
@@ -228,7 +243,7 @@ export function TaskBoardSection() {
                   draggedBoardIdx === index && 'opacity-50 ring-2 ring-primary',
                 )}
                 style={getBoardBgStyle(board.background_image)}
-                onClick={() => setSelectedBoardId(board.id)}
+                onClick={() => { setSelectedBoardId(board.id); navigate('/tarefas/' + slugifyBoardName(board.name) + '-' + board.id); }}
                 draggable
                 onDragStart={(e) => handleBoardDragStart(e, index)}
                 onDragOver={(e) => handleBoardDragOver(e, index)}
