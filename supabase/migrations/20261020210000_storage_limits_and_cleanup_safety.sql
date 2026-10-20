@@ -1,0 +1,1 @@
+-- Storage upload limits are enforced at the bucket level.
