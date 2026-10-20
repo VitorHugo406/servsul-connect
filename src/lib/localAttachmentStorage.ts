@@ -35,6 +35,9 @@ function attachmentKey(userId: string, path: string) {
   return `${userId}:${path}`;
 }
 
+// Avoid duplicate downloads when the image and its surrounding link mount together.
+const pendingDownloads = new Map<string, Promise<string>>();
+
 export async function getLocalAttachment(userId: string, path: string): Promise<CachedAttachment | null> {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
@@ -71,16 +74,35 @@ export async function getOrCacheAttachment(userId: string, sourceUrl: string, fi
   const target = getStorageTarget(sourceUrl);
   if (!target || target.bucket !== 'attachments') return createSignedStorageUrl(sourceUrl);
 
-  const cached = await getLocalAttachment(userId, target.path);
-  if (cached) return URL.createObjectURL(cached.blob);
+  const key = attachmentKey(userId, target.path);
+  const existingRequest = pendingDownloads.get(key);
+  if (existingRequest) {
+    const sharedUrl = await existingRequest;
+    if (!sharedUrl) return '';
+    // Each component owns and revokes its own object URL.
+    const cachedAfterDownload = await getLocalAttachment(userId, target.path);
+    return cachedAfterDownload ? URL.createObjectURL(cachedAfterDownload.blob) : sharedUrl;
+  }
 
-  const signedUrl = await createSignedStorageUrl(sourceUrl);
-  if (!signedUrl) return '';
-  const response = await fetch(signedUrl);
-  if (!response.ok) return '';
-  const blob = await response.blob();
-  await saveLocalAttachment(userId, target.path, blob, fileName);
-  return URL.createObjectURL(blob);
+  const download = (async () => {
+    const cached = await getLocalAttachment(userId, target.path);
+    if (cached) return URL.createObjectURL(cached.blob);
+
+    const signedUrl = await createSignedStorageUrl(sourceUrl);
+    if (!signedUrl) return '';
+    const response = await fetch(signedUrl);
+    if (!response.ok) return '';
+    const blob = await response.blob();
+    await saveLocalAttachment(userId, target.path, blob, fileName);
+    return URL.createObjectURL(blob);
+  })();
+
+  pendingDownloads.set(key, download);
+  try {
+    return await download;
+  } finally {
+    pendingDownloads.delete(key);
+  }
 }
 
 export async function cacheOwnUploadedAttachment(userId: string, path: string, file: File): Promise<void> {
