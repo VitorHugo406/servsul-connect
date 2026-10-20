@@ -45,6 +45,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { getCompanyLogoPath } from '@/lib/companyLogo';
+import { optimizeImageFile } from '@/lib/imageOptimization';
 import { CompanyLogo } from '@/components/common/CompanyLogo';
 
 interface CompanyStats {
@@ -241,12 +242,17 @@ export function CompaniesManagementSection() {
       toast.error('Selecione um arquivo de imagem válido');
       return;
     }
-    const path = getCompanyLogoPath(selected.slug, file);
+    const optimizedFile = await optimizeImageFile(file, 1024);
+    if (optimizedFile.size > 1024 * 1024) {
+      toast.error('A logo deve ter no máximo 1MB após a otimização.');
+      return;
+    }
+    const path = getCompanyLogoPath(selected.slug, optimizedFile);
     const { error: upErr } = await supabase.storage
       .from('company-logos')
-      .upload(path, file, {
+      .upload(path, optimizedFile, {
         upsert: true,
-        contentType: file.type || 'image/png',
+        contentType: optimizedFile.type || 'image/png',
         cacheControl: '3600',
       });
     if (upErr) {
