@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useId } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -9,6 +9,7 @@ interface NotificationCounts {
 }
 
 export function useNotifications() {
+  const instanceId = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const [counts, setCounts] = useState<NotificationCounts>({
     unreadMessages: 0,
     unreadAnnouncements: 0,
@@ -88,7 +89,7 @@ export function useNotifications() {
 
     // Subscribe to direct messages
     const dmChannel = supabase
-      .channel('notification-dm')
+      .channel(`notification-dm-${instanceId}`)
       .on(
         'postgres_changes',
         {
@@ -104,7 +105,7 @@ export function useNotifications() {
 
     // Subscribe to announcements
     const annChannel = supabase
-      .channel('notification-announcements')
+      .channel(`notification-announcements-${instanceId}`)
       .on(
         'postgres_changes',
         {
@@ -120,7 +121,7 @@ export function useNotifications() {
 
     // Subscribe to announcement reads
     const readsChannel = supabase
-      .channel('notification-reads')
+      .channel(`notification-reads-${instanceId}`)
       .on(
         'postgres_changes',
         {
