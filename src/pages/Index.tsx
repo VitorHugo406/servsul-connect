@@ -98,7 +98,7 @@ const Index = () => {
   const joinToken = searchParams.get('join');
 
   useEffect(() => {
-    const pathSection = pathSections[location.pathname];
+    const pathSection = pathSections[location.pathname] || (location.pathname.startsWith('/tarefas/') ? 'tasks' : undefined);
     const legacySection = searchParams.get('section');
     if (pathSection) {
       setActiveSection(pathSection);
