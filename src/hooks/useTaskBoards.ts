@@ -63,11 +63,22 @@ export function useTaskBoards() {
 
   useEffect(() => {
     fetchBoards();
+    // Batch rapid realtime events so a burst of board updates does not trigger
+    // repeated full-list queries and unnecessary state updates.
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     const channel = supabase
       .channel('task-boards-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_boards' }, () => fetchBoards())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_boards' }, () => {
+        if (refreshTimer) clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(() => {
+          fetchBoards();
+        }, 250);
+      })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      supabase.removeChannel(channel);
+    };
   }, [fetchBoards]);
 
   const createBoard = async (name: string, description?: string) => {
