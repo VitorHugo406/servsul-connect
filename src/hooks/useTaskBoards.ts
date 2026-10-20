@@ -50,7 +50,7 @@ export function useTaskBoards() {
     try {
       const { data, error } = await supabase
         .from('task_boards')
-        .select('*')
+        .select('id, name, description, owner_id, background_image, created_at, updated_at')
         .order('created_at', { ascending: false });
       if (error) throw error;
       setBoards((data || []) as TaskBoard[]);
