@@ -2252,22 +2252,37 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     );
                   })()}
                   </div>
-                  {/* Fixed add button at bottom of column */}
-                  <div className="p-2 pt-0 border-t border-border">
-                    <div className="flex items-center gap-1">
+                  {/* Footer controls: centered glass buttons with consistent vertical alignment */}
+                  <div className="mt-auto flex min-h-[56px] items-center justify-center border-t border-white/15 px-2 py-2">
+                    <div className="flex w-full items-center justify-center gap-2">
                       {(column as any).is_template_column ? (
-                        <Button variant="ghost" size="sm" className="flex-1 text-xs gap-1" onClick={() => openCreateTemplate(column.id)}>
-                          <Plus className="h-3 w-3" /> Adicionar template
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-10 flex-1 self-center rounded-xl border border-white/25 bg-white/20 text-xs gap-1.5 text-foreground shadow-sm backdrop-blur-xl transition-all duration-200 hover:border-white/40 hover:bg-white/75 hover:shadow-md dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                          onClick={() => openCreateTemplate(column.id)}
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Adicionar template
                         </Button>
                       ) : (
                         <>
-                          <Button variant="ghost" size="sm" className="flex-1 text-xs gap-1" onClick={() => openCreateTask(column.id)}>
-                            <Plus className="h-3 w-3" /> Adicionar um cartão
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-10 min-w-0 flex-1 self-center rounded-xl border border-white/25 bg-white/20 text-xs gap-1.5 text-foreground shadow-sm backdrop-blur-xl transition-all duration-200 hover:border-white/40 hover:bg-white/75 hover:shadow-md dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                            onClick={() => openCreateTask(column.id)}
+                          >
+                            <Plus className="h-3.5 w-3.5 shrink-0" /> Adicionar um cartão
                           </Button>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openCreateTemplate(column.id)}>
-                                <Copy className="h-3.5 w-3.5" />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10 shrink-0 self-center rounded-xl border border-white/25 bg-white/20 text-muted-foreground shadow-sm backdrop-blur-xl transition-all duration-200 hover:border-white/40 hover:bg-white/75 hover:text-primary hover:shadow-md dark:bg-white/10 dark:text-white/70 dark:hover:bg-white/20 dark:hover:text-white"
+                                onClick={() => openCreateTemplate(column.id)}
+                              >
+                                <Copy className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Criar template</TooltipContent>
