@@ -97,25 +97,47 @@ export function useMessages(sectorId: string | null) {
   }, []);
 
   const loadedSectorRef = useRef<string | null>(null);
+  const activeSectorRef = useRef<string | null>(sectorId);
+  const messagesCacheRef = useRef<Map<string, Message[]>>(new Map());
+
+  // Keep the current sector identity synchronized so late requests from a previous
+  // sector cannot replace the messages currently being viewed.
+  activeSectorRef.current = sectorId;
+
   const fetchMessages = useCallback(async () => {
-    if (!sectorId) return;
-    if (loadedSectorRef.current !== sectorId) setLoading(true);
+    const requestedSectorId = sectorId;
+    if (!requestedSectorId) return;
+
+    const cachedMessages = messagesCacheRef.current.get(requestedSectorId);
+    if (cachedMessages) {
+      setMessages(cachedMessages);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     const { data, error } = await supabase
       .from('messages')
       .select('id, content, author_id, sector_id, created_at, reply_to_id, author:profiles!messages_author_id_fkey(id, user_id, name, display_name, email, avatar_url, sector_id, autonomy_level, birth_date, company_id)')
-      .eq('sector_id', sectorId)
+      .eq('sector_id', requestedSectorId)
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE);
 
     if (error) {
       console.error('Error fetching messages:', error);
-      setLoading(false);
+      if (activeSectorRef.current === requestedSectorId) setLoading(false);
       return;
     }
+
+    // A slow response for a sector the user has already left must never replace
+    // the active sector's message list.
+    if (activeSectorRef.current !== requestedSectorId) return;
 
     // Render the history as soon as the primary query returns. Reply previews and
     // author-sector labels are secondary metadata and must not block the chat.
     const baseMessages = (((data as any[]) || []).reverse()) as Message[];
+    messagesCacheRef.current.set(requestedSectorId, baseMessages.map(m => ({ ...m, status: 'delivered' as const })));
+    loadedSectorRef.current = requestedSectorId;
     setHasMore((data || []).length === PAGE_SIZE);
     setMessages(prev => {
       const temps = prev.filter(m => m.id.startsWith('temp-'));
@@ -123,7 +145,6 @@ export function useMessages(sectorId: string | null) {
       temps.forEach(m => byId.set(m.id, m));
       return Array.from(byId.values()).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     });
-    loadedSectorRef.current = sectorId;
     setLoading(false);
 
     // Enrich the already-visible messages in the background, without delaying
