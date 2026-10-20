@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { cacheOwnUploadedAttachment } from '@/lib/localAttachmentStorage';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -145,6 +146,32 @@ export function useFileUpload() {
         console.error('Upload error:', error);
         toast.error('Erro ao fazer upload do arquivo');
         return null;
+      }
+
+      // Save this user's own copy locally immediately. The same local cache
+      // is also populated for received files when they are opened in chat.
+      if (bucket === 'attachments') {
+        try {
+          await cacheOwnUploadedAttachment(user.id, data.path, file);
+        } catch (localCacheError) {
+          console.warn('Could not cache uploaded attachment locally:', localCacheError);
+        }
+      }
+
+      // Chat attachments must be registered server-side so the 24-hour
+      // cleanup job can remove the temporary server copy. Avatars are excluded.
+      if (bucket === 'attachments') {
+        const { error: lifecycleError } = await supabase.functions.invoke(
+          'register-attachment-lifecycle',
+          { body: { storagePath: data.path } },
+        );
+
+        if (lifecycleError) {
+          await supabase.storage.from(bucket).remove([data.path]);
+          console.error('Attachment lifecycle registration failed:', lifecycleError);
+          toast.error('Não foi possível registrar a validade do arquivo. Tente novamente.');
+          return null;
+        }
       }
 
       const { data: urlData } = supabase.storage

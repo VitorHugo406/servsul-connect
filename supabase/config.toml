@@ -50,3 +50,9 @@ verify_jwt = true
 
 [functions.apply-schema]
 verify_jwt = false
+
+[functions.cleanup-expired-attachments]
+verify_jwt = false
+
+[functions.register-attachment-lifecycle]
+verify_jwt = false
