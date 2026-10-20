@@ -242,6 +242,10 @@ export function CompaniesManagementSection() {
       toast.error('Selecione um arquivo de imagem válido');
       return;
     }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('A imagem original deve ter no máximo 10MB.');
+      return;
+    }
     const optimizedFile = await optimizeImageFile(file, 1024);
     if (optimizedFile.size > 1024 * 1024) {
       toast.error('A logo deve ter no máximo 1MB após a otimização.');
