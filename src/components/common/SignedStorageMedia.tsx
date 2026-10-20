@@ -3,7 +3,7 @@ import { useSignedStorageUrl, getStorageTarget } from '@/lib/storageUrls';
 import { getOrCacheAttachment } from '@/lib/localAttachmentStorage';
 import { useAuth } from '@/contexts/AuthContext';
 
-export function SignedStorageLink({ url, className, children }: { url: string; className?: string; children: ReactNode }) {
+export function SignedStorageLink({ url, className, children, fileName = 'anexo' }: { url: string; className?: string; children: ReactNode; fileName?: string }) {
   const signedUrl = useSignedStorageUrl(url);
   const { user } = useAuth();
   const [localUrl, setLocalUrl] = useState('');
@@ -15,7 +15,7 @@ export function SignedStorageLink({ url, className, children }: { url: string; c
     let objectUrl = '';
     setLocalUrl('');
     if (!isAttachment || !user?.id) return;
-    getOrCacheAttachment(user.id, url, 'anexo')
+    getOrCacheAttachment(user.id, url, fileName)
       .then((resolved) => {
         if (!alive) {
           if (resolved.startsWith('blob:')) URL.revokeObjectURL(resolved);
@@ -31,7 +31,7 @@ export function SignedStorageLink({ url, className, children }: { url: string; c
       alive = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [url, user?.id, isAttachment]);
+  }, [url, user?.id, isAttachment, fileName]);
 
   const href = isAttachment ? (localUrl || signedUrl) : signedUrl;
   return (
