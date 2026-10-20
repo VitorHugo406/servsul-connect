@@ -291,8 +291,11 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       return { error: null };
     } catch (error) {
       console.error('Error reordering board tasks:', error);
+      const affectedIds = new Set(updates.map((update) => update.id));
       setAllTasks((current) => {
-        const next = current.map((t) => allTasks.find((previous) => previous.id === t.id) || t);
+        const next = current.map((t) =>
+          affectedIds.has(t.id) ? allTasks.find((previous) => previous.id === t.id) || t : t,
+        );
         boardTaskCache.set(boardId, next);
         return next;
       });
