@@ -161,9 +161,9 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
       {textContent && <p className="text-sm leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{textContent.split('\n').map((line, i) => <React.Fragment key={i}>{i > 0 && <br />}{formatText(line, isOwnMsg)}</React.Fragment>)}</p>}
       {elements}
       {attachments.map((att, i) => att.type === 'image' ? (
-        <SignedStorageLink key={i} url={att.url}><SignedStorageImage url={att.url} alt={att.name} className="max-w-full max-h-48 rounded-2xl object-cover" /></SignedStorageLink>
+        <SignedStorageLink key={i} url={att.url} fileName={att.name}><SignedStorageImage url={att.url} alt={att.name} className="max-w-full max-h-48 rounded-2xl object-cover" /></SignedStorageLink>
       ) : (
-        <SignedStorageLink key={i} url={att.url} className={cn('flex max-w-full items-center gap-2 rounded-2xl p-2 text-xs', isOwn ? 'bg-white/10 hover:bg-white/20' : 'bg-muted hover:bg-muted/80')}><span>📎</span><span className="min-w-0 truncate">{att.name}</span></SignedStorageLink>
+        <SignedStorageLink key={i} url={att.url} fileName={att.name} className={cn('flex max-w-full items-center gap-2 rounded-2xl p-2 text-xs', isOwn ? 'bg-white/10 hover:bg-white/20' : 'bg-muted hover:bg-muted/80')}><span>📎</span><span className="min-w-0 truncate">{att.name}</span></SignedStorageLink>
       ))}
     </div>;
   };
