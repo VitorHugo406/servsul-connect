@@ -147,6 +147,22 @@ export function useFileUpload() {
         return null;
       }
 
+      // Chat attachments must be registered server-side so the 24-hour
+      // cleanup job can remove the temporary server copy. Avatars are excluded.
+      if (bucket === 'attachments') {
+        const { error: lifecycleError } = await supabase.functions.invoke(
+          'register-attachment-lifecycle',
+          { body: { storagePath: data.path } },
+        );
+
+        if (lifecycleError) {
+          await supabase.storage.from(bucket).remove([data.path]);
+          console.error('Attachment lifecycle registration failed:', lifecycleError);
+          toast.error('Não foi possível registrar a validade do arquivo. Tente novamente.');
+          return null;
+        }
+      }
+
       const { data: urlData } = supabase.storage
         .from(bucket)
         .getPublicUrl(data.path);
