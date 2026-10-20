@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useId } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -49,6 +49,9 @@ export function useMyNotePermission(note: Note | null) {
 
 export function useNotes() {
   const { user } = useAuth();
+  // Cada instância do hook precisa de um tópico próprio no Realtime.
+  // Isso evita registrar callbacks em um canal já inscrito quando a janela flutuante e a tela usam o hook.
+  const instanceId = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -77,7 +80,7 @@ export function useNotes() {
   useEffect(() => {
     if (!user) return;
     const ch = supabase
-      .channel('notes-rt')
+      .channel(`notes-rt-${instanceId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, () => {
         fetchNotes();
       })
