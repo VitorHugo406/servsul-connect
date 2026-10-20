@@ -75,3 +75,60 @@
   .flex-1.overflow-hidden > .flex.h-full.flex-col.border-r.border-border.bg-card > .border-b.border-border.p-4:has(> div > h3) button { height:32px; width:32px; padding:0; }
 }
 [data-radix-scroll-area-viewport]{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+
+
+/* Nuvexa: vidro realmente translúcido nos controles de ação das colunas */
+@layer components {
+  .task-column-glass-action {
+    background: hsl(var(--foreground) / 0.025) !important;
+    border: 1px solid hsl(var(--foreground) / 0.075) !important;
+    color: hsl(var(--foreground) / 0.68) !important;
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.10), 0 2px 8px hsl(var(--foreground) / 0.025) !important;
+    backdrop-filter: blur(18px) saturate(155%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(155%) !important;
+    transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease !important;
+  }
+  .task-column-glass-action:hover {
+    background: hsl(var(--foreground) / 0.065) !important;
+    border-color: hsl(var(--foreground) / 0.13) !important;
+    color: hsl(var(--foreground) / 0.9) !important;
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.14), 0 4px 14px hsl(var(--foreground) / 0.07) !important;
+  }
+  .dark .task-column-glass-action {
+    background: hsl(var(--foreground) / 0.035) !important;
+    border-color: hsl(var(--foreground) / 0.09) !important;
+    color: hsl(var(--foreground) / 0.72) !important;
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.07), 0 2px 10px hsl(0 0% 0% / 0.10) !important;
+  }
+  .dark .task-column-glass-action:hover {
+    background: hsl(var(--foreground) / 0.085) !important;
+    border-color: hsl(var(--foreground) / 0.16) !important;
+    color: hsl(var(--foreground) / 0.95) !important;
+  }
+}
+
+/* Modo Emergente: contorno luminoso ao redor do cartão, sem cobrir o conteúdo */
+.emergency-card {
+  position: relative;
+  isolation: isolate;
+  border-color: hsl(0 88% 60% / 0.75) !important;
+  box-shadow: 0 0 0 1px hsl(0 88% 60% / 0.22), 0 0 12px hsl(0 88% 60% / 0.22), 0 0 24px hsl(0 88% 60% / 0.12) !important;
+  animation: emergency-card-pulse 2.4s ease-in-out infinite;
+}
+.emergency-card::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 1px solid hsl(0 88% 60% / 0.55);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  box-shadow: 0 0 14px hsl(0 88% 60% / 0.22);
+}
+@keyframes emergency-card-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px hsl(0 88% 60% / 0.18), 0 0 10px hsl(0 88% 60% / 0.18), 0 0 20px hsl(0 88% 60% / 0.09); }
+  50% { box-shadow: 0 0 0 1px hsl(0 88% 60% / 0.35), 0 0 16px hsl(0 88% 60% / 0.30), 0 0 30px hsl(0 88% 60% / 0.16); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .emergency-card { animation: none; }
+}
