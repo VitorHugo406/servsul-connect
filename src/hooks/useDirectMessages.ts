@@ -281,7 +281,10 @@ export function useConversations() {
 
     if (!profile) return;
 
-    // Realtime subscription for new messages
+    // Coalesce bursts of realtime events into a single refresh. A busy
+    // conversation can emit several events close together; querying the full
+    // history for every event creates avoidable database and rendering work.
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     const channel = supabase
       .channel(`conversations-${profile.id}`)
       .on(
@@ -291,13 +294,19 @@ export function useConversations() {
           schema: 'public',
           table: 'direct_messages',
         },
-        () => {
-          fetchConversations();
+        (payload) => {
+          const message = (payload.new ?? payload.old) as Partial<DirectMessage>;
+          if (message.sender_id !== profile.id && message.receiver_id !== profile.id) return;
+          if (refreshTimer) clearTimeout(refreshTimer);
+          refreshTimer = setTimeout(() => {
+            fetchConversations();
+          }, 250);
         }
       )
       .subscribe();
 
     return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
       supabase.removeChannel(channel);
     };
   }, [profile, fetchConversations]);
