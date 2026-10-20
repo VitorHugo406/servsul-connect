@@ -107,7 +107,7 @@
   }
 }
 
-/* Modo Emergente: feixe vermelho intenso rente à borda do cartão */
+/* Modo Emergente: feixe vermelho fino e uniforme rente à borda */
 @property --emergency-angle {
   syntax: "<angle>";
   inherits: false;
@@ -117,7 +117,7 @@
   position: relative;
   isolation: isolate;
   border: 1px solid hsl(0 88% 60% / 0.42) !important;
-  box-shadow: 0 0 14px hsl(0 100% 50% / 0.12) !important;
+  box-shadow: 0 0 10px hsl(0 100% 50% / 0.10) !important;
 }
 .emergency-card::before {
   content: "";
@@ -129,19 +129,19 @@
   z-index: 3;
   background: conic-gradient(
     from var(--emergency-angle),
-    transparent 0deg 286deg,
-    hsl(0 100% 50% / 0.38) 306deg,
+    transparent 0deg 310deg,
+    hsl(0 100% 50% / 0.52) 319deg,
     hsl(0 100% 50% / 0.98) 326deg,
-    hsl(0 100% 68%) 335deg,
-    hsl(0 100% 50% / 0.92) 344deg,
-    hsl(0 100% 50% / 0.25) 354deg,
-    transparent 360deg
+    hsl(0 100% 68%) 330deg,
+    hsl(0 100% 50% / 0.88) 335deg,
+    hsl(0 100% 50% / 0.20) 341deg,
+    transparent 346deg 360deg
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   animation: emergency-angle-orbit 2.8s linear infinite;
-  filter: drop-shadow(0 0 2px hsl(0 100% 55% / 0.95)) drop-shadow(0 0 5px hsl(0 100% 50% / 0.65));
+  filter: drop-shadow(0 0 1px hsl(0 100% 55% / 0.9)) drop-shadow(0 0 3px hsl(0 100% 50% / 0.45));
 }
 @keyframes emergency-angle-orbit {
   to { --emergency-angle: 360deg; }
