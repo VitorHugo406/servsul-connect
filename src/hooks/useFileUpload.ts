@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { optimizeImageFile } from '@/lib/imageOptimization';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB for attachments
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -131,12 +132,17 @@ export function useFileUpload() {
     setProgress(0);
 
     try {
-      const fileExt = file.name.split('.').pop();
+      const uploadFileObject = await optimizeImageFile(file, 1600);
+      if (uploadFileObject.size > MAX_FILE_SIZE) {
+        toast.error('O arquivo continua muito grande após a otimização. O limite é 2MB.');
+        return null;
+      }
+      const fileExt = uploadFileObject.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
       const { data, error } = await supabase.storage
         .from(bucket)
-        .upload(fileName, file, {
+        .upload(fileName, uploadFileObject, {
           cacheControl: '3600',
           upsert: false,
         });
@@ -165,8 +171,8 @@ export function useFileUpload() {
       return {
         url: urlData.publicUrl,
         fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
+        fileType: uploadFileObject.type,
+        fileSize: uploadFileObject.size,
       };
     } catch (error) {
       console.error('Upload error:', error);
@@ -196,14 +202,19 @@ export function useFileUpload() {
     setUploading(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
+      const uploadFileObject = await optimizeImageFile(file, 512);
+      if (uploadFileObject.size > 1 * 1024 * 1024) {
+        toast.error('A imagem continua muito grande após a otimização. O limite é 1MB.');
+        return null;
+      }
+      const fileExt = uploadFileObject.name.split('.').pop();
       const fileName = `${user.id}/avatar.${fileExt}`;
 
       await supabase.storage.from('avatars').remove([fileName]);
 
       const { data, error } = await supabase.storage
         .from('avatars')
-        .upload(fileName, file, {
+        .upload(fileName, uploadFileObject, {
           cacheControl: '3600',
           upsert: true,
         });
