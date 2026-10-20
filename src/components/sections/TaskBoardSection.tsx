@@ -2259,7 +2259,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-10 flex-1 self-center rounded-xl border border-white/25 bg-white/20 text-xs gap-1.5 text-foreground shadow-sm backdrop-blur-xl transition-all duration-200 hover:border-white/40 hover:bg-white/75 hover:shadow-md dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                          className="h-10 flex-1 self-center rounded-xl border border-white/20 bg-white/[0.06] text-xs gap-1.5 text-foreground/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_4px_14px_rgba(0,0,0,0.06)] backdrop-blur-2xl transition-all duration-200 hover:border-white/35 hover:bg-white/[0.14] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_6px_18px_rgba(0,0,0,0.1)] dark:bg-white/[0.04] dark:text-white/90 dark:hover:bg-white/[0.10]"
                           onClick={() => openCreateTemplate(column.id)}
                         >
                           <Plus className="h-3.5 w-3.5" /> Adicionar template
@@ -2269,7 +2269,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-10 min-w-0 flex-1 self-center rounded-xl border border-white/25 bg-white/20 text-xs gap-1.5 text-foreground shadow-sm backdrop-blur-xl transition-all duration-200 hover:border-white/40 hover:bg-white/75 hover:shadow-md dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                            className="h-10 min-w-0 flex-1 self-center rounded-xl border border-white/20 bg-white/[0.06] text-xs gap-1.5 text-foreground/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_4px_14px_rgba(0,0,0,0.06)] backdrop-blur-2xl transition-all duration-200 hover:border-white/35 hover:bg-white/[0.14] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_6px_18px_rgba(0,0,0,0.1)] dark:bg-white/[0.04] dark:text-white/90 dark:hover:bg-white/[0.10]"
                             onClick={() => openCreateTask(column.id)}
                           >
                             <Plus className="h-3.5 w-3.5 shrink-0" /> Adicionar um cartão
@@ -2279,7 +2279,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-10 w-10 shrink-0 self-center rounded-xl border border-white/25 bg-white/20 text-muted-foreground shadow-sm backdrop-blur-xl transition-all duration-200 hover:border-white/40 hover:bg-white/75 hover:text-primary hover:shadow-md dark:bg-white/10 dark:text-white/70 dark:hover:bg-white/20 dark:hover:text-white"
+                                className="h-10 w-10 shrink-0 self-center rounded-xl border border-white/20 bg-white/[0.06] text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_4px_14px_rgba(0,0,0,0.06)] backdrop-blur-2xl transition-all duration-200 hover:border-white/35 hover:bg-white/[0.14] hover:text-primary hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_6px_18px_rgba(0,0,0,0.1)] dark:bg-white/[0.04] dark:text-white/70 dark:hover:bg-white/[0.10] dark:hover:text-white"
                                 onClick={() => openCreateTemplate(column.id)}
                               >
                                 <Copy className="h-4 w-4" />
