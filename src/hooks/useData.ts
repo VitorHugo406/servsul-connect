@@ -50,33 +50,35 @@ export function useMessages(sectorId: string | null) {
   const hydrateMessages = useCallback(async (rows: any[]): Promise<Message[]> => {
     const baseMessages = rows as Message[];
     const replyIds = Array.from(new Set(baseMessages.map((m) => m.reply_to_id).filter((id): id is string => Boolean(id))));
-    const replyMap = new Map<string, Message['reply_to']>();
-
-    if (replyIds.length > 0) {
-      const { data: replyRows, error: repliesError } = await supabase
-        .from('messages')
-        .select('id, content, author:profiles!messages_author_id_fkey(name, display_name)')
-        .in('id', replyIds);
-      if (repliesError) console.error('Error fetching reply messages:', repliesError);
-      else for (const row of (replyRows as any[]) || []) {
-        const rawAuthor = Array.isArray(row.author) ? row.author[0] : row.author;
-        replyMap.set(row.id, { id: row.id, content: row.content, reply_author: rawAuthor ? { name: rawAuthor.name, display_name: rawAuthor.display_name } : null });
-      }
-    }
-
-    // The message query already loads the complete sender profile. Preload the
-    // department metadata once for the whole page so each message can render
-    // its sender + department together, without per-message lookups.
     const sectorIds = Array.from(new Set(baseMessages.map((m) => m.author?.sector_id).filter((id): id is string => Boolean(id))));
-    const sectorMap = new Map<string, Sector>();
-    if (sectorIds.length > 0) {
-      const { data: sectorRows, error: sectorsError } = await supabase
-        .from('sectors')
-        .select('id, name, color, icon')
-        .in('id', sectorIds);
-      if (sectorsError) console.error('Error fetching message author sectors:', sectorsError);
-      else for (const sector of (sectorRows as Sector[]) || []) sectorMap.set(sector.id, sector);
+
+    // Fetch independent related data in parallel so chat hydration does not pay
+    // two sequential network round trips before rendering the message history.
+    const [replyResult, sectorResult] = await Promise.all([
+      replyIds.length > 0
+        ? supabase
+            .from('messages')
+            .select('id, content, author:profiles!messages_author_id_fkey(name, display_name)')
+            .in('id', replyIds)
+        : Promise.resolve({ data: [], error: null }),
+      sectorIds.length > 0
+        ? supabase
+            .from('sectors')
+            .select('id, name, color, icon')
+            .in('id', sectorIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    const replyMap = new Map<string, Message['reply_to']>();
+    if (replyResult.error) console.error('Error fetching reply messages:', replyResult.error);
+    else for (const row of (replyResult.data as any[]) || []) {
+      const rawAuthor = Array.isArray(row.author) ? row.author[0] : row.author;
+      replyMap.set(row.id, { id: row.id, content: row.content, reply_author: rawAuthor ? { name: rawAuthor.name, display_name: rawAuthor.display_name } : null });
     }
+
+    const sectorMap = new Map<string, Sector>();
+    if (sectorResult.error) console.error('Error fetching message author sectors:', sectorResult.error);
+    else for (const sector of (sectorResult.data as Sector[]) || []) sectorMap.set(sector.id, sector);
 
     return baseMessages.map((m) => {
       const author = m.author ? { ...m.author } : undefined;
