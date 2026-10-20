@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB for attachments
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const ALLOWED_FILE_TYPES = [
   ...ALLOWED_IMAGE_TYPES,
@@ -188,8 +188,8 @@ export function useFileUpload() {
       return null;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('A imagem é muito grande. O tamanho máximo é 2MB.');
+    if (file.size > 1 * 1024 * 1024) {
+      toast.error('A imagem é muito grande. O tamanho máximo é 1MB.');
       return null;
     }
 
