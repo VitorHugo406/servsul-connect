@@ -58,7 +58,7 @@ export function StorageMonitoringSection() {
       tableStats.sort((a, b) => b.rows - a.rows);
 
       // Get bucket file counts and real sizes
-      const bucketNames = ['attachments', 'avatars', 'face-images'];
+      const bucketNames = ['attachments', 'avatars', 'company-logos', 'face-images'];
       const bucketStats: { name: string; count: number; sizeMb: number }[] = [];
 
       for (const bucket of bucketNames) {
