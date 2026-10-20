@@ -107,38 +107,42 @@
   }
 }
 
-/* Modo Emergente: um feixe luminoso percorre continuamente a borda do cartão */
+/* Modo Emergente: feixe luminoso percorre a borda sem girar o cartão/pseudo-elemento */
+@property --emergency-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
 .emergency-card {
   position: relative;
   isolation: isolate;
-  border-color: hsl(0 88% 60% / 0.32) !important;
+  border: 1px solid hsl(0 88% 60% / 0.34) !important;
   box-shadow: 0 0 12px hsl(0 88% 60% / 0.08) !important;
 }
 .emergency-card::before {
-  content: '';
+  content: "";
   position: absolute;
-  inset: -2px;
-  padding: 2px;
+  inset: 0;
   border-radius: inherit;
+  padding: 1.5px;
   pointer-events: none;
   z-index: 3;
   background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    transparent 255deg,
-    hsl(0 95% 62% / 0.18) 285deg,
-    hsl(0 100% 65% / 0.98) 320deg,
-    hsl(28 100% 66% / 0.95) 338deg,
-    hsl(0 95% 62% / 0.25) 352deg,
+    from var(--emergency-angle),
+    transparent 0deg 285deg,
+    hsl(0 95% 62% / 0.22) 305deg,
+    hsl(0 100% 68%) 328deg,
+    hsl(27 100% 65%) 340deg,
+    hsl(0 95% 62% / 0.28) 352deg,
     transparent 360deg
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: emergency-border-orbit 2.6s linear infinite;
+  animation: emergency-angle-orbit 2.8s linear infinite;
 }
-@keyframes emergency-border-orbit {
-  to { transform: rotate(360deg); }
+@keyframes emergency-angle-orbit {
+  to { --emergency-angle: 360deg; }
 }
 @media (prefers-reduced-motion: reduce) {
   .emergency-card::before { animation: none; }
