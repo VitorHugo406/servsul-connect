@@ -106,7 +106,13 @@ export function useMessages(sectorId: string | null) {
 
   const fetchMessages = useCallback(async () => {
     const requestedSectorId = sectorId;
-    if (!requestedSectorId) return;
+    if (!requestedSectorId) {
+      setMessages([]);
+      setLoading(false);
+      setHasMore(false);
+      loadedSectorRef.current = null;
+      return;
+    }
 
     const cachedMessages = messagesCacheRef.current.get(requestedSectorId);
     if (cachedMessages) {
@@ -150,6 +156,8 @@ export function useMessages(sectorId: string | null) {
     // Enrich the already-visible messages in the background, without delaying
     // first paint while extra Supabase requests complete.
     void hydrateMessages(baseMessages).then(enrichedMessages => {
+      // Ignore background enrichment if the user has navigated to another sector.
+      if (activeSectorRef.current !== requestedSectorId) return;
       setMessages(prev => {
         const byId = new Map(prev.map(m => [m.id, m]));
         enrichedMessages.forEach(m => {
