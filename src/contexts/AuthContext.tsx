@@ -29,10 +29,10 @@ export function AuthProvider({children}:{children:ReactNode}){
    const profilePromise=supabase.rpc('get_my_full_profile');
    const[{data:companyRef},{data:profileRows,error:profileError}]=await Promise.all([companyIdPromise,profilePromise]);
    const earlyCompanyId=companyRef?.company_id as string|undefined;
-   if(earlyCompanyId){setActiveCompanyId(earlyCompanyId);await hydrateCompanyBrand(earlyCompanyId);}
+   if(earlyCompanyId){setActiveCompanyId(earlyCompanyId);void hydrateCompanyBrand(earlyCompanyId);}
    if(profileError){console.error('Error fetching profile:',profileError);return;}
    const profileData=Array.isArray(profileRows)?profileRows[0]:profileRows;
-   if(profileData){const nextProfile=profileData as Profile;cacheProfile(nextProfile);setProfile(nextProfile);setActiveCompanyId(nextProfile.company_id??earlyCompanyId??null);if(nextProfile.company_id&&nextProfile.company_id!==earlyCompanyId)await hydrateCompanyBrand(nextProfile.company_id);if(nextProfile.sector_id){const{data:sectorData}=await supabase.from('sectors').select('*').eq('id',nextProfile.sector_id).maybeSingle();if(sectorData)setSector(sectorData as Sector);}}
+   if(profileData){const nextProfile=profileData as Profile;cacheProfile(nextProfile);setProfile(nextProfile);setActiveCompanyId(nextProfile.company_id??earlyCompanyId??null);if(nextProfile.company_id&&nextProfile.company_id!==earlyCompanyId)void hydrateCompanyBrand(nextProfile.company_id);if(nextProfile.sector_id){const{data:sectorData}=await supabase.from('sectors').select('*').eq('id',nextProfile.sector_id).maybeSingle();if(sectorData)setSector(sectorData as Sector);}}
    const{data:rolesData,error:rolesError}=await supabase.from('user_roles').select('role').eq('user_id',userId);if(rolesError)console.error('Error fetching roles:',rolesError);else if(rolesData)setRoles(rolesData as UserRole[]);
    await Promise.all([fetchAdditionalSectors(userId),fetchPermissions(userId)]);
  }catch(error){console.error('Error in fetchProfile:',error);}};
