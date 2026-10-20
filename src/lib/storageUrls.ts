@@ -32,7 +32,11 @@ export async function createSignedStorageUrl(value?: string | null): Promise<str
     .from(target.bucket)
     .createSignedUrl(target.path, SIGNED_URL_TTL_SECONDS);
 
-  if (error || !data?.signedUrl) return value;
+  if (error || !data?.signedUrl) {
+    // Never fall back to a raw attachment URL: that would bypass private-bucket
+    // authorization once the attachments bucket is hardened.
+    return target.bucket === 'attachments' ? '' : value;
+  }
 
   signedUrlCache.set(cacheKey, {
     url: data.signedUrl,
@@ -47,13 +51,17 @@ export function useSignedStorageUrl(value?: string | null) {
     const target = getStorageTarget(value);
     return target ? `${target.bucket}:${target.path}` : value || '';
   }, [value]);
-  const [signedUrl, setSignedUrl] = useState(value || '');
+  const [signedUrl, setSignedUrl] = useState(() => {
+    const target = getStorageTarget(value);
+    return target?.bucket === 'attachments' ? '' : value || '';
+  });
 
   useEffect(() => {
     let alive = true;
-    setSignedUrl(value || '');
+    const target = getStorageTarget(value);
+    setSignedUrl(target?.bucket === 'attachments' ? '' : value || '');
 
-    if (!value || !getStorageTarget(value)) return;
+    if (!value || !target) return;
 
     createSignedStorageUrl(value).then((url) => {
       if (alive) setSignedUrl(url);
