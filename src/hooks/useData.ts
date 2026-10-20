@@ -107,19 +107,37 @@ export function useMessages(sectorId: string | null) {
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE);
 
-    if (error) console.error('Error fetching messages:', error);
-    else {
-      const hydratedMessages = await hydrateMessages(((data as any[]) || []).reverse());
-      setHasMore((data || []).length === PAGE_SIZE);
-      setMessages(prev => {
-        const temps = prev.filter(m => m.id.startsWith('temp-'));
-        const byId = new Map(hydratedMessages.map(m => [m.id, m]));
-        temps.forEach(m => byId.set(m.id, m));
-        return Array.from(byId.values()).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-      });
+    if (error) {
+      console.error('Error fetching messages:', error);
+      setLoading(false);
+      return;
     }
+
+    // Render the history as soon as the primary query returns. Reply previews and
+    // author-sector labels are secondary metadata and must not block the chat.
+    const baseMessages = (((data as any[]) || []).reverse()) as Message[];
+    setHasMore((data || []).length === PAGE_SIZE);
+    setMessages(prev => {
+      const temps = prev.filter(m => m.id.startsWith('temp-'));
+      const byId = new Map(baseMessages.map(m => [m.id, { ...m, status: 'delivered' as const }]));
+      temps.forEach(m => byId.set(m.id, m));
+      return Array.from(byId.values()).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    });
     loadedSectorRef.current = sectorId;
     setLoading(false);
+
+    // Enrich the already-visible messages in the background, without delaying
+    // first paint while extra Supabase requests complete.
+    void hydrateMessages(baseMessages).then(enrichedMessages => {
+      setMessages(prev => {
+        const byId = new Map(prev.map(m => [m.id, m]));
+        enrichedMessages.forEach(m => {
+          const current = byId.get(m.id);
+          if (current && !current.id.startsWith('temp-')) byId.set(m.id, { ...current, ...m });
+        });
+        return Array.from(byId.values()).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      });
+    }).catch(enrichError => console.error('Error enriching chat messages:', enrichError));
   }, [sectorId, hydrateMessages]);
 
   const loadOlderMessages = useCallback(async () => {
