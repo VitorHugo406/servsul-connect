@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { usePresence } from '@/hooks/usePresence';
 import { useMeetingStatus } from '@/hooks/useMeetingStatus';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -76,19 +76,49 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   'system-broadcasts': { title: 'Comunicados Globais', subtitle: 'Avisos para todas as empresas' },
 };
 
+const sectionPaths: Record<string, string> = {
+  home: '/', 'my-dashboard': '/meu-painel', chat: '/chat', announcements: '/avisos',
+  birthdays: '/aniversariantes', management: '/gerenciamento', shortcuts: '/atalhos',
+  facial: '/cadastro-facial', 'data-management': '/gestao-de-dados', sectors: '/setores',
+  'important-announcements': '/comunicados-importantes', tasks: '/tarefas',
+  'people-management': '/gestao-de-pessoas', 'feedback-email': '/disparo-de-feedback',
+  calendar: '/calendario', 'system-logs': '/logs-do-sistema', storage: '/armazenamento',
+  'event-history': '/eventos-mensais', documentation: '/documentacao', 'war-room': '/war-room',
+  'api-management': '/integracoes-api', evaluations: '/avaliacoes', notes: '/anotacoes',
+  companies: '/empresas', 'system-broadcasts': '/comunicados-globais',
+};
+const pathSections = Object.fromEntries(Object.entries(sectionPaths).map(([key, path]) => [path, key])) as Record<string, string>;
+
 const Index = () => {
-  const [activeSection, setActiveSection] = useState('home');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState(() => pathSections[location.pathname] || 'home');
   const [globalSearch, setGlobalSearch] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
   const joinToken = searchParams.get('join');
 
   useEffect(() => {
-    const sectionParam = searchParams.get('section');
-    if (sectionParam && sectionParam in sectionTitles) setActiveSection(sectionParam);
-  }, [searchParams]);
+    const pathSection = pathSections[location.pathname];
+    const legacySection = searchParams.get('section');
+    if (pathSection) {
+      setActiveSection(pathSection);
+    } else if (legacySection && legacySection in sectionTitles) {
+      setActiveSection(legacySection);
+      navigate(sectionPaths[legacySection], { replace: true });
+    } else {
+      setActiveSection('home');
+    }
+  }, [location.pathname, searchParams, navigate]);
 
   const handleSectionChange = (section: string) => {
-    const next = new URLSearchParams(searchParams); next.delete('section'); next.delete('board'); next.delete('task'); setSearchParams(next, { replace: true }); setActiveSection(section);
+    const destination = sectionPaths[section] || '/';
+    const next = new URLSearchParams(searchParams);
+    next.delete('section');
+    next.delete('board');
+    next.delete('task');
+    const query = next.toString();
+    navigate(query ? `${destination}?${query}` : destination);
+    setActiveSection(section);
   };
   const handleCloseJoinDialog = () => { searchParams.delete('join'); setSearchParams(searchParams, { replace: true }); };
   const handleNavigateToTasks = () => handleSectionChange('tasks');
