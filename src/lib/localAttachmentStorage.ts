@@ -1,4 +1,3 @@
-import { supabase } from '@/integrations/supabase/client';
 import { getStorageTarget, createSignedStorageUrl } from '@/lib/storageUrls';
 
 const DB_NAME = 'ewvor-local-attachments';
