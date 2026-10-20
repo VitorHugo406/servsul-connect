@@ -66,17 +66,23 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
   const [allTasks, setAllTasks] = useState<BoardTask[]>(() => (boardId ? boardTaskCache.get(boardId) || [] : []));
   const [loading, setLoading] = useState(() => (boardId ? !boardTaskCache.has(boardId) : false));
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inFlight = useRef(false);
+  const requestSequence = useRef(0);
+  const activeBoardIdRef = useRef(boardId);
+  // Keep the active board current during render so a late response from the
+  // previous board cannot overwrite the newly opened board.
+  activeBoardIdRef.current = boardId;
 
   const fetchTasks = useCallback(async () => {
+    const requestId = ++requestSequence.current;
+
     if (!boardId) {
-      setAllTasks([]);
-      setLoading(false);
+      if (requestId === requestSequence.current && activeBoardIdRef.current === boardId) {
+        setAllTasks([]);
+        setLoading(false);
+      }
       return;
     }
 
-    if (inFlight.current) return;
-    inFlight.current = true;
     try {
       const { data, error } = await supabase.rpc('get_board_tasks_fast' as any, { _board_id: boardId });
 
@@ -89,15 +95,19 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
           is_template: t.is_template ?? false,
           is_emergency: t.is_emergency ?? false,
         })) as BoardTask[];
+
+      if (requestId !== requestSequence.current || activeBoardIdRef.current !== boardId) return;
       boardTaskCache.set(boardId, normalized);
       setAllTasks(normalized);
     } catch (error) {
+      if (requestId !== requestSequence.current || activeBoardIdRef.current !== boardId) return;
       console.error('Error fetching board tasks:', error);
       const cached = boardTaskCache.get(boardId);
       if (cached) setAllTasks(cached);
     } finally {
-      inFlight.current = false;
-      setLoading(false);
+      if (requestId === requestSequence.current && activeBoardIdRef.current === boardId) {
+        setLoading(false);
+      }
     }
   }, [boardId]);
 
@@ -247,28 +257,47 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
 
   const reorderInColumn = async (taskId: string, newPosition: number) => {
     const task = allTasks.find((t) => t.id === taskId);
-    if (!task) return;
+    if (!task || !boardId) return { error: new Error('Task or board not found') };
 
     const columnTasks = allTasks
       .filter((t) => t.status === task.status && t.id !== taskId)
       .sort((a, b) => a.position - b.position);
 
-    columnTasks.splice(newPosition, 0, task);
+    const safePosition = Math.max(0, Math.min(newPosition, columnTasks.length));
+    columnTasks.splice(safePosition, 0, task);
 
-    // Optimistic UI first — feels instant
+    // Only send changed positions, but persist them atomically in one RPC.
+    const updates = columnTasks
+      .map((t, position) => ({ id: t.id, position }))
+      .filter((update) => allTasks.find((t) => t.id === update.id)?.position !== update.position);
+
+    if (updates.length === 0) return { error: null };
+
+    // Optimistic UI keeps drag-and-drop responsive while the single write runs.
     columnTasks.forEach((t) => markLocal(t.id));
     setAllTasks((prev) => {
       const other = prev.filter((t) => t.status !== task.status);
-      const next = [...other, ...columnTasks.map((t, i) => ({ ...t, position: i }))];
-      if (boardId) boardTaskCache.set(boardId, next);
+      const next = [...other, ...columnTasks.map((t, position) => ({ ...t, position }))];
+      boardTaskCache.set(boardId, next);
       return next;
     });
 
-    // Persist only the rows whose position actually changed, in background.
-    const changed = columnTasks.filter((t, i) => t.position !== i);
-    void Promise.all(
-      changed.map((t) => supabase.from('tasks').update({ position: columnTasks.indexOf(t) }).eq('id', t.id)),
-    ).catch(() => {});
+    try {
+      const { error } = await supabase.rpc('reorder_board_tasks_fast' as any, {
+        _board_id: boardId,
+        _updates: updates,
+      });
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      console.error('Error reordering board tasks:', error);
+      setAllTasks((current) => {
+        const next = current.map((t) => allTasks.find((previous) => previous.id === t.id) || t);
+        boardTaskCache.set(boardId, next);
+        return next;
+      });
+      return { error };
+    }
   };
 
 
