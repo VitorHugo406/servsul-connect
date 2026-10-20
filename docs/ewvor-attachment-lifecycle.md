@@ -2,14 +2,14 @@
 
 ## Current status
 
-This branch is intentionally isolated from the production branch. Do not apply storage-policy changes to production until the application and the storage migration are deployed together.
+This branch is intentionally isolated from the production branch. Do not merge or deploy as production-ready yet. The metadata registration and cleanup function have been added to the branch, but the cleanup schedule, authorized conversation-aware downloads, private-bucket rollout, and desktop companion are not complete.
 
 ## Required behavior
 
 1. Upload a file to a private temporary object in Supabase Storage.
 2. Store lifecycle metadata for each attachment: sender user ID, object key, creation time, temporary expiry time (24 hours), original-file availability, and an opaque device registration ID. Never store a local filesystem path as a server-accessible URL.
 3. Authorize every download on the server. The sender and only the participants of the message/conversation can request a short-lived signed URL. A random object key is not authorization.
-4. A scheduled server-side cleanup removes expired temporary objects and marks their metadata as expired. The cleanup must use service-role credentials in a server-side scheduled job only.
+4. A scheduled server-side cleanup removes expired temporary objects and marks their metadata as expired. The `cleanup-expired-attachments` Edge Function is now implemented in this branch and requires the server secret `ATTACHMENT_CLEANUP_SECRET` in the `x-cleanup-secret` header. It must be deployed and invoked by a trusted scheduler (for example, Supabase Cron/pg_cron or an external cron). The schedule and secret are not configured by this code commit.
 5. After expiry, the web client must not fall back to the old public URL. It requests a transfer from the sender's registered desktop companion. If the companion is offline, the UI reports the file unavailable until it reconnects.
 6. If the sender deletes the original file, the companion must return a not-found response. A recipient's separately downloaded copy is independent and cannot be revoked.
 
@@ -17,7 +17,7 @@ This branch is intentionally isolated from the production branch. Do not apply s
 
 The current application is a browser-based React app. It has no desktop companion, device registration, signaling service, or peer-to-peer transfer implementation. A browser tab cannot reliably serve local files after it closes, after the device goes offline, or after browser permissions are revoked. The 24-hour fallback therefore cannot be truthfully marked complete until the companion and its authenticated transfer protocol are built and tested.
 
-## Storage security findings
+## Implemented in branch `V4.0.0.3`\n\n- Added `register-attachment-lifecycle` Edge Function, which validates the caller's Supabase session and verifies the object belongs to the caller before registering its 24-hour expiry.\n- Connected the chat upload hook to register uploaded objects. If registration fails, the uploaded object is removed and the UI reports the failure rather than leaving an untracked temporary file.\n- Added `cleanup-expired-attachments` Edge Function to remove expired Storage objects and mark lifecycle metadata expired. It is protected by a server-side secret and must never be called from the browser.\n- Added both functions to `supabase/config.toml`.\n- These changes have not been deployed to Supabase or validated against a live end-to-end chat.\n\n## Storage security findings
 
 - The current chat uploader uses paths of the form `<auth-user-id>/<timestamp>.<extension>`.
 - The existing security-hardening migration checks the first path segment against `attachments.id`, which does not match the uploader's current path format.
