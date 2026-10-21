@@ -20,7 +20,7 @@ export function usePresence() {
 
     // Initialize or update presence on mount
     const initPresence = async () => {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('user_presence')
         .upsert({
           user_id: userId,
