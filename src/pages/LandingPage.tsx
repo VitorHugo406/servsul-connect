@@ -79,10 +79,10 @@ export default function LandingPage() {
     <main className="min-h-screen overflow-hidden bg-[#f7f9fc] text-[#101828]">
       <div className="h-[76px] md:h-[88px]">
         <header className={`fixed left-1/2 top-3 z-50 grid w-[calc(100%-1.5rem)] max-w-7xl -translate-x-1/2 grid-cols-[1fr_auto] items-center gap-x-3 rounded-[1.35rem] border border-white/25 bg-white/15 px-4 py-3 shadow-[0_8px_32px_rgba(15,23,42,.10)] backdrop-blur-2xl transition-all duration-500 ease-in-out md:top-4 md:grid-cols-[1fr_auto_1fr] md:px-7 ${scrolled ? "translate-y-0 scale-[0.98] bg-white/10 shadow-[0_12px_40px_-18px_rgba(0,0,0,.20)]" : "translate-y-0 scale-100 bg-white/15 shadow-none"}`}>
-          <a href="#inicio" className="flex shrink-0 items-center gap-2.5" aria-label="Nuvexa início">
+          <a href="#inicio" className="flex shrink-0 items-center gap-2.5" aria-label="Ewvor início">
             <span className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/25 bg-slate-900/10 text-current transition-all duration-500"><Zap size={20} /></span>
             <span className="flex items-center gap-2 font-bold tracking-tight">
-              <span className="text-lg text-current transition-all duration-500 md:text-xl">nuvexa<span className="text-blue-500">.</span></span>
+              <span className="text-lg text-current transition-all duration-500 md:text-xl">Ewvor<span className="text-blue-500">.</span></span>
               <span className={`border-l pl-2 font-sans text-[9px] font-medium uppercase tracking-[.18em] transition-all duration-300 ${scrolled ? "hidden border-current/20 opacity-0" : "inline-block border-current/30 opacity-70"}`}>Gestão de operações</span>
             </span>
           </a>
@@ -102,7 +102,7 @@ export default function LandingPage() {
         <div className="pointer-events-none absolute -left-40 top-10 h-96 w-96 rounded-full bg-blue-200/40 blur-3xl" />
         <div className="relative z-10">
           <h1 className="max-w-2xl text-4xl font-semibold leading-[1.08] tracking-[-.045em] text-[#111d33] sm:text-5xl md:text-6xl">Menos processos espalhados. <span className="text-blue-700">Mais operação fluindo.</span></h1>
-          <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 md:text-lg">A Nuvexa reúne comunicação, tarefas, equipes e controles operacionais em uma plataforma pensada para simplificar a rotina da sua empresa.</p>
+          <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 md:text-lg">A Ewvor reúne comunicação, tarefas, equipes e controles operacionais em uma plataforma pensada para simplificar a rotina da sua empresa.</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link to="/select-company" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-blue-700/20 transition hover:-translate-y-0.5 hover:bg-blue-800">Começar avaliação gratuita <ArrowRight size={17} /></Link>
             <a href="#planos" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">Ver planos pagos</a>
@@ -223,7 +223,7 @@ export default function LandingPage() {
           <div className="mx-auto max-w-3xl text-center">
             <p className="text-xs font-bold uppercase tracking-[.2em] text-blue-300">Comece com simplicidade</p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Da sua empresa para uma rotina mais organizada.</h2>
-            <p className="mx-auto mt-4 max-w-2xl leading-7 text-slate-300">A Nuvexa foi pensada para acompanhar a estrutura da organização, de equipes menores a operações com vários departamentos.</p>
+            <p className="mx-auto mt-4 max-w-2xl leading-7 text-slate-300">A Ewvor foi pensada para acompanhar a estrutura da organização, de equipes menores a operações com vários departamentos.</p>
           </div>
           <div className="mx-auto mt-12 max-w-6xl">
             <ol className="divide-y divide-white/15 md:grid md:grid-cols-3 md:divide-y-0 md:divide-x">
@@ -253,8 +253,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="px-5 pb-20 md:px-8 md:pb-28"><div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 rounded-[2rem] bg-gradient-to-br from-blue-700 to-[#172b4d] p-8 text-white shadow-2xl shadow-blue-900/15 sm:p-12 md:flex-row md:items-center"><div className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[.2em] text-blue-200">Nuvexa · Gestão de operações</p><h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Sua equipe pode trabalhar com mais clareza.</h2><p className="mt-3 leading-7 text-blue-100">Centralize informações, conecte departamentos e dê mais visibilidade à rotina.</p></div><Link to="/auth" className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-3.5 text-sm font-bold text-blue-800 transition hover:bg-blue-50">Começar agora <ArrowRight size={16}/></Link></div></section>
-      <footer className="border-t border-slate-200 bg-white"><div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-7 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between md:px-8"><span>© {new Date().getFullYear()} Nuvexa. Gestão de operações.</span><div className="flex gap-5"><a href="#recursos" className="hover:text-blue-700">Recursos</a><a href="#planos" className="hover:text-blue-700">Planos</a><Link to="/select-company" className="hover:text-blue-700">Entrar</Link></div></div></footer>
+      <section className="px-5 pb-20 md:px-8 md:pb-28"><div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 rounded-[2rem] bg-gradient-to-br from-blue-700 to-[#172b4d] p-8 text-white shadow-2xl shadow-blue-900/15 sm:p-12 md:flex-row md:items-center"><div className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[.2em] text-blue-200">Ewvor · Gestão de operações</p><h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Sua equipe pode trabalhar com mais clareza.</h2><p className="mt-3 leading-7 text-blue-100">Centralize informações, conecte departamentos e dê mais visibilidade à rotina.</p></div><Link to="/auth" className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-3.5 text-sm font-bold text-blue-800 transition hover:bg-blue-50">Começar agora <ArrowRight size={16}/></Link></div></section>
+      <footer className="border-t border-slate-200 bg-white"><div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-7 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between md:px-8"><span>© {new Date().getFullYear()} Ewvor. Gestão de operações.</span><div className="flex gap-5"><a href="#recursos" className="hover:text-blue-700">Recursos</a><a href="#planos" className="hover:text-blue-700">Planos</a><Link to="/select-company" className="hover:text-blue-700">Entrar</Link></div></div></footer>
     </main>
   );
 }
