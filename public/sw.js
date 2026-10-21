@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ewvor-runtime-v4';
+const CACHE_NAME = 'ewvor-runtime-v5';
 const APP_SHELL = ['/', '/index.html', '/manifest.json', '/icons/logo-192.png', '/icons/logo-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
