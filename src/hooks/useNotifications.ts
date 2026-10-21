@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useId } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -16,9 +16,12 @@ export function useNotifications() {
   });
   const [loading, setLoading] = useState(true);
   const { profile, user } = useAuth();
+  const profileId = profile?.id;
+  const userId = user?.id;
+  const instanceId = useId().replace(/:/g, '');
 
   const fetchCounts = useCallback(async () => {
-    if (!profile || !user) {
+    if (!profileId || !userId) {
       setCounts({ unreadMessages: 0, unreadAnnouncements: 0, total: 0 });
       setLoading(false);
       return;
@@ -29,7 +32,7 @@ export function useNotifications() {
       const { count: unreadMessages, error: msgError } = await supabase
         .from('direct_messages')
         .select('*', { count: 'exact', head: true })
-        .eq('receiver_id', profile.id)
+        .eq('receiver_id', profileId)
         .eq('is_read', false);
 
       if (msgError) {
@@ -58,7 +61,7 @@ export function useNotifications() {
       const { data: readAnnouncements, error: readError } = await supabase
         .from('announcement_reads')
         .select('announcement_id')
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
 
       if (readError) {
         console.error('Error fetching read announcements:', readError);
@@ -79,16 +82,16 @@ export function useNotifications() {
     } finally {
       setLoading(false);
     }
-  }, [profile, user]);
+  }, [profileId, userId]);
 
   useEffect(() => {
     fetchCounts();
 
-    if (!profile || !user) return;
+    if (!profileId || !userId) return;
 
     // Subscribe to direct messages
     const dmChannel = supabase
-      .channel('notification-dm')
+      .channel(`notification-${instanceId}-dm-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -104,7 +107,7 @@ export function useNotifications() {
 
     // Subscribe to announcements
     const annChannel = supabase
-      .channel('notification-announcements')
+      .channel(`notification-${instanceId}-announcements-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -120,7 +123,7 @@ export function useNotifications() {
 
     // Subscribe to announcement reads
     const readsChannel = supabase
-      .channel('notification-reads')
+      .channel(`notification-${instanceId}-reads-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -139,7 +142,7 @@ export function useNotifications() {
       supabase.removeChannel(annChannel);
       supabase.removeChannel(readsChannel);
     };
-  }, [profile, user, fetchCounts]);
+  }, [profileId, userId, fetchCounts, instanceId]);
 
   const markAnnouncementAsRead = useCallback(async (announcementId: string) => {
     if (!user) return;
