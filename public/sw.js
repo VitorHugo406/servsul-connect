@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ewvor-runtime-v5';
+const CACHE_NAME = 'ewvor-runtime-v6';
 const APP_SHELL = ['/', '/index.html', '/manifest.json', '/icons/logo-192.png', '/icons/logo-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
@@ -6,7 +6,6 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(APP_SHELL))
       .catch((error) => {
-        // A missing optional icon must not prevent the new worker from installing.
         console.warn('Some offline assets could not be cached:', error);
       })
   );
@@ -27,8 +26,6 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-
-  // Never cache API/auth/function responses or URLs carrying credentials/tokens.
   if (/\/(rest|auth|functions|storage|graphql)\//i.test(url.pathname) || url.searchParams.has('token') || url.searchParams.has('access_token')) return;
 
   if (request.mode === 'navigate') {
@@ -36,7 +33,7 @@ self.addEventListener('fetch', (event) => {
       fetch(request).then((response) => {
         if (response.ok) {
           const copy = response.clone();
-          void caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
+          event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy)).catch((error) => console.warn('Could not cache app shell:', error)));
         }
         return response;
       }).catch(async () => (await caches.match('/index.html')) || (await caches.match('/')))
@@ -44,27 +41,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache only static same-origin files. Fingerprinted Vite assets are immutable,
-  // while other static files use network-first to make updates visible promptly.
   const isStaticFile = /\.(?:avif|css|eot|gif|ico|jpe?g|js|json|png|svg|webp|woff2?|ttf)$/i.test(url.pathname);
   if (!isStaticFile) return;
 
   const isFingerprintAsset = url.pathname.startsWith('/assets/') && /-[A-Za-z0-9_-]{8,}\./.test(url.pathname);
+  const cacheThenReturn = (response) => {
+    if (response.ok) {
+      // Clone synchronously, before returning the response to the page. Delaying
+      // clone() until caches.open resolves lets the browser consume the body first.
+      const copy = response.clone();
+      event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch((error) => console.warn('Could not cache static asset:', error)));
+    }
+    return response;
+  };
+
   if (isFingerprintAsset) {
-    event.respondWith(
-      caches.match(request).then((cached) => cached || fetch(request).then((response) => {
-        if (response.ok) void caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
-        return response;
-      }))
-    );
+    event.respondWith(caches.match(request).then((cached) => cached || fetch(request).then(cacheThenReturn)));
     return;
   }
 
   event.respondWith(
-    fetch(request).then((response) => {
-      if (response.ok) void caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
-      return response;
-    }).catch(async () => (await caches.match(request)) || new Response('Offline', { status: 503, statusText: 'Offline' }))
+    fetch(request).then(cacheThenReturn).catch(async () => (await caches.match(request)) || new Response('Offline', { status: 503, statusText: 'Offline' }))
   );
 });
 
