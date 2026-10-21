@@ -22,7 +22,8 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("/react-dom/") || id.includes("/react/") || id.includes("/scheduler/")) return "react-vendor";
           if (id.includes("@supabase/")) return "supabase-vendor";
           if (id.includes("react-router")) return "router-vendor";
-          if (id.includes("recharts") || id.includes("/d3-")) return "charts-vendor";
+          // Keep Recharts and its D3 dependencies in Rollup's automatic chunking.
+          // A forced shared chunk here can create initialization cycles in production.
           if (id.includes("xlsx")) return "xlsx-vendor";
           if (id.includes("jspdf") || id.includes("jspdf-autotable")) return "pdf-vendor";
           if (id.includes("html2canvas")) return "html2canvas-vendor";
