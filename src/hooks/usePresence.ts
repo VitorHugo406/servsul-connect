@@ -8,26 +8,25 @@ interface UserPresence {
   last_heartbeat: string;
 }
 
-const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+const HEARTBEAT_INTERVAL = 60000; // 60 seconds
 const OFFLINE_THRESHOLD = 60000; // 60 seconds
 
 export function usePresence() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
+  const userId = user?.id;
 
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     // Initialize or update presence on mount
     const initPresence = async () => {
       const { data, error } = await supabase
         .from('user_presence')
         .upsert({
-          user_id: user.id,
+          user_id: userId,
           is_online: true,
           last_heartbeat: new Date().toISOString(),
-        }, { onConflict: 'user_id' })
-        .select()
-        .single();
+        }, { onConflict: 'user_id' });
 
       if (error) {
         console.error('Error initializing presence:', error);
@@ -44,7 +43,7 @@ export function usePresence() {
           is_online: true,
           last_heartbeat: new Date().toISOString(),
         })
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
 
       if (error) {
         console.error('Error updating heartbeat:', error);
@@ -54,7 +53,7 @@ export function usePresence() {
     // Set offline on beforeunload
     const handleBeforeUnload = () => {
       navigator.sendBeacon && navigator.sendBeacon(
-        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_presence?user_id=eq.${user.id}`,
+        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_presence?user_id=eq.${userId}`,
         JSON.stringify({ is_online: false })
       );
     };
@@ -72,7 +71,7 @@ export function usePresence() {
         .eq('user_id', user.id)
         .then();
     };
-  }, [user]);
+  }, [userId]);
 
   return null;
 }
