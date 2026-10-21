@@ -1,5 +1,6 @@
 import {
   createContext,
+  createElement,
   useCallback,
   useContext,
   useEffect,
@@ -270,7 +271,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     resetCounts,
   ]);
 
-  return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
+  return createElement(NotificationContext.Provider, { value }, children);
 }
 
 export function useNotifications() {
