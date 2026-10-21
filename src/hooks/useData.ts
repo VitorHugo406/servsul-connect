@@ -95,29 +95,79 @@ export function useMessages(sectorId: string | null) {
   }, []);
 
   const loadedSectorRef = useRef<string | null>(null);
-  const fetchMessages = useCallback(async () => {
-    if (!sectorId) return;
-    if (loadedSectorRef.current !== sectorId) setLoading(true);
-    const { data, error } = await supabase
-      .from('messages')
-      .select('id, content, author_id, sector_id, created_at, reply_to_id, author:profiles!messages_author_id_fkey(id, user_id, name, display_name, email, avatar_url, sector_id, autonomy_level, birth_date, company_id)')
-      .eq('sector_id', sectorId)
-      .order('created_at', { ascending: false })
-      .limit(PAGE_SIZE);
+  const fetchSequenceRef = useRef(0);
 
-    if (error) console.error('Error fetching messages:', error);
-    else {
-      const hydratedMessages = await hydrateMessages(((data as any[]) || []).reverse());
-      setHasMore((data || []).length === PAGE_SIZE);
-      setMessages(prev => {
-        const temps = prev.filter(m => m.id.startsWith('temp-'));
-        const byId = new Map(hydratedMessages.map(m => [m.id, m]));
-        temps.forEach(m => byId.set(m.id, m));
-        return Array.from(byId.values()).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-      });
+  const fetchMessages = useCallback(async () => {
+    const requestId = ++fetchSequenceRef.current;
+
+    if (!sectorId) {
+      setMessages([]);
+      setHasMore(false);
+      setLoading(false);
+      loadedSectorRef.current = null;
+      return;
     }
-    loadedSectorRef.current = sectorId;
-    setLoading(false);
+
+    const sectorChanged = loadedSectorRef.current !== sectorId;
+    if (sectorChanged) {
+      setLoading(true);
+      setMessages([]);
+      setHasMore(false);
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('id, content, author_id, sector_id, created_at, reply_to_id, author:profiles!messages_author_id_fkey(id, user_id, name, display_name, email, avatar_url, sector_id, autonomy_level, birth_date, company_id)')
+        .eq('sector_id', sectorId)
+        .order('created_at', { ascending: false })
+        .limit(PAGE_SIZE);
+
+      if (requestId !== fetchSequenceRef.current) return;
+      if (error) {
+        console.error('Error fetching messages:', error);
+        return;
+      }
+
+      const baseMessages = (((data as any[]) || []).reverse() as Message[]).map((message) => ({
+        ...message,
+        status: 'delivered' as const,
+      }));
+      setHasMore((data || []).length === PAGE_SIZE);
+      loadedSectorRef.current = sectorId;
+
+      // Render the actual message rows immediately. Reply/sector metadata is
+      // secondary and must never hold the entire chat behind extra requests.
+      setMessages((previous) => {
+        const temps = previous.filter((message) => message.id.startsWith('temp-'));
+        const byId = new Map(baseMessages.map((message) => [message.id, message]));
+        temps.forEach((message) => byId.set(message.id, message));
+        return Array.from(byId.values()).sort((a, b) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+      });
+      setLoading(false);
+
+      void hydrateMessages(baseMessages).then((hydratedMessages) => {
+        if (requestId !== fetchSequenceRef.current) return;
+        setMessages((previous) => {
+          const temps = previous.filter((message) => message.id.startsWith('temp-'));
+          const byId = new Map(hydratedMessages.map((message) => [message.id, message]));
+          temps.forEach((message) => byId.set(message.id, message));
+          return Array.from(byId.values()).sort((a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+        });
+      }).catch((error) => {
+        console.error('Error hydrating message metadata:', error);
+      });
+    } catch (error) {
+      if (requestId === fetchSequenceRef.current) {
+        console.error('Unexpected error fetching messages:', error);
+      }
+    } finally {
+      if (requestId === fetchSequenceRef.current) setLoading(false);
+    }
   }, [sectorId, hydrateMessages]);
 
   const loadOlderMessages = useCallback(async () => {
@@ -145,7 +195,13 @@ export function useMessages(sectorId: string | null) {
   }, [sectorId, messages, loadingOlder, hasMore, hydrateMessages]);
 
   useEffect(() => {
-    fetchMessages();
+    if (!sectorId) {
+      setMessages([]);
+      setLoading(false);
+      return;
+    }
+
+    void fetchMessages();
     const channel = supabase.channel(`messages-${sectorId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `sector_id=eq.${sectorId}` }, (payload) => {
       if (payload.eventType === 'INSERT') {
         const newMessage = payload.new as Message;
@@ -172,7 +228,10 @@ export function useMessages(sectorId: string | null) {
         setMessages(prev => prev.map(message => message.id === updated.id ? { ...message, ...updated, author: message.author, reply_to: message.reply_to, status: message.status === 'sending' ? message.status : 'delivered' } : message));
       }
     }).subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      fetchSequenceRef.current += 1;
+      void supabase.removeChannel(channel);
+    };
   }, [sectorId, fetchMessages]);
 
   const sendMessage = async (content: string, options?: { reply_to_id?: string }) => {
