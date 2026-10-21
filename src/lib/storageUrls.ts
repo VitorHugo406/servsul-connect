@@ -32,7 +32,7 @@ export function getStorageTarget(value?: string | null): StorageTarget | null {
   if (!value) return null;
   if (!value.includes('/storage/v1/object/')) return null;
 
-  const match = value.match(/\\/storage\\/v1\\/object\\/(?:public|sign)\\/(attachments|avatars)\\/([^?]+)/);
+  const match = value.match(/\/storage\/v1\/object\/(?:public|sign)\/(attachments|avatars)\/([^?]+)/);
   if (!match) return null;
 
   return {
