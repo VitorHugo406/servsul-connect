@@ -25,16 +25,27 @@ export function AuthProvider({children}:{children:ReactNode}){
  const fetchAdditionalSectors=async(userId:string)=>{try{const{data:additionalData,error:additionalError}=await supabase.from('user_additional_sectors').select('sector_id').eq('user_id',userId);if(additionalError){console.error('Error fetching additional sectors:',additionalError);return;}if(additionalData?.length){const ids=additionalData.map(d=>d.sector_id);const{data:sectorsData,error:sectorsError}=await supabase.from('sectors').select('*').in('id',ids);if(sectorsError){console.error('Error fetching sector details:',sectorsError);return;}if(sectorsData)setAdditionalSectors(sectorsData as Sector[]);}else setAdditionalSectors([]);}catch(error){console.error('Error in fetchAdditionalSectors:',error);setAdditionalSectors([]);}};
  const hydrateCompanyBrand=async(companyId:string)=>{const cached=readCachedCompany(companyId);if(cached){applyBrand(cached);return;}const{data,error}=await(supabase as any).from('companies').select('id,name,slug,logo_url,primary_color,secondary_color,is_active,is_system,enabled_modules').eq('id',companyId).maybeSingle();if(!error&&data){cacheCompany(data);applyBrand(data);}};
  const fetchProfile=async(userId:string)=>{try{
-   const companyIdPromise=(supabase as any).from('profiles').select('company_id').eq('user_id',userId).maybeSingle();
-   const profilePromise=supabase.rpc('get_my_full_profile');
-   const[{data:companyRef},{data:profileRows,error:profileError}]=await Promise.all([companyIdPromise,profilePromise]);
-   const earlyCompanyId=companyRef?.company_id as string|undefined;
-   if(earlyCompanyId){setActiveCompanyId(earlyCompanyId);void hydrateCompanyBrand(earlyCompanyId);}
+   // get_my_full_profile already returns company_id, so a separate profiles
+   // request was duplicating database work during every authentication refresh.
+   const{data:profileRows,error:profileError}=await supabase.rpc('get_my_full_profile');
    if(profileError){console.error('Error fetching profile:',profileError);return;}
    const profileData=Array.isArray(profileRows)?profileRows[0]:profileRows;
-   if(profileData){const nextProfile=profileData as Profile;cacheProfile(nextProfile);setProfile(nextProfile);setActiveCompanyId(nextProfile.company_id??earlyCompanyId??null);if(nextProfile.company_id&&nextProfile.company_id!==earlyCompanyId)void hydrateCompanyBrand(nextProfile.company_id);if(nextProfile.sector_id){const{data:sectorData}=await supabase.from('sectors').select('*').eq('id',nextProfile.sector_id).maybeSingle();if(sectorData)setSector(sectorData as Sector);}}
-   const{data:rolesData,error:rolesError}=await supabase.from('user_roles').select('role').eq('user_id',userId);if(rolesError)console.error('Error fetching roles:',rolesError);else if(rolesData)setRoles(rolesData as UserRole[]);
-   await Promise.all([fetchAdditionalSectors(userId),fetchPermissions(userId)]);
+   if(profileData){
+     const nextProfile=profileData as Profile;
+     cacheProfile(nextProfile);
+     setProfile(nextProfile);
+     setActiveCompanyId(nextProfile.company_id??null);
+     if(nextProfile.company_id)void hydrateCompanyBrand(nextProfile.company_id);
+   }
+   const tasks:Promise<unknown>[]=[
+     (async()=>{const{data:rolesData,error:rolesError}=await supabase.from('user_roles').select('role').eq('user_id',userId);if(rolesError)console.error('Error fetching roles:',rolesError);else if(rolesData)setRoles(rolesData as UserRole[]);})(),
+     fetchAdditionalSectors(userId),
+     fetchPermissions(userId),
+   ];
+   if(profileData?.sector_id){
+     tasks.push((async()=>{const{data:sectorData}=await supabase.from('sectors').select('*').eq('id',profileData.sector_id).maybeSingle();if(sectorData)setSector(sectorData as Sector);})());
+   }
+   await Promise.all(tasks);
  }catch(error){console.error('Error in fetchProfile:',error);}};
  const hydrateCachedProfile=async(userId:string)=>{const cached=readCachedProfile(userId);if(!cached)return false;setProfile(cached);setActiveCompanyId(cached.company_id);const company=readCachedCompany(cached.company_id);if(company)applyBrand(company);else await hydrateCompanyBrand(cached.company_id);return true;};
  const refreshProfile=async()=>{if(user)await fetchProfile(user.id)};const refreshPermissions=async()=>{if(user)await fetchPermissions(user.id)};const canAccess=(permission:keyof UserPermissions)=>isAdmin||Boolean(permissions?.[permission]);const hasSectorAccess=(sectorId:string)=>isAdmin||allAccessibleSectorIds.includes(sectorId);
