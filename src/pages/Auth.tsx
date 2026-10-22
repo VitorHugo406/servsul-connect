@@ -416,15 +416,6 @@ const Auth = () => {
     setError(null);
   };
 
-  const toggleMode = () => {
-    setIsLogin(!isLogin);
-    if (isLogin) {
-      resetLoginForm();
-    } else {
-      resetSignupForm();
-    }
-  };
-
   const brandPrimary = companyBrand?.primary_color || BRAND_PRIMARY;
   const brandSecondary = companyBrand?.secondary_color || BRAND_SECONDARY;
 
