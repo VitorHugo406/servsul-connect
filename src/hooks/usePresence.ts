@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useId } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -130,6 +130,7 @@ export function useUserPresence(userId?: string) {
 }
 
 export function useAllUsersPresence() {
+  const instanceId = useId().replace(/:/g, '');
   const [presenceMap, setPresenceMap] = useState<Record<string, { isOnline: boolean; lastHeartbeat: Date | null }>>({});
 
   const fetchAllPresence = useCallback(async () => {
@@ -152,7 +153,7 @@ export function useAllUsersPresence() {
 
     // Subscribe to realtime changes
     const channel = supabase
-      .channel('all-presence')
+      .channel(`all-presence-${instanceId}`)
       .on(
         'postgres_changes',
         {
