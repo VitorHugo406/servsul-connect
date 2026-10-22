@@ -200,7 +200,9 @@ const Auth = () => {
       
       setLoadingSectors(true);
       try {
-        const response = await supabase.functions.invoke('get-public-sectors');
+        const response = await supabase.functions.invoke('get-public-sectors', {
+          body: { company_id: companyBrand?.id || '00000000-0000-0000-0000-0000000000a2' },
+        });
         
         if (response.error) {
           console.error('Error fetching sectors:', response.error);
@@ -220,7 +222,7 @@ const Auth = () => {
     };
 
     fetchSectors();
-  }, [isLogin]);
+  }, [isLogin, companyBrand?.id]);
 
   const validateStep1 = () => {
     const result = step1Schema.safeParse({
