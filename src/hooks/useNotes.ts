@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useId } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -48,6 +48,7 @@ export function useMyNotePermission(note: Note | null) {
 }
 
 export function useNotes(options: { enableRealtime?: boolean; enableInitialFetch?: boolean } = {}) {
+  const instanceId = useId().replace(/:/g, '');
   const { user } = useAuth();
   const userId = user?.id;
   const { enableRealtime = true, enableInitialFetch = true } = options;
@@ -89,7 +90,7 @@ export function useNotes(options: { enableRealtime?: boolean; enableInitialFetch
     let ch: ReturnType<typeof supabase.channel> | null = null;
     try {
       ch = supabase
-        .channel(`notes-rt-${userId}`)
+        .channel(`notes-rt-${userId}-${instanceId}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, () => {
           void fetchNotes();
         })
