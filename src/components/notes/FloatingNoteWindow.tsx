@@ -8,7 +8,9 @@ import { getImageCss, getTextureCss, getTextureSize } from './noteStyles';
 
 export function FloatingNoteWindow() {
   const { floatingNote, mode, closeFloating } = useFloatingNote();
-  const { updateNote } = useNotes();
+  // This window only needs the mutation method. It must not open a second
+  // notes Realtime subscription or repeat the initial notes query.
+  const { updateNote } = useNotes({ enableRealtime: false, enableInitialFetch: false });
   const [pipContainer, setPipContainer] = useState<HTMLElement | null>(null);
   const [pos, setPos] = useState({ x: window.innerWidth - 380, y: 80 });
   const dragRef = useRef<{ dx: number; dy: number } | null>(null);
