@@ -47,13 +47,19 @@ export function useMyNotePermission(note: Note | null) {
   return permission;
 }
 
-export function useNotes() {
+export function useNotes(options: { enableRealtime?: boolean; enableInitialFetch?: boolean } = {}) {
   const { user } = useAuth();
+  const userId = user?.id;
+  const { enableRealtime = true, enableInitialFetch = true } = options;
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchNotes = useCallback(async () => {
-    if (!user) return;
+    if (!userId) {
+      setNotes([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase
       .from('notes')
@@ -67,28 +73,44 @@ export function useNotes() {
       setNotes((data || []) as Note[]);
     }
     setLoading(false);
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
-    fetchNotes();
-  }, [fetchNotes]);
+    if (!enableInitialFetch) return;
+    void fetchNotes();
+  }, [fetchNotes, enableInitialFetch]);
 
-  // Realtime
+  // Configure every Postgres callback before subscribing. Only the notes screen
+  // owns this subscription; utility consumers can use mutations without opening
+  // another Realtime channel.
   useEffect(() => {
-    if (!user) return;
-    const ch = supabase
-      .channel('notes-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, () => {
-        fetchNotes();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'note_shares' }, () => {
-        fetchNotes();
-      })
-      .subscribe();
+    if (!userId || !enableRealtime) return;
+
+    let ch: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      ch = supabase
+        .channel(`notes-rt-${userId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, () => {
+          void fetchNotes();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'note_shares' }, () => {
+          void fetchNotes();
+        });
+
+      ch.subscribe((status, error) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('Notes Realtime channel status:', status, error);
+        }
+      });
+    } catch (error) {
+      // A Realtime setup failure must not crash the entire application view.
+      console.error('Could not initialize Notes Realtime channel:', error);
+    }
+
     return () => {
-      supabase.removeChannel(ch);
+      if (ch) void supabase.removeChannel(ch);
     };
-  }, [user, fetchNotes]);
+  }, [userId, enableRealtime, fetchNotes]);
 
   const createNote = async () => {
     if (!user) return null;
