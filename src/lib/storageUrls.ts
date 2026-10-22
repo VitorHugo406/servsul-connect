@@ -8,9 +8,8 @@ const pendingSignedUrls = new Map<string, Promise<string>>();
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 const CACHE_SAFETY_MS = 60 * 1000;
 
-// Storage signed URLs require database work. A large chat history can render
-// many attachments at once, so cap concurrent signing requests to protect the
-// shared Supabase connection pool.
+// Storage signing uses database resources. Keep a small queue and only request
+// URLs for media that is near the visible viewport.
 const MAX_CONCURRENT_SIGNING_REQUESTS = 3;
 let activeSigningRequests = 0;
 const signingQueue: Array<() => void> = [];
@@ -32,7 +31,7 @@ export function getStorageTarget(value?: string | null): StorageTarget | null {
   if (!value) return null;
   if (!value.includes('/storage/v1/object/')) return null;
 
-  const match = value.match(/\/storage\/v1\/object\/(?:public|sign)\/(attachments|avatars)\/([^?]+)/);
+  const match = value.match(/\\/storage\\/v1\\/object\\/(?:public|sign)\\/(attachments|avatars)\\/([^?]+)/);
   if (!match) return null;
 
   return {
@@ -49,7 +48,6 @@ export async function createSignedStorageUrl(value?: string | null): Promise<str
   const cached = signedUrlCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now() + CACHE_SAFETY_MS) return cached.url;
 
-  // Reuse both cached results and in-flight work for identical files.
   const pending = pendingSignedUrls.get(cacheKey);
   if (pending) return pending;
 
@@ -64,7 +62,6 @@ export async function createSignedStorageUrl(value?: string | null): Promise<str
       url: data.signedUrl,
       expiresAt: Date.now() + SIGNED_URL_TTL_SECONDS * 1000,
     });
-
     return data.signedUrl;
   });
 
@@ -76,7 +73,7 @@ export async function createSignedStorageUrl(value?: string | null): Promise<str
   }
 }
 
-export function useSignedStorageUrl(value?: string | null) {
+export function useSignedStorageUrl(value?: string | null, enabled = true) {
   const targetKey = useMemo(() => {
     const target = getStorageTarget(value);
     return target ? `${target.bucket}:${target.path}` : value || '';
@@ -87,7 +84,7 @@ export function useSignedStorageUrl(value?: string | null) {
     let alive = true;
     setSignedUrl(value || '');
 
-    if (!value || !getStorageTarget(value)) return;
+    if (!enabled || !value || !getStorageTarget(value)) return;
 
     createSignedStorageUrl(value).then((url) => {
       if (alive) setSignedUrl(url);
@@ -96,7 +93,7 @@ export function useSignedStorageUrl(value?: string | null) {
     });
 
     return () => { alive = false; };
-  }, [value, targetKey]);
+  }, [value, targetKey, enabled]);
 
   return signedUrl;
 }
