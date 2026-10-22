@@ -982,18 +982,8 @@ const Auth = () => {
                 </AnimatePresence>
               )}
 
-              {/* Toggle Login/Signup */}
-              <div className="mt-2 text-center">
-                <span className="text-sm text-muted-foreground">
-                  {isLogin ? 'Não tem uma conta?' : 'Já tem uma conta?'}
-                </span>
-                <button
-                  type="button"
-                  onClick={toggleMode}
-                  className="ml-1 text-sm font-semibold text-primary hover:underline touch-manipulation"
-                >
-                  {isLogin ? 'Cadastre-se' : 'Fazer login'}
-                </button>
+              <div className="mt-2 text-center text-sm text-muted-foreground">
+                A criação de contas é feita pelo administrador da empresa para manter o acesso vinculado à organização correta.
               </div>
             </CardContent>
           </Card>
