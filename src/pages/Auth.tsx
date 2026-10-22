@@ -356,6 +356,7 @@ const Auth = () => {
           birthDate,
           sectorId,
           registrationPassword,
+          companyId: companyBrand?.id || '00000000-0000-0000-0000-0000000000a2',
           additionalSectors: additionalSectors.length > 0 ? additionalSectors : undefined,
           // Public registration defaults
           profileType: 'user',
