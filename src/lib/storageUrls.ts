@@ -78,11 +78,11 @@ export function useSignedStorageUrl(value?: string | null, enabled = true) {
     const target = getStorageTarget(value);
     return target ? `${target.bucket}:${target.path}` : value || '';
   }, [value]);
-  const [signedUrl, setSignedUrl] = useState(value || '');
+  const [signedUrl, setSignedUrl] = useState(() => (value && getStorageTarget(value) && !enabled ? '' : value || ''));
 
   useEffect(() => {
     let alive = true;
-    setSignedUrl(value || '');
+    setSignedUrl(value && getStorageTarget(value) && !enabled ? '' : value || '');
 
     if (!enabled || !value || !getStorageTarget(value)) return;
 
