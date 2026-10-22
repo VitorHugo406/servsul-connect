@@ -11,6 +11,7 @@ import { NotificationsProvider } from "@/hooks/useNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { applyBrand, getCachedBrand } from "@/lib/branding";
 import { AdminBirthdayPdfGuard } from "@/components/birthday/AdminBirthdayPdfGuard";
+import { AppErrorBoundary } from "@/components/common/AppErrorBoundary";
 
 // Recarrega uma única vez quando um pedaço antigo do app ficou em cache (deploy novo)
 function lazyWithRetry<T extends { default: React.ComponentType<any> }>(factory: () => Promise<T>) {
@@ -67,7 +68,7 @@ function RootRoute() {
   }, []);
   if (!isKnownRoute) return <NotFound />;
   if (loading || verifying) return <LoadingScreen message="Preparando seu ambiente..." />;
-  if (user) return <Index />;
+  if (user) return <AppErrorBoundary><Index /></AppErrorBoundary>;
   return isMobile ? <Auth /> : <LandingPage />;
 }
 function AppRoutes() { const location = useLocation(); const authContent = <PublicRoute><Auth /></PublicRoute>; return <Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><Routes><Route path="/" element={<RootRoute />} /><Route path="/:section" element={<RootRoute />} /><Route path="/:section/*" element={<RootRoute />} /><Route path="/auth" element={location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={<PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="*" element={<NotFound />} /></Routes></Suspense>; }
