@@ -66,10 +66,10 @@ CREATE TABLE IF NOT EXISTS public.system_settings (
 -- 8. Enable RLS on system_settings
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 
--- 9. Insert the registration password (hashed for security display but we'll use plain for validation in edge function)
+-- 9. Seed a unique registration code on fresh installs without committing a reusable secret.
 INSERT INTO public.system_settings (key, value)
-VALUES ('registration_password', 'Senh@Cast753')
-ON CONFLICT (key) DO UPDATE SET value = 'Senh@Cast753';
+VALUES ('registration_password', 'Ewvor-' || replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''))
+ON CONFLICT (key) DO NOTHING;
 
 -- 10. RLS policies for user_roles
 CREATE POLICY "Admins can manage all roles"

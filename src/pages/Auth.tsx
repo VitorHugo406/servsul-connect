@@ -200,7 +200,9 @@ const Auth = () => {
       
       setLoadingSectors(true);
       try {
-        const response = await supabase.functions.invoke('get-public-sectors');
+        const response = await supabase.functions.invoke('get-public-sectors', {
+          body: { company_id: companyBrand?.id || '00000000-0000-0000-0000-0000000000a2' },
+        });
         
         if (response.error) {
           console.error('Error fetching sectors:', response.error);
@@ -220,7 +222,7 @@ const Auth = () => {
     };
 
     fetchSectors();
-  }, [isLogin]);
+  }, [isLogin, companyBrand?.id]);
 
   const validateStep1 = () => {
     const result = step1Schema.safeParse({
@@ -354,6 +356,7 @@ const Auth = () => {
           birthDate,
           sectorId,
           registrationPassword,
+          companyId: companyBrand?.id || '00000000-0000-0000-0000-0000000000a2',
           additionalSectors: additionalSectors.length > 0 ? additionalSectors : undefined,
           // Public registration defaults
           profileType: 'user',
@@ -411,15 +414,6 @@ const Auth = () => {
     setLoginEmail('');
     setLoginPassword('');
     setError(null);
-  };
-
-  const toggleMode = () => {
-    setIsLogin(!isLogin);
-    if (isLogin) {
-      resetLoginForm();
-    } else {
-      resetSignupForm();
-    }
   };
 
   const brandPrimary = companyBrand?.primary_color || BRAND_PRIMARY;
@@ -979,18 +973,8 @@ const Auth = () => {
                 </AnimatePresence>
               )}
 
-              {/* Toggle Login/Signup */}
-              <div className="mt-2 text-center">
-                <span className="text-sm text-muted-foreground">
-                  {isLogin ? 'Não tem uma conta?' : 'Já tem uma conta?'}
-                </span>
-                <button
-                  type="button"
-                  onClick={toggleMode}
-                  className="ml-1 text-sm font-semibold text-primary hover:underline touch-manipulation"
-                >
-                  {isLogin ? 'Cadastre-se' : 'Fazer login'}
-                </button>
+              <div className="mt-2 text-center text-sm text-muted-foreground">
+                A criação de contas é feita pelo administrador da empresa para manter o acesso vinculado à organização correta.
               </div>
             </CardContent>
           </Card>
