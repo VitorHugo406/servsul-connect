@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useId } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { withCompany } from '@/lib/companyScope';
@@ -212,6 +212,7 @@ export function useDirectMessages(partnerId?: string) {
 }
 
 export function useConversations() {
+  const hookId = useId().replace(/:/g, '');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const { profile } = useAuth();
@@ -286,7 +287,7 @@ export function useConversations() {
     // history for every event creates avoidable database and rendering work.
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     const channel = supabase
-      .channel(`conversations-${profile.id}`)
+      .channel(`conversations-${profile.id}-${hookId}`)
       .on(
         'postgres_changes',
         {
