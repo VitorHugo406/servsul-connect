@@ -1,8 +1,8 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useSignedStorageUrl } from '@/lib/storageUrls';
 
-function useNearViewport() {
-  const ref = useRef<HTMLElement | null>(null);
+function useNearViewport<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
   const [nearViewport, setNearViewport] = useState(false);
 
   useEffect(() => {
@@ -29,17 +29,17 @@ function useNearViewport() {
 }
 
 export function SignedStorageLink({ url, className, children }: { url: string; className?: string; children: ReactNode }) {
-  const { ref, nearViewport } = useNearViewport();
+  const { ref, nearViewport } = useNearViewport<HTMLAnchorElement>();
   const signedUrl = useSignedStorageUrl(url, nearViewport);
   return (
-    <a ref={ref as React.RefObject<HTMLAnchorElement>} href={signedUrl || undefined} target="_blank" rel="noopener noreferrer" className={className} aria-disabled={!signedUrl || undefined}>
+    <a ref={ref} href={signedUrl || undefined} target="_blank" rel="noopener noreferrer" className={className} aria-disabled={!signedUrl || undefined}>
       {children}
     </a>
   );
 }
 
 export function SignedStorageImage({ url, alt, className }: { url: string; alt: string; className?: string }) {
-  const { ref, nearViewport } = useNearViewport();
+  const { ref, nearViewport } = useNearViewport<HTMLImageElement>();
   const signedUrl = useSignedStorageUrl(url, nearViewport);
-  return <img ref={ref as React.RefObject<HTMLImageElement>} src={signedUrl || undefined} alt={alt} className={className} loading="lazy" decoding="async" />;
+  return <img ref={ref} src={signedUrl || undefined} alt={alt} className={className} loading="lazy" decoding="async" />;
 }
