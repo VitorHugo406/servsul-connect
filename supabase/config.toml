@@ -1,52 +1,62 @@
 project_id = "scslfueixmuolkmgdslk"
 
+# All privileged endpoints require a valid Supabase JWT by default.
 [functions.create-admin]
-verify_jwt = false
+verify_jwt = true
 
 [functions.delete-data]
-verify_jwt = false
+verify_jwt = true
 
 [functions.facial-login]
-verify_jwt = false
+verify_jwt = true
 
 [functions.get-facial-data]
-verify_jwt = false
+verify_jwt = true
 
+# Login company/sector discovery is intentionally public and must return only public metadata.
 [functions.get-public-sectors]
 verify_jwt = false
 
 [functions.register-facial-data]
-verify_jwt = false
+verify_jwt = true
 
 [functions.register-user]
-verify_jwt = false
+verify_jwt = true
 
 [functions.update-user-permissions]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-feedback-email]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-announcement-email]
-verify_jwt = false
+verify_jwt = true
 
 [functions.process-automations]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-scheduled-summary]
-verify_jwt = false
+verify_jwt = true
 
 [functions.servchat-conference]
-verify_jwt = false
+verify_jwt = true
 
+# This endpoint authenticates using its own API-key/token or user-JWT flow.
 [functions.api-integrations]
 verify_jwt = false
 
 [functions.seed-super-admin]
-verify_jwt = false
+verify_jwt = true
 
 [functions.create-company-admin]
 verify_jwt = true
 
 [functions.apply-schema]
+verify_jwt = true
+
+[functions.duplicate-scheduled-cards]
+verify_jwt = true
+
+# Invoked by a scheduled job using its own secret validation.
+[functions.cleanup-expired-attachments]
 verify_jwt = false
