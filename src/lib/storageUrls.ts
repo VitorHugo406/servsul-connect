@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 type StorageTarget = { bucket: 'attachments' | 'avatars'; path: string };
 
 const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+const pendingSignedUrls = new Map<string, Promise<string>>();
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 const CACHE_SAFETY_MS = 60 * 1000;
 
@@ -32,32 +33,42 @@ export async function createSignedStorageUrl(value?: string | null): Promise<str
   const cached = signedUrlCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now() + CACHE_SAFETY_MS) return cached.url;
 
-  try {
-    const { data, error } = await supabase.storage
-      .from(target.bucket)
-      .createSignedUrl(target.path, SIGNED_URL_TTL_SECONDS);
+  // Multiple components can request the same file during one render. Reuse the
+  // in-flight request instead of flooding Storage with duplicate sign requests.
+  const pending = pendingSignedUrls.get(cacheKey);
+  if (pending) return pending;
 
-    // Fail closed: never fall back to an original public/object URL if signing fails.
-    if (error || !data?.signedUrl) {
+  const request = (async () => {
+    try {
+      const { data, error } = await supabase.storage
+        .from(target.bucket)
+        .createSignedUrl(target.path, SIGNED_URL_TTL_SECONDS);
+
+      if (error || !data?.signedUrl) {
+        signedUrlCache.delete(cacheKey);
+        console.error('Unable to create a signed storage URL.');
+        return '';
+      }
+
+      signedUrlCache.set(cacheKey, {
+        url: data.signedUrl,
+        expiresAt: Date.now() + SIGNED_URL_TTL_SECONDS * 1000,
+      });
+      return data.signedUrl;
+    } catch (error) {
       signedUrlCache.delete(cacheKey);
-      console.error('Unable to create a signed storage URL.');
+      console.error('Unable to create a signed storage URL.', error);
       return '';
+    } finally {
+      pendingSignedUrls.delete(cacheKey);
     }
+  })();
 
-    signedUrlCache.set(cacheKey, {
-      url: data.signedUrl,
-      expiresAt: Date.now() + SIGNED_URL_TTL_SECONDS * 1000,
-    });
-
-    return data.signedUrl;
-  } catch (error) {
-    signedUrlCache.delete(cacheKey);
-    console.error('Unable to create a signed storage URL.', error);
-    return '';
-  }
+  pendingSignedUrls.set(cacheKey, request);
+  return request;
 }
 
-export function useSignedStorageUrl(value?: string | null) {
+export function useSignedStorageUrl(value?: string | null, enabled = true) {
   const targetKey = useMemo(() => {
     const target = getStorageTarget(value);
     return target ? `${target.bucket}:${target.path}` : value || '';
@@ -71,14 +82,14 @@ export function useSignedStorageUrl(value?: string | null) {
     const target = getStorageTarget(value);
     setSignedUrl(target ? '' : value || '');
 
-    if (!value || !target) return;
+    if (!value || !target || !enabled) return;
 
     createSignedStorageUrl(value).then((url) => {
       if (alive) setSignedUrl(url);
     });
 
     return () => { alive = false; };
-  }, [value, targetKey]);
+  }, [value, targetKey, enabled]);
 
   return signedUrl;
 }

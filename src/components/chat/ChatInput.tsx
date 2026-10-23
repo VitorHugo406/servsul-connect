@@ -43,19 +43,29 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
     setIsSending(true);
     const currentMessage = trimmedMessage;
     const currentAttachments = [...attachments];
-    setMessage('');
-    setAttachments([]);
-    setShowCardPicker(false);
     try {
       const uploadedAttachments = [];
       for (const attachment of currentAttachments) {
         const result = await uploadFile(attachment.file);
-        if (result) uploadedAttachments.push(result);
+        if (!result) {
+          // Keep the draft and selected files visible if any upload fails.
+          // Do not silently send a text-only message after a failed attachment.
+          toast.error('O anexo não foi enviado. Seus arquivos continuam selecionados para tentar novamente.');
+          return;
+        }
+        uploadedAttachments.push(result);
       }
+
       await onSendMessage(currentMessage, uploadedAttachments.length > 0 ? uploadedAttachments : undefined, replyTo?.id);
+      setMessage('');
+      setAttachments([]);
+      setShowCardPicker(false);
     } catch (error) {
       console.error('Error sending message:', error);
-    } finally { setIsSending(false); }
+      toast.error('Não foi possível enviar a mensagem. O texto e os anexos foram mantidos para você tentar novamente.');
+    } finally {
+      setIsSending(false);
+    }
   }, [message, attachments, isSending, uploadFile, onSendMessage, replyTo?.id]);
 
   const handleEmojiSelect = (emoji: string) => { setMessage(prev => prev + emoji); setShowEmojiPicker(false); inputRef.current?.focus(); };
