@@ -45,8 +45,15 @@ function jsonResponse(body: any, status = 200) {
 function generateKey(prefix: string): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let result = prefix + "_";
-  for (let i = 0; i < 48; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  // Use a cryptographically secure RNG and rejection sampling (62 chars).
+  while (result.length < prefix.length + 1 + 48) {
+    const bytes = new Uint8Array(64);
+    crypto.getRandomValues(bytes);
+    for (const byte of bytes) {
+      if (byte >= 248) continue;
+      result += chars[byte % chars.length];
+      if (result.length === prefix.length + 1 + 48) break;
+    }
   }
   return result;
 }
