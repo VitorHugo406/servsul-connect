@@ -31,8 +31,21 @@ function useNearViewport<T extends HTMLElement>() {
 export function SignedStorageLink({ url, className, children }: { url: string; className?: string; children: ReactNode }) {
   const { ref, nearViewport } = useNearViewport<HTMLAnchorElement>();
   const signedUrl = useSignedStorageUrl(url, nearViewport);
+  const ready = Boolean(signedUrl);
+
   return (
-    <a ref={ref} href={signedUrl || undefined} target="_blank" rel="noopener noreferrer" className={className} aria-disabled={!signedUrl || undefined}>
+    <a
+      ref={ref}
+      href={ready ? signedUrl : undefined}
+      target={ready ? '_blank' : undefined}
+      rel={ready ? 'noopener noreferrer' : undefined}
+      className={className}
+      aria-disabled={!ready}
+      onClick={(event) => {
+        // Never let a pending/failed Storage signature navigate to the chat page.
+        if (!ready) event.preventDefault();
+      }}
+    >
       {children}
     </a>
   );
