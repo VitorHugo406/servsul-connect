@@ -376,3 +376,111 @@ body { background: var(--ewvon-shell-bg); }
   .ewvon-topbar { display: none !important; }
   .ewvon-main { margin: 12px !important; padding: 12px !important; border-radius: 22px !important; }
 }
+
+
+/* Final shell alignment fixes */
+.ewvon-topbar {
+  flex: 0 0 68px !important;
+  min-height: 68px !important;
+  height: 68px !important;
+  margin-top: 8px !important;
+  margin-bottom: 0 !important;
+  margin-left: 88px !important;
+  margin-right: 8px !important;
+  padding: 6px 12px 6px 18px !important;
+  border-radius: 9999px !important;
+  border: 1px solid rgba(255,255,255,.98) !important;
+  background: rgba(255,255,255,.88) !important;
+  box-shadow: 0 4px 22px rgba(31,41,55,.035) !important;
+}
+.ewvon-brand {
+  flex: 0 1 245px !important;
+  min-width: 0 !important;
+  border-radius: 9999px !important;
+  background: rgba(247,248,250,.78) !important;
+  border-color: rgba(235,237,242,.9) !important;
+}
+.ewvon-quick-nav {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  flex: 0 0 auto !important;
+  justify-content: flex-start !important;
+  border-radius: 9999px !important;
+  background: rgba(247,248,250,.82) !important;
+  border: 1px solid rgba(235,237,242,.92) !important;
+  padding: 4px !important;
+}
+.ewvon-main {
+  margin: 10px 8px 8px 88px !important;
+  padding: 28px !important;
+  border-radius: 30px !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  background: rgba(255,255,255,.95) !important;
+}
+.ewvon-sidebar {
+  left: 12px !important;
+  top: 98px !important;
+  width: 64px !important;
+  min-width: 64px !important;
+  height: calc(100vh - 116px) !important;
+  max-height: none !important;
+  padding: 10px 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  border-radius: 9999px !important;
+  background: rgba(255,255,255,.86) !important;
+}
+.ewvon-sidebar nav {
+  width: 100% !important;
+  flex: 1 1 auto !important;
+  align-items: center !important;
+  padding: 0 !important;
+}
+.ewvon-sidebar nav > div {
+  width: 100% !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  padding: 0 !important;
+}
+.ewvon-sidebar nav button {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-inline: auto !important;
+  flex: 0 0 40px !important;
+  width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  border-radius: 9999px !important;
+}
+.ewvon-sidebar > div:last-child {
+  display: flex !important;
+  width: 100% !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 8px 0 0 !important;
+  border: 0 !important;
+}
+.ewvon-sidebar > div:last-child > button {
+  display: flex !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 9999px !important;
+}
+@media (max-width: 1100px) {
+  .ewvon-topbar { margin-left: 82px !important; margin-right: 8px !important; }
+  .ewvon-main { margin-left: 82px !important; margin-right: 8px !important; padding: 20px !important; }
+}
+@media (max-width: 767px) {
+  .ewvon-topbar { display: none !important; }
+  .ewvon-main { margin: 12px !important; padding: 14px !important; }
+}
