@@ -167,3 +167,34 @@
   .ewvon-uber-mini-progress { height:8px; margin-top:25px; overflow:hidden; border-radius:99px; background:#f1f1f1; }
   .ewvon-uber-mini-progress i { display:block; height:100%; border-radius:99px; background:#262626; }
 }
+
+
+/* Desktop profile: restrained backdrop and an expanding, button-origin panel. */
+@media (min-width: 768px) {
+  [data-radix-dialog-overlay].ewvon-profile-overlay,
+  .ewvon-profile-overlay[data-radix-dialog-overlay] {
+    background: rgba(15, 23, 42, .16) !important;
+    backdrop-filter: blur(1.5px) !important;
+    -webkit-backdrop-filter: blur(1.5px) !important;
+    animation: ewvon-profile-overlay-in 220ms ease-out both !important;
+  }
+  .ewvon-profile-drawer {
+    transform-origin: top right !important;
+    animation: ewvon-profile-expand 420ms cubic-bezier(.16, 1, .3, 1) both !important;
+    will-change: transform, opacity, clip-path;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(255,255,255,.98) !important;
+    box-shadow: 0 24px 80px rgba(15,23,42,.16), 0 4px 16px rgba(15,23,42,.06) !important;
+  }
+  .ewvon-profile-drawer[data-state="closed"] { animation: ewvon-profile-collapse 180ms ease-in both !important; }
+  .ewvon-profile-drawer :is(button, input, textarea, [role="button"]) { backdrop-filter:none !important; -webkit-backdrop-filter:none !important; filter:none !important; }
+  .ewvon-topbar .ewvon-actions > button[title="Perfil do usuário"],
+  .ewvon-topbar .ewvon-actions > button[title="Perfil do usuário"] * {
+    backdrop-filter:none !important; -webkit-backdrop-filter:none !important; filter:none !important;
+  }
+}
+@keyframes ewvon-profile-overlay-in { from { opacity:0; } to { opacity:1; } }
+@keyframes ewvon-profile-expand { from { opacity:0; transform:translate(-50%,-50%) scale(.16); border-radius:999px; clip-path:inset(0 0 0 0 round 999px); } 58% { opacity:1; border-radius:28px; } to { opacity:1; transform:translate(-50%,-50%) scale(1); border-radius:16px; clip-path:inset(0 0 0 0 round 16px); } }
+@keyframes ewvon-profile-collapse { from { opacity:1; transform:translate(-50%,-50%) scale(1); } to { opacity:0; transform:translate(-50%,-50%) scale(.94); } }
+@media (prefers-reduced-motion: reduce) { .ewvon-profile-drawer, .ewvon-profile-overlay { animation:none !important; } }
