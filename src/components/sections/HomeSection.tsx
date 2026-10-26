@@ -9,7 +9,7 @@ import {
   Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from 'recharts';
-import { format, subDays, startOfDay, isSameDay, isToday, isPast } from 'date-fns';
+import { format, subDays, startOfDay, isSameDay, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -107,9 +107,10 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
 
   const displayName = profile?.display_name || profile?.name || 'Usuário';
   const initials = displayName.split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase();
+  const todayStart = startOfDay(new Date());
+  const tasksToday = tasks.filter((task) => task.created_at && new Date(task.created_at) >= todayStart);
+  const completedToday = tasks.filter((task) => task.completed_at && new Date(task.completed_at) >= todayStart).length;
   const openTasks = tasks.filter((task) => !task.completed_at && !['done', 'completed'].includes((task.status || '').toLowerCase()));
-  const overdueTasks = openTasks.filter((task) => task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date)));
-  const completedLast7 = tasks.filter((task) => task.completed_at && new Date(task.completed_at) >= startOfDay(subDays(new Date(), 6))).length;
   const todayBirthdays = birthdayPeople.filter((person) => person.isToday);
   const visibleBirthdays = birthdayPeople.slice(0, 4);
   const latestAnnouncement = announcements[0];
@@ -142,18 +143,18 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
 
   const metrics = [
     { label: 'Mensagens hoje', value: todayMessages, icon: MessageSquare, note: 'Enviadas por você', section: 'chat' },
-    { label: 'Tarefas em aberto', value: openTasks.length, icon: ListTodo, note: overdueTasks.length ? `${overdueTasks.length} em atraso` : 'Nenhuma urgência identificada', section: 'tasks', alert: overdueTasks.length > 0 },
-    { label: 'Concluídas em 7 dias', value: completedLast7, icon: CheckCircle2, note: 'Últimos sete dias', section: 'tasks' },
+    { label: 'Tarefas hoje', value: tasksToday.length, icon: ListTodo, note: 'Atividades criadas hoje' },
+    { label: 'Concluídas hoje', value: completedToday, icon: CheckCircle2, note: 'Tarefas finalizadas hoje' },
     { label: 'Avisos publicados', value: announcements.length, icon: Bell, note: 'Disponíveis para você', section: 'announcements' },
   ];
 
   return (
-    <div className="ewvon-home mx-auto w-full max-w-[1680px] space-y-5 p-4 sm:p-6 lg:p-7">
+    <div className="ewvon-home mx-auto w-full max-w-[1680px] space-y-4 p-3 sm:p-5 lg:p-6">
       <motion.section
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="ewvon-glass-panel relative overflow-hidden rounded-[28px] border border-white/80 p-5 shadow-[0_12px_45px_rgba(24,24,27,0.045)] sm:p-7"
+        className="ewvon-glass-panel relative overflow-hidden rounded-[18px] border border-white/80 p-4 shadow-[0_12px_45px_rgba(24,24,27,0.045)] sm:p-5"
       >
         <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-zinc-200/50 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-28 left-1/3 h-48 w-48 rounded-full bg-zinc-100 blur-3xl" />
@@ -177,14 +178,6 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={() => onNavigate('tasks')} className="h-10 rounded-full bg-zinc-950 px-4 text-white shadow-sm hover:bg-zinc-800">
-              <Plus className="mr-2 h-4 w-4" /> Abrir tarefas
-            </Button>
-            <Button variant="outline" onClick={() => onNavigate('my-dashboard')} className="h-10 rounded-full border-zinc-200 bg-white/70 px-4 text-zinc-700 hover:bg-white">
-              <Activity className="mr-2 h-4 w-4" /> Meu painel
-            </Button>
-          </div>
         </div>
       </motion.section>
 
@@ -195,11 +188,11 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
             <motion.button
               key={metric.label}
               type="button"
-              onClick={() => onNavigate(metric.section)}
+              onClick={() => metric.section && onNavigate(metric.section)}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.045, duration: 0.25 }}
-              className="ewvon-glass-card group min-w-0 rounded-[24px] border border-white/90 p-5 text-left shadow-[0_6px_24px_rgba(24,24,27,0.035)] transition duration-200 hover:-translate-y-0.5 hover:border-zinc-200 hover:shadow-[0_12px_32px_rgba(24,24,27,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+              className="ewvon-glass-card group min-w-0 rounded-[16px] border border-white/90 p-4 text-left shadow-[0_6px_24px_rgba(24,24,27,0.035)] transition duration-200 hover:-translate-y-0.5 hover:border-zinc-200 hover:shadow-[0_12px_32px_rgba(24,24,27,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
             >
               <div className="flex items-start justify-between gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200/80 bg-white/80 text-zinc-700 shadow-sm"><Icon className="h-[18px] w-[18px]" strokeWidth={1.8} /></span>
@@ -218,8 +211,8 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
         })}
       </section>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="ewvon-glass-panel rounded-[26px] border border-white/90 p-5 shadow-[0_8px_30px_rgba(24,24,27,0.035)] sm:p-6 xl:col-span-8">
+      <section className="ewvon-dashboard-panels grid grid-cols-1 gap-3 xl:grid-cols-12">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="ewvon-glass-panel rounded-[18px] border border-white/90 p-4 shadow-[0_8px_30px_rgba(24,24,27,0.035)] sm:p-5 xl:col-span-8">
           <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700"><TrendingUp className="h-4 w-4" /></span><h2 className="font-semibold tracking-tight text-zinc-900">Sua atividade</h2></div>
@@ -253,7 +246,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="ewvon-glass-panel rounded-[26px] border border-white/90 p-5 shadow-[0_8px_30px_rgba(24,24,27,0.035)] sm:p-6 xl:col-span-4">
           <div className="flex items-start justify-between gap-3">
             <div><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700"><CircleDashed className="h-4 w-4" /></span><h2 className="font-semibold tracking-tight text-zinc-900">Tarefas por status</h2></div><p className="mt-1 pl-10 text-sm text-zinc-500">Distribuição atual</p></div>
-            <button type="button" onClick={() => onNavigate('tasks')} aria-label="Abrir tarefas" className="rounded-full border border-zinc-200 bg-white/70 p-2 text-zinc-500 hover:bg-white hover:text-zinc-900"><ChevronRight className="h-4 w-4" /></button>
+            <button type="button" aria-label="Distribuição das tarefas" className="rounded-full border border-zinc-200 bg-white/70 p-2 text-zinc-500 hover:bg-white hover:text-zinc-900"><ChevronRight className="h-4 w-4" /></button>
           </div>
           {taskStatusData.length ? (
             <>
