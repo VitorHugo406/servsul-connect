@@ -750,3 +750,81 @@ body { background: var(--ewvon-shell-bg); }
 .ewvon-profile-drawer{position:fixed!important;left:auto!important;right:12px!important;top:12px!important;bottom:12px!important;width:min(440px,calc(100vw - 24px))!important;max-width:min(440px,calc(100vw - 24px))!important;height:auto!important;max-height:none!important;transform:none!important;border-radius:18px!important;border:1px solid rgba(255,255,255,.72)!important;background:rgba(255,255,255,.88)!important;backdrop-filter:blur(24px) saturate(145%)!important;-webkit-backdrop-filter:blur(24px) saturate(145%)!important;box-shadow:0 24px 80px rgba(15,23,42,.18)!important;animation:ewvon-drawer-in 220ms cubic-bezier(.2,.8,.2,1) both!important}
 @keyframes ewvon-drawer-in{from{opacity:0;translate:18px 0}to{opacity:1;translate:0 0}}
 @media(max-width:767px){.ewvon-profile-drawer{top:auto!important;left:8px!important;right:8px!important;bottom:8px!important;width:auto!important;max-width:none!important;max-height:82dvh!important;border-radius:18px!important}}
+
+
+/* Refined glass surfaces and mobile-only allowed shortcuts */
+.ewvon-home .ewvon-glass-panel { border-radius: 20px !important; }
+.ewvon-home .ewvon-glass-card { border-radius: 18px !important; }
+.ewvon-mobile-shortcuts { display: none; }
+@media (max-width: 767px) {
+  .ewvon-home .ewvon-glass-panel { border-radius: 17px !important; }
+  .ewvon-home .ewvon-glass-card { border-radius: 16px !important; }
+  .ewvon-mobile-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 8px;
+    margin: 0 0 2px;
+  }
+  .ewvon-mobile-shortcuts button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 11px 9px;
+    border: 1px solid rgba(228,228,231,.8);
+    border-radius: 15px;
+    color: #3f3f46;
+    background: linear-gradient(145deg,rgba(255,255,255,.88),rgba(250,250,251,.72));
+    backdrop-filter: blur(14px) saturate(130%);
+    -webkit-backdrop-filter: blur(14px) saturate(130%);
+    box-shadow: 0 4px 14px rgba(24,24,27,.035);
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .ewvon-mobile-shortcuts button svg { flex-shrink: 0; }
+  .ewvon-mobile-shortcuts button span { overflow: hidden; text-overflow: ellipsis; }
+}
+
+/* Profile is a compact popover emerging below the top-right profile control */
+[data-radix-dialog-overlay] {
+  background: rgba(255,255,255,.015) !important;
+  backdrop-filter: blur(6px) saturate(108%) !important;
+  -webkit-backdrop-filter: blur(6px) saturate(108%) !important;
+}
+.ewvon-profile-drawer {
+  position: fixed !important;
+  inset: 76px 22px auto auto !important;
+  width: min(360px, calc(100vw - 28px)) !important;
+  max-width: min(360px, calc(100vw - 28px)) !important;
+  height: auto !important;
+  max-height: min(72vh, 650px) !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(228,228,231,.8) !important;
+  background: rgba(255,255,255,.86) !important;
+  backdrop-filter: blur(24px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+  box-shadow: 0 18px 55px rgba(24,24,27,.10) !important;
+  overflow-y: auto !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  transform-origin: top right !important;
+  animation: ewvon-profile-pop 190ms cubic-bezier(.2,.8,.2,1) both !important;
+}
+.ewvon-profile-drawer::-webkit-scrollbar,
+.ewvon-profile-drawer *::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
+.ewvon-profile-drawer,
+.ewvon-profile-drawer * { scrollbar-width: none !important; }
+@keyframes ewvon-profile-pop {
+  from { opacity: 0; transform: translateY(-8px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (max-width: 767px) {
+  .ewvon-profile-drawer {
+    inset: 10px 10px auto auto !important;
+    width: min(360px, calc(100vw - 20px)) !important;
+    max-width: min(360px, calc(100vw - 20px)) !important;
+    max-height: 82dvh !important;
+    border-radius: 18px !important;
+  }
+}
