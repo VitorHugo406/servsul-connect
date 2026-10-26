@@ -115,3 +115,32 @@
 .ewvon-uber-alert small { color:#7f1d1d; font-size:11px; line-height:1.4; }
 .ewvon-uber-footer { margin:0; padding:4px 0 8px; color:#a3a3a3; font-size:10px; text-align:center; }
 @media (max-width:360px) { .ewvon-uber-home { padding-inline:14px; gap:20px; } .ewvon-uber-greeting h1 { font-size:27px; } .ewvon-uber-stats { gap:6px; } .ewvon-uber-stats article { padding:11px 8px; } .ewvon-uber-stats article strong { font-size:22px; } }
+
+
+/* Mobile dashboard insights */
+.ewvon-uber-insights { display:flex; flex-direction:column; gap:15px; }
+.ewvon-uber-chart-card { padding:17px; border:1px solid #e5e7eb; border-radius:18px; background:#fff; }
+.ewvon-uber-chart-heading { display:flex; align-items:center; gap:10px; }
+.ewvon-uber-chart-icon { display:flex; width:38px; height:38px; flex:0 0 38px; align-items:center; justify-content:center; border-radius:12px; background:#f3f4f6; color:#111; }
+.ewvon-uber-chart-heading > span:nth-child(2) { display:flex; min-width:0; flex:1; flex-direction:column; gap:4px; }
+.ewvon-uber-chart-heading strong { color:#111; font-size:13px; font-weight:700; }
+.ewvon-uber-chart-heading small { color:#737373; font-size:11px; }
+.ewvon-uber-chart-total { color:#111; font-size:22px; font-weight:750; letter-spacing:-.04em; }
+.ewvon-uber-task-bars { display:flex; flex-direction:column; gap:16px; margin-top:22px; }
+.ewvon-uber-task-bar { display:flex; flex-direction:column; gap:8px; }
+.ewvon-uber-task-bar-label { display:flex; align-items:center; gap:7px; color:#525252; font-size:11px; }
+.ewvon-uber-task-bar-label > i { display:inline-block; width:8px; height:8px; border-radius:50%; background:#737373; }
+.ewvon-uber-task-bar-label > i.pending,.ewvon-uber-track > i.pending { background:#404040; }
+.ewvon-uber-task-bar-label > i.overdue,.ewvon-uber-track > i.overdue { background:#dc2626; }
+.ewvon-uber-task-bar-label > i.completed,.ewvon-uber-track > i.completed { background:#16a34a; }
+.ewvon-uber-task-bar-label strong { margin-left:auto; color:#111; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; }
+.ewvon-uber-track { display:block; height:6px; overflow:hidden; border-radius:999px; background:#f1f1f1; }
+.ewvon-uber-track > i { display:block; height:100%; min-width:0; border-radius:999px; transition:width .35s ease; }
+.ewvon-uber-chart-note { display:flex; align-items:center; gap:6px; margin:18px 0 0; padding-top:13px; border-top:1px solid #f0f0f0; color:#737373; font-size:10px; }
+.ewvon-uber-activity-title { margin-top:5px; }
+.ewvon-uber-activity-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.ewvon-uber-activity-card { display:flex; min-width:0; flex-direction:column; align-items:flex-start; gap:7px; padding:12px 10px; border:1px solid #e5e7eb; border-radius:15px; background:#fff; text-align:left; }
+.ewvon-uber-activity-top { display:flex; width:100%; align-items:center; justify-content:space-between; color:#737373; }
+.ewvon-uber-activity-card > strong { color:#111; font-size:24px; line-height:1; font-weight:750; letter-spacing:-.05em; }
+.ewvon-uber-activity-card > span:not(.ewvon-uber-activity-top) { color:#262626; font-size:11px; font-weight:650; }
+.ewvon-uber-activity-card > small { min-height:24px; color:#737373; font-size:9px; line-height:1.35; }
