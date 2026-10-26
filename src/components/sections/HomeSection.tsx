@@ -182,6 +182,12 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
         </div>
       </motion.section>
 
+      <nav aria-label="Atalhos mobile" className="ewvon-mobile-shortcuts">
+        <button type="button" onClick={() => onNavigate('chat')}><MessageSquare className="h-4 w-4" /><span>Chat</span><ArrowUpRight className="ml-auto h-3.5 w-3.5" /></button>
+        <button type="button" onClick={() => onNavigate('announcements')}><Bell className="h-4 w-4" /><span>Avisos</span><ArrowUpRight className="ml-auto h-3.5 w-3.5" /></button>
+        <button type="button" onClick={() => onNavigate('birthdays')}><Cake className="h-4 w-4" /><span>Aniversariantes</span><ArrowUpRight className="ml-auto h-3.5 w-3.5" /></button>
+      </nav>
+
       <section aria-label="Indicadores principais" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric, index) => {
           const Icon = metric.icon;
@@ -193,7 +199,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.045, duration: 0.25 }}
-              className="ewvon-glass-card group min-w-0 rounded-[16px] border border-white/90 p-4 text-left shadow-[0_6px_24px_rgba(24,24,27,0.035)] transition duration-200 hover:-translate-y-0.5 hover:border-zinc-200 hover:shadow-[0_12px_32px_rgba(24,24,27,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+              className="ewvon-glass-card group min-w-0 rounded-[18px] border border-white/90 p-4 text-left shadow-[0_6px_24px_rgba(24,24,27,0.035)] transition duration-200 hover:-translate-y-0.5 hover:border-zinc-200 hover:shadow-[0_12px_32px_rgba(24,24,27,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
             >
               <div className="flex items-start justify-between gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200/80 bg-white/80 text-zinc-700 shadow-sm"><Icon className="h-[18px] w-[18px]" strokeWidth={1.8} /></span>
@@ -213,7 +219,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
       </section>
 
       <section className="ewvon-dashboard-panels grid grid-cols-1 gap-3 xl:grid-cols-12">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="ewvon-glass-panel rounded-[18px] border border-white/90 p-4 shadow-[0_8px_30px_rgba(24,24,27,0.035)] sm:p-5 xl:col-span-8">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="ewvon-glass-panel rounded-[20px] border border-white/90 p-4 shadow-[0_8px_30px_rgba(24,24,27,0.035)] sm:p-5 xl:col-span-8">
           <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700"><TrendingUp className="h-4 w-4" /></span><h2 className="font-semibold tracking-tight text-zinc-900">Sua atividade</h2></div>
@@ -244,7 +250,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
           </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="ewvon-glass-panel rounded-[26px] border border-white/90 p-5 shadow-[0_8px_30px_rgba(24,24,27,0.035)] sm:p-6 xl:col-span-4">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="ewvon-glass-panel rounded-[20px] border border-white/90 p-5 shadow-[0_8px_30px_rgba(24,24,27,0.035)] sm:p-6 xl:col-span-4">
           <div className="flex items-start justify-between gap-3">
             <div><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700"><CircleDashed className="h-4 w-4" /></span><h2 className="font-semibold tracking-tight text-zinc-900">Tarefas por status</h2></div><p className="mt-1 pl-10 text-sm text-zinc-500">Distribuição atual</p></div>
             <button type="button" aria-label="Distribuição das tarefas" className="rounded-full border border-zinc-200 bg-white/70 p-2 text-zinc-500 hover:bg-white hover:text-zinc-900"><ChevronRight className="h-4 w-4" /></button>
