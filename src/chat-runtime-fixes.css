@@ -81,12 +81,12 @@
 .ewvon-uber-subtitle { margin:7px 0 0; color:#6b7280; font-size:14px; }
 .ewvon-uber-company { display:flex; align-items:center; gap:7px; max-width:100%; padding:7px 10px; border-radius:999px; background:#f3f4f6; color:#404040; font-size:11px; font-weight:600; }
 .ewvon-uber-company span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.ewvon-uber-primary { display:flex; align-items:center; justify-content:space-between; gap:14px; width:100%; padding:20px; border:0; border-radius:20px; background:#111; color:#fff; text-align:left; box-shadow:none; }
-.ewvon-uber-primary-copy { display:flex; flex-direction:column; align-items:flex-start; gap:6px; min-width:0; }
+.ewvon-uber-primary { display:flex; box-sizing:border-box; align-items:center; justify-content:space-between; gap:10px; width:calc(100% - 36px); max-width:100%; min-width:0; margin-inline:18px; padding:16px; border:0; border-radius:20px; background:#111; color:#fff; text-align:left; box-shadow:none; }
+.ewvon-uber-primary-copy { display:flex; flex:1; min-width:0; overflow-wrap:anywhere; flex-direction:column; align-items:flex-start; gap:6px; min-width:0; }
 .ewvon-uber-primary-label { color:#d4d4d4; font-size:9px; font-weight:700; letter-spacing:.15em; }
-.ewvon-uber-primary strong { font-size:18px; line-height:1.2; font-weight:650; letter-spacing:-.03em; }
+.ewvon-uber-primary strong { max-width:100%; overflow-wrap:anywhere; font-size:16px; line-height:1.2; font-weight:650; letter-spacing:-.03em; }
 .ewvon-uber-primary small { color:#d4d4d4; font-size:12px; line-height:1.4; }
-.ewvon-uber-primary-arrow { display:flex; flex:0 0 42px; width:42px; height:42px; align-items:center; justify-content:center; border-radius:50%; background:#fff; color:#111; }
+.ewvon-uber-primary-arrow { display:flex; flex:0 0 36px; width:36px; height:36px; align-items:center; justify-content:center; border-radius:50%; background:#fff; color:#111; }
 .ewvon-uber-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
 .ewvon-uber-stats article { display:flex; min-width:0; flex-direction:column; align-items:flex-start; gap:9px; padding:13px 11px; border:1px solid #e5e7eb; border-radius:16px; background:#fff; }
 .ewvon-uber-stats article > span { min-height:27px; color:#6b7280; font-size:10px; line-height:1.3; }
@@ -148,14 +148,14 @@
 
 /* EWVON mobile home: headerless top controls and horizontal chart carousel */
 @media screen and (max-width: 767px) {
-  .ewvon-uber-home { gap:20px; padding:10px 0 28px; }
+  .ewvon-uber-home { box-sizing:border-box; gap:20px; padding:10px 0 28px; }
   .ewvon-home-topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 18px; }
   .ewvon-home-brand { display:flex; align-items:center; gap:8px; color:#171717; font-size:18px; font-weight:800; letter-spacing:-.06em; }
   .ewvon-home-brand-mark { display:flex; align-items:center; justify-content:center; width:29px; height:29px; border-radius:10px; background:#171717; color:#fff; font-size:20px; font-weight:800; }
-  .ewvon-home-tools { display:flex; align-items:center; gap:7px; }
-  .ewvon-home-tool { position:relative; display:flex; align-items:center; justify-content:center; width:38px; height:38px; border:1px solid #e5e7eb; border-radius:13px; background:rgba(255,255,255,.76); color:#262626; }
+  .ewvon-home-tools { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .ewvon-home-tool { position:relative; display:flex; flex:0 0 36px; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid #e5e7eb; border-radius:13px; background:rgba(255,255,255,.76); color:#262626; }
   .ewvon-home-tool i { position:absolute; top:-5px; right:-5px; display:flex; min-width:16px; height:16px; align-items:center; justify-content:center; padding:0 3px; border:2px solid #fff; border-radius:99px; background:#dc2626; color:#fff; font-size:8px; font-style:normal; font-weight:800; }
-  .ewvon-home-profile { width:38px; height:38px; overflow:hidden; padding:2px; border-radius:13px; }
+  .ewvon-home-profile { width:36px; height:36px; overflow:hidden; padding:2px; border-radius:13px; }
   .ewvon-uber-greeting, .ewvon-uber-primary, .ewvon-uber-stats, .ewvon-uber-context, .ewvon-uber-insights, .ewvon-uber-alert, .ewvon-uber-footer { margin-left:18px; margin-right:18px; }
   .ewvon-uber-chart-carousel { display:flex; gap:12px; width:100%; max-width:100%; min-width:0; overflow-x:auto; margin-right:0; padding:0 0 7px; scroll-snap-type:x mandatory; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .ewvon-uber-chart-carousel::-webkit-scrollbar { display:none; }
@@ -184,7 +184,7 @@
   .ewvon-profile-drawer {
     transform-origin: top right !important;
     animation: ewvon-profile-expand 420ms cubic-bezier(.16, 1, .3, 1) both !important;
-    will-change: transform, opacity, clip-path;
+    will-change: transform, opacity;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     background: rgba(255,255,255,.98) !important;
@@ -198,6 +198,6 @@
   }
 }
 @keyframes ewvon-profile-overlay-in { from { opacity:0; } to { opacity:1; } }
-@keyframes ewvon-profile-expand { from { opacity:0; transform:translate(-50%,-50%) scale(.12); border-radius:999px; clip-path:circle(0 at calc(100% - var(--ewvon-profile-right, 24px)) var(--ewvon-profile-top, 80px)); } 55% { opacity:1; border-radius:24px; clip-path:circle(72% at calc(100% - var(--ewvon-profile-right, 24px)) var(--ewvon-profile-top, 80px)); } to { opacity:1; transform:translate(-50%,-50%) scale(1); border-radius:16px; clip-path:circle(150% at calc(100% - var(--ewvon-profile-right, 24px)) var(--ewvon-profile-top, 80px)); } }
-@keyframes ewvon-profile-collapse { from { opacity:1; transform:translate(-50%,-50%) scale(1); clip-path:circle(150% at calc(100% - var(--ewvon-profile-right, 24px)) var(--ewvon-profile-top, 80px)); } to { opacity:0; transform:translate(-50%,-50%) scale(.96); clip-path:circle(0 at calc(100% - var(--ewvon-profile-right, 24px)) var(--ewvon-profile-top, 80px)); } }
+@keyframes ewvon-profile-expand { from { opacity:0; transform:translate(-50%,-50%) scale(.96); } to { opacity:1; transform:translate(-50%,-50%) scale(1); } }
+@keyframes ewvon-profile-collapse { from { opacity:1; transform:translate(-50%,-50%) scale(1); } to { opacity:0; transform:translate(-50%,-50%) scale(.98); } }
 @media (prefers-reduced-motion: reduce) { .ewvon-profile-drawer, .ewvon-profile-overlay { animation:none !important; } }
