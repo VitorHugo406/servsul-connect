@@ -46,9 +46,9 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   });
   return (
     <motion.aside initial={false} animate={{ width: 64 }} transition={{ duration: 0.2, ease: 'easeOut' }}
-      className="ewvon-sidebar fixed left-0 top-0 z-40 flex h-screen w-16 shrink-0 flex-col items-center border-r border-slate-200/80 bg-white text-slate-700"
+      className="ewvon-sidebar fixed left-0 top-0 z-40 flex h-screen w-16 shrink-0 flex-col items-center text-slate-700"
       aria-label="Navegação principal">
-      <nav className="flex min-h-0 w-full flex-1 flex-col items-center overflow-hidden py-2">
+      <nav className="flex min-h-0 w-full flex-1 flex-col items-center overflow-hidden py-3">
         <ScrollArea className="h-full w-full [&_[data-radix-scroll-area-scrollbar]]:hidden">
           <div className="flex flex-col items-center gap-1 px-2">
             {visibleMenuItems.map(item => {
