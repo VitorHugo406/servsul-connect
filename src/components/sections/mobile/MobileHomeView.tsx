@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { MessageSquare, Bell, Cake, ChevronRight, AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, Building2, TrendingUp, ListTodo } from 'lucide-react';
+import { MessageSquare, Bell, Cake, ChevronRight, AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, Building2, TrendingUp, ListTodo, Palette, UserRound } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useBirthdays } from '@/hooks/useData';
@@ -7,9 +8,9 @@ import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { useTodayMessages } from '@/hooks/useTodayMessages';
 import { supabase } from '@/integrations/supabase/client';
 
-interface Props { onNavigate: (section: string) => void; }
+interface Props { onNavigate: (section: string) => void; onOpenNotifications: () => void; onOpenAppearance: () => void; onOpenProfile: () => void; unreadNotifications: number; }
 
-export function MobileHomeView({ onNavigate }: Props) {
+export function MobileHomeView({ onNavigate, onOpenNotifications, onOpenAppearance, onOpenProfile, unreadNotifications }: Props) {
   const { profile, sector } = useAuth();
   const { company } = useCompany();
   const { todayMessages } = useTodayMessages();
@@ -87,7 +88,7 @@ export function MobileHomeView({ onNavigate }: Props) {
 
       <section className="ewvon-uber-insights" aria-label="Indicadores de atividade">
         <div className="ewvon-uber-section-title"><h2>Visão geral</h2><span>Seus indicadores</span></div>
-        <div className="ewvon-uber-chart-card">
+        <div className="ewvon-uber-chart-carousel" aria-label="Gráficos do painel">\n        <div className="ewvon-uber-chart-card">
           <div className="ewvon-uber-chart-heading"><span className="ewvon-uber-chart-icon"><ListTodo size={18}/></span><span><strong>Suas tarefas</strong><small>Distribuição das pendências</small></span><span className="ewvon-uber-chart-total">{tasksLoading ? '—' : totalTasks + completedWeek}</span></div>
           <div className="ewvon-uber-task-bars" role="img" aria-label="Resumo de tarefas pendentes, atrasadas e concluídas nos últimos sete dias">
             <div className="ewvon-uber-task-bar"><span className="ewvon-uber-task-bar-label"><i className="pending"/>Pendentes<strong>{tasksLoading ? '—' : totalTasks}</strong></span><span className="ewvon-uber-track"><i className="pending" style={{width: tasksLoading ? '0%' : String(pendingShare) + '%'}}/></span></div>
