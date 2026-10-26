@@ -879,3 +879,56 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 @media (max-width: 767px) {
   .ewvon-profile-drawer { inset: 62px 10px auto auto !important; width: min(370px, calc(100vw - 20px)) !important; max-width: min(370px, calc(100vw - 20px)) !important; max-height: calc(100dvh - 78px) !important; border-radius: 20px !important; }
 }
+
+
+/* Mobile dashboard: native-feeling, focused and tactile, inspired by Uber's UX */
+.ewvon-mobile-dashboard { display: none; }
+@media (max-width: 767px) {
+  .ewvon-home { max-width: 100% !important; padding: 14px 0 22px !important; gap: 18px !important; }
+  .ewvon-home > .ewvon-desktop-hero,
+  .ewvon-home > section[aria-label="Indicadores principais"],
+  .ewvon-home > .ewvon-dashboard-panels,
+  .ewvon-home > .ewvon-secondary-panels,
+  .ewvon-home > .flex.flex-wrap.items-center.justify-between.gap-2.px-1.pb-1.text-xs.text-zinc-400 { display: none !important; }
+  .ewvon-home > .ewvon-mobile-shortcuts { display: grid !important; order: -1; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin: 0 14px; }
+  .ewvon-home .ewvon-mobile-shortcuts button { display:flex; align-items:center; gap:7px; min-width:0; padding: 12px 10px; border:1px solid #e8e8e8; border-radius:15px !important; background:#fff; color:#27272a; font-size:12px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.025); }
+  .ewvon-home .ewvon-mobile-shortcuts button svg:last-child { display:none; }
+  .ewvon-mobile-dashboard { display:flex; flex-direction:column; gap:21px; padding:0 14px; }
+  .ewvon-mobile-welcome { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .ewvon-mobile-eyebrow { display:block; color:#71717a; font-size:11px; font-weight:600; letter-spacing:.02em; text-transform:capitalize; }
+  .ewvon-mobile-welcome h2 { margin-top:5px; color:#18181b; font-size:25px; line-height:1.12; font-weight:700; letter-spacing:-.055em; }
+  .ewvon-mobile-welcome p { margin-top:6px; color:#71717a; font-size:13px; }
+  .ewvon-mobile-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  .ewvon-mobile-kpis article { min-width:0; display:flex; flex-direction:column; gap:7px; padding:13px 11px; border:1px solid #e8e8e8; border-radius:17px; background:#fff; }
+  .ewvon-mobile-kpis article span { color:#71717a; font-size:10px; line-height:1.25; min-height:25px; }
+  .ewvon-mobile-kpis article strong { color:#18181b; font-size:25px; line-height:1; letter-spacing:-.05em; font-weight:700; }
+  .ewvon-mobile-kpis article small { color:#a1a1aa; font-size:9px; line-height:1.25; }
+  .ewvon-mobile-section-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; }
+  .ewvon-mobile-section-heading > div > span { color:#a1a1aa; font-size:10px; font-weight:700; letter-spacing:.14em; }
+  .ewvon-mobile-section-heading h3 { margin-top:4px; color:#18181b; font-size:19px; font-weight:700; letter-spacing:-.04em; }
+  .ewvon-mobile-period { padding:6px 10px; border-radius:999px; background:#f4f4f5; color:#71717a; font-size:11px; }
+  .ewvon-mobile-carousel { display:flex; gap:12px; overflow-x:auto; margin-right:-14px; padding:0 14px 4px 0; scroll-snap-type:x mandatory; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .ewvon-mobile-carousel::-webkit-scrollbar { display:none; }
+  .ewvon-mobile-chart-card { flex:0 0 88%; min-width:0; padding:17px 15px 14px; border:1px solid #e8e8e8; border-radius:21px; background:#fff; scroll-snap-align:start; box-shadow:0 3px 12px rgba(0,0,0,.025); }
+  .ewvon-mobile-card-title { display:flex; flex-direction:column; gap:4px; }
+  .ewvon-mobile-card-title span { color:#18181b; font-size:15px; font-weight:650; letter-spacing:-.02em; }
+  .ewvon-mobile-card-title small { color:#a1a1aa; font-size:11px; }
+  .ewvon-mobile-chart-footer { display:flex; gap:15px; border-top:1px solid #f4f4f5; padding-top:12px; }
+  .ewvon-mobile-chart-footer span { display:flex; align-items:center; gap:6px; color:#71717a; font-size:10px; }
+  .ewvon-dot { width:7px; height:7px; display:inline-block; border-radius:50%; }
+  .ewvon-dot.dark { background:#27272a; } .ewvon-dot.light { background:#a1a1aa; }
+  .ewvon-mobile-status-list { display:flex; flex-direction:column; gap:8px; }
+  .ewvon-mobile-status-list span { display:flex; align-items:center; gap:8px; color:#71717a; font-size:11px; }
+  .ewvon-mobile-status-list i { width:7px; height:7px; flex:none; border-radius:50%; }
+  .ewvon-mobile-status-list b { margin-left:auto; color:#27272a; font-weight:650; }
+  .ewvon-mobile-empty { display:flex; min-height:130px; align-items:center; justify-content:center; color:#a1a1aa; font-size:12px; }
+  .ewvon-mobile-updates { display:flex; flex-direction:column; overflow:hidden; border:1px solid #e8e8e8; border-radius:19px; background:#fff; }
+  .ewvon-mobile-update { display:flex; align-items:center; gap:12px; padding:15px 13px; text-align:left; }
+  .ewvon-mobile-update + .ewvon-mobile-update { border-top:1px solid #f0f0f0; }
+  .ewvon-mobile-update-icon { display:flex; width:40px; height:40px; flex:none; align-items:center; justify-content:center; border-radius:14px; background:#f4f4f5; color:#3f3f46; }
+  .ewvon-mobile-update-copy { display:flex; min-width:0; flex:1; flex-direction:column; gap:4px; }
+  .ewvon-mobile-update-copy strong { color:#27272a; font-size:13px; font-weight:650; }
+  .ewvon-mobile-update-copy small { overflow:hidden; color:#71717a; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+  .ewvon-mobile-update-copy .ewvon-mobile-update-detail { color:#a1a1aa; }
+  .ewvon-mobile-footnote { display:flex; align-items:center; gap:6px; color:#a1a1aa; font-size:10px; }
+}
