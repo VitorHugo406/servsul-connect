@@ -261,3 +261,118 @@
   .ewvon-topbar { display: none !important; margin-left: 0; }
   .ewvon-main { margin-left: 0; padding: 12px !important; }
 }
+
+
+/* ewvon: compact floating navigation and unified rounded surfaces */
+:root {
+  --ewvon-shell-bg: #f7f7f9;
+  --ewvon-panel-bg: rgba(255, 255, 255, 0.92);
+  --ewvon-panel-border: rgba(226, 229, 235, 0.88);
+}
+body { background: var(--ewvon-shell-bg); }
+.ewvon-sidebar {
+  position: fixed !important;
+  left: 16px !important;
+  top: 96px !important;
+  bottom: auto !important;
+  width: 58px !important;
+  min-width: 58px !important;
+  height: auto !important;
+  max-height: calc(100vh - 120px);
+  padding: 10px 6px !important;
+  border: 1px solid rgba(255,255,255,.96) !important;
+  border-radius: 9999px !important;
+  background: rgba(255,255,255,.82) !important;
+  box-shadow: 0 8px 30px rgba(25,35,55,.045) !important;
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+.ewvon-sidebar nav { padding: 2px 0 8px !important; overflow: hidden; }
+.ewvon-sidebar nav > div { width: 100%; padding: 0 !important; gap: 7px !important; align-items: center; }
+.ewvon-sidebar nav button {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  border-radius: 9999px !important;
+}
+.ewvon-sidebar nav button[aria-current="page"] {
+  background: #20232b !important;
+  color: #fff !important;
+  box-shadow: 0 3px 8px rgba(17,24,39,.12) !important;
+}
+.ewvon-sidebar nav button[aria-current="page"] svg { color: #fff !important; }
+.ewvon-sidebar > div:last-child { border-top: 0 !important; padding: 6px 0 0 !important; }
+.ewvon-topbar {
+  position: sticky !important;
+  top: 14px !important;
+  z-index: 30 !important;
+  margin: 14px 18px 0 90px !important;
+  min-height: 68px !important;
+  padding: 8px 14px 8px 20px !important;
+  border: 1px solid rgba(255,255,255,.96) !important;
+  border-radius: 9999px !important;
+  background: var(--ewvon-panel-bg) !important;
+  box-shadow: 0 8px 30px rgba(25,35,55,.045) !important;
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+.ewvon-brand { max-width: 180px; }
+.ewvon-quick-nav {
+  flex: 0 1 auto !important;
+  gap: 3px !important;
+  max-width: max-content;
+  padding: 4px !important;
+  border: 1px solid rgba(235,237,242,.86) !important;
+  border-radius: 9999px !important;
+  background: rgba(247,248,250,.78) !important;
+}
+.ewvon-quick-nav button {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  padding: 0 !important;
+  border-radius: 9999px !important;
+}
+.ewvon-quick-nav button[aria-current="page"] { background: #e8eaf0 !important; color: #20232b !important; box-shadow: inset 0 0 0 1px rgba(220,223,231,.75) !important; }
+.ewvon-actions {
+  gap: 6px !important;
+  padding: 4px !important;
+  border: 1px solid rgba(235,237,242,.9) !important;
+  border-radius: 9999px !important;
+  background: rgba(247,248,250,.76) !important;
+}
+.ewvon-actions > button,
+.ewvon-actions > div > button,
+.ewvon-actions [data-radix-popover-trigger] {
+  border-radius: 9999px !important;
+}
+.ewvon-actions button.h-10.w-10 { width: 38px !important; height: 38px !important; }
+.ewvon-actions .ewvon-profile-button { border-radius: 9999px !important; }
+.ewvon-main {
+  margin: 16px 18px 18px 90px !important;
+  padding: 24px !important;
+  min-height: 0;
+  border: 1px solid rgba(255,255,255,.96) !important;
+  border-radius: 28px !important;
+  background: rgba(255,255,255,.92) !important;
+  box-shadow: 0 8px 30px rgba(25,35,55,.035) !important;
+  overflow: auto;
+}
+.ewvon-main > * { min-width: 0; }
+.ewvon-topbar button,
+.ewvon-main button,
+.ewvon-actions button { border-radius: 9999px; }
+@media (max-width: 1100px) {
+  .ewvon-topbar { margin-left: 84px !important; margin-right: 12px !important; padding-inline: 12px !important; gap: 8px !important; }
+  .ewvon-brand { max-width: 130px; }
+  .ewvon-quick-nav button { width: 36px !important; min-width: 36px !important; height: 36px !important; }
+  .ewvon-main { margin-left: 84px !important; margin-right: 12px !important; padding: 18px !important; }
+  .ewvon-sidebar { left: 12px !important; width: 56px !important; min-width: 56px !important; }
+}
+@media (max-width: 767px) {
+  .ewvon-sidebar { display: none !important; }
+  .ewvon-topbar { display: none !important; }
+  .ewvon-main { margin: 12px !important; padding: 12px !important; border-radius: 22px !important; }
+}
