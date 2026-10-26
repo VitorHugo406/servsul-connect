@@ -48,8 +48,8 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
     <motion.aside initial={false} animate={{ width: 64 }} transition={{ duration: 0.2, ease: 'easeOut' }}
       className="ewvon-sidebar fixed left-0 top-0 z-40 flex h-screen w-16 shrink-0 flex-col items-center text-slate-700"
       aria-label="Navegação principal">
-      <nav className="flex min-h-0 w-full flex-1 flex-col items-center overflow-hidden py-3">
-        <ScrollArea className="h-full w-full [&_[data-radix-scroll-area-scrollbar]]:hidden">
+      <nav className="flex min-h-0 w-full flex-col items-center overflow-visible py-0">
+        <ScrollArea className="ewvon-sidebar-scroll w-full [&_[data-radix-scroll-area-scrollbar]]:hidden">
           <div className="flex flex-col items-center gap-1 px-2">
             {visibleMenuItems.map(item => {
               const Icon = item.icon;
@@ -69,7 +69,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
           </div>
         </ScrollArea>
       </nav>
-      <div className="flex w-full justify-center border-t border-slate-100 py-2">
+      <div className="ewvon-seasonal-slot flex w-full justify-center pt-1">
         <SeasonalEffectsButton collapsed />
       </div>
     </motion.aside>
