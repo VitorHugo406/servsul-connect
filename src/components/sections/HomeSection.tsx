@@ -110,6 +110,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
   const todayStart = startOfDay(new Date());
   const tasksToday = tasks.filter((task) => task.created_at && new Date(task.created_at) >= todayStart);
   const completedToday = tasks.filter((task) => task.completed_at && new Date(task.completed_at) >= todayStart).length;
+  const completedLast7 = tasks.filter((task) => task.completed_at && new Date(task.completed_at) >= startOfDay(subDays(new Date(), 6))).length;
   const openTasks = tasks.filter((task) => !task.completed_at && !['done', 'completed'].includes((task.status || '').toLowerCase()));
   const todayBirthdays = birthdayPeople.filter((person) => person.isToday);
   const visibleBirthdays = birthdayPeople.slice(0, 4);
