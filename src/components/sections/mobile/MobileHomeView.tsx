@@ -1,6 +1,5 @@
-import { CompanyLogo } from '@/components/common/CompanyLogo';
 import { useEffect, useState } from 'react';
-import { MessageSquare, Bell, Cake, ChevronRight, AlertTriangle } from 'lucide-react';
+import { MessageSquare, Bell, Cake, ChevronRight, AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, Building2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useBirthdays } from '@/hooks/useData';
@@ -8,17 +7,7 @@ import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { useTodayMessages } from '@/hooks/useTodayMessages';
 import { supabase } from '@/integrations/supabase/client';
 
-const autonomyLabels: Record<string, string> = {
-  admin: 'Administrador',
-  gerente: 'Gerente',
-  supervisor: 'Supervisor',
-  diretoria: 'Diretoria',
-  colaborador: 'Colaborador',
-};
-
-interface Props {
-  onNavigate: (section: string) => void;
-}
+interface Props { onNavigate: (section: string) => void; }
 
 export function MobileHomeView({ onNavigate }: Props) {
   const { profile, sector } = useAuth();
@@ -28,137 +17,83 @@ export function MobileHomeView({ onNavigate }: Props) {
   const { birthdayPeople } = useBirthdays();
   const [totalTasks, setTotalTasks] = useState(0);
   const [overdueTasks, setOverdueTasks] = useState(0);
+  const [tasksLoading, setTasksLoading] = useState(true);
 
   useEffect(() => {
-    if (!profile) return;
+    if (!profile?.id) { setTasksLoading(false); return; }
+    let cancelled = false;
     (async () => {
-      const { count: overdue } = await supabase
-        .from('tasks')
-        .select('*', { count: 'exact', head: true })
-        .eq('assigned_to', profile.id)
-        .is('completed_at', null)
-        .lt('due_date', new Date().toISOString());
-      const { count: total } = await supabase
-        .from('tasks')
-        .select('*', { count: 'exact', head: true })
-        .eq('assigned_to', profile.id)
-        .is('completed_at', null);
-      setOverdueTasks(overdue || 0);
-      setTotalTasks(total || 0);
+      setTasksLoading(true);
+      const [overdueResult, totalResult] = await Promise.all([
+        supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('assigned_to', profile.id).is('completed_at', null).lt('due_date', new Date().toISOString()),
+        supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('assigned_to', profile.id).is('completed_at', null),
+      ]);
+      if (cancelled) return;
+      setOverdueTasks(overdueResult.count || 0);
+      setTotalTasks(totalResult.count || 0);
+      setTasksLoading(false);
     })();
-  }, [profile]);
+    return () => { cancelled = true; };
+  }, [profile?.id]);
 
   const displayName = profile?.display_name || profile?.name || 'Usuário';
-  const level = autonomyLabels[profile?.autonomy_level || 'colaborador'];
-  const todayBdays = birthdayPeople.filter((p) => p.isToday).length;
+  const firstName = displayName.trim().split(/\s+/)[0] || 'Usuário';
+  const todayBdays = birthdayPeople.filter((person) => person.isToday).length;
+  const tasksValue = tasksLoading ? '—' : String(totalTasks);
 
-  const rows = [
-    { id: 'chat', label: 'Chat', icon: MessageSquare, sub: `${todayMessages} mensagens hoje`, count: todayMessages, hueShift: 0 },
-    { id: 'announcements', label: 'Avisos', icon: Bell, sub: announcements.length ? `${announcements.length} publicados` : 'Tudo em dia', count: announcements.length, hueShift: 40 },
-    { id: 'birthdays', label: 'Aniversariantes', icon: Cake, sub: todayBdays ? `${todayBdays} hoje` : `${birthdayPeople.length} este mês`, count: todayBdays || birthdayPeople.length, hueShift: 150 },
+  const actions = [
+    { id: 'chat', title: 'Conversas', subtitle: todayMessages ? `${todayMessages} mensagens hoje` : 'Fale com sua equipe', icon: MessageSquare, count: todayMessages },
+    { id: 'announcements', title: 'Avisos', subtitle: announcements.length ? `${announcements.length} comunicados publicados` : 'Nenhum comunicado novo', icon: Bell, count: announcements.length },
+    { id: 'birthdays', title: 'Aniversários', subtitle: todayBdays ? `${todayBdays} hoje` : `${birthdayPeople.length} neste mês`, icon: Cake, count: todayBdays },
   ];
 
   return (
-    <div className="px-4 pt-1 pb-4" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
-      {/* Hero */}
-      <div
-        className="relative mb-3 overflow-hidden rounded-[24px] border border-white/10 p-4 text-white shadow-lg"
-        style={{
-          background: 'linear-gradient(150deg, var(--brand-dark, hsl(var(--primary) / 0.85)), var(--brand, hsl(var(--primary))))',
-          boxShadow: '0 16px 30px -14px var(--brand-glow, hsl(var(--primary) / 0.35))',
-        }}
-      >
-        <div className="absolute -top-16 -right-14 w-44 h-44 rounded-full bg-white/[0.08]" />
-        <div className="relative">
-          <div className="text-[11.5px] opacity-80">Bem-vindo de volta,</div>
-          <div className="text-[17px] font-bold mt-0.5 mb-2" style={{ fontFamily: "'Sora', system-ui, sans-serif" }}>
-            {displayName}
-          </div>
-          <div className="flex gap-1.5 mb-3">
-            {sector && (
-              <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-white/[0.14]">{sector.name}</span>
-            )}
-            <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full border border-white/50">{level}</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-white/10 rounded-[18px] p-2.5">
-              <div className="text-[11px] opacity-75">Mensagens hoje</div>
-              <div className="text-lg font-semibold mt-0.5" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                {todayMessages}
-              </div>
-            </div>
-            <div className="bg-white/10 rounded-[18px] p-2.5">
-              <div className="text-[11px] opacity-75">Tarefas pendentes</div>
-              <div className="text-lg font-semibold mt-0.5" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                {totalTasks}
-              </div>
-            </div>
-            {overdueTasks > 0 && (
-              <div className="col-span-2 rounded-[18px] p-2.5 flex items-center justify-between bg-red-500/25">
-                <div>
-                  <div className="text-[11px] opacity-80">Atrasadas</div>
-                  <div className="text-lg font-semibold mt-0.5" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                    {overdueTasks}
-                  </div>
-                </div>
-                <AlertTriangle className="w-4 h-4" />
-              </div>
-            )}
-          </div>
+    <div className="ewvon-uber-home">
+      <section className="ewvon-uber-greeting">
+        <div>
+          <p className="ewvon-uber-kicker">PAINEL DA EMPRESA</p>
+          <h1>Bom dia, {firstName}</h1>
+          <p className="ewvon-uber-subtitle">Tudo o que importa para o seu dia.</p>
         </div>
-      </div>
+        {company && <div className="ewvon-uber-company"><Building2 size={15} /><span>{company.name}</span></div>}
+      </section>
 
-      {/* Company brand chip */}
-      {company && (
-        <div className="flex items-center justify-center gap-2 mb-2 text-[11px] text-muted-foreground">
-          {company.logo_url ? (
-            <CompanyLogo value={company.logo_url} alt={company.name} className="w-4 h-4 rounded object-cover" />
-          ) : (
-            <span
-              className="w-2 h-2 rounded-full"
-              style={{ background: 'var(--brand, hsl(var(--primary)))' }}
-            />
-          )}
-          <span className="font-semibold">{company.name}</span>
-        </div>
-      )}
+      <button type="button" className="ewvon-uber-primary" onClick={() => onNavigate('chat')}>
+        <span className="ewvon-uber-primary-copy">
+          <span className="ewvon-uber-primary-label">VAMOS COMEÇAR</span>
+          <strong>Precisa falar com alguém?</strong>
+          <small>Abra uma conversa com sua equipe</small>
+        </span>
+        <span className="ewvon-uber-primary-arrow"><ArrowUpRight size={20} /></span>
+      </button>
 
-      <div className="text-[12px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-2 px-1">
-        Acessos rápidos
-      </div>
-      <div className="flex flex-col gap-2">
-        {rows.map((row) => {
-          const Icon = row.icon;
-          return (
-            <button
-              key={row.id}
-              onClick={() => onNavigate(row.id)}
-              className="flex items-center gap-3 rounded-[22px] border border-border/70 bg-card p-3 text-left shadow-sm transition-transform active:scale-[0.99]"
-              style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.03)' }}
-            >
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0"
-                style={{ background: `hsl(calc(var(--company-hue, 220) + ${row.hueShift}) 55% 48%)` }}
-              >
-                <Icon className="w-[18px] h-[18px]" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[14px] font-semibold text-foreground">{row.label}</div>
-                <div className="text-[12px] text-muted-foreground truncate">{row.sub}</div>
-              </div>
-              {row.count > 0 && (
-                <span
-                  className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full text-white shrink-0"
-                  style={{ background: 'var(--brand, hsl(var(--primary)))', fontFamily: "'IBM Plex Mono', monospace" }}
-                >
-                  {row.count}
-                </span>
-              )}
-              <ChevronRight className="w-4 h-4 text-muted-foreground/60 shrink-0" />
+      <section className="ewvon-uber-stats" aria-label="Resumo de hoje">
+        <article><span>Mensagens hoje</span><strong>{todayMessages}</strong><small><MessageSquare size={13} /> Atividade</small></article>
+        <article><span>Tarefas pendentes</span><strong>{tasksValue}</strong><small><Clock3 size={13} /> Em aberto</small></article>
+        <article className={overdueTasks > 0 ? 'is-alert' : ''}><span>Tarefas atrasadas</span><strong>{tasksLoading ? '—' : overdueTasks}</strong><small>{overdueTasks > 0 ? <AlertTriangle size={13} /> : <CheckCircle2 size={13} />} {overdueTasks > 0 ? 'Precisam de atenção' : 'Tudo sob controle'}</small></article>
+      </section>
+
+      {sector?.name && <div className="ewvon-uber-context"><span>Seu setor</span><strong>{sector.name}</strong></div>}
+
+      <section className="ewvon-uber-actions">
+        <div className="ewvon-uber-section-title"><h2>Acessos rápidos</h2><span>Seu dia a dia</span></div>
+        <div className="ewvon-uber-action-list">
+          {actions.map(({ id, title, subtitle, icon: Icon, count }) => (
+            <button type="button" key={id} onClick={() => onNavigate(id)} className="ewvon-uber-action">
+              <span className="ewvon-uber-action-icon"><Icon size={20} strokeWidth={1.8} /></span>
+              <span className="ewvon-uber-action-copy"><strong>{title}</strong><small>{subtitle}</small></span>
+              {count > 0 && <span className="ewvon-uber-count">{count}</span>}
+              <ChevronRight size={18} className="ewvon-uber-chevron" />
             </button>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      </section>
+
+      {overdueTasks > 0 && <button type="button" className="ewvon-uber-alert" onClick={() => onNavigate('home')}>
+        <AlertTriangle size={18} /><span><strong>Você tem {overdueTasks} {overdueTasks === 1 ? 'tarefa atrasada' : 'tarefas atrasadas'}</strong><small>Reserve um momento para revisar suas pendências.</small></span><ChevronRight size={18} />
+      </button>}
+
+      <p className="ewvon-uber-footer">ewvon · Gestão de operações</p>
     </div>
   );
 }
