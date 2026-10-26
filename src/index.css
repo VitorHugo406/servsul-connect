@@ -149,3 +149,63 @@
 @media (prefers-reduced-motion: reduce) {
   .emergency-card::before { animation: none; }
 }
+
+
+/* ewvon global shell: clean white SaaS layout, shared across desktop sections */
+@layer base {
+  :root {
+    --background: 0 0% 99%;
+    --card: 0 0% 100%;
+    --border: 220 14% 91%;
+    --input: 220 14% 91%;
+    --radius: 0.875rem;
+  }
+}
+.ewvon-sidebar {
+  width: 248px;
+  min-width: 248px;
+  border-radius: 0 !important;
+  overflow: hidden;
+}
+.ewvon-sidebar > div:first-child {
+  min-height: 68px;
+  padding: 0 18px;
+  border-color: #f1f2f4 !important;
+}
+.ewvon-sidebar h1 { color: #111827 !important; font-size: 15px !important; font-weight: 700 !important; letter-spacing: -0.025em; }
+.ewvon-sidebar p { color: #6b7280; }
+.ewvon-sidebar nav { padding: 14px 10px; }
+.ewvon-sidebar nav button {
+  min-height: 42px;
+  border-radius: 10px !important;
+  padding-top: 9px !important;
+  padding-bottom: 9px !important;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.ewvon-sidebar nav button svg { width: 18px; height: 18px; stroke-width: 1.8; }
+.ewvon-sidebar nav button.bg-slate-100 { color: #111827 !important; }
+.ewvon-sidebar nav button.bg-slate-100 svg { color: #111827 !important; }
+.ewvon-sidebar .border-t { border-color: #f1f2f4 !important; }
+.ewvon-sidebar [data-radix-scroll-area-viewport] { max-height: 100%; }
+.ewvon-topbar { min-height: 68px; flex-shrink: 0; }
+.ewvon-topbar input { height: 38px; font-size: 13px; }
+.ewvon-topbar button { border-radius: 10px; }
+.ewvon-main {
+  min-height: 0;
+  padding: 20px 24px 24px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overscroll-behavior: contain;
+}
+@media (max-width: 1023px) {
+  .ewvon-sidebar { width: 220px; min-width: 220px; }
+  .ewvon-main { padding: 16px; }
+}
+@media (max-width: 767px) {
+  .ewvon-sidebar { display: none; }
+  .ewvon-topbar { display: none; }
+  .ewvon-main { padding: 12px; }
+}
