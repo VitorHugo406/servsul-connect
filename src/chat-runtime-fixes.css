@@ -71,3 +71,47 @@
   .ewvon-mobile-update + .ewvon-mobile-update { border-top:1px solid #f0f0f0 !important; }
   .ewvon-mobile-footnote { display:flex !important; align-items:center !important; gap:6px !important; color:#a1a1aa !important; font-size:10px !important; }
 }
+
+
+/* Mobile home: rebuild the actual MobileHomeView, not the desktop HomeSection. */
+.ewvon-uber-home { display:flex; flex-direction:column; gap:24px; padding:14px 18px 28px; color:#111; font-family:Inter,system-ui,sans-serif; }
+.ewvon-uber-greeting { display:flex; flex-direction:column; align-items:flex-start; gap:12px; }
+.ewvon-uber-kicker { margin:0 0 7px; color:#6b7280; font-size:10px; font-weight:750; letter-spacing:.14em; }
+.ewvon-uber-greeting h1 { margin:0; color:#111; font-size:30px; line-height:1.08; font-weight:750; letter-spacing:-.055em; }
+.ewvon-uber-subtitle { margin:7px 0 0; color:#6b7280; font-size:14px; }
+.ewvon-uber-company { display:flex; align-items:center; gap:7px; max-width:100%; padding:7px 10px; border-radius:999px; background:#f3f4f6; color:#404040; font-size:11px; font-weight:600; }
+.ewvon-uber-company span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ewvon-uber-primary { display:flex; align-items:center; justify-content:space-between; gap:14px; width:100%; padding:20px; border:0; border-radius:20px; background:#111; color:#fff; text-align:left; box-shadow:none; }
+.ewvon-uber-primary-copy { display:flex; flex-direction:column; align-items:flex-start; gap:6px; min-width:0; }
+.ewvon-uber-primary-label { color:#d4d4d4; font-size:9px; font-weight:700; letter-spacing:.15em; }
+.ewvon-uber-primary strong { font-size:18px; line-height:1.2; font-weight:650; letter-spacing:-.03em; }
+.ewvon-uber-primary small { color:#d4d4d4; font-size:12px; line-height:1.4; }
+.ewvon-uber-primary-arrow { display:flex; flex:0 0 42px; width:42px; height:42px; align-items:center; justify-content:center; border-radius:50%; background:#fff; color:#111; }
+.ewvon-uber-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.ewvon-uber-stats article { display:flex; min-width:0; flex-direction:column; align-items:flex-start; gap:9px; padding:13px 11px; border:1px solid #e5e7eb; border-radius:16px; background:#fff; }
+.ewvon-uber-stats article > span { min-height:27px; color:#6b7280; font-size:10px; line-height:1.3; }
+.ewvon-uber-stats article strong { color:#111; font-size:25px; line-height:1; font-weight:700; letter-spacing:-.05em; }
+.ewvon-uber-stats article small { display:flex; align-items:center; gap:4px; color:#737373; font-size:9px; line-height:1.25; }
+.ewvon-uber-stats article.is-alert { border-color:#fecaca; background:#fffafa; }
+.ewvon-uber-stats article.is-alert small { color:#b91c1c; }
+.ewvon-uber-context { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 0; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb; }
+.ewvon-uber-context span { color:#737373; font-size:12px; }
+.ewvon-uber-context strong { color:#111; font-size:12px; font-weight:650; }
+.ewvon-uber-actions { display:flex; flex-direction:column; gap:12px; }
+.ewvon-uber-section-title { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+.ewvon-uber-section-title h2 { margin:0; color:#111; font-size:20px; font-weight:700; letter-spacing:-.04em; }
+.ewvon-uber-section-title > span { color:#737373; font-size:11px; }
+.ewvon-uber-action-list { overflow:hidden; border-top:1px solid #e5e7eb; }
+.ewvon-uber-action { display:flex; width:100%; align-items:center; gap:13px; padding:16px 2px; border:0; border-bottom:1px solid #e5e7eb; border-radius:0; background:transparent; color:#111; text-align:left; }
+.ewvon-uber-action-icon { display:flex; flex:0 0 44px; width:44px; height:44px; align-items:center; justify-content:center; border-radius:13px; background:#f3f4f6; color:#111; }
+.ewvon-uber-action-copy { display:flex; flex:1; min-width:0; flex-direction:column; gap:5px; }
+.ewvon-uber-action-copy strong { color:#111; font-size:14px; font-weight:650; }
+.ewvon-uber-action-copy small { overflow:hidden; color:#737373; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.ewvon-uber-count { display:flex; min-width:25px; height:25px; align-items:center; justify-content:center; padding:0 6px; border-radius:999px; background:#f3f4f6; color:#111; font-size:10px; font-weight:700; }
+.ewvon-uber-chevron { flex-shrink:0; color:#737373; }
+.ewvon-uber-alert { display:flex; align-items:center; gap:12px; width:100%; padding:14px; border:1px solid #fecaca; border-radius:14px; background:#fff7f7; color:#991b1b; text-align:left; }
+.ewvon-uber-alert span { display:flex; flex:1; flex-direction:column; gap:4px; }
+.ewvon-uber-alert strong { font-size:12px; font-weight:700; }
+.ewvon-uber-alert small { color:#7f1d1d; font-size:11px; line-height:1.4; }
+.ewvon-uber-footer { margin:0; padding:4px 0 8px; color:#a3a3a3; font-size:10px; text-align:center; }
+@media (max-width:360px) { .ewvon-uber-home { padding-inline:14px; gap:20px; } .ewvon-uber-greeting h1 { font-size:27px; } .ewvon-uber-stats { gap:6px; } .ewvon-uber-stats article { padding:11px 8px; } .ewvon-uber-stats article strong { font-size:22px; } }
