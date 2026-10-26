@@ -42,14 +42,14 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
     <motion.header initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
       className="ewvon-topbar sticky top-0 z-30 flex min-h-[68px] items-center border-b border-slate-100/80 bg-white/95 px-5 shadow-none backdrop-blur-sm">
       <div className="flex w-full min-w-0 items-center justify-between gap-3">
-        <button type="button" onClick={() => onNavigateToSection?.('home')} className="ewvon-brand flex min-w-0 shrink-0 items-center gap-2.5 rounded-full pr-2 text-left transition-opacity hover:opacity-80" aria-label="Ir para o início">
+        <button type="button" onClick={() => onNavigateToSection?.('home')} className="ewvon-brand flex min-w-0 shrink-0 items-center gap-2.5 rounded-full border border-slate-100/90 bg-slate-50/70 py-1 pl-1.5 pr-3 text-left transition-colors hover:bg-slate-100/80" aria-label="Ir para o início">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-orange-100 bg-orange-50">
             {companyLogoUrl ? <img src={companyLogoUrl} alt="" className="h-full w-full object-contain" /> : <span className="text-sm font-bold text-orange-600">{(company?.name || 'e').charAt(0).toUpperCase()}</span>}
           </span>
           <span className="max-w-36 truncate text-[14px] font-semibold tracking-tight text-slate-900">{company?.name || 'ewvon'}</span>
         </button>
 
-        <nav className="ewvon-quick-nav flex min-w-0 items-center justify-center gap-1 overflow-x-auto px-2" aria-label="Atalhos principais">
+        <nav className="ewvon-quick-nav flex min-w-0 items-center justify-start gap-1 overflow-x-auto px-2" aria-label="Atalhos principais">
           {([
             { id: 'my-dashboard', label: 'Meu Painel', Icon: LayoutDashboard },
             { id: 'notes', label: 'Anotações', Icon: StickyNote },
