@@ -1,1 +1,73 @@
 .gradient-primary{background:linear-gradient(135deg,var(--brand),var(--brand-dark))!important}.gradient-secondary{background:linear-gradient(135deg,var(--brand-2),var(--brand))!important}.gradient-hero{background:linear-gradient(135deg,var(--brand-dark),var(--brand))!important}.shadow-glow{box-shadow:0 0 20px var(--brand-glow)!important}
+
+
+/* EWVON mobile home: enforce the mobile-first dashboard after all global stylesheets. */
+.ewvon-mobile-dashboard { display: none; }
+.ewvon-mobile-shortcuts { display: none; }
+@media screen and (max-width: 767px) {
+  .ewvon-home {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 18px 0 28px !important;
+    margin: 0 !important;
+  }
+  .ewvon-home > * { margin-top: 0 !important; }
+  .ewvon-home > .ewvon-desktop-hero,
+  .ewvon-home > section[aria-label="Indicadores principais"],
+  .ewvon-home > .ewvon-dashboard-panels,
+  .ewvon-home > .ewvon-secondary-panels,
+  .ewvon-home > p.flex.flex-wrap.items-center.justify-between {
+    display: none !important;
+  }
+  .ewvon-home > nav.ewvon-mobile-shortcuts {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    margin: 0 14px !important;
+  }
+  .ewvon-home > nav.ewvon-mobile-shortcuts button {
+    display: flex !important;
+    align-items: center !important;
+    min-width: 0 !important;
+    gap: 7px !important;
+    padding: 12px 9px !important;
+    border: 1px solid #e5e5e5 !important;
+    border-radius: 14px !important;
+    background: #fff !important;
+    color: #27272a !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,.025) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+  }
+  .ewvon-home > nav.ewvon-mobile-shortcuts button svg:last-child { display: none !important; }
+  .ewvon-mobile-dashboard {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 22px !important;
+    width: 100% !important;
+    padding: 0 14px !important;
+    color: #18181b !important;
+  }
+  .ewvon-mobile-welcome { display:flex !important; align-items:center !important; justify-content:space-between !important; gap:12px !important; }
+  .ewvon-mobile-welcome h2 { margin-top:5px !important; font-size:27px !important; line-height:1.08 !important; font-weight:750 !important; letter-spacing:-.055em !important; }
+  .ewvon-mobile-welcome p { margin-top:6px !important; font-size:13px !important; color:#71717a !important; }
+  .ewvon-mobile-kpis { display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)) !important; gap:8px !important; }
+  .ewvon-mobile-kpis article { display:flex !important; flex-direction:column !important; gap:8px !important; min-width:0 !important; padding:13px 10px !important; border:1px solid #e5e5e5 !important; border-radius:17px !important; background:#fff !important; box-shadow:0 3px 12px rgba(0,0,0,.025) !important; }
+  .ewvon-mobile-kpis article span { min-height:26px !important; color:#71717a !important; font-size:10px !important; line-height:1.25 !important; }
+  .ewvon-mobile-kpis article strong { color:#18181b !important; font-size:25px !important; line-height:1 !important; font-weight:750 !important; letter-spacing:-.05em !important; }
+  .ewvon-mobile-kpis article small { color:#a1a1aa !important; font-size:9px !important; line-height:1.25 !important; }
+  .ewvon-mobile-section-heading { display:flex !important; align-items:end !important; justify-content:space-between !important; gap:12px !important; }
+  .ewvon-mobile-section-heading > div > span { color:#a1a1aa !important; font-size:10px !important; font-weight:700 !important; letter-spacing:.14em !important; }
+  .ewvon-mobile-section-heading h3 { margin-top:4px !important; font-size:20px !important; line-height:1.2 !important; font-weight:700 !important; letter-spacing:-.04em !important; }
+  .ewvon-mobile-carousel { display:flex !important; gap:12px !important; overflow-x:auto !important; margin-right:-14px !important; padding:0 14px 5px 0 !important; scroll-snap-type:x mandatory !important; scrollbar-width:none !important; -webkit-overflow-scrolling:touch !important; }
+  .ewvon-mobile-carousel::-webkit-scrollbar { display:none !important; }
+  .ewvon-mobile-chart-card { flex:0 0 88% !important; min-width:0 !important; padding:17px 15px 14px !important; border:1px solid #e5e5e5 !important; border-radius:20px !important; background:#fff !important; scroll-snap-align:start !important; box-shadow:0 3px 12px rgba(0,0,0,.025) !important; }
+  .ewvon-mobile-updates { display:flex !important; flex-direction:column !important; overflow:hidden !important; border:1px solid #e5e5e5 !important; border-radius:18px !important; background:#fff !important; }
+  .ewvon-mobile-update { display:flex !important; align-items:center !important; gap:12px !important; padding:15px 13px !important; text-align:left !important; }
+  .ewvon-mobile-update + .ewvon-mobile-update { border-top:1px solid #f0f0f0 !important; }
+  .ewvon-mobile-footnote { display:flex !important; align-items:center !important; gap:6px !important; color:#a1a1aa !important; font-size:10px !important; }
+}
