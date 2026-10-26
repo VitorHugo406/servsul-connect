@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Bell, Cake,
+  Activity, ArrowRight, ArrowUpRight, Bell, Cake,
   CheckCircle2, CircleDashed, Clock3, MessageSquare, Plus, Sparkles,
   TrendingUp, ListTodo, CalendarDays, ChevronRight,
 } from 'lucide-react';
