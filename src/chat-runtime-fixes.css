@@ -144,3 +144,26 @@
 .ewvon-uber-activity-card > strong { color:#111; font-size:24px; line-height:1; font-weight:750; letter-spacing:-.05em; }
 .ewvon-uber-activity-card > span:not(.ewvon-uber-activity-top) { color:#262626; font-size:11px; font-weight:650; }
 .ewvon-uber-activity-card > small { min-height:24px; color:#737373; font-size:9px; line-height:1.35; }
+
+
+/* EWVON mobile home: headerless top controls and horizontal chart carousel */
+@media screen and (max-width: 767px) {
+  .ewvon-uber-home { gap:20px; padding:10px 0 28px; }
+  .ewvon-home-topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 18px; }
+  .ewvon-home-brand { display:flex; align-items:center; gap:8px; color:#171717; font-size:18px; font-weight:800; letter-spacing:-.06em; }
+  .ewvon-home-brand-mark { display:flex; align-items:center; justify-content:center; width:29px; height:29px; border-radius:10px; background:#171717; color:#fff; font-size:20px; font-weight:800; }
+  .ewvon-home-tools { display:flex; align-items:center; gap:7px; }
+  .ewvon-home-tool { position:relative; display:flex; align-items:center; justify-content:center; width:38px; height:38px; border:1px solid #e5e7eb; border-radius:13px; background:rgba(255,255,255,.76); color:#262626; }
+  .ewvon-home-tool i { position:absolute; top:-5px; right:-5px; display:flex; min-width:16px; height:16px; align-items:center; justify-content:center; padding:0 3px; border:2px solid #fff; border-radius:99px; background:#dc2626; color:#fff; font-size:8px; font-style:normal; font-weight:800; }
+  .ewvon-home-profile { width:38px; height:38px; overflow:hidden; padding:2px; border-radius:13px; }
+  .ewvon-uber-greeting, .ewvon-uber-primary, .ewvon-uber-stats, .ewvon-uber-context, .ewvon-uber-insights, .ewvon-uber-alert, .ewvon-uber-footer { margin-left:18px; margin-right:18px; }
+  .ewvon-uber-chart-carousel { display:flex; gap:12px; overflow-x:auto; margin-right:-18px; padding:0 18px 7px 0; scroll-snap-type:x mandatory; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .ewvon-uber-chart-carousel::-webkit-scrollbar { display:none; }
+  .ewvon-uber-chart-carousel .ewvon-uber-chart-card { flex:0 0 82%; min-width:0; scroll-snap-align:start; }
+  .ewvon-uber-chart-carousel .ewvon-uber-chart-card:first-child { margin-left:0; }
+  .ewvon-uber-mini-number { margin-top:22px; color:#111; font-size:36px; line-height:1; font-weight:800; letter-spacing:-.06em; }
+  .ewvon-uber-mini-bars { display:flex; align-items:flex-end; gap:8px; height:82px; margin-top:18px; padding:0 4px; }
+  .ewvon-uber-mini-bars i { flex:1; min-width:8px; border-radius:6px 6px 3px 3px; background:linear-gradient(180deg,#737373,#262626); opacity:.9; }
+  .ewvon-uber-mini-progress { height:8px; margin-top:25px; overflow:hidden; border-radius:99px; background:#f1f1f1; }
+  .ewvon-uber-mini-progress i { display:block; height:100%; border-radius:99px; background:#262626; }
+}
