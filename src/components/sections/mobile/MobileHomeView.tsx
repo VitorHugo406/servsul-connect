@@ -52,14 +52,16 @@ export function MobileHomeView({ onNavigate, onOpenNotifications, onOpenAppearan
   const overdueShare = taskTotalForChart ? Math.round((overdueTasks / taskTotalForChart) * 100) : 0;
   const completedShare = taskTotalForChart ? Math.max(0, 100 - pendingShare - overdueShare) : 0;
 
-  const actions = [
-    { id: 'chat', title: 'Conversas', subtitle: todayMessages ? `${todayMessages} mensagens hoje` : 'Fale com sua equipe', icon: MessageSquare, count: todayMessages },
-    { id: 'announcements', title: 'Avisos', subtitle: announcements.length ? `${announcements.length} comunicados publicados` : 'Nenhum comunicado novo', icon: Bell, count: announcements.length },
-    { id: 'birthdays', title: 'Aniversários', subtitle: todayBdays ? `${todayBdays} hoje` : `${birthdayPeople.length} neste mês`, icon: Cake, count: todayBdays },
-  ];
-
   return (
     <div className="ewvon-uber-home">
+      <div className="ewvon-home-topbar">
+        <div className="ewvon-home-brand"><span className="ewvon-home-brand-mark">e</span><span>ewvon</span></div>
+        <div className="ewvon-home-tools">
+          <button type="button" onClick={onOpenNotifications} aria-label="Notificações" className="ewvon-home-tool"><Bell size={18}/>{unreadNotifications > 0 && <i>{unreadNotifications > 99 ? '99+' : unreadNotifications}</i>}</button>
+          <button type="button" onClick={onOpenAppearance} aria-label="Personalizar aparência" className="ewvon-home-tool"><Palette size={18}/></button>
+          <button type="button" onClick={onOpenProfile} aria-label="Meu perfil" className="ewvon-home-tool ewvon-home-profile"><Avatar className="h-8 w-8"><AvatarImage src={profile?.avatar_url || ''} alt={displayName}/><AvatarFallback>{displayName.split(/\s+/).map(n => n[0]).slice(0,2).join('').toUpperCase()}</AvatarFallback></Avatar></button>
+        </div>
+      </div>
       <section className="ewvon-uber-greeting">
         <div>
           <p className="ewvon-uber-kicker">PAINEL DA EMPRESA</p>
@@ -88,7 +90,8 @@ export function MobileHomeView({ onNavigate, onOpenNotifications, onOpenAppearan
 
       <section className="ewvon-uber-insights" aria-label="Indicadores de atividade">
         <div className="ewvon-uber-section-title"><h2>Visão geral</h2><span>Seus indicadores</span></div>
-        <div className="ewvon-uber-chart-carousel" aria-label="Gráficos do painel">\n        <div className="ewvon-uber-chart-card">
+        <div className="ewvon-uber-chart-carousel" aria-label="Gráficos do painel">
+        <div className="ewvon-uber-chart-card">
           <div className="ewvon-uber-chart-heading"><span className="ewvon-uber-chart-icon"><ListTodo size={18}/></span><span><strong>Suas tarefas</strong><small>Distribuição das pendências</small></span><span className="ewvon-uber-chart-total">{tasksLoading ? '—' : totalTasks + completedWeek}</span></div>
           <div className="ewvon-uber-task-bars" role="img" aria-label="Resumo de tarefas pendentes, atrasadas e concluídas nos últimos sete dias">
             <div className="ewvon-uber-task-bar"><span className="ewvon-uber-task-bar-label"><i className="pending"/>Pendentes<strong>{tasksLoading ? '—' : totalTasks}</strong></span><span className="ewvon-uber-track"><i className="pending" style={{width: tasksLoading ? '0%' : String(pendingShare) + '%'}}/></span></div>
@@ -96,6 +99,19 @@ export function MobileHomeView({ onNavigate, onOpenNotifications, onOpenAppearan
             <div className="ewvon-uber-task-bar"><span className="ewvon-uber-task-bar-label"><i className="completed"/>Concluídas · 7 dias<strong>{tasksLoading ? '—' : completedWeek}</strong></span><span className="ewvon-uber-track"><i className="completed" style={{width: tasksLoading ? '0%' : String(completedShare) + '%'}}/></span></div>
           </div>
           <p className="ewvon-uber-chart-note"><TrendingUp size={14}/> Acompanhe o andamento sem sair do início.</p>
+        </div>
+        <div className="ewvon-uber-chart-card ewvon-uber-mini-chart">
+          <div className="ewvon-uber-chart-heading"><span className="ewvon-uber-chart-icon"><MessageSquare size={18}/></span><span><strong>Comunicação</strong><small>Mensagens de hoje</small></span></div>
+          <div className="ewvon-uber-mini-number">{todayMessages}</div>
+          <div className="ewvon-uber-mini-bars" role="img" aria-label={`Mensagens registradas hoje: ${todayMessages}`}><i style={{height: todayMessages ? '100%' : '8%'}}/><i style={{height: todayMessages ? '72%' : '8%'}}/><i style={{height: todayMessages ? '88%' : '8%'}}/><i style={{height: todayMessages ? '55%' : '8%'}}/><i style={{height: todayMessages ? '95%' : '8%'}}/><i style={{height: todayMessages ? '65%' : '8%'}}/><i style={{height: todayMessages ? '80%' : '8%'}}/></div>
+          <p className="ewvon-uber-chart-note">Volume de mensagens no dia</p>
+        </div>
+        <div className="ewvon-uber-chart-card ewvon-uber-mini-chart">
+          <div className="ewvon-uber-chart-heading"><span className="ewvon-uber-chart-icon"><Bell size={18}/></span><span><strong>Comunicados</strong><small>Publicados</small></span></div>
+          <div className="ewvon-uber-mini-number">{announcements.length}</div>
+          <div className="ewvon-uber-mini-progress"><i style={{width: String(Math.min(100, announcements.length * 10)) + '%'}}/></div>
+          <p className="ewvon-uber-chart-note">Avisos disponíveis para a equipe</p>
+        </div>
         </div>
         <div className="ewvon-uber-section-title ewvon-uber-activity-title"><h2>Atividade da equipe</h2><span>Hoje</span></div>
         <div className="ewvon-uber-activity-grid">
