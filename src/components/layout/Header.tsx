@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, Bell, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction, Plus, Palette, LayoutDashboard, StickyNote, ListTodo, UsersRound, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,7 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
   const companyLogoUrl = useCompanyLogoUrl(company?.logo_url);
   const displayName = profile?.display_name || profile?.name || 'Usuário';
   const initials = displayName.split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase();
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
   const [showNotifications, setShowNotifications] = useState(false); const [showProfile, setShowProfile] = useState(false); const [showSectionSearch, setShowSectionSearch] = useState(false); const [showComingSoon, setShowComingSoon] = useState<string | null>(null); const [showAppearance, setShowAppearance] = useState(false);
   useEffect(() => { document.title = company?.name ? `${company.name} | ewvon` : 'ewvon - Gestão de operações'; void createCompanyLogoUrl(company?.logo_url).then(faviconUrl => { if (!faviconUrl) return; document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach(link => { link.href = faviconUrl; }); }); }, [company?.name, company?.logo_url]);
   const isMainAdmin = profile?.email === ADMIN_EMAIL; const autonomy = profile?.autonomy_level;
@@ -97,7 +98,7 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
             <PopoverTrigger asChild><Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full text-slate-500 hover:bg-slate-100" title="Notificações"><Bell className="h-[18px] w-[18px]" />{counts.total > 0 && <Badge className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 p-0 text-[9px] text-white">{counts.total > 99 ? '99+' : counts.total}</Badge>}</Button></PopoverTrigger>
             <PopoverContent className="w-80 rounded-2xl p-0" align="end"><div className="border-b border-border p-4"><h3 className="font-semibold">Notificações</h3></div><ScrollArea className="h-64"><div className="space-y-3 p-4">{counts.unreadMessages > 0 && <div className="rounded-xl bg-muted/50 p-3 text-sm">{counts.unreadMessages} mensagens não lidas</div>}{counts.unreadAnnouncements > 0 && <div className="rounded-xl bg-muted/50 p-3 text-sm">{counts.unreadAnnouncements} avisos não lidos</div>}{counts.total === 0 && <div className="py-8 text-center text-muted-foreground"><Bell className="mx-auto mb-2 h-8 w-8 opacity-50" /><p className="text-sm">Nenhuma notificação</p></div>}</div></ScrollArea></PopoverContent>
           </Popover>}
-          <button type="button" onClick={() => setShowProfile(true)} className="ml-1 flex h-10 items-center gap-2 rounded-full border border-slate-100 bg-white py-1 pl-1 pr-3 transition-colors hover:bg-slate-50" title="Perfil do usuário">
+          <button type="button" onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); document.documentElement.style.setProperty("--ewvon-profile-top", `${Math.round(rect.bottom)}px`); document.documentElement.style.setProperty("--ewvon-profile-right", `${Math.max(12, Math.round(window.innerWidth - rect.right))}px`); setShowProfile(true); }} ref={profileButtonRef} className="ml-1 flex h-10 items-center gap-2 rounded-full border border-slate-100 bg-white py-1 pl-1 pr-3 transition-colors hover:bg-slate-50" title="Perfil do usuário">
             <Avatar className="h-8 w-8"><AvatarImage src={profile?.avatar_url || ''} alt={displayName} className="object-cover" /><AvatarFallback className="bg-slate-900 text-[11px] font-semibold text-white">{initials}</AvatarFallback></Avatar>
             <span className="hidden max-w-28 flex-col items-start leading-tight sm:flex"><span className="max-w-28 truncate text-[12px] font-semibold text-slate-800">{displayName}</span><span className="text-[10px] text-slate-400">{profile?.autonomy_level || 'Usuário'}</span></span>
           </button>
