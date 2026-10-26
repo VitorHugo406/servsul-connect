@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Bell, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction, Plus, Palette, LayoutDashboard, StickyNote, ListTodo, UsersRound, LogOut } from 'lucide-react';
+import { Search, Bell, Bot, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction, Plus, Palette, LayoutDashboard, StickyNote, ListTodo, UsersRound, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -94,6 +94,7 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
           {showOrbsButton && <Button variant="outline" size="sm" className="hidden gap-1.5 rounded-full md:flex" asChild><a href="https://sync-synergy-flow.vercel.app/" target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />Orbs</a></Button>}
           <TeamHeaderButton />
           <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-slate-500 hover:bg-slate-100" onClick={() => setShowAppearance(true)} title="Personalizar visual"><Palette className="h-[18px] w-[18px]" /></Button>
+          <Button type="button" variant="ghost" size="icon" className="h-10 w-10 rounded-full text-slate-900 hover:bg-slate-100" onClick={() => window.dispatchEvent(new CustomEvent('ewvon:open-assistant'))} title="Assistente ewvon" aria-label="Abrir assistente"><Bot className="h-[18px] w-[18px]" strokeWidth={1.8} /></Button>
           {!hideNotifications && <Popover open={showNotifications} onOpenChange={setShowNotifications}>
             <PopoverTrigger asChild><Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full text-slate-500 hover:bg-slate-100" title="Notificações"><Bell className="h-[18px] w-[18px]" />{counts.total > 0 && <Badge className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 p-0 text-[9px] text-white">{counts.total > 99 ? '99+' : counts.total}</Badge>}</Button></PopoverTrigger>
             <PopoverContent className="w-80 rounded-2xl p-0" align="end"><div className="border-b border-border p-4"><h3 className="font-semibold">Notificações</h3></div><ScrollArea className="h-64"><div className="space-y-3 p-4">{counts.unreadMessages > 0 && <div className="rounded-xl bg-muted/50 p-3 text-sm">{counts.unreadMessages} mensagens não lidas</div>}{counts.unreadAnnouncements > 0 && <div className="rounded-xl bg-muted/50 p-3 text-sm">{counts.unreadAnnouncements} avisos não lidos</div>}{counts.total === 0 && <div className="py-8 text-center text-muted-foreground"><Bell className="mx-auto mb-2 h-8 w-8 opacity-50" /><p className="text-sm">Nenhuma notificação</p></div>}</div></ScrollArea></PopoverContent>
