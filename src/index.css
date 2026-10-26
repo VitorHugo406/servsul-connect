@@ -733,3 +733,20 @@ body { background: var(--ewvon-shell-bg); }
     transition-duration: .01ms !important;
   }
 }
+
+.ewvon-home .ewvon-glass-panel,.ewvon-home .ewvon-glass-card{border-radius:16px!important;border-color:rgba(228,228,231,.76)!important}
+@media(max-width:767px){
+ .ewvon-home{padding:10px!important;gap:12px!important}
+ .ewvon-home .ewvon-glass-panel,.ewvon-home .ewvon-glass-card{border-radius:14px!important}
+ .ewvon-home>section[aria-label="Indicadores principais"]{display:flex!important;overflow-x:auto!important;scroll-snap-type:x mandatory!important;gap:10px!important;padding:2px 1px 8px!important;scrollbar-width:none!important;-webkit-overflow-scrolling:touch}
+ .ewvon-home>section[aria-label="Indicadores principais"]::-webkit-scrollbar,.ewvon-home .ewvon-dashboard-panels::-webkit-scrollbar{display:none!important}
+ .ewvon-home>section[aria-label="Indicadores principais"]>button{flex:0 0 72%!important;min-width:0!important;scroll-snap-align:start!important;padding:14px!important}
+ .ewvon-home>section[aria-label="Indicadores principais"]>button .mt-5{margin-top:12px!important}
+ .ewvon-home .ewvon-dashboard-panels{display:flex!important;overflow-x:auto!important;scroll-snap-type:x mandatory!important;gap:10px!important;padding-bottom:6px!important;scrollbar-width:none!important;-webkit-overflow-scrolling:touch}
+ .ewvon-home .ewvon-dashboard-panels>*{flex:0 0 88%!important;min-width:0!important;scroll-snap-align:start!important}
+ .ewvon-home h1{font-size:1.5rem!important}
+}
+[data-radix-dialog-overlay]{background:rgba(15,23,42,.22)!important;backdrop-filter:blur(7px) saturate(115%)!important;-webkit-backdrop-filter:blur(7px) saturate(115%)!important}
+.ewvon-profile-drawer{position:fixed!important;left:auto!important;right:12px!important;top:12px!important;bottom:12px!important;width:min(440px,calc(100vw - 24px))!important;max-width:min(440px,calc(100vw - 24px))!important;height:auto!important;max-height:none!important;transform:none!important;border-radius:18px!important;border:1px solid rgba(255,255,255,.72)!important;background:rgba(255,255,255,.88)!important;backdrop-filter:blur(24px) saturate(145%)!important;-webkit-backdrop-filter:blur(24px) saturate(145%)!important;box-shadow:0 24px 80px rgba(15,23,42,.18)!important;animation:ewvon-drawer-in 220ms cubic-bezier(.2,.8,.2,1) both!important}
+@keyframes ewvon-drawer-in{from{opacity:0;translate:18px 0}to{opacity:1;translate:0 0}}
+@media(max-width:767px){.ewvon-profile-drawer{top:auto!important;left:8px!important;right:8px!important;bottom:8px!important;width:auto!important;max-width:none!important;max-height:82dvh!important;border-radius:18px!important}}
