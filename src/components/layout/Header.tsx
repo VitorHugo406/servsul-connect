@@ -40,7 +40,7 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
   const openNewAnnouncement = () => window.dispatchEvent(new CustomEvent('ewvor:open-new-announcement'));
   return (<>
     <motion.header initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
-      className="ewvon-topbar sticky top-0 z-30 flex min-h-[68px] items-center border-b border-slate-100/80 bg-white/95 px-5 shadow-none backdrop-blur-sm">
+      className="ewvon-topbar sticky top-0 z-30 flex min-h-[68px] items-center px-5 shadow-none">
       <div className="flex w-full min-w-0 items-center justify-between gap-3">
         <button type="button" onClick={() => onNavigateToSection?.('home')} className="ewvon-brand flex min-w-0 shrink-0 items-center gap-2.5 rounded-full border border-slate-100/90 bg-slate-50/70 py-1 pl-1.5 pr-3 text-left transition-colors hover:bg-slate-100/80" aria-label="Ir para o início">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-orange-100 bg-orange-50">
