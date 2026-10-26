@@ -155,7 +155,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="ewvon-glass-panel relative overflow-hidden rounded-[24px] border border-white/80 p-4 shadow-[0_12px_45px_rgba(24,24,27,0.045)] sm:p-5"
+        className="ewvon-desktop-hero ewvon-glass-panel relative overflow-hidden rounded-[24px] border border-white/80 p-4 shadow-[0_12px_45px_rgba(24,24,27,0.045)] sm:p-5"
       >
         <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-zinc-200/50 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-28 left-1/3 h-48 w-48 rounded-full bg-zinc-100 blur-3xl" />
@@ -207,7 +207,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
           </article>
           <article className="ewvon-mobile-chart-card">
             <div className="ewvon-mobile-card-title"><span>Tarefas por status</span><small>Distribuição atual</small></div>
-            {taskStatusData.length ? <><div className="relative mx-auto h-[185px] w-full max-w-[250px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={taskStatusData} dataKey="value" nameKey="name" innerRadius={54} outerRadius={76} paddingAngle={3} stroke="none" cornerRadius={5}>{taskStatusData.map((entry,index)=><Cell key={entry.name} fill={entry.fill || statusColors[index % statusColors.length}/>)}</Pie><Tooltip contentStyle={chartTooltipStyle}/></PieChart></ResponsiveContainer><div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><strong className="text-3xl font-semibold text-zinc-900">{loadingMetrics ? '—' : tasks.length}</strong><span className="text-[11px] text-zinc-400">tarefas</span></div></div><div className="ewvon-mobile-status-list">{taskStatusData.slice(0,4).map(item=><span key={item.name}><i style={{backgroundColor:item.fill}}/>{item.name}<b>{item.value}</b></span>)}</div></> : <p className="ewvon-mobile-empty">{loadingMetrics ? 'Carregando indicadores…' : 'Nenhuma tarefa para exibir.'}</p>}
+            {taskStatusData.length ? <><div className="relative mx-auto h-[185px] w-full max-w-[250px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={taskStatusData} dataKey="value" nameKey="name" innerRadius={54} outerRadius={76} paddingAngle={3} stroke="none" cornerRadius={5}>{taskStatusData.map((entry,index)=><Cell key={entry.name} fill={entry.fill || statusColors[index % statusColors.length]} />)}</Pie><Tooltip contentStyle={chartTooltipStyle}/></PieChart></ResponsiveContainer><div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><strong className="text-3xl font-semibold text-zinc-900">{loadingMetrics ? '—' : tasks.length}</strong><span className="text-[11px] text-zinc-400">tarefas</span></div></div><div className="ewvon-mobile-status-list">{taskStatusData.slice(0,4).map(item=><span key={item.name}><i style={{backgroundColor:item.fill}}/>{item.name}<b>{item.value}</b></span>)}</div></> : <p className="ewvon-mobile-empty">{loadingMetrics ? 'Carregando indicadores…' : 'Nenhuma tarefa para exibir.'}</p>}
           </article>
         </div>
         <div className="ewvon-mobile-section-heading"><div><span>ATUALIZAÇÕES</span><h3>Da sua equipe</h3></div></div>
