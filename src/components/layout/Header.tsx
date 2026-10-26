@@ -41,7 +41,7 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
   return (<>
     <motion.header initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
       className="ewvon-topbar sticky top-0 z-30 flex min-h-[68px] items-center border-b border-slate-100/80 bg-white/95 px-5 shadow-none backdrop-blur-sm">
-      <div className="flex w-full min-w-0 items-center justify-between gap-4">
+      <div className="flex w-full min-w-0 items-center justify-between gap-3">
         <button type="button" onClick={() => onNavigateToSection?.('home')} className="ewvon-brand flex min-w-0 shrink-0 items-center gap-2.5 rounded-full pr-2 text-left transition-opacity hover:opacity-80" aria-label="Ir para o início">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-orange-100 bg-orange-50">
             {companyLogoUrl ? <img src={companyLogoUrl} alt="" className="h-full w-full object-contain" /> : <span className="text-sm font-bold text-orange-600">{(company?.name || 'e').charAt(0).toUpperCase()}</span>}
@@ -49,7 +49,7 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
           <span className="max-w-36 truncate text-[14px] font-semibold tracking-tight text-slate-900">{company?.name || 'ewvon'}</span>
         </button>
 
-        <nav className="ewvon-quick-nav flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto px-2" aria-label="Atalhos principais">
+        <nav className="ewvon-quick-nav flex min-w-0 items-center justify-center gap-1 overflow-x-auto px-2" aria-label="Atalhos principais">
           {([
             { id: 'my-dashboard', label: 'Meu Painel', Icon: LayoutDashboard },
             { id: 'notes', label: 'Anotações', Icon: StickyNote },
@@ -57,14 +57,14 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
             { id: 'people-management', label: 'Gestão de Pessoas', Icon: UsersRound },
           ] as const).filter(item => visibleSections.some(section => section.id === item.id)).map(item => (
             <button key={item.id} type="button" onClick={() => onNavigateToSection?.(item.id)}
-              aria-current={activeSection === item.id ? 'page' : undefined}
-              className={`flex h-10 shrink-0 items-center gap-2 rounded-full px-3.5 text-[12px] font-medium transition-colors ${activeSection === item.id ? 'bg-slate-950 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}>
-              <item.Icon className="h-4 w-4" strokeWidth={1.8} /><span>{item.label}</span>
+              aria-label={item.label} title={item.label} aria-current={activeSection === item.id ? 'page' : undefined}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${activeSection === item.id ? 'bg-slate-950 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}>
+              <item.Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
             </button>
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center justify-end gap-1.5">
+        <div className="ewvon-actions flex shrink-0 items-center justify-end gap-1.5">
           <div className="relative">
             <button type="button" onClick={() => { setShowSectionSearch(value => !value); if (showSectionSearch) onSearchChange?.(''); }}
               title="Pesquisar abas" aria-label="Pesquisar abas"
