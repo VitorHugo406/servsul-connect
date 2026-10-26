@@ -209,3 +209,55 @@
   .ewvon-topbar { display: none; }
   .ewvon-main { padding: 12px; }
 }
+
+
+/* Compact reference layout: fixed icon rail and rounded, centered quick-navigation pill */
+.ewvon-sidebar {
+  position: fixed !important;
+  inset: 0 auto 0 0 !important;
+  z-index: 40 !important;
+  width: 64px !important;
+  min-width: 64px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  background: #fff !important;
+}
+.ewvon-sidebar nav { padding: 10px 0 !important; }
+.ewvon-sidebar nav > div { width: 100%; }
+.ewvon-sidebar nav button { border-radius: 9999px !important; }
+.ewvon-sidebar nav button[aria-current="page"] { background: #111 !important; color: #fff !important; }
+.ewvon-sidebar nav button[aria-current="page"] svg { color: #fff !important; }
+.ewvon-topbar {
+  min-height: 68px !important;
+  margin-left: 64px;
+  border-bottom: 0 !important;
+  padding: 8px 22px !important;
+  background: rgba(255,255,255,.96) !important;
+}
+.ewvon-brand { max-width: 210px; }
+.ewvon-quick-nav {
+  border: 1px solid #f0f0f2;
+  border-radius: 9999px;
+  background: #fff;
+  padding: 4px;
+  max-width: max-content;
+}
+.ewvon-quick-nav::-webkit-scrollbar { display: none; }
+.ewvon-quick-nav { scrollbar-width: none; }
+.ewvon-main {
+  margin-left: 64px;
+  padding: 18px 24px 24px !important;
+  background: #fff !important;
+}
+@media (max-width: 1100px) {
+  .ewvon-topbar { padding-inline: 12px !important; }
+  .ewvon-brand { max-width: 145px; }
+  .ewvon-quick-nav button { padding-inline: 10px; gap: 6px; }
+  .ewvon-quick-nav button span { font-size: 11px; }
+}
+@media (max-width: 767px) {
+  .ewvon-sidebar { display: none !important; }
+  .ewvon-topbar { display: none !important; margin-left: 0; }
+  .ewvon-main { margin-left: 0; padding: 12px !important; }
+}
