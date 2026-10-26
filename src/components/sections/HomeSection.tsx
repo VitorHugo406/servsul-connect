@@ -188,6 +188,40 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
         <button type="button" onClick={() => onNavigate('birthdays')}><Cake className="h-4 w-4" /><span>Aniversariantes</span><ArrowUpRight className="ml-auto h-3.5 w-3.5" /></button>
       </nav>
 
+      <section className="ewvon-mobile-dashboard" aria-label="Resumo mobile">
+        <div className="ewvon-mobile-welcome">
+          <div><span className="ewvon-mobile-eyebrow">{format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}</span><h2>Seu dia, em resumo.</h2><p>O que está acontecendo na sua equipe.</p></div>
+          <Avatar className="h-11 w-11 border border-white shadow-sm"><AvatarImage src={profile?.avatar_url || ''} /><AvatarFallback className="bg-zinc-900 text-sm font-semibold text-white">{initials}</AvatarFallback></Avatar>
+        </div>
+        <div className="ewvon-mobile-kpis" aria-label="Indicadores">
+          <article><span>Mensagens hoje</span><strong>{todayMessages}</strong><small>Enviadas por você</small></article>
+          <article><span>Tarefas abertas</span><strong>{loadingMetrics ? '—' : openTasks.length}</strong><small>Em andamento</small></article>
+          <article><span>Concluídas hoje</span><strong>{loadingMetrics ? '—' : completedToday}</strong><small>Finalizadas</small></article>
+        </div>
+        <div className="ewvon-mobile-section-heading"><div><span>SEU PAINEL</span><h3>Visão da semana</h3></div><span className="ewvon-mobile-period">7 dias</span></div>
+        <div className="ewvon-mobile-carousel" aria-label="Gráficos do painel, deslize para navegar">
+          <article className="ewvon-mobile-chart-card">
+            <div className="ewvon-mobile-card-title"><span>Atividade</span><small>Mensagens e tarefas</small></div>
+            <div className="h-[185px] w-full"><ResponsiveContainer width="100%" height="100%"><AreaChart data={activityData} margin={{ top: 8, right: 4, left: -24, bottom: 0 }}><defs><linearGradient id="ewvonMobileMessages" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#27272a" stopOpacity={0.16}/><stop offset="100%" stopColor="#27272a" stopOpacity={0.01}/></linearGradient></defs><CartesianGrid vertical={false} stroke="#e4e4e7" strokeDasharray="3 5"/><XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#a1a1aa', fontSize: 10 }}/><YAxis axisLine={false} tickLine={false} tick={{ fill: '#a1a1aa', fontSize: 10 }} allowDecimals={false}/><Tooltip contentStyle={chartTooltipStyle} labelFormatter={(_, payload) => payload?.[0]?.payload?.fullDate || ''}/><Area type="monotone" dataKey="mensagens" name="Mensagens" stroke="#27272a" strokeWidth={2.5} fill="url(#ewvonMobileMessages)"/><Area type="monotone" dataKey="tarefas" name="Tarefas concluídas" stroke="#a1a1aa" strokeWidth={2.5} fill="transparent"/></AreaChart></ResponsiveContainer></div>
+            <div className="ewvon-mobile-chart-footer"><span><i className="ewvon-dot dark" />Mensagens</span><span><i className="ewvon-dot light" />Tarefas concluídas</span></div>
+          </article>
+          <article className="ewvon-mobile-chart-card">
+            <div className="ewvon-mobile-card-title"><span>Tarefas por status</span><small>Distribuição atual</small></div>
+            {taskStatusData.length ? <><div className="relative mx-auto h-[185px] w-full max-w-[250px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={taskStatusData} dataKey="value" nameKey="name" innerRadius={54} outerRadius={76} paddingAngle={3} stroke="none" cornerRadius={5}>{taskStatusData.map((entry,index)=><Cell key={entry.name} fill={entry.fill || statusColors[index % statusColors.length}/>)}</Pie><Tooltip contentStyle={chartTooltipStyle}/></PieChart></ResponsiveContainer><div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><strong className="text-3xl font-semibold text-zinc-900">{loadingMetrics ? '—' : tasks.length}</strong><span className="text-[11px] text-zinc-400">tarefas</span></div></div><div className="ewvon-mobile-status-list">{taskStatusData.slice(0,4).map(item=><span key={item.name}><i style={{backgroundColor:item.fill}}/>{item.name}<b>{item.value}</b></span>)}</div></> : <p className="ewvon-mobile-empty">{loadingMetrics ? 'Carregando indicadores…' : 'Nenhuma tarefa para exibir.'}</p>}
+          </article>
+        </div>
+        <div className="ewvon-mobile-section-heading"><div><span>ATUALIZAÇÕES</span><h3>Da sua equipe</h3></div></div>
+        <div className="ewvon-mobile-updates">
+          <button type="button" onClick={() => onNavigate('announcements')} className="ewvon-mobile-update">
+            <span className="ewvon-mobile-update-icon"><Bell className="h-[18px] w-[18px]"/></span><span className="ewvon-mobile-update-copy"><strong>Último aviso</strong><small>{latestAnnouncement?.title || 'Nenhum aviso publicado'}</small>{latestAnnouncement?.content && <small className="ewvon-mobile-update-detail">{latestAnnouncement.content}</small>}</span><ChevronRight className="h-4 w-4 text-zinc-400"/>
+          </button>
+          <button type="button" onClick={() => onNavigate('birthdays')} className="ewvon-mobile-update">
+            <span className="ewvon-mobile-update-icon"><Cake className="h-[18px] w-[18px]"/></span><span className="ewvon-mobile-update-copy"><strong>Aniversariantes</strong><small>{todayBirthdays.length ? `${todayBirthdays.length} pessoa(s) fazem aniversário hoje` : `${birthdayPeople.length} pessoa(s) na lista deste mês`}</small></span><ChevronRight className="h-4 w-4 text-zinc-400"/>
+          </button>
+        </div>
+        <p className="ewvon-mobile-footnote"><Activity className="h-3.5 w-3.5"/> Dados atualizados ao abrir o painel</p>
+      </section>
+
       <section aria-label="Indicadores principais" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric, index) => {
           const Icon = metric.icon;
