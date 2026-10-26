@@ -46,8 +46,8 @@ export function MobileHomeView({ onNavigate }: Props) {
   const firstName = displayName.trim().split(/\s+/)[0] || 'Usuário';
   const todayBdays = birthdayPeople.filter((person) => person.isToday).length;
   const tasksValue = tasksLoading ? '—' : String(totalTasks);
-  const taskTotalForChart = totalTasks + overdueTasks + completedWeek;
-  const pendingShare = taskTotalForChart ? Math.round((totalTasks / taskTotalForChart) * 100) : 0;
+  const taskTotalForChart = totalTasks + completedWeek;
+  const pendingShare = taskTotalForChart ? Math.round((Math.max(0, totalTasks - overdueTasks) / taskTotalForChart) * 100) : 0;
   const overdueShare = taskTotalForChart ? Math.round((overdueTasks / taskTotalForChart) * 100) : 0;
   const completedShare = taskTotalForChart ? Math.max(0, 100 - pendingShare - overdueShare) : 0;
 
@@ -88,7 +88,7 @@ export function MobileHomeView({ onNavigate }: Props) {
       <section className="ewvon-uber-insights" aria-label="Indicadores de atividade">
         <div className="ewvon-uber-section-title"><h2>Visão geral</h2><span>Seus indicadores</span></div>
         <div className="ewvon-uber-chart-card">
-          <div className="ewvon-uber-chart-heading"><span className="ewvon-uber-chart-icon"><ListTodo size={18}/></span><span><strong>Suas tarefas</strong><small>Distribuição das pendências</small></span><span className="ewvon-uber-chart-total">{tasksLoading ? '—' : totalTasks + overdueTasks}</span></div>
+          <div className="ewvon-uber-chart-heading"><span className="ewvon-uber-chart-icon"><ListTodo size={18}/></span><span><strong>Suas tarefas</strong><small>Distribuição das pendências</small></span><span className="ewvon-uber-chart-total">{tasksLoading ? '—' : totalTasks + completedWeek}</span></div>
           <div className="ewvon-uber-task-bars" role="img" aria-label="Resumo de tarefas pendentes, atrasadas e concluídas nos últimos sete dias">
             <div className="ewvon-uber-task-bar"><span className="ewvon-uber-task-bar-label"><i className="pending"/>Pendentes<strong>{tasksLoading ? '—' : totalTasks}</strong></span><span className="ewvon-uber-track"><i className="pending" style={{width: tasksLoading ? '0%' : String(pendingShare) + '%'}}/></span></div>
             <div className="ewvon-uber-task-bar"><span className="ewvon-uber-task-bar-label"><i className="overdue"/>Atrasadas<strong>{tasksLoading ? '—' : overdueTasks}</strong></span><span className="ewvon-uber-track"><i className="overdue" style={{width: tasksLoading ? '0%' : String(overdueShare) + '%'}}/></span></div>
