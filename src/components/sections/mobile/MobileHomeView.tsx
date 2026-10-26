@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MessageSquare, Bell, Cake, ChevronRight, AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, Building2, TrendingUp, ListTodo, Palette } from 'lucide-react';
+import { MessageSquare, Bell, Bot, Cake, ChevronRight, AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, Building2, TrendingUp, ListTodo, Palette } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
@@ -58,6 +58,7 @@ export function MobileHomeView({ onNavigate, onOpenNotifications, onOpenAppearan
         <div className="ewvon-home-brand"><span className="ewvon-home-brand-mark">e</span><span>ewvon</span></div>
         <div className="ewvon-home-tools">
           <button type="button" onClick={onOpenNotifications} aria-label="Notificações" className="ewvon-home-tool"><Bell size={18}/>{unreadNotifications > 0 && <i>{unreadNotifications > 99 ? '99+' : unreadNotifications}</i>}</button>
+          <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('ewvon:open-assistant'))} aria-label="Abrir assistente" className="ewvon-home-tool ewvon-home-assistant"><Bot size={18}/></button>
           <button type="button" onClick={onOpenAppearance} aria-label="Personalizar aparência" className="ewvon-home-tool"><Palette size={18}/></button>
           <button type="button" onClick={onOpenProfile} aria-label="Meu perfil" className="ewvon-home-tool ewvon-home-profile"><Avatar className="h-8 w-8"><AvatarImage src={profile?.avatar_url || ''} alt={displayName}/><AvatarFallback>{displayName.split(/\s+/).map(n => n[0]).slice(0,2).join('').toUpperCase()}</AvatarFallback></Avatar></button>
         </div>
