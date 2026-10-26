@@ -157,9 +157,12 @@
   .ewvon-home-tool i { position:absolute; top:-5px; right:-5px; display:flex; min-width:16px; height:16px; align-items:center; justify-content:center; padding:0 3px; border:2px solid #fff; border-radius:99px; background:#dc2626; color:#fff; font-size:8px; font-style:normal; font-weight:800; }
   .ewvon-home-profile { width:38px; height:38px; overflow:hidden; padding:2px; border-radius:13px; }
   .ewvon-uber-greeting, .ewvon-uber-primary, .ewvon-uber-stats, .ewvon-uber-context, .ewvon-uber-insights, .ewvon-uber-alert, .ewvon-uber-footer { margin-left:18px; margin-right:18px; }
-  .ewvon-uber-chart-carousel { display:flex; gap:12px; overflow-x:auto; margin-right:-18px; padding:0 18px 7px 0; scroll-snap-type:x mandatory; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .ewvon-uber-chart-carousel { display:flex; gap:12px; width:100%; max-width:100%; min-width:0; overflow-x:auto; margin-right:0; padding:0 0 7px; scroll-snap-type:x mandatory; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .ewvon-uber-chart-carousel::-webkit-scrollbar { display:none; }
-  .ewvon-uber-chart-carousel .ewvon-uber-chart-card { flex:0 0 82%; min-width:0; scroll-snap-align:start; }
+  .ewvon-uber-chart-carousel .ewvon-uber-chart-card { flex:0 0 82%; min-width:0; max-width:100%; scroll-snap-align:start; }
+  html, body, #root { max-width:100%; overflow-x:clip; }
+  .ewvon-uber-home { width:100%; max-width:100%; min-width:0; overflow-x:clip; }
+  .ewvon-home-topbar, .ewvon-uber-greeting, .ewvon-uber-primary, .ewvon-uber-stats, .ewvon-uber-context, .ewvon-uber-insights, .ewvon-uber-alert, .ewvon-uber-footer { min-width:0; max-width:100%; }
   .ewvon-uber-chart-carousel .ewvon-uber-chart-card:first-child { margin-left:0; }
   .ewvon-uber-mini-number { margin-top:22px; color:#111; font-size:36px; line-height:1; font-weight:800; letter-spacing:-.06em; }
   .ewvon-uber-mini-bars { display:flex; align-items:flex-end; gap:8px; height:82px; margin-top:18px; padding:0 4px; }
@@ -195,6 +198,6 @@
   }
 }
 @keyframes ewvon-profile-overlay-in { from { opacity:0; } to { opacity:1; } }
-@keyframes ewvon-profile-expand { from { opacity:0; transform:translate(-50%,-50%) scale(.16); border-radius:999px; clip-path:inset(0 0 0 0 round 999px); } 58% { opacity:1; border-radius:28px; } to { opacity:1; transform:translate(-50%,-50%) scale(1); border-radius:16px; clip-path:inset(0 0 0 0 round 16px); } }
-@keyframes ewvon-profile-collapse { from { opacity:1; transform:translate(-50%,-50%) scale(1); } to { opacity:0; transform:translate(-50%,-50%) scale(.94); } }
+@keyframes ewvon-profile-expand { from { opacity:0; transform:translate(-50%,-50%) scale(.12); border-radius:999px; clip-path:circle(0 at calc(100% - var(--ewvon-profile-right, 24px)) var(--ewvon-profile-top, 80px)); } 55% { opacity:1; border-radius:24px; clip-path:circle(72% at calc(100% - var(--ewvon-profile-right, 24px)) var(--ewvon-profile-top, 80px)); } to { opacity:1; transform:translate(-50%,-50%) scale(1); border-radius:16px; clip-path:circle(150% at calc(100% - var(--ewvon-profile-right, 24px)) var(--ewvon-profile-top, 80px)); } }
+@keyframes ewvon-profile-collapse { from { opacity:1; transform:translate(-50%,-50%) scale(1); clip-path:circle(150% at calc(100% - var(--ewvon-profile-right, 24px)) var(--ewvon-profile-top, 80px)); } to { opacity:0; transform:translate(-50%,-50%) scale(.96); clip-path:circle(0 at calc(100% - var(--ewvon-profile-right, 24px)) var(--ewvon-profile-top, 80px)); } }
 @media (prefers-reduced-motion: reduce) { .ewvon-profile-drawer, .ewvon-profile-overlay { animation:none !important; } }
