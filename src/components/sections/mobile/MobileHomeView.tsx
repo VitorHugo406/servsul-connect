@@ -17,6 +17,7 @@ export function MobileHomeView({ onNavigate }: Props) {
   const { birthdayPeople } = useBirthdays();
   const [totalTasks, setTotalTasks] = useState(0);
   const [overdueTasks, setOverdueTasks] = useState(0);
+  const [completedWeek, setCompletedWeek] = useState(0);
   const [tasksLoading, setTasksLoading] = useState(true);
 
   useEffect(() => {
@@ -24,13 +25,18 @@ export function MobileHomeView({ onNavigate }: Props) {
     let cancelled = false;
     (async () => {
       setTasksLoading(true);
-      const [overdueResult, totalResult] = await Promise.all([
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 6);
+      weekAgo.setHours(0, 0, 0, 0);
+      const [overdueResult, totalResult, completedResult] = await Promise.all([
         supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('assigned_to', profile.id).is('completed_at', null).lt('due_date', new Date().toISOString()),
         supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('assigned_to', profile.id).is('completed_at', null),
+        supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('assigned_to', profile.id).not('completed_at', 'is', null).gte('completed_at', weekAgo.toISOString()),
       ]);
       if (cancelled) return;
       setOverdueTasks(overdueResult.count || 0);
       setTotalTasks(totalResult.count || 0);
+      setCompletedWeek(completedResult.count || 0);
       setTasksLoading(false);
     })();
     return () => { cancelled = true; };
@@ -40,6 +46,10 @@ export function MobileHomeView({ onNavigate }: Props) {
   const firstName = displayName.trim().split(/\s+/)[0] || 'Usuário';
   const todayBdays = birthdayPeople.filter((person) => person.isToday).length;
   const tasksValue = tasksLoading ? '—' : String(totalTasks);
+  const taskTotalForChart = totalTasks + overdueTasks + completedWeek;
+  const pendingShare = taskTotalForChart ? Math.round((totalTasks / taskTotalForChart) * 100) : 0;
+  const overdueShare = taskTotalForChart ? Math.round((overdueTasks / taskTotalForChart) * 100) : 0;
+  const completedShare = taskTotalForChart ? Math.max(0, 100 - pendingShare - overdueShare) : 0;
 
   const actions = [
     { id: 'chat', title: 'Conversas', subtitle: todayMessages ? `${todayMessages} mensagens hoje` : 'Fale com sua equipe', icon: MessageSquare, count: todayMessages },
@@ -75,17 +85,22 @@ export function MobileHomeView({ onNavigate }: Props) {
 
       {sector?.name && <div className="ewvon-uber-context"><span>Seu setor</span><strong>{sector.name}</strong></div>}
 
-      <section className="ewvon-uber-actions">
-        <div className="ewvon-uber-section-title"><h2>Acessos rápidos</h2><span>Seu dia a dia</span></div>
-        <div className="ewvon-uber-action-list">
-          {actions.map(({ id, title, subtitle, icon: Icon, count }) => (
-            <button type="button" key={id} onClick={() => onNavigate(id)} className="ewvon-uber-action">
-              <span className="ewvon-uber-action-icon"><Icon size={20} strokeWidth={1.8} /></span>
-              <span className="ewvon-uber-action-copy"><strong>{title}</strong><small>{subtitle}</small></span>
-              {count > 0 && <span className="ewvon-uber-count">{count}</span>}
-              <ChevronRight size={18} className="ewvon-uber-chevron" />
-            </button>
-          ))}
+      <section className="ewvon-uber-insights" aria-label="Indicadores de atividade">
+        <div className="ewvon-uber-section-title"><h2>Visão geral</h2><span>Seus indicadores</span></div>
+        <div className="ewvon-uber-chart-card">
+          <div className="ewvon-uber-chart-heading"><span className="ewvon-uber-chart-icon"><ListTodo size={18}/></span><span><strong>Suas tarefas</strong><small>Distribuição das pendências</small></span><span className="ewvon-uber-chart-total">{tasksLoading ? '—' : totalTasks + overdueTasks}</span></div>
+          <div className="ewvon-uber-task-bars" role="img" aria-label="Resumo de tarefas pendentes, atrasadas e concluídas nos últimos sete dias">
+            <div className="ewvon-uber-task-bar"><span className="ewvon-uber-task-bar-label"><i className="pending"/>Pendentes<strong>{tasksLoading ? '—' : totalTasks}</strong></span><span className="ewvon-uber-track"><i className="pending" style={{width: tasksLoading ? '0%' : String(pendingShare) + '%'}}/></span></div>
+            <div className="ewvon-uber-task-bar"><span className="ewvon-uber-task-bar-label"><i className="overdue"/>Atrasadas<strong>{tasksLoading ? '—' : overdueTasks}</strong></span><span className="ewvon-uber-track"><i className="overdue" style={{width: tasksLoading ? '0%' : String(overdueShare) + '%'}}/></span></div>
+            <div className="ewvon-uber-task-bar"><span className="ewvon-uber-task-bar-label"><i className="completed"/>Concluídas · 7 dias<strong>{tasksLoading ? '—' : completedWeek}</strong></span><span className="ewvon-uber-track"><i className="completed" style={{width: tasksLoading ? '0%' : String(completedShare) + '%'}}/></span></div>
+          </div>
+          <p className="ewvon-uber-chart-note"><TrendingUp size={14}/> Acompanhe o andamento sem sair do início.</p>
+        </div>
+        <div className="ewvon-uber-section-title ewvon-uber-activity-title"><h2>Atividade da equipe</h2><span>Hoje</span></div>
+        <div className="ewvon-uber-activity-grid">
+          <button type="button" onClick={() => onNavigate('chat')} className="ewvon-uber-activity-card"><span className="ewvon-uber-activity-top"><MessageSquare size={17}/><ArrowUpRight size={15}/></span><strong>{todayMessages}</strong><span>Mensagens</span><small>Conversas de hoje</small></button>
+          <button type="button" onClick={() => onNavigate('announcements')} className="ewvon-uber-activity-card"><span className="ewvon-uber-activity-top"><Bell size={17}/><ArrowUpRight size={15}/></span><strong>{announcements.length}</strong><span>Avisos publicados</span><small>Comunicados da empresa</small></button>
+          <button type="button" onClick={() => onNavigate('birthdays')} className="ewvon-uber-activity-card"><span className="ewvon-uber-activity-top"><Cake size={17}/><ArrowUpRight size={15}/></span><strong>{todayBdays || birthdayPeople.length}</strong><span>Aniversariantes</span><small>{todayBdays ? 'Fazem aniversário hoje' : 'Na lista deste mês'}</small></button>
         </div>
       </section>
 
