@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MessageSquare, Bell, Cake, ChevronRight, AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, Building2 } from 'lucide-react';
+import { MessageSquare, Bell, Cake, ChevronRight, AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, Building2, TrendingUp, ListTodo } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useBirthdays } from '@/hooks/useData';
