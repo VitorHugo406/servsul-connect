@@ -31,6 +31,7 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
   const displayName = profile?.display_name || profile?.name || 'Usuário';
   const initials = displayName.split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase();
   const profileButtonRef = useRef<HTMLButtonElement>(null);
+  const [calendarViewMode, setCalendarViewMode] = useState<'month' | 'week' | 'day'>('month');
   const [showNotifications, setShowNotifications] = useState(false); const [showProfile, setShowProfile] = useState(false); const [showSectionSearch, setShowSectionSearch] = useState(false); const [showComingSoon, setShowComingSoon] = useState<string | null>(null); const [showAppearance, setShowAppearance] = useState(false);
   useEffect(() => { document.title = company?.name ? `${company.name} | ewvon` : 'ewvon - Gestão de operações'; void createCompanyLogoUrl(company?.logo_url).then(faviconUrl => { if (!faviconUrl) return; document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach(link => { link.href = faviconUrl; }); }); }, [company?.name, company?.logo_url]);
   const isMainAdmin = profile?.email === ADMIN_EMAIL; const autonomy = profile?.autonomy_level;
@@ -69,9 +70,9 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
           <div className="ewvon-global-calendar-tabs ewvon-calendar-tabs-intro flex shrink-0 items-center gap-1 rounded-full border border-slate-200/90 bg-slate-100/80 p-1" role="group" aria-label="Visualização do calendário">
             {(['month', 'week', 'day'] as const).map((mode) => (
               <button key={mode} type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('ewvon:calendar-view-change', { detail: mode }))}
-                className="ewvon-global-calendar-tab rounded-full px-3 py-1.5 text-[11px] font-medium text-slate-500 transition-all hover:bg-white hover:text-slate-900"
-                data-calendar-view={mode}
+                onClick={() => { setCalendarViewMode(mode); window.dispatchEvent(new CustomEvent('ewvon:calendar-view-change', { detail: mode })); }}
+                className={`ewvon-global-calendar-tab rounded-full px-3 py-1.5 text-[11px] font-medium transition-all ${calendarViewMode === mode ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:bg-white/70 hover:text-slate-900'}`}
+                data-calendar-view={mode} aria-pressed={calendarViewMode === mode}
               >{mode === 'month' ? 'Mês' : mode === 'week' ? 'Semana' : 'Dia'}</button>
             ))}
           </div>
