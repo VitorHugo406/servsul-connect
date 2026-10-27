@@ -427,15 +427,6 @@ const Auth = () => {
 
   return (
     <div className="ewvon-auth-page min-h-screen flex flex-col items-center justify-center px-5 py-10">
-      <div className={`ewvon-access-nav ewvon-auth-nav ${companyBrand ? "is-found" : ""}`} style={companyBrand ? ({ "--company-accent": companyBrand.primary_color, "--company-secondary": companyBrand.secondary_color } as any) : undefined}>
-        <Link to="/select-company" className="ewvon-access-nav-brand"><span className="ewvon-access-nav-mark">e</span><span>ewvon</span></Link>
-        {companyBrand && <div className="ewvon-access-nav-state">
-          <span className="ewvon-access-nav-company-logo">{companyBrand.logo_url && companyLogoUrl ? <img src={companyLogoUrl} alt="" /> : <Building2 size={16} />}</span>
-          <span className="ewvon-access-nav-company-name">{companyBrand.name}</span><Check size={14} />
-        </div>}
-      </div>
-      {/* Minimal single-column access layout; company identity stays above the form. */}
-      {/* Right Panel - Auth Form - Full width on mobile */}
       <div className="ewvon-auth-form-wrap flex w-full items-center justify-center px-0 py-0 bg-transparent">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
