@@ -1542,3 +1542,30 @@
     transform:none !important;
   }
 }
+
+
+/* EWVON: alternate the login navigation outline between the company's primary and secondary colors. */
+.ewvon-auth-nav,
+.ewvon-access-nav {
+  border:1px solid var(--company-accent, #8b96a8) !important;
+  animation:ewvon-company-nav-color-cycle 4.8s ease-in-out infinite !important;
+  transition:border-color 1.2s ease, box-shadow 1.2s ease !important;
+}
+@keyframes ewvon-company-nav-color-cycle {
+  0%, 100% {
+    border-color:var(--company-accent, #8b96a8);
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--company-accent, #8b96a8) 24%,transparent),
+      0 0 18px color-mix(in srgb,var(--company-accent, #8b96a8) 18%,transparent),
+      inset 0 1px 0 rgba(255,255,255,.07);
+  }
+  50% {
+    border-color:var(--company-secondary, #b6becb);
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--company-secondary, #b6becb) 24%,transparent),
+      0 0 18px color-mix(in srgb,var(--company-secondary, #b6becb) 18%,transparent),
+      inset 0 1px 0 rgba(255,255,255,.07);
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .ewvon-auth-nav,
+  .ewvon-access-nav { animation:none !important; }
+}
