@@ -435,46 +435,8 @@ const Auth = () => {
           transition={{ duration: 0.5 }}
           className="w-full max-w-[420px]"
         >
-          <div className="mb-5 flex justify-start">
-            <Link to="/select-company" className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:text-foreground">
-              <ArrowLeft className="w-3 h-3" /> Trocar empresa
-            </Link>
-          </div>
-          {/* Logo da empresa selecionada no mobile */}
-          <div className="ewvon-auth-company-heading mb-7 flex flex-col items-start justify-center gap-3">
-            {companyBrand?.logo_url && (
-              <img
-                src={companyLogoUrl ?? undefined}
-                alt={companyBrand.name}
-                className="h-14 max-w-[180px] object-contain"
-              />
-            )}
-            <div className="ewvon-auth-company-copy">
-              <h1 className="font-display text-2xl sm:text-[28px] font-semibold tracking-tight text-foreground">
-                {companyBrand?.is_system ? 'ewvon' : (companyBrand?.name || 'ewvon')}
-              </h1>
-              {companyBrand && !companyBrand.is_system && (
-                <p className="text-xs text-muted-foreground">Entrar na empresa</p>
-              )}
-            </div>
-          </div>
-
-
           <Card className="ewvon-auth-card">
-            <CardHeader className="text-center pb-2 pt-0 px-4 sm:px-6">
-              <CardTitle className="font-display text-xl sm:text-2xl">
-                {isLogin ? 'Bem-vindo de volta!' : 'Criar conta'}
-              </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">
-                {isLogin
-                  ? 'Entre com suas credenciais para acessar'
-                  : step === 1
-                    ? 'Etapa 1 de 2: Dados pessoais'
-                    : 'Etapa 2 de 2: Setor e informações adicionais'}
-              </CardDescription>
-            </CardHeader>
-            
-            <CardContent className="px-4 pb-2 sm:px-6">
+            <CardContent className="px-4 py-7 sm:px-7">
               {/* Progress bar for signup */}
               {!isLogin && (
                 <div className="mb-6">
@@ -919,9 +881,6 @@ const Auth = () => {
             </CardContent>
           </Card>
 
-          <p className="mt-2 text-center text-xs text-muted-foreground">
-            © 2026 ewvon. Todos os direitos reservados.
-          </p>
         </motion.div>
       </div>
     </div>
