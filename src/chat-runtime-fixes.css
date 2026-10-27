@@ -201,3 +201,32 @@
 @keyframes ewvon-profile-expand { from { opacity:0; transform:translate(-50%,-50%) scale(.96); } to { opacity:1; transform:translate(-50%,-50%) scale(1); } }
 @keyframes ewvon-profile-collapse { from { opacity:1; transform:translate(-50%,-50%) scale(1); } to { opacity:0; transform:translate(-50%,-50%) scale(.98); } }
 @media (prefers-reduced-motion: reduce) { .ewvon-profile-drawer, .ewvon-profile-overlay { animation:none !important; } }
+
+
+/* EWVON calendar: minimalist, consistent with the home dashboard. */
+.ewvon-calendar-shell { min-width:0; color:#18181b; background:transparent; }
+.ewvon-calendar-header { gap:14px !important; padding:16px 20px !important; border-bottom:1px solid #eaeaec !important; background:transparent !important; }
+.ewvon-calendar-header h3 { font-size:20px !important; line-height:1.2 !important; font-weight:650 !important; letter-spacing:-.045em !important; }
+.ewvon-calendar-header p { margin-top:4px !important; font-size:12px !important; color:#71717a !important; }
+.ewvon-calendar-header button { border-radius:10px !important; box-shadow:none !important; }
+.ewvon-calendar-shell [role="tablist"] { padding:3px !important; gap:3px !important; border:1px solid #e5e7eb !important; border-radius:12px !important; background:#f7f7f8 !important; }
+.ewvon-calendar-shell [role="tab"] { border-radius:8px !important; font-size:12px !important; box-shadow:none !important; }
+.ewvon-calendar-shell [role="tabpanel"] { min-width:0; }
+.ewvon-calendar-shell [role="tabpanel"] > div { min-width:0; }
+.ewvon-calendar-shell .grid-cols-7.gap-px { border-radius:10px !important; border-color:#e5e7eb !important; background:#e5e7eb !important; }
+.ewvon-calendar-shell .grid-cols-7.gap-px > button { border-radius:0 !important; box-shadow:none; }
+.ewvon-calendar-shell .grid-cols-7.gap-px > button:hover { background-color:#f4f4f5 !important; }
+.ewvon-calendar-shell .grid-cols-7.gap-px > button.ring-2 { box-shadow:inset 0 0 0 1px #27272a !important; }
+.ewvon-calendar-shell [data-radix-scroll-area-viewport] { scrollbar-width:thin; }
+.ewvon-calendar-shell [class*="rounded-\[22px\]"], .ewvon-calendar-shell [class*="rounded-xl"] { box-shadow:none; }
+@media (min-width:768px) {
+ .ewvon-calendar-shell .grid-cols-7.gap-px > button { min-height:76px !important; align-items:flex-start !important; padding:8px !important; }
+ .ewvon-calendar-shell .grid-cols-7.gap-px > button > span:first-child { margin-bottom:4px; }
+ .ewvon-calendar-shell .grid-cols-7.gap-px > button > div { justify-content:flex-start !important; }
+ .ewvon-calendar-shell [role="tabpanel"] { padding:16px 20px !important; }
+}
+@media (max-width:767px) {
+ .ewvon-calendar-header { padding:14px !important; }
+ .ewvon-calendar-shell [role="tabpanel"] { padding:10px !important; }
+ .ewvon-calendar-shell .grid-cols-7.gap-px > button { min-height:52px !important; }
+}
