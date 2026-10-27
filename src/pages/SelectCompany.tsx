@@ -14,16 +14,18 @@ export default function SelectCompany(){const navigate=useNavigate();const[query
  const foundLogoUrl=useCompanyLogoUrl(found?.logo_url);const handleContinue=()=>{if(!found)return;saveCompany(found);setContinuing(true);navigate(`/auth?company=${encodeURIComponent(found.slug)}`)};
  return (
   <main className="ewvon-company-auth-page">
+    <div className={`ewvon-access-nav ${found ? "is-found" : searching ? "is-searching" : notFound ? "is-not-found" : ""}`} style={found ? ({ "--company-accent": found.primary_color } as any) : undefined} aria-live="polite">
+      <div className="ewvon-access-nav-brand"><span className="ewvon-access-nav-mark">e</span><span>ewvon</span></div>
+      {(searching || notFound || found) && <div className="ewvon-access-nav-state">
+        {searching ? <><Loader2 size={14} /><span>Procurando empresa</span></> : notFound ? <><X size={14} /><span>Empresa Não Encontrada</span></> : found ? <><span className="ewvon-access-nav-company-logo">{found.logo_url && foundLogoUrl ? <img src={foundLogoUrl} alt="" /> : <Building2 size={16} />}</span><span className="ewvon-access-nav-company-name">{found.name}</span><Check size={14} /></> : null}
+      </div>}
+    </div>
     <motion.section
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className="ewvon-company-layout"
     >
-      <header className="ewvon-access-brand">
-        <div className="ewvon-access-mark" aria-hidden="true"><Building2 size={20} strokeWidth={1.7} /></div>
-        <span>ewvon</span>
-      </header>
 
       {found?.logo_url && foundLogoUrl && (
         <motion.div
