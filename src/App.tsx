@@ -56,7 +56,7 @@ function RootRoute() {
   }, []);
   if (loading || verifying) return <LoadingScreen message="Preparando seu ambiente..." />;
   if (user) return <Index />;
-  return isMobile ? <Auth /> : <LandingPage />;
+  return isMobile ? <SelectCompany /> : <LandingPage />;
 }
 function PersistentAccessNavigation() {
   const location = useLocation();
