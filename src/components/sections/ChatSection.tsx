@@ -286,9 +286,6 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       <ChatPersonalizationDialog open={showSectorPersonalization} onOpenChange={setShowSectorPersonalization} chatId={effectiveSector ? `sector-${effectiveSector}` : null} chatName={currentSector?.name || 'Setor'} />
     </> : chatMode === 'direct' ? (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden [&>div>div:nth-child(2)]:hidden"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div> : <div className="flex min-h-0 flex-1 overflow-hidden"><DirectMessageChat partnerId={selectedUserId} /></div>) : (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div> : <div className="flex min-h-0 flex-1 overflow-hidden"><PrivateGroupChat group={selectedGroup} /></div>)}
       </div>
-    </div>}
-    {isMobile && (chatMode === 'sectors' ? <> 
-      {/* Mobile keeps its existing sector-chat layout and controls. */}
-    </> : null)}
+    </div>
   </motion.div>;
 }
