@@ -18,7 +18,7 @@ export default function SelectCompany(){const navigate=useNavigate();const[query
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="ewvon-company-layout"
+      className="ewvon-company-layout text-black [&_*]:text-black"
     >
 
       {found?.logo_url && foundLogoUrl && (
@@ -41,12 +41,13 @@ export default function SelectCompany(){const navigate=useNavigate();const[query
 
       <section className="ewvon-company-auth-card" aria-label="Localizar empresa">
         <label className="ewvon-access-label" htmlFor="company-search">Empresa</label>
-        <div className="ewvon-company-search">
+        <div className="ewvon-company-search text-black">
           <Search size={17} aria-hidden="true" />
           <Input
             id="company-search"
             autoFocus
             placeholder="Buscar pelo nome da empresa"
+            className="text-black placeholder:!text-gray-500"
             value={query}
             onChange={e => setQuery(e.target.value)}
             autoComplete="organization"
