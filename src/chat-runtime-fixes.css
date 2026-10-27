@@ -404,25 +404,25 @@
     linear-gradient(135deg, rgba(24,24,27,.018), transparent 42%, rgba(24,24,27,.018));
 }
 .ewvon-auth-page > .hidden.lg\\:flex { display:none !important; }
-.ewvon-auth-page > div:nth-child(2) {
+.ewvon-auth-page > div:first-child {
   width:100% !important;
   min-height:100svh !important;
   padding:32px 20px !important;
   background:transparent !important;
 }
-.ewvon-auth-page > div:nth-child(2) > div {
+.ewvon-auth-page > div:first-child > div {
   width:100% !important;
   max-width:420px !important;
 }
-.ewvon-auth-page > div:nth-child(2) > div > div:first-child {
+.ewvon-auth-page > div:first-child > div > div:first-child {
   margin-bottom:18px !important;
   padding-left:2px;
 }
-.ewvon-auth-page > div:nth-child(2) > div > div:nth-child(2) {
+.ewvon-auth-page > div:first-child > div > div:nth-child(2) {
   gap:10px !important;
   margin-bottom:24px !important;
 }
-.ewvon-auth-page > div:nth-child(2) > div > div:nth-child(2) h1 {
+.ewvon-auth-page > div:first-child > div > div:nth-child(2) h1 {
   font-size:24px !important;
   font-weight:650 !important;
   letter-spacing:-.055em !important;
@@ -567,8 +567,8 @@
   outline-offset:3px !important;
 }
 @media (max-width:640px) {
-  .ewvon-auth-page > div:nth-child(2) { padding:22px 16px !important; }
-  .ewvon-auth-page > div:nth-child(2) > div > div:nth-child(2) { margin-bottom:18px !important; }
+  .ewvon-auth-page > div:first-child { padding:22px 16px !important; }
+  .ewvon-auth-page > div:first-child > div > div:nth-child(2) { margin-bottom:18px !important; }
   .ewvon-auth-card { border-radius:23px !important; }
   .ewvon-auth-card [class*="CardHeader"] { padding:20px 20px 15px !important; }
   .ewvon-auth-card [class*="CardTitle"] { font-size:23px !important; }
@@ -613,20 +613,20 @@
     radial-gradient(ellipse at 0% 100%,rgba(24,24,27,.035),transparent 34%),
     radial-gradient(ellipse at 100% 80%,rgba(24,24,27,.025),transparent 36%);
 }
-.ewvon-auth-page > div:nth-child(2) {
+.ewvon-auth-page > div:first-child {
   width:100% !important;
   min-height:0 !important;
   padding:0 !important;
   background:transparent !important;
 }
-.ewvon-auth-page > div:nth-child(2) > div {
+.ewvon-auth-page > div:first-child > div {
   max-width:420px !important;
   margin:0 auto;
 }
-.ewvon-auth-page > div:nth-child(2) > div > div:first-child {
+.ewvon-auth-page > div:first-child > div > div:first-child {
   margin:0 0 20px !important;
 }
-.ewvon-auth-page > div:nth-child(2) > div > div:first-child a {
+.ewvon-auth-page > div:first-child > div > div:first-child a {
   display:inline-flex;
   align-items:center;
   gap:8px;
@@ -640,26 +640,26 @@
   text-decoration:none;
   transition:background .18s ease,border-color .18s ease;
 }
-.ewvon-auth-page > div:nth-child(2) > div > div:first-child a:hover {
+.ewvon-auth-page > div:first-child > div > div:first-child a:hover {
   background:#fff;
   border-color:#d4d4d8;
 }
-.ewvon-auth-page > div:nth-child(2) > div > div:nth-child(2) {
+.ewvon-auth-page > div:first-child > div > div:nth-child(2) {
   margin:0 0 24px !important;
   gap:12px !important;
 }
-.ewvon-auth-page > div:nth-child(2) > div > div:nth-child(2) img {
+.ewvon-auth-page > div:first-child > div > div:nth-child(2) img {
   max-width:180px;
   max-height:56px;
 }
-.ewvon-auth-page > div:nth-child(2) > div > div:nth-child(2) h1 {
+.ewvon-auth-page > div:first-child > div > div:nth-child(2) h1 {
   color:#18181b !important;
   font-size:28px !important;
   line-height:1.12 !important;
   font-weight:650 !important;
   letter-spacing:-.065em !important;
 }
-.ewvon-auth-page > div:nth-child(2) > div > div:nth-child(2) p {
+.ewvon-auth-page > div:first-child > div > div:nth-child(2) p {
   margin-top:4px;
   color:#71717a !important;
   font-size:12px !important;
@@ -887,8 +887,8 @@
 .ewvon-access-footer span { padding:0 5px; }
 @media(max-width:600px) {
   .ewvon-auth-page,.ewvon-company-auth-page { padding:24px 16px !important; }
-  .ewvon-auth-page > div:nth-child(2) > div > div:nth-child(2) { margin-bottom:20px !important; }
-  .ewvon-auth-page > div:nth-child(2) > div > div:nth-child(2) h1 { font-size:25px !important; }
+  .ewvon-auth-page > div:first-child > div > div:nth-child(2) { margin-bottom:20px !important; }
+  .ewvon-auth-page > div:first-child > div > div:nth-child(2) h1 { font-size:25px !important; }
   .ewvon-auth-card { border-radius:23px !important; }
   .ewvon-auth-card [class*="CardHeader"] { padding:24px 21px 17px !important; }
   .ewvon-auth-card [class*="CardContent"] { padding:0 21px 23px !important; }
