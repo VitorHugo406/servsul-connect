@@ -78,7 +78,7 @@ const step2Schema = z.object({
 });
 
 const Auth = () => {
-  const [isLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingSectors, setLoadingSectors] = useState(false);
