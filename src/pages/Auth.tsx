@@ -426,7 +426,7 @@ const Auth = () => {
   const brandSecondary = companyBrand?.secondary_color || BRAND_SECONDARY;
 
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
+    <div className="ewvon-auth-page flex min-h-screen flex-col lg:flex-row">
       {/* Left Panel - Branding - Hidden on mobile */}
       <div
         className="hidden lg:flex lg:w-1/2 items-center justify-center p-12"
@@ -523,7 +523,7 @@ const Auth = () => {
           </div>
 
 
-          <Card className="border-0 shadow-none sm:shadow-xl">
+          <Card className="ewvon-auth-card border-0 shadow-none sm:shadow-xl">
             <CardHeader className="text-center pb-2 pt-0 px-4 sm:px-6">
               <CardTitle className="font-display text-xl sm:text-2xl">
                 {isLogin ? 'Bem-vindo de volta!' : 'Criar conta'}
