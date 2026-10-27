@@ -903,7 +903,7 @@ export function CalendarSection() {
 
   // ========== MAIN CALENDAR VIEW ==========
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="ewvon-calendar-shell flex flex-col h-full overflow-hidden">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="ewvon-calendar-shell flex flex-col h-full min-h-0 overflow-hidden">
       {/* Header */}
       <div className="ewvon-calendar-header flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-4 py-3 border-b border-border/70 flex-shrink-0">
         <div>
