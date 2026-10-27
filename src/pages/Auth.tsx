@@ -135,7 +135,7 @@ const Auth = () => {
 
   useEffect(() => {
     const logoUrl = companyLogoUrl;
-    document.title = companyBrand?.name ? `${companyBrand.name} | Ewvor` : 'Ewvor - Comunicação Empresarial';
+    document.title = companyBrand?.name ? `${companyBrand.name} | ewvon` : 'ewvon - Comunicação Empresarial';
     document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
       link.href = logoUrl ?? '';
     });
@@ -426,7 +426,7 @@ const Auth = () => {
   const brandSecondary = companyBrand?.secondary_color || BRAND_SECONDARY;
 
   return (
-    <div className="ewvon-auth-page min-h-screen flex flex-col items-center justify-center px-5 py-10">
+    <div className="ewvon-auth-page min-h-screen flex flex-col items-center justify-center px-5 py-10">\n      <div className={`ewvon-access-nav ewvon-auth-nav ${companyBrand ? "is-found" : ""}`} style={companyBrand ? ({ "--company-accent": companyBrand.primary_color } as React.CSSProperties) : undefined}>\n        <Link to="/select-company" className="ewvon-access-nav-brand"><span className="ewvon-access-nav-mark">e</span><span>ewvon</span></Link>\n        {companyBrand && <div className="ewvon-access-nav-state"><span className="ewvon-access-nav-company-logo">{companyBrand.logo_url && companyLogoUrl ? <img src={companyLogoUrl} alt="" /> : <Building2 size={16} />}</span><span className="ewvon-access-nav-company-name">{companyBrand.name}</span><Check size={14} /></div>}\n      </div>
       {/* Minimal single-column access layout; company identity stays above the form. */}
       {/* Right Panel - Auth Form - Full width on mobile */}
       <div className="flex min-h-[100dvh] w-full items-center justify-center px-0 py-0 bg-transparent">
@@ -452,7 +452,7 @@ const Auth = () => {
             )}
             <div className="text-center">
               <h1 className="font-display text-2xl sm:text-[28px] font-semibold tracking-tight text-foreground">
-                {companyBrand?.is_system ? 'Ewvor' : (companyBrand?.name || 'Ewvor')}
+                {companyBrand?.is_system ? 'ewvon' : (companyBrand?.name || 'ewvon')}
               </h1>
               {companyBrand && !companyBrand.is_system && (
                 <p className="text-xs text-muted-foreground">Entrar na empresa</p>
@@ -921,7 +921,7 @@ const Auth = () => {
           </Card>
 
           <p className="mt-2 text-center text-xs text-muted-foreground">
-            © 2026 Ewvor. Todos os direitos reservados.
+            © 2026 ewvon. Todos os direitos reservados.
           </p>
         </motion.div>
       </div>
