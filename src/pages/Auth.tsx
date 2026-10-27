@@ -426,94 +426,32 @@ const Auth = () => {
   const brandSecondary = companyBrand?.secondary_color || BRAND_SECONDARY;
 
   return (
-    <div className="ewvon-auth-page flex min-h-screen flex-col lg:flex-row">
-      {/* Left Panel - Branding - Hidden on mobile */}
-      <div
-        className="hidden lg:flex lg:w-1/2 items-center justify-center p-12"
-        style={{
-          background: `linear-gradient(135deg, ${brandPrimary} 0%, ${brandSecondary} 100%)`,
-        }}
-      >
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6 }}
-          className="max-w-md text-white"
-        >
-          <div className="mb-4 flex items-center gap-4">
-            {companyBrand?.logo_url && (
-              <img
-                src={companyLogoUrl ?? undefined}
-                alt={companyBrand.name}
-                className="h-16 w-16 object-contain rounded-2xl bg-white/10 p-1"
-              />
-            )}
-            <div>
-              <h1 className="font-display text-4xl font-bold">
-                {companyBrand?.is_system ? 'Ewvor' : (companyBrand?.name || 'Ewvor')}
-              </h1>
-              <p className="text-white/70">
-                {companyBrand?.is_system ? 'Painel de administração' : (companyBrand ? 'Ambiente corporativo' : 'Plataforma corporativa')}
-              </p>
-            </div>
-          </div>
-          
-          <h2 className="mb-4 font-display text-2xl font-semibold">
-            Comunicação Corporativa Integrada
-          </h2>
-          <p className="mb-8 text-white/80 leading-relaxed">
-            Conecte-se com sua equipe, receba avisos oficiais, acompanhe dados em tempo real 
-            e mantenha sua identidade digital.
-          </p>
-          
-          <div className="space-y-2">
-            {[
-              'Chat por setores com emojis',
-              'Avisos gerais da empresa',
-              'Mural de aniversariantes',
-              'Gráficos e visualização de dados',
-            ].map((feature, index) => (
-              <motion.div
-                key={feature}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 + index * 0.1 }}
-                className="flex items-center gap-3"
-              >
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary">
-                  <ArrowRight className="h-3 w-3 text-secondary-foreground" />
-                </div>
-                <span className="text-white/90">{feature}</span>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
-
+    <div className="ewvon-auth-page min-h-screen flex flex-col items-center justify-center px-5 py-10">
+      {/* Minimal single-column access layout; company identity stays above the form. */}
       {/* Right Panel - Auth Form - Full width on mobile */}
-      <div className="flex min-h-[100dvh] w-full items-center justify-center bg-background px-4 py-2 sm:px-8 lg:min-h-0 lg:w-1/2">
+      <div className="flex min-h-[100dvh] w-full items-center justify-center px-0 py-0 bg-transparent">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
+          className="w-full max-w-[420px]"
         >
-          <div className="mb-1 flex justify-start lg:hidden">
+          <div className="mb-5 flex justify-start">
             <Link to="/select-company" className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:text-foreground">
               <ArrowLeft className="w-3 h-3" /> Trocar empresa
             </Link>
           </div>
           {/* Logo da empresa selecionada no mobile */}
-          <div className="mb-2 flex flex-col items-center justify-center gap-1 lg:hidden">
+          <div className="mb-7 flex flex-col items-center justify-center gap-3">
             {companyBrand?.logo_url && (
               <img
                 src={companyLogoUrl ?? undefined}
                 alt={companyBrand.name}
-                className="h-10 object-contain"
+                className="h-14 max-w-[180px] object-contain"
               />
             )}
             <div className="text-center">
-              <h1 className="font-display text-xl sm:text-3xl font-bold text-foreground">
+              <h1 className="font-display text-2xl sm:text-[28px] font-semibold tracking-tight text-foreground">
                 {companyBrand?.is_system ? 'Ewvor' : (companyBrand?.name || 'Ewvor')}
               </h1>
               {companyBrand && !companyBrand.is_system && (
@@ -523,7 +461,7 @@ const Auth = () => {
           </div>
 
 
-          <Card className="ewvon-auth-card border-0 shadow-none sm:shadow-xl">
+          <Card className="ewvon-auth-card">
             <CardHeader className="text-center pb-2 pt-0 px-4 sm:px-6">
               <CardTitle className="font-display text-xl sm:text-2xl">
                 {isLogin ? 'Bem-vindo de volta!' : 'Criar conta'}
