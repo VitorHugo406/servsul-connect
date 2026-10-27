@@ -92,12 +92,12 @@ function PersistentAccessNavigation() {
   if (!active) return null;
   const company = state.company;
   const status = state.status;
-  const className = 'ewvon-access-nav ' + (status === 'found' ? 'is-found' : status === 'searching' ? 'is-searching' : status === 'not-found' ? 'is-not-found' : '');
+  const className = 'ewvon-access-nav ' + (status === 'found' ? 'is-found' : status === 'searching' ? 'is-searching' : status === 'not-found' ? 'is-not-found' : 'is-idle');
   return <div className={className} style={company ? ({'--company-accent':company.primary_color,'--company-secondary':company.secondary_color} as any) : undefined} aria-live="polite">
     <a href="/select-company" className="ewvon-access-nav-brand"><span className="ewvon-access-nav-mark">e</span><span>ewvon</span></a>
-    {(status === 'searching' || status === 'not-found' || company) && <div className="ewvon-access-nav-state">
-      {status === 'searching' ? <><Loader2 size={14} className="animate-spin"/><span>Procurando empresa</span></> : status === 'not-found' ? <><X size={14}/><span>Empresa Não Encontrada</span></> : company ? <><span className="ewvon-access-nav-company-logo">{company.logo_url ? <img src={company.logo_url} alt=""/> : <Building2 size={16}/>}</span><span className="ewvon-access-nav-company-name">{company.name}</span><Check size={14}/></> : null}
-    </div>}
+    <div className="ewvon-access-nav-state">
+      {status === 'searching' || status === 'idle' ? <><Loader2 size={14} className="animate-spin"/><span>{status === 'idle' ? 'Procurando empresa' : 'Procurando empresa'}</span></> : status === 'not-found' ? <><X size={14}/><span>Empresa Não Encontrada</span></> : company ? <><span className="ewvon-access-nav-company-logo">{company.logo_url ? <img src={company.logo_url} alt=""/> : <Building2 size={16}/>}</span><span className="ewvon-access-nav-company-name">{company.name}</span><Check size={14}/></> : <><Loader2 size={14} className="animate-spin"/><span>Procurando empresa</span></>}
+    </div>
   </div>;
 }
 function AppRoutes() { const location = useLocation(); const authContent = <PublicRoute><Auth /></PublicRoute>; return <><PersistentAccessNavigation /><Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><Routes><Route path="/" element={<RootRoute />} /><Route path="/auth" element={location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={<PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="*" element={<RootRoute />} /></Routes></Suspense></>; }
