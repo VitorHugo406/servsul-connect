@@ -65,6 +65,18 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
           ))}
         </nav>
 
+        {activeSection === 'calendar' && (
+          <div className="ewvon-global-calendar-tabs ewvon-calendar-tabs-intro flex shrink-0 items-center gap-1 rounded-full border border-slate-200/90 bg-slate-100/80 p-1" role="group" aria-label="Visualização do calendário">
+            {(['month', 'week', 'day'] as const).map((mode) => (
+              <button key={mode} type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('ewvon:calendar-view-change', { detail: mode }))}
+                className="ewvon-global-calendar-tab rounded-full px-3 py-1.5 text-[11px] font-medium text-slate-500 transition-all hover:bg-white hover:text-slate-900"
+                data-calendar-view={mode}
+              >{mode === 'month' ? 'Mês' : mode === 'week' ? 'Semana' : 'Dia'}</button>
+            ))}
+          </div>
+        )}
+
         <div className="ewvon-actions flex shrink-0 items-center justify-end gap-1.5">
           <div className="relative">
             <button type="button" onClick={() => { setShowSectionSearch(value => !value); if (showSectionSearch) onSearchChange?.(''); }}
