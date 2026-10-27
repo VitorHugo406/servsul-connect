@@ -904,34 +904,32 @@ export function CalendarSection() {
   // ========== MAIN CALENDAR VIEW ==========
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="ewvon-calendar-shell flex flex-col h-full min-h-0 overflow-hidden">
-      {/* Header */}
-      <div className="ewvon-calendar-header flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-4 py-3 border-b border-border/70 flex-shrink-0">
-        <div>
-          <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">Calendário</h3>
-          <p className="text-muted-foreground text-[11px]">Reuniões, lembretes e prazos</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {myInvites.length > 0 && (
-            <Badge variant="destructive" className="gap-1"><Bell className="h-3 w-3" /> {myInvites.length} convite(s)</Badge>
-          )}
-          <Button variant="outline" size="sm" onClick={goToToday}>Hoje</Button>
-          <Button variant="outline" size="sm" onClick={() => handleMeetingButtonClick(selectedDate)} className="gap-1">
-            <Video className="h-3.5 w-3.5" /> Reunião
-          </Button>
-          <Button size="sm" onClick={() => openCreateEvent(selectedDate)} className="gap-1">
-            <Plus className="h-3.5 w-3.5" /> Evento
-          </Button>
-        </div>
-      </div>
-
-      {/* View mode tabs */}
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="flex flex-col flex-1 overflow-hidden">
-        <div className="px-4 pt-2 flex-shrink-0">
-          <TabsList>
-            <TabsTrigger value="month">Mês</TabsTrigger>
-            <TabsTrigger value="week">Semana</TabsTrigger>
-            <TabsTrigger value="day">Dia</TabsTrigger>
-          </TabsList>
+      {/* Calendar controls share the app's compact top navigation row. */}
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div className="ewvon-calendar-header flex flex-wrap items-center justify-between gap-3 px-4 py-2 border-b border-border/70 flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="shrink-0">
+              <h3 className="font-display text-base font-semibold tracking-tight text-foreground">Calendário</h3>
+              <p className="text-muted-foreground text-[10px]">Reuniões, lembretes e prazos</p>
+            </div>
+            <TabsList className="ewvon-calendar-view-tabs">
+              <TabsTrigger value="month">Mês</TabsTrigger>
+              <TabsTrigger value="week">Semana</TabsTrigger>
+              <TabsTrigger value="day">Dia</TabsTrigger>
+            </TabsList>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {myInvites.length > 0 && (
+              <Badge variant="destructive" className="gap-1"><Bell className="h-3 w-3" /> {myInvites.length} convite(s)</Badge>
+            )}
+            <Button variant="outline" size="sm" onClick={goToToday} className="ewvon-calendar-action">Hoje</Button>
+            <Button variant="outline" size="sm" onClick={() => handleMeetingButtonClick(selectedDate)} className="gap-1 ewvon-calendar-action">
+              <Video className="h-3.5 w-3.5" /> Reunião
+            </Button>
+            <Button size="sm" onClick={() => openCreateEvent(selectedDate)} className="gap-1 ewvon-calendar-action ewvon-calendar-action-primary">
+              <Plus className="h-3.5 w-3.5" /> Evento
+            </Button>
+          </div>
         </div>
 
         {/* MONTH VIEW */}
