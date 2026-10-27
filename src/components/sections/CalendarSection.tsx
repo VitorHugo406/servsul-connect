@@ -912,7 +912,7 @@ export function CalendarSection() {
               <h3 className="font-display text-base font-semibold tracking-tight text-foreground">Calendário</h3>
               <p className="text-muted-foreground text-[10px]">Reuniões, lembretes e prazos</p>
             </div>
-            <TabsList className="ewvon-calendar-view-tabs">
+            <TabsList className="ewvon-calendar-view-tabs ewvon-calendar-tabs-intro">
               <TabsTrigger value="month">Mês</TabsTrigger>
               <TabsTrigger value="week">Semana</TabsTrigger>
               <TabsTrigger value="day">Dia</TabsTrigger>
