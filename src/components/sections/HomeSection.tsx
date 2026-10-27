@@ -312,24 +312,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
             <div className="flex h-[250px] flex-col items-center justify-center text-center"><span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-400"><ListTodo className="h-5 w-5" /></span><p className="mt-3 text-sm font-medium text-zinc-700">{loadingMetrics ? 'Carregando indicadores' : 'Sem tarefas para exibir'}</p><p className="mt-1 max-w-[210px] text-xs leading-5 text-zinc-400">Quando houver tarefas atribuídas a você, a distribuição aparecerá aqui.</p></div>
           )}
         </motion.div>
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="ewvon-glass-panel rounded-[22px] border border-white/90 p-5 shadow-[0_8px_30px_rgba(24,24,27,0.035)] xl:col-span-6">
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700"><Activity className="h-4 w-4" /></span><h2 className="font-semibold tracking-tight text-zinc-900">Ritmo da semana</h2></div><p className="mt-1 pl-10 text-sm text-zinc-500">Volume diário de mensagens e tarefas concluídas</p></div>
-            <Badge variant="outline" className="rounded-full border-zinc-200 bg-white/70 text-zinc-500">7 dias</Badge>
-          </div>
-          <div className="h-[210px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activityData} barGap={5} margin={{ top: 8, right: 4, left: -22, bottom: 0 }}>
-                <CartesianGrid vertical={false} stroke="#e4e4e7" strokeDasharray="3 5" />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#a1a1aa', fontSize: 11 }} dy={8} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#a1a1aa', fontSize: 11 }} allowDecimals={false} />
-                <Tooltip contentStyle={chartTooltipStyle} labelFormatter={(_, payload) => payload?.[0]?.payload?.fullDate || ''} />
-                <Bar dataKey="mensagens" name="Mensagens" fill="#52525b" radius={[5,5,0,0]} maxBarSize={18} />
-                <Bar dataKey="tarefas" name="Tarefas concluídas" fill="#a1a1aa" radius={[5,5,0,0]} maxBarSize={18} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
+
       </section>
 
       <section className="ewvon-secondary-panels grid grid-cols-1 gap-3 xl:grid-cols-12">
