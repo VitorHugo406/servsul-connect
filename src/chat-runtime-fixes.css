@@ -1569,3 +1569,182 @@
   .ewvon-auth-nav,
   .ewvon-access-nav { animation:none !important; }
 }
+
+
+/* EWVON mobile access refresh: Uber-inspired restraint, monochrome, no generic floating glass card. */
+@media (max-width: 600px) {
+  .ewvon-company-auth-page {
+    min-height:100svh !important;
+    padding:calc(env(safe-area-inset-top, 0px) + 26px) 22px calc(env(safe-area-inset-bottom, 0px) + 24px) !important;
+    display:flex !important;
+    align-items:stretch !important;
+    justify-content:center !important;
+    background:#fff !important;
+    color:#111 !important;
+  }
+  .ewvon-company-layout {
+    width:100% !important;
+    max-width:460px !important;
+    min-height:calc(100svh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 50px) !important;
+    margin:0 auto !important;
+    display:flex !important;
+    flex-direction:column !important;
+    justify-content:center !important;
+    gap:0 !important;
+  }
+  .ewvon-access-heading {
+    margin:0 0 32px !important;
+    text-align:left !important;
+  }
+  .ewvon-access-eyebrow {
+    display:block !important;
+    margin:0 0 12px !important;
+    color:#6b6b6b !important;
+    font-size:10px !important;
+    font-weight:700 !important;
+    letter-spacing:.16em !important;
+  }
+  .ewvon-access-heading h1 {
+    max-width:340px !important;
+    margin:0 !important;
+    color:#111 !important;
+    font-size:clamp(30px,8vw,40px) !important;
+    line-height:1.06 !important;
+    letter-spacing:-.055em !important;
+    font-weight:750 !important;
+  }
+  .ewvon-access-heading p {
+    max-width:310px !important;
+    margin:14px 0 0 !important;
+    color:#686868 !important;
+    font-size:15px !important;
+    line-height:1.5 !important;
+  }
+  .ewvon-company-auth-card {
+    width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:12px !important;
+    color:#111 !important;
+    background:transparent !important;
+    border:0 !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+  }
+  .ewvon-access-label {
+    margin:0 0 -4px !important;
+    color:#242424 !important;
+    font-size:13px !important;
+    font-weight:650 !important;
+  }
+  .ewvon-company-search {
+    min-height:56px !important;
+    padding:0 15px !important;
+    gap:11px !important;
+    color:#686868 !important;
+    background:#f5f5f5 !important;
+    border:1px solid #e7e7e7 !important;
+    border-radius:12px !important;
+    box-shadow:none !important;
+    transition:border-color .18s ease, background .18s ease, box-shadow .18s ease !important;
+  }
+  .ewvon-company-search:focus-within {
+    background:#fff !important;
+    border-color:#252525 !important;
+    box-shadow:0 0 0 3px rgba(0,0,0,.07) !important;
+  }
+  .ewvon-company-search input {
+    min-width:0 !important;
+    min-height:52px !important;
+    padding:0 !important;
+    color:#171717 !important;
+    background:transparent !important;
+    border:0 !important;
+    outline:none !important;
+    box-shadow:none !important;
+    font-size:16px !important;
+  }
+  .ewvon-company-search input::placeholder { color:#858585 !important; opacity:1 !important; }
+  .ewvon-company-continue {
+    width:100% !important;
+    min-height:56px !important;
+    margin-top:5px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:10px !important;
+    color:#fff !important;
+    background:#111 !important;
+    border:1px solid #111 !important;
+    border-radius:12px !important;
+    box-shadow:none !important;
+    font-size:15px !important;
+    font-weight:650 !important;
+    transition:transform .16s ease, background .16s ease, opacity .16s ease !important;
+  }
+  .ewvon-company-continue:active:not(:disabled) { transform:scale(.985) !important; }
+  .ewvon-company-continue:disabled { color:#8a8a8a !important; background:#e8e8e8 !important; border-color:#e8e8e8 !important; opacity:1 !important; }
+  .ewvon-access-security {
+    margin:12px 0 0 !important;
+    justify-content:center !important;
+    color:#777 !important;
+    font-size:12px !important;
+  }
+  .ewvon-company-logo-wrap {
+    margin:0 0 26px !important;
+    align-self:flex-start !important;
+  }
+  .ewvon-company-logo { max-width:68px !important; max-height:52px !important; object-fit:contain !important; }
+  .ewvon-access-footer {
+    margin-top:auto !important;
+    padding-top:36px !important;
+    color:#8a8a8a !important;
+    font-size:11px !important;
+    text-align:left !important;
+  }
+
+  /* Actual credential form: keep the same typographic and monochrome language. */
+  .ewvon-auth-card {
+    width:100% !important;
+    max-width:none !important;
+    padding:24px 0 0 !important;
+    color:#111 !important;
+    background:transparent !important;
+    border:0 !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+  }
+  .ewvon-auth-card input,
+  .ewvon-auth-card [role="combobox"] {
+    min-height:54px !important;
+    color:#171717 !important;
+    background:#f5f5f5 !important;
+    border:1px solid #e5e5e5 !important;
+    border-radius:12px !important;
+    box-shadow:none !important;
+    font-size:16px !important;
+  }
+  .ewvon-auth-card input::placeholder { color:#858585 !important; }
+  .ewvon-auth-card input:focus,
+  .ewvon-auth-card [role="combobox"]:focus,
+  .ewvon-auth-card [role="combobox"]:focus-visible {
+    background:#fff !important;
+    border-color:#252525 !important;
+    box-shadow:0 0 0 3px rgba(0,0,0,.07) !important;
+  }
+  .ewvon-auth-card button[type="submit"] {
+    min-height:56px !important;
+    color:#fff !important;
+    background:#111 !important;
+    border:1px solid #111 !important;
+    border-radius:12px !important;
+    box-shadow:none !important;
+    font-weight:650 !important;
+  }
+}
