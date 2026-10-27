@@ -1384,3 +1384,64 @@
 @media(prefers-reduced-motion:reduce) {
  .ewvon-auth-orb,.ewvon-auth-card,.ewvon-access-nav { animation:none !important; }
 }
+
+
+/* Final polish: gradual company-status expansion and soft graphite login fields. */
+.ewvon-access-nav-state {
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  transform-origin: center right !important;
+  transition:
+    max-width .65s cubic-bezier(.22,1,.36,1),
+    padding .55s cubic-bezier(.22,1,.36,1),
+    gap .45s ease,
+    border-color .5s ease,
+    background-color .5s ease,
+    box-shadow .65s cubic-bezier(.22,1,.36,1),
+    color .35s ease,
+    opacity .3s ease !important;
+}
+.ewvon-access-nav-state > * {
+  transition: opacity .35s ease, transform .55s cubic-bezier(.22,1,.36,1) !important;
+}
+.ewvon-access-nav.is-searching .ewvon-access-nav-state,
+.ewvon-access-nav.is-not-found .ewvon-access-nav-state,
+.ewvon-access-nav.is-found .ewvon-access-nav-state,
+.ewvon-auth-nav.is-searching .ewvon-access-nav-state,
+.ewvon-auth-nav.is-not-found .ewvon-access-nav-state,
+.ewvon-auth-nav.is-found .ewvon-access-nav-state {
+  animation: ewvon-status-expand .7s cubic-bezier(.22,1,.36,1) both !important;
+}
+@keyframes ewvon-status-expand {
+  from { opacity:.55; transform:scale(.965); filter:blur(1.5px); }
+  to { opacity:1; transform:scale(1); filter:blur(0); }
+}
+.ewvon-auth-card input,
+.ewvon-auth-card [role="combobox"] {
+  color:#e5e7eb !important;
+  background:linear-gradient(145deg,rgba(65,68,74,.78),rgba(48,51,57,.84)) !important;
+  border:1px solid rgba(210,214,222,.17) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045),inset 0 2px 5px rgba(0,0,0,.12) !important;
+}
+.ewvon-auth-card input::placeholder { color:#a4a9b2 !important; }
+.ewvon-auth-card input:focus,
+.ewvon-auth-card [role="combobox"]:focus,
+.ewvon-auth-card [role="combobox"]:focus-visible {
+  background:linear-gradient(145deg,rgba(72,75,82,.9),rgba(53,56,63,.94)) !important;
+  border-color:rgba(224,229,238,.38) !important;
+  box-shadow:0 0 0 3px rgba(190,199,213,.1),inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+@media(prefers-reduced-motion:reduce) {
+  .ewvon-access-nav-state,
+  .ewvon-access-nav-state > *,
+  .ewvon-access-nav.is-searching .ewvon-access-nav-state,
+  .ewvon-access-nav.is-not-found .ewvon-access-nav-state,
+  .ewvon-access-nav.is-found .ewvon-access-nav-state,
+  .ewvon-auth-nav.is-searching .ewvon-access-nav-state,
+  .ewvon-auth-nav.is-not-found .ewvon-access-nav-state,
+  .ewvon-auth-nav.is-found .ewvon-access-nav-state {
+    animation:none !important;
+    transition:none !important;
+    filter:none !important;
+  }
+}
