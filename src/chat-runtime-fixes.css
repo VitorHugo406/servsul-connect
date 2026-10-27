@@ -381,3 +381,203 @@
 @media (prefers-reduced-motion:reduce) {
   .ewvon-global-calendar-tabs { animation:none !important; }
 }
+
+
+/* EWVON access screens: a fresh, restrained design system shared by login and company lookup. */
+.ewvon-auth-page,
+.ewvon-company-auth-page {
+  position:relative;
+  isolation:isolate;
+  min-height:100svh;
+  background:#f6f6f7 !important;
+  color:#18181b;
+}
+.ewvon-auth-page::before,
+.ewvon-company-auth-page::before {
+  position:absolute;
+  z-index:-1;
+  inset:0;
+  content:"";
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.96) 0%, rgba(255,255,255,0) 58%),
+    linear-gradient(135deg, rgba(24,24,27,.018), transparent 42%, rgba(24,24,27,.018));
+}
+.ewvon-auth-page > .hidden.lg\\:flex { display:none !important; }
+.ewvon-auth-page > div:nth-child(2) {
+  width:100% !important;
+  min-height:100svh !important;
+  padding:32px 20px !important;
+  background:transparent !important;
+}
+.ewvon-auth-page > div:nth-child(2) > div {
+  width:100% !important;
+  max-width:420px !important;
+}
+.ewvon-auth-page > div:nth-child(2) > div > div:first-child {
+  margin-bottom:18px !important;
+  padding-left:2px;
+}
+.ewvon-auth-page > div:nth-child(2) > div > div:nth-child(2) {
+  gap:10px !important;
+  margin-bottom:24px !important;
+}
+.ewvon-auth-page > div:nth-child(2) > div > div:nth-child(2) h1 {
+  font-size:24px !important;
+  font-weight:650 !important;
+  letter-spacing:-.055em !important;
+}
+.ewvon-auth-card,
+.ewvon-company-auth-card {
+  box-sizing:border-box;
+  overflow:hidden;
+  border:1px solid #e7e7e9 !important;
+  border-radius:26px !important;
+  background:rgba(255,255,255,.92) !important;
+  box-shadow:0 22px 70px rgba(24,24,27,.065), 0 2px 8px rgba(24,24,27,.025) !important;
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+.ewvon-auth-card { padding:10px 4px 6px; }
+.ewvon-auth-card [class*="CardHeader"] { padding:22px 24px 18px !important; gap:7px !important; }
+.ewvon-auth-card [class*="CardTitle"] {
+  color:#18181b !important;
+  font-size:25px !important;
+  line-height:1.15 !important;
+  font-weight:650 !important;
+  letter-spacing:-.055em !important;
+}
+.ewvon-auth-card [class*="CardDescription"] {
+  color:#71717a !important;
+  font-size:13px !important;
+  line-height:1.55 !important;
+}
+.ewvon-auth-card [class*="CardContent"] { padding:0 24px 24px !important; }
+.ewvon-auth-card label {
+  color:#3f3f46 !important;
+  font-size:12px !important;
+  font-weight:600 !important;
+  letter-spacing:-.01em;
+}
+.ewvon-auth-card input,
+.ewvon-company-auth-card input {
+  box-sizing:border-box;
+  min-height:46px !important;
+  border:1px solid #e4e4e7 !important;
+  border-radius:14px !important;
+  background:#fafafa !important;
+  color:#18181b !important;
+  font-size:14px !important;
+  box-shadow:inset 0 1px 1px rgba(24,24,27,.015) !important;
+  transition:border-color .18s ease, background .18s ease, box-shadow .18s ease !important;
+}
+.ewvon-auth-card input { padding-top:0 !important; padding-bottom:0 !important; }
+.ewvon-auth-card input:hover,
+.ewvon-company-auth-card input:hover { border-color:#d4d4d8 !important; background:#fff !important; }
+.ewvon-auth-card input:focus,
+.ewvon-company-auth-card input:focus {
+  border-color:#a1a1aa !important;
+  background:#fff !important;
+  box-shadow:0 0 0 4px rgba(24,24,27,.055) !important;
+  outline:none !important;
+}
+.ewvon-auth-card form { gap:17px !important; }
+.ewvon-auth-card form > div { gap:7px !important; }
+.ewvon-auth-card form button[type="submit"],
+.ewvon-auth-card form > button,
+.ewvon-company-auth-card > button {
+  min-height:46px !important;
+  border:1px solid #18181b !important;
+  border-radius:999px !important;
+  background:#18181b !important;
+  color:#fff !important;
+  font-size:13px !important;
+  font-weight:600 !important;
+  letter-spacing:-.01em;
+  box-shadow:0 4px 10px rgba(24,24,27,.09) !important;
+  transition:transform .18s ease, background .18s ease, box-shadow .18s ease !important;
+}
+.ewvon-auth-card form button[type="submit"]:hover,
+.ewvon-auth-card form > button:hover,
+.ewvon-company-auth-card > button:hover {
+  background:#303036 !important;
+  box-shadow:0 7px 16px rgba(24,24,27,.13) !important;
+  transform:translateY(-1px);
+}
+.ewvon-auth-card form button[type="submit"]:active,
+.ewvon-company-auth-card > button:active { transform:translateY(0); }
+.ewvon-auth-card button:not([type="submit"]),
+.ewvon-company-auth-card button:not(:disabled) { border-radius:999px; }
+.ewvon-company-auth-page {
+  padding:28px 20px !important;
+  gap:0 !important;
+}
+.ewvon-company-auth-page > div:has(.ewvon-company-auth-card) {
+  width:100%;
+  max-width:420px !important;
+}
+.ewvon-company-auth-page > div:has(.ewvon-company-auth-card) > div:first-child {
+  margin-bottom:22px !important;
+}
+.ewvon-company-auth-page h1 {
+  color:#18181b !important;
+  font-family:inherit !important;
+  font-size:27px !important;
+  font-weight:650 !important;
+  letter-spacing:-.06em !important;
+  line-height:1.12 !important;
+}
+.ewvon-company-auth-page h1 + p {
+  margin-top:9px !important;
+  color:#71717a !important;
+  font-size:13px !important;
+  line-height:1.5 !important;
+}
+.ewvon-company-auth-card { padding:22px !important; }
+.ewvon-company-auth-card > div:first-child input {
+  padding-left:44px !important;
+  padding-right:42px !important;
+}
+.ewvon-company-auth-card .min-h-\\[80px\\] { min-height:76px !important; }
+.ewvon-company-auth-card .min-h-\\[80px\\] > div {
+  border-width:1px !important;
+  border-color:#e4e4e7 !important;
+  border-radius:17px !important;
+  background:#fafafa !important;
+}
+.ewvon-company-auth-card .min-h-\\[80px\\] > div > div:first-child {
+  border-radius:13px !important;
+  background:#f0f0f1 !important;
+  color:#27272a !important;
+}
+.ewvon-company-auth-card .min-h-\\[80px\\] > div > div:first-child svg { color:#52525b !important; }
+.ewvon-company-auth-card .min-h-\\[80px\\] p { letter-spacing:normal !important; }
+.ewvon-company-auth-page > p:last-child {
+  margin-top:22px !important;
+  color:#a1a1aa !important;
+  font-size:11px !important;
+  letter-spacing:.01em;
+}
+.ewvon-auth-page a,
+.ewvon-company-auth-page a { transition:color .18s ease; }
+.ewvon-auth-page a:focus-visible,
+.ewvon-auth-card button:focus-visible,
+.ewvon-company-auth-card button:focus-visible {
+  outline:2px solid #52525b !important;
+  outline-offset:3px !important;
+}
+@media (max-width:640px) {
+  .ewvon-auth-page > div:nth-child(2) { padding:22px 16px !important; }
+  .ewvon-auth-page > div:nth-child(2) > div > div:nth-child(2) { margin-bottom:18px !important; }
+  .ewvon-auth-card { border-radius:23px !important; }
+  .ewvon-auth-card [class*="CardHeader"] { padding:20px 20px 15px !important; }
+  .ewvon-auth-card [class*="CardTitle"] { font-size:23px !important; }
+  .ewvon-auth-card [class*="CardContent"] { padding:0 20px 22px !important; }
+  .ewvon-company-auth-page { padding:22px 16px !important; }
+  .ewvon-company-auth-page h1 { font-size:25px !important; }
+  .ewvon-company-auth-card { padding:18px !important; border-radius:23px !important; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .ewvon-auth-card *,
+  .ewvon-company-auth-card * { transition:none !important; }
+}
