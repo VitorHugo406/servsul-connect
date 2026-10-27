@@ -427,6 +427,7 @@ const Auth = () => {
 
   return (
     <div className="ewvon-auth-page min-h-screen flex flex-col items-center justify-center px-5 py-10">
+      <div className="ewvon-auth-atmosphere" aria-hidden="true"><span className="ewvon-auth-orb orb-one" /><span className="ewvon-auth-orb orb-two" /><span className="ewvon-auth-orb orb-three" /><span className="ewvon-auth-grid" /></div>
       <div className="ewvon-auth-form-wrap flex w-full items-center justify-center px-0 py-0 bg-transparent">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -448,7 +449,7 @@ const Auth = () => {
                 className="h-14 max-w-[180px] object-contain"
               />
             )}
-            <div className="text-center">
+            <div className="ewvon-auth-company-copy">
               <h1 className="font-display text-2xl sm:text-[28px] font-semibold tracking-tight text-foreground">
                 {companyBrand?.is_system ? 'ewvon' : (companyBrand?.name || 'ewvon')}
               </h1>
