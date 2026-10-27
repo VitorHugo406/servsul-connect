@@ -61,36 +61,7 @@ export default function SelectCompany(){const navigate=useNavigate();const[query
           {searching && <Loader2 size={17} className="ewvon-search-spinner" aria-label="Buscando empresa" />}
         </div>
 
-        <div className="ewvon-company-result" aria-live="polite">
-          <AnimatePresence mode="wait">
-            {found && (
-              <motion.div key={`ok-${found.id}`} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="ewvon-company-result-inner">
-                <div className="ewvon-company-result-icon">
-                  {found.logo_url && foundLogoUrl
-                    ? <img src={foundLogoUrl} alt="" />
-                    : <Building2 size={19} />}
-                </div>
-                <div className="ewvon-company-result-copy">
-                  <span className="ewvon-company-status"><Check size={12} /> Empresa localizada</span>
-                  <strong>{found.name}</strong>
-                </div>
-                <span className="ewvon-company-check"><Check size={16} /></span>
-              </motion.div>
-            )}
-            {notFound && !searching && (
-              <motion.div key="not-found" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="ewvon-company-empty ewvon-company-empty-error">
-                <span className="ewvon-company-empty-icon"><X size={16} /></span>
-                <span><strong>Empresa não encontrada</strong><small>Confira a escrita e tente novamente.</small></span>
-              </motion.div>
-            )}
-            {!found && !notFound && !searching && (
-              <motion.div key="hint" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="ewvon-company-empty" id="company-search-hint">
-                <span className="ewvon-company-empty-icon"><Search size={16} /></span>
-                <span><strong>Localize sua empresa</strong><small>O resultado aparecerá aqui enquanto você digita.</small></span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+
 
         <Button disabled={!found || continuing} onClick={handleContinue} className="ewvon-company-continue">
           {continuing ? <Loader2 size={17} className="animate-spin" /> : <>Continuar <ArrowRight size={17} /></>}
