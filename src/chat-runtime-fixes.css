@@ -2105,6 +2105,10 @@
       linear-gradient(135deg,#07090e 0%,#0b0f17 48%,#080a10 100%) !important;
     color: #f4f4f5 !important;
   }
+  .ewvon-company-auth-page {
+    background: transparent !important;
+    color: #111 !important;
+  }
   .ewvon-auth-atmosphere, .ewvon-auth-atmosphere *, .ewvon-auth-page video, .ewvon-company-auth-page video {
     display: none !important; animation: none !important;
   }
