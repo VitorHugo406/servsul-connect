@@ -905,10 +905,10 @@ export function CalendarSection() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 border-b border-border flex-shrink-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-4 py-3 border-b border-border/70 flex-shrink-0">
         <div>
-          <h3 className="font-display text-xl font-bold text-foreground">Calendário</h3>
-          <p className="text-muted-foreground text-xs">Reuniões, lembretes e prazos</p>
+          <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">Calendário</h3>
+          <p className="text-muted-foreground text-[11px]">Reuniões, lembretes e prazos</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {myInvites.length > 0 && (
@@ -950,7 +950,7 @@ export function CalendarSection() {
                   <div key={d} className="text-center text-[10px] font-medium text-muted-foreground py-1">{d}</div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden flex-1">
+              <div className="grid grid-cols-7 gap-px bg-border/70 rounded-md overflow-hidden flex-1 border border-border/70">
                 {monthDays.map(day => {
                   const dayEvents = getEventsForDate(day);
                   const dayTasks = getTasksForDate(day);
@@ -1128,7 +1128,7 @@ export function CalendarSection() {
                   const dayTasks = getTasksForDate(day);
                   const isTodayDate = isToday(day);
                   return (
-                    <div key={day.toISOString()} className={cn('rounded-lg border border-border p-3', isTodayDate && 'bg-primary/5 border-primary')}>
+                    <div key={day.toISOString()} className={cn('rounded-md border border-border/70 p-2.5', isTodayDate && 'bg-primary/5 border-primary/70')}>
                       <div className="flex items-center gap-2 mb-2">
                         <span className={cn('text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center', isTodayDate ? 'bg-primary text-primary-foreground' : '')}>
                           {format(day, 'd')}
@@ -1176,7 +1176,7 @@ export function CalendarSection() {
                     const dayTasks = getTasksForDate(day);
                     const isTodayDate = isToday(day);
                     return (
-                      <div key={day.toISOString()} className={cn('rounded-lg border border-border p-2 overflow-y-auto', isTodayDate && 'bg-primary/5 border-primary')}>
+                      <div key={day.toISOString()} className={cn('rounded-md border border-border/70 p-2 overflow-y-auto', isTodayDate && 'bg-primary/5 border-primary/70')}>
                         <div className="text-center mb-1.5">
                           <p className="text-[10px] text-muted-foreground uppercase">{format(day, 'EEE', { locale: ptBR })}</p>
                           <button onClick={() => { setSelectedDate(day); setViewMode('day'); }}
