@@ -2106,8 +2106,10 @@
     color: #f4f4f5 !important;
   }
   .ewvon-company-auth-page {
-    background: #f4f5f7 !important;
-    color: #111 !important;
+    background: radial-gradient(ellipse at 10% 8%,rgba(48,64,88,.62) 0%,transparent 44%),
+      radial-gradient(ellipse at 95% 95%,rgba(26,38,58,.4) 0%,transparent 42%),
+      linear-gradient(135deg,#07090e 0%,#0b0f17 48%,#080a10 100%) !important;
+    color: #f4f4f5 !important;
   }
   .ewvon-auth-atmosphere, .ewvon-auth-atmosphere *, .ewvon-auth-page video, .ewvon-company-auth-page video {
     display: none !important; animation: none !important;
@@ -2121,7 +2123,7 @@
   .ewvon-company-layout { gap: 0 !important; }
   .ewvon-access-heading { margin: 0 0 18px !important; padding: 0 !important; text-align: left !important; }
   .ewvon-access-eyebrow, .ewvon-access-heading h1, .ewvon-access-heading p {
-    color: #08090c !important; text-shadow: none !important;
+    color: #f4f4f5 !important; text-shadow: none !important;
   }
   .ewvon-access-eyebrow { display: block !important; margin: 0 0 5px !important; font-size: 11px !important; letter-spacing: .12em !important; }
   .ewvon-access-heading h1 { margin: 0 0 7px !important; font-size: clamp(25px,7vw,32px) !important; line-height: 1.12 !important; }
@@ -2133,29 +2135,29 @@
     border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
     -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
   }
-  .ewvon-company-auth-card .ewvon-access-label { color: #111 !important; }
-  .ewvon-company-auth-card .ewvon-access-security { color: rgba(0,0,0,.72) !important; }
+  .ewvon-company-auth-card .ewvon-access-label { color: #f1f3f6 !important; }
+  .ewvon-company-auth-card .ewvon-access-security { color: #aab2c0 !important; }
   .ewvon-company-search {
     display: flex !important; align-items: center !important; gap: 9px !important; width: 100% !important;
     max-width: 100% !important; min-width: 0 !important; min-height: 52px !important; box-sizing: border-box !important;
     padding: 0 13px !important; overflow: hidden !important; background: transparent !important;
-    border: 1px solid rgba(0,0,0,.28) !important; border-radius: 14px !important; color: rgba(0,0,0,.75) !important;
+    border: 1px solid rgba(255,255,255,.2) !important; border-radius: 14px !important; color: rgba(255,255,255,.78) !important;
     box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
   }
   .ewvon-company-search input, .ewvon-company-search input#company-search {
     flex: 1 1 0% !important; width: 0 !important; min-width: 0 !important; max-width: 100% !important;
     padding-left: 0 !important; padding-right: 0 !important; background: transparent !important;
-    border: 0 !important; color: #111 !important; box-shadow: none !important;
+    border: 0 !important; color: #f4f4f5 !important; box-shadow: none !important;
   }
-  .ewvon-company-search input::placeholder { color: rgba(0,0,0,.52) !important; }
+  .ewvon-company-search input::placeholder { color: rgba(255,255,255,.55) !important; }
   .ewvon-company-continue {
     display: inline-flex !important; align-items: center !important; justify-content: center !important;
-    min-height: 48px !important; border: 1px solid rgba(0,0,0,.24) !important; border-radius: 15px !important;
-    background: rgba(255,255,255,.18) !important; color: #111 !important;
+    min-height: 48px !important; border: 1px solid rgba(255,255,255,.28) !important; border-radius: 15px !important;
+    background: rgba(255,255,255,.14) !important; color: #fff !important;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.28) !important;
     -webkit-backdrop-filter: blur(16px) saturate(150%) !important; backdrop-filter: blur(16px) saturate(150%) !important;
   }
-  .ewvon-access-footer { color: rgba(0,0,0,.65) !important; }
+  .ewvon-access-footer { color: #aab2c0 !important; }
 
   /* Login page: remove the opaque panel, enlarge fields, and make the "ou" backing transparent. */
   .ewvon-auth-form-wrap { align-items: flex-start !important; padding-top: 4px !important; }
