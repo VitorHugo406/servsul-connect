@@ -179,8 +179,9 @@
     background: rgba(15, 23, 42, .16) !important;
     backdrop-filter: blur(1.5px) !important;
     -webkit-backdrop-filter: blur(1.5px) !important;
-    animation: ewvon-profile-overlay-in 220ms ease-out both !important;
   }
+  .ewvon-profile-overlay[data-state="open"] { animation: ewvon-profile-overlay-in 180ms ease-out both !important; }
+  .ewvon-profile-overlay[data-state="closed"] { animation: none !important; opacity: 0 !important; transition: none !important; }
   .ewvon-profile-drawer {
     transform-origin: top right !important;
     animation: ewvon-profile-expand 420ms cubic-bezier(.16, 1, .3, 1) both !important;
