@@ -190,7 +190,7 @@
     background: rgba(255,255,255,.98) !important;
     box-shadow: 0 24px 80px rgba(15,23,42,.16), 0 4px 16px rgba(15,23,42,.06) !important;
   }
-  .ewvon-profile-drawer[data-state="closed"] { animation: ewvon-profile-collapse 180ms ease-in both !important; }
+  .ewvon-profile-drawer[data-state="closed"] { animation: none !important; transition: none !important; }
   .ewvon-profile-drawer :is(button, input, textarea, [role="button"]) { backdrop-filter:none !important; -webkit-backdrop-filter:none !important; filter:none !important; }
   .ewvon-topbar .ewvon-actions > button[title="Perfil do usuário"],
   .ewvon-topbar .ewvon-actions > button[title="Perfil do usuário"] * {
