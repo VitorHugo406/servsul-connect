@@ -49,6 +49,8 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const [showMobileAutomation, setShowMobileAutomation] = useState(false);
   const [showMobileMedia, setShowMobileMedia] = useState(false);
   const [mobileListSearch, setMobileListSearch] = useState('');
+  const [conversationSearch, setConversationSearch] = useState('');
+  const [conversationFilter, setConversationFilter] = useState<'all' | 'direct' | 'groups' | 'sectors'>('all');
   const [showSectorPersonalization, setShowSectorPersonalization] = useState(false);
   const [sectorBackground, setSectorBackground] = useState('');
 
@@ -224,6 +226,52 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       <Sheet open={showMobileMedia} onOpenChange={setShowMobileMedia}><SheetContent><SheetHeader><SheetTitle>Mídia e Arquivos - {currentSector?.name}</SheetTitle></SheetHeader>{effectiveSector && <div className="mt-6"><ChatMediaFilter chatType="sector" chatId={effectiveSector} /></div>}</SheetContent></Sheet>
     </>}
 
+    {!isMobile && <div className="flex min-h-0 flex-1 overflow-hidden rounded-xl border border-border/60 bg-card">
+      <aside className="flex w-[300px] shrink-0 flex-col border-r border-border/60 bg-background/70">
+        <div className="space-y-3 border-b border-border/60 p-3">
+          <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-foreground">Conversas</h3>
+            <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" title="Filtrar conversas"><UsersRound className="h-4 w-4"/></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Mostrar</DropdownMenuLabel><DropdownMenuSeparator/>
+              <DropdownMenuItem onSelect={() => setConversationFilter('all')}>Todas as conversas</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setConversationFilter('direct')}>Individuais</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setConversationFilter('groups')}>Grupos</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setConversationFilter('sectors')}>Setores</DropdownMenuItem>
+            </DropdownMenuContent></DropdownMenu>
+          </div>
+          <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/><Input value={conversationSearch} onChange={e => setConversationSearch(e.target.value)} placeholder="Buscar conversa..." className="h-9 rounded-lg border-border/60 bg-card pl-9 text-sm"/></div>
+        </div>
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="space-y-0.5 p-1.5">
+            {(conversationFilter === 'all' || conversationFilter === 'direct') && conversations.filter(c => (c.partner.display_name || c.partner.name || '').toLowerCase().includes(conversationSearch.toLowerCase())).map(c => {
+              const title = c.partner.display_name || c.partner.name;
+              const selected = chatMode === 'direct' && selectedUserId === c.partnerId;
+              const time = new Date(c.lastMessage.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+              return <button key={'dm-'+c.partnerId} onClick={() => {setChatMode('direct');setSelectedUserId(c.partnerId);setSelectedGroupId(null);}} className={cn('flex w-full items-center gap-2.5 rounded-lg px-2.5 py-3 text-left transition-colors',selected?'bg-primary/10':'hover:bg-muted/70')}>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">{title.split(' ').map((p:string)=>p[0]).slice(0,2).join('').toUpperCase()}</div>
+                <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><span className="truncate text-sm font-medium text-foreground">{title}</span><span className="shrink-0 text-[10px] text-muted-foreground">{time}</span></div><p className="truncate text-xs text-muted-foreground">{c.lastMessage.content || 'Sem mensagem'}</p></div>
+                <span className="shrink-0 rounded border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-medium text-sky-700 dark:text-sky-300">Individual</span>
+                {c.unreadCount>0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">{c.unreadCount}</span>}
+              </button>;
+            })}
+            {(conversationFilter === 'all' || conversationFilter === 'groups') && groups.filter(g => g.name.toLowerCase().includes(conversationSearch.toLowerCase())).map(g => {
+              const selected = chatMode === 'groups' && selectedGroupId === g.id;
+              return <button key={'group-'+g.id} onClick={() => {setChatMode('groups');setSelectedGroupId(g.id);setSelectedUserId(null);}} className={cn('flex w-full items-center gap-2.5 rounded-lg px-2.5 py-3 text-left transition-colors',selected?'bg-primary/10':'hover:bg-muted/70')}>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-sm font-semibold text-violet-600 dark:text-violet-300"><UsersRound className="h-4 w-4"/></div>
+                <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><span className="truncate text-sm font-medium text-foreground">{g.name}</span></div><p className="truncate text-xs text-muted-foreground">{g.description || 'Grupo privado'}</p></div>
+                <span className="shrink-0 rounded border border-violet-500/25 bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-medium text-violet-700 dark:text-violet-300">Grupo</span>
+              </button>;
+            })}
+            {(conversationFilter === 'all' || conversationFilter === 'sectors') && accessibleSectors.filter((sec:any) => sec.name.toLowerCase().includes(conversationSearch.toLowerCase())).map((sec:any) => {
+              const selected = chatMode === 'sectors' && effectiveSector === sec.id;
+              return <button key={'sector-'+sec.id} onClick={() => {setChatMode('sectors');setActiveSector(sec.id);setSelectedUserId(null);setSelectedGroupId(null);}} className={cn('flex w-full items-center gap-2.5 rounded-lg px-2.5 py-3 text-left transition-colors',selected?'bg-primary/10':'hover:bg-muted/70')}>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white" style={{backgroundColor:sec.color || '#64748b'}}>{sec.name.charAt(0).toUpperCase()}</div>
+                <div className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-foreground">{sec.name}</span><p className="truncate text-xs text-muted-foreground">Canal do setor</p></div>
+                <span className="shrink-0 rounded border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-medium text-emerald-700 dark:text-emerald-300">Setor</span>
+              </button>;
+            })}
+          </div>
+        </ScrollArea>
+      </aside>
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
     {chatMode === 'sectors' ? <>
       {!isMobile && <SectorTabs sectors={accessibleSectors} activeSector={effectiveSector || ''} onSectorChange={setActiveSector} />}
       <div className={cn('flex items-center gap-3 border-b border-border bg-card shrink-0', isMobile ? 'hidden' : 'px-4 py-3')}>
@@ -236,6 +284,11 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       {showSectorUsers && isMobile && <div className="absolute inset-0 z-50 bg-background"><div className="flex items-center justify-between border-b border-border p-3"><h3 className="font-semibold">Membros do Setor</h3><Button variant="ghost" size="icon" onClick={() => setShowSectorUsers(false)}><ArrowLeft className="h-5 w-5" /></Button></div><SectorUsersList sectorId={effectiveSector || ''} inline /></div>}
       <TypingIndicator typingUsers={typingUsers} />{canSendMessages ? <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} onMention={handleMention} replyTo={replyTo} onClearReply={() => setReplyTo(null)} /> : <div className="border-t border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">Você só pode enviar mensagens no seu próprio setor</div>}
       <ChatPersonalizationDialog open={showSectorPersonalization} onOpenChange={setShowSectorPersonalization} chatId={effectiveSector ? `sector-${effectiveSector}` : null} chatName={currentSector?.name || 'Setor'} />
-    </> : chatMode === 'direct' ? (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden [&>div>div:nth-child(2)]:hidden"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div> : <div className="flex flex-1 overflow-hidden"><div className="w-80 flex-shrink-0"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div><div className="flex-1"><DirectMessageChat partnerId={selectedUserId} /></div></div>) : (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div> : <div className="flex flex-1 overflow-hidden"><div className="w-80 flex-shrink-0"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div><div className="flex-1"><PrivateGroupChat group={selectedGroup} /></div></div>)}
+    </> : chatMode === 'direct' ? (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden [&>div>div:nth-child(2)]:hidden"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div> : <div className="flex min-h-0 flex-1 overflow-hidden"><DirectMessageChat partnerId={selectedUserId} /></div>) : (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div> : <div className="flex min-h-0 flex-1 overflow-hidden"><PrivateGroupChat group={selectedGroup} /></div>)}
+      </div>
+    </div>}
+    {isMobile && (chatMode === 'sectors' ? <> 
+      {/* Mobile keeps its existing sector-chat layout and controls. */}
+    </> : null)}
   </motion.div>;
 }
