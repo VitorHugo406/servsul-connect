@@ -1756,3 +1756,101 @@
     font-weight:650 !important;
   }
 }
+
+
+/* EWVON mobile login polish: readable field labels and translucent glass navigation. */
+@media (max-width: 600px) {
+  .ewvon-access-nav {
+    position:fixed !important;
+    z-index:1000 !important;
+    top:calc(env(safe-area-inset-top, 0px) + 10px) !important;
+    left:10px !important;
+    right:10px !important;
+    width:auto !important;
+    min-height:52px !important;
+    box-sizing:border-box !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    gap:8px !important;
+    padding:7px 10px 7px 12px !important;
+    background:rgba(255,255,255,.58) !important;
+    border:1px solid rgba(255,255,255,.78) !important;
+    border-radius:17px !important;
+    box-shadow:0 8px 28px rgba(0,0,0,.075), inset 0 1px 0 rgba(255,255,255,.72) !important;
+    -webkit-backdrop-filter:blur(22px) saturate(165%) !important;
+    backdrop-filter:blur(22px) saturate(165%) !important;
+    animation:none !important;
+  }
+  .ewvon-access-nav-brand { color:#151515 !important; }
+  .ewvon-access-nav-mark { background:#111 !important; color:#fff !important; }
+  .ewvon-access-nav-state {
+    min-width:0 !important;
+    max-width:calc(100% - 90px) !important;
+    overflow:hidden !important;
+    border-left:1px solid rgba(0,0,0,.09) !important;
+    background:rgba(255,255,255,.22) !important;
+    color:#333 !important;
+  }
+  .ewvon-access-nav-company-name { max-width:calc(100vw - 190px) !important; }
+  .ewvon-auth-page {
+    box-sizing:border-box !important;
+    min-height:100svh !important;
+    padding:calc(env(safe-area-inset-top, 0px) + 84px) 18px calc(env(safe-area-inset-bottom, 0px) + 28px) !important;
+    justify-content:center !important;
+    background:#fff !important;
+    color:#111 !important;
+  }
+  .ewvon-auth-atmosphere { display:none !important; }
+  .ewvon-auth-form-wrap { width:100% !important; max-width:420px !important; margin:0 auto !important; }
+  .ewvon-auth-card {
+    padding:0 !important;
+    color:#111 !important;
+    background:transparent !important;
+    border:0 !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+  }
+  .ewvon-auth-card label {
+    display:block !important;
+    margin:0 0 7px !important;
+    color:#202020 !important;
+    font-size:14px !important;
+    line-height:1.4 !important;
+    font-weight:650 !important;
+    opacity:1 !important;
+  }
+  .ewvon-auth-card form { gap:18px !important; }
+  .ewvon-auth-card form > div,
+  .ewvon-auth-card form .space-y-1 { gap:7px !important; }
+  .ewvon-auth-card input {
+    min-height:54px !important;
+    color:#171717 !important;
+    background:#f5f5f5 !important;
+    border:1px solid #e4e4e4 !important;
+    border-radius:14px !important;
+    box-shadow:none !important;
+    font-size:16px !important;
+  }
+  .ewvon-auth-card input::placeholder { color:#858585 !important; opacity:1 !important; }
+  .ewvon-auth-card input:focus {
+    background:#fff !important;
+    border-color:#222 !important;
+    box-shadow:0 0 0 3px rgba(0,0,0,.06) !important;
+  }
+  .ewvon-auth-card button[type="submit"] {
+    min-height:54px !important;
+    margin-top:8px !important;
+    color:#fff !important;
+    background:#111 !important;
+    border:1px solid #111 !important;
+    border-radius:15px !important;
+    box-shadow:none !important;
+    font-weight:650 !important;
+  }
+}
+@supports not ((backdrop-filter: blur(1px))) {
+  @media (max-width: 600px) {
+    .ewvon-access-nav { background:rgba(255,255,255,.94) !important; }
+  }
+}
