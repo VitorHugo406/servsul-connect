@@ -903,9 +903,9 @@ export function CalendarSection() {
 
   // ========== MAIN CALENDAR VIEW ==========
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full overflow-hidden">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="ewvon-calendar-shell flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-4 py-3 border-b border-border/70 flex-shrink-0">
+      <div className="ewvon-calendar-header flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-4 py-3 border-b border-border/70 flex-shrink-0">
         <div>
           <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">Calendário</h3>
           <p className="text-muted-foreground text-[11px]">Reuniões, lembretes e prazos</p>
