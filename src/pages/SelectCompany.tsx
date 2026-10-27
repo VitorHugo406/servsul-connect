@@ -12,5 +12,92 @@ export default function SelectCompany(){const navigate=useNavigate();const[query
  useEffect(()=>{const t=setTimeout(()=>setDebounced(query.trim()),120);return()=>clearTimeout(t)},[query]);
  useEffect(()=>{if(!debounced){setFound(null);setNotFound(false);setSearching(false);return;}const cached=readPublicCached(debounced);if(cached){setFound(cached);setNotFound(false);saveCompany(cached);applyBrand(cached);}let cancelled=false;setSearching(!cached);(async()=>{const{data,error}=await(supabase as any).rpc('public_find_company',{_query:debounced});if(cancelled)return;const row=Array.isArray(data)?data[0]:data;if(!error&&row){const company=row as FoundCompany;saveCompany(company,debounced);setFound(company);setNotFound(false);applyBrand(company);}else if(!cached){setFound(null);setNotFound(true);resetBrand();}setSearching(false)})();return()=>{cancelled=true}},[debounced]);
  const foundLogoUrl=useCompanyLogoUrl(found?.logo_url);const glow=useMemo(()=>!found?'transparent':`radial-gradient(closest-side, ${found.primary_color}, ${found.secondary_color} 40%, transparent 78%)`,[found]);const handleContinue=()=>{if(!found)return;saveCompany(found);setContinuing(true);navigate(`/auth?company=${encodeURIComponent(found.slug)}`)};
- return <div className="ewvon-company-auth-page min-h-screen flex flex-col items-center justify-center px-5 py-10 relative overflow-hidden transition-colors duration-300" style={{background:'radial-gradient(circle at 12% 0%, hsla(220,60%,55%,0.10), transparent 45%), radial-gradient(circle at 88% 100%, hsla(220,60%,45%,0.08), transparent 40%), #F5F7FB'}}>{found?.logo_url&&foundLogoUrl&&<div className="relative mb-8 flex items-center justify-center"><motion.div initial={false} animate={{opacity:1,scale:1}} transition={{duration:.3}} className="absolute inset-0 -m-20 rounded-full blur-3xl pointer-events-none" style={{background:glow}}/><motion.img key={found.id} src={foundLogoUrl??undefined} alt={found.name} initial={{opacity:0,scale:.95}} animate={{opacity:1,scale:1}} transition={{duration:.25}} className="h-24 md:h-28 object-contain relative z-10 drop-shadow-[0_10px_30px_rgba(15,23,42,0.15)]" loading="eager"/></div>}<motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:.3}} className="w-full max-w-md relative z-10"><div className="text-center mb-6"><h1 className="text-2xl md:text-[28px] font-bold text-[#12151C] tracking-tight" style={{fontFamily:'Sora, Inter, sans-serif'}}>Digite o nome da sua empresa</h1><p className="text-sm text-[#6B7280] mt-1.5">Localizaremos seu ambiente corporativo</p></div><div className="ewvon-company-auth-card bg-white rounded-3xl shadow-[0_20px_60px_-20px_rgba(16,24,40,0.25)] border border-[#E4E7EC] p-5 md:p-6"><div className="relative"><Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9AA1AF]"/><Input autoFocus placeholder="Ex.: Sua Empresa Ltda" value={query} onChange={e=>setQuery(e.target.value)} className="pl-10 h-12 rounded-xl bg-[#F5F6F8] border-transparent focus-visible:ring-2 focus-visible:ring-[color:var(--brand,#2E5AAC)] text-[15px]"/>{searching&&<Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9AA1AF] animate-spin"/>}</div><div className="mt-4 min-h-[80px]"><AnimatePresence mode="wait">{found&&<motion.div key={`ok-${found.id}`} initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-6}} transition={{duration:.2}} className="flex items-center gap-3 p-3 rounded-2xl border-2" style={{borderColor:found.primary_color,background:`linear-gradient(135deg, ${found.primary_color}33, ${found.secondary_color}22)`}}><div className="w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden shrink-0" style={{background:`linear-gradient(140deg, ${found.primary_color}, ${found.secondary_color})`}}>{found.logo_url?<img src={foundLogoUrl??undefined} alt={found.name} className="w-full h-full object-cover"/>:<Building2 className="w-5 h-5 text-white"/>}</div><div className="flex-1 min-w-0"><p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--brand,#2E5AAC)] flex items-center gap-1"><Check className="w-3 h-3"/> Empresa encontrada</p><p className="text-[15px] font-semibold text-[#12151C] truncate">{found.name}</p></div></motion.div>}{notFound&&!searching&&<motion.div key="nf" initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-6}} transition={{duration:.2}} className="flex items-center gap-3 p-3 rounded-2xl border border-[#F0D0D0] bg-[#FFF5F5]"><div className="w-11 h-11 rounded-xl bg-[#FEE2E2] flex items-center justify-center shrink-0"><X className="w-5 h-5 text-[#DC2626]"/></div><div className="flex-1 min-w-0"><p className="text-[11px] font-semibold uppercase tracking-wider text-[#DC2626]">Não encontrada</p><p className="text-[13px] text-[#6B7280]">Verifique o nome digitado</p></div></motion.div>}{!found&&!notFound&&!searching&&<motion.p key="hint" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="text-center text-xs text-[#9AA1AF] pt-6">Comece a digitar para localizar sua empresa</motion.p>}</AnimatePresence></div><Button disabled={!found||continuing} onClick={handleContinue} className="w-full h-12 mt-4 rounded-xl text-[15px] font-semibold transition-all disabled:opacity-40" style={{background:found?`linear-gradient(135deg, ${found.primary_color}, ${found.secondary_color})`:'#12151C',color:'white'}}>{continuing?<Loader2 className="w-4 h-4 animate-spin"/>:<><span>Continuar</span><ArrowRight className="w-4 h-4 ml-1.5"/></>}</Button></div></motion.div><p className="mt-8 text-xs text-[#9AA1AF] relative z-10">© {new Date().getFullYear()} Ewvor</p></div>;
+ return (
+  <main className="ewvon-company-auth-page">
+    <motion.section
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="ewvon-company-layout"
+    >
+      <header className="ewvon-access-brand">
+        <div className="ewvon-access-mark" aria-hidden="true"><Building2 size={20} strokeWidth={1.7} /></div>
+        <span>ewvon</span>
+      </header>
+
+      {found?.logo_url && foundLogoUrl && (
+        <motion.div
+          key={found.id}
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.25 }}
+          className="ewvon-company-logo-wrap"
+        >
+          <img src={foundLogoUrl} alt={found.name} className="ewvon-company-logo" loading="eager" />
+        </motion.div>
+      )}
+
+      <div className="ewvon-access-heading">
+        <span className="ewvon-access-eyebrow">ACESSO CORPORATIVO</span>
+        <h1>Entre no seu ambiente</h1>
+        <p>Informe o nome da empresa para continuar com segurança.</p>
+      </div>
+
+      <section className="ewvon-company-auth-card" aria-label="Localizar empresa">
+        <label className="ewvon-access-label" htmlFor="company-search">Empresa</label>
+        <div className="ewvon-company-search">
+          <Search size={17} aria-hidden="true" />
+          <Input
+            id="company-search"
+            autoFocus
+            placeholder="Buscar pelo nome da empresa"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            autoComplete="organization"
+            aria-describedby="company-search-hint"
+          />
+          {searching && <Loader2 size={17} className="ewvon-search-spinner" aria-label="Buscando empresa" />}
+        </div>
+
+        <div className="ewvon-company-result" aria-live="polite">
+          <AnimatePresence mode="wait">
+            {found && (
+              <motion.div key={`ok-${found.id}`} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="ewvon-company-result-inner">
+                <div className="ewvon-company-result-icon">
+                  {found.logo_url && foundLogoUrl
+                    ? <img src={foundLogoUrl} alt="" />
+                    : <Building2 size={19} />}
+                </div>
+                <div className="ewvon-company-result-copy">
+                  <span className="ewvon-company-status"><Check size={12} /> Empresa localizada</span>
+                  <strong>{found.name}</strong>
+                </div>
+                <span className="ewvon-company-check"><Check size={16} /></span>
+              </motion.div>
+            )}
+            {notFound && !searching && (
+              <motion.div key="not-found" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="ewvon-company-empty ewvon-company-empty-error">
+                <span className="ewvon-company-empty-icon"><X size={16} /></span>
+                <span><strong>Empresa não encontrada</strong><small>Confira a escrita e tente novamente.</small></span>
+              </motion.div>
+            )}
+            {!found && !notFound && !searching && (
+              <motion.div key="hint" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="ewvon-company-empty" id="company-search-hint">
+                <span className="ewvon-company-empty-icon"><Search size={16} /></span>
+                <span><strong>Localize sua empresa</strong><small>O resultado aparecerá aqui enquanto você digita.</small></span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <Button disabled={!found || continuing} onClick={handleContinue} className="ewvon-company-continue">
+          {continuing ? <Loader2 size={17} className="animate-spin" /> : <>Continuar <ArrowRight size={17} /></>}
+        </Button>
+        <p className="ewvon-access-security"><Lock size={12} /> Acesso protegido para sua organização</p>
+      </section>
+
+      <footer className="ewvon-access-footer">© {new Date().getFullYear()} ewvon <span>·</span> Gestão corporativa</footer>
+    </motion.section>
+  </main>
+ );
 }
