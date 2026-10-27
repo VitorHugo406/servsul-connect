@@ -427,7 +427,7 @@ const Auth = () => {
 
   return (
     <div className="ewvon-auth-page min-h-screen flex flex-col items-center justify-center px-5 py-10">
-      <div className={`ewvon-access-nav ewvon-auth-nav ${companyBrand ? "is-found" : ""}`} style={companyBrand ? ({ "--company-accent": companyBrand.primary_color } as any) : undefined}>
+      <div className={`ewvon-access-nav ewvon-auth-nav ${companyBrand ? "is-found" : ""}`} style={companyBrand ? ({ "--company-accent": companyBrand.primary_color, "--company-secondary": companyBrand.secondary_color } as any) : undefined}>
         <Link to="/select-company" className="ewvon-access-nav-brand"><span className="ewvon-access-nav-mark">e</span><span>ewvon</span></Link>
         {companyBrand && <div className="ewvon-access-nav-state">
           <span className="ewvon-access-nav-company-logo">{companyBrand.logo_url && companyLogoUrl ? <img src={companyLogoUrl} alt="" /> : <Building2 size={16} />}</span>
@@ -449,7 +449,7 @@ const Auth = () => {
             </Link>
           </div>
           {/* Logo da empresa selecionada no mobile */}
-          <div className="mb-7 flex flex-col items-start justify-center gap-3">
+          <div className="ewvon-auth-company-heading mb-7 flex flex-col items-start justify-center gap-3">
             {companyBrand?.logo_url && (
               <img
                 src={companyLogoUrl ?? undefined}
