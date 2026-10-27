@@ -113,6 +113,15 @@ export function CalendarSection() {
   const [meetingScheduleDate, setMeetingScheduleDate] = useState<Date>(new Date());
 
   useEffect(() => {
+    const handleCalendarViewChange = (event: Event) => {
+      const mode = (event as CustomEvent<'month' | 'week' | 'day'>).detail;
+      if (mode === 'month' || mode === 'week' || mode === 'day') setViewMode(mode);
+    };
+    window.addEventListener('ewvon:calendar-view-change', handleCalendarViewChange);
+    return () => window.removeEventListener('ewvon:calendar-view-change', handleCalendarViewChange);
+  }, []);
+
+  useEffect(() => {
     const fetchUsers = async () => {
       const { data } = await supabase.from('profiles').select('id, name, display_name, avatar_url, user_id').eq('is_active', true);
       setAllUsers((data || []) as UserProfile[]);
@@ -904,19 +913,11 @@ export function CalendarSection() {
   // ========== MAIN CALENDAR VIEW ==========
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="ewvon-calendar-shell flex flex-col h-full min-h-0 overflow-hidden">
-      {/* Calendar controls share the app's compact top navigation row. */}
       <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="flex flex-col flex-1 min-h-0 overflow-hidden">
         <div className="ewvon-calendar-header flex flex-wrap items-center justify-between gap-3 px-4 py-2 border-b border-border/70 flex-shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="shrink-0">
-              <h3 className="font-display text-base font-semibold tracking-tight text-foreground">Calendário</h3>
-              <p className="text-muted-foreground text-[10px]">Reuniões, lembretes e prazos</p>
-            </div>
-            <TabsList className="ewvon-calendar-view-tabs ewvon-calendar-tabs-intro">
-              <TabsTrigger value="month">Mês</TabsTrigger>
-              <TabsTrigger value="week">Semana</TabsTrigger>
-              <TabsTrigger value="day">Dia</TabsTrigger>
-            </TabsList>
+          <div className="min-w-0">
+            <h3 className="font-display text-base font-semibold tracking-tight text-foreground">Calendário</h3>
+            <p className="text-muted-foreground text-[10px]">Reuniões, lembretes e prazos</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {myInvites.length > 0 && (
