@@ -298,8 +298,8 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     </>}
 
     <div className="flex min-h-0 flex-1 overflow-hidden">
-      <aside className="hidden w-[300px] shrink-0 flex-col bg-background/70 md:flex">
-        <div className="space-y-3 border-b border-border/60 p-3">
+      <aside className="hidden w-[260px] shrink-0 flex-col bg-transparent md:flex">
+        <div className="space-y-3 border-0 p-3">
           <div className="flex items-center justify-between"><h3 className="text-lg font-semibold tracking-tight text-foreground">Conversas</h3>
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" title="Filtrar conversas"><UsersRound className="h-4 w-4"/></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Mostrar</DropdownMenuLabel><DropdownMenuSeparator/>
               <DropdownMenuItem onSelect={() => setConversationFilter('all')}>Todas as conversas</DropdownMenuItem>
