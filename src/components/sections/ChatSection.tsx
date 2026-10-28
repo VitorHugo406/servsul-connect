@@ -233,7 +233,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     const normalized = (content || '').replace(/\s+/g, ' ').trim();
     if (!normalized) return 'Sem mensagens';
     const withoutAttachmentLinks = normalized.replace(/📷?\s*\[([^\]]+)\]\([^)]*\)/g, '$1');
-    return withoutAttachmentLinks.length > 58 ? `${withoutAttachmentLinks.slice(0, 57).trimEnd()}…` : withoutAttachmentLinks;
+    return withoutAttachmentLinks.length > 32 ? `${withoutAttachmentLinks.slice(0, 31).trimEnd()}…` : withoutAttachmentLinks;
   };
   const previewTime = (date?: string) => date
     ? new Date(date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
@@ -352,7 +352,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       {showSectorUsers && isMobile && <div className="absolute inset-0 z-50 bg-background"><div className="flex items-center justify-between border-b border-border p-3"><h3 className="font-semibold">Membros do Setor</h3><Button variant="ghost" size="icon" onClick={() => setShowSectorUsers(false)}><ArrowLeft className="h-5 w-5" /></Button></div><SectorUsersList sectorId={effectiveSector || ''} inline /></div>}
       <TypingIndicator typingUsers={typingUsers} />{canSendMessages ? <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} onMention={handleMention} replyTo={replyTo} onClearReply={() => setReplyTo(null)} /> : <div className="border-t border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">Você só pode enviar mensagens no seu próprio setor</div>}
       <ChatPersonalizationDialog open={showSectorPersonalization} onOpenChange={setShowSectorPersonalization} chatId={effectiveSector ? `sector-${effectiveSector}` : null} chatName={currentSector?.name || 'Setor'} />
-    </> : chatMode === 'direct' ? (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden [&>div>div:nth-child(2)]:hidden"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div> : <div className="flex min-h-0 flex-1 overflow-hidden border-0 rounded-none shadow-none"><DirectMessageChat partnerId={selectedUserId} /></div>) : (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div> : <div className="flex min-h-0 flex-1 overflow-hidden border-0 rounded-none shadow-none"><PrivateGroupChat group={selectedGroup} /></div>)}
+    </> : chatMode === 'direct' ? (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden [&>div>div:nth-child(2)]:hidden"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div> : <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden border-0 rounded-none bg-transparent p-0 shadow-none"><DirectMessageChat partnerId={selectedUserId} /></div>) : (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div> : <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden border-0 rounded-none bg-transparent p-0 shadow-none"><PrivateGroupChat group={selectedGroup} /></div>)}
       </div>
     </div>
   </motion.div>;

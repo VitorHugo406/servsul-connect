@@ -32,7 +32,7 @@ export function PrivateGroupList({ selectedGroupId, onSelectGroup }: PrivateGrou
   }, []);
 
   const handleCreateGroup = async () => { if (!newName.trim()) { toast.error('Digite o nome do grupo'); return; } setCreating(true); const { data, error } = await createGroup(newName.trim(), newDescription.trim() || undefined); setCreating(false); if (error) toast.error('Erro ao criar grupo'); else { toast.success('Grupo criado com sucesso!'); setShowCreateDialog(false); setNewName(''); setNewDescription(''); if (data?.id) onSelectGroup(data.id); } };
-  return <div className="flex h-full min-h-0 w-full min-w-0 flex-col border-0 rounded-none bg-transparent p-0 shadow-none overflow-hidden">
+  return <div className="flex h-full min-h-0 w-full min-w-0 flex-col !border-0 !rounded-none !bg-transparent p-0 !shadow-none overflow-hidden">
     <div className="flex shrink-0 items-center gap-2 border-0 bg-transparent px-3 py-2">
       <h3 className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-foreground">Grupos privados</h3>
       <div className="relative w-[42%] min-w-[125px]"><Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Buscar grupos" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="h-8 rounded-full border-border/60 bg-background/65 pl-8 pr-2 text-xs" /></div>
