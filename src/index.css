@@ -933,29 +933,3 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
   .ewvon-mobile-footnote { display:flex; align-items:center; gap:6px; color:#a1a1aa; font-size:10px; }
 }
 
-
-/* Chat: use the complete content viewport, not a rounded card inside the page. */
-.ewvon-main-chat {
-  width: 100% !important;
-  height: 100% !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  overflow: hidden !important;
-}
-.ewvon-main-chat > * {
-  width: 100% !important;
-  height: 100% !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-.ewvon-main-chat [data-radix-scroll-area-viewport] { max-width: 100%; }
