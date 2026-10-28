@@ -104,69 +104,83 @@ const sectionIntroIcons = {
 
 function SectionTransitionIndicator({ section }: { section: string }) {
   const [visible, setVisible] = useState(false);
-  const [flashing, setFlashing] = useState(false);
+  const [phase, setPhase] = useState<'dot' | 'expanded' | 'glow' | 'collapse'>('dot');
   const title = sectionTitles[section]?.title || 'Início';
   const Icon = sectionIntroIcons[section as keyof typeof sectionIntroIcons] || LayoutGrid;
 
   useEffect(() => {
     setVisible(false);
-    setFlashing(false);
+    setPhase('dot');
     if (section === 'calendar') return;
-    setVisible(true);
-    const flashTimer = window.setTimeout(() => setFlashing(true), 4300);
-    const hideTimer = window.setTimeout(() => setVisible(false), 5000);
+
+    // Sequência: bolinha aparece, pausa, abre, destaca com sombra, fecha e some.
+    const showTimer = window.setTimeout(() => setVisible(true), 30);
+    const expandTimer = window.setTimeout(() => setPhase('expanded'), 1050);
+    const glowTimer = window.setTimeout(() => setPhase('glow'), 2050);
+    const collapseTimer = window.setTimeout(() => setPhase('collapse'), 3150);
+    const hideTimer = window.setTimeout(() => setVisible(false), 3650);
+
     return () => {
-      window.clearTimeout(flashTimer);
+      window.clearTimeout(showTimer);
+      window.clearTimeout(expandTimer);
+      window.clearTimeout(glowTimer);
+      window.clearTimeout(collapseTimer);
       window.clearTimeout(hideTimer);
     };
   }, [section]);
 
   if (section === 'calendar') return null;
+  const isExpanded = phase === 'expanded' || phase === 'glow';
   const pillWidth = Math.min(310, Math.max(154, title.length * 8 + 76));
 
   return (
-    <AnimatePresence>
-      {visible && (
-        <motion.div
-          key={section}
-          initial={{ opacity: 0, scale: 0.68, y: -12, filter: 'blur(8px)', width: 44 }}
-          animate={{
-            opacity: flashing ? [1, 0.35, 1] : 1,
-            scale: 1,
-            y: 0,
-            filter: 'blur(0px)',
-            width: pillWidth,
-          }}
-          exit={{ opacity: 0, scale: 0.78, y: -10, filter: 'blur(10px)', width: 44, transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1] } }}
-          transition={{
-            opacity: flashing ? { duration: 0.42, times: [0, 0.5, 1] } : { duration: 0.32 },
-            scale: { type: 'spring', stiffness: 360, damping: 27 },
-            y: { type: 'spring', stiffness: 360, damping: 28 },
-            filter: { duration: 0.3 },
-            width: { type: 'spring', stiffness: 300, damping: 28 },
-          }}
-          className="pointer-events-none fixed left-1/2 top-3 z-[100] flex h-11 -translate-x-1/2 items-center overflow-hidden rounded-full border border-white/60 bg-white/85 px-1.5 text-slate-900 shadow-[0_12px_40px_rgba(15,23,42,0.16)] backdrop-blur-2xl"
-          style={{ marginLeft: 0 }}
-          role="status"
-          aria-live="polite"
-          aria-label={title}
-        >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm">
-            <Icon className="h-4 w-4" strokeWidth={1.9} />
-          </span>
-          <motion.span
-            initial={{ opacity: 0, x: -5 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -4 }}
-            transition={{ delay: 0.12, duration: 0.22 }}
-            className="min-w-0 flex-1 truncate px-3 text-[13px] font-semibold tracking-[-0.02em]"
+    <div className="pointer-events-none fixed inset-0 z-[100] grid place-items-center" aria-live="polite">
+      <AnimatePresence>
+        {visible && (
+          <motion.div
+            key={section}
+            initial={{ opacity: 0, scale: 0.55, filter: 'blur(5px)', width: 44 }}
+            animate={{
+              opacity: phase === 'collapse' ? 0.92 : 1,
+              scale: phase === 'collapse' ? 0.96 : 1,
+              filter: 'blur(0px)',
+              width: isExpanded ? pillWidth : 44,
+              boxShadow: phase === 'glow'
+                ? '0 0 0 1px rgba(255,255,255,0.8), 0 0 0 7px rgba(148,163,184,0.12), 0 18px 55px rgba(15,23,42,0.28)'
+                : '0 12px 36px rgba(15,23,42,0.16)',
+            }}
+            exit={{ opacity: 0, scale: 0.62, filter: 'blur(7px)', transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] } }}
+            transition={{
+              opacity: { duration: phase === 'collapse' ? 0.28 : 0.24 },
+              scale: { type: 'spring', stiffness: 360, damping: 27 },
+              filter: { duration: 0.24 },
+              width: { type: 'spring', stiffness: 300, damping: 28 },
+              boxShadow: { duration: 0.42, ease: 'easeOut' },
+            }}
+            className="flex h-11 items-center overflow-hidden rounded-full border border-white/70 bg-white/90 px-1.5 text-slate-900 backdrop-blur-2xl"
+            role="status"
+            aria-label={title}
           >
-            {title}
-          </motion.span>
-          <span className="mr-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400/70" />
-        </motion.div>
-      )}
-    </AnimatePresence>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm">
+              <Icon className="h-4 w-4" strokeWidth={1.9} />
+            </span>
+            <motion.span
+              initial={false}
+              animate={{ opacity: isExpanded ? 1 : 0, x: isExpanded ? 0 : -5 }}
+              transition={{ duration: 0.2, delay: isExpanded ? 0.08 : 0 }}
+              className="min-w-0 flex-1 truncate px-3 text-[13px] font-semibold tracking-[-0.02em]"
+            >
+              {title}
+            </motion.span>
+            <motion.span
+              animate={{ opacity: isExpanded ? 0.7 : 0, scale: isExpanded ? 1 : 0.7 }}
+              transition={{ duration: 0.18 }}
+              className="mr-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
