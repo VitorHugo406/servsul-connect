@@ -174,8 +174,8 @@ export function useFileUpload() {
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
-              const response = JSON.parse(xhr.responseText);
-              resolve(response.Key?.split('/').slice(2).join('/') || fileName);
+              JSON.parse(xhr.responseText);
+              resolve(fileName);
             } catch {
               resolve(fileName);
             }
