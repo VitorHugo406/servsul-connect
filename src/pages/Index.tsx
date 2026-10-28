@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Home, LayoutDashboard, MessageSquare, Bell, Cake, Settings, Link as LinkIcon, ScanFace, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, CalendarDays, FileText, HardDrive, BookOpen, Shield, Globe, ClipboardCheck, StickyNote, Megaphone, Plug, LayoutGrid } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { usePresence } from '@/hooks/usePresence';
 import { useMeetingStatus } from '@/hooks/useMeetingStatus';
@@ -88,6 +90,86 @@ const sectionPaths: Record<string, string> = {
 };
 const pathSections = Object.fromEntries(Object.entries(sectionPaths).map(([key, path]) => [path, key])) as Record<string, string>;
 
+
+const sectionIntroIcons = {
+  home: Home, 'my-dashboard': LayoutDashboard, chat: MessageSquare,
+  announcements: Bell, birthdays: Cake, management: Settings, shortcuts: LinkIcon,
+  facial: ScanFace, 'data-management': Trash2, sectors: Building2,
+  'important-announcements': Sparkles, tasks: ListTodo, 'people-management': UsersRound,
+  'feedback-email': Mail, calendar: CalendarDays, 'system-logs': FileText,
+  storage: HardDrive, documentation: BookOpen, 'war-room': Shield,
+  'api-management': Plug, evaluations: ClipboardCheck, notes: StickyNote,
+  companies: Building2, 'system-broadcasts': Megaphone, 'event-history': Sparkles,
+} as const;
+
+function SectionTransitionIndicator({ section }: { section: string }) {
+  const [visible, setVisible] = useState(false);
+  const [flashing, setFlashing] = useState(false);
+  const title = sectionTitles[section]?.title || 'Início';
+  const Icon = sectionIntroIcons[section as keyof typeof sectionIntroIcons] || LayoutGrid;
+
+  useEffect(() => {
+    setVisible(false);
+    setFlashing(false);
+    if (section === 'calendar') return;
+    setVisible(true);
+    const flashTimer = window.setTimeout(() => setFlashing(true), 4300);
+    const hideTimer = window.setTimeout(() => setVisible(false), 5000);
+    return () => {
+      window.clearTimeout(flashTimer);
+      window.clearTimeout(hideTimer);
+    };
+  }, [section]);
+
+  if (section === 'calendar') return null;
+  const pillWidth = Math.min(310, Math.max(154, title.length * 8 + 76));
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          key={section}
+          initial={{ opacity: 0, scale: 0.68, y: -12, filter: 'blur(8px)', width: 44 }}
+          animate={{
+            opacity: flashing ? [1, 0.35, 1] : 1,
+            scale: 1,
+            y: 0,
+            filter: 'blur(0px)',
+            width: pillWidth,
+          }}
+          exit={{ opacity: 0, scale: 0.78, y: -10, filter: 'blur(10px)', width: 44, transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1] } }}
+          transition={{
+            opacity: flashing ? { duration: 0.42, times: [0, 0.5, 1] } : { duration: 0.32 },
+            scale: { type: 'spring', stiffness: 360, damping: 27 },
+            y: { type: 'spring', stiffness: 360, damping: 28 },
+            filter: { duration: 0.3 },
+            width: { type: 'spring', stiffness: 300, damping: 28 },
+          }}
+          className="pointer-events-none fixed left-1/2 top-3 z-[100] flex h-11 -translate-x-1/2 items-center overflow-hidden rounded-full border border-white/60 bg-white/85 px-1.5 text-slate-900 shadow-[0_12px_40px_rgba(15,23,42,0.16)] backdrop-blur-2xl"
+          style={{ marginLeft: 0 }}
+          role="status"
+          aria-live="polite"
+          aria-label={title}
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm">
+            <Icon className="h-4 w-4" strokeWidth={1.9} />
+          </span>
+          <motion.span
+            initial={{ opacity: 0, x: -5 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -4 }}
+            transition={{ delay: 0.12, duration: 0.22 }}
+            className="min-w-0 flex-1 truncate px-3 text-[13px] font-semibold tracking-[-0.02em]"
+          >
+            {title}
+          </motion.span>
+          <span className="mr-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400/70" />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 const Index = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -165,8 +247,8 @@ const Index = () => {
 
   const currentSection = sectionTitles[activeSection] || sectionTitles.home; const isHomePage = activeSection === 'home';
   if (isMobile) {
-    return <><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><MobileShell activeSection={activeSection} onSectionChange={handleSectionChange} globalSearch={globalSearch} /><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} /><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && !showOnboarding && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></>;
+    return <><SectionTransitionIndicator section={activeSection} /><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><MobileShell activeSection={activeSection} onSectionChange={handleSectionChange} globalSearch={globalSearch} /><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} /><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && !showOnboarding && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></>;
   }
-  return <div className="flex h-screen overflow-hidden bg-background"><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} /><div className="flex flex-1 flex-col overflow-hidden"><Header title={currentSection.title} subtitle={currentSection.subtitle} activeSection={activeSection} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} /><main className="ewvon-main min-w-0 flex-1 overflow-auto bg-white"><Suspense fallback={<div className="flex min-h-48 items-center justify-center" role="status" aria-label="Carregando seção"><div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>}>{renderSection()}</Suspense></main></div><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} /><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && !showOnboarding && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></div>;
+  return <div className="flex h-screen overflow-hidden bg-background"><SectionTransitionIndicator section={activeSection} /><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} /><div className="flex flex-1 flex-col overflow-hidden"><Header title={currentSection.title} subtitle={currentSection.subtitle} activeSection={activeSection} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} /><main className="ewvon-main min-w-0 flex-1 overflow-auto bg-white"><Suspense fallback={<div className="flex min-h-48 items-center justify-center" role="status" aria-label="Carregando seção"><div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>}>{renderSection()}</Suspense></main></div><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} /><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && !showOnboarding && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></div>;
 };
 export default Index;
