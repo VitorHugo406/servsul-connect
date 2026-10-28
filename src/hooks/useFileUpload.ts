@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { optimizeImageFile } from '@/lib/imageOptimization';
@@ -158,10 +158,10 @@ export function useFileUpload() {
       const uploadPath = fileName.split('/').map(encodeURIComponent).join('/');
       const uploadedPath = await new Promise<string>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', `${supabase.storage.from(bucket).url}/${uploadPath}`);
+        xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/${bucket}/${uploadPath}`);
         xhr.setRequestHeader('apikey', SUPABASE_PUBLISHABLE_KEY);
         xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
-        xhr.setRequestHeader('Cache-Control', '3600');
+        xhr.setRequestHeader('cache-control', 'max-age=3600');
         xhr.setRequestHeader('x-upsert', 'false');
         xhr.setRequestHeader('Content-Type', uploadFileObject.type || 'application/octet-stream');
         xhr.upload.onprogress = (event) => {
