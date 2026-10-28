@@ -230,9 +230,9 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   }, [accessibleSectorIdsKey, groupIdsKey]);
 
   const previewText = (content?: string | null) => {
-    const normalized = (content || '').replace(/\\s+/g, ' ').trim();
+    const normalized = (content || '').replace(/\s+/g, ' ').trim();
     if (!normalized) return 'Sem mensagens';
-    const withoutAttachmentLinks = normalized.replace(/📷?\\s*\\[([^\\]]+)\\]\\([^)]*\\)/g, '$1');
+    const withoutAttachmentLinks = normalized.replace(/📷?\s*\[([^\]]+)\]\([^)]*\)/g, '$1');
     return withoutAttachmentLinks.length > 58 ? withoutAttachmentLinks.slice(0, 58).trimEnd() + '…' : withoutAttachmentLinks;
   };
   const previewTime = (date?: string) => date
