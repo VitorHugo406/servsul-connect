@@ -25,7 +25,8 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
   const [message, setMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [isSending, setIsSending] = useState(false);\n  const [uploadingFileName, setUploadingFileName] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [uploadingFileName, setUploadingFileName] = useState<string | null>(null);
   const [showCardPicker, setShowCardPicker] = useState(false);
   const [cardQuery, setCardQuery] = useState('');
   const [showUserPicker, setShowUserPicker] = useState(false);
