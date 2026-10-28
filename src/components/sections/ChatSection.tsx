@@ -226,7 +226,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       <Sheet open={showMobileMedia} onOpenChange={setShowMobileMedia}><SheetContent><SheetHeader><SheetTitle>Mídia e Arquivos - {currentSector?.name}</SheetTitle></SheetHeader>{effectiveSector && <div className="mt-6"><ChatMediaFilter chatType="sector" chatId={effectiveSector} /></div>}</SheetContent></Sheet>
     </>}
 
-    <div className="flex min-h-0 flex-1 overflow-hidden rounded-xl border border-border/60 bg-card">
+    <div className="flex min-h-0 flex-1 overflow-hidden">
       <aside className="hidden w-[300px] shrink-0 flex-col border-r border-border/60 bg-background/70 md:flex">
         <div className="space-y-3 border-b border-border/60 p-3">
           <div className="flex items-center justify-between"><h3 className="text-lg font-semibold tracking-tight text-foreground">Conversas</h3>
