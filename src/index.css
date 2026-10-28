@@ -933,3 +933,13 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
   .ewvon-mobile-footnote { display:flex; align-items:center; gap:6px; color:#a1a1aa; font-size:10px; }
 }
 
+
+
+/* Keep the main rounded shell as the only outer frame.
+   Section roots must not add a second panel around an entire tab. */
+.ewvon-main > :first-child {
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+}
