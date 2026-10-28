@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Send, Smile, Paperclip, Image as ImageIcon, X, FileText } from 'lucide-react';
+import { Send, Smile, Paperclip, Image as ImageIcon, X, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,7 +25,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
   const [message, setMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [isSending, setIsSending] = useState(false);
+  const [isSending, setIsSending] = useState(false);\n  const [uploadingFileName, setUploadingFileName] = useState<string | null>(null);
   const [showCardPicker, setShowCardPicker] = useState(false);
   const [cardQuery, setCardQuery] = useState('');
   const [showUserPicker, setShowUserPicker] = useState(false);
@@ -40,22 +40,37 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
     if (isSending) return;
     const trimmedMessage = message.trim();
     if (!trimmedMessage && attachments.length === 0) return;
+
     setIsSending(true);
     const currentMessage = trimmedMessage;
     const currentAttachments = [...attachments];
-    setMessage('');
-    setAttachments([]);
     setShowCardPicker(false);
+
     try {
-      const uploadedAttachments = [];
+      const uploadedAttachments: { url: string; fileName: string; fileType: string; fileSize: number }[] = [];
       for (const attachment of currentAttachments) {
+        setUploadingFileName(attachment.file.name);
         const result = await uploadFile(attachment.file);
-        if (result) uploadedAttachments.push(result);
+        if (!result) {
+          toast.error(`Não foi possível enviar "${attachment.file.name}". O arquivo continua anexado para tentar novamente.`);
+          return;
+        }
+        uploadedAttachments.push(result);
       }
+
       await onSendMessage(currentMessage, uploadedAttachments.length > 0 ? uploadedAttachments : undefined, replyTo?.id);
+      setMessage('');
+      setAttachments(prev => {
+        prev.forEach(item => { if (item.preview) URL.revokeObjectURL(item.preview); });
+        return [];
+      });
     } catch (error) {
       console.error('Error sending message:', error);
-    } finally { setIsSending(false); }
+      toast.error('Não foi possível concluir o envio. Confira a conexão e tente novamente.');
+    } finally {
+      setUploadingFileName(null);
+      setIsSending(false);
+    }
   }, [message, attachments, isSending, uploadFile, onSendMessage, replyTo?.id]);
 
   const handleEmojiSelect = (emoji: string) => { setMessage(prev => prev + emoji); setShowEmojiPicker(false); inputRef.current?.focus(); };
@@ -113,7 +128,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
     {showCardPicker && <CardMentionPicker query={cardQuery} onSelect={handleCardSelect} onClose={() => setShowCardPicker(false)} />}
     {showUserPicker && <UserMentionPicker query={userQuery} onSelect={handleUserSelect} onClose={() => setShowUserPicker(false)} />}
     <FormattingPreview text={message} />
-    <AnimatePresence>{attachments.length > 0 && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-2 flex flex-wrap gap-2">{attachments.map((attachment, index) => <div key={index} className="group relative rounded-2xl border border-border/60 bg-muted/50 p-1.5"><div className="h-14 w-14">{attachment.preview ? <img src={attachment.preview} alt={attachment.file.name} className="h-14 w-14 rounded object-cover" /> : <div className="flex h-14 w-14 flex-col items-center justify-center gap-1"><FileText className="h-5 w-5 text-muted-foreground" /><span className="w-12 truncate text-center text-[9px] text-muted-foreground">{attachment.file.name.split('.').pop()?.toUpperCase()}</span></div>}</div><button type="button" onClick={() => removeAttachment(index)} className="absolute -right-2 -top-2 rounded-full bg-destructive p-1 text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"><X className="h-3 w-3" /></button></div>)}</motion.div>}</AnimatePresence>
+    <AnimatePresence>{attachments.length > 0 && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-2 flex flex-col gap-1.5">{attachments.map((attachment, index) => { const isCurrentUpload = isSending && uploadingFileName === attachment.file.name; const isQueued = isSending && !isCurrentUpload; return <div key={attachment.file.name + '-' + attachment.file.size + '-' + index} className="flex min-w-0 items-center gap-3 rounded-2xl border border-border/60 bg-card/75 px-3 py-2 shadow-sm backdrop-blur-xl"><div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted">{attachment.preview ? <img src={attachment.preview} alt={attachment.file.name} className="h-full w-full object-cover" /> : <FileText className="h-5 w-5 text-muted-foreground" />}</div><div className="min-w-0 flex-1"><p className="truncate text-xs font-medium text-foreground">{attachment.file.name}</p><p className="mt-0.5 text-[11px] text-muted-foreground">{(attachment.file.size / 1024 / 1024).toFixed(2)} MB · {isCurrentUpload ? 'Enviando arquivo…' : isQueued ? 'Na fila de envio' : 'Pronto para enviar'}</p>{isCurrentUpload && <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted"><div className="h-full w-1/3 animate-pulse rounded-full bg-primary" /></div>}</div>{isCurrentUpload || isQueued ? <Loader2 className={`h-4 w-4 shrink-0 ${isCurrentUpload ? 'animate-spin text-primary' : 'text-muted-foreground/60'}`} /> : <button type="button" disabled={isSending} onClick={() => removeAttachment(index)} aria-label={`Remover ${attachment.file.name}`} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40"><X className="h-4 w-4" /></button>}</div>; })}</motion.div>}</AnimatePresence>
     <AnimatePresence>{showEmojiPicker && <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className="absolute bottom-full left-2 z-40 mb-2 max-w-[calc(100vw-1rem)] rounded-xl border border-border bg-card p-2 shadow-xl sm:left-4"><div className="flex max-w-[min(360px,calc(100vw-2rem))] gap-1 overflow-x-auto scrollbar-none">{EMOJI_LIST.map(emoji => <button key={emoji} type="button" onClick={() => handleEmojiSelect(emoji)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl transition-colors hover:bg-muted">{emoji}</button>)}</div></motion.div>}</AnimatePresence>
     <div className="relative z-10 flex items-center gap-1 rounded-[26px] border border-border/50 bg-muted/35 p-1 shadow-[0_8px_24px_-18px_hsl(var(--foreground)/0.45),inset_0_1px_0_hsl(var(--background)/0.9)] backdrop-blur-2xl transition-all focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10 sm:gap-1.5">
       <div className="flex shrink-0 items-center gap-0.5">
