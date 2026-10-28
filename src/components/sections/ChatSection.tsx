@@ -283,7 +283,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   if (isMobile && chatMode === 'direct' && selectedUserId) return <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex h-full flex-col"><div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-2 py-1.5 backdrop-blur-xl"><Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 shrink-0 rounded-full p-0 hover:bg-transparent"><ArrowLeft className="h-4 w-4" /></Button><div className="flex-1 overflow-hidden"><DirectMessageChat partnerId={selectedUserId} /></div></div></motion.div>;
   if (isMobile && chatMode === 'groups' && selectedGroupId) return <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 0 + 1, x: 0 }} className="flex h-full flex-col"><div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-2 py-1.5 backdrop-blur-xl"><Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 shrink-0 rounded-full p-0 hover:bg-transparent"><ArrowLeft className="h-4 w-4" /></Button><div className="flex-1 min-w-0"><PrivateGroupChat group={selectedGroup} /></div></div></motion.div>;
 
-  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex h-full flex-col">
+  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-0 !rounded-none bg-muted/40 p-0 shadow-none">
 
     {isMobile && <>
       <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl">
@@ -298,7 +298,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     </>}
 
     <div className="flex min-h-0 flex-1 overflow-hidden">
-      <aside className="hidden w-[260px] shrink-0 flex-col bg-transparent md:flex">
+      <aside className="hidden w-[260px] shrink-0 flex-col border-0 bg-background md:flex">
         <div className="space-y-3 border-0 p-3">
           <div className="flex items-center justify-between"><h3 className="text-lg font-semibold tracking-tight text-foreground">Conversas</h3>
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" title="Filtrar conversas"><UsersRound className="h-4 w-4"/></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Mostrar</DropdownMenuLabel><DropdownMenuSeparator/>
@@ -339,7 +339,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
           </div>
         </ScrollArea>
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-0 !rounded-none bg-muted/40 shadow-none">
     {chatMode === 'sectors' ? <>
 
       <div className={cn('flex items-center gap-3 border-b border-border bg-card shrink-0', isMobile ? 'hidden' : 'px-4 py-3')}>
@@ -352,7 +352,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       {showSectorUsers && isMobile && <div className="absolute inset-0 z-50 bg-background"><div className="flex items-center justify-between border-b border-border p-3"><h3 className="font-semibold">Membros do Setor</h3><Button variant="ghost" size="icon" onClick={() => setShowSectorUsers(false)}><ArrowLeft className="h-5 w-5" /></Button></div><SectorUsersList sectorId={effectiveSector || ''} inline /></div>}
       <TypingIndicator typingUsers={typingUsers} />{canSendMessages ? <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} onMention={handleMention} replyTo={replyTo} onClearReply={() => setReplyTo(null)} /> : <div className="border-t border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">Você só pode enviar mensagens no seu próprio setor</div>}
       <ChatPersonalizationDialog open={showSectorPersonalization} onOpenChange={setShowSectorPersonalization} chatId={effectiveSector ? `sector-${effectiveSector}` : null} chatName={currentSector?.name || 'Setor'} />
-    </> : chatMode === 'direct' ? (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden [&>div>div:nth-child(2)]:hidden"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div> : <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden border-0 rounded-none bg-transparent p-0 shadow-none"><DirectMessageChat partnerId={selectedUserId} /></div>) : (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div> : <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden border-0 rounded-none bg-transparent p-0 shadow-none"><PrivateGroupChat group={selectedGroup} /></div>)}
+    </> : chatMode === 'direct' ? (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden [&>div>div:nth-child(2)]:hidden"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div> : <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden border-0 !rounded-none bg-muted/40 p-0 shadow-none"><DirectMessageChat partnerId={selectedUserId} /></div>) : (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div> : <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden border-0 !rounded-none bg-muted/40 p-0 shadow-none"><PrivateGroupChat group={selectedGroup} /></div>)}
       </div>
     </div>
   </motion.div>;
