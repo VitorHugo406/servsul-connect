@@ -4,8 +4,25 @@ import { supabase } from '@/integrations/supabase/client';
 type StorageTarget = { bucket: 'attachments' | 'avatars'; path: string };
 
 const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+const inFlightSignatures = new Map<string, Promise<string>>();
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 const CACHE_SAFETY_MS = 60 * 1000;
+const MAX_CONCURRENT_SIGNATURES = 3;
+let activeSignatures = 0;
+const signatureQueue: Array<() => void> = [];
+
+async function withSignatureSlot<T>(operation: () => Promise<T>): Promise<T> {
+  if (activeSignatures >= MAX_CONCURRENT_SIGNATURES) {
+    await new Promise<void>((resolve) => signatureQueue.push(resolve));
+  }
+  activeSignatures += 1;
+  try {
+    return await operation();
+  } finally {
+    activeSignatures -= 1;
+    signatureQueue.shift()?.();
+  }
+}
 
 export function getStorageTarget(value?: string | null): StorageTarget | null {
   if (!value) return null;
@@ -32,12 +49,19 @@ export async function createSignedStorageUrl(value?: string | null): Promise<str
   const cached = signedUrlCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now() + CACHE_SAFETY_MS) return cached.url;
 
-  try {
+  const existingRequest = inFlightSignatures.get(cacheKey);
+  if (existingRequest) return existingRequest;
+
+  const request = withSignatureSlot(async () => {
+    // Re-check after waiting: another request may have populated the cache.
+    const freshCache = signedUrlCache.get(cacheKey);
+    if (freshCache && freshCache.expiresAt > Date.now() + CACHE_SAFETY_MS) return freshCache.url;
+
     const { data, error } = await supabase.storage
       .from(target.bucket)
       .createSignedUrl(target.path, SIGNED_URL_TTL_SECONDS);
 
-    // Fail closed: never fall back to an original public/object URL if signing fails.
+    // Fail closed: never fall back to an original object URL if signing fails.
     if (error || !data?.signedUrl) {
       signedUrlCache.delete(cacheKey);
       console.error('Unable to create a signed storage URL.');
@@ -48,13 +72,17 @@ export async function createSignedStorageUrl(value?: string | null): Promise<str
       url: data.signedUrl,
       expiresAt: Date.now() + SIGNED_URL_TTL_SECONDS * 1000,
     });
-
     return data.signedUrl;
-  } catch (error) {
+  }).catch((error: unknown) => {
     signedUrlCache.delete(cacheKey);
     console.error('Unable to create a signed storage URL.', error);
     return '';
-  }
+  }).finally(() => {
+    inFlightSignatures.delete(cacheKey);
+  });
+
+  inFlightSignatures.set(cacheKey, request);
+  return request;
 }
 
 export function useSignedStorageUrl(value?: string | null) {
@@ -73,7 +101,7 @@ export function useSignedStorageUrl(value?: string | null) {
 
     if (!value || !target) return;
 
-    createSignedStorageUrl(value).then((url) => {
+    void createSignedStorageUrl(value).then((url) => {
       if (alive) setSignedUrl(url);
     });
 

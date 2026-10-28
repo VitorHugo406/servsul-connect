@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { optimizeImageFile } from '@/lib/imageOptimization';
@@ -90,7 +90,8 @@ export function useFileUpload() {
 
   const uploadFile = async (
     file: File,
-    bucket: 'attachments' | 'avatars' = 'attachments'
+    bucket: 'attachments' | 'avatars' = 'attachments',
+    onProgress?: (percent: number) => void
   ): Promise<UploadResult | null> => {
     if (!user || !profile) {
       toast.error('Você precisa estar logado para fazer upload');
@@ -146,18 +147,51 @@ export function useFileUpload() {
       const fileExt = uploadFileObject.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(fileName, uploadFileObject, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-
-      if (error) {
-        console.error('Upload error:', error);
-        toast.error('Erro ao fazer upload do arquivo');
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        toast.error('Sua sessão expirou. Entre novamente para enviar o arquivo.');
         return null;
       }
+
+      // XHR exposes real upload progress; the standard Storage upload call does not.
+      const uploadPath = fileName.split('/').map(encodeURIComponent).join('/');
+      const uploadedPath = await new Promise<string>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/${bucket}/${uploadPath}`);
+        xhr.setRequestHeader('apikey', SUPABASE_PUBLISHABLE_KEY);
+        xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+        xhr.setRequestHeader('cache-control', 'max-age=3600');
+        xhr.setRequestHeader('x-upsert', 'false');
+        xhr.setRequestHeader('Content-Type', uploadFileObject.type || 'application/octet-stream');
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.min(99, Math.round((event.loaded / event.total) * 100));
+            setProgress(percent);
+            onProgress?.(percent);
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              JSON.parse(xhr.responseText);
+              resolve(fileName);
+            } catch {
+              resolve(fileName);
+            }
+          } else {
+            reject(new Error(`Storage upload failed (${xhr.status}): ${xhr.responseText}`));
+          }
+        };
+        xhr.onerror = () => reject(new Error('Falha de rede durante o upload'));
+        xhr.onabort = () => reject(new Error('Upload cancelado'));
+        xhr.send(uploadFileObject);
+      }).catch((error) => {
+        console.error('Upload error:', error);
+        throw error;
+      });
+
+      const data = { path: uploadedPath };
 
       const { data: urlData } = supabase.storage
         .from(bucket)

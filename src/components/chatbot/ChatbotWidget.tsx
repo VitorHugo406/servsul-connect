@@ -122,6 +122,12 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
   const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
+    const openAssistant = () => setIsOpen(true);
+    window.addEventListener('ewvon:open-assistant', openAssistant);
+    return () => window.removeEventListener('ewvon:open-assistant', openAssistant);
+  }, []);
+
+  useEffect(() => {
     if (!user || !profile || !isHomePage) return;
 
     const fetchData = async () => {
@@ -353,7 +359,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
       {/* Floating Button with bubble animation - positioned above mobile nav */}
       <motion.button
         onClick={handleOpen}
-        className="fixed bottom-28 md:bottom-6 right-4 md:right-6 z-50 flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full gradient-primary shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+        className="hidden"
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ 

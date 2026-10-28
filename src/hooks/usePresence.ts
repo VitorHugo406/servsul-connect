@@ -8,8 +8,9 @@ interface UserPresence {
   last_heartbeat: string;
 }
 
-const HEARTBEAT_INTERVAL = 30000; // 30 seconds
-const OFFLINE_THRESHOLD = 60000; // 60 seconds
+// Reduce write pressure on PostgreSQL: presence is advisory, not real-time telemetry.
+const HEARTBEAT_INTERVAL = 60000; // 60 seconds
+const OFFLINE_THRESHOLD = 120000; // 120 seconds
 
 export function usePresence() {
   const { user, profile } = useAuth();
@@ -51,26 +52,11 @@ export function usePresence() {
       }
     }, HEARTBEAT_INTERVAL);
 
-    // Set offline on beforeunload
-    const handleBeforeUnload = () => {
-      navigator.sendBeacon && navigator.sendBeacon(
-        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_presence?user_id=eq.${user.id}`,
-        JSON.stringify({ is_online: false })
-      );
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
     return () => {
       clearInterval(heartbeatInterval);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      
-      // Set offline on cleanup
-      supabase
-        .from('user_presence')
-        .update({ is_online: false })
-        .eq('user_id', user.id)
-        .then();
+      // Do not send an unauthenticated sendBeacon request during unload.
+      // It bypasses the Supabase client's auth headers and produced repeated 500s.
+      // The last_heartbeat timestamp is the source of truth for stale presence.
     };
   }, [user]);
 

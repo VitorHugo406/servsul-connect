@@ -113,6 +113,15 @@ export function CalendarSection() {
   const [meetingScheduleDate, setMeetingScheduleDate] = useState<Date>(new Date());
 
   useEffect(() => {
+    const handleCalendarViewChange = (event: Event) => {
+      const mode = (event as CustomEvent<'month' | 'week' | 'day'>).detail;
+      if (mode === 'month' || mode === 'week' || mode === 'day') setViewMode(mode);
+    };
+    window.addEventListener('ewvon:calendar-view-change', handleCalendarViewChange);
+    return () => window.removeEventListener('ewvon:calendar-view-change', handleCalendarViewChange);
+  }, []);
+
+  useEffect(() => {
     const fetchUsers = async () => {
       const { data } = await supabase.from('profiles').select('id, name, display_name, avatar_url, user_id').eq('is_active', true);
       setAllUsers((data || []) as UserProfile[]);
@@ -903,35 +912,25 @@ export function CalendarSection() {
 
   // ========== MAIN CALENDAR VIEW ==========
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 border-b border-border flex-shrink-0">
-        <div>
-          <h3 className="font-display text-xl font-bold text-foreground">Calendário</h3>
-          <p className="text-muted-foreground text-xs">Reuniões, lembretes e prazos</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {myInvites.length > 0 && (
-            <Badge variant="destructive" className="gap-1"><Bell className="h-3 w-3" /> {myInvites.length} convite(s)</Badge>
-          )}
-          <Button variant="outline" size="sm" onClick={goToToday}>Hoje</Button>
-          <Button variant="outline" size="sm" onClick={() => handleMeetingButtonClick(selectedDate)} className="gap-1">
-            <Video className="h-3.5 w-3.5" /> Reunião
-          </Button>
-          <Button size="sm" onClick={() => openCreateEvent(selectedDate)} className="gap-1">
-            <Plus className="h-3.5 w-3.5" /> Evento
-          </Button>
-        </div>
-      </div>
-
-      {/* View mode tabs */}
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="flex flex-col flex-1 overflow-hidden">
-        <div className="px-4 pt-2 flex-shrink-0">
-          <TabsList>
-            <TabsTrigger value="month">Mês</TabsTrigger>
-            <TabsTrigger value="week">Semana</TabsTrigger>
-            <TabsTrigger value="day">Dia</TabsTrigger>
-          </TabsList>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="ewvon-calendar-shell flex flex-col h-full min-h-0 overflow-hidden">
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div className="ewvon-calendar-header flex flex-wrap items-center justify-between gap-3 px-4 py-2 border-b border-border/70 flex-shrink-0">
+          <div className="min-w-0">
+            <h3 className="font-display text-base font-semibold tracking-tight text-foreground">Calendário</h3>
+            <p className="text-muted-foreground text-[10px]">Reuniões, lembretes e prazos</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {myInvites.length > 0 && (
+              <Badge variant="destructive" className="gap-1"><Bell className="h-3 w-3" /> {myInvites.length} convite(s)</Badge>
+            )}
+            <Button variant="outline" size="sm" onClick={goToToday} className="ewvon-calendar-action">Hoje</Button>
+            <Button variant="outline" size="sm" onClick={() => handleMeetingButtonClick(selectedDate)} className="gap-1 ewvon-calendar-action">
+              <Video className="h-3.5 w-3.5" /> Reunião
+            </Button>
+            <Button size="sm" onClick={() => openCreateEvent(selectedDate)} className="gap-1 ewvon-calendar-action ewvon-calendar-action-primary">
+              <Plus className="h-3.5 w-3.5" /> Evento
+            </Button>
+          </div>
         </div>
 
         {/* MONTH VIEW */}
@@ -950,7 +949,7 @@ export function CalendarSection() {
                   <div key={d} className="text-center text-[10px] font-medium text-muted-foreground py-1">{d}</div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden flex-1">
+              <div className="grid grid-cols-7 gap-px bg-border/70 rounded-md overflow-hidden flex-1 border border-border/70">
                 {monthDays.map(day => {
                   const dayEvents = getEventsForDate(day);
                   const dayTasks = getTasksForDate(day);
@@ -1128,7 +1127,7 @@ export function CalendarSection() {
                   const dayTasks = getTasksForDate(day);
                   const isTodayDate = isToday(day);
                   return (
-                    <div key={day.toISOString()} className={cn('rounded-lg border border-border p-3', isTodayDate && 'bg-primary/5 border-primary')}>
+                    <div key={day.toISOString()} className={cn('rounded-md border border-border/70 p-2.5', isTodayDate && 'bg-primary/5 border-primary/70')}>
                       <div className="flex items-center gap-2 mb-2">
                         <span className={cn('text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center', isTodayDate ? 'bg-primary text-primary-foreground' : '')}>
                           {format(day, 'd')}
@@ -1176,7 +1175,7 @@ export function CalendarSection() {
                     const dayTasks = getTasksForDate(day);
                     const isTodayDate = isToday(day);
                     return (
-                      <div key={day.toISOString()} className={cn('rounded-lg border border-border p-2 overflow-y-auto', isTodayDate && 'bg-primary/5 border-primary')}>
+                      <div key={day.toISOString()} className={cn('rounded-md border border-border/70 p-2 overflow-y-auto', isTodayDate && 'bg-primary/5 border-primary/70')}>
                         <div className="text-center mb-1.5">
                           <p className="text-[10px] text-muted-foreground uppercase">{format(day, 'EEE', { locale: ptBR })}</p>
                           <button onClick={() => { setSelectedDate(day); setViewMode('day'); }}

@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Home, LayoutDashboard, MessageSquare, Bell, Cake, Settings, Link as LinkIcon, ScanFace, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, CalendarDays, FileText, HardDrive, BookOpen, Shield, Globe, ClipboardCheck, StickyNote, Megaphone, Plug, LayoutGrid } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { usePresence } from '@/hooks/usePresence';
 import { useMeetingStatus } from '@/hooks/useMeetingStatus';
@@ -37,7 +39,6 @@ const ShortcutsManagementSection = lazy(() => import('@/components/sections/Shor
 import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
 import { FloatingNoteWindow } from '@/components/notes/FloatingNoteWindow';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
-import { SeasonalMarquee } from '@/components/seasonal/SeasonalMarquee';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
@@ -49,7 +50,7 @@ import { WarRoomAlarmOverlay } from '@/components/warroom/WarRoomAlarmOverlay';
 import { MobileShell } from '@/components/layout/mobile/MobileShell';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
-  home: { title: 'Início', subtitle: 'Visão geral do Ewvor' },
+  home: { title: 'Início', subtitle: 'Visão geral do ewvon' },
   'my-dashboard': { title: 'Meu Painel', subtitle: 'Métricas e estatísticas personalizadas' },
   chat: { title: 'Chat por Setores', subtitle: 'Comunicação entre equipes' },
   announcements: { title: 'Avisos Gerais', subtitle: 'Comunicados oficiais' },
@@ -88,6 +89,100 @@ const sectionPaths: Record<string, string> = {
   companies: '/empresas', 'system-broadcasts': '/comunicados-globais',
 };
 const pathSections = Object.fromEntries(Object.entries(sectionPaths).map(([key, path]) => [path, key])) as Record<string, string>;
+
+
+const sectionIntroIcons = {
+  home: Home, 'my-dashboard': LayoutDashboard, chat: MessageSquare,
+  announcements: Bell, birthdays: Cake, management: Settings, shortcuts: LinkIcon,
+  facial: ScanFace, 'data-management': Trash2, sectors: Building2,
+  'important-announcements': Sparkles, tasks: ListTodo, 'people-management': UsersRound,
+  'feedback-email': Mail, calendar: CalendarDays, 'system-logs': FileText,
+  storage: HardDrive, documentation: BookOpen, 'war-room': Shield,
+  'api-management': Plug, evaluations: ClipboardCheck, notes: StickyNote,
+  companies: Building2, 'system-broadcasts': Megaphone, 'event-history': Sparkles,
+} as const;
+
+function SectionTransitionIndicator({ section }: { section: string }) {
+  const [visible, setVisible] = useState(false);
+  const [phase, setPhase] = useState<'dot' | 'expanded' | 'glow' | 'collapse'>('dot');
+  const title = sectionTitles[section]?.title || 'Início';
+  const Icon = sectionIntroIcons[section as keyof typeof sectionIntroIcons] || LayoutGrid;
+
+  useEffect(() => {
+    setVisible(false);
+    setPhase('dot');
+    if (section === 'calendar') return;
+
+    // Sequência: bolinha aparece, pausa, abre, destaca com sombra, fecha e some.
+    const showTimer = window.setTimeout(() => setVisible(true), 30);
+    const expandTimer = window.setTimeout(() => setPhase('expanded'), 1050);
+    const glowTimer = window.setTimeout(() => setPhase('glow'), 2050);
+    const collapseTimer = window.setTimeout(() => setPhase('collapse'), 3150);
+    const hideTimer = window.setTimeout(() => setVisible(false), 3650);
+
+    return () => {
+      window.clearTimeout(showTimer);
+      window.clearTimeout(expandTimer);
+      window.clearTimeout(glowTimer);
+      window.clearTimeout(collapseTimer);
+      window.clearTimeout(hideTimer);
+    };
+  }, [section]);
+
+  if (section === 'calendar') return null;
+  const isExpanded = phase === 'expanded' || phase === 'glow';
+  const pillWidth = Math.min(310, Math.max(154, title.length * 8 + 76));
+
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-3 z-[100] flex justify-center" aria-live="polite">
+      <AnimatePresence>
+        {visible && (
+          <motion.div
+            key={section}
+            initial={{ opacity: 0, scale: 0.55, filter: 'blur(5px)', width: 44 }}
+            animate={{
+              opacity: phase === 'collapse' ? 0.92 : 1,
+              scale: phase === 'collapse' ? 0.96 : 1,
+              filter: 'blur(0px)',
+              width: isExpanded ? pillWidth : 44,
+              boxShadow: phase === 'glow'
+                ? '0 0 0 1px rgba(255,255,255,0.95), 0 0 0 5px rgba(148,163,184,0.18), 0 0 22px rgba(255,255,255,0.75), 0 18px 48px rgba(15,23,42,0.30)'
+                : '0 8px 24px rgba(15,23,42,0.12)',
+            }}
+            exit={{ opacity: 0, scale: 0.62, filter: 'blur(7px)', transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] } }}
+            transition={{
+              opacity: { duration: phase === 'collapse' ? 0.28 : 0.24 },
+              scale: { type: 'spring', stiffness: 360, damping: 27 },
+              filter: { duration: 0.24 },
+              width: { type: 'spring', stiffness: 300, damping: 28 },
+              boxShadow: { duration: 0.42, ease: 'easeOut' },
+            }}
+            className="flex h-11 items-center overflow-hidden rounded-full border border-white/70 bg-white/90 px-1.5 text-slate-900 backdrop-blur-2xl"
+            role="status"
+            aria-label={title}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm">
+              <Icon className="h-4 w-4" strokeWidth={1.9} />
+            </span>
+            <motion.span
+              initial={false}
+              animate={{ opacity: isExpanded ? 1 : 0, x: isExpanded ? 0 : -5 }}
+              transition={{ duration: 0.2, delay: isExpanded ? 0.08 : 0 }}
+              className="min-w-0 flex-1 truncate px-3 text-[13px] font-semibold tracking-[-0.02em]"
+            >
+              {title}
+            </motion.span>
+            <motion.span
+              animate={{ opacity: isExpanded ? 0.7 : 0, scale: isExpanded ? 1 : 0.7 }}
+              transition={{ duration: 0.18 }}
+              className="mr-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 const Index = () => {
   const location = useLocation();
@@ -166,8 +261,8 @@ const Index = () => {
 
   const currentSection = sectionTitles[activeSection] || sectionTitles.home; const isHomePage = activeSection === 'home';
   if (isMobile) {
-    return <><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><MobileShell activeSection={activeSection} onSectionChange={handleSectionChange} globalSearch={globalSearch} /><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} /><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && !showOnboarding && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></>;
+    return <><SectionTransitionIndicator section={activeSection} /><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><MobileShell activeSection={activeSection} onSectionChange={handleSectionChange} globalSearch={globalSearch} /><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} /><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && !showOnboarding && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></>;
   }
-  return <div className="flex h-screen overflow-hidden bg-background"><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} /><div className="flex flex-1 flex-col overflow-hidden">{isHomePage && <><Header title={currentSection.title} subtitle={currentSection.subtitle} hideNotifications={isHomePage} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} /><SystemBroadcastBanner /><SeasonalMarquee /></>}<main className="m-3 flex-1 overflow-auto rounded-[28px] border border-border/60 bg-card/30 shadow-sm"><Suspense fallback={<div className="flex min-h-48 items-center justify-center" role="status" aria-label="Carregando seção"><div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>}>{renderSection()}</Suspense></main></div><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} /><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && !showOnboarding && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></div>;
+  return <div className="flex h-screen overflow-hidden bg-background"><SectionTransitionIndicator section={activeSection} /><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} /><div className="flex flex-1 flex-col overflow-hidden"><Header title={currentSection.title} subtitle={currentSection.subtitle} activeSection={activeSection} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} /><main className="ewvon-main min-w-0 flex-1 overflow-auto bg-white"><Suspense fallback={<div className="flex min-h-48 items-center justify-center" role="status" aria-label="Carregando seção"><div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>}>{renderSection()}</Suspense></main></div><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} /><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && !showOnboarding && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></div>;
 };
 export default Index;

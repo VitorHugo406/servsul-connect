@@ -10,6 +10,7 @@ import { FloatingNoteProvider } from "@/contexts/FloatingNoteContext";
 import { supabase } from "@/integrations/supabase/client";
 import { applyBrand, getCachedBrand } from "@/lib/branding";
 import { AdminBirthdayPdfGuard } from "@/components/birthday/AdminBirthdayPdfGuard";
+import { Building2, Check, Loader2, X } from "lucide-react";
 
 // Recarrega uma única vez quando um pedaço antigo do app ficou em cache (deploy novo)
 function lazyWithRetry<T extends { default: React.ComponentType<any> }>(factory: () => Promise<T>) {
@@ -55,9 +56,51 @@ function RootRoute() {
   }, []);
   if (loading || verifying) return <LoadingScreen message="Preparando seu ambiente..." />;
   if (user) return <Index />;
-  return isMobile ? <Auth /> : <LandingPage />;
+  return isMobile ? <SelectCompany /> : <LandingPage />;
 }
-function AppRoutes() { const location = useLocation(); const authContent = <PublicRoute><Auth /></PublicRoute>; return <Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><Routes><Route path="/" element={<RootRoute />} /><Route path="/auth" element={location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={<PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="*" element={<RootRoute />} /></Routes></Suspense>; }
+function PersistentAccessNavigation() {
+  const location = useLocation();
+  const [state, setState] = useState<{status:string; company:any}>({status:'idle',company:null});
+  const slug = new URLSearchParams(location.search).get('company');
+  useEffect(() => {
+    const update = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail) setState(detail);
+    };
+    window.addEventListener('ewvon-access-state', update);
+    return () => window.removeEventListener('ewvon-access-state', update);
+  }, []);
+  useEffect(() => {
+    if (location.pathname !== '/auth' || !slug) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const cachedRaw = localStorage.getItem('ewvor:public-company:' + slug.toLowerCase());
+        if (cachedRaw) {
+          const company = JSON.parse(cachedRaw);
+          if (!cancelled && company?.primary_color) setState({status:'found',company});
+        }
+        const {data,error} = await (supabase as any).rpc('public_get_company_by_slug',{_slug:slug});
+        const company = Array.isArray(data) ? data[0] : data;
+        if (!cancelled && !error && company?.primary_color) setState({status:'found',company});
+      } catch {}
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [location.pathname,slug]);
+  const active = location.pathname === '/auth' || location.pathname === '/select-company';
+  if (!active) return null;
+  const company = state.company;
+  const status = state.status;
+  const className = 'ewvon-access-nav ' + (status === 'found' ? 'is-found' : status === 'searching' ? 'is-searching' : status === 'not-found' ? 'is-not-found' : 'is-idle');
+  return <div className={className} style={company ? ({'--company-accent':company.primary_color,'--company-secondary':company.secondary_color} as any) : undefined} aria-live="polite">
+    <a href="/select-company" className="ewvon-access-nav-brand"><span className="ewvon-access-nav-mark">e</span><span>ewvon</span></a>
+    <div className="ewvon-access-nav-state">
+      {status === 'searching' || status === 'idle' ? <><Loader2 size={14} className="animate-spin"/><span>{status === 'idle' ? 'Procurando empresa' : 'Procurando empresa'}</span></> : status === 'not-found' ? <><X size={14}/><span>Empresa Não Encontrada</span></> : company ? <><span className="ewvon-access-nav-company-logo">{company.logo_url ? <img src={company.logo_url} alt=""/> : <Building2 size={16}/>}</span><span className="ewvon-access-nav-company-name">{company.name}</span><Check size={14}/></> : <><Loader2 size={14} className="animate-spin"/><span>Procurando empresa</span></>}
+    </div>
+  </div>;
+}
+function AppRoutes() { const location = useLocation(); const authContent = <PublicRoute><Auth /></PublicRoute>; return <><PersistentAccessNavigation /><Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><Routes><Route path="/" element={<RootRoute />} /><Route path="/auth" element={location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={<PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="*" element={<RootRoute />} /></Routes></Suspense></>; }
 function AppShell() { return <AuthProvider><CompanyProvider><FloatingNoteProvider><AppRoutes /></FloatingNoteProvider></CompanyProvider></AuthProvider>; }
 const App = () => (<QueryClientProvider client={queryClient}><TooltipProvider><Toaster /><Sonner /><BrowserRouter><AppShell /></BrowserRouter></TooltipProvider></QueryClientProvider>);
 export default App;

@@ -49,8 +49,12 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const [showMobileAutomation, setShowMobileAutomation] = useState(false);
   const [showMobileMedia, setShowMobileMedia] = useState(false);
   const [mobileListSearch, setMobileListSearch] = useState('');
+  const [conversationSearch, setConversationSearch] = useState('');
+  const [conversationFilter, setConversationFilter] = useState<'all' | 'direct' | 'groups' | 'sectors'>('all');
   const [showSectorPersonalization, setShowSectorPersonalization] = useState(false);
   const [sectorBackground, setSectorBackground] = useState('');
+  const [latestGroupMessages, setLatestGroupMessages] = useState<Record<string, { content: string; created_at: string }>>({});
+  const [latestSectorMessages, setLatestSectorMessages] = useState<Record<string, { content: string; created_at: string }>>({});
 
   const isMobile = useIsMobile();
   const { playMessageSent } = useSound();
@@ -166,7 +170,76 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     setShowScrollToBottom(false);
   }, [effectiveSector]);
 
-  const unreadDmCount = conversations.reduce((acc, c) => acc + c.unreadCount, 0);
+
+  const accessibleSectorIdsKey = useMemo(
+    () => accessibleSectors.map((sector: any) => sector.id).filter(Boolean).join(','),
+    [accessibleSectors]
+  );
+  const groupIdsKey = useMemo(() => groups.map(group => group.id).filter(Boolean).join(','), [groups]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const sectorIds = accessibleSectorIdsKey ? accessibleSectorIdsKey.split(',') : [];
+    const groupIds = groupIdsKey ? groupIdsKey.split(',') : [];
+
+    const refreshPreviews = async () => {
+      const [sectorResult, groupResult] = await Promise.all([
+        sectorIds.length
+          ? supabase.from('messages').select('id, sector_id, content, created_at').in('sector_id', sectorIds).order('created_at', { ascending: false }).limit(500)
+          : Promise.resolve({ data: [], error: null }),
+        groupIds.length
+          ? supabase.from('private_group_messages').select('id, group_id, content, created_at').in('group_id', groupIds).order('created_at', { ascending: false }).limit(500)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (cancelled) return;
+      if (sectorResult.error) console.error('Erro ao carregar prévias dos setores:', sectorResult.error);
+      else {
+        const latest: Record<string, { content: string; created_at: string }> = {};
+        for (const message of (sectorResult.data || []) as any[]) {
+          if (message.sector_id && !latest[message.sector_id]) {
+            latest[message.sector_id] = { content: message.content || '', created_at: message.created_at };
+          }
+        }
+        setLatestSectorMessages(latest);
+      }
+
+      if (groupResult.error) console.error('Erro ao carregar prévias dos grupos:', groupResult.error);
+      else {
+        const latest: Record<string, { content: string; created_at: string }> = {};
+        for (const message of (groupResult.data || []) as any[]) {
+          if (message.group_id && !latest[message.group_id]) {
+            latest[message.group_id] = { content: message.content || '', created_at: message.created_at };
+          }
+        }
+        setLatestGroupMessages(latest);
+      }
+    };
+
+    void refreshPreviews();
+    const channel = supabase
+      .channel('chat-sidebar-last-message-previews')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => { void refreshPreviews(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'private_group_messages' }, () => { void refreshPreviews(); })
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [accessibleSectorIdsKey, groupIdsKey]);
+
+  const previewText = (content?: string | null) => {
+    const normalized = (content || '').replace(/\s+/g, ' ').trim();
+    if (!normalized) return 'Sem mensagens';
+    const withoutAttachmentLinks = normalized.replace(/📷?\s*\[([^\]]+)\]\([^)]*\)/g, '$1');
+    return withoutAttachmentLinks.length > 32 ? `${withoutAttachmentLinks.slice(0, 31).trimEnd()}…` : withoutAttachmentLinks;
+  };
+  const previewTime = (date?: string) => date
+    ? new Date(date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : '';
+
+    const unreadDmCount = conversations.reduce((acc, c) => acc + c.unreadCount, 0);
 
   useEffect(() => {
     if (!profile || !user) return;
@@ -210,8 +283,8 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   if (isMobile && chatMode === 'direct' && selectedUserId) return <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex h-full flex-col"><div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-2 py-1.5 backdrop-blur-xl"><Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 shrink-0 rounded-full p-0 hover:bg-transparent"><ArrowLeft className="h-4 w-4" /></Button><div className="flex-1 overflow-hidden"><DirectMessageChat partnerId={selectedUserId} /></div></div></motion.div>;
   if (isMobile && chatMode === 'groups' && selectedGroupId) return <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 0 + 1, x: 0 }} className="flex h-full flex-col"><div className="flex items-center gap-2 rounded-t-[26px] border-b border-border/40 bg-card/60 px-2 py-1.5 backdrop-blur-xl"><Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 shrink-0 rounded-full p-0 hover:bg-transparent"><ArrowLeft className="h-4 w-4" /></Button><div className="flex-1 min-w-0"><PrivateGroupChat group={selectedGroup} /></div></div></motion.div>;
 
-  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex h-full flex-col">
-    {!isMobile && <div className="flex border-b border-border bg-card shrink-0"><button onClick={() => setChatMode('sectors')} className={cn('flex flex-1 items-center justify-center gap-2 font-medium transition-colors','px-4 py-3 text-sm',chatMode === 'sectors' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground')}><Users className="h-4 w-4" /><span>Setores</span></button><button onClick={() => setChatMode('direct')} className={cn('flex flex-1 items-center justify-center gap-2 font-medium transition-colors','px-4 py-3 text-sm',chatMode === 'direct' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground')}><MessageSquare className="h-4 w-4" /><span>Individual</span>{unreadDmCount > 0 && chatMode !== 'direct' && <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />}</button><button onClick={() => setChatMode('groups')} className={cn('flex flex-1 items-center justify-center gap-2 font-medium transition-colors','px-4 py-3 text-sm',chatMode === 'groups' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground')}><UsersRound className="h-4 w-4" /><span>Grupos</span>{unreadGroupCount > 0 && chatMode !== 'groups' && <span className="h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />}</button></div>}
+  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden !border-0 !rounded-none bg-transparent !p-0 !shadow-none">
+
     {isMobile && <>
       <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-card/65 px-3 py-2 backdrop-blur-2xl">
         {chatMode === 'sectors' && <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-10 min-w-0 flex-1 justify-start gap-2 rounded-full border border-border/60 bg-background/65 px-3 shadow-sm"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-primary-foreground" style={{ backgroundColor: currentSector?.color }}>{currentSector?.name?.charAt(0)}</span><span className="min-w-0 flex-1 text-left"><span className="block truncate text-sm font-semibold text-foreground">{currentSector?.name || 'Setor'}</span><span className="block truncate text-[10px] text-muted-foreground">Canais da empresa</span></span><ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" /></Button></DropdownMenuTrigger><DropdownMenuContent align="start" className="max-h-[60vh] w-[min(88vw,320px)] overflow-y-auto rounded-2xl border-border/60 bg-popover/95 p-2 shadow-2xl backdrop-blur-2xl"><DropdownMenuLabel>Canais da empresa</DropdownMenuLabel>{accessibleSectors.map((s: any) => <DropdownMenuItem key={s.id} className="rounded-xl py-2.5" onSelect={() => setActiveSector(s.id)}><span className="mr-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-primary-foreground" style={{ backgroundColor: s.color }}>{s.name.charAt(0)}</span><span className="truncate">{s.name}</span></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>}
@@ -224,8 +297,51 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       <Sheet open={showMobileMedia} onOpenChange={setShowMobileMedia}><SheetContent><SheetHeader><SheetTitle>Mídia e Arquivos - {currentSector?.name}</SheetTitle></SheetHeader>{effectiveSector && <div className="mt-6"><ChatMediaFilter chatType="sector" chatId={effectiveSector} /></div>}</SheetContent></Sheet>
     </>}
 
+    <div className="flex min-h-0 flex-1 overflow-hidden">
+      <aside className="hidden w-[280px] shrink-0 flex-col !border-0 bg-background md:flex">
+        <div className="space-y-3 border-0 p-3">
+          <div className="flex items-center justify-between"><h3 className="text-lg font-semibold tracking-tight text-foreground">Conversas</h3>
+            <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" title="Filtrar conversas"><UsersRound className="h-4 w-4"/></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Mostrar</DropdownMenuLabel><DropdownMenuSeparator/>
+              <DropdownMenuItem onSelect={() => setConversationFilter('all')}>Todas as conversas</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setConversationFilter('direct')}>Individuais</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setConversationFilter('groups')}>Grupos</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setConversationFilter('sectors')}>Setores</DropdownMenuItem>
+            </DropdownMenuContent></DropdownMenu>
+          </div>
+          <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/><Input value={conversationSearch} onChange={e => setConversationSearch(e.target.value)} placeholder="Buscar conversa..." className="h-9 rounded-lg border-border/60 bg-card pl-9 text-sm"/></div>
+        </div>
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="space-y-0.5 p-1.5">
+            {(conversationFilter === 'all' || conversationFilter === 'direct') && conversations.filter(c => (c.partner.display_name || c.partner.name || '').toLowerCase().includes(conversationSearch.toLowerCase())).map(c => {
+              const title = c.partner.display_name || c.partner.name;
+              const selected = chatMode === 'direct' && selectedUserId === c.partnerId;
+              const time = new Date(c.lastMessage.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+              return <button key={'dm-'+c.partnerId} onClick={() => {setChatMode('direct');setSelectedUserId(c.partnerId);setSelectedGroupId(null);}} className={cn('flex w-full items-center gap-2.5 rounded-lg px-2.5 py-3 text-left transition-colors',selected?'bg-primary/10':'hover:bg-muted/70')}>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">{title.split(' ').map((p:string)=>p[0]).slice(0,2).join('').toUpperCase()}</div>
+                <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><span className="truncate text-sm font-medium text-foreground">{title}</span></div><p className="truncate text-xs text-muted-foreground">{previewText(c.lastMessage.content)}</p><div className="mt-1 flex items-center gap-1.5"><span className="shrink-0 rounded-sm bg-sky-500/10 px-1 py-0.5 text-[9px] font-medium leading-none text-sky-700 dark:text-sky-300">Individual</span><span className="text-[10px] leading-none text-muted-foreground">{time}</span></div></div>
+                {c.unreadCount>0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">{c.unreadCount}</span>}
+              </button>;
+            })}
+            {(conversationFilter === 'all' || conversationFilter === 'groups') && groups.filter(g => g.name.toLowerCase().includes(conversationSearch.toLowerCase())).map(g => {
+              const selected = chatMode === 'groups' && selectedGroupId === g.id;
+              return <button key={'group-'+g.id} onClick={() => {setChatMode('groups');setSelectedGroupId(g.id);setSelectedUserId(null);}} className={cn('flex w-full items-center gap-2.5 rounded-lg px-2.5 py-3 text-left transition-colors',selected?'bg-primary/10':'hover:bg-muted/70')}>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-sm font-semibold text-violet-600 dark:text-violet-300"><UsersRound className="h-4 w-4"/></div>
+                <div className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-foreground">{g.name}</span><p className="truncate text-xs text-muted-foreground">{previewText(latestGroupMessages[g.id]?.content || g.description || 'Sem mensagens')}</p><div className="mt-1 flex items-center gap-1.5"><span className="shrink-0 rounded-sm bg-violet-500/10 px-1 py-0.5 text-[9px] font-medium leading-none text-violet-700 dark:text-violet-300">Grupo</span><span className="text-[10px] leading-none text-muted-foreground">{previewTime(latestGroupMessages[g.id]?.created_at)}</span></div></div>
+              </button>;
+            })}
+            {(conversationFilter === 'all' || conversationFilter === 'sectors') && accessibleSectors.filter((sec:any) => sec.name.toLowerCase().includes(conversationSearch.toLowerCase())).map((sec:any) => {
+              const selected = chatMode === 'sectors' && effectiveSector === sec.id;
+              return <button key={'sector-'+sec.id} onClick={() => {setChatMode('sectors');setActiveSector(sec.id);setSelectedUserId(null);setSelectedGroupId(null);}} className={cn('flex w-full items-center gap-2.5 rounded-lg px-2.5 py-3 text-left transition-colors',selected?'bg-primary/10':'hover:bg-muted/70')}>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white" style={{backgroundColor:sec.color || '#64748b'}}>{sec.name.charAt(0).toUpperCase()}</div>
+                <div className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-foreground">{sec.name}</span><p className="truncate text-xs text-muted-foreground">{previewText(latestSectorMessages[sec.id]?.content || 'Sem mensagens')}</p><div className="mt-1 flex items-center gap-1.5"><span className="shrink-0 rounded-sm bg-emerald-500/10 px-1 py-0.5 text-[9px] font-medium leading-none text-emerald-700 dark:text-emerald-300">Setor</span><span className="text-[10px] leading-none text-muted-foreground">{previewTime(latestSectorMessages[sec.id]?.created_at)}</span></div></div>
+              </button>;
+            })}
+          </div>
+        </ScrollArea>
+      </aside>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden !border-0 !rounded-none bg-muted/40 !shadow-none">
     {chatMode === 'sectors' ? <>
-      {!isMobile && <SectorTabs sectors={accessibleSectors} activeSector={effectiveSector || ''} onSectorChange={setActiveSector} />}
+
       <div className={cn('flex items-center gap-3 border-b border-border bg-card shrink-0', isMobile ? 'hidden' : 'px-4 py-3')}>
         <div className="flex items-center justify-center rounded-xl text-white shrink-0 h-10 w-10" style={{ backgroundColor: currentSector?.color }}><span className="font-bold text-lg">{currentSector?.name.charAt(0)}</span></div>
         <div className="flex-1 min-w-0"><h3 className="font-display font-semibold text-foreground truncate">{currentSector?.name}</h3><p className="text-xs text-muted-foreground">{messages.length} mensagens</p></div>
@@ -236,6 +352,8 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
       {showSectorUsers && isMobile && <div className="absolute inset-0 z-50 bg-background"><div className="flex items-center justify-between border-b border-border p-3"><h3 className="font-semibold">Membros do Setor</h3><Button variant="ghost" size="icon" onClick={() => setShowSectorUsers(false)}><ArrowLeft className="h-5 w-5" /></Button></div><SectorUsersList sectorId={effectiveSector || ''} inline /></div>}
       <TypingIndicator typingUsers={typingUsers} />{canSendMessages ? <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} onMention={handleMention} replyTo={replyTo} onClearReply={() => setReplyTo(null)} /> : <div className="border-t border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">Você só pode enviar mensagens no seu próprio setor</div>}
       <ChatPersonalizationDialog open={showSectorPersonalization} onOpenChange={setShowSectorPersonalization} chatId={effectiveSector ? `sector-${effectiveSector}` : null} chatName={currentSector?.name || 'Setor'} />
-    </> : chatMode === 'direct' ? (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden [&>div>div:nth-child(2)]:hidden"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div> : <div className="flex flex-1 overflow-hidden"><div className="w-80 flex-shrink-0"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div><div className="flex-1"><DirectMessageChat partnerId={selectedUserId} /></div></div>) : (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div> : <div className="flex flex-1 overflow-hidden"><div className="w-80 flex-shrink-0"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div><div className="flex-1"><PrivateGroupChat group={selectedGroup} /></div></div>)}
+    </> : chatMode === 'direct' ? (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden [&>div>div:nth-child(2)]:hidden"><DirectMessageList selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} /></div> : <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden !border-0 !rounded-none bg-muted/40 p-0 !shadow-none"><DirectMessageChat partnerId={selectedUserId} /></div>) : (isMobile ? <div className="flex-1 overflow-hidden [&>div>div:first-child]:hidden"><PrivateGroupList selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} /></div> : <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden !border-0 !rounded-none bg-muted/40 p-0 !shadow-none"><PrivateGroupChat group={selectedGroup} /></div>)}
+      </div>
+    </div>
   </motion.div>;
 }

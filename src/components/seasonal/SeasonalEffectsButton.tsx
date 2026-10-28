@@ -234,7 +234,7 @@ export function SeasonalEffectsButton({ collapsed }: { collapsed?: boolean }) {
       <Button
         variant="ghost"
         onClick={handleClick}
-        className={`w-full gap-2 justify-start rounded-xl px-4 py-3 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all ${collapsed ? 'justify-center px-0' : ''}`}
+        className={`flex h-10 w-10 min-w-10 items-center justify-center rounded-full p-0 text-sidebar-foreground/80 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-amber-300 ${collapsed ? '' : 'gap-2'}`}
         title={theme.label}
       >
         <Sparkles className="h-5 w-5 flex-shrink-0 text-amber-400" />
@@ -251,9 +251,9 @@ export function SeasonalEffectsButton({ collapsed }: { collapsed?: boolean }) {
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[9999] max-w-sm w-[90vw]"
+            className="fixed bottom-6 left-1/2 z-[10000] w-[min(90vw,420px)] -translate-x-1/2 pointer-events-none"
           >
-            <div className="rounded-2xl bg-card border border-border shadow-2xl p-5 text-center">
+            <div role="status" aria-live="polite" className="pointer-events-auto rounded-3xl border border-slate-200 bg-white p-5 text-center shadow-2xl">
               <h3 className="text-lg font-bold text-foreground mb-1">{theme.label}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">{theme.message}</p>
             </div>

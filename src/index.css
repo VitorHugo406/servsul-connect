@@ -149,3 +149,797 @@
 @media (prefers-reduced-motion: reduce) {
   .emergency-card::before { animation: none; }
 }
+
+
+/* ewvon global shell: clean white SaaS layout, shared across desktop sections */
+@layer base {
+  :root {
+    --background: 0 0% 99%;
+    --card: 0 0% 100%;
+    --border: 220 14% 91%;
+    --input: 220 14% 91%;
+    --radius: 0.875rem;
+  }
+}
+.ewvon-sidebar {
+  width: 248px;
+  min-width: 248px;
+  border-radius: 0 !important;
+  overflow: hidden;
+}
+.ewvon-sidebar > div:first-child {
+  min-height: 68px;
+  padding: 0 18px;
+  border-color: #f1f2f4 !important;
+}
+.ewvon-sidebar h1 { color: #111827 !important; font-size: 15px !important; font-weight: 700 !important; letter-spacing: -0.025em; }
+.ewvon-sidebar p { color: #6b7280; }
+.ewvon-sidebar nav { padding: 14px 10px; }
+.ewvon-sidebar nav button {
+  min-height: 42px;
+  border-radius: 10px !important;
+  padding-top: 9px !important;
+  padding-bottom: 9px !important;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.ewvon-sidebar nav button svg { width: 18px; height: 18px; stroke-width: 1.8; }
+.ewvon-sidebar nav button.bg-slate-100 { color: #111827 !important; }
+.ewvon-sidebar nav button.bg-slate-100 svg { color: #111827 !important; }
+.ewvon-sidebar .border-t { border-color: #f1f2f4 !important; }
+.ewvon-sidebar [data-radix-scroll-area-viewport] { max-height: 100%; }
+.ewvon-topbar { min-height: 68px; flex-shrink: 0; }
+.ewvon-topbar input { height: 38px; font-size: 13px; }
+.ewvon-topbar button { border-radius: 10px; }
+.ewvon-main {
+  min-height: 0;
+  padding: 20px 24px 24px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overscroll-behavior: contain;
+}
+@media (max-width: 1023px) {
+  .ewvon-sidebar { width: 220px; min-width: 220px; }
+  .ewvon-main { padding: 16px; }
+}
+@media (max-width: 767px) {
+  .ewvon-sidebar { display: none; }
+  .ewvon-topbar { display: none; }
+  .ewvon-main { padding: 12px; }
+}
+
+
+/* Compact reference layout: fixed icon rail and rounded, centered quick-navigation pill */
+.ewvon-sidebar {
+  position: fixed !important;
+  inset: 0 auto 0 0 !important;
+  z-index: 40 !important;
+  width: 64px !important;
+  min-width: 64px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  background: #fff !important;
+}
+.ewvon-sidebar nav { padding: 10px 0 !important; }
+.ewvon-sidebar nav > div { width: 100%; }
+.ewvon-sidebar nav button { border-radius: 9999px !important; }
+.ewvon-sidebar nav button[aria-current="page"] { background: #111 !important; color: #fff !important; }
+.ewvon-sidebar nav button[aria-current="page"] svg { color: #fff !important; }
+.ewvon-topbar {
+  min-height: 68px !important;
+  margin-left: 64px;
+  border-bottom: 0 !important;
+  padding: 8px 22px !important;
+  background: rgba(255,255,255,.96) !important;
+}
+.ewvon-brand { max-width: 210px; }
+.ewvon-quick-nav {
+  border: 1px solid #f0f0f2;
+  border-radius: 9999px;
+  background: #fff;
+  padding: 4px;
+  max-width: max-content;
+}
+.ewvon-quick-nav::-webkit-scrollbar { display: none; }
+.ewvon-quick-nav { scrollbar-width: none; }
+.ewvon-main {
+  margin-left: 64px;
+  padding: 18px 24px 24px !important;
+  background: #fff !important;
+}
+@media (max-width: 1100px) {
+  .ewvon-topbar { padding-inline: 12px !important; }
+  .ewvon-brand { max-width: 145px; }
+  .ewvon-quick-nav button { padding-inline: 10px; gap: 6px; }
+  .ewvon-quick-nav button span { font-size: 11px; }
+}
+@media (max-width: 767px) {
+  .ewvon-sidebar { display: none !important; }
+  .ewvon-topbar { display: none !important; margin-left: 0; }
+  .ewvon-main { margin-left: 0; padding: 12px !important; }
+}
+
+
+/* ewvon: compact floating navigation and unified rounded surfaces */
+:root {
+  --ewvon-shell-bg: #f7f7f9;
+  --ewvon-panel-bg: rgba(255, 255, 255, 0.92);
+  --ewvon-panel-border: rgba(226, 229, 235, 0.88);
+}
+body { background: var(--ewvon-shell-bg); }
+.ewvon-sidebar {
+  position: fixed !important;
+  left: 16px !important;
+  top: 96px !important;
+  bottom: auto !important;
+  width: 58px !important;
+  min-width: 58px !important;
+  height: auto !important;
+  max-height: calc(100vh - 120px);
+  padding: 10px 6px !important;
+  border: 1px solid rgba(255,255,255,.96) !important;
+  border-radius: 9999px !important;
+  background: rgba(255,255,255,.82) !important;
+  box-shadow: 0 8px 30px rgba(25,35,55,.045) !important;
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+.ewvon-sidebar nav { padding: 2px 0 8px !important; overflow: hidden; }
+.ewvon-sidebar nav > div { width: 100%; padding: 0 !important; gap: 7px !important; align-items: center; }
+.ewvon-sidebar nav button {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  border-radius: 9999px !important;
+}
+.ewvon-sidebar nav button[aria-current="page"] {
+  background: #20232b !important;
+  color: #fff !important;
+  box-shadow: 0 3px 8px rgba(17,24,39,.12) !important;
+}
+.ewvon-sidebar nav button[aria-current="page"] svg { color: #fff !important; }
+.ewvon-sidebar > div:last-child { border-top: 0 !important; padding: 6px 0 0 !important; }
+.ewvon-topbar {
+  position: sticky !important;
+  top: 14px !important;
+  z-index: 30 !important;
+  margin: 14px 18px 0 90px !important;
+  min-height: 68px !important;
+  padding: 8px 14px 8px 20px !important;
+  border: 1px solid rgba(255,255,255,.96) !important;
+  border-radius: 9999px !important;
+  background: var(--ewvon-panel-bg) !important;
+  box-shadow: 0 8px 30px rgba(25,35,55,.045) !important;
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+.ewvon-brand { max-width: 180px; }
+.ewvon-quick-nav {
+  flex: 0 1 auto !important;
+  gap: 3px !important;
+  max-width: max-content;
+  padding: 4px !important;
+  border: 1px solid rgba(235,237,242,.86) !important;
+  border-radius: 9999px !important;
+  background: rgba(247,248,250,.78) !important;
+}
+.ewvon-quick-nav button {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  padding: 0 !important;
+  border-radius: 9999px !important;
+}
+.ewvon-quick-nav button[aria-current="page"] { background: #e8eaf0 !important; color: #20232b !important; box-shadow: inset 0 0 0 1px rgba(220,223,231,.75) !important; }
+.ewvon-actions {
+  gap: 6px !important;
+  padding: 4px !important;
+  border: 1px solid rgba(235,237,242,.9) !important;
+  border-radius: 9999px !important;
+  background: rgba(247,248,250,.76) !important;
+}
+.ewvon-actions > button,
+.ewvon-actions > div > button,
+.ewvon-actions [data-radix-popover-trigger] {
+  border-radius: 9999px !important;
+}
+.ewvon-actions button.h-10.w-10 { width: 38px !important; height: 38px !important; }
+.ewvon-actions .ewvon-profile-button { border-radius: 9999px !important; }
+.ewvon-main {
+  margin: 16px 18px 18px 90px !important;
+  padding: 24px !important;
+  min-height: 0;
+  border: 1px solid rgba(255,255,255,.96) !important;
+  border-radius: 28px !important;
+  background: rgba(255,255,255,.92) !important;
+  box-shadow: 0 8px 30px rgba(25,35,55,.035) !important;
+  overflow: auto;
+}
+.ewvon-main > * { min-width: 0; }
+.ewvon-topbar button,
+.ewvon-main button,
+.ewvon-actions button { border-radius: 9999px; }
+@media (max-width: 1100px) {
+  .ewvon-topbar { margin-left: 84px !important; margin-right: 12px !important; padding-inline: 12px !important; gap: 8px !important; }
+  .ewvon-brand { max-width: 130px; }
+  .ewvon-quick-nav button { width: 36px !important; min-width: 36px !important; height: 36px !important; }
+  .ewvon-main { margin-left: 84px !important; margin-right: 12px !important; padding: 18px !important; }
+  .ewvon-sidebar { left: 12px !important; width: 56px !important; min-width: 56px !important; }
+}
+@media (max-width: 767px) {
+  .ewvon-sidebar { display: none !important; }
+  .ewvon-topbar { display: none !important; }
+  .ewvon-main { margin: 12px !important; padding: 12px !important; border-radius: 22px !important; }
+}
+
+
+/* Final shell alignment fixes */
+.ewvon-topbar {
+  flex: 0 0 68px !important;
+  min-height: 68px !important;
+  height: 68px !important;
+  margin-top: 8px !important;
+  margin-bottom: 0 !important;
+  margin-left: 88px !important;
+  margin-right: 8px !important;
+  padding: 6px 12px 6px 18px !important;
+  border-radius: 9999px !important;
+  border: 1px solid rgba(255,255,255,.98) !important;
+  background: rgba(255,255,255,.88) !important;
+  box-shadow: 0 4px 22px rgba(31,41,55,.035) !important;
+}
+.ewvon-brand {
+  flex: 0 1 245px !important;
+  min-width: 0 !important;
+  border-radius: 9999px !important;
+  background: rgba(247,248,250,.78) !important;
+  border-color: rgba(235,237,242,.9) !important;
+}
+.ewvon-quick-nav {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  flex: 0 0 auto !important;
+  justify-content: flex-start !important;
+  border-radius: 9999px !important;
+  background: rgba(247,248,250,.82) !important;
+  border: 1px solid rgba(235,237,242,.92) !important;
+  padding: 4px !important;
+}
+.ewvon-main {
+  margin: 10px 8px 8px 88px !important;
+  padding: 28px !important;
+  border-radius: 30px !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  background: rgba(255,255,255,.95) !important;
+}
+.ewvon-sidebar {
+  left: 12px !important;
+  top: 98px !important;
+  width: 64px !important;
+  min-width: 64px !important;
+  height: calc(100vh - 116px) !important;
+  max-height: none !important;
+  padding: 10px 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  border-radius: 9999px !important;
+  background: rgba(255,255,255,.86) !important;
+}
+.ewvon-sidebar nav {
+  width: 100% !important;
+  flex: 1 1 auto !important;
+  align-items: center !important;
+  padding: 0 !important;
+}
+.ewvon-sidebar nav > div {
+  width: 100% !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  padding: 0 !important;
+}
+.ewvon-sidebar nav button {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-inline: auto !important;
+  flex: 0 0 40px !important;
+  width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  border-radius: 9999px !important;
+}
+.ewvon-sidebar > div:last-child {
+  display: flex !important;
+  width: 100% !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 8px 0 0 !important;
+  border: 0 !important;
+}
+.ewvon-sidebar > div:last-child > button {
+  display: flex !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 9999px !important;
+}
+@media (max-width: 1100px) {
+  .ewvon-topbar { margin-left: 82px !important; margin-right: 8px !important; }
+  .ewvon-main { margin-left: 82px !important; margin-right: 8px !important; padding: 20px !important; }
+}
+@media (max-width: 767px) {
+  .ewvon-topbar { display: none !important; }
+  .ewvon-main { margin: 12px !important; padding: 14px !important; }
+}
+
+
+/* Precision pass: keep the top navigation floating, not inside a full-width white strip */
+.ewvon-topbar {
+  height: 68px !important;
+  min-height: 68px !important;
+  flex: 0 0 68px !important;
+  margin: 8px 12px 0 88px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  overflow: visible !important;
+}
+.ewvon-topbar > div {
+  width: 100% !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  padding: 5px 8px !important;
+  gap: 10px !important;
+  border: 1px solid rgba(255,255,255,.96) !important;
+  border-radius: 9999px !important;
+  background: rgba(255,255,255,.68) !important;
+  box-shadow: 0 3px 18px rgba(31,41,55,.025) !important;
+}
+.ewvon-brand { flex: 0 0 auto !important; }
+.ewvon-quick-nav { flex: 0 0 auto !important; margin-left: 0 !important; margin-right: auto !important; }
+.ewvon-actions { flex: 0 0 auto !important; }
+.ewvon-sidebar {
+  top: 98px !important;
+  bottom: auto !important;
+  height: auto !important;
+  max-height: calc(100vh - 116px) !important;
+  min-height: 0 !important;
+  padding: 10px 8px !important;
+  overflow: hidden !important;
+  justify-content: flex-start !important;
+  gap: 0 !important;
+}
+.ewvon-sidebar nav {
+  flex: 0 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  overflow: visible !important;
+  padding: 0 !important;
+}
+.ewvon-sidebar-scroll {
+  height: auto !important;
+  max-height: calc(100vh - 174px) !important;
+  overflow: hidden !important;
+}
+.ewvon-sidebar-scroll [data-radix-scroll-area-viewport] {
+  height: auto !important;
+  max-height: calc(100vh - 174px) !important;
+  overflow-y: auto !important;
+}
+.ewvon-sidebar nav > div {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 7px !important;
+  padding: 0 !important;
+}
+.ewvon-sidebar nav button {
+  margin: 0 auto !important;
+  flex: 0 0 40px !important;
+}
+.ewvon-seasonal-slot {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  height: 42px !important;
+  padding: 2px 0 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+}
+.ewvon-seasonal-slot button {
+  display: flex !important;
+  flex: 0 0 40px !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 9999px !important;
+}
+@media (max-width: 1100px) {
+  .ewvon-topbar { margin-left: 82px !important; margin-right: 8px !important; }
+}
+@media (max-width: 767px) {
+  .ewvon-topbar { display: none !important; }
+}
+
+
+/* Latest alignment: no continuous header strip, compact top groups, centered rail */
+.ewvon-topbar {
+  position: relative !important;
+  top: 0 !important;
+  height: 58px !important;
+  min-height: 58px !important;
+  flex: 0 0 58px !important;
+  margin: 2px 12px 0 88px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+.ewvon-topbar > div {
+  display: flex !important;
+  width: 100% !important;
+  height: 58px !important;
+  min-height: 58px !important;
+  padding: 0 !important;
+  gap: 10px !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.ewvon-brand {
+  background: rgba(255,255,255,.76) !important;
+  border: 1px solid rgba(230,233,239,.78) !important;
+  box-shadow: 0 2px 10px rgba(30,41,59,.025) !important;
+}
+.ewvon-quick-nav {
+  background: rgba(255,255,255,.76) !important;
+  border: 1px solid rgba(230,233,239,.78) !important;
+  box-shadow: 0 2px 10px rgba(30,41,59,.025) !important;
+}
+.ewvon-actions {
+  margin-left: auto !important;
+  background: rgba(255,255,255,.76) !important;
+  border: 1px solid rgba(230,233,239,.78) !important;
+  box-shadow: 0 2px 10px rgba(30,41,59,.025) !important;
+}
+.ewvon-sidebar {
+  box-sizing: border-box !important;
+  left: 12px !important;
+  top: 82px !important;
+  width: 64px !important;
+  min-width: 64px !important;
+  height: fit-content !important;
+  max-height: calc(100vh - 100px) !important;
+  padding: 10px 8px !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  overflow: hidden !important;
+}
+.ewvon-sidebar nav {
+  display: flex !important;
+  width: 100% !important;
+  flex: 0 1 auto !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  overflow: visible !important;
+}
+.ewvon-sidebar-scroll {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  max-height: calc(100vh - 150px) !important;
+  overflow: hidden !important;
+}
+.ewvon-sidebar-scroll [data-radix-scroll-area-viewport] {
+  width: 100% !important;
+  height: auto !important;
+  max-height: calc(100vh - 150px) !important;
+  overflow-y: auto !important;
+}
+.ewvon-sidebar-scroll [data-radix-scroll-area-viewport] > div {
+  display: flex !important;
+  width: 100% !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding: 0 !important;
+}
+.ewvon-sidebar nav button {
+  position: relative !important;
+  display: flex !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  align-self: center !important;
+  border-radius: 50% !important;
+}
+.ewvon-seasonal-slot {
+  display: flex !important;
+  width: 100% !important;
+  height: 42px !important;
+  flex: 0 0 42px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-top: 7px !important;
+  padding: 0 !important;
+}
+.ewvon-main {
+  margin: 4px 8px 8px 88px !important;
+  padding: 32px !important;
+  border-radius: 30px !important;
+  background: rgba(255,255,255,.96) !important;
+}
+@media (max-width: 1100px) {
+  .ewvon-topbar { margin-left: 82px !important; margin-right: 8px !important; }
+  .ewvon-main { margin-left: 82px !important; padding: 24px !important; }
+}
+@media (max-width: 767px) {
+  .ewvon-topbar { display: none !important; }
+  .ewvon-main { margin: 12px !important; padding: 14px !important; }
+}
+
+
+/* Home dashboard: restrained monochrome glass surfaces */
+.ewvon-home {
+  color: #18181b;
+}
+.ewvon-glass-panel {
+  background: linear-gradient(145deg, rgba(255,255,255,.91), rgba(250,250,251,.76));
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+}
+.ewvon-glass-card {
+  background: linear-gradient(145deg, rgba(255,255,255,.94), rgba(250,250,251,.78));
+  backdrop-filter: blur(16px) saturate(130%);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ewvon-home *,
+  .ewvon-home *::before,
+  .ewvon-home *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+.ewvon-home .ewvon-glass-panel,.ewvon-home .ewvon-glass-card{border-radius:16px!important;border-color:rgba(228,228,231,.76)!important}
+@media(max-width:767px){
+ .ewvon-home{padding:10px!important;gap:12px!important}
+ .ewvon-home .ewvon-glass-panel,.ewvon-home .ewvon-glass-card{border-radius:14px!important}
+ .ewvon-home>section[aria-label="Indicadores principais"]{display:flex!important;overflow-x:auto!important;scroll-snap-type:x mandatory!important;gap:10px!important;padding:2px 1px 8px!important;scrollbar-width:none!important;-webkit-overflow-scrolling:touch}
+ .ewvon-home>section[aria-label="Indicadores principais"]::-webkit-scrollbar,.ewvon-home .ewvon-dashboard-panels::-webkit-scrollbar{display:none!important}
+ .ewvon-home>section[aria-label="Indicadores principais"]>button{flex:0 0 72%!important;min-width:0!important;scroll-snap-align:start!important;padding:14px!important}
+ .ewvon-home>section[aria-label="Indicadores principais"]>button .mt-5{margin-top:12px!important}
+ .ewvon-home .ewvon-dashboard-panels{display:flex!important;overflow-x:auto!important;scroll-snap-type:x mandatory!important;gap:10px!important;padding-bottom:6px!important;scrollbar-width:none!important;-webkit-overflow-scrolling:touch}
+ .ewvon-home .ewvon-dashboard-panels>*{flex:0 0 88%!important;min-width:0!important;scroll-snap-align:start!important}
+ .ewvon-home h1{font-size:1.5rem!important}
+}
+[data-radix-dialog-overlay]{background:rgba(15,23,42,.22)!important;backdrop-filter:blur(7px) saturate(115%)!important;-webkit-backdrop-filter:blur(7px) saturate(115%)!important}
+.ewvon-profile-drawer{position:fixed!important;left:auto!important;right:12px!important;top:12px!important;bottom:12px!important;width:min(440px,calc(100vw - 24px))!important;max-width:min(440px,calc(100vw - 24px))!important;height:auto!important;max-height:none!important;transform:none!important;border-radius:18px!important;border:1px solid rgba(255,255,255,.72)!important;background:rgba(255,255,255,.88)!important;backdrop-filter:blur(24px) saturate(145%)!important;-webkit-backdrop-filter:blur(24px) saturate(145%)!important;box-shadow:0 24px 80px rgba(15,23,42,.18)!important;animation:ewvon-drawer-in 220ms cubic-bezier(.2,.8,.2,1) both!important}
+@keyframes ewvon-drawer-in{from{opacity:0;translate:18px 0}to{opacity:1;translate:0 0}}
+@media(max-width:767px){.ewvon-profile-drawer{top:auto!important;left:8px!important;right:8px!important;bottom:8px!important;width:auto!important;max-width:none!important;max-height:82dvh!important;border-radius:18px!important}}
+
+
+/* Refined glass surfaces and mobile-only allowed shortcuts */
+.ewvon-home .ewvon-glass-panel { border-radius: 20px !important; }
+.ewvon-home .ewvon-glass-card { border-radius: 18px !important; }
+.ewvon-mobile-shortcuts { display: none; }
+@media (max-width: 767px) {
+  .ewvon-home .ewvon-glass-panel { border-radius: 17px !important; }
+  .ewvon-home .ewvon-glass-card { border-radius: 16px !important; }
+  .ewvon-mobile-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 8px;
+    margin: 0 0 2px;
+  }
+  .ewvon-mobile-shortcuts button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 11px 9px;
+    border: 1px solid rgba(228,228,231,.8);
+    border-radius: 15px;
+    color: #3f3f46;
+    background: linear-gradient(145deg,rgba(255,255,255,.88),rgba(250,250,251,.72));
+    backdrop-filter: blur(14px) saturate(130%);
+    -webkit-backdrop-filter: blur(14px) saturate(130%);
+    box-shadow: 0 4px 14px rgba(24,24,27,.035);
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .ewvon-mobile-shortcuts button svg { flex-shrink: 0; }
+  .ewvon-mobile-shortcuts button span { overflow: hidden; text-overflow: ellipsis; }
+}
+
+/* Profile is a compact popover emerging below the top-right profile control */
+[data-radix-dialog-overlay] {
+  background: rgba(255,255,255,.015) !important;
+  backdrop-filter: blur(6px) saturate(108%) !important;
+  -webkit-backdrop-filter: blur(6px) saturate(108%) !important;
+}
+.ewvon-profile-drawer {
+  position: fixed !important;
+  inset: 76px 22px auto auto !important;
+  width: min(360px, calc(100vw - 28px)) !important;
+  max-width: min(360px, calc(100vw - 28px)) !important;
+  height: auto !important;
+  max-height: min(72vh, 650px) !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(228,228,231,.8) !important;
+  background: rgba(255,255,255,.86) !important;
+  backdrop-filter: blur(24px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+  box-shadow: 0 18px 55px rgba(24,24,27,.10) !important;
+  overflow-y: auto !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  transform-origin: top right !important;
+  animation: ewvon-profile-pop 190ms cubic-bezier(.2,.8,.2,1) both !important;
+}
+.ewvon-profile-drawer::-webkit-scrollbar,
+.ewvon-profile-drawer *::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
+.ewvon-profile-drawer,
+.ewvon-profile-drawer * { scrollbar-width: none !important; }
+@keyframes ewvon-profile-pop {
+  from { opacity: 0; transform: translateY(-8px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (max-width: 767px) {
+  .ewvon-profile-drawer {
+    inset: 10px 10px auto auto !important;
+    width: min(360px, calc(100vw - 20px)) !important;
+    max-width: min(360px, calc(100vw - 20px)) !important;
+    max-height: 82dvh !important;
+    border-radius: 18px !important;
+  }
+}
+
+
+/* Dashboard polish: rounder PC surfaces and horizontally browsable mobile panels */
+.ewvon-home .ewvon-glass-panel { border-radius: 23px !important; }
+.ewvon-home .ewvon-glass-card { border-radius: 21px !important; }
+.ewvon-home .ewvon-secondary-panels > * { min-width: 0; }
+@media (min-width: 768px) { .ewvon-home { padding: 22px 26px 26px !important; } }
+@media (max-width: 767px) {
+  .ewvon-home { padding: 12px !important; gap: 13px !important; }
+  .ewvon-home > section[aria-label="Indicadores principais"] > button { flex-basis: 78% !important; min-height: 148px; }
+  .ewvon-home .ewvon-dashboard-panels,
+  .ewvon-home .ewvon-secondary-panels {
+    display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: hidden !important;
+    scroll-snap-type: x mandatory !important; gap: 12px !important; margin-right: -12px !important;
+    padding: 2px 12px 12px 1px !important; scrollbar-width: none !important; -ms-overflow-style: none !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .ewvon-home .ewvon-dashboard-panels > *,
+  .ewvon-home .ewvon-secondary-panels > * {
+    flex: 0 0 88% !important; width: 88% !important; min-width: 0 !important; scroll-snap-align: start !important;
+  }
+  .ewvon-home .ewvon-dashboard-panels .h-\\[240px\\] { height: 185px !important; }
+  .ewvon-home .ewvon-dashboard-panels .h-\\[210px\\] { height: 170px !important; }
+  .ewvon-home .ewvon-dashboard-panels .h-\\[178px\\] { height: 145px !important; }
+  .ewvon-home .ewvon-glass-panel, .ewvon-home .ewvon-glass-card { border-radius: 20px !important; }
+  .ewvon-home .ewvon-secondary-panels .ewvon-glass-panel { padding: 16px !important; }
+  .ewvon-home .ewvon-secondary-panels .ewvon-glass-panel h2 { font-size: 14px !important; }
+  .ewvon-home .ewvon-secondary-panels .ewvon-glass-panel p { font-size: 11px; }
+  .ewvon-home .ewvon-mobile-shortcuts button { border-radius: 16px !important; }
+}
+body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
+  background: rgba(255,255,255,.01) !important; opacity: 1 !important;
+  backdrop-filter: blur(8px) saturate(108%) !important; -webkit-backdrop-filter: blur(8px) saturate(108%) !important;
+}
+.ewvon-profile-drawer {
+  inset: calc(var(--ewvon-profile-top, 68px) + 8px) var(--ewvon-profile-right, 22px) auto auto !important;
+  width: min(370px, calc(100vw - 24px)) !important; max-width: min(370px, calc(100vw - 24px)) !important;
+  max-height: min(72vh, 650px) !important; transform-origin: top right !important;
+  animation: ewvon-profile-emerge 260ms cubic-bezier(.16,1,.3,1) both !important;
+  border-radius: 22px !important; overflow-y: auto !important; scrollbar-width: none !important; -ms-overflow-style: none !important;
+}
+.ewvon-profile-drawer::-webkit-scrollbar, .ewvon-profile-drawer *::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
+.ewvon-profile-drawer, .ewvon-profile-drawer * { scrollbar-width: none !important; }
+@keyframes ewvon-profile-emerge {
+  0% { opacity: 0; transform: translateY(-12px) scale(.94); }
+  65% { opacity: 1; transform: translateY(2px) scale(1.005); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (max-width: 767px) {
+  .ewvon-profile-drawer { inset: 62px 10px auto auto !important; width: min(370px, calc(100vw - 20px)) !important; max-width: min(370px, calc(100vw - 20px)) !important; max-height: calc(100dvh - 78px) !important; border-radius: 20px !important; }
+}
+
+
+/* Mobile dashboard: native-feeling, focused and tactile, inspired by Uber's UX */
+.ewvon-mobile-dashboard { display: none; }
+@media (max-width: 767px) {
+  .ewvon-home { max-width: 100% !important; padding: 14px 0 22px !important; gap: 18px !important; }
+  .ewvon-home > .ewvon-desktop-hero,
+  .ewvon-home > section[aria-label="Indicadores principais"],
+  .ewvon-home > .ewvon-dashboard-panels,
+  .ewvon-home > .ewvon-secondary-panels,
+  .ewvon-home > .flex.flex-wrap.items-center.justify-between.gap-2.px-1.pb-1.text-xs.text-zinc-400 { display: none !important; }
+  .ewvon-home > .ewvon-mobile-shortcuts { display: grid !important; order: -1; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin: 0 14px; }
+  .ewvon-home .ewvon-mobile-shortcuts button { display:flex; align-items:center; gap:7px; min-width:0; padding: 12px 10px; border:1px solid #e8e8e8; border-radius:15px !important; background:#fff; color:#27272a; font-size:12px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.025); }
+  .ewvon-home .ewvon-mobile-shortcuts button svg:last-child { display:none; }
+  .ewvon-mobile-dashboard { display:flex; flex-direction:column; gap:21px; padding:0 14px; }
+  .ewvon-mobile-welcome { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .ewvon-mobile-eyebrow { display:block; color:#71717a; font-size:11px; font-weight:600; letter-spacing:.02em; text-transform:capitalize; }
+  .ewvon-mobile-welcome h2 { margin-top:5px; color:#18181b; font-size:25px; line-height:1.12; font-weight:700; letter-spacing:-.055em; }
+  .ewvon-mobile-welcome p { margin-top:6px; color:#71717a; font-size:13px; }
+  .ewvon-mobile-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  .ewvon-mobile-kpis article { min-width:0; display:flex; flex-direction:column; gap:7px; padding:13px 11px; border:1px solid #e8e8e8; border-radius:17px; background:#fff; }
+  .ewvon-mobile-kpis article span { color:#71717a; font-size:10px; line-height:1.25; min-height:25px; }
+  .ewvon-mobile-kpis article strong { color:#18181b; font-size:25px; line-height:1; letter-spacing:-.05em; font-weight:700; }
+  .ewvon-mobile-kpis article small { color:#a1a1aa; font-size:9px; line-height:1.25; }
+  .ewvon-mobile-section-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; }
+  .ewvon-mobile-section-heading > div > span { color:#a1a1aa; font-size:10px; font-weight:700; letter-spacing:.14em; }
+  .ewvon-mobile-section-heading h3 { margin-top:4px; color:#18181b; font-size:19px; font-weight:700; letter-spacing:-.04em; }
+  .ewvon-mobile-period { padding:6px 10px; border-radius:999px; background:#f4f4f5; color:#71717a; font-size:11px; }
+  .ewvon-mobile-carousel { display:flex; gap:12px; overflow-x:auto; margin-right:-14px; padding:0 14px 4px 0; scroll-snap-type:x mandatory; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .ewvon-mobile-carousel::-webkit-scrollbar { display:none; }
+  .ewvon-mobile-chart-card { flex:0 0 88%; min-width:0; padding:17px 15px 14px; border:1px solid #e8e8e8; border-radius:21px; background:#fff; scroll-snap-align:start; box-shadow:0 3px 12px rgba(0,0,0,.025); }
+  .ewvon-mobile-card-title { display:flex; flex-direction:column; gap:4px; }
+  .ewvon-mobile-card-title span { color:#18181b; font-size:15px; font-weight:650; letter-spacing:-.02em; }
+  .ewvon-mobile-card-title small { color:#a1a1aa; font-size:11px; }
+  .ewvon-mobile-chart-footer { display:flex; gap:15px; border-top:1px solid #f4f4f5; padding-top:12px; }
+  .ewvon-mobile-chart-footer span { display:flex; align-items:center; gap:6px; color:#71717a; font-size:10px; }
+  .ewvon-dot { width:7px; height:7px; display:inline-block; border-radius:50%; }
+  .ewvon-dot.dark { background:#27272a; } .ewvon-dot.light { background:#a1a1aa; }
+  .ewvon-mobile-status-list { display:flex; flex-direction:column; gap:8px; }
+  .ewvon-mobile-status-list span { display:flex; align-items:center; gap:8px; color:#71717a; font-size:11px; }
+  .ewvon-mobile-status-list i { width:7px; height:7px; flex:none; border-radius:50%; }
+  .ewvon-mobile-status-list b { margin-left:auto; color:#27272a; font-weight:650; }
+  .ewvon-mobile-empty { display:flex; min-height:130px; align-items:center; justify-content:center; color:#a1a1aa; font-size:12px; }
+  .ewvon-mobile-updates { display:flex; flex-direction:column; overflow:hidden; border:1px solid #e8e8e8; border-radius:19px; background:#fff; }
+  .ewvon-mobile-update { display:flex; align-items:center; gap:12px; padding:15px 13px; text-align:left; }
+  .ewvon-mobile-update + .ewvon-mobile-update { border-top:1px solid #f0f0f0; }
+  .ewvon-mobile-update-icon { display:flex; width:40px; height:40px; flex:none; align-items:center; justify-content:center; border-radius:14px; background:#f4f4f5; color:#3f3f46; }
+  .ewvon-mobile-update-copy { display:flex; min-width:0; flex:1; flex-direction:column; gap:4px; }
+  .ewvon-mobile-update-copy strong { color:#27272a; font-size:13px; font-weight:650; }
+  .ewvon-mobile-update-copy small { overflow:hidden; color:#71717a; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+  .ewvon-mobile-update-copy .ewvon-mobile-update-detail { color:#a1a1aa; }
+  .ewvon-mobile-footnote { display:flex; align-items:center; gap:6px; color:#a1a1aa; font-size:10px; }
+}
+
+
+
+/* Keep the main rounded shell as the only outer frame.
+   Section roots must not add a second panel around an entire tab. */
+.ewvon-main > :first-child {
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+}
