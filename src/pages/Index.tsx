@@ -134,7 +134,7 @@ function SectionTransitionIndicator({ section }: { section: string }) {
   const pillWidth = Math.min(310, Math.max(154, title.length * 8 + 76));
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[100] grid place-items-center" aria-live="polite">
+    <div className="pointer-events-none fixed inset-x-0 top-3 z-[100] flex justify-center" aria-live="polite">
       <AnimatePresence>
         {visible && (
           <motion.div
@@ -146,8 +146,8 @@ function SectionTransitionIndicator({ section }: { section: string }) {
               filter: 'blur(0px)',
               width: isExpanded ? pillWidth : 44,
               boxShadow: phase === 'glow'
-                ? '0 0 0 1px rgba(255,255,255,0.8), 0 0 0 7px rgba(148,163,184,0.12), 0 18px 55px rgba(15,23,42,0.28)'
-                : '0 12px 36px rgba(15,23,42,0.16)',
+                ? '0 0 0 1px rgba(255,255,255,0.95), 0 0 0 5px rgba(148,163,184,0.18), 0 0 22px rgba(255,255,255,0.75), 0 18px 48px rgba(15,23,42,0.30)'
+                : '0 8px 24px rgba(15,23,42,0.12)',
             }}
             exit={{ opacity: 0, scale: 0.62, filter: 'blur(7px)', transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] } }}
             transition={{
