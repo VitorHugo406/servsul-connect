@@ -95,9 +95,9 @@ export function UserRegistrationDialog({
   const [birthDate, setBirthDate] = useState('');
   const [additionalSectors, setAdditionalSectors] = useState<string[]>([]);
   const [canPostAnnouncements, setCanPostAnnouncements] = useState(false);
-  const [canDeleteMessages, setCanDeleteMessages] = useState(false);
   const [canAccessManagement, setCanAccessManagement] = useState(false);
   const [canAccessPasswordChange, setCanAccessPasswordChange] = useState(false);
+  const [canAccessMeetingRooms, setCanAccessMeetingRooms] = useState(false);
   const [isActive, setIsActive] = useState(true);
 
   const resetForm = () => {
@@ -114,9 +114,9 @@ export function UserRegistrationDialog({
     setBirthDate('');
     setAdditionalSectors([]);
     setCanPostAnnouncements(false);
-    setCanDeleteMessages(false);
     setCanAccessManagement(false);
     setCanAccessPasswordChange(false);
+    setCanAccessMeetingRooms(false);
     setIsActive(true);
     setErrors({});
   };
@@ -207,9 +207,9 @@ export function UserRegistrationDialog({
           additionalSectors,
           permissions: {
             canPostAnnouncements,
-            canDeleteMessages,
             canAccessManagement,
             canAccessPasswordChange,
+            canAccessMeetingRooms,
           },
         },
       });
