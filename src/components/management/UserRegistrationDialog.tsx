@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -76,6 +77,7 @@ export function UserRegistrationDialog({
   onSuccess 
 }: UserRegistrationDialogProps) {
   const { company: currentCompany } = useCompany();
+  const { isAdmin } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
