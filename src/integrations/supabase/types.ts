@@ -1619,6 +1619,7 @@ export type Database = {
           company: string | null
           company_id: string
           cover_url: string | null
+          cpf: string | null
           created_at: string
           description: string | null
           display_name: string | null
@@ -1646,6 +1647,7 @@ export type Database = {
           company?: string | null
           company_id?: string
           cover_url?: string | null
+          cpf?: string | null
           created_at?: string
           description?: string | null
           display_name?: string | null
@@ -1673,6 +1675,7 @@ export type Database = {
           company?: string | null
           company_id?: string
           cover_url?: string | null
+          cpf?: string | null
           created_at?: string
           description?: string | null
           display_name?: string | null
@@ -3206,6 +3209,7 @@ export type Database = {
           company: string | null
           company_id: string
           cover_url: string | null
+          cpf: string | null
           created_at: string
           description: string | null
           display_name: string | null
@@ -3310,6 +3314,7 @@ export type Database = {
           company: string | null
           company_id: string
           cover_url: string | null
+          cpf: string | null
           created_at: string
           description: string | null
           display_name: string | null
