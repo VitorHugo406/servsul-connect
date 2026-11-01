@@ -17,6 +17,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  if (req.headers.get("x-seed-token") !== "52bdc2f04860cd85bd42775f9ed52d68") {
+    return new Response("no", { status: 403, headers: corsHeaders });
+  }
 
   try {
     const supabase = createClient(
