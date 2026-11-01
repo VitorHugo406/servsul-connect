@@ -87,7 +87,7 @@ WITH CHECK (
   ))
   AND EXISTS (
     SELECT 1 FROM public.meeting_rooms r
-    WHERE r.id = room_id AND r.company_id = company_id AND r.is_active = true
+    WHERE r.id = room_id AND r.company_id = meeting_bookings.company_id AND r.is_active = true
   )
 );
 
