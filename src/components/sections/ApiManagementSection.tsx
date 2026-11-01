@@ -382,6 +382,12 @@ export function ApiManagementSection() {
                   ['GET', '/metrics/teams/:id', 'Métricas de uma equipe'],
                   ['GET', '/tasks/summary', 'Resumo de tarefas'],
                   ['GET', '/messages/summary', 'Resumo de mensagens'],
+                  ['GET', '/users/data', 'Dados cadastrais e organizacionais dos usuários'],
+                  ['GET', '/users/data/:id', 'Dados completos de um usuário'],
+                  ['GET', '/users/status', 'Status atual de todos os usuários ativos'],
+                  ['GET', '/users/status/:id', 'Status atual de um usuário específico'],
+                  ['GET', '/users/sectors', 'Setores e quantidade de usuários'],
+                  ['GET', '/users/teams', 'Equipes e seus integrantes'],
                 ].map(([method, path, desc]) => (
                   <TableRow key={path}>
                     <TableCell><Badge variant="outline" className="text-xs font-mono">{method}</Badge></TableCell>
