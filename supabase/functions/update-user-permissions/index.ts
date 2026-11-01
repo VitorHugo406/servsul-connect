@@ -15,7 +15,7 @@ interface PermissionUpdate {
     canCreateWarRoom?: boolean;
     canAccessBh?: boolean;
     canAccessFechamento?: boolean;
-    canAccessOrbs?: boolean;
+    canAccessOrbs?: boolean;\n    canAccessMeetingRooms?: boolean;
   };
 }
 
@@ -116,13 +116,13 @@ Deno.serve(async (req) => {
 
     const permissionData = {
       can_post_announcements: permissions.canPostAnnouncements ?? existingPerm?.can_post_announcements ?? false,
-      can_delete_messages: permissions.canDeleteMessages ?? existingPerm?.can_delete_messages ?? false,
+      can_delete_messages: false,
       can_access_management: permissions.canAccessManagement ?? existingPerm?.can_access_management ?? false,
       can_access_password_change: permissions.canAccessPasswordChange ?? existingPerm?.can_access_password_change ?? false,
       can_create_war_room: permissions.canCreateWarRoom ?? existingPerm?.can_create_war_room ?? false,
       can_access_bh: permissions.canAccessBh ?? existingPerm?.can_access_bh ?? false,
       can_access_fechamento: permissions.canAccessFechamento ?? existingPerm?.can_access_fechamento ?? false,
-      can_access_orbs: permissions.canAccessOrbs ?? existingPerm?.can_access_orbs ?? false,
+      can_access_orbs: permissions.canAccessOrbs ?? existingPerm?.can_access_orbs ?? false,\n      can_access_meeting_rooms: permissions.canAccessMeetingRooms ?? existingPerm?.can_access_meeting_rooms ?? false,
       updated_at: new Date().toISOString(),
     };
 
