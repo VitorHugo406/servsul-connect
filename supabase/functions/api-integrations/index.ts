@@ -983,7 +983,12 @@ Deno.serve(async (req) => {
     } else if (path.match(/^\/users\/data\/(.+)$/) && method === "GET") {
       const uid = path.match(/^\/users\/data\/(.+)$/)![1];
       response = await handleUsersData(url, companyIds, uid);
-    } else if (path === "/users/status" && method === "GET") {\n      response = await handleUsersStatus(url, companyIds);\n    } else if (path.match(/^\\/users\\/status\\/(.+)$/) && method === "GET") {\n      const uid = path.match(/^\\/users\\/status\\/(.+)$/)![1];\n      response = await handleUsersStatus(url, companyIds, uid);\n    } else if (path === "/users/sectors" && method === "GET") {
+    } else if (path === "/users/status" && method === "GET") {
+      response = await handleUsersStatus(url, companyIds);
+    } else if (path.match(/^\/users\/status\/(.+)$/) && method === "GET") {
+      const uid = path.match(/^\/users\/status\/(.+)$/)![1];
+      response = await handleUsersStatus(url, companyIds, uid);
+    } else if (path === "/users/sectors" && method === "GET") {
       response = await handleUsersSectors(url, companyIds);
     } else if (path === "/users/teams" && method === "GET") {
       response = await handleUsersTeams(url, companyIds);
