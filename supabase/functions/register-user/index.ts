@@ -187,7 +187,8 @@ Deno.serve(async (req) => {
           can_post_announcements: permissions.canPostAnnouncements || false,
           can_delete_messages: false,
           can_access_management: permissions.canAccessManagement || false,
-          can_access_password_change: permissions.canAccessPasswordChange || false,\n          can_access_meeting_rooms: callerCanGrantMeetingRooms && permissions.canAccessMeetingRooms === true,
+          can_access_password_change: permissions.canAccessPasswordChange || false,
+          can_access_meeting_rooms: callerCanGrantMeetingRooms && permissions.canAccessMeetingRooms === true,
         });
 
       if (permError) {
