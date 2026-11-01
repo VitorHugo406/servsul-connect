@@ -265,6 +265,39 @@ export type Database = {
           },
         ]
       }
+      attachment_lifecycle: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          storage_bucket: string
+          storage_path: string
+          temporary_deleted_at: string | null
+          temporary_expires_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          storage_bucket?: string
+          storage_path: string
+          temporary_deleted_at?: string | null
+          temporary_expires_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          storage_bucket?: string
+          storage_path?: string
+          temporary_deleted_at?: string | null
+          temporary_expires_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       attachments: {
         Row: {
           announcement_id: string | null
@@ -1599,6 +1632,7 @@ export type Database = {
           registration_number: string | null
           sector_id: string | null
           team_alert_times: string[] | null
+          team_alerts_enabled: boolean
           updated_at: string
           user_id: string
           user_status: string | null
@@ -1625,6 +1659,7 @@ export type Database = {
           registration_number?: string | null
           sector_id?: string | null
           team_alert_times?: string[] | null
+          team_alerts_enabled?: boolean
           updated_at?: string
           user_id: string
           user_status?: string | null
@@ -1651,6 +1686,7 @@ export type Database = {
           registration_number?: string | null
           sector_id?: string | null
           team_alert_times?: string[] | null
+          team_alerts_enabled?: boolean
           updated_at?: string
           user_id?: string
           user_status?: string | null
@@ -1682,6 +1718,7 @@ export type Database = {
           frequency: string
           id: string
           is_active: boolean
+          last_sent_on: string | null
           metrics: Json
           month_day: number | null
           send_time: string
@@ -1698,6 +1735,7 @@ export type Database = {
           frequency: string
           id?: string
           is_active?: boolean
+          last_sent_on?: string | null
           metrics?: Json
           month_day?: number | null
           send_time?: string
@@ -1714,6 +1752,7 @@ export type Database = {
           frequency?: string
           id?: string
           is_active?: boolean
+          last_sent_on?: string | null
           metrics?: Json
           month_day?: number | null
           send_time?: string
@@ -1805,6 +1844,7 @@ export type Database = {
           id: string
           member_profile_id: string
           supervisor_id: string
+          team_id: string | null
           team_name: string | null
         }
         Insert: {
@@ -1812,6 +1852,7 @@ export type Database = {
           id?: string
           member_profile_id: string
           supervisor_id: string
+          team_id?: string | null
           team_name?: string | null
         }
         Update: {
@@ -1819,6 +1860,7 @@ export type Database = {
           id?: string
           member_profile_id?: string
           supervisor_id?: string
+          team_id?: string | null
           team_name?: string | null
         }
         Relationships: [
@@ -1827,6 +1869,13 @@ export type Database = {
             columns: ["member_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -3170,6 +3219,7 @@ export type Database = {
           registration_number: string | null
           sector_id: string | null
           team_alert_times: string[] | null
+          team_alerts_enabled: boolean
           updated_at: string
           user_id: string
           user_status: string | null
@@ -3183,6 +3233,7 @@ export type Database = {
         }
       }
       can_edit_note: { Args: { _note_id: string }; Returns: boolean }
+      can_read_attachment_object: { Args: { _name: string }; Returns: boolean }
       can_view_calendar_event: {
         Args: { _created_by: string; _event_id: string }
         Returns: boolean
@@ -3272,6 +3323,7 @@ export type Database = {
           registration_number: string | null
           sector_id: string | null
           team_alert_times: string[] | null
+          team_alerts_enabled: boolean
           updated_at: string
           user_id: string
           user_status: string | null
@@ -3394,6 +3446,10 @@ export type Database = {
       refresh_board_monthly_scores: {
         Args: { _board_id: string }
         Returns: undefined
+      }
+      reorder_board_tasks_fast: {
+        Args: { _board_id: string; _updates: Json }
+        Returns: number
       }
       resolve_board_share_link: {
         Args: { _token: string }
