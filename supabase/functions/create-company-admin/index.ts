@@ -135,8 +135,7 @@ Deno.serve(async (req) => {
       {
         user_id: newUserId,
         can_post_announcements: true,
-        can_delete_messages: false,
-        can_access_management: true,
+                can_access_management: true,
         can_access_password_change: true,
         can_create_war_room: true,
         can_access_meeting_rooms: false,
