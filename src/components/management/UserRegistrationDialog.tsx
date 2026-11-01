@@ -56,6 +56,7 @@ const GERAL_SECTOR_ID = '00000000-0000-0000-0000-000000000001';
 const step1Schema = z.object({
   name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
   email: z.string().email('Email inválido'),
+  cpf: z.string().refine(v=>{const d=v.replace(/\D/g,'');if(d.length!==11||/^(\d)\1+$/.test(d))return false;const c=(n:number)=>{let t=0;for(let i=0;i<n;i++)t+=+d[i]*(n+1-i);const r=(t*10)%11%10;return r===+d[n]};return c(9)&&c(10)},'CPF inválido'),
   phone: z.string().optional(),
   address: z.string().optional(),
   company: z.string().optional(),
@@ -84,6 +85,7 @@ export function UserRegistrationDialog({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [cpf, setCpf] = useState('');
   const [address, setAddress] = useState('');
   const [company, setCompany] = useState('');
   const [profileType, setProfileType] = useState<'admin' | 'user' | 'supervisor' | 'diretoria'>('user');
@@ -125,6 +127,7 @@ export function UserRegistrationDialog({
     const result = step1Schema.safeParse({
       name,
       email,
+      cpf,
       phone,
       address,
       company,
@@ -198,6 +201,7 @@ export function UserRegistrationDialog({
           
           companyId: currentCompany?.id,
           // Additional fields
+          cpf: cpf.replace(/\D/g, ''),
           phone,
           address,
           company,
@@ -319,6 +323,19 @@ export function UserRegistrationDialog({
                   {errors.email && (
                     <p className="text-xs text-destructive">{errors.email}</p>
                   )}
+                </div>
+
+                {/* CPF */}
+                <div className="space-y-2">
+                  <Label htmlFor="cpf">CPF *</Label>
+                  <Input
+                    id="cpf"
+                    value={cpf}
+                    inputMode="numeric"
+                    onChange={(e) => { const d = e.target.value.replace(/\D/g, '').slice(0, 11); setCpf(d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2')); }}
+                    placeholder="000.000.000-00"
+                  />
+                  {errors.cpf && <p className="text-xs text-destructive">{errors.cpf}</p>}
                 </div>
 
                 {/* Telefone */}
