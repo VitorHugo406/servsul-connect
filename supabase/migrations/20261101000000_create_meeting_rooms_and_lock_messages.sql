@@ -1,6 +1,7 @@
 -- Sala de Reunião: tenant-scoped rooms, bookings and participants.
 ALTER TABLE public.user_permissions
-  ADD COLUMN IF NOT EXISTS can_access_meeting_rooms boolean NOT NULL DEFAULT false;
+  ADD COLUMN IF NOT EXISTS can_access_meeting_rooms boolean NOT NULL DEFAULT false,
+  DROP COLUMN IF EXISTS can_delete_messages;
 
 CREATE TABLE IF NOT EXISTS public.meeting_rooms (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
