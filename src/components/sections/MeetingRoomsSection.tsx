@@ -86,6 +86,15 @@ export function MeetingRoomsSection() {
 
   useEffect(() => { void fetchData(); }, [fetchData]);
 
+  useEffect(() => {
+    if (!allowed || !profile?.company_id) return;
+    const channel = supabase.channel(`meeting-rooms-${profile.company_id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meeting_bookings', filter: `company_id=eq.${profile.company_id}` }, () => { void fetchData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meeting_rooms', filter: `company_id=eq.${profile.company_id}` }, () => { void fetchData(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [allowed, profile?.company_id, fetchData]);
+
   const filteredBookings = useMemo(() => bookings.filter(b => {
     const haystack = [b.title, b.room?.name, b.organizer?.display_name, b.organizer?.name].join(' ').toLowerCase();
     return haystack.includes(search.toLowerCase());
