@@ -9,7 +9,6 @@ interface PermissionUpdate {
   userId: string;
   permissions: {
     canPostAnnouncements?: boolean;
-    canDeleteMessages?: boolean;
     canAccessManagement?: boolean;
     canAccessPasswordChange?: boolean;
     canCreateWarRoom?: boolean;
