@@ -159,8 +159,9 @@ BEGIN
     RAISE EXCEPTION 'Sala indisponível para esta empresa.';
   END IF;
 
-  IF NEW.starts_at::time < room_record.opens_at OR NEW.ends_at::time > room_record.closes_at
-     OR NEW.starts_at::date <> NEW.ends_at::date THEN
+  IF (NEW.starts_at AT TIME ZONE 'America/Sao_Paulo')::time < room_record.opens_at
+     OR (NEW.ends_at AT TIME ZONE 'America/Sao_Paulo')::time > room_record.closes_at
+     OR (NEW.starts_at AT TIME ZONE 'America/Sao_Paulo')::date <> (NEW.ends_at AT TIME ZONE 'America/Sao_Paulo')::date THEN
     RAISE EXCEPTION 'O agendamento está fora do horário de funcionamento da sala.';
   END IF;
 
