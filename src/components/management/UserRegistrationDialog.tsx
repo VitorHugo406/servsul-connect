@@ -518,14 +518,15 @@ export function UserRegistrationDialog({
                         onCheckedChange={setCanPostAnnouncements}
                       />
                     </div>
-
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="canDelete" className="font-normal">
-                        Pode excluir mensagens
+                      <Label htmlFor="canMeetingRooms" className="font-normal">
+                        Acesso à Sala de Reunião
                       </Label>
                       <Switch
-                        id="canDelete"
-                        
+                        id="canMeetingRooms"
+                        checked={canAccessMeetingRooms}
+                        onCheckedChange={setCanAccessMeetingRooms}
+                      />
                     </div>
 
                     <div className="flex items-center justify-between">
