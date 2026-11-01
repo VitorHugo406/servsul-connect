@@ -185,7 +185,6 @@ Deno.serve(async (req) => {
         .insert({
           user_id: authData.user.id,
           can_post_announcements: permissions.canPostAnnouncements || false,
-          can_delete_messages: false,
           can_access_management: permissions.canAccessManagement || false,
           can_access_password_change: permissions.canAccessPasswordChange || false,
           can_access_meeting_rooms: callerCanGrantMeetingRooms && permissions.canAccessMeetingRooms === true,
