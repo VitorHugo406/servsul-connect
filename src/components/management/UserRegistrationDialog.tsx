@@ -525,9 +525,7 @@ export function UserRegistrationDialog({
                       </Label>
                       <Switch
                         id="canDelete"
-                        checked={canDeleteMessages}
-                        onCheckedChange={setCanDeleteMessages}
-                      />
+                        
                     </div>
 
                     <div className="flex items-center justify-between">
