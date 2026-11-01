@@ -107,6 +107,7 @@ export function UserRegistrationDialog({
     setName('');
     setEmail('');
     setPhone('');
+    setCpf('');
     setAddress('');
     setCompany('');
     setProfileType('user');
