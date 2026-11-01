@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, LayoutDashboard, MessageSquare, Bell, Cake, Settings, Link as LinkIcon, ScanFace, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, CalendarDays, FileText, HardDrive, BookOpen, Shield, Globe, ClipboardCheck, StickyNote, Megaphone, Plug, LayoutGrid } from 'lucide-react';
+import { Home, LayoutDashboard, MessageSquare, Bell, Cake, Settings, Link as LinkIcon, ScanFace, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, CalendarDays, FileText, HardDrive, BookOpen, Shield, Globe, ClipboardCheck, StickyNote, Megaphone, Plug, LayoutGrid, DoorOpen } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { usePresence } from '@/hooks/usePresence';
 import { useMeetingStatus } from '@/hooks/useMeetingStatus';
@@ -16,6 +16,7 @@ const ChatSection = lazy(() => import('@/components/sections/ChatSection').then(
 const AnnouncementsSection = lazy(() => import('@/components/sections/AnnouncementsSection').then((module) => ({ default: module.AnnouncementsSection })));
 const BirthdaysSection = lazy(() => import('@/components/sections/BirthdaysSection').then((module) => ({ default: module.BirthdaysSection })));
 const MyDashboardSection = lazy(() => import('@/components/sections/MyDashboardSection').then((module) => ({ default: module.MyDashboardSection })));
+const MeetingRoomsSection = lazy(() => import('@/components/sections/MeetingRoomsSection').then((module) => ({ default: module.MeetingRoomsSection })));
 const ManagementSection = lazy(() => import('@/components/sections/ManagementSection').then((module) => ({ default: module.ManagementSection })));
 const FacialRegistrationSection = lazy(() => import('@/components/sections/FacialRegistrationSection').then((module) => ({ default: module.FacialRegistrationSection })));
 const DataManagementSection = lazy(() => import('@/components/sections/DataManagementSection').then((module) => ({ default: module.DataManagementSection })));
@@ -56,6 +57,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   announcements: { title: 'Avisos Gerais', subtitle: 'Comunicados oficiais' },
   birthdays: { title: 'Aniversariantes', subtitle: 'Mural de celebrações' },
   management: { title: 'Gerenciamento', subtitle: 'Administração do sistema' },
+  'meeting-rooms': { title: 'Sala de Reunião', subtitle: 'Salas, horários e agendamentos da equipe' },
   shortcuts: { title: 'Atalhos do Sistema', subtitle: 'Links personalizados do cabeçalho do PC' },
   facial: { title: 'Cadastro Facial', subtitle: 'Reconhecimento biométrico' },
   'data-management': { title: 'Exclusão de Dados', subtitle: 'Gerenciamento de dados do sistema' },
@@ -236,6 +238,7 @@ const Index = () => {
       case 'announcements': return <AnnouncementsSection />;
       case 'birthdays': return <BirthdaysSection />;
       case 'management': return <ManagementSection />;
+      case 'meeting-rooms': return <MeetingRoomsSection />;
       case 'shortcuts': return isAdmin ? <ShortcutsManagementSection /> : <HomeSection onNavigate={handleSectionChange} />;
       case 'facial': return <FacialRegistrationSection />;
       case 'data-management': return <DataManagementSection />;
