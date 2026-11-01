@@ -223,6 +223,34 @@ FOR EACH ROW EXECUTE FUNCTION public.enforce_meeting_participant_capacity();
 REVOKE ALL ON FUNCTION public.enforce_meeting_booking_rules() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.enforce_meeting_participant_capacity() FROM PUBLIC, anon, authenticated;
 
+-- Enforce immutability even for privileged application paths and cascading deletes.
+CREATE OR REPLACE FUNCTION public.prevent_chat_message_deletion()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $
+BEGIN
+  RAISE EXCEPTION 'Exclusão de mensagens está desabilitada. O histórico de comunicação deve ser preservado.';
+END;
+$;
+
+DROP TRIGGER IF EXISTS trg_prevent_messages_delete ON public.messages;
+CREATE TRIGGER trg_prevent_messages_delete
+BEFORE DELETE ON public.messages
+FOR EACH ROW EXECUTE FUNCTION public.prevent_chat_message_deletion();
+
+DROP TRIGGER IF EXISTS trg_prevent_direct_messages_delete ON public.direct_messages;
+CREATE TRIGGER trg_prevent_direct_messages_delete
+BEFORE DELETE ON public.direct_messages
+FOR EACH ROW EXECUTE FUNCTION public.prevent_chat_message_deletion();
+
+DROP TRIGGER IF EXISTS trg_prevent_private_group_messages_delete ON public.private_group_messages;
+CREATE TRIGGER trg_prevent_private_group_messages_delete
+BEFORE DELETE ON public.private_group_messages
+FOR EACH ROW EXECUTE FUNCTION public.prevent_chat_message_deletion();
+
+REVOKE ALL ON FUNCTION public.prevent_chat_message_deletion() FROM PUBLIC, anon, authenticated;
+
 -- Chat messages are immutable for regular authenticated users. UPDATE remains
 -- available where existing policies permit read receipts (direct messages).
 REVOKE DELETE ON TABLE public.messages, public.direct_messages, public.private_group_messages FROM authenticated, anon;
