@@ -28,7 +28,7 @@ const EventHistorySection = lazy(() => import('@/components/sections/EventHistor
 const CalendarSection = lazy(() => import('@/components/sections/CalendarSection').then((module) => ({ default: module.CalendarSection })));
 const DocumentationSection = lazy(() => import('@/components/sections/DocumentationSection').then((module) => ({ default: module.DocumentationSection })));
 const ApiManagementSection = lazy(() => import('@/components/sections/ApiManagementSection').then((module) => ({ default: module.ApiManagementSection })));
-const WarRoomSection = lazy(() => import('@/components/sections/WarRoomSection').then((module) => ({ default: module.WarRoomSection })));
+const MeetingRoomsSection = lazy(() => import('@/components/sections/MeetingRoomsSection').then((module) => ({ default: module.MeetingRoomsSection })));\nconst WarRoomSection = lazy(() => import('@/components/sections/WarRoomSection').then((module) => ({ default: module.WarRoomSection })));
 const EvaluationsSection = lazy(() => import('@/components/sections/EvaluationsSection').then((module) => ({ default: module.EvaluationsSection })));
 const NotesSection = lazy(() => import('@/components/sections/NotesSection').then((module) => ({ default: module.NotesSection })));
 const CompaniesManagementSection = lazy(() => import('@/components/sections/CompaniesManagementSection').then((module) => ({ default: module.CompaniesManagementSection })));
@@ -68,7 +68,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   storage: { title: 'Armazenamento', subtitle: 'Monitoramento do banco de dados' },
   'event-history': { title: 'Eventos Mensais', subtitle: 'Histórico de campanhas' },
   documentation: { title: 'Documentação', subtitle: 'Documentação técnica do sistema' },
-  'war-room': { title: 'War Room', subtitle: 'Gestão de incidentes críticos' },
+  'war-room': { title: 'War Room', subtitle: 'Gestão de incidentes críticos' },\n  'meeting-rooms': { title: 'Sala de Reunião', subtitle: 'Salas, disponibilidade e agendamentos' },
   'api-management': { title: 'API de Integração', subtitle: 'Gerenciamento de integrações externas' },
   evaluations: { title: 'Avaliações', subtitle: 'Avaliação de desempenho e feedback' },
   notes: { title: 'Anotações', subtitle: 'Suas notas pessoais e compartilhadas' },
@@ -83,7 +83,7 @@ const sectionPaths: Record<string, string> = {
   'important-announcements': '/comunicados-importantes', tasks: '/tarefas',
   'people-management': '/gestao-de-pessoas', 'feedback-email': '/disparo-de-feedback',
   calendar: '/calendario', 'system-logs': '/logs-do-sistema', storage: '/armazenamento',
-  'event-history': '/eventos-mensais', documentation: '/documentacao', 'war-room': '/war-room',
+  'event-history': '/eventos-mensais', documentation: '/documentacao', 'war-room': '/war-room', 'meeting-rooms': '/sala-de-reuniao',
   'api-management': '/integracoes-api', evaluations: '/avaliacoes', notes: '/anotacoes',
   companies: '/empresas', 'system-broadcasts': '/comunicados-globais',
 };
@@ -154,7 +154,7 @@ const Index = () => {
       case 'storage': return <StorageMonitoringSection />;
       case 'event-history': return <EventHistorySection />;
       case 'documentation': return <DocumentationSection />;
-      case 'war-room': return <WarRoomSection />;
+      case 'war-room': return <WarRoomSection />;\n      case 'meeting-rooms': return <MeetingRoomsSection />;
       case 'api-management': return <ApiManagementSection />;
       case 'evaluations': return <EvaluationsSection />;
       case 'notes': return <NotesSection />;
