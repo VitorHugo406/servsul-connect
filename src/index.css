@@ -943,3 +943,117 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
   box-shadow: none !important;
   outline: 0 !important;
 }
+
+
+/* ewvon Liquid Glass system: translucent controls and navigation surfaces */
+:root {
+  --ew-glass-bg: rgba(255,255,255,.58);
+  --ew-glass-bg-hover: rgba(255,255,255,.76);
+  --ew-glass-border: rgba(255,255,255,.78);
+  --ew-glass-shadow: 0 5px 18px rgba(15,23,42,.07), inset 0 1px 0 rgba(255,255,255,.88);
+  --ew-glass-blur: 22px;
+}
+.dark {
+  --ew-glass-bg: rgba(30,41,59,.52);
+  --ew-glass-bg-hover: rgba(51,65,85,.68);
+  --ew-glass-border: rgba(255,255,255,.13);
+  --ew-glass-shadow: 0 5px 18px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.10);
+}
+
+/* All standard buttons receive a light glass material without flattening semantic CTA colors. */
+button:not([data-no-glass="true"]) {
+  -webkit-backdrop-filter: blur(var(--ew-glass-blur)) saturate(175%);
+  backdrop-filter: blur(var(--ew-glass-blur)) saturate(175%);
+  border-color: rgba(148,163,184,.20);
+  box-shadow: var(--ew-glass-shadow);
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+button:not([data-no-glass="true"]):not(:disabled):hover {
+  border-color: rgba(148,163,184,.30);
+  box-shadow: 0 7px 22px rgba(15,23,42,.09), inset 0 1px 0 rgba(255,255,255,.92);
+}
+button:not([data-no-glass="true"]):not(:disabled):active {
+  transform: scale(.975);
+  box-shadow: inset 0 1px 5px rgba(15,23,42,.09);
+}
+button[class~="bg-primary"], button[class~="bg-destructive"],
+button[class~="bg-secondary"], button[class*="gradient-"] {
+  border-color: rgba(255,255,255,.24);
+  box-shadow: 0 5px 16px rgba(15,23,42,.12), inset 0 1px 0 rgba(255,255,255,.24);
+}
+button[class~="bg-primary"]:hover, button[class~="bg-destructive"]:hover,
+button[class~="bg-secondary"]:hover, button[class*="gradient-"]:hover {
+  filter: brightness(1.045) saturate(1.08);
+}
+.dark button:not([data-no-glass="true"]) {
+  border-color: rgba(255,255,255,.12);
+  box-shadow: 0 5px 18px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+/* Navigation bars and toolbars use a continuous glass sheet, not individual card borders. */
+.ewvon-topbar,
+.ewvon-sidebar,
+.ewvon-uber-bottom-nav,
+[role="tablist"],
+.ewvon-quick-nav {
+  background: var(--ew-glass-bg) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(185%) !important;
+  backdrop-filter: blur(28px) saturate(185%) !important;
+  border-color: rgba(148,163,184,.16) !important;
+  box-shadow: 0 8px 28px rgba(15,23,42,.045), inset 0 1px 0 rgba(255,255,255,.72) !important;
+}
+.ewvon-sidebar {
+  background: rgba(255,255,255,.66) !important;
+  border-right: 1px solid rgba(148,163,184,.14) !important;
+}
+.ewvon-topbar {
+  background: rgba(255,255,255,.68) !important;
+  border-bottom: 1px solid rgba(148,163,184,.12) !important;
+}
+.ewvon-uber-bottom-nav {
+  background: rgba(255,255,255,.72) !important;
+  border-top: 1px solid rgba(148,163,184,.16) !important;
+  box-shadow: 0 -8px 28px rgba(15,23,42,.055), inset 0 1px 0 rgba(255,255,255,.86) !important;
+}
+.ewvon-quick-nav {
+  background: rgba(255,255,255,.52) !important;
+  border: 1px solid rgba(255,255,255,.78) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 4px 16px rgba(15,23,42,.045) !important;
+}
+[role="tablist"] { border-radius: 999px; padding: 4px; }
+[role="tab"][data-state="active"] {
+  background: rgba(255,255,255,.82) !important;
+  border: 1px solid rgba(255,255,255,.92) !important;
+  box-shadow: 0 3px 12px rgba(15,23,42,.09), inset 0 1px 0 #fff !important;
+}
+
+/* Compact icon controls and mobile navigation get a softer glass capsule. */
+.ewvon-topbar button,
+.ewvon-sidebar nav button,
+.ewvon-uber-bottom-nav button {
+  background: rgba(255,255,255,.34);
+  border: 1px solid rgba(255,255,255,.54);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.72);
+}
+.ewvon-sidebar nav button[aria-current="page"] {
+  background: rgba(17,24,39,.92) !important;
+  border-color: rgba(255,255,255,.24) !important;
+  box-shadow: 0 4px 14px rgba(15,23,42,.18), inset 0 1px 0 rgba(255,255,255,.18) !important;
+}
+.ewvon-uber-bottom-nav button:active { background: rgba(255,255,255,.88); }
+
+/* Native scrollbars stay subtle; the glass treatment is reserved for their tracks. */
+* { scrollbar-color: rgba(148,163,184,.42) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(148,163,184,.30);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,.48); background-clip: padding-box; }
+
+@media (prefers-reduced-motion: reduce) {
+  button:not([data-no-glass="true"]) { transition: none; }
+}
