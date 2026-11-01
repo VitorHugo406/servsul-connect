@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
       companyId,
       // New fields
       phone,
+      cpf,
       address,
       company,
       registrationNumber,
@@ -127,6 +128,7 @@ Deno.serve(async (req) => {
         birth_date: birthDate,
         sector_id: sectorId,
         phone: phone || null,
+        cpf: cpf ? String(cpf).replace(/\D/g, '') : null,
         address: address || null,
         company: company || null,
         registration_number: registrationNumber || null,
