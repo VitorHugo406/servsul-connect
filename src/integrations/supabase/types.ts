@@ -1632,6 +1632,7 @@ export type Database = {
           registration_number: string | null
           sector_id: string | null
           team_alert_times: string[] | null
+          team_alerts_enabled: boolean
           updated_at: string
           user_id: string
           user_status: string | null
@@ -1658,6 +1659,7 @@ export type Database = {
           registration_number?: string | null
           sector_id?: string | null
           team_alert_times?: string[] | null
+          team_alerts_enabled?: boolean
           updated_at?: string
           user_id: string
           user_status?: string | null
@@ -1684,6 +1686,7 @@ export type Database = {
           registration_number?: string | null
           sector_id?: string | null
           team_alert_times?: string[] | null
+          team_alerts_enabled?: boolean
           updated_at?: string
           user_id?: string
           user_status?: string | null
@@ -1841,6 +1844,7 @@ export type Database = {
           id: string
           member_profile_id: string
           supervisor_id: string
+          team_id: string | null
           team_name: string | null
         }
         Insert: {
@@ -1848,6 +1852,7 @@ export type Database = {
           id?: string
           member_profile_id: string
           supervisor_id: string
+          team_id?: string | null
           team_name?: string | null
         }
         Update: {
@@ -1855,6 +1860,7 @@ export type Database = {
           id?: string
           member_profile_id?: string
           supervisor_id?: string
+          team_id?: string | null
           team_name?: string | null
         }
         Relationships: [
@@ -1863,6 +1869,13 @@ export type Database = {
             columns: ["member_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -3206,6 +3219,7 @@ export type Database = {
           registration_number: string | null
           sector_id: string | null
           team_alert_times: string[] | null
+          team_alerts_enabled: boolean
           updated_at: string
           user_id: string
           user_status: string | null
@@ -3309,6 +3323,7 @@ export type Database = {
           registration_number: string | null
           sector_id: string | null
           team_alert_times: string[] | null
+          team_alerts_enabled: boolean
           updated_at: string
           user_id: string
           user_status: string | null
