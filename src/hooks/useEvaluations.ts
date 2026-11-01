@@ -271,7 +271,7 @@ export function useEvaluations() {
 
   const updateEvaluation = async (id: string, updates: Partial<Evaluation>) => {
     if (!profile) return;
-    const { error } = await supabase.from('evaluations').update(updates).eq('id', id);
+    const { error } = await supabase.from('evaluations').update(updates as any).eq('id', id);
     if (error) { toast.error('Erro ao atualizar avaliação.'); return; }
     fetchData();
   };

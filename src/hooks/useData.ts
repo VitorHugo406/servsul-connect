@@ -147,7 +147,7 @@ export function useMessages(sectorId: string | null) {
     setHasMore((data || []).length === PAGE_SIZE);
     setMessages(prev => {
       const temps = prev.filter(m => m.id.startsWith('temp-'));
-      const byId = new Map(baseMessages.map(m => [m.id, { ...m, status: 'delivered' as const }]));
+      const byId = new Map<string, (typeof prev)[number]>(baseMessages.map(m => [m.id, { ...m, status: 'delivered' as const }]));
       temps.forEach(m => byId.set(m.id, m));
       return Array.from(byId.values()).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     });
