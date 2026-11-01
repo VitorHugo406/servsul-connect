@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -76,6 +77,7 @@ export function UserRegistrationDialog({
   onSuccess 
 }: UserRegistrationDialogProps) {
   const { company: currentCompany } = useCompany();
+  const { isAdmin } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -95,9 +97,9 @@ export function UserRegistrationDialog({
   const [birthDate, setBirthDate] = useState('');
   const [additionalSectors, setAdditionalSectors] = useState<string[]>([]);
   const [canPostAnnouncements, setCanPostAnnouncements] = useState(false);
-  const [canDeleteMessages, setCanDeleteMessages] = useState(false);
   const [canAccessManagement, setCanAccessManagement] = useState(false);
   const [canAccessPasswordChange, setCanAccessPasswordChange] = useState(false);
+  const [canAccessMeetingRooms, setCanAccessMeetingRooms] = useState(false);
   const [isActive, setIsActive] = useState(true);
 
   const resetForm = () => {
@@ -114,9 +116,9 @@ export function UserRegistrationDialog({
     setBirthDate('');
     setAdditionalSectors([]);
     setCanPostAnnouncements(false);
-    setCanDeleteMessages(false);
     setCanAccessManagement(false);
     setCanAccessPasswordChange(false);
+    setCanAccessMeetingRooms(false);
     setIsActive(true);
     setErrors({});
   };
@@ -207,9 +209,9 @@ export function UserRegistrationDialog({
           additionalSectors,
           permissions: {
             canPostAnnouncements,
-            canDeleteMessages,
             canAccessManagement,
             canAccessPasswordChange,
+            canAccessMeetingRooms,
           },
         },
       });
@@ -518,15 +520,14 @@ export function UserRegistrationDialog({
                         onCheckedChange={setCanPostAnnouncements}
                       />
                     </div>
-
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="canDelete" className="font-normal">
-                        Pode excluir mensagens
+                      <Label htmlFor="canMeetingRooms" className="font-normal">
+                        Acesso à Sala de Reunião
                       </Label>
                       <Switch
-                        id="canDelete"
-                        checked={canDeleteMessages}
-                        onCheckedChange={setCanDeleteMessages}
+                        id="canMeetingRooms"
+                        checked={canAccessMeetingRooms}
+                        onCheckedChange={setCanAccessMeetingRooms}
                       />
                     </div>
 

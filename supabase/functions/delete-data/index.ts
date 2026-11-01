@@ -150,42 +150,10 @@ serve(async (req) => {
 
     switch (type) {
       case 'messages': {
-        const { startDate, endDate } = body;
-        const hasDateRange = startDate && endDate;
-        console.log(`Deleting messages... ${hasDateRange ? `Range: ${startDate} to ${endDate}` : 'All'}`);
-        
-        if (hasDateRange) {
-          // Delete attachments for messages in range
-          const { data: sectorMsgs } = await adminClient.from('messages').select('id').gte('created_at', startDate).lte('created_at', endDate);
-          const { data: dms } = await adminClient.from('direct_messages').select('id').gte('created_at', startDate).lte('created_at', endDate);
-          const { data: groupMsgs } = await adminClient.from('private_group_messages').select('id').gte('created_at', startDate).lte('created_at', endDate);
-          
-          if (sectorMsgs?.length) {
-            for (const m of sectorMsgs) {
-              await adminClient.from('attachments').delete().eq('message_id', m.id);
-            }
-          }
-          if (dms?.length) {
-            for (const m of dms) {
-              await adminClient.from('attachments').delete().eq('direct_message_id', m.id);
-            }
-          }
-          
-          // Delete messages in range
-          await adminClient.from('private_group_messages').delete().gte('created_at', startDate).lte('created_at', endDate);
-          await adminClient.from('private_group_message_reads').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-          await adminClient.from('direct_messages').delete().gte('created_at', startDate).lte('created_at', endDate);
-          await adminClient.from('messages').delete().gte('created_at', startDate).lte('created_at', endDate);
-          result.message = `Mensagens do período selecionado foram excluídas`;
-        } else {
-          await safeDelete('attachments');
-          await safeDelete('private_group_messages');
-          await safeDelete('private_group_message_reads');
-          await safeDelete('direct_messages');
-          await safeDelete('messages');
-          result.message = 'Todas as mensagens foram excluídas';
-        }
-        break;
+        return new Response(
+          JSON.stringify({ error: 'A exclusão de mensagens foi desabilitada permanentemente. O histórico de comunicação deve ser preservado.' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+        );
       }
 
       case 'announcements': {

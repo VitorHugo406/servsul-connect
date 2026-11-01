@@ -135,10 +135,16 @@
   const deleteGroup = async (groupId: string) => {
     if (!user) return { error: new Error('Not authenticated') };
     try {
-      // Delete message reads first
-      await supabase.from('private_group_message_reads').delete().eq('group_id', groupId);
-      // Delete all messages (while user is still admin for RLS)
-      await supabase.from('private_group_messages').delete().eq('group_id', groupId);
+      // Preserve the conversation history: groups with messages cannot be deleted.
+      const { count: messageCount, error: messageCountError } = await supabase
+        .from('private_group_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('group_id', groupId);
+      if (messageCountError) throw messageCountError;
+      if ((messageCount || 0) > 0) {
+        throw new Error('Este grupo possui mensagens e não pode ser excluído para preservar o histórico.');
+      }
+
       // Delete members EXCEPT current user (keep admin for RLS on group delete)
       const { data: otherMembers } = await supabase
         .from('private_group_members')

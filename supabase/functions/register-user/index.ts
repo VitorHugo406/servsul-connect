@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
     const callerIsSuper = roleNames.includes("super_admin");
     const callerCompanyId = callerProfile?.company_id;
     const callerAllowed = callerIsSuper || roleNames.includes("admin") || callerProfile?.autonomy_level === "admin" || callerPerms?.can_access_management === true;
+    const callerCanGrantMeetingRooms = callerIsSuper || roleNames.includes("admin") || callerProfile?.autonomy_level === "admin";
 
     let {
       email, 
@@ -184,9 +185,9 @@ Deno.serve(async (req) => {
         .insert({
           user_id: authData.user.id,
           can_post_announcements: permissions.canPostAnnouncements || false,
-          can_delete_messages: permissions.canDeleteMessages || false,
           can_access_management: permissions.canAccessManagement || false,
           can_access_password_change: permissions.canAccessPasswordChange || false,
+          can_access_meeting_rooms: callerCanGrantMeetingRooms && permissions.canAccessMeetingRooms === true,
         });
 
       if (permError) {

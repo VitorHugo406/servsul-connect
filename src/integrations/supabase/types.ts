@@ -2832,7 +2832,6 @@ export type Database = {
           can_access_orbs: boolean
           can_access_password_change: boolean
           can_create_war_room: boolean
-          can_delete_messages: boolean
           can_post_announcements: boolean
           created_at: string
           id: string
@@ -2846,7 +2845,6 @@ export type Database = {
           can_access_orbs?: boolean
           can_access_password_change?: boolean
           can_create_war_room?: boolean
-          can_delete_messages?: boolean
           can_post_announcements?: boolean
           created_at?: string
           id?: string
@@ -2860,7 +2858,6 @@ export type Database = {
           can_access_orbs?: boolean
           can_access_password_change?: boolean
           can_create_war_room?: boolean
-          can_delete_messages?: boolean
           can_post_announcements?: boolean
           created_at?: string
           id?: string
