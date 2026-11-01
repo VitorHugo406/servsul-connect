@@ -15,6 +15,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  *   GET /messages/summary - Messages summary
  *   GET /users/data - All users full data (profiles, roles, teams, departments)
  *   GET /users/data/:id - Single user full data
+ *   GET /users/status - Current status of active users (optional ?status=available)
+ *   GET /users/status/:id - Current status of a single user
  *   GET /users/sectors - All sectors with user counts
  *   GET /users/teams - All teams with members
  * 
@@ -765,6 +767,81 @@ async function handleUsersData(url: URL, companyIds: string[], userId?: string) 
   });
 }
 
+// ===== USER STATUS ENDPOINTS =====
+const USER_STATUS_LABELS: Record<string, string> = {
+  available: "Disponível",
+  lunch: "Almoçando",
+  meeting: "Em reunião",
+  away: "Fora de expediente",
+  vacation: "De férias",
+  leave: "De afastamento",
+};
+
+async function handleUsersStatus(url: URL, companyIds: string[], userId?: string) {
+  const admin = getAdminClient();
+  const requestedStatus = url.searchParams.get("status");
+  const sectorId = url.searchParams.get("sector_id");
+
+  const allowedStatuses = Object.keys(USER_STATUS_LABELS);
+  if (requestedStatus && !allowedStatuses.includes(requestedStatus)) {
+    return jsonResponse({
+      status: "error",
+      message: "Status inválido.",
+      allowed_statuses: allowedStatuses,
+    }, 400);
+  }
+
+  let query = admin
+    .from("profiles")
+    .select("id, name, display_name, sector_id, user_status, is_active, last_seen_at, updated_at")
+    .in("company_id", companyIds);
+
+  if (userId) query = query.eq("id", userId);
+  else query = query.eq("is_active", true);
+
+  if (requestedStatus) query = query.eq("user_status", requestedStatus);
+  if (sectorId) query = query.eq("sector_id", sectorId);
+
+  const { data: profiles, error } = await query.order("name");
+  if (error) return jsonResponse({ status: "error", message: "Não foi possível consultar os status dos usuários." }, 500);
+
+  if (userId && (!profiles || profiles.length === 0)) {
+    return jsonResponse({ status: "success", data: null });
+  }
+
+  const sectorIds = [...new Set((profiles || []).map((profile: any) => profile.sector_id).filter(Boolean))];
+  const { data: sectors } = sectorIds.length > 0
+    ? await admin.from("sectors").select("id, name").in("id", sectorIds).in("company_id", companyIds)
+    : { data: [] };
+  const sectorMap = new Map((sectors || []).map((sector: any) => [sector.id, sector.name]));
+
+  const results = (profiles || []).map((profile: any) => {
+    const status = profile.user_status || "available";
+    return {
+      id: profile.id,
+      name: profile.display_name || profile.name,
+      department: profile.sector_id ? sectorMap.get(profile.sector_id) || null : null,
+      department_id: profile.sector_id,
+      status,
+      status_label: USER_STATUS_LABELS[status] || status,
+      is_active: profile.is_active,
+      last_seen_at: profile.last_seen_at,
+      updated_at: profile.updated_at,
+    };
+  });
+
+  return jsonResponse({
+    status: "success",
+    message: "Status dos usuários consultados com sucesso.",
+    data: userId ? results[0] || null : results,
+    meta: {
+      total: results.length,
+      filters: { status: requestedStatus, sector_id: sectorId },
+      allowed_statuses: allowedStatuses,
+    },
+  });
+}
+
 async function handleUsersSectors(url: URL, companyIds: string[]) {
   const admin = getAdminClient();
   const { data, error } = await admin.from("sectors").select("id, name, color, icon, created_at").in("company_id", companyIds).order("name");
@@ -906,7 +983,7 @@ Deno.serve(async (req) => {
     } else if (path.match(/^\/users\/data\/(.+)$/) && method === "GET") {
       const uid = path.match(/^\/users\/data\/(.+)$/)![1];
       response = await handleUsersData(url, companyIds, uid);
-    } else if (path === "/users/sectors" && method === "GET") {
+    } else if (path === "/users/status" && method === "GET") {\n      response = await handleUsersStatus(url, companyIds);\n    } else if (path.match(/^\\/users\\/status\\/(.+)$/) && method === "GET") {\n      const uid = path.match(/^\\/users\\/status\\/(.+)$/)![1];\n      response = await handleUsersStatus(url, companyIds, uid);\n    } else if (path === "/users/sectors" && method === "GET") {
       response = await handleUsersSectors(url, companyIds);
     } else if (path === "/users/teams" && method === "GET") {
       response = await handleUsersTeams(url, companyIds);
