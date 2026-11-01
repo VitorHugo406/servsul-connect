@@ -54,7 +54,7 @@ export function MeetingRoomsSection() {
     const [{ data: roomData, error: roomError }, { data: bookingData, error: bookingError }, { data: peopleData, error: peopleError }] = await Promise.all([
       db.from('meeting_rooms').select('*').eq('company_id', profile.company_id).eq('is_active', true).order('name'),
       db.from('meeting_bookings').select('id, room_id, title, starts_at, ends_at, booked_by, notes').eq('company_id', profile.company_id).gte('ends_at', new Date().toISOString()).order('starts_at'),
-      db.from('profiles').select('id, name, display_name, avatar_url, is_active').eq('company_id', profile.company_id).eq('is_active', true).order('name'),
+      db.from('profiles').select('id, user_id, name, display_name, avatar_url, is_active').eq('company_id', profile.company_id).eq('is_active', true).order('name'),
     ]);
     if (roomError || bookingError || peopleError) {
       console.error('Meeting rooms load error', roomError || bookingError || peopleError);
