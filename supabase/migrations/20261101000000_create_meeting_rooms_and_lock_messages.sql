@@ -138,6 +138,91 @@ WITH CHECK (EXISTS (
   WHERE p.id = profile_id AND p.company_id = b.company_id
 ));
 
+
+-- Enforce room opening hours, capacity and non-overlapping reservations in the database,
+-- so concurrent clients cannot bypass the checks performed by the interface.
+CREATE OR REPLACE FUNCTION public.enforce_meeting_booking_rules()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $
+DECLARE
+  room_record public.meeting_rooms%ROWTYPE;
+  conflict_exists boolean;
+BEGIN
+  SELECT * INTO room_record
+  FROM public.meeting_rooms
+  WHERE id = NEW.room_id AND company_id = NEW.company_id AND is_active = true;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Sala indisponível para esta empresa.';
+  END IF;
+
+  IF NEW.starts_at::time < room_record.opens_at OR NEW.ends_at::time > room_record.closes_at
+     OR NEW.starts_at::date <> NEW.ends_at::date THEN
+    RAISE EXCEPTION 'O agendamento está fora do horário de funcionamento da sala.';
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1 FROM public.meeting_bookings b
+    WHERE b.room_id = NEW.room_id
+      AND b.id <> COALESCE(NEW.id, '00000000-0000-0000-0000-000000000000'::uuid)
+      AND NEW.starts_at < b.ends_at
+      AND NEW.ends_at > b.starts_at
+  ) INTO conflict_exists;
+
+  IF conflict_exists THEN
+    RAISE EXCEPTION 'A sala já possui uma reserva neste intervalo.';
+  END IF;
+
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS trg_enforce_meeting_booking_rules ON public.meeting_bookings;
+CREATE TRIGGER trg_enforce_meeting_booking_rules
+BEFORE INSERT OR UPDATE OF room_id, company_id, starts_at, ends_at
+ON public.meeting_bookings
+FOR EACH ROW EXECUTE FUNCTION public.enforce_meeting_booking_rules();
+
+CREATE OR REPLACE FUNCTION public.enforce_meeting_participant_capacity()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $
+DECLARE
+  room_capacity integer;
+  current_count integer;
+BEGIN
+  SELECT r.capacity INTO room_capacity
+  FROM public.meeting_rooms r
+  JOIN public.meeting_bookings b ON b.room_id = r.id
+  WHERE b.id = NEW.booking_id AND b.company_id = r.company_id;
+
+  IF room_capacity IS NULL THEN
+    RAISE EXCEPTION 'Agendamento ou sala não encontrado.';
+  END IF;
+
+  SELECT count(*) INTO current_count
+  FROM public.meeting_booking_participants
+  WHERE booking_id = NEW.booking_id;
+
+  IF current_count >= room_capacity THEN
+    RAISE EXCEPTION 'A capacidade máxima da sala foi atingida.';
+  END IF;
+
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS trg_enforce_meeting_participant_capacity ON public.meeting_booking_participants;
+CREATE TRIGGER trg_enforce_meeting_participant_capacity
+BEFORE INSERT ON public.meeting_booking_participants
+FOR EACH ROW EXECUTE FUNCTION public.enforce_meeting_participant_capacity();
+
+REVOKE ALL ON FUNCTION public.enforce_meeting_booking_rules() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.enforce_meeting_participant_capacity() FROM PUBLIC, anon, authenticated;
+
 -- Chat messages are immutable for regular authenticated users. UPDATE remains
 -- available where existing policies permit read receipts (direct messages).
 REVOKE DELETE ON TABLE public.messages, public.direct_messages, public.private_group_messages FROM authenticated, anon;
