@@ -50,18 +50,21 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 async function apiCall(path: string, method = 'GET', body?: any) {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Not authenticated');
+  if (!session) throw new Error('Sua sessão expirou. Entre novamente para gerenciar as integrações.');
 
   const res = await fetch(`${SUPABASE_URL}/functions/v1/api-integrations?path=${encodeURIComponent(path)}`, {
     method,
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
+      'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       'Content-Type': 'application/json',
     },
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  return res.json();
+  const result = await res.json().catch(() => null);
+  if (!res.ok || result?.status !== 'success') throw new Error(result?.message || result?.error || `Não foi possível acessar a API (${res.status}).`);
+  return result;
 }
 
 export function ApiManagementSection() {
@@ -92,7 +95,7 @@ export function ApiManagementSection() {
         setIntegrations(result.data || []);
       }
     } catch (e) {
-      console.error(e);
+      toast.error(e instanceof Error ? e.message : 'Não foi possível carregar as integrações.');
     } finally {
       setLoading(false);
     }
@@ -122,7 +125,7 @@ export function ApiManagementSection() {
         toast.error(result.message || 'Erro ao criar integração.');
       }
     } catch (e) {
-      toast.error('Erro ao criar integração.');
+      toast.error(e instanceof Error ? e.message : 'Erro ao criar integração.');
     } finally {
       setActionLoading(null);
     }
@@ -137,7 +140,7 @@ export function ApiManagementSection() {
         fetchIntegrations();
       }
     } catch (e) {
-      toast.error('Erro ao alterar status.');
+      toast.error(e instanceof Error ? e.message : 'Erro ao alterar status.');
     } finally {
       setActionLoading(null);
     }
@@ -162,7 +165,7 @@ export function ApiManagementSection() {
         toast.success('Credenciais regeneradas.');
       }
     } catch (e) {
-      toast.error('Erro ao regenerar credenciais.');
+      toast.error(e instanceof Error ? e.message : 'Erro ao regenerar credenciais.');
     } finally {
       setActionLoading(null);
     }
@@ -178,7 +181,7 @@ export function ApiManagementSection() {
         fetchIntegrations();
       }
     } catch (e) {
-      toast.error('Erro ao excluir.');
+      toast.error(e instanceof Error ? e.message : 'Erro ao excluir.');
     } finally {
       setActionLoading(null);
     }
@@ -382,6 +385,11 @@ export function ApiManagementSection() {
                   ['GET', '/metrics/teams/:id', 'Métricas de uma equipe'],
                   ['GET', '/tasks/summary', 'Resumo de tarefas'],
                   ['GET', '/messages/summary', 'Resumo de mensagens'],
+                  ['GET', '/meeting-rooms', 'Salas ativas, ocupação, reuniões, participantes e horários livres'],
+                  ['GET', '/meeting-rooms/:id', 'Detalhes e agenda da sala'],
+                  ['GET', '/meeting-rooms/:id/availability', 'Horários livres e ocupados da sala na data consultada'],
+                  ['GET', '/meeting-rooms/:id/bookings', 'Reuniões e participantes da sala na data consultada'],
+                  ['GET', '/meeting-bookings', 'Reuniões das salas ativas da empresa na data consultada'],
                 ].map(([method, path, desc]) => (
                   <TableRow key={path}>
                     <TableCell><Badge variant="outline" className="text-xs font-mono">{method}</Badge></TableCell>
@@ -398,6 +406,9 @@ export function ApiManagementSection() {
             <p className="font-mono">X-API-TOKEN: seu_api_token</p>
             <p className="mt-2 font-medium">Filtros disponíveis (query params):</p>
             <p className="font-mono">?start_date=2024-01-01&end_date=2024-12-31&status=completed</p>
+            <p className="mt-2 font-medium">Agenda de salas (horário de São Paulo):</p>
+            <p className="break-all font-mono">{SUPABASE_URL}/functions/v1/api-integrations/meeting-rooms?date=2026-11-02</p>
+            <p>Sem date, a consulta usa o dia atual. free_slots respeita o horário de funcionamento; bookings inclui organizador e participantes. occupied_now indica a ocupação atual apenas ao consultar hoje.</p>
           </div>
         </CardContent>
       </Card>

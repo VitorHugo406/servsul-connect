@@ -1,5 +1,6 @@
 # Architecture rules
 
+- Meeting API resources are read-only, filtered by integration companies and active rooms, with profile identities for organizers/participants; availability subtracts persisted bookings from São Paulo room hours using half-open intervals.
 - Apple-inspired glass uses shared semantic CSS optics and the Button base class on the web; do not install native Expo modules in the Vite application.
 - Chat presentation uses shared semantic CSS classes and light/dark tokens across sectors, direct messages and groups, so visual changes stay consistent without changing message or permission logic.
 - Manual unread reminders use a shared conversation wrapper and browser storage scoped by company and profile; they never rewrite delivery receipts or other participants' read status.

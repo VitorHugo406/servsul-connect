@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders as sdkCorsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { availabilityWindow, freeIntervals, isOccupied, type RoomBooking } from './roomAvailability.ts';
 
 /**
  * API Integrations - External Analytics API
@@ -30,6 +32,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  */
 
 const corsHeaders = {
+  ...sdkCorsHeaders,
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-api-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
@@ -43,12 +46,7 @@ function jsonResponse(body: any, status = 200) {
 }
 
 function generateKey(prefix: string): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = prefix + "_";
-  for (let i = 0; i < 48; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  return prefix + '_' + Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('');
 }
 
 async function hashToken(token: string): Promise<string> {
@@ -60,10 +58,10 @@ async function hashToken(token: string): Promise<string> {
 }
 
 function getAdminClient() {
-  return createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
+  const url = Deno.env.get('SUPABASE_URL');
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !key) throw new Error('Configuração do serviço indisponível.');
+  return createClient(url, key);
 }
 
 async function validateAdminAuth(req: Request): Promise<{ userId: string; companyId: string; isSuperAdmin: boolean } | null> {
@@ -87,8 +85,10 @@ async function validateAdminAuth(req: Request): Promise<{ userId: string; compan
     return null;
   }
 
-  const { data: profile } = await adminClient.from("profiles").select("company_id").eq("user_id", userId).maybeSingle();
-  if (!profile?.company_id) return null;
+  const { data: profile } = await adminClient.from("profiles").select("company_id, is_active").eq("user_id", userId).maybeSingle();
+  if (!profile?.company_id || !profile.is_active) return null;
+  const { data: company } = await adminClient.from('companies').select('is_active').eq('id', profile.company_id).maybeSingle();
+  if (!company?.is_active) return null;
 
   return { userId, companyId: profile.company_id, isSuperAdmin: roles.includes("super_admin") };
 }
@@ -108,6 +108,8 @@ async function validateApiAuth(req: Request): Promise<{ integrationId: string; c
 
   if (!integration) return null;
   if (!integration.is_active) return null;
+  const { data: company } = await admin.from('companies').select('is_active').eq('id', integration.company_id).maybeSingle();
+  if (!company?.is_active) return null;
 
   const tokenHash = await hashToken(apiToken);
   if (tokenHash !== integration.api_token_hash) return null;
@@ -130,8 +132,9 @@ async function logAccess(integrationId: string, endpoint: string, method: string
 
 // ===== ADMIN ENDPOINTS =====
 async function handleAdminCreateIntegration(req: Request, userId: string, companyId: string, isSuperAdmin: boolean) {
-  const body = await req.json();
-  const name = body.name?.trim();
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body.name !== 'string' || body.name.trim().length > 120) return jsonResponse({ status: 'error', message: 'Informe um nome de até 120 caracteres.' }, 400);
+  const name = body.name.trim();
   const scopeAll = isSuperAdmin && body.scope_all_companies === true;
   if (!name) return jsonResponse({ status: "error", message: "Nome é obrigatório." }, 400);
 
@@ -823,6 +826,60 @@ async function handleUsersTeams(url: URL, companyIds: string[]) {
   return jsonResponse({ status: "success", data: results });
 }
 
+// Meeting resources are read-only and always scoped to the authenticated integration.
+async function handleMeetingRooms(url: URL, companyIds: string[], roomId?: string, onlyBookings = false) {
+  const admin = getAdminClient();
+  if (roomId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(roomId)) return jsonResponse({ status: 'error', message: 'Sala inválida.' }, 400);
+  const now = Date.now();
+  const date = url.searchParams.get('date') || new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(now));
+  try { availabilityWindow(date, '00:00:00', '23:59:59'); } catch (error) { return jsonResponse({ status: 'error', message: error instanceof Error ? error.message : 'Data inválida.' }, 400); }
+  let roomQuery = admin.from('meeting_rooms').select('id, company_id, name, capacity, opens_at, closes_at, is_active').in('company_id', companyIds).eq('is_active', true).order('name');
+  if (roomId) roomQuery = roomQuery.eq('id', roomId);
+  const { data: rooms, error: roomError } = await roomQuery;
+  if (roomError) throw roomError;
+  if (roomId && !rooms?.length) return jsonResponse({ status: 'error', message: 'Sala ativa não encontrada nesta empresa.' }, 404);
+  if (!rooms?.length) return jsonResponse({ status: 'success', data: [], date, timezone: 'America/Sao_Paulo' });
+  const dayStart = new Date(`${date}T00:00:00-03:00`).toISOString();
+  const dayEnd = new Date(Date.parse(dayStart) + 86400000).toISOString();
+  const bookings: RoomBooking[] = [];
+  // Page through results rather than silently truncating at PostgREST's 1000-row limit.
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await admin.from('meeting_bookings').select('id, company_id, room_id, title, starts_at, ends_at, booked_by, notes').in('company_id', companyIds).in('room_id', rooms.map(r => r.id)).lt('starts_at', dayEnd).gt('ends_at', dayStart).order('starts_at').order('id').range(offset, offset + 499);
+    if (error) throw error;
+    bookings.push(...(data || []));
+    if ((data || []).length < 500) break;
+  }
+  const participants: { booking_id: string; profile_id: string }[] = [];
+  for (let i = 0; i < bookings.length; i += 100) {
+    const ids = bookings.slice(i, i + 100).map(b => b.id);
+    for (let offset = 0; ; offset += 500) {
+      const { data, error } = await admin.from('meeting_booking_participants').select('booking_id, profile_id').in('booking_id', ids).order('id').range(offset, offset + 499);
+      if (error) throw error;
+      participants.push(...(data || []));
+      if ((data || []).length < 500) break;
+    }
+  }
+  const profileIds = [...new Set([...participants.map(p => p.profile_id), ...bookings.map(b => b.booked_by)])];
+  const profileMap = new Map<string, { id: string; name: string; company_id: string }>();
+  for (let i = 0; i < profileIds.length; i += 100) {
+    const { data, error } = await admin.from('profiles').select('id, name, display_name, company_id').in('company_id', companyIds).in('id', profileIds.slice(i, i + 100));
+    if (error) throw error;
+    for (const p of data || []) profileMap.set(p.id, { id: p.id, name: p.display_name || p.name, company_id: p.company_id });
+  }
+  const results = rooms.map(room => {
+    const meetings = bookings.filter(b => b.room_id === room.id && b.company_id === room.company_id).map(b => ({
+      ...b,
+      organizer: profileMap.get(b.booked_by)?.company_id === room.company_id ? profileMap.get(b.booked_by) : null,
+      participants: participants.filter(p => p.booking_id === b.id).map(p => profileMap.get(p.profile_id)).filter(p => p?.company_id === room.company_id),
+    }));
+    const window = availabilityWindow(date, room.opens_at, room.closes_at);
+    const current = meetings.find(b => isOccupied(b, now)) || null;
+    const localToday = new Date(now - 10800000).toISOString().slice(0, 10);
+    return { ...room, occupied_now: date === localToday ? Boolean(current) : null, current_meeting: current, bookings: meetings, free_slots: freeIntervals(meetings, window.start, window.end) };
+  });
+  return jsonResponse({ status: 'success', date, timezone: 'America/Sao_Paulo', data: onlyBookings ? results.flatMap(r => r.bookings.map(b => ({ ...b, room_name: r.name }))) : roomId ? results[0] : results });
+}
+
 // ===== MAIN HANDLER =====
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -831,7 +888,7 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const path = url.searchParams.get("path") || "/";
+    const path = url.searchParams.get("path") || url.pathname.replace(/^.*\/api-integrations/, '') || "/";
     const method = req.method;
 
     // ===== ADMIN ROUTES =====
@@ -880,7 +937,14 @@ Deno.serve(async (req) => {
 
     let response: Response;
 
-    if (path === "/metrics/general" && method === "GET") {
+    const roomMatch = path.match(/^\/meeting-rooms\/([^/]+)(?:\/(availability|bookings))?$/);
+    if (path === '/meeting-rooms' && method === 'GET') {
+      response = await handleMeetingRooms(url, companyIds);
+    } else if (path === '/meeting-bookings' && method === 'GET') {
+      response = await handleMeetingRooms(url, companyIds, undefined, true);
+    } else if (roomMatch && method === 'GET') {
+      response = await handleMeetingRooms(url, companyIds, roomMatch[1], roomMatch[2] === 'bookings');
+    } else if (path === "/metrics/general" && method === "GET") {
       response = await handleMetricsGeneral(url, companyIds);
     } else if (path === "/metrics/users" && method === "GET") {
       response = await handleMetricsUsers(url, companyIds);
@@ -915,8 +979,7 @@ Deno.serve(async (req) => {
     }
 
     // Log access
-    const status = JSON.parse(await response.clone().text()).status === "success" ? 200 : 400;
-    await logAccess(apiAuth.integrationId, path, method, status, ip);
+    await logAccess(apiAuth.integrationId, path, method, response.status, ip);
 
     return response;
   } catch (error) {
