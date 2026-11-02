@@ -1,3 +1,5 @@
+import { ChatConversationItem } from '@/components/chat/ChatConversationItem';
+import { ChatSenderAvatar } from '@/components/chat/ChatSenderIdentity';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ChevronDown, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -315,25 +317,25 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
               const title = c.partner.display_name || c.partner.name;
               const selected = chatMode === 'direct' && selectedUserId === c.partnerId;
               const time = new Date(c.lastMessage.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-              return <Button variant="ghost" key={'dm-'+c.partnerId} onClick={() => {setChatMode('direct');setSelectedUserId(c.partnerId);setSelectedGroupId(null);}} className={cn('chat-conversation-row flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',selected?'chat-conversation-selected':'hover:bg-muted/70')}>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">{title.split(' ').map((p:string)=>p[0]).slice(0,2).join('').toUpperCase()}</div>
-                <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><span className="truncate text-sm font-medium text-foreground">{title}</span></div><p className="truncate text-xs text-muted-foreground">{previewText(c.lastMessage.content)}</p><div className="mt-1 flex items-center gap-1.5"><span className="shrink-0 rounded-sm bg-primary/10 px-1 py-0.5 text-[9px] font-medium leading-none text-primary">Individual</span><span className="text-[10px] leading-none text-muted-foreground">{time}</span></div></div>
+              return <ChatConversationItem key={'dm-'+c.partnerId} conversationKey={'dm:'+c.partnerId}><Button variant="ghost" onClick={() => {setChatMode('direct');setSelectedUserId(c.partnerId);setSelectedGroupId(null);}} className={cn('chat-conversation-row flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',selected?'chat-conversation-selected':'hover:bg-muted/70')}>
+                <ChatSenderAvatar name={title} avatarUrl={c.partner.avatar_url} />
+                <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><span className="truncate text-sm font-medium text-foreground">{title}</span></div><p className="truncate text-xs text-muted-foreground">{previewText(c.lastMessage.content)}</p><div className="mt-1 flex items-center gap-1.5"><span className="shrink-0 rounded-sm bg-primary/10 px-1 py-0.5 text-[9px] font-medium leading-none text-primary">Individual</span><span className="truncate text-[10px] leading-none text-muted-foreground">{sectors.find(s => s.id === c.partner.sector_id)?.name}</span><span className="text-[10px] leading-none text-muted-foreground">{time}</span></div></div>
                 {c.unreadCount>0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">{c.unreadCount}</span>}
-              </Button>;
+              </Button></ChatConversationItem>;
             })}
             {(conversationFilter === 'all' || conversationFilter === 'groups') && groups.filter(g => g.name.toLowerCase().includes(conversationSearch.toLowerCase())).map(g => {
               const selected = chatMode === 'groups' && selectedGroupId === g.id;
-              return <Button variant="ghost" key={'group-'+g.id} onClick={() => {setChatMode('groups');setSelectedGroupId(g.id);setSelectedUserId(null);}} className={cn('chat-conversation-row flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',selected?'chat-conversation-selected':'hover:bg-muted/70')}>
+              return <ChatConversationItem key={'group-'+g.id} conversationKey={'group:'+g.id}><Button variant="ghost" onClick={() => {setChatMode('groups');setSelectedGroupId(g.id);setSelectedUserId(null);}} className={cn('chat-conversation-row flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',selected?'chat-conversation-selected':'hover:bg-muted/70')}>
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-sm font-semibold text-secondary"><UsersRound className="h-4 w-4"/></div>
                 <div className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-foreground">{g.name}</span><p className="truncate text-xs text-muted-foreground">{previewText(latestGroupMessages[g.id]?.content || g.description || 'Sem mensagens')}</p><div className="mt-1 flex items-center gap-1.5"><span className="shrink-0 rounded-sm bg-secondary/10 px-1 py-0.5 text-[9px] font-medium leading-none text-secondary">Grupo</span><span className="text-[10px] leading-none text-muted-foreground">{previewTime(latestGroupMessages[g.id]?.created_at)}</span></div></div>
-              </Button>;
+              </Button></ChatConversationItem>;
             })}
             {(conversationFilter === 'all' || conversationFilter === 'sectors') && accessibleSectors.filter((sec:any) => sec.name.toLowerCase().includes(conversationSearch.toLowerCase())).map((sec:any) => {
               const selected = chatMode === 'sectors' && effectiveSector === sec.id;
-              return <Button variant="ghost" key={'sector-'+sec.id} onClick={() => {setChatMode('sectors');setActiveSector(sec.id);setSelectedUserId(null);setSelectedGroupId(null);}} className={cn('chat-conversation-row flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',selected?'chat-conversation-selected':'hover:bg-muted/70')}>
+              return <ChatConversationItem key={'sector-'+sec.id} conversationKey={'sector:'+sec.id}><Button variant="ghost" onClick={() => {setChatMode('sectors');setActiveSector(sec.id);setSelectedUserId(null);setSelectedGroupId(null);}} className={cn('chat-conversation-row flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',selected?'chat-conversation-selected':'hover:bg-muted/70')}>
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white" style={{backgroundColor:sec.color || '#64748b'}}>{sec.name.charAt(0).toUpperCase()}</div>
                 <div className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-foreground">{sec.name}</span><p className="truncate text-xs text-muted-foreground">{previewText(latestSectorMessages[sec.id]?.content || 'Sem mensagens')}</p><div className="mt-1 flex items-center gap-1.5"><span className="shrink-0 rounded-sm bg-muted px-1 py-0.5 text-[9px] font-medium leading-none text-muted-foreground">Setor</span><span className="text-[10px] leading-none text-muted-foreground">{previewTime(latestSectorMessages[sec.id]?.created_at)}</span></div></div>
-              </Button>;
+              </Button></ChatConversationItem>;
             })}
           </div>
         </ScrollArea>
