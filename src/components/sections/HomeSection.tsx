@@ -244,7 +244,7 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
                   <p className="text-sm text-zinc-500">{metric.label}</p>
                   <p className="mt-1 text-3xl font-semibold tracking-tight text-zinc-950">{loadingMetrics && metric.label !== 'Mensagens hoje' && metric.label !== 'Avisos publicados' ? <span className="inline-block h-8 w-10 animate-pulse rounded-lg bg-zinc-200" /> : metric.value}</p>
                 </div>
-                {metric.alert && <span className="mb-1 rounded-full border border-zinc-300 bg-zinc-100 px-2.5 py-1 text-[11px] font-medium text-zinc-700">Atenção</span>}
+                {'alert' in metric && metric.alert && <span className="mb-1 rounded-full border border-zinc-300 bg-zinc-100 px-2.5 py-1 text-[11px] font-medium text-zinc-700">Atenção</span>}
               </div>
               <p className="mt-2 text-xs text-zinc-400">{metric.note}</p>
             </motion.button>
