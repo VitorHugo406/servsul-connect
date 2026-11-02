@@ -979,7 +979,25 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 .chat-thread { background: hsl(var(--chat-canvas)); }
 .chat-thread-header { min-height: 64px; background: hsl(var(--card)); border-bottom: 1px solid hsl(var(--border)); }
 .chat-history { background-color: hsl(var(--chat-canvas)); }
-.chat-bubble { position: relative; border-radius: 8px; padding: 8px 11px 6px; box-shadow: var(--chat-shadow); }
+.chat-bubble { position: relative; border-radius: 8px; padding: 11px 14px 9px; box-shadow: var(--chat-shadow); }
+.chat-message-text { font-size: 16px; line-height: 1.5; }
+.chat-emoji-popover { max-width: calc(100vw - 24px); }
+.chat-emoji-scroll {
+  width: 192px;
+  max-width: 100%;
+  max-height: min(112px, var(--radix-popover-content-available-height, 112px));
+  overflow-y: scroll;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / .6) hsl(var(--muted));
+  scrollbar-gutter: stable;
+  touch-action: pan-y;
+  padding-right: 4px;
+}
+.chat-emoji-scroll::-webkit-scrollbar { width: 6px; }
+.chat-emoji-scroll::-webkit-scrollbar-thumb { background: hsl(var(--muted-foreground) / .6); border-radius: 6px; }
+.chat-emoji-scroll::-webkit-scrollbar-track { background: hsl(var(--muted)); }
 .chat-bubble-outgoing { background: hsl(var(--chat-outgoing)); color: hsl(var(--chat-outgoing-foreground)); border-top-right-radius: 2px; }
 .chat-bubble-incoming { background: hsl(var(--chat-incoming)); color: hsl(var(--card-foreground)); border-top-left-radius: 2px; }
 .chat-bubble::before { content: ''; position: absolute; top: 0; width: 13px; height: 17px; pointer-events: none; }
@@ -1006,7 +1024,7 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 @media (max-width: 767px) {
   .ewvon-main { margin: 8px !important; padding: 0 !important; border-radius: 18px !important; }
   .chat-thread-header { min-height: 60px; }
-  .chat-bubble { padding: 7px 10px 5px; }
+  .chat-bubble { padding: 10px 13px 8px; }
   .chat-workspace .chat-thread-header > button { box-shadow: none; }
 }
 
