@@ -1,5 +1,5 @@
 ## Current work
-- [ ] Fix stale React runtime causing a blank screen on company selection
+- [x] Prevent stale React runtime on company selection (5 regression tests passed; company selection and login rendered without errors; no preview service workers)
 - [x] Align chat presentation across individual, group and sector conversations with WhatsApp/Teams references (build OK; public page opens without runtime errors)
 - [ ] Validate authenticated chat appearance — external Supabase session unavailable; requires user's review
 - [ ] Fix task cards loading
