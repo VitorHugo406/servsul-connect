@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { CardMentionCard } from './CardMentionCard';
 import { formatText } from '@/lib/chatFormatUtils';
+import { ChatSenderAvatar } from './ChatSenderIdentity';
 import { SignedStorageImage, SignedStorageLink } from '@/components/common/SignedStorageMedia';
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '🚀', '😍', '🥰', '😘', '🤩', '😎', '🤔', '🙌', '💯', '🎉', '🥳', '🤣', '😅', '😡', '😱', '😭', '🙏', '🤝', '👀', '💪', '✨', '❤️‍🔥', '💙', '💚', '💛', '💜', '🫶', '😴', '🤗', '😏', '🤯', '🥹', '😇', '🤪', '😈', '🤍', '🖤', '💔', '👏🏻', '👍🏻'];
@@ -29,7 +30,7 @@ interface ChatMessageProps {
 }
 
 function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScrollToMessage }: ChatMessageProps) {
-  const { profile } = useAuth();
+  const { profile, sector } = useAuth();
   const [isHovered, setIsHovered] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -103,11 +104,11 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
   };
 
   const isOwn = message.author_id === profile?.id;
-  const author = message.author;
+  const author = isOwn ? { ...message.author, ...profile } : message.author;
   const getInitials = (name: string) => name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
   const formatTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const displayName = author?.display_name || author?.name || 'Usuário';
-  const authorSectorName = author?.sector_name || null;
+  const authorSectorName = message.author?.sector_name || (isOwn ? sector?.name : null);
   const authorSectorColor = author?.sector_color || '#6366f1';
   const messageStatus = message.status || (message.id ? 'delivered' : 'sending');
 
@@ -169,22 +170,17 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
   };
 
   return <>
-    <div className={cn('mobile-chat-message group relative flex w-full min-w-0 max-w-full items-start gap-2 sm:gap-2.5', isOwn && 'flex-row-reverse', isFocused && 'mobile-chat-message-focused z-[101]')} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => { setIsHovered(false); setShowReactionPicker(false); }}>
-      <div className={cn("relative z-10 shrink-0", isOwn && "hidden")}>
-        <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
-          <AvatarImage src={author?.avatar_url || ''} alt={displayName} />
-          <AvatarFallback className="text-xs font-semibold text-white sm:text-sm" style={{ backgroundColor: authorSectorColor }}>{getInitials(displayName)}</AvatarFallback>
-        </Avatar>
-      </div>
+    <div className={cn('mobile-chat-message group relative flex w-full min-w-0 max-w-full items-start gap-3 sm:gap-4', isOwn && 'flex-row-reverse', isFocused && 'mobile-chat-message-focused z-[101]')} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => { setIsHovered(false); setShowReactionPicker(false); }}>
+      <div className="relative z-10 shrink-0"><ChatSenderAvatar name={displayName} avatarUrl={author?.avatar_url} /></div>
 
       <div className={cn('flex w-0 min-w-0 flex-1 flex-col', isOwn && 'items-end')}>
         {isFocused && <div className="mobile-reaction-picker relative z-[320] mb-1.5 flex w-[min(94vw,520px)] max-w-[calc(100vw-24px)] self-center items-center gap-1.5 overflow-x-auto overflow-y-hidden rounded-2xl bg-background/35 px-2 py-1.5 shadow-lg backdrop-blur-md ring-1 ring-white/10 scrollbar-none sm:hidden" role="group" aria-label="Escolher reação" onClick={(event) => event.stopPropagation()} onTouchMove={(event) => event.stopPropagation()} style={{ touchAction: 'pan-x', overscrollBehaviorX: 'contain', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {QUICK_REACTIONS.map((emoji) => <button key={emoji} type="button" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-transparent text-[1.55rem] leading-none transition-transform active:scale-90 active:bg-white/10" onClick={() => selectReaction(emoji)}>{emoji}</button>)}
         </div>}
 
-        <div className={cn('relative z-10 mb-1 flex w-fit max-w-full flex-wrap items-center gap-1.5', isOwn && 'hidden')}>
+        <div className={cn('relative z-10 mb-1 flex w-fit max-w-full flex-wrap items-center gap-1.5', isOwn && 'justify-end')}>
           <span className="min-w-0 max-w-full truncate text-xs font-medium text-foreground sm:text-sm">{displayName}</span>
-          {authorSectorName && <span className="max-w-full rounded-full px-1.5 py-0.5 text-[10px] font-medium sm:px-2 sm:text-xs" style={{ backgroundColor: `${authorSectorColor}20`, color: authorSectorColor }}>{authorSectorName}</span>}
+          {authorSectorName && <span className="max-w-full break-words text-[10px] text-muted-foreground sm:text-xs">{authorSectorName}</span>}
         </div>
 
         <div className={cn('flex w-full min-w-0 max-w-full items-end gap-1.5', isOwn && 'flex-row-reverse')}>
@@ -241,6 +237,7 @@ export function DateSeparator({ date }: { date: string }) {
 export const ChatMessage = memo(ChatMessageBase, (prev, next) =>
   prev.message.id === next.message.id &&
   prev.message.content === next.message.content &&
+  prev.message.author === next.message.author &&
   prev.reactions === next.reactions &&
   prev.onReply === next.onReply &&
   prev.onToggleReaction === next.onToggleReaction &&
