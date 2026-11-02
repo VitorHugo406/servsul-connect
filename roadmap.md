@@ -1,5 +1,6 @@
 ## Current work
-- [ ] Fix company API credential creation and expose active meeting rooms, occupancy, free times, bookings and participants
+- [x] Add company-scoped meeting API resources, secure credential generation, request headers and visible error details (deployed; 3 availability tests passed; unauthenticated calls rejected)
+- [ ] Verify company API creation and room data end-to-end — external Supabase provides no authenticated test session; original creation failure remains unconfirmed
 - [x] Apply Apple-inspired glass consistently to navigation bars and all buttons (web-compatible CSS; light/dark optics; public page checked; 4 chat regression tests passed; authenticated navigation review unavailable)
 - [x] Emphasize chat tails, show every sender's photo and department, align navigation with page, and add blue manual unread markers (4 targeted tests passed; build OK; authenticated visual check unavailable on external Supabase)
 - [x] Prevent stale React runtime on company selection (5 regression tests passed; company selection and login rendered without errors; no preview service workers)
