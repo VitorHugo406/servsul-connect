@@ -201,7 +201,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
     });
     try {
 
-      const { error } = await supabase.from('tasks').update(updates).eq('id', id);
+      const { error } = await supabase.from('tasks').update(updates as any).eq('id', id);
       if (error) throw error;
       if (boardId) triggerAutomations(boardId);
       return { error: null };

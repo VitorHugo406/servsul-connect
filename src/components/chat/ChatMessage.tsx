@@ -163,15 +163,15 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
       {attachments.map((att, i) => att.type === 'image' ? (
         <SignedStorageLink key={i} url={att.url}><SignedStorageImage url={att.url} alt={att.name} className="max-w-full max-h-48 rounded-2xl object-cover" /></SignedStorageLink>
       ) : (
-        <SignedStorageLink key={i} url={att.url} className={cn('flex max-w-full items-center gap-2 rounded-2xl p-2 text-xs', isOwn ? 'bg-white/10 hover:bg-white/20' : 'bg-muted hover:bg-muted/80')}><span>📎</span><span className="min-w-0 truncate">{att.name}</span></SignedStorageLink>
+        <SignedStorageLink key={i} url={att.url} className={cn('flex max-w-full items-center gap-2 rounded-2xl p-2 text-xs', 'bg-muted/60 hover:bg-muted')}><span>📎</span><span className="min-w-0 truncate">{att.name}</span></SignedStorageLink>
       ))}
     </div>;
   };
 
   return <>
     <div className={cn('mobile-chat-message group relative flex w-full min-w-0 max-w-full items-start gap-2 sm:gap-2.5', isOwn && 'flex-row-reverse', isFocused && 'mobile-chat-message-focused z-[101]')} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => { setIsHovered(false); setShowReactionPicker(false); }}>
-      <div className="relative z-10 shrink-0">
-        <Avatar className="h-8 w-8 ring-2 ring-border sm:h-10 sm:w-10">
+      <div className={cn("relative z-10 shrink-0", isOwn && "hidden")}>
+        <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
           <AvatarImage src={author?.avatar_url || ''} alt={displayName} />
           <AvatarFallback className="text-xs font-semibold text-white sm:text-sm" style={{ backgroundColor: authorSectorColor }}>{getInitials(displayName)}</AvatarFallback>
         </Avatar>
@@ -182,21 +182,20 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
           {QUICK_REACTIONS.map((emoji) => <button key={emoji} type="button" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-transparent text-[1.55rem] leading-none transition-transform active:scale-90 active:bg-white/10" onClick={() => selectReaction(emoji)}>{emoji}</button>)}
         </div>}
 
-        <div className={cn('relative z-10 mb-0.5 flex w-fit max-w-[82%] flex-wrap items-center gap-1.5', isOwn && 'flex-row-reverse')}>
+        <div className={cn('relative z-10 mb-1 flex w-fit max-w-full flex-wrap items-center gap-1.5', isOwn && 'hidden')}>
           <span className="min-w-0 max-w-full truncate text-xs font-medium text-foreground sm:text-sm">{displayName}</span>
           {authorSectorName && <span className="max-w-full rounded-full px-1.5 py-0.5 text-[10px] font-medium sm:px-2 sm:text-xs" style={{ backgroundColor: `${authorSectorColor}20`, color: authorSectorColor }}>{authorSectorName}</span>}
-          <span className="shrink-0 text-[10px] text-muted-foreground sm:text-xs">{formatTime(message.created_at)}</span>
         </div>
 
         <div className={cn('flex w-full min-w-0 max-w-full items-end gap-1.5', isOwn && 'flex-row-reverse')}>
-          <div className="relative w-fit min-w-0 max-w-[82%] sm:max-w-[400px]" style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 160ms ease-out' : 'none' }}>
-            <div onTouchStart={startLongPress} onTouchMove={handleTouchMove} onTouchEnd={finishTouch} onTouchCancel={finishTouch} onContextMenu={(event) => { event.preventDefault(); setIsFocused(true); setShowReactionPicker(false); }} style={{ touchAction: isFocused ? 'none' : 'pan-y' }} className={cn('relative min-w-0 max-w-full rounded-[20px] px-3 py-2 shadow-sm select-none sm:rounded-[26px] sm:px-4 sm:py-3', isOwn ? 'gradient-primary text-white rounded-tr-md' : 'bg-card text-card-foreground rounded-tl-md border border-border', isFocused && 'z-[110]')}>
-              {message.reply_to && <div className={cn('mb-1.5 max-w-full rounded-2xl px-2 py-1 text-[10px] border-l-2 cursor-pointer transition-colors sm:mb-2 sm:py-1.5 sm:text-xs', isOwn ? 'bg-white/10 border-white/40 hover:bg-white/20' : 'bg-muted border-muted-foreground/30 hover:bg-muted/80')} onClick={() => message.reply_to?.id && onScrollToMessage?.(message.reply_to.id)}>
+          <div className="relative w-fit min-w-0 max-w-[90%] sm:max-w-[min(78%,560px)]" style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 160ms ease-out' : 'none' }}>
+            <div onTouchStart={startLongPress} onTouchMove={handleTouchMove} onTouchEnd={finishTouch} onTouchCancel={finishTouch} onContextMenu={(event) => { event.preventDefault(); setIsFocused(true); setShowReactionPicker(false); }} style={{ touchAction: isFocused ? 'none' : 'pan-y' }} className={cn('chat-bubble relative min-w-0 max-w-full select-none', isOwn ? 'chat-bubble-outgoing' : 'chat-bubble-incoming', isFocused && 'z-[110]')}>
+              {message.reply_to && <div className={cn('mb-1.5 max-w-full rounded-2xl px-2 py-1 text-[10px] border-l-2 cursor-pointer transition-colors sm:mb-2 sm:py-1.5 sm:text-xs', 'bg-muted/60 border-primary/50 hover:bg-muted')} onClick={() => message.reply_to?.id && onScrollToMessage?.(message.reply_to.id)}>
                 <span className="font-semibold">{message.reply_to.reply_author?.display_name || message.reply_to.reply_author?.name || 'Usuário'}</span>
                 <p className="mt-0.5 truncate opacity-80">{message.reply_to.content.substring(0, 100)}</p>
               </div>}
               {renderContent(message.content, isOwn)}
-              {isOwn && <span className="ml-1 inline-flex items-center">{messageStatus === 'sending' ? <Check className="h-3 w-3 text-white/60 sm:h-3.5 sm:w-3.5" /> : <CheckCheck className="h-3 w-3 text-white/80 sm:h-3.5 sm:w-3.5" />}</span>}
+              <span className="chat-message-meta"><span>{formatTime(message.created_at)}</span>{isOwn && (messageStatus === 'sending' ? <Check className="h-3.5 w-3.5" /> : <CheckCheck className="h-3.5 w-3.5 text-primary" />)}</span>
             </div>
 
             {isFocused && <div className="fixed inset-0 z-[100] bg-background/20 backdrop-blur-[1px] md:hidden" onClick={closeFocus} aria-label="Fechar ações da mensagem" />}
@@ -235,7 +234,7 @@ export function DateSeparator({ date }: { date: string }) {
     if (isSameDay(msgDate, yesterday)) return 'Ontem';
     return msgDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
-  return <div className="flex items-center justify-center my-4"><span className="rounded-2xl bg-muted px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm">{getLabel(date)}</span></div>;
+  return <div className="flex items-center justify-center my-4"><span className="chat-date-label px-3 py-1 text-[11px] font-medium">{getLabel(date)}</span></div>;
 }
 // Memoized: re-rendering every bubble on each parent state change (scroll,
 // typing, presence) was freezing the chat scroll.

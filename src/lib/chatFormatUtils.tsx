@@ -28,20 +28,20 @@ export function formatText(text: string, isOwnMsg: boolean): React.ReactNode[] {
       if (linkMatch) {
         parts.push(
           <a key={key++} href={linkMatch[2]} target="_blank" rel="noopener noreferrer"
-            className={cn("underline font-medium", isOwnMsg ? "text-blue-200 hover:text-white" : "text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300")}
+            className={cn("underline font-medium", "text-primary hover:text-primary/80")}
           >{linkMatch[1]}</a>
         );
       }
     } else if (m.startsWith('@')) {
       parts.push(
-        <span key={key++} className={cn("font-semibold", isOwnMsg ? "text-blue-200" : "text-blue-600 dark:text-blue-400")}>
+        <span key={key++} className={cn("font-semibold", "text-primary")}>
           {m.trim()}
         </span>
       );
     } else if (m.startsWith('http')) {
       parts.push(
         <a key={key++} href={m} target="_blank" rel="noopener noreferrer"
-          className={cn("underline font-medium break-all", isOwnMsg ? "text-blue-200 hover:text-white" : "text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300")}
+          className={cn("underline font-medium break-all", "text-primary hover:text-primary/80")}
         >{m}</a>
       );
     }

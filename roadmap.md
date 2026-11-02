@@ -1,4 +1,6 @@
 ## Current work
+- [x] Align chat presentation across individual, group and sector conversations with WhatsApp/Teams references (build OK; public page opens without runtime errors)
+- [ ] Validate authenticated chat appearance — external Supabase session unavailable; requires user's review
 - [ ] Fix task cards loading
 - [ ] Restore task and chat automations
 - [ ] Restore previous-month monthly feedback
