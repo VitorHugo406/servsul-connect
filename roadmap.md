@@ -1,4 +1,10 @@
 ## Current work
+- [ ] Compact reaction/composer emoji menus with side scrolling; enlarge chat bubbles and text
+- [ ] Add configurable chat font and font size
+- [ ] Add chat action keyboard shortcuts
+- [ ] Expand WhatsApp-style chat filters
+- [ ] Standardize system forms and logo-branded reports
+- [ ] Review APIs and apply evidenced security and visual corrections
 - [x] Standardize clean tab presentation using Home, excluding calendar/chat/open task board; simplify task board selection (build OK; authenticated visual review unavailable on external Supabase)
 - [x] Hide birthday data management and reports from ordinary users; show upcoming people and departments only (3 rule tests passed)
 - [x] Add company-scoped meeting API resources, secure credential generation, request headers and visible error details (deployed; 3 availability tests passed; unauthenticated calls rejected)
