@@ -1,4 +1,5 @@
 ## Current work
+- [ ] Align chat presentation across individual, group and sector conversations with WhatsApp/Teams references
 - [ ] Fix task cards loading
 - [ ] Restore task and chat automations
 - [ ] Restore previous-month monthly feedback
