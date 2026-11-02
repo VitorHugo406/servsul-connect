@@ -948,8 +948,8 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 /* Shared WhatsApp-like message surfaces with Teams-style conversation navigation. */
 :root {
   --chat-canvas: 210 12% 95%;
-  --chat-outgoing: 142 48% 90%;
-  --chat-outgoing-foreground: 160 20% 16%;
+  --chat-outgoing: 212 90% 91%;
+  --chat-outgoing-foreground: 216 55% 22%;
   --chat-incoming: var(--card);
   --chat-meta: 215 12% 42%;
   --chat-selected: var(--accent);
@@ -957,8 +957,8 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 }
 .dark {
   --chat-canvas: 210 12% 11%;
-  --chat-outgoing: 164 35% 21%;
-  --chat-outgoing-foreground: 150 16% 94%;
+  --chat-outgoing: 214 58% 30%;
+  --chat-outgoing-foreground: 210 35% 96%;
   --chat-incoming: 210 12% 18%;
   --chat-meta: 210 12% 70%;
 }
@@ -973,9 +973,12 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 .chat-thread { background: hsl(var(--chat-canvas)); }
 .chat-thread-header { min-height: 64px; background: hsl(var(--card)); border-bottom: 1px solid hsl(var(--border)); }
 .chat-history { background-color: hsl(var(--chat-canvas)); }
-.chat-bubble { border-radius: 8px; padding: 8px 11px 6px; box-shadow: var(--chat-shadow); }
+.chat-bubble { position: relative; border-radius: 8px; padding: 8px 11px 6px; box-shadow: var(--chat-shadow); }
 .chat-bubble-outgoing { background: hsl(var(--chat-outgoing)); color: hsl(var(--chat-outgoing-foreground)); border-top-right-radius: 2px; }
 .chat-bubble-incoming { background: hsl(var(--chat-incoming)); color: hsl(var(--card-foreground)); border-top-left-radius: 2px; }
+.chat-bubble::before { content: ''; position: absolute; top: 0; width: 8px; height: 10px; pointer-events: none; }
+.chat-bubble-outgoing::before { right: -7px; background: hsl(var(--chat-outgoing)); clip-path: polygon(0 0, 100% 0, 0 100%); }
+.chat-bubble-incoming::before { left: -7px; background: hsl(var(--chat-incoming)); clip-path: polygon(0 0, 100% 0, 100% 100%); }
 .chat-message-meta { display: flex; justify-content: flex-end; align-items: center; gap: 4px; margin: 3px 0 0 18px; font-size: 10px; line-height: 14px; color: hsl(var(--chat-meta)); white-space: nowrap; }
 .chat-composer { background: hsl(var(--card)); border-top: 1px solid hsl(var(--border)); padding-bottom: max(10px, env(safe-area-inset-bottom)) !important; }
 .chat-date-label { background: hsl(var(--card)); color: hsl(var(--muted-foreground)); border-radius: 6px; box-shadow: var(--chat-shadow); }
