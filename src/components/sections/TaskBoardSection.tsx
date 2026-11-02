@@ -198,8 +198,8 @@ export function TaskBoardSection() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b border-border">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="clean-section board-selection flex flex-col h-full">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
             <ListTodo className="h-5 w-5 text-primary" />
@@ -230,29 +230,26 @@ export function TaskBoardSection() {
         ) : (
           <div className={cn('grid gap-4', isMobile ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-3')}>
             {orderedBoards.map((board, index) => {
-              const isDark = isBoardBgDark(board.background_image);
-              const textColor = isDark ? 'text-white' : 'text-foreground';
-              const subTextColor = isDark ? 'text-white/70' : 'text-muted-foreground';
-              const metaColor = isDark ? 'text-white/60' : 'text-muted-foreground';
+              const textColor = 'text-foreground';
+              const subTextColor = 'text-muted-foreground';
+              const metaColor = 'text-muted-foreground';
               return (
               <Card
                 key={board.id}
                 className={cn(
-                  'cursor-pointer hover:shadow-lg transition-all overflow-hidden',
-                  getBoardBg(board.background_image),
+                  'board-selection-item cursor-pointer transition-all overflow-hidden hover:border-primary/30',
                   draggedBoardIdx === index && 'opacity-50 ring-2 ring-primary',
                 )}
-                style={getBoardBgStyle(board.background_image)}
                 onClick={() => { setSelectedBoardId(board.id); navigate('/tarefas/' + slugifyBoardName(board.name) + '-' + board.id); }}
                 draggable
                 onDragStart={(e) => handleBoardDragStart(e, index)}
                 onDragOver={(e) => handleBoardDragOver(e, index)}
                 onDragEnd={handleBoardDragEnd}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-2 flex-1 min-w-0">
-                      <GripVertical className={cn("h-4 w-4 mt-1 flex-shrink-0 cursor-grab active:cursor-grabbing", isDark ? "text-white/50" : "text-muted-foreground/50")} />
+                      <GripVertical className={cn("h-4 w-4 mt-1 flex-shrink-0 cursor-grab active:cursor-grabbing", "text-muted-foreground/50")} />
                       <div className="flex-1 min-w-0">
                         <h3 className={cn("font-semibold truncate", textColor)}>{board.name}</h3>
                         {board.description && (
@@ -265,7 +262,7 @@ export function TaskBoardSection() {
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className={cn("h-8 w-8 flex-shrink-0", isDark && "text-white hover:bg-white/20")}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>

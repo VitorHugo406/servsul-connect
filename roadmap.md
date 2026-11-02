@@ -1,4 +1,6 @@
 ## Current work
+- [x] Standardize clean tab presentation using Home, excluding calendar/chat/open task board; simplify task board selection (build OK; authenticated visual review unavailable on external Supabase)
+- [x] Hide birthday data management and reports from ordinary users; show upcoming people and departments only (3 rule tests passed)
 - [x] Add company-scoped meeting API resources, secure credential generation, request headers and visible error details (deployed; 3 availability tests passed; unauthenticated calls rejected)
 - [ ] Verify company API creation and room data end-to-end — external Supabase provides no authenticated test session; original creation failure remains unconfirmed
 - [x] Apply Apple-inspired glass consistently to navigation bars and all buttons (web-compatible CSS; light/dark optics; public page checked; 4 chat regression tests passed; authenticated navigation review unavailable)
