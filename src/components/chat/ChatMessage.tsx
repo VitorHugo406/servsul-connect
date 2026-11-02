@@ -8,6 +8,8 @@ import { CardMentionCard } from './CardMentionCard';
 import { formatText } from '@/lib/chatFormatUtils';
 import { ChatSenderAvatar } from './ChatSenderIdentity';
 import { SignedStorageImage, SignedStorageLink } from '@/components/common/SignedStorageMedia';
+import { Button } from '@/components/ui/button';
+import { ChatEmojiGrid } from './ChatEmojiGrid';
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '🚀', '😍', '🥰', '😘', '🤩', '😎', '🤔', '🙌', '💯', '🎉', '🥳', '🤣', '😅', '😡', '😱', '😭', '🙏', '🤝', '👀', '💪', '✨', '❤️‍🔥', '💙', '💚', '💛', '💜', '🫶', '😴', '🤗', '😏', '🤯', '🥹', '😇', '🤪', '😈', '🤍', '🖤', '💔', '👏🏻', '👍🏻'];
 
@@ -159,7 +161,7 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
     flushCardMention();
     const textContent = textLines.join('\n').trim();
     return <div className="min-w-0 max-w-full space-y-2">
-      {textContent && <p className="text-sm leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{textContent.split('\n').map((line, i) => <React.Fragment key={i}>{i > 0 && <br />}{formatText(line, isOwnMsg)}</React.Fragment>)}</p>}
+      {textContent && <p className="chat-message-text whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{textContent.split('\n').map((line, i) => <React.Fragment key={i}>{i > 0 && <br />}{formatText(line, isOwnMsg)}</React.Fragment>)}</p>}
       {elements}
       {attachments.map((att, i) => att.type === 'image' ? (
         <SignedStorageLink key={i} url={att.url}><SignedStorageImage url={att.url} alt={att.name} className="max-w-full max-h-48 rounded-2xl object-cover" /></SignedStorageLink>
@@ -170,12 +172,12 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
   };
 
   return <>
-    <div className={cn('mobile-chat-message group relative flex w-full min-w-0 max-w-full items-start gap-3 sm:gap-4', isOwn && 'flex-row-reverse', isFocused && 'mobile-chat-message-focused z-[101]')} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => { setIsHovered(false); setShowReactionPicker(false); }}>
+    <div className={cn('mobile-chat-message group relative flex w-full min-w-0 max-w-full items-start gap-3 sm:gap-4', isOwn && 'flex-row-reverse', isFocused && 'mobile-chat-message-focused z-[101]')} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => { setIsHovered(false); }}>
       <div className="relative z-10 shrink-0"><ChatSenderAvatar name={displayName} avatarUrl={author?.avatar_url} /></div>
 
       <div className={cn('flex w-0 min-w-0 flex-1 flex-col', isOwn && 'items-end')}>
-        {isFocused && <div className="mobile-reaction-picker relative z-[320] mb-1.5 flex w-[min(94vw,520px)] max-w-[calc(100vw-24px)] self-center items-center gap-1.5 overflow-x-auto overflow-y-hidden rounded-2xl bg-background/35 px-2 py-1.5 shadow-lg backdrop-blur-md ring-1 ring-white/10 scrollbar-none sm:hidden" role="group" aria-label="Escolher reação" onClick={(event) => event.stopPropagation()} onTouchMove={(event) => event.stopPropagation()} style={{ touchAction: 'pan-x', overscrollBehaviorX: 'contain', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          {QUICK_REACTIONS.map((emoji) => <button key={emoji} type="button" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-transparent text-[1.55rem] leading-none transition-transform active:scale-90 active:bg-white/10" onClick={() => selectReaction(emoji)}>{emoji}</button>)}
+        {isFocused && <div className="mobile-reaction-picker relative z-[320] mb-2 w-fit max-w-full self-center rounded-lg border border-border bg-card p-2 shadow-lg sm:hidden" onClick={event => event.stopPropagation()} onTouchMove={event => event.stopPropagation()}>
+          <ChatEmojiGrid emojis={QUICK_REACTIONS} onSelect={selectReaction} label="Escolher reação" />
         </div>}
 
         <div className={cn('relative z-10 mb-1 flex w-fit max-w-full flex-wrap items-center gap-1.5', isOwn && 'justify-end')}>
@@ -184,7 +186,7 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
         </div>
 
         <div className={cn('flex w-full min-w-0 max-w-full items-end gap-1.5', isOwn && 'flex-row-reverse')}>
-          <div className="relative w-fit min-w-0 max-w-[90%] sm:max-w-[min(78%,560px)]" style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 160ms ease-out' : 'none' }}>
+          <div className="relative w-fit min-w-0 max-w-[90%] sm:max-w-[min(82%,620px)]" style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 160ms ease-out' : 'none' }}>
             <div onTouchStart={startLongPress} onTouchMove={handleTouchMove} onTouchEnd={finishTouch} onTouchCancel={finishTouch} onContextMenu={(event) => { event.preventDefault(); setIsFocused(true); setShowReactionPicker(false); }} style={{ touchAction: isFocused ? 'none' : 'pan-y' }} className={cn('chat-bubble relative min-w-0 max-w-full select-none', isOwn ? 'chat-bubble-outgoing' : 'chat-bubble-incoming', isFocused && 'z-[110]')}>
               {message.reply_to && <div className={cn('mb-1.5 max-w-full rounded-2xl px-2 py-1 text-[10px] border-l-2 cursor-pointer transition-colors sm:mb-2 sm:py-1.5 sm:text-xs', 'bg-muted/60 border-primary/50 hover:bg-muted')} onClick={() => message.reply_to?.id && onScrollToMessage?.(message.reply_to.id)}>
                 <span className="font-semibold">{message.reply_to.reply_author?.display_name || message.reply_to.reply_author?.name || 'Usuário'}</span>
@@ -196,18 +198,17 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
 
             {isFocused && <div className="fixed inset-0 z-[100] bg-background/20 backdrop-blur-[1px] md:hidden" onClick={closeFocus} aria-label="Fechar ações da mensagem" />}
 
-            {isFocused && <div className="hidden sm:flex absolute top-1/2 z-[120] -translate-y-1/2 items-center gap-1.5 animate-in fade-in-0 zoom-in-75 duration-200" style={{ [isOwn ? 'right' : 'left']: '100%', marginLeft: isOwn ? undefined : '0.5rem', marginRight: isOwn ? '0.5rem' : undefined }} onClick={(event) => event.stopPropagation()}>
-              <button type="button" aria-label="Reagir à mensagem" className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-foreground shadow-xl ring-1 ring-border transition-transform hover:scale-105 active:scale-95" onClick={() => setShowReactionPicker((value) => !value)}><SmilePlus className="h-4 w-4" /></button>
-              <button type="button" aria-label="Responder à mensagem" className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl ring-1 ring-primary transition-transform hover:scale-105 active:scale-95" onClick={() => { closeFocus(); onReply?.(message); }}><Reply className="h-4 w-4" /></button>
-              {showReactionPicker && <div className="absolute top-1/2 flex -translate-y-1/2 flex-wrap gap-1 rounded-2xl bg-card p-2 shadow-xl ring-1 ring-border" style={{ [isOwn ? 'right' : 'left']: '100%', marginRight: isOwn ? '0.5rem' : undefined, marginLeft: isOwn ? undefined : '0.5rem' }}>{QUICK_REACTIONS.map((emoji) => <button key={emoji} type="button" className="h-9 w-9 rounded-full p-1 text-lg hover:bg-muted" onClick={() => selectReaction(emoji)}>{emoji}</button>)}</div>}
-            </div>}
+
           </div>
 
-          <div className={cn('hidden shrink-0 items-center gap-0.5 transition-opacity sm:flex', isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none')}>
+          <div className={cn('hidden shrink-0 items-center gap-0.5 transition-opacity sm:flex', (isHovered || isFocused || showReactionPicker) ? 'opacity-100' : 'opacity-0 pointer-events-none')}>
             <button onClick={() => onReply?.(message)} className="p-1.5 rounded-2xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Responder"><Reply className="h-3.5 w-3.5" /></button>
-            <div className="relative"><button onClick={() => setShowReactionPicker(!showReactionPicker)} className="p-1.5 rounded-2xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Reagir"><SmilePlus className="h-3.5 w-3.5" /></button>
-              {showReactionPicker && <div className={cn('absolute bottom-full mb-1 bg-card border border-border rounded-xl shadow-lg p-2 flex gap-1 z-[200] whitespace-nowrap', isOwn ? 'right-0' : 'left-0')}>{QUICK_REACTIONS.map(emoji => <button key={emoji} onClick={() => { onToggleReaction?.(message.id, emoji); setShowReactionPicker(false); }} className="text-lg hover:bg-muted rounded-2xl p-1 transition-colors leading-none">{emoji}</button>)}</div>}
-            </div>
+            <Popover open={showReactionPicker} onOpenChange={setShowReactionPicker}>
+              <PopoverTrigger asChild><Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground" title="Reagir" aria-label="Reagir à mensagem"><SmilePlus className="h-4 w-4" /></Button></PopoverTrigger>
+              <PopoverContent side="top" align={isOwn ? 'end' : 'start'} collisionPadding={12} className="chat-emoji-popover z-[500] w-auto p-2">
+                <ChatEmojiGrid emojis={QUICK_REACTIONS} onSelect={selectReaction} label="Escolher reação" />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 

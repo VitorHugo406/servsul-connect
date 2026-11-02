@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { ChatTypographyControls } from './ChatTypographyControls';
 
 export const CHAT_BACKGROUND_KEY_PREFIX = 'nuvexa:chat-background:';
 
@@ -79,6 +80,7 @@ export function ChatPersonalizationDialog({ open, onOpenChange, chatId, chatName
           <DialogTitle className="flex items-center gap-2"><Palette className="h-5 w-5 text-primary" /> Personalização do chat</DialogTitle>
           <DialogDescription>Personalize somente esta conversa. A escolha fica salva neste navegador e não altera o chat dos outros usuários.</DialogDescription>
         </DialogHeader>
+        <ChatTypographyControls />
         {!chatId ? (
           <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">Selecione uma conversa individual para personalizar o fundo.</div>
         ) : (
