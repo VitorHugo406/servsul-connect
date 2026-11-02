@@ -72,7 +72,7 @@ export function MobileNavigation({ activeSection, onSectionChange }: MobileNavig
 
   return (
     <>
-      <nav aria-label="Navegação principal" className="fixed bottom-2 left-3 right-3 z-50 rounded-[24px] border border-border/60 bg-background/90 shadow-lg backdrop-blur-xl safe-area-pb">
+      <nav aria-label="Navegação principal" className="apple-glass-bar fixed bottom-2 left-3 right-3 z-50 rounded-[24px] border border-border/60 bg-background/90 shadow-lg backdrop-blur-xl safe-area-pb">
         <div className="flex items-center justify-around h-14 px-1.5">
           {mainNavItems.map((item) => {
             const Icon = item.icon;
