@@ -980,6 +980,14 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 .chat-composer { background: hsl(var(--card)); border-top: 1px solid hsl(var(--border)); padding-bottom: max(10px, env(safe-area-inset-bottom)) !important; }
 .chat-date-label { background: hsl(var(--card)); color: hsl(var(--muted-foreground)); border-radius: 6px; box-shadow: var(--chat-shadow); }
 .chat-mobile-open > .chat-thread > .chat-thread-header { padding-left: 48px; }
+/* The selected section is the content area itself, never a framed panel. */
+.ewvon-main {
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+  background: hsl(var(--background)) !important;
+}
 @media (max-width: 767px) {
   .chat-thread-header { min-height: 60px; }
   .chat-bubble { padding: 7px 10px 5px; }
