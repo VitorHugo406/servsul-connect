@@ -16,13 +16,13 @@ afterEach(cleanup);
 it('the unread menu saves a reminder, preserves it on remount, and opening clears it', async () => {
   const conversation = () => <ChatConversationItem conversationKey="dm:partner"><button>Conversa</button></ChatConversationItem>;
   const view = render(conversation());
-  fireEvent.pointerDown(screen.getByRole('button', { name: 'Opções da conversa' }), { button: 0, ctrlKey: false, pointerType: 'mouse' });
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Opções da conversa' }), { key: 'Enter' });
   fireEvent.click(await screen.findByRole('menuitem', { name: 'Marcar como não lida' }));
   const key = chatUnreadStorageKey('company', 'person');
   await waitFor(() => expect(parseUnreadMarks(localStorage.getItem(key))).toEqual(['dm:partner']));
   view.unmount();
   render(conversation());
-  fireEvent.pointerDown(screen.getByRole('button', { name: 'Opções da conversa' }), { button: 0, ctrlKey: false, pointerType: 'mouse' });
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Opções da conversa' }), { key: 'Enter' });
   expect(await screen.findByRole('menuitem', { name: 'Marcar como lida' })).toBeTruthy();
   fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
   fireEvent.click(screen.getByRole('button', { name: 'Conversa' }));
