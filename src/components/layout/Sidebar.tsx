@@ -1,4 +1,5 @@
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useLayoutEffect } from 'react';
 import { motion } from 'framer-motion';
 import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, Globe, ClipboardCheck, Megaphone, Link, MessageSquare, Bell, Home, Cake, Settings, Trash2, Building2, Sparkles } from 'lucide-react';
 import { SeasonalEffectsButton } from '@/components/seasonal/SeasonalEffectsButton';
@@ -31,6 +32,17 @@ const menuItems = [
   { id: 'documentation', icon: BookOpen, label: 'Documentação', mainAdminOnly: true },
 ];
 export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
+  useLayoutEffect(() => {
+    const main = document.querySelector<HTMLElement>('.ewvon-main');
+    if (!main) return;
+    const align = () => document.documentElement.style.setProperty('--navigation-page-top', `${main.getBoundingClientRect().top}px`);
+    align();
+    const observer = new ResizeObserver(align);
+    observer.observe(main);
+    if (main.previousElementSibling) observer.observe(main.previousElementSibling);
+    window.addEventListener('resize', align);
+    return () => { observer.disconnect(); window.removeEventListener('resize', align); document.documentElement.style.removeProperty('--navigation-page-top'); };
+  }, []);
   const { profile, isAdmin, canAccess, roles } = useAuth();
   const { counts } = useNotifications();
   const isSuperAdmin = roles.some((r: any) => (r.role as string) === 'super_admin');
