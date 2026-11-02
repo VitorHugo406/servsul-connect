@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ewvor-runtime-v4';
+const CACHE_NAME = 'ewvor-runtime-v5';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/icons/logo-192.png',
@@ -39,6 +39,16 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  // Development modules must never be cached: React and its renderer must
+  // always come from the same Vite dependency generation.
+  if (
+    url.pathname.startsWith('/node_modules/') ||
+    url.pathname.startsWith('/src/') ||
+    url.pathname.startsWith('/@') ||
+    url.pathname.startsWith('/__') ||
+    url.pathname === '/sw.js'
+  ) return;
+
   // Never cache authentication, database, or server-function responses.
   if (
     url.pathname.includes('/rest/') ||
@@ -78,6 +88,9 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
+
+  // Only explicitly listed static files are safe for cache-first delivery.
+  if (!STATIC_ASSETS.includes(url.pathname)) return;
 
   // Cache-first for small same-origin static files, network-first on a miss.
   event.respondWith(
