@@ -183,7 +183,7 @@ export function BirthdaysSection() {
     finally { setGeneratingPdf(false); }
   };
 
-  if (loading) return <div className="p-4 md:p-6 space-y-6"><div className="flex items-center gap-3"><Skeleton className="h-12 w-12 rounded-xl" /><div className="space-y-2"><Skeleton className="h-6 w-64 rounded-md" /><Skeleton className="h-3.5 w-80 rounded-md" /></div></div><StatsSkeleton count={4} /><CardGridSkeleton count={4} columns="lg:grid-cols-2" cardHeight="h-24" /></div>;
+  if (loading) return <div className="p-4 md:p-6 space-y-6"><div className="flex items-center gap-3"><Skeleton className="h-12 w-12 rounded-xl" /><div className="space-y-2"><Skeleton className="h-6 w-64 rounded-md" /><Skeleton className="h-3.5 w-80 rounded-md" /></div></div>{canManage && <StatsSkeleton count={4} />}<CardGridSkeleton count={4} columns="lg:grid-cols-2" cardHeight="h-24" /></div>;
   if (!canManage) {
     const upcoming = upcomingBirthdayPeople(birthdayPeople, currentDay);
     return <div className="space-y-6 p-4 md:p-6">

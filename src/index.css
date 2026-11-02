@@ -1105,6 +1105,17 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
   background: transparent !important;
   box-shadow: none !important;
 }
+.clean-section :is([data-ui="card"], .ewvon-glass-card, .ewvon-glass-panel):hover {
+  box-shadow: var(--clean-panel-shadow) !important;
+}
+.clean-section [data-ui="card"] [data-ui="card"] {
+  border-radius: var(--clean-control-radius) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+.clean-section :is(.bg-gradient-to-br, .bg-gradient-to-r, .gradient-card):not(button):not([role="switch"]):not([role="checkbox"]) {
+  background-image: var(--clean-panel-surface) !important;
+}
 .board-selection > :first-child { padding: 20px 20px 8px !important; }
 .board-selection-item { min-height: 148px; }
 @media (max-width: 767px) {
