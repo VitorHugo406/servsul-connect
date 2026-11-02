@@ -1072,3 +1072,42 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
   }
   :is(button, .apple-glass-button) { backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
+
+/* Home-derived tab surfaces; never applied to chat, calendar or an open board. */
+:root {
+  --clean-panel-radius: 21px;
+  --clean-control-radius: 12px;
+  --clean-panel-border: hsl(var(--border) / .8);
+  --clean-panel-shadow: 0 3px 14px hsl(var(--foreground) / .035);
+  --clean-panel-surface: linear-gradient(145deg, hsl(var(--card) / .97), hsl(var(--muted) / .22));
+}
+.clean-section { color: hsl(var(--foreground)); }
+.clean-section > :first-child { padding: 20px !important; }
+.clean-section :is([data-ui="card"], .ewvon-glass-panel, .ewvon-glass-card) {
+  border: 1px solid var(--clean-panel-border) !important;
+  border-radius: var(--clean-panel-radius) !important;
+  background-color: hsl(var(--card)) !important;
+  background-image: var(--clean-panel-surface) !important;
+  color: hsl(var(--card-foreground));
+  box-shadow: var(--clean-panel-shadow) !important;
+}
+.clean-section :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, [role="combobox"], [role="tablist"]) {
+  border-radius: var(--clean-control-radius) !important;
+  border-color: hsl(var(--border)) !important;
+}
+.clean-section :is(h1, h2, h3, h4) { letter-spacing: 0 !important; }
+.clean-section :is(.apple-glass-button, button:not([role="switch"]):not([role="checkbox"]):not([role="radio"]):not([role="tab"])) {
+  border-radius: var(--clean-control-radius);
+}
+.clean-section :is(.h-8.w-8, .h-9.w-9, .h-10.w-10).apple-glass-button { border-radius: 50%; }
+.clean-section > :first-child > div:first-child:has(h2):not([data-ui="card"]) {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.board-selection > :first-child { padding: 20px 20px 8px !important; }
+.board-selection-item { min-height: 148px; }
+@media (max-width: 767px) {
+  .clean-section { --clean-panel-radius: 17px; }
+  .clean-section > :first-child { padding: 14px !important; }
+}
