@@ -980,15 +980,22 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 .chat-composer { background: hsl(var(--card)); border-top: 1px solid hsl(var(--border)); padding-bottom: max(10px, env(safe-area-inset-bottom)) !important; }
 .chat-date-label { background: hsl(var(--card)); color: hsl(var(--muted-foreground)); border-radius: 6px; box-shadow: var(--chat-shadow); }
 .chat-mobile-open > .chat-thread > .chat-thread-header { padding-left: 48px; }
-/* The selected section is the content area itself, never a framed panel. */
+/* A single rounded background sits behind the section, without a visible border. */
 .ewvon-main {
+  margin: 4px 12px 8px 88px !important;
+  padding: 16px !important;
   border: 0 !important;
-  border-radius: 0 !important;
+  border-radius: 24px !important;
   box-shadow: none !important;
   outline: 0 !important;
-  background: hsl(var(--background)) !important;
+  background: hsl(var(--card)) !important;
+  background-clip: padding-box;
+}
+@media (min-width: 768px) and (max-width: 1100px) {
+  .ewvon-main { margin-left: 82px !important; margin-right: 8px !important; padding: 12px !important; }
 }
 @media (max-width: 767px) {
+  .ewvon-main { margin: 8px !important; padding: 10px !important; border-radius: 18px !important; }
   .chat-thread-header { min-height: 60px; }
   .chat-bubble { padding: 7px 10px 5px; }
   .chat-workspace .chat-thread-header > button { box-shadow: none; }
