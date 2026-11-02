@@ -265,6 +265,39 @@ export type Database = {
           },
         ]
       }
+      attachment_lifecycle: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          storage_bucket: string
+          storage_path: string
+          temporary_deleted_at: string | null
+          temporary_expires_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          storage_bucket?: string
+          storage_path: string
+          temporary_deleted_at?: string | null
+          temporary_expires_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          storage_bucket?: string
+          storage_path?: string
+          temporary_deleted_at?: string | null
+          temporary_expires_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       attachments: {
         Row: {
           announcement_id: string | null
@@ -1151,6 +1184,103 @@ export type Database = {
           },
         ]
       }
+      meeting_booking_participants: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          profile_id: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          profile_id: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_booking_participants_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_booking_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_bookings: {
+        Row: {
+          booked_by: string
+          company_id: string
+          created_at: string
+          ends_at: string
+          id: string
+          notes: string | null
+          room_id: string
+          starts_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          booked_by: string
+          company_id: string
+          created_at?: string
+          ends_at: string
+          id?: string
+          notes?: string | null
+          room_id: string
+          starts_at: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          booked_by?: string
+          company_id?: string
+          created_at?: string
+          ends_at?: string
+          id?: string
+          notes?: string | null
+          room_id?: string
+          starts_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_bookings_booked_by_fkey"
+            columns: ["booked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_bookings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_bookings_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_participants: {
         Row: {
           created_at: string
@@ -1189,6 +1319,53 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_rooms: {
+        Row: {
+          capacity: number
+          closes_at: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          opens_at: string
+          updated_at: string
+        }
+        Insert: {
+          capacity: number
+          closes_at: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          opens_at: string
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number
+          closes_at?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          opens_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_rooms_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -1586,6 +1763,7 @@ export type Database = {
           company: string | null
           company_id: string
           cover_url: string | null
+          cpf: string | null
           created_at: string
           description: string | null
           display_name: string | null
@@ -1599,6 +1777,7 @@ export type Database = {
           registration_number: string | null
           sector_id: string | null
           team_alert_times: string[] | null
+          team_alerts_enabled: boolean
           updated_at: string
           user_id: string
           user_status: string | null
@@ -1612,6 +1791,7 @@ export type Database = {
           company?: string | null
           company_id?: string
           cover_url?: string | null
+          cpf?: string | null
           created_at?: string
           description?: string | null
           display_name?: string | null
@@ -1625,6 +1805,7 @@ export type Database = {
           registration_number?: string | null
           sector_id?: string | null
           team_alert_times?: string[] | null
+          team_alerts_enabled?: boolean
           updated_at?: string
           user_id: string
           user_status?: string | null
@@ -1638,6 +1819,7 @@ export type Database = {
           company?: string | null
           company_id?: string
           cover_url?: string | null
+          cpf?: string | null
           created_at?: string
           description?: string | null
           display_name?: string | null
@@ -1651,6 +1833,7 @@ export type Database = {
           registration_number?: string | null
           sector_id?: string | null
           team_alert_times?: string[] | null
+          team_alerts_enabled?: boolean
           updated_at?: string
           user_id?: string
           user_status?: string | null
@@ -1682,6 +1865,7 @@ export type Database = {
           frequency: string
           id: string
           is_active: boolean
+          last_sent_on: string | null
           metrics: Json
           month_day: number | null
           send_time: string
@@ -1698,6 +1882,7 @@ export type Database = {
           frequency: string
           id?: string
           is_active?: boolean
+          last_sent_on?: string | null
           metrics?: Json
           month_day?: number | null
           send_time?: string
@@ -1714,6 +1899,7 @@ export type Database = {
           frequency?: string
           id?: string
           is_active?: boolean
+          last_sent_on?: string | null
           metrics?: Json
           month_day?: number | null
           send_time?: string
@@ -1805,6 +1991,7 @@ export type Database = {
           id: string
           member_profile_id: string
           supervisor_id: string
+          team_id: string | null
           team_name: string | null
         }
         Insert: {
@@ -1812,6 +1999,7 @@ export type Database = {
           id?: string
           member_profile_id: string
           supervisor_id: string
+          team_id?: string | null
           team_name?: string | null
         }
         Update: {
@@ -1819,6 +2007,7 @@ export type Database = {
           id?: string
           member_profile_id?: string
           supervisor_id?: string
+          team_id?: string | null
           team_name?: string | null
         }
         Relationships: [
@@ -1827,6 +2016,13 @@ export type Database = {
             columns: ["member_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -2829,6 +3025,7 @@ export type Database = {
           can_access_bh: boolean
           can_access_fechamento: boolean
           can_access_management: boolean
+          can_access_meeting_rooms: boolean
           can_access_orbs: boolean
           can_access_password_change: boolean
           can_create_war_room: boolean
@@ -2843,6 +3040,7 @@ export type Database = {
           can_access_bh?: boolean
           can_access_fechamento?: boolean
           can_access_management?: boolean
+          can_access_meeting_rooms?: boolean
           can_access_orbs?: boolean
           can_access_password_change?: boolean
           can_create_war_room?: boolean
@@ -2857,6 +3055,7 @@ export type Database = {
           can_access_bh?: boolean
           can_access_fechamento?: boolean
           can_access_management?: boolean
+          can_access_meeting_rooms?: boolean
           can_access_orbs?: boolean
           can_access_password_change?: boolean
           can_create_war_room?: boolean
@@ -3157,6 +3356,7 @@ export type Database = {
           company: string | null
           company_id: string
           cover_url: string | null
+          cpf: string | null
           created_at: string
           description: string | null
           display_name: string | null
@@ -3170,6 +3370,7 @@ export type Database = {
           registration_number: string | null
           sector_id: string | null
           team_alert_times: string[] | null
+          team_alerts_enabled: boolean
           updated_at: string
           user_id: string
           user_status: string | null
@@ -3183,6 +3384,8 @@ export type Database = {
         }
       }
       can_edit_note: { Args: { _note_id: string }; Returns: boolean }
+      can_read_attachment_object: { Args: { _name: string }; Returns: boolean }
+      can_use_meeting_rooms: { Args: never; Returns: boolean }
       can_view_calendar_event: {
         Args: { _created_by: string; _event_id: string }
         Returns: boolean
@@ -3259,6 +3462,7 @@ export type Database = {
           company: string | null
           company_id: string
           cover_url: string | null
+          cpf: string | null
           created_at: string
           description: string | null
           display_name: string | null
@@ -3272,6 +3476,7 @@ export type Database = {
           registration_number: string | null
           sector_id: string | null
           team_alert_times: string[] | null
+          team_alerts_enabled: boolean
           updated_at: string
           user_id: string
           user_status: string | null
@@ -3314,6 +3519,15 @@ export type Database = {
       is_note_shared_with_me: { Args: { _note_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       is_war_room_member: { Args: { _war_room_id: string }; Returns: boolean }
+      link_attachments_from_text: {
+        Args: {
+          _author_profile: string
+          _content: string
+          _dm_id: string
+          _message_id: string
+        }
+        Returns: number
+      }
       list_companies_with_stats: {
         Args: never
         Returns: {
@@ -3394,6 +3608,10 @@ export type Database = {
       refresh_board_monthly_scores: {
         Args: { _board_id: string }
         Returns: undefined
+      }
+      reorder_board_tasks_fast: {
+        Args: { _board_id: string; _updates: Json }
+        Returns: number
       }
       resolve_board_share_link: {
         Args: { _token: string }
