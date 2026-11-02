@@ -1,4 +1,5 @@
 ## Current work
+- [ ] Apply Apple-inspired glass consistently to navigation bars and all buttons
 - [x] Emphasize chat tails, show every sender's photo and department, align navigation with page, and add blue manual unread markers (4 targeted tests passed; build OK; authenticated visual check unavailable on external Supabase)
 - [x] Prevent stale React runtime on company selection (5 regression tests passed; company selection and login rendered without errors; no preview service workers)
 - [x] Align chat presentation across individual, group and sector conversations with WhatsApp/Teams references (build OK; public page opens without runtime errors)
