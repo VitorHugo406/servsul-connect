@@ -939,7 +939,7 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
    Section roots must not add a second panel around an entire tab. */
 .ewvon-main > :first-child {
   border: 0 !important;
-  border-radius: 0 !important;
+  border-radius: inherit !important;
   box-shadow: none !important;
   outline: 0 !important;
 }
@@ -992,7 +992,7 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 /* A single rounded background sits behind the section, without a visible border. */
 .ewvon-main {
   margin: 4px 12px 8px 88px !important;
-  padding: 16px !important;
+  padding: 0 !important;
   border: 0 !important;
   border-radius: 24px !important;
   box-shadow: none !important;
@@ -1001,10 +1001,10 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
   background-clip: padding-box;
 }
 @media (min-width: 768px) and (max-width: 1100px) {
-  .ewvon-main { margin-left: 82px !important; margin-right: 8px !important; padding: 12px !important; }
+  .ewvon-main { margin-left: 82px !important; margin-right: 8px !important; padding: 0 !important; }
 }
 @media (max-width: 767px) {
-  .ewvon-main { margin: 8px !important; padding: 10px !important; border-radius: 18px !important; }
+  .ewvon-main { margin: 8px !important; padding: 0 !important; border-radius: 18px !important; }
   .chat-thread-header { min-height: 60px; }
   .chat-bubble { padding: 7px 10px 5px; }
   .chat-workspace .chat-thread-header > button { box-shadow: none; }
@@ -1121,4 +1121,13 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 @media (max-width: 767px) {
   .clean-section { --clean-panel-radius: 17px; }
   .clean-section > :first-child { padding: 14px !important; }
+}
+
+/* The tab and its background share one outline, never an inset frame. */
+.ewvon-main > :first-child {
+  min-height: 100%;
+  border: 0 !important;
+  border-radius: inherit !important;
+  box-shadow: none !important;
+  outline: 0 !important;
 }

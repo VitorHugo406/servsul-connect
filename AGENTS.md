@@ -1,6 +1,7 @@
 # Architecture rules
 
 - Clean tab surfaces are scoped by section containers and semantic Card markers; chat, calendar, crisis screens and open task boards retain their domain presentation, while board selection uses the clean scope.
+- The main shell owns tab geometry; section roots inherit its radius without an inset shell frame, preserving individual controls and domain surfaces.
 - Birthday presentation separates ordinary-user upcoming name/department lists from management report controls using authenticated roles; this is a display rule, not a change to database access.
 - Meeting API resources are read-only, filtered by integration companies and active rooms, with profile identities for organizers/participants; availability subtracts persisted bookings from São Paulo room hours using half-open intervals.
 - Apple-inspired glass uses shared semantic CSS optics and the Button base class on the web; do not install native Expo modules in the Vite application.
