@@ -34,6 +34,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useMessageReactions } from '@/hooks/useMessageReactions';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
+import { useChatTypography } from '@/hooks/useChatTypography';
+import { useChatListMarks } from '@/hooks/useChatListMarks';
+import { matchesChatFilter, type ChatListFilter } from '@/lib/chatFilters';
+
 type ChatMode = 'sectors' | 'direct' | 'groups';
 
 export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
@@ -52,7 +56,9 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const [showMobileMedia, setShowMobileMedia] = useState(false);
   const [mobileListSearch, setMobileListSearch] = useState('');
   const [conversationSearch, setConversationSearch] = useState('');
-  const [conversationFilter, setConversationFilter] = useState<'all' | 'direct' | 'groups' | 'sectors'>('all');
+  const [conversationFilter, setConversationFilter] = useState<ChatListFilter>('all');
+  const { className: typographyClass } = useChatTypography();
+  const { unread: unreadMarks, favorites } = useChatListMarks();
   const [showSectorPersonalization, setShowSectorPersonalization] = useState(false);
   const [sectorBackground, setSectorBackground] = useState('');
   const [latestGroupMessages, setLatestGroupMessages] = useState<Record<string, { content: string; created_at: string }>>({});
@@ -140,6 +146,21 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     }
     return true;
   }), [messages, messageSearchQuery, searchDate]);
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (document.querySelector('[role="dialog"]') || event.repeat) return;
+      if (event.altKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 'm') {
+        event.preventDefault(); document.querySelector<HTMLTextAreaElement>('.chat-composer textarea')?.focus();
+      } else if (event.altKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 'f') {
+        event.preventDefault(); const search = document.querySelector<HTMLInputElement>('input[aria-label="Buscar conversas"]'); search?.focus();
+      } else if (event.key === 'Escape') {
+        setReplyTo(null); setShowSearch(false); setMessageSearchQuery(''); setSearchDate(null);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   // Only auto-scroll on the first successful load or when the user is already
   // near the bottom. Never force the viewport while the user is reading history.
@@ -284,7 +305,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
 
   if (isMobile && ((chatMode === 'direct' && selectedUserId) || (chatMode === 'groups' && selectedGroupId))) return <div className="chat-mobile-open relative flex h-full min-h-0 flex-col overflow-hidden"><Button variant="ghost" size="icon" onClick={handleBack} title="Voltar às conversas" aria-label="Voltar às conversas" className="absolute left-1 top-3 z-30 h-9 w-9 rounded-full"><ArrowLeft className="h-5 w-5" /></Button>{chatMode === 'direct' ? <DirectMessageChat partnerId={selectedUserId} /> : <PrivateGroupChat group={selectedGroup} />}</div>;
 
-  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="chat-workspace flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden !border-0 !rounded-none bg-card !p-0 !shadow-none">
+  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={cn("chat-workspace flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden !border-0 !rounded-none bg-card !p-0 !shadow-none", typographyClass)}>
 
     {isMobile && <>
       <div className="chat-thread-header flex shrink-0 items-center gap-2 px-3 py-2">
@@ -304,16 +325,19 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
           <div className="flex items-center justify-between"><h3 className="text-xl font-semibold text-foreground">Conversas</h3>
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" title="Filtrar conversas"><UsersRound className="h-4 w-4"/></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Mostrar</DropdownMenuLabel><DropdownMenuSeparator/>
               <DropdownMenuItem onSelect={() => setConversationFilter('all')}>Todas as conversas</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setConversationFilter('unread')}>Não lidas</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setConversationFilter('favorites')}>Favoritas</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setConversationFilter('direct')}>Individuais</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setConversationFilter('groups')}>Grupos</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setConversationFilter('sectors')}>Setores</DropdownMenuItem>
             </DropdownMenuContent></DropdownMenu>
           </div>
-          <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/><Input value={conversationSearch} onChange={e => setConversationSearch(e.target.value)} placeholder="Buscar conversa..." className="h-9 rounded-lg border-border/60 bg-card pl-9 text-sm"/></div>
+          <div className="flex flex-wrap gap-1">{(['all', 'unread', 'favorites'] as const).map(filter => <Button key={filter} variant={conversationFilter === filter ? 'secondary' : 'ghost'} size="sm" className="h-7 px-2 text-xs" aria-pressed={conversationFilter === filter} onClick={() => setConversationFilter(filter)}>{{all:'Todas',unread:'Não lidas',favorites:'Favoritas'}[filter]}</Button>)}</div>
+          <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/><Input value={conversationSearch} onChange={e => setConversationSearch(e.target.value)} aria-label="Buscar conversas" placeholder="Buscar conversa..." className="h-9 rounded-lg border-border/60 bg-card pl-9 text-sm"/></div>
         </div>
         <ScrollArea className="min-h-0 flex-1">
           <div className="space-y-0 p-0">
-            {(conversationFilter === 'all' || conversationFilter === 'direct') && conversations.filter(c => (c.partner.display_name || c.partner.name || '').toLowerCase().includes(conversationSearch.toLowerCase())).map(c => {
+            {conversations.filter(c => matchesChatFilter(conversationFilter, 'direct', 'dm:'+c.partnerId, c.unreadCount, unreadMarks, favorites) && (c.partner.display_name || c.partner.name || '').toLowerCase().includes(conversationSearch.toLowerCase())).map(c => {
               const title = c.partner.display_name || c.partner.name;
               const selected = chatMode === 'direct' && selectedUserId === c.partnerId;
               const time = new Date(c.lastMessage.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -323,14 +347,14 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
                 {c.unreadCount>0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">{c.unreadCount}</span>}
               </Button></ChatConversationItem>;
             })}
-            {(conversationFilter === 'all' || conversationFilter === 'groups') && groups.filter(g => g.name.toLowerCase().includes(conversationSearch.toLowerCase())).map(g => {
+            {groups.filter(g => matchesChatFilter(conversationFilter, 'groups', 'group:'+g.id, 0, unreadMarks, favorites) && g.name.toLowerCase().includes(conversationSearch.toLowerCase())).map(g => {
               const selected = chatMode === 'groups' && selectedGroupId === g.id;
               return <ChatConversationItem key={'group-'+g.id} conversationKey={'group:'+g.id}><Button variant="ghost" onClick={() => {setChatMode('groups');setSelectedGroupId(g.id);setSelectedUserId(null);}} className={cn('chat-conversation-row flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',selected?'chat-conversation-selected':'hover:bg-muted/70')}>
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-sm font-semibold text-secondary"><UsersRound className="h-4 w-4"/></div>
                 <div className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-foreground">{g.name}</span><p className="truncate text-xs text-muted-foreground">{previewText(latestGroupMessages[g.id]?.content || g.description || 'Sem mensagens')}</p><div className="mt-1 flex items-center gap-1.5"><span className="shrink-0 rounded-sm bg-secondary/10 px-1 py-0.5 text-[9px] font-medium leading-none text-secondary">Grupo</span><span className="text-[10px] leading-none text-muted-foreground">{previewTime(latestGroupMessages[g.id]?.created_at)}</span></div></div>
               </Button></ChatConversationItem>;
             })}
-            {(conversationFilter === 'all' || conversationFilter === 'sectors') && accessibleSectors.filter((sec:any) => sec.name.toLowerCase().includes(conversationSearch.toLowerCase())).map((sec:any) => {
+            {accessibleSectors.filter((sec:any) => matchesChatFilter(conversationFilter, 'sectors', 'sector:'+sec.id, 0, unreadMarks, favorites) && sec.name.toLowerCase().includes(conversationSearch.toLowerCase())).map((sec:any) => {
               const selected = chatMode === 'sectors' && effectiveSector === sec.id;
               return <ChatConversationItem key={'sector-'+sec.id} conversationKey={'sector:'+sec.id}><Button variant="ghost" onClick={() => {setChatMode('sectors');setActiveSector(sec.id);setSelectedUserId(null);setSelectedGroupId(null);}} className={cn('chat-conversation-row flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',selected?'chat-conversation-selected':'hover:bg-muted/70')}>
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white" style={{backgroundColor:sec.color || '#64748b'}}>{sec.name.charAt(0).toUpperCase()}</div>

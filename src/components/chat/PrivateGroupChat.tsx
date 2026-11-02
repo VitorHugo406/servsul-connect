@@ -1,3 +1,4 @@
+import { useChatTypography } from '@/hooks/useChatTypography';
 import { ChatSenderAvatar, ChatSenderLabel } from './ChatSenderIdentity';
 import { DateSeparator } from './ChatMessage';
 import { scrollChatToBottom, isNearBottom } from '@/lib/chatScroll';
@@ -35,6 +36,7 @@ import { ChatPersonalizationDialog, getChatBackgroundKey } from '@/components/ch
 interface PrivateGroupChatProps { group: PrivateGroup | null; }
 
 export function PrivateGroupChat({ group }: PrivateGroupChatProps) {
+  const { className: typographyClass } = useChatTypography();
   const { profile, user } = useAuth();
   const { messages, loading, sendMessage } = useGroupMessages(group?.id || null);
   const { members, addMember, removeMember, updateMemberRole } = useGroupMembers(group?.id || null);
