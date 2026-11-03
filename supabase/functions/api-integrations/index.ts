@@ -34,7 +34,7 @@ import { availabilityWindow, freeIntervals, isOccupied, type RoomBooking } from 
 const corsHeaders = {
   ...sdkCorsHeaders,
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-api-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, accept, cache-control, pragma, x-requested-with, x-api-key, x-api-token, api-key, api-token, token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 };
 
@@ -94,8 +94,11 @@ async function validateAdminAuth(req: Request): Promise<{ userId: string; compan
 }
 
 async function validateApiAuth(req: Request): Promise<{ integrationId: string; companyId: string; scopeAll: boolean } | null> {
-  const apiKey = req.headers.get("X-API-KEY");
-  const apiToken = req.headers.get("X-API-TOKEN");
+  const h = req.headers;
+  const q = new URL(req.url).searchParams;
+  const bearer = h.get("Authorization")?.replace(/^Bearer\s+/i, "");
+  const apiKey = h.get("X-API-KEY") || h.get("api-key") || q.get("api_key") || (bearer?.startsWith("sk_") ? bearer : null);
+  const apiToken = h.get("X-API-TOKEN") || h.get("api-token") || h.get("token") || q.get("api_token") || (bearer?.startsWith("st_") ? bearer : null);
   if (!apiKey || !apiToken) return null;
 
   const admin = getAdminClient();
@@ -883,7 +886,8 @@ async function handleMeetingRooms(url: URL, companyIds: string[], roomId?: strin
 // ===== MAIN HANDLER =====
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    const requested = req.headers.get("Access-Control-Request-Headers");
+    return new Response(null, { status: 204, headers: { ...corsHeaders, "Access-Control-Allow-Headers": requested || corsHeaders["Access-Control-Allow-Headers"], "Access-Control-Max-Age": "86400" } });
   }
 
   try {
