@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import plannerEmptyIllustration from '@/assets/planner-empty-illustration.png';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -54,16 +54,11 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CheckSquare, CheckCircle2 } from 'lucide-react';
 
-const slugifyBoardName = (name: string) => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-
 export function TaskBoardSection() {
   const { user } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { boards, loading: boardsLoading, createBoard, updateBoard, deleteBoard } = useTaskBoards();
   const isMobile = useIsMobile();
-  const boardSlugFromPath = location.pathname.match(/^\/tarefas\/([^/]+)$/)?.[1] || null;
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
   const [showCreateBoard, setShowCreateBoard] = useState(false);
   const [boardName, setBoardName] = useState('');
@@ -73,24 +68,14 @@ export function TaskBoardSection() {
   const [boardOrder, setBoardOrder] = useState<string[]>([]);
   const [draggedBoardIdx, setDraggedBoardIdx] = useState<number | null>(null);
 
-  // Deep link por slug do mural, com ID no final para evitar colisões de nomes.
+  // Permite abrir um mural específico via URL (?section=tasks&board=...)
   useEffect(() => {
-    const legacyBoardId = searchParams.get('board');
-    if (legacyBoardId) {
-      const legacyBoard = boards.find(b => b.id === legacyBoardId);
-      if (legacyBoard) {
-        navigate('/tarefas/' + slugifyBoardName(legacyBoard.name) + '-' + legacyBoard.id, { replace: true });
-        setSelectedBoardId(legacyBoard.id);
-        return;
-      }
+    const section = searchParams.get('section');
+    const board = searchParams.get('board');
+    if (section === 'tasks' && board && board !== selectedBoardId) {
+      setSelectedBoardId(board);
     }
-    if (!boardSlugFromPath) {
-      if (selectedBoardId !== null) setSelectedBoardId(null);
-      return;
-    }
-    const matchedBoard = boards.find(b => slugifyBoardName(b.name) + '-' + b.id === boardSlugFromPath);
-    if (matchedBoard && matchedBoard.id !== selectedBoardId) setSelectedBoardId(matchedBoard.id);
-  }, [boards, boardSlugFromPath, searchParams, navigate, selectedBoardId]);
+  }, [searchParams, selectedBoardId]);
 
   // Persist board order in localStorage
   const ORDER_KEY = 'board_order';
@@ -159,7 +144,7 @@ export function TaskBoardSection() {
     const { error } = await deleteBoard(id);
     if (error) { toast.error('Erro ao excluir mural'); return; }
     toast.success('Mural excluído com sucesso!');
-    if (selectedBoardId === id) { setSelectedBoardId(null); navigate('/tarefas', { replace: true }); }
+    if (selectedBoardId === id) setSelectedBoardId(null);
   };
 
   const handleEditBoard = async () => {
@@ -183,13 +168,13 @@ export function TaskBoardSection() {
 
   if (selectedBoardId) {
     const board = boards.find(b => b.id === selectedBoardId);
-    if (!board) return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+    if (!board) { setSelectedBoardId(null); return null; }
     return (
       <BoardView
         board={board}
         boards={boards}
-        onBack={() => { setSelectedBoardId(null); navigate('/tarefas'); }}
-        onSelectBoard={(id: string) => { const nextBoard = boards.find(b => b.id === id); if (nextBoard) { setSelectedBoardId(id); navigate('/tarefas/' + slugifyBoardName(nextBoard.name) + '-' + nextBoard.id); } }}
+        onBack={() => setSelectedBoardId(null)}
+        onSelectBoard={(id: string) => setSelectedBoardId(id)}
         onUpdateBoard={updateBoard}
         isOwner={board.owner_id === user?.id}
         currentUserId={user?.id || ''}
@@ -243,7 +228,7 @@ export function TaskBoardSection() {
                   draggedBoardIdx === index && 'opacity-50 ring-2 ring-primary',
                 )}
                 style={getBoardBgStyle(board.background_image)}
-                onClick={() => { setSelectedBoardId(board.id); navigate('/tarefas/' + slugifyBoardName(board.name) + '-' + board.id); }}
+                onClick={() => setSelectedBoardId(board.id)}
                 draggable
                 onDragStart={(e) => handleBoardDragStart(e, index)}
                 onDragOver={(e) => handleBoardDragOver(e, index)}
@@ -1108,87 +1093,74 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     if (position !== undefined) setDragOverPosition(position);
   };
   const handleDragLeave = () => { setDragOverColumn(null); setDragOverPosition(null); };
-  const handleDrop = (e: React.DragEvent, colId: string, position?: number) => {
+  const handleDrop = async (e: React.DragEvent, colId: string, position?: number) => {
     e.preventDefault();
     setDragOverColumn(null); setDragOverPosition(null);
     if (!draggedTask) return;
-    const task = draggedTask;
-    // The visual state is released immediately; everything else runs in background.
-    setDraggedTask(null);
+    if (draggedTask.status === colId && position !== undefined) {
+      await reorderInColumn(draggedTask.id, position);
+    } else if (draggedTask.status !== colId) {
+      // Workflow rule check
+      const moveCheck = canMoveToColumn(draggedTask.status, colId);
+      if (!moveCheck.allowed) {
+        toast.error(moveCheck.reason || 'Movimento bloqueado por regra de workflow');
+        setDraggedTask(null);
+        return;
+      }
+      const colTasks = tasks.filter(t => t.status === colId);
+      await moveTask(draggedTask.id, colId, position ?? colTasks.length);
 
-    if (task.status === colId && position !== undefined) {
-      void reorderInColumn(task.id, position);
-      return;
-    }
-    if (task.status === colId) return;
-
-    // Workflow rule check
-    const moveCheck = canMoveToColumn(task.status, colId);
-    if (!moveCheck.allowed) {
-      toast.error(moveCheck.reason || 'Movimento bloqueado por regra de workflow');
-      return;
-    }
-
-    const sourceCol = columns.find(c => c.id === task.status);
-    const targetCol = columns.find(c => c.id === colId);
-    const colTasks = tasks.filter(t => t.status === colId);
-
-    // Optimistic move (updates local state synchronously inside the hook)
-    const movePromise = moveTask(task.id, colId, position ?? colTasks.length);
-
-    const autoUpdates: Record<string, any> = {};
-    if (targetCol) {
-      if (targetCol.auto_assign_to) autoUpdates.assigned_to = targetCol.auto_assign_to;
-      if (targetCol.auto_cover) autoUpdates.cover_image = targetCol.auto_cover;
-      if ((targetCol as any).is_template_column) autoUpdates.is_template = true;
-
-      if (targetCol.is_conclusion) {
-        autoUpdates.completed_at = new Date().toISOString();
-        if (task.due_date) {
-          const due = new Date(task.due_date);
-          const now = new Date();
-          due.setHours(0, 0, 0, 0);
-          now.setHours(0, 0, 0, 0);
-          const diffDays = Math.ceil((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
-          autoUpdates.completed_late = diffDays > 0;
-          autoUpdates.delay_days = diffDays > 0 ? diffDays : 0;
-        } else {
-          autoUpdates.completed_late = false;
-          autoUpdates.delay_days = 0;
-        }
+      // Log activity
+      const sourceCol = columns.find(c => c.id === draggedTask.status);
+      const targetCol = columns.find(c => c.id === colId);
+      if (profile && targetCol) {
+        await logTaskActivity(
+          draggedTask.id,
+          profile.id,
+          profile.display_name || profile.name,
+          'move',
+          `moveu de "${sourceCol?.title || '?'}" para "${targetCol.title}"`
+        );
       }
 
-      if (Object.keys(autoUpdates).length > 0) {
+      // Apply column automations on drag
+      if (targetCol) {
+        const autoUpdates: Record<string, any> = {};
+        if (targetCol.auto_assign_to) autoUpdates.assigned_to = targetCol.auto_assign_to;
+        if (targetCol.auto_cover) autoUpdates.cover_image = targetCol.auto_cover;
+        if ((targetCol as any).is_template_column) autoUpdates.is_template = true;
+
         if (targetCol.is_conclusion) {
-          toast.info(autoUpdates.completed_late ? `Concluída com ${autoUpdates.delay_days} dia(s) de atraso` : 'Concluída no prazo!');
-        } else {
-          toast.info('Automações da coluna aplicadas');
+          autoUpdates.completed_at = new Date().toISOString();
+          if (draggedTask.due_date) {
+            const due = new Date(draggedTask.due_date);
+            const now = new Date();
+            due.setHours(0, 0, 0, 0);
+            now.setHours(0, 0, 0, 0);
+            const diffDays = Math.ceil((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+            autoUpdates.completed_late = diffDays > 0;
+            autoUpdates.delay_days = diffDays > 0 ? diffDays : 0;
+          } else {
+            autoUpdates.completed_late = false;
+            autoUpdates.delay_days = 0;
+          }
         }
+
+        if (Object.keys(autoUpdates).length > 0) {
+          await updateTask(draggedTask.id, autoUpdates);
+          if (targetCol.is_conclusion) {
+            toast.info(autoUpdates.completed_late ? `Concluída com ${autoUpdates.delay_days} dia(s) de atraso` : 'Concluída no prazo!');
+          } else {
+            toast.info('Automações da coluna aplicadas');
+          }
+        }
+
+        // Apply auto-subtasks
+        await applyColumnAutoSubtasks(draggedTask.id, colId);
       }
     }
-
-    void (async () => {
-      try {
-        await movePromise;
-        if (profile && targetCol) {
-          void logTaskActivity(
-            task.id,
-            profile.id,
-            profile.display_name || profile.name,
-            'move',
-            `moveu de "${sourceCol?.title || '?'}" para "${targetCol.title}"`
-          );
-        }
-        if (targetCol) {
-          if (Object.keys(autoUpdates).length > 0) await updateTask(task.id, autoUpdates);
-          await applyColumnAutoSubtasks(task.id, colId);
-        }
-      } catch (err) {
-        console.error('Erro ao concluir movimentação do card:', err);
-      }
-    })();
+    setDraggedTask(null);
   };
-
   const handleDragEnd = () => { setDraggedTask(null); setDragOverColumn(null); setDragOverPosition(null); };
 
   const boardBg = getBoardBg(board.background_image);
@@ -1211,7 +1183,6 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     boardScrollRef.current.scrollLeft = dragStartRef.current.scrollLeft - dx;
   };
   const handleBoardMouseUp = () => {
-    if (!dragStartRef.current) return;
     setIsDraggingBoard(false);
     dragStartRef.current = null;
   };
@@ -2253,37 +2224,22 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     );
                   })()}
                   </div>
-                  {/* Footer controls: centered glass buttons with consistent vertical alignment */}
-                  <div className="mt-auto flex min-h-[56px] items-center justify-center border-t border-white/15 px-2 py-2">
-                    <div className="flex w-full items-center justify-center gap-2">
+                  {/* Fixed add button at bottom of column */}
+                  <div className="p-2 pt-0 border-t border-border">
+                    <div className="flex items-center gap-1">
                       {(column as any).is_template_column ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-10 flex-1 self-center rounded-xl border border-white/20 bg-white/[0.06] text-xs gap-1.5 text-foreground/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_4px_14px_rgba(0,0,0,0.06)] backdrop-blur-2xl transition-all duration-200 hover:border-white/35 hover:bg-white/[0.14] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_6px_18px_rgba(0,0,0,0.1)] dark:bg-white/[0.04] dark:text-white/90 dark:hover:bg-white/[0.10]"
-                          onClick={() => openCreateTemplate(column.id)}
-                        >
-                          <Plus className="h-3.5 w-3.5" /> Adicionar template
+                        <Button variant="ghost" size="sm" className="flex-1 text-xs gap-1" onClick={() => openCreateTemplate(column.id)}>
+                          <Plus className="h-3 w-3" /> Adicionar template
                         </Button>
                       ) : (
                         <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-10 min-w-0 flex-1 self-center rounded-xl text-xs gap-1.5 task-column-glass-action"
-                            onClick={() => openCreateTask(column.id)}
-                          >
-                            <Plus className="h-3.5 w-3.5 shrink-0" /> Adicionar um cartão
+                          <Button variant="ghost" size="sm" className="flex-1 text-xs gap-1" onClick={() => openCreateTask(column.id)}>
+                            <Plus className="h-3 w-3" /> Adicionar um cartão
                           </Button>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10 shrink-0 self-center rounded-xl task-column-glass-action"
-                                onClick={() => openCreateTemplate(column.id)}
-                              >
-                                <Copy className="h-4 w-4" />
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openCreateTemplate(column.id)}>
+                                <Copy className="h-3.5 w-3.5" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Criar template</TooltipContent>
@@ -2999,6 +2955,49 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                       {columns.map(c => (
                         <SelectItem key={c.id} value={c.id}>
                           <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
+                            {c.title}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Frequência</Label>
+                  <Select value={dupFrequency} onValueChange={setDupFrequency}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Diariamente</SelectItem>
+                      <SelectItem value="weekly">Semanalmente</SelectItem>
+                      <SelectItem value="monthly">Mensalmente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Weekday selector for daily */}
+                {dupFrequency === 'daily' && (
+                  <div className="space-y-2">
+                    <Label>Dias da semana</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {WEEKDAY_NAMES.map((name, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setDupWeekdays(prev => prev.includes(idx) ? prev.filter(d => d !== idx) : [...prev, idx].sort())}
+                          className={cn(
+                            'w-10 h-8 rounded-lg text-xs font-medium border transition-all',
+                            dupWeekdays.includes(idx) 
+                              ? 'bg-primary text-primary-foreground border-primary' 
+                              : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
+                          )}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Selecione os dias em que o card será duplicado</p>
+                  </div>
+                )}
+                {/* Month day selector for monthly */}
                 {dupFrequency === 'monthly' && (
                   <div className="space-y-2">
                     <Label>Dia do mês</Label>
