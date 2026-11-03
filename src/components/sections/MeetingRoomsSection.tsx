@@ -19,7 +19,7 @@ type Participant = { booking_id: string; profile_id: string };
 const timeLabel = (value: string) => value.slice(0, 5);
 const initials = (name: string) => name.split(' ').filter(Boolean).slice(0, 2).map(v => v[0]).join('').toUpperCase();
 
-function RoomIllustration({ capacity, people, busy, imageUrl, roomName }: { capacity: number; people: number; busy: boolean; imageUrl?: string | null; roomName?: string }) {
+function RoomIllustration({ capacity, people, imageUrl, roomName }: { capacity: number; people: number; imageUrl?: string | null; roomName?: string }) {
   return <div className="relative h-[220px] overflow-hidden bg-slate-100 sm:h-[220px]" aria-label={`Imagem da sala ${roomName || ''}; capacidade para ${capacity} pessoas`}>
     {imageUrl ? <img src={imageUrl} alt={roomName ? `Sala ${roomName}` : 'Imagem da sala'} className="h-full w-full object-cover" loading="lazy" />
       : <div className="flex h-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 text-slate-400">
@@ -179,18 +179,6 @@ export function MeetingRoomsSection() {
       .ew-meetings .ew-muted{color:#87909d}
       .ew-meetings .ew-room-card{border:0;background:#f7f8fa;border-radius:18px;overflow:hidden;transition:transform .2s ease,background .2s ease;cursor:pointer}
       .ew-meetings .ew-room-card:hover{transform:translateY(-3px);background:#f1f3f6}
-      .ew-room-scene{height:220px;position:relative;overflow:hidden;background:linear-gradient(145deg,#f1f4f7,#e5eaf0);perspective:800px}
-      .ew-room-wall{position:absolute;inset:0 9% 35%;background:linear-gradient(160deg,#fff,#e8edf2);clip-path:polygon(0 0,100% 0,100% 100%,0 75%)}
-      .ew-room-window{position:absolute;left:12%;top:18%;width:24%;height:48%;border:5px solid #d8e0e8;border-radius:5px;background:linear-gradient(135deg,#d9eaf3,#f7fbff)}
-      .ew-room-screen{position:absolute;right:12%;top:25%;width:20%;height:30%;border-radius:5px;background:#34445a;box-shadow:0 5px 0 #c5ced8}
-      .ew-room-floor{position:absolute;left:-5%;right:-5%;bottom:-20%;height:66%;background:linear-gradient(150deg,#d9e0e7,#cbd4de);transform:rotateX(54deg);transform-origin:top}
-      .ew-room-table{position:absolute;left:50%;top:54%;width:42%;height:29%;transform:translate(-50%,-50%) rotateX(58deg);border-radius:50%;background:linear-gradient(145deg,#b9c5d1,#8797a8);box-shadow:0 12px 0 #78899a,0 19px 22px #64748b55}
-      .ew-room-table span{position:absolute;left:48%;top:15%;width:4%;height:70%;background:#718195;border-radius:9px}
-      .ew-room-seat{position:absolute;width:22px;height:25px;transform:translate(-50%,-50%);z-index:3}
-      .ew-room-seat-back{position:absolute;left:3px;top:0;width:16px;height:12px;border-radius:5px 5px 3px 3px;background:#9eabb9;box-shadow:0 2px 2px #64748b44}
-      .ew-room-seat-base{position:absolute;left:0;top:10px;width:22px;height:12px;border-radius:5px;background:#c1cbd5;box-shadow:0 3px 0 #8998a8}
-      .ew-room-seat.is-occupied .ew-room-seat-back,.ew-room-seat.is-occupied .ew-room-seat-base{background:#c89d63}
-      .ew-room-capacity{position:absolute;right:13px;bottom:12px;font-size:11px;font-weight:600;color:#64748b;background:#ffffffd9;padding:5px 9px;border-radius:20px}
       .ew-meetings .ew-status{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:5px 9px;font-size:11px;font-weight:600}
       .ew-meetings .ew-dot{width:7px;height:7px;border-radius:50%;background:#22a06b}
       .ew-meetings .ew-status.busy{background:#fff1e8;color:#b75b2b}.ew-meetings .ew-status.busy .ew-dot{background:#e28a4e}
@@ -215,7 +203,7 @@ export function MeetingRoomsSection() {
       </div>
       <div className="grid gap-5 lg:grid-cols-[1.05fr_.95fr]">
         <div className="ew-panel overflow-hidden">
-          <RoomIllustration capacity={selectedRoom.capacity} people={currentPeople} busy={!!currentBooking} imageUrl={selectedRoom.image_url} roomName={selectedRoom.name}/>
+          <RoomIllustration capacity={selectedRoom.capacity} people={currentPeople} imageUrl={selectedRoom.image_url} roomName={selectedRoom.name}/>
           <div className="flex flex-wrap items-center justify-between gap-3 p-5">
             <div><p className="text-sm font-medium text-slate-800">Visão da sala</p><p className="mt-1 text-xs text-slate-500">Capacidade para {selectedRoom.capacity} pessoas</p></div>
             <div className="text-right"><p className="text-lg font-semibold text-slate-900">{currentPeople}<span className="text-sm font-normal text-slate-400">/{selectedRoom.capacity}</span></p><p className="text-xs text-slate-500">pessoas na reunião atual</p></div>
@@ -242,7 +230,7 @@ export function MeetingRoomsSection() {
         const active=bookings.find(b=>b.room_id===room.id&&new Date()>=new Date(b.starts_at)&&new Date()<new Date(b.ends_at));
         const count=active?participants.filter(p=>p.booking_id===active.id).length:0;
         return <article key={room.id} className="ew-room-card" onClick={()=>{setSelectedRoom(room);setSelectedDate(startOfDay(new Date()));}}>
-          <div className="relative"><RoomIllustration capacity={room.capacity} people={count} busy={!!active} imageUrl={room.image_url} roomName={room.name}/><span className={`ew-status absolute left-4 top-4 ${active?'busy':'free'}`}><i className="ew-dot"/>{active?'Ocupada':'Livre'}</span><button aria-label="Editar sala" onClick={e=>{e.stopPropagation();openRoomEditor(room);}} className={`absolute right-3 top-3 rounded-full bg-white/90 p-2 text-slate-600 hover:bg-white ${isAdmin?'':'hidden'}`}><Pencil size={14}/></button></div>
+          <div className="relative"><RoomIllustration capacity={room.capacity} people={count} imageUrl={room.image_url} roomName={room.name}/><span className={`ew-status absolute left-4 top-4 ${active?'busy':'free'}`}><i className="ew-dot"/>{active?'Ocupada':'Livre'}</span><button aria-label="Editar sala" onClick={e=>{e.stopPropagation();openRoomEditor(room);}} className={`absolute right-3 top-3 rounded-full bg-white/90 p-2 text-slate-600 hover:bg-white ${isAdmin?'':'hidden'}`}><Pencil size={14}/></button></div>
           <div className="p-4"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">{room.name}</h2><p className="mt-1 text-xs text-slate-500">Até {room.capacity} pessoas</p></div><span className="text-xs text-slate-500">{timeLabel(room.opens_at)} - {timeLabel(room.closes_at)}</span></div><div className="mt-4 flex items-center justify-between border-t border-slate-200/70 pt-3"><span className="text-xs text-slate-500">{active?active.title:'Consulte os horários'}</span><span className="text-xs font-semibold text-slate-700">Ver sala <span aria-hidden>→</span></span></div></div>
         </article>;
       })}</div>:<div className="rounded-2xl bg-slate-50 px-6 py-14 text-center"><DoorOpen className="mx-auto mb-3 text-slate-400" size={28}/><p className="font-medium text-slate-800">Nenhuma sala cadastrada</p><p className="mt-1 text-sm text-slate-500">Adicione uma sala para começar a organizar as reuniões.</p>{isAdmin&&<Button className="mt-4" onClick={()=>openRoomEditor()}><Plus size={16} className="mr-2"/> Cadastrar sala</Button>}</div>}
