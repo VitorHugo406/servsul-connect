@@ -25,7 +25,7 @@ with check (
     from public.profiles p
     join public.user_roles ur on ur.user_id = p.user_id
     where p.user_id = auth.uid()
-      and p.company_id::text = (storage.foldername(name))[1]
+      and p.company_id::text = (storage.foldername(objects.name))[1]
       and p.is_active = true
       and ur.role in ('admin', 'super_admin')
   )
@@ -42,7 +42,7 @@ using (
     from public.profiles p
     join public.user_roles ur on ur.user_id = p.user_id
     where p.user_id = auth.uid()
-      and p.company_id::text = (storage.foldername(name))[1]
+      and p.company_id::text = (storage.foldername(objects.name))[1]
       and p.is_active = true
       and ur.role in ('admin', 'super_admin')
   )
@@ -54,7 +54,7 @@ with check (
     from public.profiles p
     join public.user_roles ur on ur.user_id = p.user_id
     where p.user_id = auth.uid()
-      and p.company_id::text = (storage.foldername(name))[1]
+      and p.company_id::text = (storage.foldername(objects.name))[1]
       and p.is_active = true
       and ur.role in ('admin', 'super_admin')
   )
@@ -71,7 +71,7 @@ using (
     from public.profiles p
     join public.user_roles ur on ur.user_id = p.user_id
     where p.user_id = auth.uid()
-      and p.company_id::text = (storage.foldername(name))[1]
+      and p.company_id::text = (storage.foldername(objects.name))[1]
       and p.is_active = true
       and ur.role in ('admin', 'super_admin')
   )
