@@ -1,4 +1,5 @@
 ## Current work
+- [ ] Priority: fix HTTP 405 when an admin generates a company API key
 - [x] Compact reaction/composer emoji menus with side scrolling; enlarge chat bubbles and text (4 regressions passed; shared picker interaction checked; authenticated chat unavailable)
 - [ ] Add configurable chat font and font size
 - [ ] Add chat action keyboard shortcuts
