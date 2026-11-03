@@ -97,7 +97,7 @@ export function PrivateGroupChat({ group }: PrivateGroupChatProps) {
 
   if (!group) return <div className="flex h-full flex-col items-center justify-center bg-muted/20 p-8 text-center"><div className="mb-4 rounded-full bg-muted p-6"><Users className="h-12 w-12 text-muted-foreground" /></div><h3 className="font-display text-xl font-semibold text-foreground">Selecione um grupo</h3><p className="mt-2 text-muted-foreground">Escolha um grupo para iniciar uma conversa</p></div>;
 
-  return <div className="chat-thread flex h-full min-w-0 flex-col min-h-0">
+  return <div className={cn("chat-thread flex h-full min-w-0 flex-col min-h-0", typographyClass)}>
     <div className="chat-thread-header flex shrink-0 items-center justify-between gap-3 px-3 py-3 sm:px-5">
       <div className="flex items-center gap-3 min-w-0"><Avatar className="h-10 w-10 shrink-0"><AvatarImage src={group.avatar_url || ''} /><AvatarFallback className="bg-primary text-primary-foreground">{getInitials(group.name)}</AvatarFallback></Avatar><div className="min-w-0"><h3 className="font-display font-semibold text-foreground truncate">{group.name}</h3><p className="text-xs text-muted-foreground">{members.length} membros</p></div></div>
       <div className="flex items-center gap-1 shrink-0">
