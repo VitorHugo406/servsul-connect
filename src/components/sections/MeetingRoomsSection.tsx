@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 
-type Room = { id: string; name: string; capacity: number; opens_at: string; closes_at: string };
+type Room = { id: string; name: string; capacity: number; opens_at: string; closes_at: string; image_url?: string | null };
 type Person = { id: string; user_id: string; name: string; display_name: string | null };
 type Booking = { id: string; room_id: string; title: string; starts_at: string; ends_at: string; booked_by: string; notes: string | null };
 type Participant = { booking_id: string; profile_id: string };
@@ -19,22 +19,14 @@ type Participant = { booking_id: string; profile_id: string };
 const timeLabel = (value: string) => value.slice(0, 5);
 const initials = (name: string) => name.split(' ').filter(Boolean).slice(0, 2).map(v => v[0]).join('').toUpperCase();
 
-function RoomIllustration({ capacity, people, busy }: { capacity: number; people: number; busy: boolean }) {
-  const seats = Array.from({ length: Math.min(capacity, 12) }, (_, i) => i);
-  return <div className="ew-room-scene" aria-label={`Sala com capacidade para ${capacity} pessoas`}>
-    <div className="ew-room-wall"><span className="ew-room-window" /><span className="ew-room-screen" /></div>
-    <div className="ew-room-floor" />
-    <div className="ew-room-table"><span /></div>
-    {seats.map(i => {
-      const angle = (Math.PI * 2 * i) / seats.length - Math.PI / 2;
-      const x = 50 + Math.cos(angle) * 36;
-      const y = 57 + Math.sin(angle) * 31;
-      const occupied = busy && i < people;
-      return <div key={i} className={`ew-room-seat ${occupied ? 'is-occupied' : ''}`} style={{ left: `${x}%`, top: `${y}%` }}>
-        <span className="ew-room-seat-back" /><span className="ew-room-seat-base" />
-      </div>;
-    })}
-    <span className="ew-room-capacity">{people}/{capacity} lugares</span>
+function RoomIllustration({ capacity, people, busy, imageUrl, roomName }: { capacity: number; people: number; busy: boolean; imageUrl?: string | null; roomName?: string }) {
+  return <div className="relative h-[220px] overflow-hidden bg-slate-100 sm:h-[220px]" aria-label={`Imagem da sala ${roomName || ''}; capacidade para ${capacity} pessoas`}>
+    {imageUrl ? <img src={imageUrl} alt={roomName ? `Sala ${roomName}` : 'Imagem da sala'} className="h-full w-full object-cover" loading="lazy" />
+      : <div className="flex h-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 text-slate-400">
+          <DoorOpen size={34} strokeWidth={1.3} />
+          <span className="text-xs font-medium">Adicione uma foto desta sala</span>
+        </div>}
+    <span className="absolute bottom-3 right-3 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm">{people}/{capacity} lugares</span>
   </div>;
 }
 
@@ -53,6 +45,8 @@ export function MeetingRoomsSection() {
   const [bookingDialog, setBookingDialog] = useState(false);
   const [editing, setEditing] = useState<Room | null>(null);
   const [roomName, setRoomName] = useState('');
+  const [roomImage, setRoomImage] = useState<File | null>(null);
+  const [roomImagePreview, setRoomImagePreview] = useState<string | null>(null);
   const [capacity, setCapacity] = useState('8');
   const [opensAt, setOpensAt] = useState('08:00');
   const [closesAt, setClosesAt] = useState('18:00');
@@ -66,7 +60,7 @@ export function MeetingRoomsSection() {
     if (!allowed || !profile?.company_id) { setLoading(false); return; }
     const db = supabase as any;
     const [r, b, p, part] = await Promise.all([
-      db.from('meeting_rooms').select('id,name,capacity,opens_at,closes_at').eq('company_id', profile.company_id).eq('is_active', true).order('name'),
+      db.from('meeting_rooms').select('id,name,capacity,opens_at,closes_at,image_url').eq('company_id', profile.company_id).eq('is_active', true).order('name'),
       db.from('meeting_bookings').select('id,room_id,title,starts_at,ends_at,booked_by,notes').eq('company_id', profile.company_id).gte('ends_at', new Date().toISOString()).order('starts_at'),
       db.from('profiles').select('id,user_id,name,display_name').eq('company_id', profile.company_id).eq('is_active', true).order('name'),
       db.from('meeting_booking_participants').select('booking_id,profile_id'),
@@ -109,7 +103,7 @@ export function MeetingRoomsSection() {
   }, [selectedRoom, selectedDate, roomBookings]);
 
   const openRoomEditor = (room?: Room) => {
-    setEditing(room || null); setRoomName(room?.name || ''); setCapacity(String(room?.capacity || 8));
+    setEditing(room || null); setRoomName(room?.name || ''); setRoomImage(null); setRoomImagePreview(room?.image_url || null); setCapacity(String(room?.capacity || 8));
     setOpensAt(room ? timeLabel(room.opens_at) : '08:00'); setClosesAt(room ? timeLabel(room.closes_at) : '18:00'); setRoomDialog(true);
   };
   const saveRoom = async () => {
@@ -118,10 +112,21 @@ export function MeetingRoomsSection() {
     setSaving(true);
     const payload = { name: roomName.trim(), capacity: Number(capacity), opens_at: opensAt, closes_at: closesAt, company_id: profile.company_id, updated_at: new Date().toISOString() };
     const db = supabase as any;
-    const result = editing ? await db.from('meeting_rooms').update(payload).eq('id', editing.id) : await db.from('meeting_rooms').insert({ ...payload, created_by: user.id });
+    const result = editing
+      ? await db.from('meeting_rooms').update(payload).eq('id', editing.id).select('id').single()
+      : await db.from('meeting_rooms').insert({ ...payload, created_by: user.id }).select('id').single();
+    if (result.error || !result.data?.id) { setSaving(false); toast.error('Não foi possível salvar a sala.'); return; }
+    if (roomImage) {
+      const extension = roomImage.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const imagePath = `${profile.company_id}/${result.data.id}/cover.${extension}`;
+      const { error: uploadError } = await supabase.storage.from('meeting-room-images').upload(imagePath, roomImage, { upsert: true, contentType: roomImage.type, cacheControl: '3600' });
+      if (uploadError) { setSaving(false); toast.error('Sala salva, mas não foi possível enviar a imagem.'); return; }
+      const { data: publicData } = supabase.storage.from('meeting-room-images').getPublicUrl(imagePath);
+      const { error: imageError } = await db.from('meeting_rooms').update({ image_url: publicData.publicUrl }).eq('id', result.data.id);
+      if (imageError) { setSaving(false); toast.error('Imagem enviada, mas não foi possível vinculá-la à sala.'); return; }
+    }
     setSaving(false);
-    if (result.error) { toast.error('Não foi possível salvar a sala.'); return; }
-    toast.success('Sala atualizada.'); setRoomDialog(false); void load();
+    toast.success(editing ? 'Sala atualizada.' : 'Sala criada.'); setRoomDialog(false); setRoomImage(null); setRoomImagePreview(null); void load();
   };
 
   const beginBooking = (time?: string) => {
@@ -210,7 +215,7 @@ export function MeetingRoomsSection() {
       </div>
       <div className="grid gap-5 lg:grid-cols-[1.05fr_.95fr]">
         <div className="ew-panel overflow-hidden">
-          <RoomIllustration capacity={selectedRoom.capacity} people={currentPeople} busy={!!currentBooking}/>
+          <RoomIllustration capacity={selectedRoom.capacity} people={currentPeople} busy={!!currentBooking} imageUrl={selectedRoom.image_url} roomName={selectedRoom.name}/>
           <div className="flex flex-wrap items-center justify-between gap-3 p-5">
             <div><p className="text-sm font-medium text-slate-800">Visão da sala</p><p className="mt-1 text-xs text-slate-500">Capacidade para {selectedRoom.capacity} pessoas</p></div>
             <div className="text-right"><p className="text-lg font-semibold text-slate-900">{currentPeople}<span className="text-sm font-normal text-slate-400">/{selectedRoom.capacity}</span></p><p className="text-xs text-slate-500">pessoas na reunião atual</p></div>
@@ -237,14 +242,14 @@ export function MeetingRoomsSection() {
         const active=bookings.find(b=>b.room_id===room.id&&new Date()>=new Date(b.starts_at)&&new Date()<new Date(b.ends_at));
         const count=active?participants.filter(p=>p.booking_id===active.id).length:0;
         return <article key={room.id} className="ew-room-card" onClick={()=>{setSelectedRoom(room);setSelectedDate(startOfDay(new Date()));}}>
-          <div className="relative"><RoomIllustration capacity={room.capacity} people={count} busy={!!active}/><span className={`ew-status absolute left-4 top-4 ${active?'busy':'free'}`}><i className="ew-dot"/>{active?'Ocupada':'Livre'}</span><button aria-label="Editar sala" onClick={e=>{e.stopPropagation();openRoomEditor(room);}} className={`absolute right-3 top-3 rounded-full bg-white/90 p-2 text-slate-600 hover:bg-white ${isAdmin?'':'hidden'}`}><Pencil size={14}/></button></div>
+          <div className="relative"><RoomIllustration capacity={room.capacity} people={count} busy={!!active} imageUrl={room.image_url} roomName={room.name}/><span className={`ew-status absolute left-4 top-4 ${active?'busy':'free'}`}><i className="ew-dot"/>{active?'Ocupada':'Livre'}</span><button aria-label="Editar sala" onClick={e=>{e.stopPropagation();openRoomEditor(room);}} className={`absolute right-3 top-3 rounded-full bg-white/90 p-2 text-slate-600 hover:bg-white ${isAdmin?'':'hidden'}`}><Pencil size={14}/></button></div>
           <div className="p-4"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">{room.name}</h2><p className="mt-1 text-xs text-slate-500">Até {room.capacity} pessoas</p></div><span className="text-xs text-slate-500">{timeLabel(room.opens_at)} - {timeLabel(room.closes_at)}</span></div><div className="mt-4 flex items-center justify-between border-t border-slate-200/70 pt-3"><span className="text-xs text-slate-500">{active?active.title:'Consulte os horários'}</span><span className="text-xs font-semibold text-slate-700">Ver sala <span aria-hidden>→</span></span></div></div>
         </article>;
       })}</div>:<div className="rounded-2xl bg-slate-50 px-6 py-14 text-center"><DoorOpen className="mx-auto mb-3 text-slate-400" size={28}/><p className="font-medium text-slate-800">Nenhuma sala cadastrada</p><p className="mt-1 text-sm text-slate-500">Adicione uma sala para começar a organizar as reuniões.</p>{isAdmin&&<Button className="mt-4" onClick={()=>openRoomEditor()}><Plus size={16} className="mr-2"/> Cadastrar sala</Button>}</div>}
       <section><h2 className="mb-3 font-semibold text-slate-900">Próximas reuniões</h2>{bookings.length?<div className="divide-y divide-slate-100">{bookings.slice(0,6).map(b=><div key={b.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="text-sm font-medium text-slate-800">{b.title}</p><p className="mt-1 text-xs text-slate-500">{rooms.find(r=>r.id===b.room_id)?.name||'Sala'} · {format(new Date(b.starts_at),"dd 'de' MMM, HH:mm",{locale:ptBR})}</p></div><span className="text-xs text-slate-500">{participants.filter(p=>p.booking_id===b.id).length} participantes</span></div>)}</div>:<p className="py-4 text-sm text-slate-500">Nenhuma reunião agendada.</p>}</section>
     </div>}
 
-    {roomDialog&&<div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/35 p-4" onMouseDown={e=>{if(e.target===e.currentTarget)setRoomDialog(false);}}><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"><div className="mb-5 flex items-start justify-between"><div><h2 className="text-lg font-semibold text-slate-900">{editing?'Configurar sala':'Adicionar sala'}</h2><p className="mt-1 text-sm text-slate-500">Capacidade e horário de funcionamento</p></div><button onClick={()=>setRoomDialog(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X size={18}/></button></div><div className="space-y-4"><div><Label>Nome da sala</Label><Input value={roomName} onChange={e=>setRoomName(e.target.value)} maxLength={100}/></div><div><Label>Capacidade máxima</Label><Input type="number" min="1" value={capacity} onChange={e=>setCapacity(e.target.value)}/></div><div className="grid grid-cols-2 gap-3"><div><Label>Horário de abertura</Label><Input type="time" value={opensAt} onChange={e=>setOpensAt(e.target.value)}/></div><div><Label>Horário de fechamento</Label><Input type="time" value={closesAt} onChange={e=>setClosesAt(e.target.value)}/></div></div></div><div className="mt-6 flex justify-end gap-2"><Button variant="ghost" onClick={()=>setRoomDialog(false)}>Cancelar</Button><Button onClick={saveRoom} disabled={saving}>{saving?'Salvando...':'Salvar alterações'}</Button></div></div></div>}
+    {roomDialog&&<div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/35 p-4" onMouseDown={e=>{if(e.target===e.currentTarget)setRoomDialog(false);}}><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"><div className="mb-5 flex items-start justify-between"><div><h2 className="text-lg font-semibold text-slate-900">{editing?'Configurar sala':'Adicionar sala'}</h2><p className="mt-1 text-sm text-slate-500">Capacidade e horário de funcionamento</p></div><button onClick={()=>setRoomDialog(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X size={18}/></button></div><div className="space-y-4"><div><Label>Nome da sala</Label><Input value={roomName} onChange={e=>setRoomName(e.target.value)} maxLength={100}/></div><div><Label>Imagem da sala (opcional)</Label><input type="file" accept="image/jpeg,image/png,image/webp" className="block w-full cursor-pointer rounded-xl border border-slate-200 bg-white p-2 text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-xs file:font-medium" onChange={e=>{const f=e.target.files?.[0]||null;if(f && f.size>5*1024*1024){toast.error('A imagem deve ter no máximo 5 MB.');e.target.value='';return;}setRoomImage(f);setRoomImagePreview(f?URL.createObjectURL(f):editing?.image_url||null);}}/><p className="mt-1 text-[11px] text-slate-400">JPG, PNG ou WebP. Até 5 MB.</p>{roomImagePreview&&<div className="relative mt-2 overflow-hidden rounded-xl"><img src={roomImagePreview} alt="Prévia da imagem da sala" className="h-36 w-full object-cover"/><button type="button" onClick={()=>{setRoomImage(null);setRoomImagePreview(null);}} className="absolute right-2 top-2 rounded-full bg-white/90 px-3 py-1 text-xs text-slate-700">Remover</button></div>}</div><div><Label>Capacidade máxima</Label><Input type="number" min="1" value={capacity} onChange={e=>setCapacity(e.target.value)}/></div><div className="grid grid-cols-2 gap-3"><div><Label>Horário de abertura</Label><Input type="time" value={opensAt} onChange={e=>setOpensAt(e.target.value)}/></div><div><Label>Horário de fechamento</Label><Input type="time" value={closesAt} onChange={e=>setClosesAt(e.target.value)}/></div></div></div><div className="mt-6 flex justify-end gap-2"><Button variant="ghost" onClick={()=>setRoomDialog(false)}>Cancelar</Button><Button onClick={saveRoom} disabled={saving}>{saving?'Salvando...':'Salvar alterações'}</Button></div></div></div>}
 
     {bookingDialog&&selectedRoom&&<div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/35 p-4" onMouseDown={e=>{if(e.target===e.currentTarget)setBookingDialog(false);}}><div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"><div className="mb-5 flex items-start justify-between"><div><h2 className="text-lg font-semibold text-slate-900">Agendar reunião</h2><p className="mt-1 text-sm text-slate-500">{selectedRoom.name} · {format(selectedDate,"dd 'de' MMMM",{locale:ptBR})}</p></div><button onClick={()=>setBookingDialog(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X size={18}/></button></div><div className="space-y-4"><div><Label>Assunto da reunião</Label><Input value={title} onChange={e=>setTitle(e.target.value)} maxLength={160} placeholder="Ex.: Alinhamento semanal"/></div><div className="grid grid-cols-2 gap-3"><div><Label>Horário</Label><Input type="time" value={selectedTime} onChange={e=>setSelectedTime(e.target.value)}/></div><div><Label>Duração</Label><select className="h-10 w-full border bg-white px-3 text-sm" value={duration} onChange={e=>setDuration(e.target.value)}><option value="30">30 minutos</option><option value="60">1 hora</option><option value="90">1h30</option><option value="120">2 horas</option><option value="180">3 horas</option></select></div></div><div><Label>Participantes</Label><div className="mt-2 max-h-44 space-y-2 overflow-y-auto rounded-xl bg-slate-50 p-3">{people.filter(p=>p.id!==profile?.id).map(p=><label key={p.id} className="flex items-center gap-2"><Checkbox checked={selectedPeople.includes(p.id)} onCheckedChange={v=>setSelectedPeople(old=>v?[...old,p.id]:old.filter(id=>id!==p.id))}/><span>{p.display_name||p.name}</span></label>)}</div><p className="mt-1 text-xs text-slate-500">Você também será incluído como participante. Limite: {selectedRoom.capacity} pessoas.</p></div><div><Label>Observações</Label><Textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3} placeholder="Informações adicionais (opcional)"/></div></div><div className="mt-6 flex justify-end gap-2"><Button variant="ghost" onClick={()=>setBookingDialog(false)}>Cancelar</Button><Button onClick={saveBooking} disabled={saving}>{saving?'Agendando...':'Confirmar agendamento'}</Button></div></div></div>}
   </div>;
