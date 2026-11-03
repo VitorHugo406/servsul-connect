@@ -60,7 +60,7 @@ export function MeetingRoomsSection() {
     if (!allowed || !profile?.company_id) { setLoading(false); return; }
     const db = supabase as any;
     const [r, b, p, part] = await Promise.all([
-      db.from('meeting_rooms').select('id,name,capacity,opens_at,closes_at').eq('company_id', profile.company_id).eq('is_active', true).order('name'),
+      db.from('meeting_rooms').select('id,name,capacity,opens_at,closes_at,image_url').eq('company_id', profile.company_id).eq('is_active', true).order('name'),
       db.from('meeting_bookings').select('id,room_id,title,starts_at,ends_at,booked_by,notes').eq('company_id', profile.company_id).gte('ends_at', new Date().toISOString()).order('starts_at'),
       db.from('profiles').select('id,user_id,name,display_name').eq('company_id', profile.company_id).eq('is_active', true).order('name'),
       db.from('meeting_booking_participants').select('booking_id,profile_id'),
@@ -79,6 +79,7 @@ export function MeetingRoomsSection() {
     const channel = supabase.channel('meeting-rooms-live-' + profile.company_id)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'meeting_rooms', filter: 'company_id=eq.' + profile.company_id }, () => void load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'meeting_bookings', filter: 'company_id=eq.' + profile.company_id }, () => void load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meeting_booking_participants' }, () => void load())
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [allowed, profile?.company_id, load]);
@@ -116,17 +117,21 @@ export function MeetingRoomsSection() {
       ? await db.from('meeting_rooms').update(payload).eq('id', editing.id).select('id').single()
       : await db.from('meeting_rooms').insert({ ...payload, created_by: user.id }).select('id').single();
     if (result.error || !result.data?.id) { setSaving(false); toast.error('Não foi possível salvar a sala.'); return; }
+    let savedImageUrl = editing?.image_url || null;
     if (roomImage) {
-      const extension = roomImage.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const imagePath = `${profile.company_id}/${result.data.id}/cover.${extension}`;
-      const { error: uploadError } = await supabase.storage.from('meeting-room-images').upload(imagePath, roomImage, { upsert: true, contentType: roomImage.type, cacheControl: '3600' });
-      if (uploadError) { setSaving(false); toast.error('Sala salva, mas não foi possível enviar a imagem.'); return; }
+      const extension = roomImage.type === 'image/png' ? 'png' : roomImage.type === 'image/webp' ? 'webp' : 'jpg';
+      const imagePath = `${profile.company_id}/${result.data.id}/cover-${crypto.randomUUID()}.${extension}`;
+      const { error: uploadError } = await supabase.storage.from('meeting-room-images').upload(imagePath, roomImage, { upsert: false, contentType: roomImage.type, cacheControl: '31536000' });
+      if (uploadError) { setSaving(false); toast.error(`Sala salva, mas a imagem não foi armazenada: ${uploadError.message}`); return; }
       const { data: publicData } = supabase.storage.from('meeting-room-images').getPublicUrl(imagePath);
-      const { error: imageError } = await db.from('meeting_rooms').update({ image_url: publicData.publicUrl }).eq('id', result.data.id);
-      if (imageError) { setSaving(false); toast.error('Imagem enviada, mas não foi possível vinculá-la à sala.'); return; }
+      savedImageUrl = publicData.publicUrl;
+      const { data: updatedRoom, error: imageError } = await db.from('meeting_rooms').update({ image_url: savedImageUrl }).eq('id', result.data.id).select('id').maybeSingle();
+      if (imageError || !updatedRoom) { setSaving(false); toast.error(imageError?.message || 'A imagem foi enviada, mas não foi vinculada à sala.'); return; }
     }
     setSaving(false);
-    toast.success(editing ? 'Sala atualizada.' : 'Sala criada.'); setRoomDialog(false); setRoomImage(null); setRoomImagePreview(null); void load();
+    toast.success(editing ? 'Sala atualizada.' : 'Sala criada.'); setRoomDialog(false); setRoomImage(null); setRoomImagePreview(null);
+    await load();
+    if (editing) setSelectedRoom(current => current?.id === result.data.id ? { ...current, ...payload, image_url: savedImageUrl } : current);
   };
 
   const beginBooking = (time?: string) => {
