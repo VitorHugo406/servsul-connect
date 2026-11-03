@@ -728,6 +728,18 @@ async function handleUsersData(url: URL, companyIds: string[], userId?: string) 
   }
 
   const profileIds = profiles.map((p: any) => p.id);
+  // Presence is separate from the user's availability status. Keep both fields
+  // so an online user can still be marked as having lunch or being in a meeting.
+  const { data: presenceRows, error: presenceError } = await admin
+    .from("user_presence")
+    .select("user_id, is_online, last_heartbeat")
+    .in("user_id", userIds);
+  if (presenceError) console.error("API user presence lookup failed:", presenceError.message);
+  const presenceMap = new Map((presenceRows || []).map((row: any) => [row.user_id, row]));
+  const statusLabels: Record<string, string> = {
+    available: "Disponível", lunch: "Almoçando", meeting: "Em reunião",
+    away: "Fora de expediente", vacation: "De férias", leave: "De afastamento",
+  };
   const { data: teamData } = await admin.from("supervisor_team_members").select("member_profile_id, supervisor_id, team_name").in("member_profile_id", profileIds);
   // (member_profile_id is already scoped to companyId's profiles via profileIds above)
   const teamMap = new Map<string, { team_name: string; supervisor_id: string }[]>();
@@ -738,6 +750,10 @@ async function handleUsersData(url: URL, companyIds: string[], userId?: string) 
 
   const results = profiles.map((p: any) => {
     const sector = sectorMap.get(p.sector_id);
+    const presence = presenceMap.get(p.user_id);
+    const heartbeatAt = presence?.last_heartbeat ? new Date(presence.last_heartbeat) : null;
+    const isOnline = Boolean(presence?.is_online && heartbeatAt && Date.now() - heartbeatAt.getTime() < 120000);
+    const availabilityStatus = statusLabels[p.user_status] ? p.user_status : "available";
     return {
       id: p.id,
       user_id: p.user_id,
@@ -757,7 +773,13 @@ async function handleUsersData(url: URL, companyIds: string[], userId?: string) 
       address: p.address,
       registration_number: p.registration_number,
       work_period: p.work_period,
-      status: p.user_status,
+      status: availabilityStatus,
+      status_label: statusLabels[availabilityStatus],
+      availability_status: availabilityStatus,
+      availability_label: statusLabels[availabilityStatus],
+      is_online: isOnline,
+      presence_status: isOnline ? "online" : "offline",
+      last_heartbeat_at: presence?.last_heartbeat || null,
       last_seen_at: p.last_seen_at,
       created_at: p.created_at,
       updated_at: p.updated_at,
