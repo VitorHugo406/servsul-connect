@@ -1,7 +1,7 @@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLayoutEffect } from 'react';
 import { motion } from 'framer-motion';
-import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, Globe, ClipboardCheck, Megaphone, Link, MessageSquare, Bell, Home, Cake, Settings, Trash2, Building2, Sparkles } from 'lucide-react';
+import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, Globe, ClipboardCheck, Megaphone, Link, MessageSquare, Bell, Home, Cake, Settings, Trash2, Building2, Sparkles, DoorOpen } from 'lucide-react';
 import { SeasonalEffectsButton } from '@/components/seasonal/SeasonalEffectsButton';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ const menuItems = [
   { id: 'announcements', icon: Bell, label: 'Avisos' },
   { id: 'birthdays', icon: Cake, label: 'Aniversariantes' },
   { id: 'war-room', icon: Shield, label: 'War Room' },
+  { id: 'meeting-rooms', icon: DoorOpen, label: 'Sala de Reunião', permission: 'can_access_meeting_rooms' as const },
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
   { id: 'shortcuts', icon: Link, label: 'Atalhos do Sistema', adminOnly: true },
   { id: 'companies', icon: Building2, label: 'Empresas', superAdminOnly: true },
