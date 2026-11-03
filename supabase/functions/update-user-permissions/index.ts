@@ -16,6 +16,7 @@ interface PermissionUpdate {
     canAccessBh?: boolean;
     canAccessFechamento?: boolean;
     canAccessOrbs?: boolean;
+    canAccessMeetingRooms?: boolean;
   };
 }
 
@@ -123,6 +124,7 @@ Deno.serve(async (req) => {
       can_access_bh: permissions.canAccessBh ?? existingPerm?.can_access_bh ?? false,
       can_access_fechamento: permissions.canAccessFechamento ?? existingPerm?.can_access_fechamento ?? false,
       can_access_orbs: permissions.canAccessOrbs ?? existingPerm?.can_access_orbs ?? false,
+      can_access_meeting_rooms: permissions.canAccessMeetingRooms ?? existingPerm?.can_access_meeting_rooms ?? false,
       updated_at: new Date().toISOString(),
     };
 
