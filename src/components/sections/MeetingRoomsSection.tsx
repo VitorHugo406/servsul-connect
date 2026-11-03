@@ -59,12 +59,16 @@ export function MeetingRoomsSection() {
   const load = useCallback(async () => {
     if (!allowed || !profile?.company_id) { setLoading(false); return; }
     const db = supabase as any;
-    const [r, b, p, part] = await Promise.all([
+    const [roomWithImages, b, p, part] = await Promise.all([
       db.from('meeting_rooms').select('id,name,capacity,opens_at,closes_at,image_url').eq('company_id', profile.company_id).eq('is_active', true).order('name'),
       db.from('meeting_bookings').select('id,room_id,title,starts_at,ends_at,booked_by,notes').eq('company_id', profile.company_id).gte('ends_at', new Date().toISOString()).order('starts_at'),
       db.from('profiles').select('id,user_id,name,display_name').eq('company_id', profile.company_id).eq('is_active', true).order('name'),
       db.from('meeting_booking_participants').select('booking_id,profile_id'),
     ]);
+    // Keep existing rooms available while an environment is awaiting the image migration.
+    const r = roomWithImages.error
+      ? await db.from('meeting_rooms').select('id,name,capacity,opens_at,closes_at').eq('company_id', profile.company_id).eq('is_active', true).order('name')
+      : roomWithImages;
     if (r.error || b.error || p.error) toast.error('Não foi possível carregar os dados das salas.');
     else {
       setRooms(r.data || []); setBookings(b.data || []); setPeople(p.data || []);
