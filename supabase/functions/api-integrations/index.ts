@@ -888,7 +888,8 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const path = url.searchParams.get("path") || url.pathname.replace(/^.*\/api-integrations/, '') || "/";
+    const rawPath = url.searchParams.get("path") || url.pathname.replace(/^.*\/api-integrations/, '') || "/";
+    const path = `/${rawPath.replace(/^\/+|\/+$/g, '')}`;
     const method = req.method;
 
     // ===== ADMIN ROUTES =====
@@ -926,6 +927,21 @@ Deno.serve(async (req) => {
 
     if (!apiAuth) {
       return jsonResponse({ status: "unauthorized", message: "Credenciais inválidas ou não autorizadas." }, 401);
+    }
+
+    // External connectors test the generated base URL before fetching resources.
+    // Keep this confirmation behind the same credential validation as all data.
+    if (path === "/" && req.method === "GET") {
+      await logAccess(apiAuth.integrationId, path, method, 200, ip);
+      return jsonResponse({
+        status: "success",
+        message: "Conexão com a API confirmada.",
+        data: {
+          service: "Nuvexa API",
+          company_id: apiAuth.companyId,
+          endpoints: ["/meeting-rooms", "/meeting-bookings", "/metrics/general", "/users/data", "/users/sectors", "/users/teams"],
+        },
+      });
     }
 
     let companyIds: string[] = [apiAuth.companyId];
