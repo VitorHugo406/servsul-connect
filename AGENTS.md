@@ -5,6 +5,7 @@
 - Birthday presentation separates ordinary-user upcoming name/department lists from management report controls using authenticated roles; this is a display rule, not a change to database access.
 - Meeting API resources are read-only, filtered by integration companies and active rooms, with profile identities for organizers/participants; availability subtracts persisted bookings from São Paulo room hours using half-open intervals.
 - Integration management uses the canonical Supabase client URL and publishable key, never separate environment-derived endpoints, to prevent preview-host requests.
+- The integration base URL provides an authenticated connection confirmation; resource paths accept trailing slashes so external connector checks do not fail on URL formatting.
 - Apple-inspired glass uses shared semantic CSS optics and the Button base class on the web; do not install native Expo modules in the Vite application.
 - Chat presentation uses shared semantic CSS classes and light/dark tokens across sectors, direct messages and groups, so visual changes stay consistent without changing message or permission logic.
 - Chat emoji menus share a compact scrollable grid; desktop and composer menus use collision-aware portals to avoid clipping by conversation containers.

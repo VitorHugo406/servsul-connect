@@ -1,4 +1,5 @@
 ## Current work
+- [ ] Verify browser CORS and add authenticated API base URL confirmation for external connectors.
 - [x] Priority: use canonical Supabase destination for API generation (2 destination tests; live POST reaches auth handler with 401, OPTIONS 204; original 405 not reproduced, authenticated creation unverified)
 - [x] Compact reaction/composer emoji menus with side scrolling; enlarge chat bubbles and text (4 regressions passed; shared picker interaction checked; authenticated chat unavailable)
 - [x] Add configurable chat font and font size (personal browser settings, isolated by company/profile; 4 preference/filter tests)
