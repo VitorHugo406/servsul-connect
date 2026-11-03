@@ -11,7 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
+import { integrationRequestUrl } from '@/lib/integrationRequest';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -46,24 +47,22 @@ interface HistoryEntry {
   created_at: string;
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-
 async function apiCall(path: string, method = 'GET', body?: any) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Sua sessão expirou. Entre novamente para gerenciar as integrações.');
 
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/api-integrations?path=${encodeURIComponent(path)}`, {
+  const res = await fetch(integrationRequestUrl(SUPABASE_URL, path), {
     method,
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
-      'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      'apikey': SUPABASE_PUBLISHABLE_KEY,
       'Content-Type': 'application/json',
     },
     body: body ? JSON.stringify(body) : undefined,
   });
 
   const result = await res.json().catch(() => null);
-  if (!res.ok || result?.status !== 'success') throw new Error(result?.message || result?.error || `Não foi possível acessar a API (${res.status}).`);
+  if (!res.ok || result?.status !== 'success') throw new Error(result?.message || result?.error || (res.status === 405 ? 'O endereço de geração da API não aceitou a solicitação. Atualize a página e tente novamente.' : `Não foi possível acessar a API (${res.status}).`));
   return result;
 }
 

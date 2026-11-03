@@ -1,10 +1,11 @@
 ## Current work
+- [x] Priority: use canonical Supabase destination for API generation (2 destination tests; live POST reaches auth handler with 401, OPTIONS 204; original 405 not reproduced, authenticated creation unverified)
 - [x] Compact reaction/composer emoji menus with side scrolling; enlarge chat bubbles and text (4 regressions passed; shared picker interaction checked; authenticated chat unavailable)
-- [ ] Add configurable chat font and font size
-- [ ] Add chat action keyboard shortcuts
-- [ ] Expand WhatsApp-style chat filters
-- [ ] Standardize system forms and logo-branded reports
-- [ ] Review APIs and apply evidenced security and visual corrections
+- [x] Add configurable chat font and font size (personal browser settings, isolated by company/profile; 4 preference/filter tests)
+- [x] Add chat action keyboard shortcuts (Alt+M compose, Alt+F conversation search, Escape clear sector search/reply)
+- [ ] Expand WhatsApp-style chat filters — desktop favorites/unread added; mobile parity remains
+- [ ] Standardize system forms and logo-branded reports — shared form controls/dialog branding added; report branding remains
+- [ ] Review APIs and apply evidenced security and visual corrections — credential table grants hardened; deep scan reports critical issues in other functions; dependency updates remain
 - [x] Standardize clean tab presentation using Home, excluding calendar/chat/open task board; simplify task board selection (build OK; authenticated visual review unavailable on external Supabase)
 - [x] Hide birthday data management and reports from ordinary users; show upcoming people and departments only (3 rule tests passed)
 - [x] Add company-scoped meeting API resources, secure credential generation, request headers and visible error details (deployed; 3 availability tests passed; unauthenticated calls rejected)
