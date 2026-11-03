@@ -1206,7 +1206,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     e.preventDefault();
   };
   const handleBoardMouseMove = (e: React.MouseEvent) => {
-    if (!dragStartRef.current || !boardScrollRef.current) return;
+    if (!isDraggingBoard || !dragStartRef.current || !boardScrollRef.current) return;
     const dx = e.clientX - dragStartRef.current.x;
     boardScrollRef.current.scrollLeft = dragStartRef.current.scrollLeft - dx;
   };
