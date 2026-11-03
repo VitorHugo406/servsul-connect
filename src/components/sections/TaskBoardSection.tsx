@@ -2999,3 +2999,322 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                       {columns.map(c => (
                         <SelectItem key={c.id} value={c.id}>
                           <div className="flex items-center gap-2">
+                {dupFrequency === 'monthly' && (
+                  <div className="space-y-2">
+                    <Label>Dia do mês</Label>
+                    <Select value={dupMonthDay.toString()} onValueChange={v => setDupMonthDay(parseInt(v))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
+                          <SelectItem key={d} value={d.toString()}>Dia {d}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-muted-foreground">O card será duplicado neste dia de cada mês</p>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowDuplication(null)}>Cancelar</Button>
+                  <Button onClick={async () => {
+                    if (!dupTargetColumn) { toast.error('Selecione a coluna'); return; }
+                    if (dupFrequency === 'daily' && dupWeekdays.length === 0) { toast.error('Selecione ao menos um dia'); return; }
+                    const { error } = await createDuplication(
+                      showDuplication.id, dupTargetColumn, dupFrequency,
+                      dupFrequency === 'daily' ? dupWeekdays : undefined,
+                      dupFrequency === 'monthly' ? dupMonthDay : undefined
+                    );
+                    if (error) { toast.error('Erro ao criar auto-duplicação'); return; }
+                    toast.success('Auto-duplicação configurada!');
+                    setShowDuplication(null);
+                  }}>
+                    Ativar Auto-duplicação
+                  </Button>
+                </DialogFooter>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive Sidebar */}
+      <Sheet open={showArchive} onOpenChange={setShowArchive}>
+        <SheetContent side="right" className="w-[320px] sm:w-[360px] p-0 flex flex-col">
+          <SheetHeader className="p-4 border-b border-border">
+            <SheetTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5 text-primary" /> Arquivados
+            </SheetTitle>
+          </SheetHeader>
+          {archivedTasks.length > 0 && (
+            <div className="px-4 pt-3 space-y-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full gap-2"
+                onClick={async () => {
+                  if (!confirm(`Excluir permanentemente ${archivedTasks.length} card(s) arquivado(s)?`)) return;
+                  for (const task of archivedTasks) {
+                    await deleteTask(task.id);
+                  }
+                  await refetchTasks();
+                  toast.success('Todos os cards arquivados foram excluídos');
+                }}
+              >
+                <Trash2 className="h-4 w-4" /> Excluir Todos ({archivedTasks.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={async () => {
+                  if (!confirm(`Recuperar ${archivedTasks.length} card(s) arquivado(s)?`)) return;
+                  for (const task of archivedTasks) {
+                    await unarchiveTask(task.id);
+                  }
+                  await refetchTasks();
+                  toast.success('Todos os cards foram recuperados');
+                }}
+              >
+                <ArchiveRestore className="h-4 w-4" /> Recuperar Todos ({archivedTasks.length})
+              </Button>
+            </div>
+          )}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 min-w-0">
+            {archivedTasks.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Nenhum card arquivado</p>
+            ) : (
+              <div className="space-y-2 w-full">
+                {archivedTasks.map(task => (
+                  <div key={task.id} className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/30 w-full min-w-0">
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <p className="text-sm font-medium truncate">#{task.task_number} {task.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {columns.find(c => c.id === task.status)?.title || 'Sem coluna'}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleUnarchiveTask(task.id)} title="Restaurar">
+                      <ArchiveRestore className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 text-destructive" onClick={() => handleDeleteTask(task.id)} title="Excluir permanentemente">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Report Dialog */}
+      <ReportDialog open={showReport} onOpenChange={setShowReport} tasks={tasks.filter(t => !t.is_template)} columns={columns} boardName={board.name} />
+
+      {/* Automation Rules Panel */}
+      <AutomationRulesPanel
+        open={showAutomationRules}
+        onOpenChange={setShowAutomationRules}
+        boardId={board.id}
+        taskId={automationTaskId}
+        columns={columns}
+      />
+
+      {/* Operation Mode Panel */}
+      <OperationModePanel
+        open={showOperationMode}
+        onOpenChange={setShowOperationMode}
+        tasks={tasks}
+        columns={columns}
+        members={members}
+        onUpdateTask={updateTask}
+        onMoveTask={moveTask}
+        onRefetch={refetchTasks}
+      />
+
+      {/* Score Panel */}
+      <ScorePanel
+        open={showScore}
+        onClose={() => setShowScore(false)}
+        scores={boardScores}
+        monthlyHistory={boardScoreHistory}
+        loading={scoresLoading}
+        title={`Score - ${board.name}`}
+      />
+
+      {/* Filter Panel */}
+      <TaskFilterPanel
+        open={showFilter}
+        onOpenChange={setShowFilter}
+        filter={taskFilter}
+        onFilterChange={setTaskFilter}
+        members={members}
+        labels={labels}
+        currentProfileId={profile?.id}
+      />
+
+      {/* Share Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="h-5 w-5 text-primary" /> Compartilhar Quadro
+            </DialogTitle>
+            <DialogDescription>Gere um link para convidar pessoas ao quadro</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {shareLink ? (
+              <div className="space-y-3">
+                <div className="space-y-2 rounded-lg border border-border bg-muted p-3">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Link2 className="h-4 w-4 flex-shrink-0" />
+                    <span>Link de convite</span>
+                  </div>
+                  <Textarea
+                    value={shareLink}
+                    readOnly
+                    className="min-h-[96px] resize-none break-all font-mono text-xs leading-relaxed"
+                  />
+                </div>
+                <Button className="w-full" onClick={() => { navigator.clipboard.writeText(shareLink); toast.success('Link copiado!'); }}>
+                  <Copy className="h-4 w-4 mr-2" /> Copiar Link
+                </Button>
+              </div>
+            ) : (
+              <Button className="w-full" onClick={generateShareLink}>
+                <Link2 className="h-4 w-4 mr-2" /> Gerar Link de Convite
+              </Button>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Pessoas que acessarem o link poderão solicitar participação. Você precisará aprovar cada solicitação.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Join Requests Dialog */}
+      <Dialog open={showJoinRequests} onOpenChange={setShowJoinRequests}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-primary" /> Solicitações de Participação
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[400px]">
+            {joinRequests.length === 0 ? (
+              <div className="py-8 text-center">
+                <UserPlus className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">Nenhuma solicitação pendente</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {joinRequests.map(req => (
+                  <div key={req.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={req.profile?.avatar_url || ''} />
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {getInitials(req.profile?.display_name || req.profile?.name || '?')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{req.profile?.display_name || req.profile?.name}</p>
+                      <p className="text-xs text-muted-foreground">{req.profile?.email}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="default" className="h-7 text-xs" onClick={() => handleJoinRequest(req.id, true)}>
+                        Aprovar
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleJoinRequest(req.id, false)}>
+                        Recusar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Distribution Dialog */}
+      <Dialog open={showDistribution} onOpenChange={(o) => { setShowDistribution(o); if (!o) setDistributionColumnOverrides({}); }}>
+        <DialogContent className="max-w-md w-[95vw]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shuffle className="h-5 w-5 text-orange-500" /> Auto-distribuição de Tarefas
+            </DialogTitle>
+            <DialogDescription>Recomendações de redistribuição baseadas na carga de trabalho. Você pode escolher para qual coluna mover cada tarefa.</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            {(() => {
+              const recs = getDistributionRecommendations();
+              return recs.length === 0 ? (
+                <div className="py-8 text-center">
+                  <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">As tarefas estão bem distribuídas!</p>
+                </div>
+              ) : (
+                <div className="space-y-3 pr-2">
+                  {recs.map((rec, i) => {
+                    const selectedColumnId = distributionColumnOverrides[rec.taskId] || rec.targetColumnId;
+                    const selectedCol = columns.find(c => c.id === selectedColumnId);
+                    return (
+                      <div key={i} className="p-3 rounded-lg border border-border bg-card space-y-2 overflow-hidden">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: selectedCol?.color }} />
+                          <p className="text-sm font-medium text-foreground line-clamp-1" title={rec.taskTitle}>{rec.taskTitle}</p>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed bg-muted/50 rounded-md p-2 break-words">
+                          💡 {rec.reason}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                          <span className="truncate max-w-[80px]" title={rec.fromName}>{rec.fromName}</span>
+                          <MoveRight className="h-3 w-3 flex-shrink-0 text-orange-500" />
+                          <span className="font-medium text-foreground truncate max-w-[80px]" title={rec.toName}>{rec.toName}</span>
+                        </div>
+                        <div className="pt-1">
+                          <label className="text-xs text-muted-foreground mb-1 block">Mover para coluna:</label>
+                          <Select value={selectedColumnId} onValueChange={(val) => setDistributionColumnOverrides(prev => ({ ...prev, [rec.taskId]: val }))}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {columns.map(col => (
+                                <SelectItem key={col.id} value={col.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: col.color }} />
+                                    {col.title}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-2 pt-1">
+                          <Button size="sm" className="h-7 text-xs flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
+                            const updates: any = { assigned_to: rec.toProfileId };
+                            if (selectedColumnId !== rec.targetColumnId) {
+                              updates.status = selectedColumnId;
+                            }
+                            await updateTask(rec.taskId, updates);
+                            const colName = columns.find(c => c.id === selectedColumnId)?.title || '';
+                            toast.success(`Tarefa reatribuída para ${rec.toName}${selectedColumnId !== rec.targetColumnId ? ` e movida para "${colName}"` : ''}`);
+                            setShowDistribution(false);
+                          }}>
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> Aprovar
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => {
+                            toast.info('Redistribuição recusada');
+                          }}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
