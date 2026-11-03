@@ -3383,6 +3383,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      avatar_folder_visible: { Args: { _folder: string }; Returns: boolean }
       can_edit_note: { Args: { _note_id: string }; Returns: boolean }
       can_read_attachment_object: { Args: { _name: string }; Returns: boolean }
       can_use_meeting_rooms: { Args: never; Returns: boolean }
