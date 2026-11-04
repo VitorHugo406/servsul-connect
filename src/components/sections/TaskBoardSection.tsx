@@ -2202,7 +2202,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                         {colTemplates.map(template => (
                           <div
                             key={template.id}
-                            className="mx-2 mb-1.5 rounded-lg border border-dashed border-muted-foreground/30 cursor-pointer hover:shadow-md transition-all group/tpl relative bg-muted"
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, template)}
+                            onDragEnd={handleDragEnd}
+                            className={cn("mx-2 mb-1.5 rounded-lg border border-dashed border-muted-foreground/30 cursor-pointer hover:shadow-md transition-all group/tpl relative bg-muted", draggedTask?.id === template.id && 'opacity-50 scale-95')}
                             onClick={() => { setSelectedTask(template); setShowTaskDetail(true); }}
                           >
                             <div className="px-2.5 py-2">
