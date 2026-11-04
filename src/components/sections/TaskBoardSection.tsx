@@ -1193,21 +1193,24 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const isDarkBg = isBoardBgDark(board.background_image);
 
   // Drag-to-scroll handlers for desktop board
-  const handleBoardMouseDown = (e: React.MouseEvent) => {
+  const handleBoardMouseDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
     const target = e.target as HTMLElement;
-    // Only drag on empty space, not on cards/buttons
-    if (target.closest('.bg-card, button, [draggable], input, textarea, [role="dialog"]')) return;
+    // Cards stay draggable/clickable; controls stay interactive
+    if (target.closest('[draggable="true"], button, a, input, textarea, select, [role="menu"], [role="dialog"], [contenteditable="true"]')) return;
     if (!boardScrollRef.current) return;
     setIsDraggingBoard(true);
     dragStartRef.current = { x: e.clientX, scrollLeft: boardScrollRef.current.scrollLeft };
+    e.currentTarget.setPointerCapture(e.pointerId);
     e.preventDefault();
   };
-  const handleBoardMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingBoard || !dragStartRef.current || !boardScrollRef.current) return;
+  const handleBoardMouseMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragStartRef.current || !boardScrollRef.current) return;
     const dx = e.clientX - dragStartRef.current.x;
     boardScrollRef.current.scrollLeft = dragStartRef.current.scrollLeft - dx;
   };
-  const handleBoardMouseUp = () => {
+  const handleBoardMouseUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
     setIsDraggingBoard(false);
     dragStartRef.current = null;
   };
@@ -1645,11 +1648,11 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
           <div
             ref={boardScrollRef}
             className={cn(isMobile ? 'overflow-y-auto' : 'overflow-x-auto overflow-y-hidden h-full p-4 scrollbar-none')}
-            onMouseDown={!isMobile ? handleBoardMouseDown : undefined}
-            onMouseMove={!isMobile ? handleBoardMouseMove : undefined}
-            onMouseUp={!isMobile ? handleBoardMouseUp : undefined}
-            onMouseLeave={!isMobile ? handleBoardMouseUp : undefined}
-            style={!isMobile ? { cursor: isDraggingBoard ? 'grabbing' : 'grab' } : undefined}
+            onPointerDown={!isMobile ? handleBoardMouseDown : undefined}
+            onPointerMove={!isMobile ? handleBoardMouseMove : undefined}
+            onPointerUp={!isMobile ? handleBoardMouseUp : undefined}
+            onPointerCancel={!isMobile ? handleBoardMouseUp : undefined}
+            style={!isMobile ? { cursor: isDraggingBoard ? 'grabbing' : 'grab', userSelect: isDraggingBoard ? 'none' : undefined } : undefined}
           >
           <TooltipProvider delayDuration={200}>
           {isMobile ? (
