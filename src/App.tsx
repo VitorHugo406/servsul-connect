@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useSearchParams } 
 import { lazy, Suspense, useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
+import { DemoTimer } from "@/components/demo/DemoTimer";
 import { FloatingNoteProvider } from "@/contexts/FloatingNoteContext";
 import { supabase } from "@/integrations/supabase/client";
 import { applyBrand, getCachedBrand } from "@/lib/branding";
@@ -101,6 +102,6 @@ function PersistentAccessNavigation() {
   </div>;
 }
 function AppRoutes() { const location = useLocation(); const authContent = <PublicRoute><Auth /></PublicRoute>; return <><PersistentAccessNavigation /><Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><Routes><Route path="/" element={<RootRoute />} /><Route path="/auth" element={location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={<PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="*" element={<RootRoute />} /></Routes></Suspense></>; }
-function AppShell() { return <AuthProvider><CompanyProvider><FloatingNoteProvider><AppRoutes /></FloatingNoteProvider></CompanyProvider></AuthProvider>; }
+function AppShell() { return <><DemoTimer /><AuthProvider><CompanyProvider><FloatingNoteProvider><AppRoutes /></FloatingNoteProvider></CompanyProvider></AuthProvider></>; }
 const App = () => (<QueryClientProvider client={queryClient}><TooltipProvider><Toaster /><Sonner /><BrowserRouter><AppShell /></BrowserRouter></TooltipProvider></QueryClientProvider>);
 export default App;

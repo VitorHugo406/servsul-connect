@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import React from "react";
 import { Link } from "react-router-dom";
+import { startDemoSession } from "@/lib/demo/demoSession";
 import {
   ArrowRight, ChevronLeft, ChevronRight, Check, ShieldCheck, MessageSquare, LayoutDashboard, Users,
   CalendarDays, ClipboardCheck, Workflow, BarChart3, Building2,
@@ -49,6 +50,7 @@ const planFeatures = [
 ];
 
 export default function LandingPage() {
+  const startDemo = () => { startDemoSession(); window.location.href = "/"; };
   const [scrolled, setScrolled] = useState(false);
   const [activeFeature, setActiveFeature] = useState(0);
   const showcaseFeatures = features;
@@ -93,7 +95,7 @@ export default function LandingPage() {
           </nav>
           <div className="flex shrink-0 items-center justify-self-end gap-1 sm:gap-2">
             <Link to="/select-company" className="hidden rounded-xl px-3 py-2.5 text-sm font-semibold text-current transition hover:bg-white/15 sm:inline-flex">Entrar</Link>
-            <Link to="/auth" className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-slate-900/85 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-slate-800">Testar grátis <ArrowRight size={16} /></Link>
+            <button type="button" onClick={startDemo} className="hidden items-center gap-2 rounded-xl border border-white/20 bg-slate-900/85 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-slate-800 md:inline-flex">Testar agora <ArrowRight size={16} /></button>
           </div>
         </header>
       </div>
@@ -105,6 +107,7 @@ export default function LandingPage() {
           <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 md:text-lg">A Nuvexa reúne comunicação, tarefas, equipes e controles operacionais em uma plataforma pensada para simplificar a rotina da sua empresa.</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link to="/select-company" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-blue-700/20 transition hover:-translate-y-0.5 hover:bg-blue-800">Começar avaliação gratuita <ArrowRight size={17} /></Link>
+            <button type="button" onClick={startDemo} className="hidden min-h-12 items-center justify-center gap-2 rounded-xl border border-blue-700 bg-white px-6 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50 md:inline-flex">Testar agora (3h)</button>
             <a href="#planos" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">Ver planos pagos</a>
           </div>
           <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-slate-500">
