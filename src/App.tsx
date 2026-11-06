@@ -47,17 +47,9 @@ function CompanyBrandGate({ children }: { children: React.ReactNode }) {
 function PublicRoute({ children }: { children: React.ReactNode }) { const { user, loading, verifying } = useAuth(); if (loading) return <LoadingScreen message="Verificando acesso..." />; if (user && !verifying) return <Navigate to="/" replace />; return <>{children}</>; }
 function RootRoute() {
   const { user, loading, verifying } = useAuth();
-  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches);
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 767px)");
-    const update = () => setIsMobile(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
   if (loading || verifying) return <LoadingScreen message="Preparando seu ambiente..." />;
   if (user) return <Index />;
-  return isMobile ? <SelectCompany /> : <LandingPage />;
+  return <LandingPage />;
 }
 function PersistentAccessNavigation() {
   const location = useLocation();
