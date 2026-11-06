@@ -1,3 +1,5 @@
+import { IS_DEMO } from '@/lib/demo/bootDemo';
+const DEMO_HIDDEN_SECTIONS = new Set(['data-management', 'api-management', 'event-history']);
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLayoutEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -48,6 +50,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const { counts } = useNotifications();
   const isSuperAdmin = roles.some((r: any) => (r.role as string) === 'super_admin');
   const visibleMenuItems = menuItems.filter(item => {
+    if (IS_DEMO && DEMO_HIDDEN_SECTIONS.has(item.id)) return false;
     if ('superAdminOnly' in item && item.superAdminOnly) return isSuperAdmin;
     if ('mainAdminOnly' in item && item.mainAdminOnly) return isAdmin && profile?.email === 'adminservchat@servsul.com.br';
     if ('adminOnly' in item && item.adminOnly) return isAdmin;
@@ -83,7 +86,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
         </ScrollArea>
       </nav>
       <div className="ewvon-seasonal-slot flex w-full justify-center pt-1">
-        <SeasonalEffectsButton collapsed />
+        {!IS_DEMO && <SeasonalEffectsButton collapsed />}
       </div>
     </motion.aside>
   );

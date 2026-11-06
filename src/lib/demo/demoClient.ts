@@ -14,8 +14,8 @@ function notify(t: string) { listeners.forEach(l => { try { l(t); } catch { /* i
 function seed(s: DemoSession) {
   if (localStorage.getItem(`${DEMO_DATA_PREFIX}seeded`)) return;
   const now = new Date().toISOString();
-  writeTable('companies', [{ id: s.companyId, name: 'Empresa Teste', slug: 'teste', logo_url: null, primary_color: '#3D2FD6', secondary_color: '#12C2F0', is_active: true, is_system: false, enabled_modules: ['bh', 'bi', 'fechamento', 'orbs'], created_at: now }]);
-  writeTable('sectors', [{ id: GERAL_SECTOR_ID, name: 'Geral', color: '#3D2FD6', icon: 'Users', company_id: s.companyId, created_at: now }]);
+  writeTable('companies', [{ id: s.companyId, name: 'Empresa Teste', slug: 'teste', logo_url: null, primary_color: '#000000', secondary_color: '#FFFFFF', is_active: true, is_system: false, enabled_modules: ['bh', 'bi', 'fechamento', 'orbs'], created_at: now }]);
+  writeTable('sectors', [{ id: GERAL_SECTOR_ID, name: 'Geral', color: '#000000', icon: 'Users', company_id: s.companyId, created_at: now }]);
   writeTable('profiles', [{ id: s.profileId, user_id: s.userId, name: 'Usuário Teste', display_name: 'Usuário Teste', email: 'teste@nuvexa.demo', avatar_url: null, sector_id: GERAL_SECTOR_ID, autonomy_level: 'admin', birth_date: null, is_active: true, profile_type: 'user', created_at: now, updated_at: now, last_seen_at: now, user_status: 'online', work_period: null, company_id: s.companyId, team_alerts_enabled: false, team_alert_times: [] }]);
   writeTable('user_roles', [{ id: crypto.randomUUID(), user_id: s.userId, role: 'admin' }]);
   writeTable('user_permissions', [{ id: crypto.randomUUID(), user_id: s.userId, can_post_announcements: true, can_delete_messages: true, can_access_management: true, can_access_password_change: true, can_create_war_room: true, can_access_bh: true, can_access_fechamento: true, can_access_orbs: true, can_access_meeting_rooms: true }]);
