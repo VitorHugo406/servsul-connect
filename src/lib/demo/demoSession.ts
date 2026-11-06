@@ -29,6 +29,7 @@ export function startDemoSession(now = Date.now()): DemoSession {
   clearDemoData();
   const s: DemoSession = { startedAt: now, expiresAt: now + DEMO_DURATION_MS, userId: crypto.randomUUID(), profileId: crypto.randomUUID(), companyId: crypto.randomUUID() };
   localStorage.setItem(DEMO_FLAG_KEY, JSON.stringify(s));
+  localStorage.setItem(`ewvor_onboarding_completed_${s.userId}`, 'true');
   return s;
 }
 

@@ -11,4 +11,4 @@
 - Chat emoji menus share a compact scrollable grid; desktop and composer menus use collision-aware portals to avoid clipping by conversation containers.
 - Manual unread reminders use a shared conversation wrapper and browser storage scoped by company and profile; they never rewrite delivery receipts or other participants' read status.
 - Desktop navigation measures the main page's top edge so its alignment follows header height changes.
-- Vite deduplicates React and React DOM; preview development never registers a service worker, and production workers never cache development modules, to prevent mixed React runtimes after updates.
+- Vite deduplicates React and React DOM; preview development never registers a service worker, and production workers never cache development modules, to prevent mixed React runtimes after updates.- Test mode (desktop "Testar agora") swaps the shared Supabase client's methods for a localStorage store at boot, so real screens run with zero backend access; sessions expire after a fixed window and wipe their prefixed data.
