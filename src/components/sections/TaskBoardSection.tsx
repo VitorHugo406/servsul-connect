@@ -236,6 +236,12 @@ export function TaskBoardSection() {
                 onDragOver={(e) => handleBoardDragOver(e, index)}
                 onDragEnd={handleBoardDragEnd}
               >
+                {board.background_image ? (
+                  <div className={cn('board-cover relative h-24 w-full overflow-hidden', !board.background_image.startsWith('http') && getBoardBg(board.background_image))}>
+                    {board.background_image.startsWith('http') ? <img src={board.background_image} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}
+                    <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
+                  </div>
+                ) : null}
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -2346,10 +2352,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               <DropdownMenuContent className="w-64">
                 {boards.filter(b => b.id !== board.id).map(b => (
                   <DropdownMenuItem key={b.id} onClick={() => onSelectBoard(b.id)} className="flex items-center gap-3 p-2">
-                    <div
-                      className={cn("w-12 h-8 rounded flex-shrink-0 border border-border", getBoardBg(b.background_image))}
-                      style={getBoardBgStyle(b.background_image)}
-                    />
+                    <div className={cn("w-12 h-8 rounded flex-shrink-0 overflow-hidden border border-border", !b.background_image?.startsWith('http') && getBoardBg(b.background_image))}>
+                      {b.background_image?.startsWith('http') ? <img src={b.background_image} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}
+                    </div>
                     <span className="text-sm font-medium truncate">{b.name}</span>
                   </DropdownMenuItem>
                 ))}

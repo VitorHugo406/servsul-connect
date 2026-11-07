@@ -1107,7 +1107,7 @@ function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage
   const start = () => { tm.current = window.setTimeout(onPick, 450); };
   const stop = () => window.clearTimeout(tm.current);
   const rx = m.r.length ? <div className="rx" style={{ display: 'flex' }}>{m.r.map((e) => <span key={e} onClick={(ev) => { ev.stopPropagation(); onReact(e, ref.current); }}>{e}</span>)}</div> : <div className="rx" style={{ display: 'none' }} />;
-  const tmh = <div className="tm">{m.h}{m.me ? <> · <span className="ck">{m.pending ? '✓' : '✓✓'}</span></> : null}</div>;
+  const tmh = <div className="tm">{m.h}{m.me ? <> · <span className={'ck' + (m.pending ? ' one' : '')} aria-label={m.pending ? 'Enviando' : 'Enviada'}><svg viewBox="0 0 18 11" aria-hidden="true"><path d="M1 5.8l3.2 3.2L10.6 2.4" />{m.pending ? null : <path d="M7.4 9l6.6-6.6" />}</svg></span></> : null}</div>;
   const stk = parseSticker(m.t);
   const bub = stk ? <div className="ewx-stkb" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><StickerView sticker={stk} size={140} /></div>
     : <div className="bub" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><MsgBody content={m.t} onOpenImage={onImage} /></div>;
@@ -1179,6 +1179,7 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [pinned, setPinned] = useState(false);
+  const [exp, setExp] = useState(0);
   const [busy, setBusy] = useState(false);
   const [qq, setQq] = useState('');
   const [sel, setSel] = useState<string[]>([]);
@@ -1317,9 +1318,12 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
       <textarea className="fld" rows={5} value={body} maxLength={2000} onChange={(e) => setBody(e.target.value)} placeholder="Escreva o comunicado" />
       <div style={{ height: 8 }} />
       <Tg t="Fixar no topo" d="Destaque com botão Ciente" on={pinned} onChange={setPinned} />
+      <div className="sl">Duração do aviso</div>
+      <Seg id="nexp" items={['Sem prazo', '24 h', '3 dias', '7 dias', '30 dias']} value={exp} onChange={setExp} />
+      <small className="ewx-nexp">{exp ? `Some sozinho em ${['', '24 horas', '3 dias', '7 dias', '30 dias'][exp]}.` : 'Fica visível até ser apagado.'}</small>
       <button className="btn full" disabled={busy || title.trim().length < 3 || body.trim().length < 3} onClick={async () => {
         setBusy(true);
-        const r = await api.sv(D.createNotice(api.me.id, api.boot.companyId, title.trim(), body.trim(), pinned));
+        const r = await api.sv(D.createNotice(api.me.id, api.boot.companyId, title.trim(), body.trim(), pinned, exp ? new Date(Date.now() + [0, 1, 3, 7, 30][exp] * 864e5).toISOString() : null));
         setBusy(false);
         if (r) { api.toast('Aviso publicado'); close(); }
       }}>{busy ? 'Publicando…' : 'Publicar aviso'}</button>

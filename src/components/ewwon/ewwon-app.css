@@ -430,3 +430,9 @@
 .ew .ewx-rec-hint { flex: 1; min-width: 0; font-size: 12px; color: var(--mu); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @keyframes ewx-rec-blink { 50% { opacity: .25; } }
 .ew .bub .vc { color: inherit; }
+.ew .ewx-nexp { display: block; margin: 6px 2px 12px; font-size: 12px; color: var(--mu); }
+
+/* Sent / delivered marks: one compact double-check icon (WhatsApp-like) */
+.ew .tm .ck { display: inline-flex; vertical-align: -1px; }
+.ew .tm .ck svg { width: 16px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ew .tm .ck.one svg { width: 12px; }

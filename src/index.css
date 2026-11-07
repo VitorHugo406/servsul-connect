@@ -1172,3 +1172,7 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
  .chat-message-text { font-family: var(--chat-message-font); font-size: var(--chat-message-size); }
 [data-ui="form-control"] { border-radius: var(--form-radius); border-color: hsl(var(--input)); background-color: hsl(var(--card)); color: hsl(var(--foreground)); }
 [data-ui="dialog"]:has(input, textarea, [role="combobox"]) { border: 0; border-radius: 20px; background: hsl(var(--card)); max-height: calc(100dvh - 32px); overflow-y: auto; width: calc(100% - 32px); }
+
+/* Board covers on the board selection screen keep their own background (clean scope would flatten it). */
+.clean-section .board-selection-item .board-cover { border-radius: 0 !important; }
+.clean-section .board-selection-item { padding: 0; }
