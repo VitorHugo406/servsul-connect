@@ -76,7 +76,7 @@ function device(): Promise<DeviceRec> {
 
 // ---------------------------------------------------------------- send
 /** Encrypts and uploads a voice note for the given chat members. Returns the message content. */
-export async function sendVoice(audio: Blob, seconds: number, memberProfileIds: string[], meProfileId: string): Promise<string> {
+export async function sendVoice(audio: Blob, seconds: number, memberProfileIds: string[], meProfileId: string, chatKey?: string): Promise<string> {
   initE2E(meProfileId);
   await device();
   const companyId = getActiveCompanyId();
@@ -99,7 +99,7 @@ export async function sendVoice(audio: Blob, seconds: number, memberProfileIds: 
   const path = `${companyId}/${uid}/${crypto.randomUUID()}.e2e`;
   const up = await sb.storage.from('voice').upload(path, file, { contentType: 'application/octet-stream', upsert: false });
   if (up.error) throw new Error('Não foi possível enviar o áudio');
-  const reg = await sb.from('e2e_media').insert({ path, company_id: companyId, sender_profile_id: meProfileId });
+  const reg = await sb.from('e2e_media').insert({ path, company_id: companyId, sender_profile_id: meProfileId, chat_key: chatKey || null });
   if (reg.error) throw new Error('Não foi possível registrar o áudio');
 
   // Seal the content key for every device of every member (including my other devices).
@@ -131,7 +131,7 @@ export async function sendVoice(audio: Blob, seconds: number, memberProfileIds: 
 }
 
 // ---------------------------------------------------------------- receive
-export class VoiceError extends Error { constructor(public code: 'nokey' | 'expired' | 'failed', msg: string) { super(msg); } }
+export class VoiceError extends Error { constructor(public code: 'nokey' | 'pending' | 'expired' | 'failed', msg: string) { super(msg); } }
 const opened = new Map<string, Promise<string>>();
 
 /** Downloads, decrypts and returns a local URL for the voice note (cached for this session). */
@@ -143,7 +143,10 @@ export function openVoice(path: string): Promise<string> {
     const { data: row } = await sb.from('e2e_media_keys').select('epk, iv, wrapped').eq('media_path', path).eq('device_id', dev.deviceId).maybeSingle();
     if (!row) {
       const { data: media } = await sb.from('e2e_media').select('path').eq('path', path).maybeSingle();
-      throw media ? new VoiceError('nokey', 'Áudio protegido: indisponível neste aparelho') : new VoiceError('expired', 'Áudio expirou');
+      if (!media) throw new VoiceError('expired', 'Áudio expirou');
+      // Ask the sender's device to seal the key for this device (WhatsApp-like "waiting for this message").
+      await sb.from('e2e_key_requests').upsert({ media_path: path, device_id: dev.deviceId, requester_profile_id: current?.profileId }, { onConflict: 'media_path,device_id', ignoreDuplicates: true });
+      throw new VoiceError('pending', 'Aguardando a chave do aparelho de quem enviou');
     }
     const epk = await crypto.subtle.importKey('jwk', row.epk, ECDH, false, []);
     const kek = await crypto.subtle.deriveKey({ name: 'ECDH', public: epk }, dev.keys.privateKey, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
@@ -166,4 +169,67 @@ export function openVoice(path: string): Promise<string> {
 export function pickAudioMime(): string {
   const options = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm'];
   return options.find((m) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported?.(m)) || '';
+}
+
+// ---------------------------------------------------------------- key requests
+/** Resolves when a sealed key for this device arrives for `path` (or after `ms`). */
+export function waitForKey(path: string, ms = 120000): Promise<boolean> {
+  return new Promise((resolve) => {
+    let done = false;
+    let ch: { unsubscribe?: () => void } | null = null;
+    const finish = (v: boolean) => { if (done) return; done = true; window.clearTimeout(t); if (ch) void sb.removeChannel(ch); resolve(v); };
+    const t = window.setTimeout(() => finish(false), ms);
+    void device().then((dev) => {
+      ch = sb.channel(`e2e-key-${dev.deviceId}-${Date.now()}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'e2e_media_keys', filter: `device_id=eq.${dev.deviceId}` }, (p: { new: { media_path?: string } }) => { if (p.new?.media_path === path) { opened.delete(path); finish(true); } })
+        .subscribe();
+    }).catch(() => finish(false));
+  });
+}
+
+/**
+ * Runs on the sender's device: seals the key of my voice notes for devices that asked for it,
+ * only when the requester is one of my other devices or a member of that conversation.
+ */
+export async function processKeyRequests(meProfileId: string, isMember: (chatKey: string, profileId: string) => boolean) {
+  const dev = await device();
+  const { data: reqRows } = await sb.from('e2e_key_requests').select('media_path, device_id, requester_profile_id').limit(100);
+  const paths = [...new Set(((reqRows || []) as { media_path: string }[]).map((r) => r.media_path))];
+  if (!paths.length) return;
+  const { data: media } = await sb.from('e2e_media').select('path, sender_profile_id, chat_key').in('path', paths);
+  const M = new Map(((media || []) as { path: string; sender_profile_id: string; chat_key: string | null }[]).map((m) => [m.path, m]));
+  const reqs = ((reqRows || []) as { media_path: string; device_id: string; requester_profile_id: string }[]).map((r) => ({ ...r, e2e_media: M.get(r.media_path) })).filter((r) => r.e2e_media);
+  for (const r of reqs as { media_path: string; device_id: string; requester_profile_id: string; e2e_media: { sender_profile_id: string; chat_key: string | null } }[]) {
+    if (r.e2e_media?.sender_profile_id !== meProfileId) continue;
+    const allowed = r.requester_profile_id === meProfileId || (!!r.e2e_media.chat_key && isMember(r.e2e_media.chat_key, r.requester_profile_id));
+    if (!allowed) { await sb.from('e2e_key_requests').delete().eq('media_path', r.media_path).eq('device_id', r.device_id); continue; }
+    try {
+      const { data: mine } = await sb.from('e2e_media_keys').select('epk, iv, wrapped').eq('media_path', r.media_path).eq('device_id', dev.deviceId).maybeSingle();
+      if (!mine) continue; // another of my devices may answer
+      const epk = await crypto.subtle.importKey('jwk', mine.epk, ECDH, false, []);
+      const kek = await crypto.subtle.deriveKey({ name: 'ECDH', public: epk }, dev.keys.privateKey, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+      const raw = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(mine.iv) }, kek, unb64(mine.wrapped)));
+      const { data: target } = await sb.from('e2e_device_keys').select('public_key').eq('device_id', r.device_id).maybeSingle();
+      if (!target) continue;
+      const pub = await crypto.subtle.importKey('jwk', target.public_key, ECDH, false, []);
+      const eph = await crypto.subtle.generateKey(ECDH, true, ['deriveKey']) as CryptoKeyPair;
+      const k2 = await crypto.subtle.deriveKey({ name: 'ECDH', public: pub }, eph.privateKey, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+      const wiv = crypto.getRandomValues(new Uint8Array(12));
+      const wrapped = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: wiv }, k2, raw);
+      raw.fill(0);
+      await sb.from('e2e_media_keys').upsert({ media_path: r.media_path, device_id: r.device_id, epk: await crypto.subtle.exportKey('jwk', eph.publicKey), iv: b64(wiv), wrapped: b64(wrapped) }, { onConflict: 'media_path,device_id', ignoreDuplicates: true });
+      await sb.from('e2e_key_requests').delete().eq('media_path', r.media_path).eq('device_id', r.device_id);
+    } catch (e) { console.warn('e2e re-seal', e); }
+  }
+}
+
+/** Listens for new key requests while the app is open. */
+export function watchKeyRequests(meProfileId: string, isMember: (chatKey: string, profileId: string) => boolean) {
+  let busy = false;
+  const run = () => { if (busy) return; busy = true; void processKeyRequests(meProfileId, isMember).finally(() => { busy = false; }); };
+  run();
+  const ch = sb.channel(`e2e-req-${meProfileId}-${Date.now()}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'e2e_key_requests' }, run)
+    .subscribe();
+  return () => { void sb.removeChannel(ch); };
 }

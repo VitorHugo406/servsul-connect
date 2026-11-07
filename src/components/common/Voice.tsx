@@ -1,19 +1,24 @@
 // Voice note player (decrypts on demand) and recorder hook, shared by desktop and mobile.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fmtDuration, openVoice, pickAudioMime, VoiceError } from '@/lib/e2e';
+import { fmtDuration, openVoice, pickAudioMime, VoiceError, waitForKey } from '@/lib/e2e';
 import type { VoiceRef } from '@/lib/e2e';
 import './voice.css';
 
 const BARS = 28;
+/** White padlock badge used for every end-to-end encrypted item. */
+export function Lock() {
+  return <span className="vc-lockb" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5" /><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" /></svg></span>;
+}
 const bars = (seed: string) => Array.from({ length: BARS }, (_, i) => { let h = 0; for (const c of seed.slice(i % seed.length) + i) h = (h * 31 + c.charCodeAt(0)) | 0; return 25 + (Math.abs(h) % 75); });
 
 export function VoicePlayer({ voice, mine }: { voice: VoiceRef; mine?: boolean }) {
   const [src, setSrc] = useState<string | null>(null);
-  const [state, setState] = useState<'idle' | 'loading' | 'playing' | 'paused' | 'nokey' | 'expired' | 'failed'>('idle');
+  const [state, setState] = useState<'idle' | 'loading' | 'playing' | 'paused' | 'nokey' | 'pending' | 'expired' | 'failed'>('idle');
   const [pos, setPos] = useState(0);
   const [dur, setDur] = useState(0);
   const audio = useRef<HTMLAudioElement | null>(null);
   const shape = useRef(bars(voice.path)).current;
+  const toggleRef = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => () => { audio.current?.pause(); }, []);
   const toggle = async () => {
@@ -33,9 +38,15 @@ export function VoicePlayer({ voice, mine }: { voice: VoiceRef; mine?: boolean }
       a.onended = () => { setState('paused'); setPos(0); };
       await a.play();
     } catch (e) {
-      setState(e instanceof VoiceError ? e.code : 'failed');
+      const code = e instanceof VoiceError ? e.code : 'failed';
+      setState(code);
+      if (code === 'pending') {
+        // The sender's device re-seals the key as soon as it is online; then play automatically.
+        void waitForKey(voice.path).then((ok) => { if (ok) { setState('idle'); void toggleRef.current?.(); } });
+      }
     }
   };
+  toggleRef.current = toggle;
   const total = dur || voice.duration.split(':').reduce((m, s) => m * 60 + +s, 0);
   const pct = total ? Math.min(1, pos / total) : 0;
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -43,8 +54,14 @@ export function VoicePlayer({ voice, mine }: { voice: VoiceRef; mine?: boolean }
     const r = e.currentTarget.getBoundingClientRect();
     audio.current.currentTime = Math.max(0, Math.min(total, ((e.clientX - r.left) / r.width) * total));
   };
-  if (state === 'nokey' || state === 'expired') {
-    return <div className="vc vc-off">🔒 {state === 'nokey' ? 'Áudio protegido de ponta a ponta. Disponível só nos aparelhos que já estavam conectados quando ele foi enviado.' : 'Áudio expirou no servidor.'}</div>;
+  if (state === 'nokey' || state === 'expired' || state === 'pending') {
+    return (
+      <div className="vc vc-off">
+        <Lock />
+        <span>{state === 'pending' ? <>Aguardando o aparelho de quem enviou ficar online para liberar este áudio protegido.<button type="button" className="vc-retry" onClick={(e) => { e.stopPropagation(); setState('idle'); void toggle(); }}>Tentar agora</button></>
+          : state === 'nokey' ? 'Áudio protegido de ponta a ponta. Indisponível neste aparelho.' : 'Áudio expirou no servidor.'}</span>
+      </div>
+    );
   }
   return (
     <div className={'vc' + (mine ? ' mine' : '')}>
@@ -57,7 +74,7 @@ export function VoicePlayer({ voice, mine }: { voice: VoiceRef; mine?: boolean }
         {shape.map((h, i) => <i key={i} style={{ height: h + '%' }} className={i / BARS < pct ? 'on' : ''} />)}
       </div>
       <span className="vc-t">{fmtDuration(state === 'playing' || pos ? pos : total)}</span>
-      <span className="vc-lock" title="Criptografado de ponta a ponta">🔒</span>
+      <span className="vc-lock" title="Criptografado de ponta a ponta"><Lock /></span>
       {state === 'failed' ? <small className="vc-err">Não foi possível abrir</small> : null}
     </div>
   );

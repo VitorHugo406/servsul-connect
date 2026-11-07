@@ -1,7 +1,7 @@
 // Ewwon mobile app — React port of the "Ewwon · App mobile" prototype,
 // backed by the existing Supabase data (see ./data.ts).
-import { useVoiceRecorder } from '@/components/common/Voice';
-import { fmtDuration, sendVoice } from '@/lib/e2e';
+import { useVoiceRecorder, Lock } from '@/components/common/Voice';
+import { fmtDuration, sendVoice, watchKeyRequests } from '@/lib/e2e';
 import { PermissionGate, needsPermissionGate } from './permgate';
 import { StickerPicker, StickerView } from '@/components/common/Stickers';
 import { addFavorite, isSticker, parseSticker, stickerContent } from '@/lib/stickers';
@@ -345,7 +345,7 @@ export default function EwwonApp() {
     if (!r || !c) { if (!r) toast('Áudio muito curto'); return; }
     setSending(true);
     try {
-      const content = await sendVoice(r.blob, r.seconds, c.mem.length ? c.mem : [c.id], meId);
+      const content = await sendVoice(r.blob, r.seconds, c.mem.length ? c.mem : [c.id], meId, c.key);
       await send(content);
     } catch (e) { toast((e as Error).message || 'Não foi possível enviar o áudio'); }
     finally { setSending(false); }
@@ -498,6 +498,15 @@ export default function EwwonApp() {
       savePush: (sub) => D.saveWebPush(sub, meId, boot.companyId),
     }).then(() => setPerm(N.getPermission()));
   }, [boot, meId, openFrom, showBanner]);
+
+  // E2E voice: re-seal keys of my voice notes for new devices of conversation members.
+  useEffect(() => {
+    if (!boot || !meId) return;
+    return watchKeyRequests(meId, (chatKey, profileId) => {
+      const c = stateRef.current.chats.find((x) => x.key === chatKey);
+      return !!c && (c.mem.includes(profileId) || (c.kind === 'dm' && c.id === profileId));
+    });
+  }, [boot, meId]);
 
   useEffect(() => {
     if (!boot || !meId) return;
@@ -989,7 +998,7 @@ export default function EwwonApp() {
                 <button className="ewx-rec-x" aria-label="Cancelar áudio" onClick={() => voiceRec.cancel()}><I n="trash" /></button>
                 <span className="ewx-rec-dot" />
                 <span className="ewx-rec-t">{fmtDuration(voiceRec.seconds)}</span>
-                <span className="ewx-rec-hint">🔒 Gravando · criptografado</span>
+                <span className="ewx-rec-hint"><Lock /> Gravando · criptografado</span>
                 <button className="snd" aria-label="Enviar áudio" onClick={() => void sendVoiceNote()}><I n="send" /></button>
               </div>
             ) : (
