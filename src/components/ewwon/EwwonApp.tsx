@@ -3,7 +3,7 @@
 import { useVoiceRecorder, Lock } from '@/components/common/Voice';
 import { fmtDuration, sendVoice, watchKeyRequests } from '@/lib/e2e';
 import { PermissionGate, needsPermissionGate } from './permgate';
-import { StickerPicker, StickerView } from '@/components/common/Stickers';
+import { StickerPicker, StickerMessage } from '@/components/common/Stickers';
 import { addFavorite, isSticker, parseSticker, stickerContent } from '@/lib/stickers';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -979,7 +979,6 @@ export default function EwwonApp() {
             {attOn === 'menu' ? (
               <div className="ewx-att">
                 <button onClick={() => setAttOn('emoji')}><span style={{ background: '#ffb020' }}>😊</span>Emoji</button>
-                <button onClick={() => setAttOn('sticker')}><span style={{ background: '#ff7ab6' }}>✨</span>Figurinhas</button>
                 <button onClick={() => pickAttach('image/*')}><span style={{ background: '#8b5cf6' }}><I n="camera" /></span>Galeria</button>
                 <button onClick={() => pickAttach('image/*', true)}><span style={{ background: '#ff5d7a' }}><I n="camera" /></span>Câmera</button>
                 <button onClick={() => pickAttach('.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.zip,image/*')}><span style={{ background: '#4f8cff' }}><I n="upload" /></span>Arquivo</button>
@@ -989,7 +988,7 @@ export default function EwwonApp() {
                 </> : null}
               </div>
             ) : attOn === 'sticker' ? (
-              <div className="ewx-stkp"><StickerPicker notify={toast} onPick={(st) => { setAttOn(false); void send(stickerContent(st)); }} /></div>
+              <div className="ewx-stkp"><StickerPicker notify={toast} onPick={(st) => { setAttOn(false); void send(stickerContent(st)); }} onSendContent={(c) => { setAttOn(false); void send(c); }} /></div>
             ) : attOn === 'emoji' ? (
               <div className="ewx-emo">{EMOJIS.map((e) => <button key={e} onClick={() => setDraft((d) => d + e)}>{e}</button>)}</div>
             ) : null}
@@ -1003,7 +1002,8 @@ export default function EwwonApp() {
               </div>
             ) : (
             <div className="cmp">
-              <button className={'plus' + (attOn ? ' on' : '')} aria-label="Anexar" onClick={() => setAttOn(attOn ? false : 'menu')}><I n={attOn ? 'x' : 'plus'} /></button>
+              <button className={'plus' + (attOn && attOn !== 'sticker' ? ' on' : '')} aria-label="Anexar" onClick={() => setAttOn(attOn && attOn !== 'sticker' ? false : 'menu')}><I n={attOn && attOn !== 'sticker' ? 'x' : 'plus'} /></button>
+              <button className={'ewx-stkbtn' + (attOn === 'sticker' ? ' on' : '')} aria-label="Figurinhas" onClick={() => setAttOn(attOn === 'sticker' ? false : 'sticker')}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h7l7-7V7a4 4 0 0 0-4-4h-3" /><path d="M14 21v-3a4 4 0 0 1 4-4h3" /><path d="M8.5 10h.01M15.5 10h.01M8.5 14.5c1.8 1.6 5.2 1.6 7 0" /></svg></button>
               <input id="inp" ref={inpRef} placeholder={pending.length ? 'Adicione uma legenda' : 'Escreva uma mensagem'} autoComplete="off" value={draft} maxLength={4000}
                 onFocus={() => setAttOn((a) => (a === 'menu' ? false : a))}
                 onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); void doSend(); } }} />
@@ -1118,7 +1118,7 @@ function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage
   const rx = m.r.length ? <div className="rx" style={{ display: 'flex' }}>{m.r.map((e) => <span key={e} onClick={(ev) => { ev.stopPropagation(); onReact(e, ref.current); }}>{e}</span>)}</div> : <div className="rx" style={{ display: 'none' }} />;
   const tmh = <div className="tm">{m.h}{m.me ? <> · <span className={'ck' + (m.pending ? ' one' : '')} aria-label={m.pending ? 'Enviando' : 'Enviada'}><svg viewBox="0 0 18 11" aria-hidden="true"><path d="M1 5.8l3.2 3.2L10.6 2.4" />{m.pending ? null : <path d="M7.4 9l6.6-6.6" />}</svg></span></> : null}</div>;
   const stk = parseSticker(m.t);
-  const bub = stk ? <div className="ewx-stkb" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><StickerView sticker={stk} size={140} /></div>
+  const bub = stk ? <div className="ewx-stkb" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><StickerMessage sticker={stk} mine={m.me} /></div>
     : <div className="bub" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><MsgBody content={m.t} onOpenImage={onImage} /></div>;
   return (
     <div className={'m' + (m.me ? ' me' : '') + (gm ? ' gm' : '')} ref={ref} style={{ animation: 'none' }}>

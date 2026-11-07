@@ -6,7 +6,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { openMedia, useCachedMedia } from '@/lib/mediaCache';
-import { isSticker } from '@/lib/stickers';
+import { isSticker, parsePack } from '@/lib/stickers';
+import { PackCard } from '@/components/common/Stickers';
 import { parseVoice } from '@/lib/e2e';
 import { VoicePlayer } from '@/components/common/Voice';
 
@@ -88,6 +89,8 @@ function FileCard({ url, name }: { url: string; name: string }) {
 export function MsgBody({ content, onOpenImage }: { content: string; onOpenImage: (u: string, url: string, name: string, caption?: string) => void }) {
   const voice = parseVoice(content);
   if (voice) return <VoicePlayer voice={voice} />;
+  const pk = parsePack(content);
+  if (pk) return <PackCard id={pk} />;
   const p = parseMsg(content);
   const openWithCaption = (u: string, url: string, name: string) => onOpenImage(u, url, name, p.text || undefined);
   return (

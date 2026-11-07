@@ -26,3 +26,35 @@
 /* Sticker messages have no bubble (WhatsApp-like). */
 .stk-msg { display: inline-flex; flex-direction: column; gap: 2px; background: none !important; padding: 0 !important; box-shadow: none !important; border: 0 !important; }
 @media (prefers-reduced-motion: reduce) { .stk-emoji, .stk button.stk-b.edit { animation: none; } }
+
+/* Save received sticker, packs */
+.stk-msg { position: relative; }
+.stk-msg > span[role=button] { cursor: pointer; display: inline-flex; }
+button.stk-save { display: block; margin-top: 4px; padding: 6px 12px; border-radius: 999px; border: 0; background: #0b0b0e !important; background-image: none !important; box-shadow: 0 6px 16px -8px rgba(0, 0, 0, .6) !important; color: #fff; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.stk-title { font-size: 13px; }
+.stk button.stk-b.sel { outline: 2px solid currentColor; outline-offset: -2px; }
+.stk-ok { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 50%; background: #16a34a; color: #fff; font-style: normal; font-size: 12px; line-height: 20px; text-align: center; }
+.stk button.stk-main { width: 100%; padding: 10px 14px; border-radius: 14px; border: 0; background: currentColor !important; background-image: none !important; box-shadow: none !important; cursor: pointer; font-weight: 700; font-size: 14px; }
+.stk button.stk-main { color: inherit; background: var(--stk-bg) !important; }
+.stk button.stk-main:disabled { opacity: .5; }
+.stk-actions { display: flex; gap: 8px; }
+.stk-pack-list { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
+.stk button.stk-pack-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; border: 0; border-radius: 14px; background: none !important; background-image: none !important; box-shadow: none !important; color: inherit; cursor: pointer; text-align: left; }
+.stk button.stk-pack-row:hover { background: var(--stk-bg) !important; }
+.stk-pack-thumbs { display: flex; width: 116px; flex-shrink: 0; }
+.stk-pack-tx { flex: 1; min-width: 0; }
+.stk-pack-tx b, .stk-pack-h b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stk-pack-tx small, .stk-pack-h small { display: block; font-size: 12px; color: var(--stk-mu); }
+.stk-chev { color: var(--stk-mu); font-size: 18px; }
+.stk-pack-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.stk-pack-h > b { flex-basis: 100%; }
+.stk button.stk-chip { padding: 5px 10px; border-radius: 999px; border: 1px solid var(--stk-bd); background: none !important; background-image: none !important; box-shadow: none !important; color: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.stk button.stk-chip.danger { color: #ef4444; border-color: rgba(239, 68, 68, .4); }
+.stk button.stk-chip:disabled { opacity: .45; }
+.stk-pack-card { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px; min-width: 220px; max-width: 260px; border-radius: 16px; background: rgba(0, 0, 0, .14); }
+.stk-pack-grid { display: grid; grid-template-columns: repeat(4, 56px); gap: 2px; }
+.stk-pack-card b { font-size: 14px; }
+.stk-pack-card small { font-size: 12px; opacity: .75; }
+.stk-pack-own { font-weight: 600; }
+button.stk-pack-add { margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 12px; border: 0; background: #0b0b0e !important; background-image: none !important; box-shadow: none !important; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+button.stk-pack-add:disabled { opacity: .7; }

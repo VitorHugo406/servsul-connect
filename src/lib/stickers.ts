@@ -113,6 +113,7 @@ export function chatPreview(content: string | null | undefined, max = 60): strin
   const c = String(content || '').trim();
   if (!c) return '';
   if (isSticker(c)) return '✨ Figurinha';
+  if (PACK_RE.test(c)) return '✨ Pacote de figurinhas';
   const voice = c.match(/^🎤 \[(\d{1,2}:\d{2})\]\(voice:/);
   if (voice) return `🎤 Áudio (${voice[1]})`;
   const lines = c.split('\n');
@@ -121,4 +122,87 @@ export function chatPreview(content: string | null | undefined, max = 60): strin
   const file = c.match(/^📎 \[(.+?)\]/m);
   const out = text || (imgs ? (imgs > 1 ? `📷 ${imgs} fotos` : '📷 Foto') : file ? `📎 ${file[1]}` : '');
   return out.length > max ? out.slice(0, max - 1).trimEnd() + '…' : out;
+}
+
+// ---------------------------------------------------------------- packs
+export interface Pack { id: string; name: string; ownerId: string; items: Sticker[] }
+const PACK_RE = /^✨ pack:([0-9a-f-]{36})$/;
+export const packContent = (id: string) => `✨ pack:${id}`;
+export const parsePack = (content: string | null | undefined) => String(content || '').trim().match(PACK_RE)?.[1] || null;
+
+type PackRow = { id: string; name: string; owner_profile_id: string; company_id: string };
+async function withItems(rows: PackRow[]): Promise<Pack[]> {
+  if (!rows.length) return [];
+  const { data } = await sb.from('chat_sticker_pack_items').select('pack_id, sha256, position, added_at').in('pack_id', rows.map((r) => r.id)).order('position').order('added_at');
+  return rows.map((r) => ({ id: r.id, name: r.name, ownerId: r.owner_profile_id, items: ((data || []) as { pack_id: string; sha256: string }[]).filter((i) => i.pack_id === r.id).map((i) => ({ kind: 'img', companyId: r.company_id, sha: i.sha256 }) as Sticker) }));
+}
+export async function listMyPacks(meId: string): Promise<Pack[]> {
+  const { data } = await sb.from('chat_sticker_packs').select('id, name, owner_profile_id, company_id').eq('owner_profile_id', meId).order('created_at');
+  return withItems((data || []) as PackRow[]);
+}
+export async function getPack(id: string): Promise<Pack | null> {
+  const { data } = await sb.from('chat_sticker_packs').select('id, name, owner_profile_id, company_id').eq('id', id).maybeSingle();
+  return data ? (await withItems([data as PackRow]))[0] : null;
+}
+export async function createPack(name: string, meId: string): Promise<Pack> {
+  const { data, error } = await sb.from('chat_sticker_packs').insert({ name: name.trim().slice(0, 40), owner_profile_id: meId, company_id: getActiveCompanyId() || undefined }).select('id, name, owner_profile_id, company_id').single();
+  if (error || !data) throw new Error('Não foi possível criar o pacote');
+  return { id: data.id, name: data.name, ownerId: data.owner_profile_id, items: [] };
+}
+export async function renamePack(id: string, name: string) { await sb.from('chat_sticker_packs').update({ name: name.trim().slice(0, 40), updated_at: new Date().toISOString() }).eq('id', id); }
+export async function deletePack(id: string) { const { error } = await sb.from('chat_sticker_packs').delete().eq('id', id); if (error) throw new Error('Não foi possível excluir o pacote'); }
+export async function addToPack(packId: string, stickers: Sticker[]) {
+  const rows = stickers.filter((s): s is Extract<Sticker, { kind: 'img' }> => s.kind === 'img').map((s, i) => ({ pack_id: packId, sha256: s.sha, position: Date.now() % 1e6 + i }));
+  if (!rows.length) return;
+  const { error } = await sb.from('chat_sticker_pack_items').upsert(rows, { onConflict: 'pack_id,sha256', ignoreDuplicates: true });
+  if (error) throw new Error('Não foi possível adicionar ao pacote');
+}
+export async function removeFromPack(packId: string, sha: string) { await sb.from('chat_sticker_pack_items').delete().eq('pack_id', packId).eq('sha256', sha); }
+/** Adds a copy of someone's pack to my packs (and its stickers to my favorites). */
+export async function copyPack(pack: Pack, meId: string): Promise<Pack> {
+  const mine = await createPack(pack.name, meId);
+  await addToPack(mine.id, pack.items);
+  await Promise.all(pack.items.map((s) => addFavorite(s).catch(() => undefined)));
+  return { ...mine, items: pack.items };
+}
+
+// ---------------------------------------------------------------- export / import (.ewvonpack)
+const toDataUrl = (b: Blob) => new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(r.error); r.readAsDataURL(b); });
+export async function exportPack(pack: Pack): Promise<File> {
+  const stickers: string[] = [];
+  for (const s of pack.items) {
+    if (s.kind !== 'img') continue;
+    const { data } = await sb.storage.from('stickers').download(`${s.companyId}/${s.sha}.webp`);
+    if (data) stickers.push(await toDataUrl(data));
+  }
+  const body = JSON.stringify({ format: 'ewvon-stickers', version: 1, name: pack.name, stickers });
+  const safe = pack.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'figurinhas';
+  return new File([body], `${safe}.ewvonpack`, { type: 'application/json' });
+}
+/** Shares the pack file with the phone's share sheet (WhatsApp, e-mail…) or downloads it. */
+export async function shareOrDownload(file: File): Promise<'shared' | 'downloaded'> {
+  const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+  if (nav.share && nav.canShare?.({ files: [file] })) {
+    try { await nav.share({ files: [file], title: file.name }); return 'shared'; } catch { /* cancelled: fall back to download */ }
+  }
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a'); a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+  return 'downloaded';
+}
+export async function importPack(file: File, meId: string): Promise<Pack> {
+  if (file.size > 15_000_000) throw new Error('Arquivo grande demais');
+  let data: { format?: string; name?: string; stickers?: string[] };
+  try { data = JSON.parse(await file.text()); } catch { throw new Error('Arquivo de pacote inválido'); }
+  if (data.format !== 'ewvon-stickers' || !Array.isArray(data.stickers)) throw new Error('Arquivo de pacote inválido');
+  const created: Sticker[] = [];
+  for (const d of data.stickers.slice(0, 120)) {
+    if (typeof d !== 'string' || !/^data:image\/(webp|png);base64,/.test(d)) continue;
+    const blob = await (await fetch(d)).blob();
+    created.push(await createSticker(blob));
+  }
+  if (!created.length) throw new Error('O pacote não tem figurinhas válidas');
+  const pack = await createPack(String(data.name || 'Pacote importado'), meId);
+  await addToPack(pack.id, created);
+  return { ...pack, items: created };
 }

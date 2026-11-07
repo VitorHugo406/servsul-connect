@@ -45,3 +45,8 @@
 - Avisos temporários no app (24 h, 3, 7 ou 30 dias) via `expire_at`; o PC já tinha a data de expiração.
 - Postar avisos: admin (papel), nível admin/gerente ou permissão `can_post_announcements` — mesma regra na tela e na policy de INSERT.
 - Prévia de links: edge function `link-preview` (só usuários logados; só http/https em hosts públicos; HTML até 400 KB; 6 s). O app guarda a prévia no aparelho por 7 dias.
+
+## Áudio: aparelhos novos e pacotes de figurinhas (08/11/2026)
+- Áudio enviado antes de o aparelho do destinatário existir: o aparelho novo cria um pedido em `e2e_key_requests`; o aparelho de quem enviou (quando online) confere no app que a pessoa é membro daquela conversa (`e2e_media.chat_key`) e sela a chave para o aparelho novo. O servidor continua sem ver áudio nem chave.
+- Figurinhas: botão próprio ao lado do "+"; tocar numa figurinha recebida mostra "Salvar nas favoritas".
+- Pacotes: `chat_sticker_packs` / `chat_sticker_pack_items` (empresa vê, só o dono altera). Compartilhar no chat envia `✨ pack:<id>` (cartão "Adicionar aos meus pacotes" cria uma cópia). Exportar gera um arquivo `.ewvonpack` (JSON com as imagens), compartilhável pelo menu do celular; Importar recria o pacote.

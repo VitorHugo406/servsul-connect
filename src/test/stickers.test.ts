@@ -27,3 +27,13 @@ describe('chatPreview', () => {
     expect(chatPreview('x'.repeat(100), 20)).toHaveLength(20);
   });
 });
+
+import { packContent, parsePack } from '@/lib/stickers';
+describe('sticker packs', () => {
+  it('round-trips the shared pack reference', () => {
+    const id = '33333333-3333-3333-3333-333333333333';
+    expect(parsePack(packContent(id))).toBe(id);
+    expect(parsePack('✨ pack:../x')).toBeNull();
+    expect(chatPreview(packContent(id))).toBe('✨ Pacote de figurinhas');
+  });
+});
