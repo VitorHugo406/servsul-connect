@@ -99,7 +99,7 @@ export default function EwwonApp() {
   const [attOn, setAttOn] = useState<false | 'menu' | 'emoji'>(false);
   const [pending, setPending] = useState<{ file: File; url: string | null; name: string; size: number; image: boolean }[]>([]);
   const [sending, setSending] = useState(false);
-  const [viewer, setViewer] = useState<string | null>(null);
+  const [viewer, setViewer] = useState<{ src: string; url: string; name: string } | null>(null);
   const [tasksOn, setTasksOn] = useState<Record<string, { enabled: boolean; manage: boolean }>>({});
   const attRef = useRef<HTMLInputElement>(null);
   const { uploadFile } = useFileUpload();
@@ -319,7 +319,7 @@ export default function EwwonApp() {
     setSending(true);
     const lines: string[] = [];
     for (const f of pending) {
-      const r = await uploadFile(f.file, 'attachments');
+      const r = await uploadFile(f.file, 'attachments', undefined, { chat: true });
       if (!r) { setSending(false); return; }
       lines.push(`${r.fileType.startsWith('image/') ? '📷' : '📎'} [${r.fileName}](${r.url})`);
     }
@@ -891,7 +891,7 @@ export default function EwwonApp() {
               <div className="hint">Segure ou toque 2x numa mensagem para reagir</div>
               {cur && !cur.loaded ? <div className="hint" style={{ padding: 20 }}>Carregando…</div> : null}
               {cur && cur.loaded && !cur.m.length ? <div className="hint" style={{ padding: 20 }}>Nenhuma mensagem ainda. Diga oi! 👋</div> : null}
-              {cur?.m.map((m) => <Bubble key={m.id} m={m} sender={m.from ? P[m.from] : null} group={cur.g} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} onImage={setViewer} />)}
+              {cur?.m.map((m) => <Bubble key={m.id} m={m} sender={m.from ? P[m.from] : null} group={cur.g} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} onImage={(src, url, name) => setViewer({ src, url, name })} />)}
             </div>
             {pending.length ? (
               <div className="ewx-tray">
@@ -935,7 +935,7 @@ export default function EwwonApp() {
             </div>
           </div>
           <div id="toast" className={toastOn ? 'on' : ''}>{toastTxt}</div>
-          <ImageViewer src={viewer} onClose={() => setViewer(null)} />
+          <ImageViewer media={viewer} onClose={() => setViewer(null)} />
         </div>
 
         {/* ---------------- Páginas ---------------- */}
@@ -1018,7 +1018,7 @@ function Bars({ v, k }: { v: number[]; k: string }) {
 }
 
 function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage }: {
-  m: Msg; sender: Person | null; group: boolean; picking: boolean; onPick: () => void; onReact: (x: string, wrap: HTMLElement | null) => void; onProfile: (id: string) => void; onImage: (u: string) => void;
+  m: Msg; sender: Person | null; group: boolean; picking: boolean; onPick: () => void; onReact: (x: string, wrap: HTMLElement | null) => void; onProfile: (id: string) => void; onImage: (src: string, url: string, name: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const tm = useRef<number>();

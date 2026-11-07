@@ -4,7 +4,7 @@
 //   📎 [name](url)   file attachment
 //   📋 Card #N — title (+ 📝 ⚡ 📅 📌 lines)   task card
 import { useState } from 'react';
-import { useSignedStorageUrl } from '@/lib/storageUrls';
+import { openMedia, saveMedia, useCachedMedia } from '@/lib/mediaCache';
 
 export interface ParsedMsg {
   text: string;
@@ -52,27 +52,34 @@ export function previewText(content: string): string {
 const ext = (name: string) => (name.split('.').pop() || 'arq').slice(0, 4).toUpperCase();
 const EXT_COLOR: Record<string, string> = { PDF: '#ff5d5d', DOC: '#4f8cff', DOCX: '#4f8cff', XLS: '#2fbf71', XLSX: '#2fbf71', CSV: '#2fbf71', PPT: '#ff9f43', PPTX: '#ff9f43', ZIP: '#8b5cf6', TXT: '#8b8b94' };
 
-function Photo({ url, name, onOpen, single }: { url: string; name: string; onOpen: (u: string) => void; single: boolean }) {
-  const src = useSignedStorageUrl(url);
+function Photo({ url, name, onOpen, single }: { url: string; name: string; onOpen: (u: string, url: string, name: string) => void; single: boolean }) {
+  // Photos are downloaded once and kept on this device (WhatsApp-like).
+  const { src, state } = useCachedMedia(url);
   return (
-    <button className={'ewx-ph' + (single ? ' one' : '')} onClick={(e) => { e.stopPropagation(); if (src) onOpen(src); }} aria-label={`Abrir ${name}`}>
-      {src ? <img src={src} alt={name} loading="lazy" /> : <span className="ewx-ph-ld" />}
+    <button className={'ewx-ph' + (single ? ' one' : '') + (state === 'expired' ? ' gone' : '')} onClick={(e) => { e.stopPropagation(); if (src) onOpen(src, url, name); }} aria-label={`Abrir ${name}`}>
+      {src ? <img src={src} alt={name} loading="lazy" /> : state === 'expired' ? <span className="ewx-gone">📷<small>Foto expirada no servidor</small></span> : <span className="ewx-ph-ld" />}
     </button>
   );
 }
 
 function FileCard({ url, name }: { url: string; name: string }) {
-  const signed = useSignedStorageUrl(url);
   const e = ext(name);
+  const [st, setSt] = useState<'idle' | 'busy' | 'gone'>('idle');
   return (
-    <a className="ewx-file" href={signed || url} target="_blank" rel="noopener noreferrer" onClick={(ev) => ev.stopPropagation()}>
+    <button type="button" className={'ewx-file' + (st === 'gone' ? ' gone' : '')} onClick={async (ev) => {
+      ev.stopPropagation();
+      if (st === 'busy') return;
+      setSt('busy');
+      const ok = await openMedia(url, name);
+      setSt(ok ? 'idle' : 'gone');
+    }}>
       <span className="ewx-file-ic" style={{ background: EXT_COLOR[e] || '#6b7280' }}>{e}</span>
-      <span className="ewx-file-tx"><b>{name}</b><small>Toque para abrir</small></span>
-    </a>
+      <span className="ewx-file-tx"><b>{name}</b><small>{st === 'busy' ? 'Abrindo…' : st === 'gone' ? 'Expirado no servidor' : 'Toque para abrir'}</small></span>
+    </button>
   );
 }
 
-export function MsgBody({ content, onOpenImage }: { content: string; onOpenImage: (u: string) => void }) {
+export function MsgBody({ content, onOpenImage }: { content: string; onOpenImage: (u: string, url: string, name: string) => void }) {
   const p = parseMsg(content);
   return (
     <>
@@ -95,14 +102,15 @@ export function MsgBody({ content, onOpenImage }: { content: string; onOpenImage
   );
 }
 
-export function ImageViewer({ src, onClose }: { src: string | null; onClose: () => void }) {
+export function ImageViewer({ media, onClose }: { media: { src: string; url: string; name: string } | null; onClose: () => void }) {
   const [zoom, setZoom] = useState(false);
-  if (!src) return null;
+  if (!media) return null;
+  const { src } = media;
   return (
     <div className="ewx-viewer" onClick={onClose}>
       <img src={src} alt="" className={zoom ? 'z' : ''} onClick={(e) => { e.stopPropagation(); setZoom(!zoom); }} />
       <div className="ewx-viewer-bar">
-        <a href={src} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>Abrir original</a>
+        <button onClick={(e) => { e.stopPropagation(); void saveMedia(media.url, media.name); }}>Salvar no aparelho</button>
         <button onClick={onClose}>Fechar</button>
       </div>
     </div>

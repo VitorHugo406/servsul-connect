@@ -55,7 +55,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
       for (const attachment of currentAttachments) {
         setUploadingFileName(attachment.file.name);
         setUploadProgress(0);
-        const result = await uploadFile(attachment.file, 'attachments', setUploadProgress);
+        const result = await uploadFile(attachment.file, 'attachments', setUploadProgress, { chat: true });
         if (!result) {
           toast.error(`Não foi possível enviar "${attachment.file.name}". O arquivo continua anexado para tentar novamente.`);
           return;
