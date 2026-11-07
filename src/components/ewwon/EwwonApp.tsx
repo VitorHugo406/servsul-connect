@@ -14,6 +14,7 @@ import { ST, StatusKey, fmtTime, hm, safeStore } from './util';
 import { runTour, type TourController } from './tour';
 import { EwwonPage, type PageSpec } from './pages';
 import { TicketsDesk } from './tickets';
+import { EwwonLoader } from '@/components/common/EwwonLoader';
 import { MsgBody, ImageViewer, previewText } from './msgbody';
 import { TasksSheet } from './tasksheet';
 
@@ -648,7 +649,7 @@ export default function EwwonApp() {
     );
   }
   if (!boot || !me) {
-    return <div className="ew ewx-root" data-theme={themeAttr}><div id="boot"><img src="/ewwon/img/logo-full.png" alt="ewwon" /></div></div>;
+    return <EwwonLoader />;
   }
 
   const P = people;
