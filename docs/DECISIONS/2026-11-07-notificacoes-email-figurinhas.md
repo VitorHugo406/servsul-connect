@@ -50,3 +50,9 @@
 - Áudio enviado antes de o aparelho do destinatário existir: o aparelho novo cria um pedido em `e2e_key_requests`; o aparelho de quem enviou (quando online) confere no app que a pessoa é membro daquela conversa (`e2e_media.chat_key`) e sela a chave para o aparelho novo. O servidor continua sem ver áudio nem chave.
 - Figurinhas: botão próprio ao lado do "+"; tocar numa figurinha recebida mostra "Salvar nas favoritas".
 - Pacotes: `chat_sticker_packs` / `chat_sticker_pack_items` (empresa vê, só o dono altera). Compartilhar no chat envia `✨ pack:<id>` (cartão "Adicionar aos meus pacotes" cria uma cópia). Exportar gera um arquivo `.ewvonpack` (JSON com as imagens), compartilhável pelo menu do celular; Importar recria o pacote.
+
+## Chat mobile, avisos e exclusão de empresa (08/11/2026)
+- Vistos: ✓ cinza enviando, ✓✓ branco entregue, ✓✓ azul lido. Conversa individual usa `direct_messages.is_read` (tempo real); grupo usa `group_read_watermark` (até quando TODOS os outros membros leram, sem expor quem leu); setor não tem leitura por pessoa, fica só "entregue".
+- Segurar uma conversa abre: ver detalhes, fixar/desafixar, marcar como lida. Reações com "+" para todos os emojis. Datas por dia e data flutuante ao rolar. Menu ⋮ com Pesquisar (busca na conversa carregada) e Configurações.
+- Avisos podem ser excluídos por quem publicou ou admins (mesma regra da policy de DELETE).
+- Excluir empresa: `super_admin_delete_company` — só super admin, nunca a empresa do sistema, exige digitar o nome, transação única (falhou = nada apagado). Apaga linhas de todas as tabelas com `company_id`, registros ligados às pessoas, e os logins (`auth.users`). Arquivos já enviados ao Storage (fotos/anexos) não são apagados por essa função.

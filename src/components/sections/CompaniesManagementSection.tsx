@@ -25,6 +25,7 @@ import {
   Siren,
   Users2,
   LayoutDashboard,
+  Trash2,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { FunctionsHttpError } from '@supabase/supabase-js';
@@ -120,6 +121,9 @@ export function CompaniesManagementSection() {
   const [adminPassword, setAdminPassword] = useState('');
   const [creatingAdmin, setCreatingAdmin] = useState(false);
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteName, setDeleteName] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const load = async () => {
     setLoading(true);
     const { data, error } = await (supabase as any).rpc('list_companies_with_stats');
@@ -584,6 +588,16 @@ export function CompaniesManagementSection() {
                 </TabsContent>
               </Tabs>
 
+              {!selected.is_system ? (
+                <div className="mt-5 rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
+                  <p className="text-sm font-semibold text-destructive">Zona de perigo</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Excluir a empresa apaga para sempre todos os dados dela: colaboradores e seus acessos, setores, conversas, tarefas, avisos, avaliações, salas e tudo mais. Não dá para desfazer.</p>
+                  <Button variant="destructive" size="sm" className="mt-3" onClick={() => { setDeleteName(''); setDeleteOpen(true); }}>
+                    <Trash2 className="mr-1.5 h-4 w-4" /> Excluir empresa
+                  </Button>
+                </div>
+              ) : null}
+
               <DialogFooter className="pt-4">
                 <Button variant="outline" onClick={() => setSelected(null)}>Fechar</Button>
                 <Button onClick={saveSelected} disabled={saving}>
@@ -593,6 +607,35 @@ export function CompaniesManagementSection() {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete company (super admin) */}
+      <Dialog open={deleteOpen} onOpenChange={(o) => { if (!deleting) setDeleteOpen(o); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Excluir “{selected?.name}”?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p>Isso apaga <b>definitivamente</b> a empresa e tudo ligado a ela: todos os colaboradores (e o login deles), setores, conversas, grupos, tarefas e murais, avisos, avaliações, salas de reunião, chamados e configurações.</p>
+            <p>Para confirmar, digite o nome da empresa: <b>{selected?.name}</b></p>
+            <Input value={deleteName} onChange={(e) => setDeleteName(e.target.value)} placeholder={selected?.name} autoFocus />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" disabled={deleting} onClick={() => setDeleteOpen(false)}>Cancelar</Button>
+            <Button variant="destructive" disabled={deleting || !selected || deleteName.trim() !== selected.name.trim()} onClick={async () => {
+              if (!selected) return;
+              setDeleting(true);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const { data, error } = await (supabase as any).rpc('super_admin_delete_company', { _company_id: selected.id, _confirm_name: deleteName.trim() });
+              setDeleting(false);
+              if (error) { toast.error(error.message || 'Não foi possível excluir a empresa'); return; }
+              toast.success(`Empresa excluída (${data?.people ?? 0} colaboradores removidos)`);
+              setDeleteOpen(false); setSelected(null); void load();
+            }}>
+              {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}Excluir definitivamente
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
