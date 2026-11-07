@@ -80,7 +80,7 @@ function block(b: ReportBlock): string {
 
 export function renderReport(spec: ReportSpec): string {
   const brand = getCachedBrand();
-  const company = brand?.name || 'Ewwon';
+  const company = brand?.name || 'ewvon';
   const accent = brand?.primary_color || '#0b0b0f';
   const now = new Date();
   const generated = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) + ' às ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -149,7 +149,7 @@ td small{display:block;color:#71717a;font-size:10.5px;margin-top:2px}
 <div class="top"><div class="brand">${logo}<span>${esc(company)}</span></div><small>Gerado em ${esc(generated)}</small></div>
 <div class="hero"><div class="eyebrow">${esc(spec.eyebrow)}</div><h1>${esc(spec.title)}</h1>${spec.subtitle ? `<p class="sub">${esc(spec.subtitle)}</p>` : ''}${spec.meta?.length ? `<div class="meta">${spec.meta.map((m) => `<span>${esc(m)}</span>`).join('')}</div>` : ''}</div>
 ${spec.blocks.map(block).join('\n')}
-<div class="foot"><span>${esc(company)} · relatório gerado pelo ewwon</span><span>${esc(now.toLocaleDateString('pt-BR'))}</span></div>
+<div class="foot"><span>${esc(company)} · relatório gerado pelo ewvon</span><span>${esc(now.toLocaleDateString('pt-BR'))}</span></div>
 </div><script>document.fonts&&document.fonts.ready.then(function(){setTimeout(function(){window.print()},250)});</script></body></html>`;
 }
 

@@ -109,12 +109,12 @@ export function BirthdaysSection() {
     const logoUrl = company?.logo_url ? await createCompanyLogoUrl(company.logo_url) : null; const logo = logoUrl ? await loadImage(logoUrl) : null;
     setFill(doc, [255, 255, 255]); doc.roundedRect(MARGIN, 10, 24, 17, 4, 4, 'F');
     if (logo) { try { doc.addImage(logo, 'PNG', MARGIN + 2, 11.5, 20, 14, undefined, 'FAST'); return; } catch { /* initials */ } }
-    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.text(getInitials(company?.name || 'Ewwon'), MARGIN + 12, 20.5, { align: 'center' });
+    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.text(getInitials(company?.name || 'ewvon'), MARGIN + 12, 20.5, { align: 'center' });
   };
 
   const drawHeader = async (doc: jsPDF, monthName: string, count: number, selected: PdfTheme) => {
     await drawLogo(doc, selected);
-    setText(doc, [255, 255, 255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text(truncate(doc, company?.name || 'Ewwon', 90), MARGIN + 29, 17.5);
+    setText(doc, [255, 255, 255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text(truncate(doc, company?.name || 'ewvon', 90), MARGIN + 29, 17.5);
     setText(doc, [200, 200, 210]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.text('Comunicação interna', MARGIN + 29, 22.5);
     const month = monthName.charAt(0).toUpperCase() + monthName.slice(1);
     setText(doc, [210, 210, 220]); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.text(month.toUpperCase(), MARGIN, 42, { charSpace: 0.6 });
@@ -185,7 +185,7 @@ export function BirthdaysSection() {
         }
       }
       await drawFixedQrFooter(doc, getShareUrl(birthdayPeople), pdfTheme);
-      setText(doc, [150, 150, 160]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.5); doc.text(`${company?.name || 'Ewwon'} · uso interno · gerado pelo ewwon`, PAGE_W - MARGIN, PAGE_H - 5, { align: 'right' });
+      setText(doc, [150, 150, 160]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.5); doc.text(`${company?.name || 'ewvon'} · uso interno · gerado pelo ewvon`, PAGE_W - MARGIN, PAGE_H - 5, { align: 'right' });
       const companySlug = (company?.name || 'ewvor').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const monthSlug = monthName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
       doc.save(`aniversariantes_${companySlug}_${monthSlug}_${pdfTheme.id}.pdf`);

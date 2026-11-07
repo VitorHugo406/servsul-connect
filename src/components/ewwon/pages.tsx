@@ -269,7 +269,7 @@ function SettingsPage({ api }: { api: EwApi }) {
       <div className="sl">Conversas</div>
       {tg('enter', 'Enviar com Enter', 'Desligado: use Ctrl + Enter')}
       <div className="sl">Sobre</div>
-      <div className="opt"><div>Versão do app<small>Ewwon 1.0.0</small></div></div>
+      <div className="opt"><div>Versão do app<small>ewvon 1.0.0</small></div></div>
     </>
   );
 }

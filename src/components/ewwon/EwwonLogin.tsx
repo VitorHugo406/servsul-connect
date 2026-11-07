@@ -156,7 +156,7 @@ export default function EwwonLogin() {
             <li><I n="bell" />Avisos e aniversários da equipe</li>
           </ul>
         </div>
-        <small>© {new Date().getFullYear()} ewwon · Gestão corporativa</small>
+        <small>© {new Date().getFullYear()} ewvon · Gestão corporativa</small>
       </aside>
       <form className="ewx-lg" onSubmit={(e) => { if (!locked) { e.preventDefault(); goLogin(); return; } void submit(e); }}>
         <div className="ewx-lg-top">
