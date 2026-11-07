@@ -75,76 +75,88 @@ export function BirthdaysSection() {
   const setDraw = (doc: jsPDF, rgb: [number, number, number]) => doc.setDrawColor(rgb[0], rgb[1], rgb[2]);
   const truncate = (doc: jsPDF, text: string, width: number) => { let v = text || ''; while (doc.getTextWidth(v) > width && v.length > 1) v = v.slice(0, -1); return v !== text ? `${v.slice(0, -1)}…` : v; };
 
+  // ---- PDF layout (redesigned): dark photo band, horizontal cards, QR footer ----
+  const HERO_H = 70;
   const prepareHeroPhoto = async (src: string) => {
     const image = await loadImageElement(src);
     if (!image) return null;
-    const canvas = document.createElement('canvas'); canvas.width = 1800; canvas.height = 620;
+    const canvas = document.createElement('canvas'); canvas.width = 1800; canvas.height = 600;
     const ctx = canvas.getContext('2d'); if (!ctx) return null;
     const scale = Math.max(canvas.width / image.width, canvas.height / image.height); const drawW = image.width * scale; const drawH = image.height * scale;
     ctx.drawImage(image, (canvas.width - drawW) / 2, (canvas.height - drawH) / 2, drawW, drawH);
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-    gradient.addColorStop(0, 'rgba(250,249,245,0.99)'); gradient.addColorStop(0.38, 'rgba(250,249,245,0.93)'); gradient.addColorStop(0.62, 'rgba(250,249,245,0.55)'); gradient.addColorStop(1, 'rgba(250,249,245,0.08)');
-    ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height); return canvas.toDataURL('image/jpeg', 0.88);
+    const g = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    g.addColorStop(0, 'rgba(10,10,14,0.92)'); g.addColorStop(0.5, 'rgba(10,10,14,0.72)'); g.addColorStop(1, 'rgba(10,10,14,0.35)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height); return canvas.toDataURL('image/jpeg', 0.86);
   };
 
   const makeCircularAvatar = async (src: string | null | undefined) => {
     if (!src) return null; const image = await loadImageElement(src); if (!image) return null;
-    const size = 180; const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size; const ctx = canvas.getContext('2d'); if (!ctx) return null;
-    ctx.clearRect(0, 0, size, size); ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
+    const size = 200; const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size; const ctx = canvas.getContext('2d'); if (!ctx) return null;
+    ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
     const scale = Math.max(size / image.width, size / image.height); const w = image.width * scale; const h = image.height * scale; ctx.drawImage(image, (size - w) / 2, (size - h) / 2, w, h);
     return canvas.toDataURL('image/png');
   };
 
   const drawBackgroundPhoto = async (doc: jsPDF, selected: PdfTheme, imageData?: string | null) => {
-    const source = imageData || (selected.photo ? await loadImage(selected.photo) : null); const heroH = 76;
-    if (source) { try { const prepared = await prepareHeroPhoto(source); if (prepared) doc.addImage(prepared, 'JPEG', 0, 0, PAGE_W, heroH, undefined, 'FAST'); else doc.addImage(source, source.startsWith('data:image/png') ? 'PNG' : 'JPEG', 0, 0, PAGE_W, heroH, undefined, 'FAST'); } catch { setFill(doc, selected.soft); doc.rect(0, 0, PAGE_W, heroH, 'F'); } }
-    else { setFill(doc, selected.soft); doc.rect(0, 0, PAGE_W, heroH, 'F'); }
-    setFill(doc, [250, 249, 245]); doc.rect(0, heroH - 8, PAGE_W, 8, 'F'); setDraw(doc, [232, 228, 219]); doc.setLineWidth(0.35); doc.line(0, heroH, PAGE_W, heroH);
+    setFill(doc, [246, 246, 248]); doc.rect(0, 0, PAGE_W, PAGE_H, 'F');
+    const source = imageData || (selected.photo ? await loadImage(selected.photo) : null);
+    let painted = false;
+    if (source) { try { const prepared = await prepareHeroPhoto(source); if (prepared) { doc.addImage(prepared, 'JPEG', 0, 0, PAGE_W, HERO_H, undefined, 'FAST'); painted = true; } } catch { /* fallback below */ } }
+    if (!painted) { setFill(doc, [14, 14, 18]); doc.rect(0, 0, PAGE_W, HERO_H, 'F'); setFill(doc, selected.accent); doc.circle(PAGE_W - 18, 8, 42, 'F'); setFill(doc, [14, 14, 18]); doc.circle(PAGE_W - 18, 8, 30, 'F'); }
   };
 
   const drawLogo = async (doc: jsPDF, selected: PdfTheme) => {
     const logoUrl = company?.logo_url ? await createCompanyLogoUrl(company.logo_url) : null; const logo = logoUrl ? await loadImage(logoUrl) : null;
-    if (logo) { try { doc.addImage(logo, 'PNG', MARGIN, 5.5, 29, 21, undefined, 'FAST'); return; } catch {} }
-    setFill(doc, selected.soft); doc.roundedRect(MARGIN, 5.5, 29, 21, 4, 4, 'F'); setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.text(getInitials(company?.name || 'Ewvor'), MARGIN + 14.5, 18, { align: 'center' });
+    setFill(doc, [255, 255, 255]); doc.roundedRect(MARGIN, 10, 24, 17, 4, 4, 'F');
+    if (logo) { try { doc.addImage(logo, 'PNG', MARGIN + 2, 11.5, 20, 14, undefined, 'FAST'); return; } catch { /* initials */ } }
+    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.text(getInitials(company?.name || 'Ewwon'), MARGIN + 12, 20.5, { align: 'center' });
   };
 
   const drawHeader = async (doc: jsPDF, monthName: string, count: number, selected: PdfTheme) => {
     await drawLogo(doc, selected);
-    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.2); doc.text('COMUNICAÇÃO INTERNA', MARGIN + 33, 11);
-    setText(doc, [177, 137, 73]); doc.setFont('times', 'italic'); doc.setFontSize(25); doc.text('Aniversariantes', MARGIN, 34);
-    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.text('DO MÊS', MARGIN, 44.5);
-    setText(doc, [157, 121, 67]); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.text(monthName.toUpperCase().replace(' DE ', '  •  '), MARGIN + 1, 50.5);
-    setText(doc, [71, 76, 84]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.1); doc.text('Celebrar a vida é reconhecer histórias que inspiram todos os dias.', MARGIN + 1, 59);
-    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(truncate(doc, company?.name || 'Ewvor', 76), PAGE_W - MARGIN, 15, { align: 'right' });
-    setText(doc, [125, 130, 140]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.4); doc.text(`${count} pessoa${count === 1 ? '' : 's'} celebrando`, PAGE_W - MARGIN, 21, { align: 'right' });
+    setText(doc, [255, 255, 255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text(truncate(doc, company?.name || 'Ewwon', 90), MARGIN + 29, 17.5);
+    setText(doc, [200, 200, 210]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.text('Comunicação interna', MARGIN + 29, 22.5);
+    const month = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+    setText(doc, [210, 210, 220]); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.text(month.toUpperCase(), MARGIN, 42, { charSpace: 0.6 });
+    setText(doc, [255, 255, 255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(30); doc.text('Aniversariantes', MARGIN, 55);
+    setText(doc, [200, 200, 210]); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.text('Celebrar a vida é reconhecer as histórias que nos inspiram todos os dias.', MARGIN, 62.5);
+    const pill = `${count} ${count === 1 ? 'pessoa' : 'pessoas'} celebrando`;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7); const pw = doc.getTextWidth(pill) + 10;
+    setFill(doc, selected.accent); doc.roundedRect(PAGE_W - MARGIN - pw, 12, pw, 9, 4.5, 4.5, 'F');
+    setText(doc, [255, 255, 255]); doc.text(pill, PAGE_W - MARGIN - pw / 2, 17.8, { align: 'center' });
   };
 
-  const drawPerson = async (doc: jsPDF, person: BirthdayPerson, x: number, y: number, w: number, h: number, selected: PdfTheme) => {
-    const radius = 4.2;
-    const avatarSize = Math.min(17.5, h * 0.50, w * 0.40);
-    const avatarX = x + 5.5; const avatarY = y + 4.2;
-    const dateW = 13.5; const dateH = Math.min(14.8, h * 0.52); const dateX = x + w - dateW - 5.5; const dateY = y + 4.2;
-    const nameY = avatarY + avatarSize + 3.2;
-    setFill(doc, [255, 254, 251]); doc.roundedRect(x, y, w, h, radius, radius, 'F');
-    setDraw(doc, [226, 222, 213]); doc.setLineWidth(0.3); doc.roundedRect(x, y, w, h, radius, radius, 'S');
-    setFill(doc, [238, 238, 234]); doc.circle(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 'F');
+  const drawPerson = async (doc: jsPDF, person: BirthdayPerson, x: number, y: number, w: number, h: number, selected: PdfTheme, compact: boolean) => {
+    const today = person.isToday;
+    setFill(doc, [255, 255, 255]); doc.roundedRect(x, y, w, h, 4, 4, 'F');
+    if (today) { setDraw(doc, selected.accent); doc.setLineWidth(0.7); } else { setDraw(doc, [228, 228, 233]); doc.setLineWidth(0.3); }
+    doc.roundedRect(x, y, w, h, 4, 4, 'S');
+    const av = Math.min(h - 7, compact ? 11 : 13); const avX = x + 4; const avY = y + (h - av) / 2;
     const avatar = await makeCircularAvatar(person.avatar);
-    if (avatar) { try { doc.addImage(avatar, 'PNG', avatarX, avatarY, avatarSize, avatarSize, undefined, 'FAST'); } catch {} }
-    const blue = [38, 68, 101] as [number, number, number];
-    setFill(doc, [229, 236, 244]); doc.roundedRect(dateX, dateY, dateW, dateH, 3.2, 3.2, 'F');
-    setText(doc, blue); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.2); doc.text(String(person.birthDay).padStart(2, '0'), dateX + dateW / 2, dateY + 6.7, { align: 'center' });
-    doc.setFontSize(3.25); doc.text(formatBirthday(person.birthDate).split(' de ')[1]?.toUpperCase() || '', dateX + dateW / 2, dateY + 11.5, { align: 'center' });
-    setText(doc, blue); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.4); doc.text(truncate(doc, person.name.slice(0, 24), w - 11), x + 5.5, nameY);
-    setText(doc, blue); doc.setFont('helvetica', 'normal'); doc.setFontSize(4.25); doc.text(truncate(doc, person.sector || 'Sem departamento', w - 11), x + 5.5, nameY + 4.4);
+    if (avatar) { try { doc.addImage(avatar, 'PNG', avX, avY, av, av, undefined, 'FAST'); } catch { /* initials */ } }
+    else { setFill(doc, selected.soft); doc.circle(avX + av / 2, avY + av / 2, av / 2, 'F'); setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(compact ? 5.5 : 6.5); doc.text(getInitials(person.name), avX + av / 2, avY + av / 2 + 1.6, { align: 'center' }); }
+    const dW = compact ? 11 : 13; const dH = h - 7; const dX = x + w - dW - 3.5; const dY = y + 3.5;
+    setFill(doc, today ? selected.accent : [244, 244, 246]); doc.roundedRect(dX, dY, dW, dH, 3, 3, 'F');
+    setText(doc, today ? [255, 255, 255] : [20, 20, 26]); doc.setFont('helvetica', 'bold'); doc.setFontSize(compact ? 9 : 11);
+    doc.text(String(person.birthDay).padStart(2, '0'), dX + dW / 2, dY + dH / 2 + 0.6, { align: 'center' });
+    doc.setFontSize(compact ? 4.2 : 4.8); doc.setFont('helvetica', 'bold');
+    doc.text((formatBirthday(person.birthDate).split(' de ')[1] || '').slice(0, 3).toUpperCase(), dX + dW / 2, dY + dH / 2 + (compact ? 4.6 : 5.6), { align: 'center' });
+    const tx = avX + av + 3.5; const tw = dX - tx - 2.5;
+    setText(doc, [14, 14, 18]); doc.setFont('helvetica', 'bold'); doc.setFontSize(compact ? 6.4 : 7.6); doc.text(truncate(doc, person.name, tw), tx, y + h / 2 - (today ? 1.6 : 0.4));
+    setText(doc, [110, 110, 122]); doc.setFont('helvetica', 'normal'); doc.setFontSize(compact ? 4.8 : 5.6); doc.text(truncate(doc, person.sector || 'Sem departamento', tw), tx, y + h / 2 + (today ? 2.4 : 3.6));
+    if (today) { setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(compact ? 4.6 : 5.2); doc.text('HOJE', tx, y + h / 2 + 6.2); }
   };
 
   const drawFixedQrFooter = async (doc: jsPDF, url: string, selected: PdfTheme) => {
-    const qr = await loadQrImage(url); const y = PAGE_H - 42; const footerH = 34; const qrSize = 29;
-    setFill(doc, [248, 249, 251]); doc.roundedRect(MARGIN, y, CONTENT_W, footerH, 5, 5, 'F'); setDraw(doc, [226, 228, 233]); doc.setLineWidth(0.3); doc.roundedRect(MARGIN, y, CONTENT_W, footerH, 5, 5, 'S');
-    if (qr) { try { doc.addImage(qr, 'PNG', MARGIN + 3, y + (footerH - qrSize) / 2, qrSize, qrSize, undefined, 'FAST'); } catch {} }
-    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.text('Consulte no celular', MARGIN + 36, y + 8);
-    setText(doc, [100, 106, 118]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.7); doc.text('Leia o QR Code para filtrar por setor e ver os aniversariantes.', MARGIN + 36, y + 14); doc.text('O botão de mensagem aparece apenas no período de celebração.', MARGIN + 36, y + 19);
-    setText(doc, [135, 141, 151]); doc.setFontSize(5.2); doc.text('É necessário entrar no Ewvor para enviar uma mensagem.', MARGIN + 36, y + 23.5);
+    const qr = await loadQrImage(url); const footerH = 32; const y = PAGE_H - footerH - 10; const qrSize = 25;
+    setFill(doc, [14, 14, 18]); doc.roundedRect(MARGIN, y, CONTENT_W, footerH, 6, 6, 'F');
+    setFill(doc, [255, 255, 255]); doc.roundedRect(MARGIN + 4, y + 3.5, qrSize, qrSize, 3, 3, 'F');
+    if (qr) { try { doc.addImage(qr, 'PNG', MARGIN + 5, y + 4.5, qrSize - 2, qrSize - 2, undefined, 'FAST'); } catch { /* no qr */ } }
+    setText(doc, [255, 255, 255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('Consulte no celular', MARGIN + qrSize + 10, y + 10.5);
+    setText(doc, [200, 200, 210]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.4);
+    doc.text('Leia o QR Code para ver os aniversariantes e filtrar por setor.', MARGIN + qrSize + 10, y + 16.5);
+    doc.text('O botão de mensagem aparece no período de celebração (é preciso entrar no Ewwon).', MARGIN + qrSize + 10, y + 21.5);
+    setFill(doc, selected.accent); doc.circle(PAGE_W - MARGIN - 9, y + footerH / 2, 4, 'F');
   };
 
   const generateMonthlyPdf = async () => {
@@ -155,30 +167,29 @@ export function BirthdaysSection() {
       const monthName = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
       await drawBackgroundPhoto(doc, pdfTheme, pdfTheme.id === 'corporate' ? corporateImage : null);
       await drawHeader(doc, monthName, birthdayPeople.length, pdfTheme);
-      const titleY = 63;
-      const cols = 3;
-      const gap = 2.2;
+      const n = birthdayPeople.length;
+      const cols = n > 16 ? 3 : 2;
+      const compact = cols === 3;
+      const gap = 3;
       const cardW = (CONTENT_W - gap * (cols - 1)) / cols;
-      const footerTop = PAGE_H - 44;
-      const gridY = titleY + 2.5;
-      const rows = Math.max(1, Math.ceil(birthdayPeople.length / cols));
-      const available = footerTop - gridY - 3;
-      const cardH = Math.max(25, Math.min(27.5, (available - gap * Math.max(0, rows - 1)) / rows));
-      if (birthdayPeople.length === 0) {
-        setFill(doc, pdfTheme.soft); doc.roundedRect(MARGIN, gridY, CONTENT_W, 28, 5, 5, 'F'); setText(doc, pdfTheme.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('Nenhum aniversariante neste mês', PAGE_W / 2, gridY + 16, { align: 'center' });
+      const gridY = HERO_H + 8;
+      const footerTop = PAGE_H - 46;
+      const rows = Math.max(1, Math.ceil(n / cols));
+      const cardH = Math.max(15, Math.min(22, (footerTop - gridY - gap * (rows - 1)) / rows));
+      if (n === 0) {
+        setFill(doc, [255, 255, 255]); doc.roundedRect(MARGIN, gridY, CONTENT_W, 30, 5, 5, 'F'); setText(doc, [110, 110, 122]); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text('Nenhum aniversariante neste mês', PAGE_W / 2, gridY + 17, { align: 'center' });
       } else {
-        for (let i = 0; i < birthdayPeople.length; i++) {
+        for (let i = 0; i < n; i++) {
           const col = i % cols; const row = Math.floor(i / cols);
-          const x = MARGIN + col * (cardW + gap); const y = gridY + row * (cardH + gap);
-          await drawPerson(doc, birthdayPeople[i], x, y, cardW, cardH, pdfTheme);
+          await drawPerson(doc, birthdayPeople[i], MARGIN + col * (cardW + gap), gridY + row * (cardH + gap), cardW, cardH, pdfTheme, compact);
         }
       }
       await drawFixedQrFooter(doc, getShareUrl(birthdayPeople), pdfTheme);
-      setText(doc, [135, 141, 151]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.3); doc.text(`${company?.name || 'Ewvor'} • Uso interno • 1/1`, PAGE_W - MARGIN, PAGE_H - 7, { align: 'right' });
+      setText(doc, [150, 150, 160]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.5); doc.text(`${company?.name || 'Ewwon'} · uso interno · gerado pelo ewwon`, PAGE_W - MARGIN, PAGE_H - 5, { align: 'right' });
       const companySlug = (company?.name || 'ewvor').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const monthSlug = monthName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
       doc.save(`aniversariantes_${companySlug}_${monthSlug}_${pdfTheme.id}.pdf`);
-      toast.success(`PDF ${pdfTheme.name} gerado em uma página com 3 aniversariantes por fileira!`);
+      toast.success(`PDF ${pdfTheme.name} gerado!`);
     } catch (error) { console.error('Erro ao gerar PDF de aniversariantes:', error); toast.error('Não foi possível gerar o PDF.'); }
     finally { setGeneratingPdf(false); }
   };

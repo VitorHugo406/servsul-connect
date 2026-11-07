@@ -1,3 +1,4 @@
+import { openReport, priorityLabel, priorityTone } from '@/lib/reports';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar as CalendarIcon, Plus, Trash2, Clock, Bell, ListTodo, Edit, X, Users, Link2, ChevronLeft, ChevronRight, Video, ArrowLeft, Check, FileDown, ExternalLink, MonitorPlay } from 'lucide-react';
@@ -389,66 +390,28 @@ export function CalendarSection() {
       const dayEvents = getEventsForDate(date);
       const dayTasks = getTasksForDate(date);
 
-      let html = `<html><head><meta charset="utf-8"><title>Relatório do Dia - ${dateStr}</title>
-      <style>
-        * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 40px; background: #fff; color: #1a1a1a; }
-        .header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; border-bottom: 3px solid #3b82f6; padding-bottom: 16px; }
-        .header h1 { font-size: 24px; margin: 0; color: #1e293b; }
-        .header .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
-        .stats { display: flex; gap: 16px; margin-bottom: 24px; }
-        .stat-card { background: #f1f5f9; border-radius: 8px; padding: 12px 16px; flex: 1; text-align: center; }
-        .stat-card .number { font-size: 24px; font-weight: 700; color: #3b82f6; }
-        .stat-card .label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        th { background: #1e293b; color: white; padding: 12px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-        td { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
-        tr:nth-child(even) { background: #f8fafc; }
-        tr:last-child td { border-bottom: none; }
-        .section-title { font-size: 16px; font-weight: 600; color: #1e293b; margin: 24px 0 12px; display: flex; align-items: center; gap: 8px; }
-        .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 10px; text-align: center; }
-        @media print { body { padding: 20px; } }
-      </style></head><body>`;
-
-      html += `<div class="header"><div><h1>📅 Relatório do Dia</h1><div class="subtitle">${dateStr} • Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}</div></div></div>`;
-
-      html += `<div class="stats">`;
-      html += `<div class="stat-card"><div class="number">${dayEvents.length}</div><div class="label">Eventos/Reuniões</div></div>`;
-      html += `<div class="stat-card"><div class="number" style="color:#f59e0b">${dayTasks.length}</div><div class="label">Tarefas com Prazo</div></div>`;
-      html += `<div class="stat-card"><div class="number" style="color:#22c55e">${dayEvents.length + dayTasks.length}</div><div class="label">Total de Itens</div></div>`;
-      html += `</div>`;
-
-      if (dayEvents.length > 0) {
-        const typeLabel = (t: string) => ALL_EVENT_TYPES.find(et => et.id === t)?.label || t;
-        html += `<div class="section-title">📋 Eventos e Reuniões</div>`;
-        html += '<table><thead><tr><th>Tipo</th><th>Título</th><th>Horário</th><th>Participantes</th></tr></thead><tbody>';
-        for (const e of dayEvents) {
-          const timeStr = e.all_day ? 'Dia inteiro' : `${format(new Date(e.start_date), 'HH:mm')}${e.end_date ? ' - ' + format(new Date(e.end_date), 'HH:mm') : ''}`;
-          const names = e.participants?.map(p => p.profile?.display_name || p.profile?.name || '-').join(', ') || '-';
-          html += `<tr><td>${typeLabel(e.event_type)}</td><td>${e.title}${e.description ? '<br><small style="color:#64748b">' + e.description + '</small>' : ''}</td><td>${timeStr}</td><td>${names}</td></tr>`;
-        }
-        html += '</tbody></table>';
-      }
-
-      if (dayTasks.length > 0) {
-        html += `<div class="section-title">✅ Tarefas com Prazo</div>`;
-        html += '<table><thead><tr><th>#</th><th>Título</th><th>Prioridade</th><th>Horário</th></tr></thead><tbody>';
-        for (const t of dayTasks) {
-          const prioLabel = t.priority === 'urgent' ? 'Urgente' : t.priority === 'high' ? 'Alta' : t.priority === 'medium' ? 'Média' : 'Baixa';
-          const timeStr = format(new Date(t.due_date), 'HH:mm');
-          html += `<tr><td>${t.task_number}</td><td>${t.title}</td><td>${prioLabel}</td><td>${timeStr}</td></tr>`;
-        }
-        html += '</tbody></table>';
-      }
-
-      if (dayEvents.length === 0 && dayTasks.length === 0) {
-        html += '<p style="text-align:center;color:#94a3b8;padding:40px 0;font-size:14px;">Nenhum evento ou tarefa para este dia.</p>';
-      }
-
-      html += `<div class="footer">Relatório gerado automaticamente pelo Ewvor • ${new Date().toLocaleDateString('pt-BR')}</div></body></html>`;
-
-      const w = window.open('', '_blank');
-      if (w) { w.document.write(html); w.document.close(); w.print(); }
+      const typeLabel = (t: string) => ALL_EVENT_TYPES.find(et => et.id === t)?.label || t;
+      const w = openReport({
+        eyebrow: 'Agenda',
+        title: 'Relatório do dia',
+        subtitle: dateStr,
+        fileName: `Relatório do dia ${format(date, 'dd-MM-yyyy')}`,
+        blocks: [
+          { type: 'kpis', items: [
+            { label: 'Eventos e reuniões', value: dayEvents.length, tone: 'info' },
+            { label: 'Tarefas com prazo', value: dayTasks.length, tone: dayTasks.length ? 'warn' : 'neutral' },
+            { label: 'Total de itens', value: dayEvents.length + dayTasks.length },
+          ] },
+          ...(dayEvents.length ? [{ type: 'table' as const, title: 'Eventos e reuniões', headers: ['Horário', 'Título', 'Tipo', 'Participantes'], widths: ['14%', '38%', '16%', '32%'], rows: dayEvents.map(e => [
+            e.all_day ? 'Dia inteiro' : `${format(new Date(e.start_date), 'HH:mm')}${e.end_date ? ' – ' + format(new Date(e.end_date), 'HH:mm') : ''}`,
+            { text: e.title, strong: true, sub: e.description || undefined },
+            typeLabel(e.event_type),
+            e.participants?.map(p => p.profile?.display_name || p.profile?.name || '-').join(', ') || '—',
+          ]) }] : []),
+          ...(dayTasks.length ? [{ type: 'table' as const, title: 'Tarefas com prazo', headers: ['#', 'Título', 'Prioridade', 'Horário'], widths: ['10%', '56%', '18%', '16%'], rows: dayTasks.map(t => [String(t.task_number), { text: t.title, strong: true }, { text: priorityLabel(t.priority), tone: priorityTone(t.priority) }, format(new Date(t.due_date), 'HH:mm')]) }] : []),
+          ...(!dayEvents.length && !dayTasks.length ? [{ type: 'empty' as const, text: 'Nenhum evento ou tarefa para este dia.' }] : []),
+        ],
+      });
       toast.success('Relatório gerado!');
     } catch (e) {
       console.error(e);

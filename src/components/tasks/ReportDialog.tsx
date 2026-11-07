@@ -1,3 +1,4 @@
+import { openReport } from '@/lib/reports';
 import { useState } from 'react';
 import { FileSpreadsheet, FileText, CheckSquare, Square, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -77,56 +78,30 @@ export function ReportDialog({ open, onOpenChange, tasks, columns, boardName }: 
   };
 
   const generatePDF = () => {
-    let html = `<html><head><meta charset="utf-8"><title>Relatório - ${boardName}</title>
-    <style>
-      * { box-sizing: border-box; }
-      body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 40px; background: #fff; color: #1a1a1a; }
-      .header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; border-bottom: 3px solid #3b82f6; padding-bottom: 16px; }
-      .header h1 { font-size: 24px; margin: 0; color: #1e293b; }
-      .header .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
-      .stats { display: flex; gap: 16px; margin-bottom: 24px; }
-      .stat-card { background: #f1f5f9; border-radius: 8px; padding: 12px 16px; flex: 1; text-align: center; }
-      .stat-card .number { font-size: 24px; font-weight: 700; color: #3b82f6; }
-      .stat-card .label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-      table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-      th { background: #1e293b; color: white; padding: 12px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-      td { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
-      tr:nth-child(even) { background: #f8fafc; }
-      tr:last-child td { border-bottom: none; }
-      .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 10px; text-align: center; }
-      @media print { body { padding: 20px; } }
-    </style></head><body>`;
-
     const totalTasks = tasks.length;
     const overdue = tasks.filter(t => t.due_date && new Date(t.due_date) < new Date()).length;
     const completed = tasks.filter(t => {
       const col = columns.find(c => c.id === t.status);
-      return col?.title?.toLowerCase().includes('conclu');
+      return (col as { is_conclusion?: boolean } | undefined)?.is_conclusion || col?.title?.toLowerCase().includes('conclu');
     }).length;
-
-    html += `<div class="header"><div><h1>📋 ${boardName}</h1><div class="subtitle">Relatório gerado em ${new Date().toLocaleString('pt-BR')}</div></div></div>`;
-    html += `<div class="stats">`;
-    html += `<div class="stat-card"><div class="number">${totalTasks}</div><div class="label">Total de Tarefas</div></div>`;
-    html += `<div class="stat-card"><div class="number" style="color:#22c55e">${completed}</div><div class="label">Concluídas</div></div>`;
-    html += `<div class="stat-card"><div class="number" style="color:#ef4444">${overdue}</div><div class="label">Atrasadas</div></div>`;
-    html += `</div>`;
-
-    const headers = getHeaders();
-    html += '<table><thead><tr>';
-    headers.forEach(h => { html += `<th>${h}</th>`; });
-    html += '</tr></thead><tbody>';
-    tasks.forEach(t => {
-      const row = getTaskRow(t);
-      html += '<tr>';
-      row.forEach(c => { html += `<td>${c || '-'}</td>`; });
-      html += '</tr>';
+    const ok = openReport({
+      eyebrow: 'Relatório de tarefas',
+      title: boardName,
+      subtitle: 'Tarefas do quadro com os campos selecionados',
+      fileName: `${boardName} - relatório`,
+      landscape: getHeaders().length > 5,
+      blocks: [
+        { type: 'kpis', items: [
+          { label: 'Tarefas', value: totalTasks },
+          { label: 'Concluídas', value: completed, tone: 'good' },
+          { label: 'Em aberto', value: totalTasks - completed, tone: 'info' },
+          { label: 'Atrasadas', value: overdue, tone: overdue ? 'bad' : 'neutral' },
+        ] },
+        { type: 'bars', title: 'Tarefas por coluna', items: columns.map(c => ({ label: c.title, value: tasks.filter(t => t.status === c.id).length })) },
+        { type: 'table', title: 'Lista de tarefas', headers: getHeaders(), rows: tasks.map(getTaskRow), empty: 'Nenhuma tarefa neste quadro.' },
+      ],
     });
-    html += '</tbody></table>';
-    html += `<div class="footer">Relatório gerado automaticamente pelo Ewvor • ${new Date().toLocaleDateString('pt-BR')}</div></body></html>`;
-
-    const w = window.open('', '_blank');
-    if (w) { w.document.write(html); w.document.close(); w.print(); }
-    toast.success('Relatório PDF gerado!');
+    if (ok) toast.success('Relatório aberto para salvar em PDF'); else toast.error('Permita pop-ups para gerar o relatório');
   };
 
   const activeCount = fields.filter(f => f.checked).length;
