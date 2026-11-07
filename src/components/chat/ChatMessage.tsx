@@ -167,7 +167,7 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
       {textContent && <p className="chat-message-text whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{textContent.split('\n').map((line, i) => <React.Fragment key={i}>{i > 0 && <br />}{formatText(line, isOwnMsg)}</React.Fragment>)}</p>}
       {elements}
       {attachments.map((att, i) => att.type === 'image' ? (
-        <SignedStorageLink key={i} url={att.url}><SignedStorageImage url={att.url} alt={att.name} className="max-w-full max-h-48 rounded-2xl object-cover" /></SignedStorageLink>
+        <SignedStorageLink key={i} url={att.url}><SignedStorageImage url={att.url} alt={att.name} className="chat-photo max-h-[340px] w-auto max-w-[min(100%,380px)] rounded-2xl object-cover" /></SignedStorageLink>
       ) : (
         <SignedStorageLink key={i} url={att.url} className={cn('flex max-w-full items-center gap-2 rounded-2xl p-2 text-xs', 'bg-muted/60 hover:bg-muted')}><span>📎</span><span className="min-w-0 truncate">{att.name}</span></SignedStorageLink>
       ))}

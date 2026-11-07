@@ -107,3 +107,16 @@ export function pushRecent(s: Sticker) {
     localStorage.setItem(RECENT_KEY, JSON.stringify(list));
   } catch { /* storage unavailable */ }
 }
+
+/** One-line chat preview shared by every conversation list (desktop and mobile). */
+export function chatPreview(content: string | null | undefined, max = 60): string {
+  const c = String(content || '').trim();
+  if (!c) return '';
+  if (isSticker(c)) return '✨ Figurinha';
+  const lines = c.split('\n');
+  const text = lines.filter((l) => !/^(📷|📎) \[.+?\]\(.+?\)$/.test(l) && !/^(📝|🏷️|⚡|📅|📌) /.test(l)).join(' ').replace(/^📋 Card #\d+ — /, '📋 ').replace(/\s+/g, ' ').trim();
+  const imgs = lines.filter((l) => l.startsWith('📷 [')).length;
+  const file = c.match(/^📎 \[(.+?)\]/m);
+  const out = text || (imgs ? (imgs > 1 ? `📷 ${imgs} fotos` : '📷 Foto') : file ? `📎 ${file[1]}` : '');
+  return out.length > max ? out.slice(0, max - 1).trimEnd() + '…' : out;
+}

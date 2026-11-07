@@ -1,3 +1,4 @@
+import { chatPreview } from '@/lib/stickers';
 import { ChatTasksControl } from '@/components/chat/ChatTasksControl';
 import { ChatConversationItem } from '@/components/chat/ChatConversationItem';
 import { ChatSenderAvatar } from '@/components/chat/ChatSenderIdentity';
@@ -253,12 +254,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     };
   }, [accessibleSectorIdsKey, groupIdsKey]);
 
-  const previewText = (content?: string | null) => {
-    const normalized = (content || '').replace(/\s+/g, ' ').trim();
-    if (!normalized) return 'Sem mensagens';
-    const withoutAttachmentLinks = normalized.replace(/📷?\s*\[([^\]]+)\]\([^)]*\)/g, '$1');
-    return withoutAttachmentLinks.length > 32 ? `${withoutAttachmentLinks.slice(0, 31).trimEnd()}…` : withoutAttachmentLinks;
-  };
+  const previewText = (content?: string | null) => chatPreview(content, 40) || 'Sem mensagens';
   const previewTime = (date?: string) => date
     ? new Date(date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     : '';
