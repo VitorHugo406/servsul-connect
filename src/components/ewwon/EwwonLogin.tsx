@@ -12,6 +12,7 @@ import { useCompanyLogoUrl } from '@/lib/companyLogo';
 import './ewwon.css';
 import './ewwon-app.css';
 import { I } from './icons';
+import { EwwonLogo } from '@/components/common/EwwonLoader';
 
 interface Company { id: string; name: string; slug: string; logo_url: string | null; primary_color: string; secondary_color: string; is_system?: boolean }
 
@@ -143,6 +144,20 @@ export default function EwwonLogin() {
 
   return (
     <div className="ew ewx-root ewx-login" data-theme="dark">
+      <div className="ewx-lg-wrap">
+      <aside className="ewx-lg-side" aria-hidden="true">
+        <img src="/ewwon/img/logo-full.png" alt="" className="ewx-lg-side-logo" />
+        <div className="ewx-lg-side-mid">
+          <EwwonLogo size={150} />
+          <h2>Comunicação, tarefas e pessoas em um só lugar.</h2>
+          <ul>
+            <li><I n="chat" />Chat por setores, grupos e conversas diretas</li>
+            <li><I n="tasks" />Quadros de tarefas e relatórios</li>
+            <li><I n="bell" />Avisos e aniversários da equipe</li>
+          </ul>
+        </div>
+        <small>© {new Date().getFullYear()} ewwon · Gestão corporativa</small>
+      </aside>
       <form className="ewx-lg" onSubmit={(e) => { if (!locked) { e.preventDefault(); goLogin(); return; } void submit(e); }}>
         <div className="ewx-lg-top">
           <img className="ewx-lg-mark" src="/ewwon/img/logo-mark.png" alt="" />
@@ -190,6 +205,7 @@ export default function EwwonLogin() {
             : <p className="ewx-lg-foot"><I n="lock" /> Conexão segura</p>}
         </div>
       </form>
+      </div>
     </div>
   );
 }

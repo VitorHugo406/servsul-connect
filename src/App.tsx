@@ -8,7 +8,6 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { DemoTimer } from "@/components/demo/DemoTimer";
 import { EwwonLoader } from "@/components/common/EwwonLoader";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { FloatingNoteProvider } from "@/contexts/FloatingNoteContext";
 import { supabase } from "@/integrations/supabase/client";
 import { applyBrand, getCachedBrand } from "@/lib/branding";
@@ -98,10 +97,10 @@ function PersistentAccessNavigation() {
 }
 function AppRoutes() {
   const location = useLocation();
-  const isMobile = useIsMobile();
   const full = new URLSearchParams(location.search).get('full') === '1';
   // Phones get the Ewwon login (company + e-mail/password); "full=1" keeps the complete form (sign-up, facial login).
-  const mobileLogin = isMobile && !full;
+  // The new login (company + user) is used on every screen size; ?full=1 opens the complete form.
+  const mobileLogin = !full;
   const authContent = mobileLogin ? <PublicRoute><EwwonLogin /></PublicRoute> : <PublicRoute><Auth /></PublicRoute>;
   return <>{mobileLogin ? null : <PersistentAccessNavigation />}<Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><Routes><Route path="/" element={<RootRoute />} /><Route path="/auth" element={!mobileLogin && location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={mobileLogin ? authContent : <PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="*" element={<RootRoute />} /></Routes></Suspense></>;
 }
