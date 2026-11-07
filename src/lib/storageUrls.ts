@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-type StorageTarget = { bucket: 'attachments' | 'avatars'; path: string };
+type StorageTarget = { bucket: 'attachments' | 'avatars' | 'stickers'; path: string };
 
 const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
 const inFlightSignatures = new Map<string, Promise<string>>();
@@ -28,7 +28,7 @@ export function getStorageTarget(value?: string | null): StorageTarget | null {
   if (!value) return null;
   if (!value.includes('/storage/v1/object/')) return null;
 
-  const match = value.match(/\/storage\/v1\/object\/(?:public|sign)\/(attachments|avatars)\/([^?]+)/);
+  const match = value.match(/\/storage\/v1\/object\/(?:public|sign)\/(attachments|avatars|stickers)\/([^?]+)/);
   if (!match) return null;
 
   try {

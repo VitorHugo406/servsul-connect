@@ -1,5 +1,7 @@
 // Ewwon mobile app — React port of the "Ewwon · App mobile" prototype,
 // backed by the existing Supabase data (see ./data.ts).
+import { StickerPicker, StickerView } from '@/components/common/Stickers';
+import { addFavorite, isSticker, parseSticker, stickerContent } from '@/lib/stickers';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -97,7 +99,7 @@ export default function EwwonApp() {
   const [tourOn, setTourOn] = useState(false);
   const [statusClear, setStatusClear] = useState(3);
   const [deskCount, setDeskCount] = useState(0);
-  const [attOn, setAttOn] = useState<false | 'menu' | 'emoji'>(false);
+  const [attOn, setAttOn] = useState<false | 'menu' | 'emoji' | 'sticker'>(false);
   const [pending, setPending] = useState<{ file: File; url: string | null; name: string; size: number; image: boolean }[]>([]);
   const [sending, setSending] = useState(false);
   const [viewer, setViewer] = useState<{ src: string; url: string; name: string; caption?: string } | null>(null);
@@ -130,6 +132,7 @@ export default function EwwonApp() {
     window.clearTimeout((toast as unknown as { _t?: number })._t);
     (toast as unknown as { _t?: number })._t = window.setTimeout(() => setToastOn(false), 2200);
   }, []);
+  useEffect(() => { const f = (e: Event) => toast(String((e as CustomEvent).detail || '')); window.addEventListener('ew:toast', f); return () => window.removeEventListener('ew:toast', f); }, [toast]);
   const sv = useCallback(<T,>(p: Promise<T>) => p.catch((e) => { console.warn('Ewwon:', e); toast('Não foi possível salvar. Tente novamente.'); return undefined; }), [toast]);
   const patchChat = useCallback((key: string, fn: (c: Chat) => Chat) => setChats((cs) => cs.map((c) => (c.key === key ? fn(c) : c))), []);
   const patchPerson = useCallback((id: string, fn: (p: Person) => Person) => setPeople((ps) => (ps[id] ? { ...ps, [id]: fn(ps[id]) } : ps)), []);
@@ -308,7 +311,7 @@ export default function EwwonApp() {
     } catch (e) {
       console.warn(e);
       patchChat(c.key, (x) => ({ ...x, m: x.m.filter((y) => y.id !== tmpId) }));
-      setDraft(txt);
+      if (!isSticker(txt)) setDraft(txt);
       toast('Mensagem não enviada. Tente novamente.');
     }
   }, [boot, meId, patchChat, toast]);
@@ -927,6 +930,7 @@ export default function EwwonApp() {
             {attOn === 'menu' ? (
               <div className="ewx-att">
                 <button onClick={() => setAttOn('emoji')}><span style={{ background: '#ffb020' }}>😊</span>Emoji</button>
+                <button onClick={() => setAttOn('sticker')}><span style={{ background: '#ff7ab6' }}>✨</span>Figurinhas</button>
                 <button onClick={() => pickAttach('image/*')}><span style={{ background: '#8b5cf6' }}><I n="camera" /></span>Galeria</button>
                 <button onClick={() => pickAttach('image/*', true)}><span style={{ background: '#ff5d7a' }}><I n="camera" /></span>Câmera</button>
                 <button onClick={() => pickAttach('.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.zip,image/*')}><span style={{ background: '#4f8cff' }}><I n="upload" /></span>Arquivo</button>
@@ -935,6 +939,8 @@ export default function EwwonApp() {
                   <button onClick={() => { setAttOn(false); gsOpen({ kind: 'tasks', mode: 1 }); }}><span style={{ background: '#14b8a6' }}><I n="chevR" /></span>Mover tarefa</button>
                 </> : null}
               </div>
+            ) : attOn === 'sticker' ? (
+              <div className="ewx-stkp"><StickerPicker notify={toast} onPick={(st) => { setAttOn(false); void send(stickerContent(st)); }} /></div>
             ) : attOn === 'emoji' ? (
               <div className="ewx-emo">{EMOJIS.map((e) => <button key={e} onClick={() => setDraft((d) => d + e)}>{e}</button>)}</div>
             ) : null}
@@ -1050,7 +1056,9 @@ function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage
   const stop = () => window.clearTimeout(tm.current);
   const rx = m.r.length ? <div className="rx" style={{ display: 'flex' }}>{m.r.map((e) => <span key={e} onClick={(ev) => { ev.stopPropagation(); onReact(e, ref.current); }}>{e}</span>)}</div> : <div className="rx" style={{ display: 'none' }} />;
   const tmh = <div className="tm">{m.h}{m.me ? <> · <span className="ck">{m.pending ? '✓' : '✓✓'}</span></> : null}</div>;
-  const bub = <div className="bub" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><MsgBody content={m.t} onOpenImage={onImage} /></div>;
+  const stk = parseSticker(m.t);
+  const bub = stk ? <div className="ewx-stkb" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><StickerView sticker={stk} size={140} /></div>
+    : <div className="bub" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><MsgBody content={m.t} onOpenImage={onImage} /></div>;
   return (
     <div className={'m' + (m.me ? ' me' : '') + (gm ? ' gm' : '')} ref={ref} style={{ animation: 'none' }}>
       {gm && sender ? (
@@ -1059,7 +1067,7 @@ function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage
           <div className="gb"><div className="sn">{sender.n}</div>{bub}{rx}{tmh}</div>
         </>
       ) : <>{!m.me && sender && !group ? null : null}{bub}{rx}{tmh}</>}
-      {picking ? <div className="pick" onClick={(e) => e.stopPropagation()}>{REACTIONS.map((e) => <button key={e} onClick={(ev) => { ev.stopPropagation(); onReact(e, ref.current); }}>{e}</button>)}</div> : null}
+      {picking ? <div className="pick" onClick={(e) => e.stopPropagation()}>{REACTIONS.map((e) => <button key={e} onClick={(ev) => { ev.stopPropagation(); onReact(e, ref.current); }}>{e}</button>)}{stk && stk.kind === 'img' && !m.me ? <button className="ewx-stk-save" aria-label="Salvar figurinha" onClick={(ev) => { ev.stopPropagation(); void addFavorite(stk).then(() => window.dispatchEvent(new CustomEvent('ew:toast', { detail: 'Figurinha salva em Minhas' }))).catch(() => undefined); }}>⭐</button> : null}</div> : null}
     </div>
   );
 }

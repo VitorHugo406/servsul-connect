@@ -5,6 +5,7 @@
 //   📋 Card #N — title (+ 📝 ⚡ 📅 📌 lines)   task card
 import { useState } from 'react';
 import { openMedia, useCachedMedia } from '@/lib/mediaCache';
+import { isSticker } from '@/lib/stickers';
 
 export interface ParsedMsg {
   text: string;
@@ -41,6 +42,7 @@ export function parseMsg(content: string): ParsedMsg {
 
 /** One-line preview for the conversation list. */
 export function previewText(content: string): string {
+  if (isSticker(content)) return '✨ Figurinha';
   const p = parseMsg(content);
   if (p.text) return p.text.split('\n')[0];
   if (p.images.length) return p.images.length > 1 ? `📷 ${p.images.length} fotos` : '📷 Foto';

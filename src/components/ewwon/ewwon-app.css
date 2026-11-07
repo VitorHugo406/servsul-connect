@@ -383,3 +383,9 @@
 .ew .ewx-tk-rate span { color: #ffc36b; letter-spacing: 1px; }
 .ew .ewx-tk-rate span i { font-style: normal; color: color-mix(in srgb, var(--mu) 40%, transparent); }
 .ew .ewx-tk-rate em { font-style: normal; color: var(--mu); }
+
+/* Stickers */
+.ew .ewx-stkb { display: inline-flex; touch-action: manipulation; }
+.ew .m.me .ewx-stkb { align-self: flex-end; }
+.ew .ewx-stkp { margin: 0 10px 8px; padding: 10px; border-radius: 22px; background: var(--card); border: 1px solid var(--bd); }
+.ew .pick .ewx-stk-save { border-left: 1px solid var(--bd); margin-left: 2px; padding-left: 8px; }

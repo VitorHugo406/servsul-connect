@@ -1,0 +1,28 @@
+/* Stickers: works in the desktop chat (Tailwind tokens) and inside the mobile app (.ew tokens). */
+.stk-view { display: inline-flex; align-items: center; justify-content: center; line-height: 1; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.stk-view img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .18)); }
+.stk-emoji { filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .18)); animation: stk-pop .45s cubic-bezier(.3, 1.6, .5, 1); }
+.stk-ld { width: 46%; height: 46%; border-radius: 50%; background: var(--stk-bg, hsl(var(--muted))); animation: stk-pulse 1.1s ease-in-out infinite; }
+.stk-gone { font-size: 11px; color: var(--stk-mu, hsl(var(--muted-foreground))); text-align: center; }
+@keyframes stk-pop { 0% { transform: scale(.4); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes stk-pulse { 50% { opacity: .45; } }
+
+.stk { --stk-bg: hsl(var(--muted)); --stk-mu: hsl(var(--muted-foreground)); --stk-bd: hsl(var(--border)); display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.ew .stk { --stk-bg: var(--c2); --stk-mu: var(--mu); --stk-bd: var(--bd); }
+.stk-tabs { display: flex; align-items: center; gap: 4px; }
+.stk-sp { flex: 1; }
+.stk button.stk-t { border: 0; background: none !important; background-image: none !important; box-shadow: none !important; backdrop-filter: none; padding: 6px 10px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--stk-mu); cursor: pointer; }
+.stk button.stk-t.on { background: var(--stk-bg) !important; color: inherit; }
+.stk button.stk-t.stk-new { color: inherit; }
+.stk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; max-height: 260px; overflow-y: auto; padding: 2px; overscroll-behavior: contain; }
+.stk button.stk-b { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1; border: 0; border-radius: 14px; background: none !important; background-image: none !important; box-shadow: none !important; backdrop-filter: none; cursor: pointer; transition: transform .12s, background-color .12s; }
+.stk button.stk-b:hover { background: var(--stk-bg) !important; }
+.stk button.stk-b:active { transform: scale(.92); }
+.stk button.stk-b.edit { animation: stk-wiggle .3s ease-in-out infinite alternate; }
+.stk-x { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 50%; background: #ef4444; color: #fff; font-style: normal; font-size: 14px; line-height: 20px; text-align: center; }
+.stk-empty { grid-column: 1 / -1; padding: 18px 8px; text-align: center; font-size: 13px; color: var(--stk-mu); }
+@keyframes stk-wiggle { from { transform: rotate(-2deg); } to { transform: rotate(2deg); } }
+
+/* Sticker messages have no bubble (WhatsApp-like). */
+.stk-msg { display: inline-flex; flex-direction: column; gap: 2px; background: none !important; padding: 0 !important; box-shadow: none !important; border: 0 !important; }
+@media (prefers-reduced-motion: reduce) { .stk-emoji, .stk button.stk-b.edit { animation: none; } }
