@@ -41,6 +41,7 @@ export interface DeskTicket {
   id: number; label: string; companyId: string; companyName: string; reporterId: string; reporterName: string; reporterEmail: string;
   category: string; area: string; severity: string; description: string; screenshotPath: string | null; device: Row; status: string;
   assigneeId: string | null; assigneeName: string | null; createdAt: string; updatedAt: string;
+  rating?: number | null; ratingComment?: string | null;
 }
 export const TICKET_STATUS = ['Recebido', 'Em análise', 'Resolvido', 'Fechado'];
 export const TICKET_COLOR: Record<string, string> = { Recebido: '#7cc6ff', 'Em análise': '#ffc36b', Resolvido: '#46d37b', Fechado: '#8b8b94' };
@@ -672,6 +673,7 @@ export async function listDeskTickets(): Promise<DeskTicket[]> {
     reporterName: t.reporter_name || 'Usuário', reporterEmail: t.reporter_email || '', category: t.category, area: t.area || '—',
     severity: t.severity || '—', description: t.description, screenshotPath: t.screenshot_path, device: t.device, status: t.status,
     assigneeId: t.assignee_profile_id, assigneeName: t.assignee_name, createdAt: t.created_at, updatedAt: t.updated_at,
+    rating: t.rating ?? null, ratingComment: t.rating_comment ?? null,
   }));
 }
 
@@ -732,6 +734,29 @@ export async function sendTicketMessage(ticketId: number, body: string, meId: st
 export function subscribeTicketMessages(ticketId: number, onNew: (row: Row) => void): () => void {
   const ch = sb.channel(`ticket-${ticketId}-${Date.now()}`)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_ticket_messages', filter: `ticket_id=eq.${ticketId}` }, (p: Row) => onNew(p.new))
+    .subscribe();
+  return () => { void sb.removeChannel(ch); };
+}
+
+export interface TicketInfo { status: string; rating: number | null; ratingComment: string | null; ratedAt: string | null; assigneeName: string | null; isReporter: boolean }
+export const ticketClosed = (status?: string | null) => status === 'Resolvido' || status === 'Fechado';
+
+export async function ticketInfo(ticketId: number): Promise<TicketInfo | null> {
+  const r = await sb.rpc('support_ticket_info', { _id: ticketId });
+  if (r.error) throw r.error;
+  const t = Array.isArray(r.data) ? r.data[0] : r.data;
+  return t ? { status: t.status, rating: t.rating ?? null, ratingComment: t.rating_comment ?? null, ratedAt: t.rated_at ?? null, assigneeName: t.assignee_name ?? null, isReporter: !!t.is_reporter } : null;
+}
+
+export async function rateTicket(ticketId: number, rating: number, comment: string) {
+  const r = await sb.rpc('support_rate_ticket', { _id: ticketId, _rating: rating, _comment: comment.trim() || null });
+  if (r.error) throw r.error;
+}
+
+/** Status changes of one ticket (closing, reopening, rating). */
+export function subscribeTicket(ticketId: number, onChange: () => void): () => void {
+  const ch = sb.channel(`ticket-row-${ticketId}-${Date.now()}`)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'support_tickets', filter: `id=eq.${ticketId}` }, () => onChange())
     .subscribe();
   return () => { void sb.removeChannel(ch); };
 }

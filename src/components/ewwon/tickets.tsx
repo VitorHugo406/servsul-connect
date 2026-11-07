@@ -126,6 +126,7 @@ export function TicketsDesk({ meId, toast, active, onCount, onChat }: { meId: st
                   <span>{t.companyName}</span><span>·</span><span>{t.reporterName}</span><span>·</span><span>{relDays(t.createdAt)}</span>
                 </div>
                 {slaState(t) ? <div className={'ewx-tk-sla ' + slaState(t)}><I n="clock" />{slaLabel(t)}</div> : null}
+                {t.rating ? <div className="ewx-tk-rate"><span>{'★'.repeat(t.rating)}<i>{'★'.repeat(5 - t.rating)}</i></span>{t.ratingComment ? <em>“{t.ratingComment}”</em> : null}</div> : null}
                 <div className="ewx-tk-who">{t.assigneeName ? <>Atendido por <b>{mine ? 'você' : t.assigneeName}</b></> : <span className="ewx-tk-free">Sem atendente</span>}</div>
               </button>
               {isOpen ? (

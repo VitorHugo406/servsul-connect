@@ -960,7 +960,7 @@ export default function EwwonApp() {
         </div>
 
         {/* ---------------- Páginas ---------------- */}
-        <div id="pg" className={(pages.length ? 'on' : '') + (top && (top.kind === 'profile' || top.kind === 'groupEdit') ? ' cv' : '')}>
+        <div id="pg" className={(pages.length ? 'on' : '') + (top && (top.kind === 'profile' || top.kind === 'groupEdit') ? ' cv' : '') + (top?.kind === 'ticket' ? ' tk' : '')}>
           <div className="pgh"><button className="lq pgb" id="pgb" aria-label="Voltar" onClick={pgBack}><I n="chevL" /></button><b id="pgt">{top ? pageTitle(top) : ''}</b><span style={{ minWidth: 38 }} /></div>
           <div className="pgc" id="pgc" key={pages.length + (top?.kind || '')}>{top ? <EwwonPage spec={top} api={api} /> : null}</div>
         </div>

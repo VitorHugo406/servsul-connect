@@ -161,6 +161,14 @@ function rpc(s: DemoSession, name: string, args: Row = {}) {
       });
       writeTable('support_tickets', rows); return { data: out, error: out ? null : { message: 'ticket not found' } };
     }
+    case 'support_ticket_info': {
+      const t = readTable('support_tickets').find(x => String(x.id) === String(args._id));
+      return { data: t ? [{ status: t.status, rating: t.rating ?? null, rating_comment: t.rating_comment ?? null, rated_at: t.rated_at ?? null, assignee_name: t.assignee_name ?? null, is_reporter: t.profile_id === me?.id }] : [], error: null };
+    }
+    case 'support_rate_ticket': {
+      const rows = readTable('support_tickets').map(t => (String(t.id) === String(args._id) ? { ...t, rating: args._rating, rating_comment: args._comment ?? null, rated_at: new Date().toISOString() } : t));
+      writeTable('support_tickets', rows); return { data: null, error: null };
+    }
     case 'evaluation_respond': {
       let out: Row | null = null; const now = new Date().toISOString();
       const rows = readTable('evaluations').map(e => {

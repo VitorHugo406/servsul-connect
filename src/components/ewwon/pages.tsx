@@ -374,24 +374,32 @@ function SupportPage({ api }: { api: EwApi }) {
 /** Conversation between the ticket reporter and the support staff. */
 function TicketChat({ spec, api }: { spec: Extract<PageSpec, { kind: 'ticket' }>; api: EwApi }) {
   const [msgs, setMsgs] = useState<D.TicketMsg[] | null>(null);
+  const [info, setInfo] = useState<D.TicketInfo | null>(null);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const [stars, setStars] = useState(0);
+  const [note, setNote] = useState('');
   const box = useRef<HTMLDivElement>(null);
   const meId = api.me.id;
+  const closed = D.ticketClosed(info?.status);
+  const toBottom = () => window.setTimeout(() => { const b = box.current; if (b) b.scrollTop = b.scrollHeight; }, 60);
 
   useEffect(() => {
     let alive = true;
+    const loadInfo = () => { D.ticketInfo(spec.id).then((i) => { if (alive) setInfo(i); }).catch(() => undefined); };
+    loadInfo();
     D.listTicketMessages(spec.id, meId).then((m) => { if (alive) setMsgs(m); }).catch(() => { if (alive) setMsgs([]); });
     const unsub = D.subscribeTicketMessages(spec.id, (r) => {
       setMsgs((m) => (m && !m.some((x) => x.id === r.id) ? [...m, { id: r.id, body: r.body, at: r.created_at, mine: r.author_profile_id === meId, staff: !!r.from_staff, author: r.author_name || (r.from_staff ? 'Suporte' : 'Usuário') }] : m));
     });
-    return () => { alive = false; unsub(); };
+    const unsubRow = D.subscribeTicket(spec.id, loadInfo);
+    return () => { alive = false; unsub(); unsubRow(); };
   }, [spec.id, meId]);
-  useEffect(() => { const b = box.current; if (b) b.scrollTop = b.scrollHeight; }, [msgs?.length]);
+  useEffect(() => { toBottom(); }, [msgs?.length, closed]);
 
   const send = async () => {
     const v = text.trim();
-    if (!v || busy) return;
+    if (!v || busy || closed) return;
     setBusy(true);
     const tmp: D.TicketMsg = { id: 'tmp-' + Date.now(), body: v, at: new Date().toISOString(), mine: true, staff: spec.staff, author: api.me.n };
     setMsgs((m) => [...(m || []), tmp]);
@@ -403,15 +411,31 @@ function TicketChat({ spec, api }: { spec: Extract<PageSpec, { kind: 'ticket' }>
       setMsgs((m) => (m || []).filter((x) => x.id !== tmp.id));
       setText(v);
       api.toast('Mensagem não enviada');
+      void D.ticketInfo(spec.id).then(setInfo).catch(() => undefined);
     } finally { setBusy(false); }
   };
 
+  const rate = async () => {
+    if (!stars || busy) return;
+    setBusy(true);
+    try {
+      await D.rateTicket(spec.id, stars, note);
+      setInfo((i) => (i ? { ...i, rating: stars, ratingComment: note.trim() || null, ratedAt: new Date().toISOString() } : i));
+      api.toast('Obrigado pela avaliação!');
+    } catch (e) { api.toast((e as Error).message || 'Não foi possível enviar a avaliação'); } finally { setBusy(false); }
+  };
+
+  const LABELS = ['', 'Muito ruim', 'Ruim', 'Regular', 'Bom', 'Excelente'];
   return (
     <div className="ewx-tchat">
-      <div className="ewx-tchat-h"><b>{spec.label}</b><small>{spec.title || ''}</small><span>{spec.staff ? 'Você está atendendo como suporte' : 'Converse com quem está atendendo seu chamado'}</span></div>
+      <div className="ewx-tchat-h">
+        <div className="ewx-tchat-ht"><b>{spec.label}</b>{info ? <span className="tst"><i style={{ background: D.TICKET_COLOR[info.status] || '#7cc6ff' }} />{info.status}</span> : null}</div>
+        <small>{spec.title || ''}</small>
+        <span>{closed ? 'Chamado encerrado' : spec.staff ? 'Você está atendendo como suporte' : info?.assigneeName ? `Atendido por ${info.assigneeName}` : 'Converse com quem está atendendo seu chamado'}</span>
+      </div>
       <div className="ewx-tchat-list" ref={box}>
         {msgs === null ? <div className="ewx-skel">{[60, 42, 54].map((w, i) => <div key={i} className={'ewx-skel-b' + (i === 1 ? ' me' : '')} style={{ width: w + '%' }} />)}</div> : null}
-        {msgs && !msgs.length ? <div className="hint" style={{ padding: 24 }}>{spec.staff ? 'Escreva para quem abriu o chamado.' : 'Envie uma mensagem para a equipe de suporte. Você recebe a resposta aqui.'}</div> : null}
+        {msgs && !msgs.length ? <div className="hint" style={{ padding: 24 }}>{closed ? 'Nenhuma mensagem neste chamado.' : spec.staff ? 'Escreva para quem abriu o chamado.' : 'Envie uma mensagem para a equipe de suporte. Você recebe a resposta aqui.'}</div> : null}
         {msgs?.map((m) => (
           <div key={m.id} className={'ewx-tm' + (m.mine ? ' me' : '')}>
             {!m.mine ? <small className="ewx-tm-a">{m.author}{m.staff ? ' · Suporte' : ''}</small> : null}
@@ -419,11 +443,29 @@ function TicketChat({ spec, api }: { spec: Extract<PageSpec, { kind: 'ticket' }>
             <small className="ewx-tm-t">{new Date(m.at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</small>
           </div>
         ))}
+        {closed ? <div className="ewx-tclosed"><I n="check" />Este chamado foi encerrado. Para um novo problema, abra outro chamado.</div> : null}
       </div>
-      <div className="cmp ewx-tchat-cmp">
-        <input placeholder="Escreva uma mensagem" value={text} maxLength={2000} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} />
-        <button className="snd" aria-label="Enviar" disabled={busy || !text.trim()} onClick={() => void send()}><I n="send" /></button>
-      </div>
+      {!closed ? (
+        <div className="cmp ewx-tchat-cmp">
+          <input placeholder="Escreva uma mensagem" value={text} maxLength={2000} onFocus={toBottom} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} />
+          <button className="snd" aria-label="Enviar" disabled={busy || !text.trim()} onClick={() => void send()}><I n="send" /></button>
+        </div>
+      ) : info?.rating ? (
+        <div className="ewx-trate done">
+          <b>{info.isReporter ? 'Você avaliou este atendimento' : 'Avaliação do atendimento'}</b>
+          <div className="ewx-stars ro">{[1, 2, 3, 4, 5].map((n) => <span key={n} className={n <= (info.rating || 0) ? 'on' : ''}>★</span>)}<em>{LABELS[info.rating || 0]}</em></div>
+          {info.ratingComment ? <p>“{info.ratingComment}”</p> : null}
+        </div>
+      ) : info?.isReporter ? (
+        <div className="ewx-trate">
+          <b>Como foi o atendimento?</b>
+          <div className="ewx-stars">{[1, 2, 3, 4, 5].map((n) => <button key={n} aria-label={`${n} estrelas`} className={n <= stars ? 'on' : ''} onClick={() => setStars(n)}>★</button>)}<em>{LABELS[stars] || 'Toque nas estrelas'}</em></div>
+          {stars ? <textarea rows={2} maxLength={1000} value={note} onFocus={toBottom} onChange={(e) => setNote(e.target.value)} placeholder="Quer deixar um comentário? (opcional)" /> : null}
+          <button className="btn full" disabled={!stars || busy} onClick={() => void rate()}>Enviar avaliação</button>
+        </div>
+      ) : info ? (
+        <div className="ewx-trate done"><b>Aguardando a avaliação de quem abriu o chamado</b></div>
+      ) : null}
     </div>
   );
 }
