@@ -39,3 +39,9 @@
 ## Sessão e app instalado (08/11/2026)
 - `signOut` agora usa `scope: 'local'`: sair num aparelho não derruba os outros (antes o padrão global revogava todas as sessões e o app deslogava sozinho).
 - App instalado (PWA/Android) abre direto no login, pede notificações (obrigatório) e microfone no primeiro acesso; a opção "Baixar aplicativo" aparece só no navegador.
+
+## Avisos e links (08/11/2026)
+- Aviso fixado usava prioridade `high`, que o banco não aceita (`normal|important|urgent`): agora usa `important`.
+- Avisos temporários no app (24 h, 3, 7 ou 30 dias) via `expire_at`; o PC já tinha a data de expiração.
+- Postar avisos: admin (papel), nível admin/gerente ou permissão `can_post_announcements` — mesma regra na tela e na policy de INSERT.
+- Prévia de links: edge function `link-preview` (só usuários logados; só http/https em hosts públicos; HTML até 400 KB; 6 s). O app guarda a prévia no aparelho por 7 dias.
