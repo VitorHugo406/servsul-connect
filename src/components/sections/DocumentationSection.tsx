@@ -494,8 +494,8 @@ function generateDocumentationPDF() {
     ['functions/get-public-sectors/', 'Edge Fn', 'Retorna setores para tela pública de login'],
     ['functions/update-user-permissions/', 'Edge Fn', 'Atualiza permissões granulares do usuário'],
     ['functions/delete-data/', 'Edge Fn', 'Exclusão controlada com registro em audit_logs'],
-    ['functions/send-announcement-email/', 'Edge Fn', 'Disparo de e-mail de aviso via Resend API'],
-    ['functions/send-feedback-email/', 'Edge Fn', 'Disparo de e-mail de feedback via Resend API'],
+    ['functions/send-announcement-email/', 'Edge Fn', 'Disparo de e-mail de aviso via Gmail SMTP (ewvonsuporte@gmail.com)'],
+    ['functions/send-feedback-email/', 'Edge Fn', 'Disparo de e-mail de feedback via Gmail SMTP (ewvonsuporte@gmail.com)'],
     ['functions/process-automations/', 'Edge Fn', 'Executa regras SE→ENTÃO nos quadros Kanban'],
     ['functions/duplicate-scheduled-cards/', 'Edge Fn', 'Duplica cards agendados (diário/semanal/mensal)'],
     ['functions/api-integrations/', 'Edge Fn', 'API REST externa: métricas, dados de usuários, equipes'],
@@ -572,8 +572,8 @@ function generateDocumentationPDF() {
     ['get-facial-data', 'POST', 'Retorna descritores e imagem facial de um usuário'],
     ['get-public-sectors', 'GET', 'Retorna lista de setores para exibição na tela de login'],
     ['delete-data', 'POST', 'Exclusão controlada de registros com log em audit_logs'],
-    ['send-announcement-email', 'POST', 'Envia e-mail de aviso para todos os usuários ativos via Resend'],
-    ['send-feedback-email', 'POST', 'Envia e-mail de feedback personalizado para um usuário via Resend'],
+    ['send-announcement-email', 'POST', 'Envia e-mail de aviso para os usuários ativos da empresa via Gmail SMTP'],
+    ['send-feedback-email', 'POST', 'Envia e-mail de feedback personalizado (com PDF) via Gmail SMTP'],
     ['process-automations', 'POST', 'Executa regras de automação do quadro ao mover cards'],
     ['duplicate-scheduled-cards', 'POST', 'Duplica cards com subtarefas conforme agendamento (cron)'],
   ], [42, 14, contentW - 56]);
@@ -1146,8 +1146,8 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                 <div className="border border-border rounded-md overflow-hidden">
                   <TableRow label="get-public-sectors" value="Setores para tela pública" />
                   <TableRow label="delete-data" value="Exclusão + audit log" />
-                  <TableRow label="send-announcement-email" value="E-mail de aviso (Resend)" />
-                  <TableRow label="send-feedback-email" value="E-mail de feedback (Resend)" />
+                  <TableRow label="send-announcement-email" value="E-mail de aviso (Gmail SMTP)" />
+                  <TableRow label="send-feedback-email" value="E-mail de feedback (Gmail SMTP)" />
                   <TableRow label="process-automations" value="Motor de automações" />
                   <TableRow label="duplicate-scheduled-cards" value="Duplicação agendada" />
                   <TableRow label="api-integrations" value="API REST externa (métricas, usuários)" />
