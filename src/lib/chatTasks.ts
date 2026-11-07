@@ -80,7 +80,7 @@ export async function createTask(input: { boardId: string; column: ChatColumn; t
   if (input.column.auto_cover) row.cover_image = input.column.auto_cover;
   const r = await sb.from('tasks').insert(withCompany(row)).select('id,task_number,title,status,priority,due_date,assigned_to,completed_at').single();
   if (r.error) throw r.error;
-  void sb.rpc('log_task_activity_secure', { _task_id: r.data.id, _action_type: 'created', _description: 'Tarefa criada pelo chat', _metadata: { source: 'chat' } }).catch?.(() => undefined);
+  void Promise.resolve(sb.rpc('log_task_activity_secure', { _task_id: r.data.id, _action_type: 'created', _description: 'Tarefa criada pelo chat', _metadata: { source: 'chat' } })).catch(() => undefined);
   runAutomations(input.boardId);
   return r.data;
 }
@@ -103,7 +103,7 @@ export async function moveTask(task: ChatTask, boardId: string, target: ChatColu
   }
   const r = await sb.from('tasks').update(updates).eq('id', task.id);
   if (r.error) throw r.error;
-  void sb.rpc('log_task_activity_secure', { _task_id: task.id, _action_type: 'moved', _description: `Movida para ${target.title} pelo chat`, _metadata: { source: 'chat', from: from?.title, to: target.title } }).catch?.(() => undefined);
+  void Promise.resolve(sb.rpc('log_task_activity_secure', { _task_id: task.id, _action_type: 'moved', _description: `Movida para ${target.title} pelo chat`, _metadata: { source: 'chat', from: from?.title, to: target.title } })).catch(() => undefined);
   runAutomations(boardId);
 }
 

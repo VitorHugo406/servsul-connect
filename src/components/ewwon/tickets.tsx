@@ -23,7 +23,7 @@ function slaLabel(t: DeskTicket) {
   return left < 1 ? `Faltam ${Math.max(1, Math.round(left * 60))} min` : `Faltam ${Math.floor(left)}h${String(Math.round((left % 1) * 60)).padStart(2, '0')}`;
 }
 
-export function TicketsDesk({ meId, toast, active, onCount }: { meId: string; toast: (t: string) => void; active: boolean; onCount: (n: number) => void }) {
+export function TicketsDesk({ meId, toast, active, onCount, onChat }: { meId: string; toast: (t: string) => void; active: boolean; onCount: (n: number) => void; onChat: (t: DeskTicket) => void }) {
   const [list, setList] = useState<DeskTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -140,6 +140,7 @@ export function TicketsDesk({ meId, toast, active, onCount }: { meId: string; to
                   {t.device ? <div className="cr"><span>Aparelho</span><b>{[t.device.platform, t.device.screen, t.device.app && 'v' + t.device.app].filter(Boolean).join(' · ')}</b></div> : null}
                   <p className="ewx-tk-desc">{t.description}</p>
                   {t.screenshotPath ? <button className="btn sm sec" onClick={() => void shot(t.screenshotPath as string)}><I n="upload" />Ver captura de tela</button> : null}
+                  <button className="btn sec full" onClick={() => onChat(t)}><I n="chat" />Conversar com {t.reporterName.split(' ')[0]}</button>
                   {!mine ? <button className="btn full" disabled={busy === t.id} onClick={() => void update(t, t.status === 'Recebido' ? 'Em análise' : null, true)}>{t.assigneeName ? 'Assumir atendimento' : 'Atender este ticket'}</button> : null}
                   <div className="sl">Status</div>
                   <Seg id={'tks' + t.id} items={D.TICKET_STATUS} value={Math.max(0, D.TICKET_STATUS.indexOf(t.status))} onChange={(v) => { if (D.TICKET_STATUS[v] !== t.status) void update(t, D.TICKET_STATUS[v], false); }} />

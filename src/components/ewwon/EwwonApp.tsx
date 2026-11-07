@@ -99,7 +99,7 @@ export default function EwwonApp() {
   const [attOn, setAttOn] = useState<false | 'menu' | 'emoji'>(false);
   const [pending, setPending] = useState<{ file: File; url: string | null; name: string; size: number; image: boolean }[]>([]);
   const [sending, setSending] = useState(false);
-  const [viewer, setViewer] = useState<{ src: string; url: string; name: string } | null>(null);
+  const [viewer, setViewer] = useState<{ src: string; url: string; name: string; caption?: string } | null>(null);
   const [tasksOn, setTasksOn] = useState<Record<string, { enabled: boolean; manage: boolean }>>({});
   const attRef = useRef<HTMLInputElement>(null);
   const { uploadFile } = useFileUpload();
@@ -579,10 +579,26 @@ export default function EwwonApp() {
   const ringRef = useRef<SVGCircleElement>(null);
   const lineRef = useRef<SVGPathElement>(null);
   const [anim, setAnim] = useState(0);
+  // Início: refresh the dashboard numbers whenever the tab is opened (and every
+  // minute while it stays open), without reloading the page.
+  const bootReady = !!boot;
   useEffect(() => {
-    if (tab !== 0 || !boot) return;
-    setAnim((a) => a + 1);
-  }, [tab, boot]);
+    if (tab !== 0 || !bootReady || !meId) return;
+    let alive = true;
+    const refresh = () => {
+      const companyId = companyRef.current;
+      if (!companyId) return;
+      void D.refreshDashboard(meId, companyId, stateRef.current.chats).then((dashboard) => {
+        if (!alive) return;
+        setBoot((b) => (b ? { ...b, dashboard, birthdays: D.computeBirthdays(stateRef.current.people) } : b));
+        setAnim((x) => x + 1);
+      }).catch(() => undefined);
+    };
+    setAnim((x) => x + 1);
+    refresh();
+    const t = window.setInterval(refresh, 60000);
+    return () => { alive = false; window.clearInterval(t); };
+  }, [tab, bootReady, meId]);
   useEffect(() => {
     if (!boot) return;
     const r = ringRef.current, l = lineRef.current;
@@ -703,7 +719,7 @@ export default function EwwonApp() {
     <div className="ew ewx-root" data-theme={themeAttr} data-rm={prefs.red ? '' : undefined} ref={rootRef} data-tour={tourOn ? '1' : undefined}>
       <div id="phone" ref={phoneRef} className={tourOn ? 'tour' : ''}>
         <aside id="panel" ref={panelRef}>
-          <div className="pf" style={{ ['--sc' as string]: ST[me.st][1], backgroundImage: me.photo ? `url("${me.photo}")` : undefined, backgroundSize: 'cover' }}>{me.photo ? '' : me.i}<i className="pfd" /></div>
+          <div className={'pf' + (me.photo ? ' ewx-pf-photo' : '')} style={{ ['--sc' as string]: ST[me.st][1], backgroundImage: me.photo ? `url("${me.photo}")` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>{me.photo ? '' : me.i}<i className="pfd" /></div>
           <h2 id="pnm">{me.n}</h2>
           <div className="u" id="phd">{me.mail ? me.mail.split('@')[0] : ''} · {me.role}</div>
           <button className="stp lq" id="stp" style={{ ['--sc' as string]: ST[me.st][1] }} onClick={() => gsOpen({ kind: 'status' })}><i /><span id="stl">{ST[me.st][0]}</span><I n="chevD" /></button>
@@ -862,7 +878,7 @@ export default function EwwonApp() {
 
             {boot.supportStaff ? (
               <section className={'view' + (tab === 4 ? ' on' : '')} id="v4">
-                <TicketsDesk meId={meId} toast={toast} active={tab === 4} onCount={setDeskCount} />
+                <TicketsDesk meId={meId} toast={toast} active={tab === 4} onCount={setDeskCount} onChat={(t) => pgShow({ kind: 'ticket', id: t.id, label: t.label, staff: true, title: t.description.slice(0, 60) })} />
               </section>
             ) : null}
           </div>
@@ -889,9 +905,13 @@ export default function EwwonApp() {
             <div id="msgs" ref={msgsRef} style={msgsVars} onClick={() => setPickFor(null)}>
               <div className="dv">{cur && cur.m.length ? 'Mensagens recentes' : 'Hoje'}</div>
               <div className="hint">Segure ou toque 2x numa mensagem para reagir</div>
-              {cur && !cur.loaded ? <div className="hint" style={{ padding: 20 }}>Carregando…</div> : null}
+              {cur && !cur.loaded ? (
+                <div className="ewx-skel" aria-label="Carregando mensagens" role="status">
+                  {[62, 44, 70, 38, 56, 48].map((w, i) => <div key={i} className={'ewx-skel-b' + (i % 3 === 2 ? ' me' : '')} style={{ width: w + '%', animationDelay: i * 0.08 + 's' }} />)}
+                </div>
+              ) : null}
               {cur && cur.loaded && !cur.m.length ? <div className="hint" style={{ padding: 20 }}>Nenhuma mensagem ainda. Diga oi! 👋</div> : null}
-              {cur?.m.map((m) => <Bubble key={m.id} m={m} sender={m.from ? P[m.from] : null} group={cur.g} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} onImage={(src, url, name) => setViewer({ src, url, name })} />)}
+              {cur?.m.map((m) => <Bubble key={m.id} m={m} sender={m.from ? P[m.from] : null} group={cur.g} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} onImage={(src, url, name, caption) => setViewer({ src, url, name, caption })} />)}
             </div>
             {pending.length ? (
               <div className="ewx-tray">
@@ -989,6 +1009,7 @@ export function pageTitle(p: PageSpec): string {
     case 'settings': return 'Configurações';
     case 'muted': return 'Conversas silenciadas';
     case 'support': return 'Suporte';
+    case 'ticket': return 'Conversa do chamado';
     default: return '';
   }
 }
@@ -1018,7 +1039,7 @@ function Bars({ v, k }: { v: number[]; k: string }) {
 }
 
 function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage }: {
-  m: Msg; sender: Person | null; group: boolean; picking: boolean; onPick: () => void; onReact: (x: string, wrap: HTMLElement | null) => void; onProfile: (id: string) => void; onImage: (src: string, url: string, name: string) => void;
+  m: Msg; sender: Person | null; group: boolean; picking: boolean; onPick: () => void; onReact: (x: string, wrap: HTMLElement | null) => void; onProfile: (id: string) => void; onImage: (src: string, url: string, name: string, caption?: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const tm = useRef<number>();

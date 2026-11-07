@@ -4,7 +4,7 @@
 //   📎 [name](url)   file attachment
 //   📋 Card #N — title (+ 📝 ⚡ 📅 📌 lines)   task card
 import { useState } from 'react';
-import { openMedia, saveMedia, useCachedMedia } from '@/lib/mediaCache';
+import { openMedia, useCachedMedia } from '@/lib/mediaCache';
 
 export interface ParsedMsg {
   text: string;
@@ -52,7 +52,7 @@ export function previewText(content: string): string {
 const ext = (name: string) => (name.split('.').pop() || 'arq').slice(0, 4).toUpperCase();
 const EXT_COLOR: Record<string, string> = { PDF: '#ff5d5d', DOC: '#4f8cff', DOCX: '#4f8cff', XLS: '#2fbf71', XLSX: '#2fbf71', CSV: '#2fbf71', PPT: '#ff9f43', PPTX: '#ff9f43', ZIP: '#8b5cf6', TXT: '#8b8b94' };
 
-function Photo({ url, name, onOpen, single }: { url: string; name: string; onOpen: (u: string, url: string, name: string) => void; single: boolean }) {
+function Photo({ url, name, onOpen, single }: { url: string; name: string; onOpen: (u: string, url: string, name: string, caption?: string) => void; single: boolean }) {
   // Photos are downloaded once and kept on this device (WhatsApp-like).
   const { src, state } = useCachedMedia(url);
   return (
@@ -79,13 +79,14 @@ function FileCard({ url, name }: { url: string; name: string }) {
   );
 }
 
-export function MsgBody({ content, onOpenImage }: { content: string; onOpenImage: (u: string, url: string, name: string) => void }) {
+export function MsgBody({ content, onOpenImage }: { content: string; onOpenImage: (u: string, url: string, name: string, caption?: string) => void }) {
   const p = parseMsg(content);
+  const openWithCaption = (u: string, url: string, name: string) => onOpenImage(u, url, name, p.text || undefined);
   return (
     <>
       {p.images.length ? (
         <div className={'ewx-phs n' + Math.min(p.images.length, 4)}>
-          {p.images.slice(0, 4).map((im, i) => <Photo key={i} url={im.url} name={im.name} onOpen={onOpenImage} single={p.images.length === 1} />)}
+          {p.images.slice(0, 4).map((im, i) => <Photo key={i} url={im.url} name={im.name} onOpen={openWithCaption} single={p.images.length === 1} />)}
         </div>
       ) : null}
       {p.files.map((f, i) => <FileCard key={i} url={f.url} name={f.name} />)}
@@ -102,15 +103,14 @@ export function MsgBody({ content, onOpenImage }: { content: string; onOpenImage
   );
 }
 
-export function ImageViewer({ media, onClose }: { media: { src: string; url: string; name: string } | null; onClose: () => void }) {
+export function ImageViewer({ media, onClose }: { media: { src: string; url: string; name: string; caption?: string } | null; onClose: () => void }) {
   const [zoom, setZoom] = useState(false);
   if (!media) return null;
-  const { src } = media;
   return (
     <div className="ewx-viewer" onClick={onClose}>
-      <img src={src} alt="" className={zoom ? 'z' : ''} onClick={(e) => { e.stopPropagation(); setZoom(!zoom); }} />
-      <div className="ewx-viewer-bar">
-        <button onClick={(e) => { e.stopPropagation(); void saveMedia(media.url, media.name); }}>Salvar no aparelho</button>
+      <img src={media.src} alt="" className={zoom ? 'z' : ''} onClick={(e) => { e.stopPropagation(); setZoom(!zoom); }} />
+      <div className="ewx-viewer-bar" onClick={(e) => e.stopPropagation()}>
+        {media.caption ? <p className="ewx-viewer-cap">{media.caption}</p> : null}
         <button onClick={onClose}>Fechar</button>
       </div>
     </div>

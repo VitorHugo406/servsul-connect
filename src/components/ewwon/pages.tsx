@@ -1,5 +1,5 @@
 // Full-screen pages of the Ewwon mobile app (#pg stack).
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { EwApi } from './EwwonApp';
 import { Av, Seg, Tg, avStyle, covStyle } from './EwwonApp';
 import * as D from './data';
@@ -15,7 +15,8 @@ export type PageSpec =
   | { kind: 'groupEdit'; key: string }
   | { kind: 'settings' }
   | { kind: 'muted' }
-  | { kind: 'support' };
+  | { kind: 'support' }
+  | { kind: 'ticket'; id: number; label: string; staff: boolean; title?: string };
 
 export function EwwonPage({ spec, api }: { spec: PageSpec; api: EwApi }) {
   switch (spec.kind) {
@@ -26,6 +27,7 @@ export function EwwonPage({ spec, api }: { spec: PageSpec; api: EwApi }) {
     case 'settings': return <SettingsPage api={api} />;
     case 'muted': return <MutedPage api={api} />;
     case 'support': return <SupportPage api={api} />;
+    case 'ticket': return <TicketChat spec={spec} api={api} />;
     default: return null;
   }
 }
@@ -316,7 +318,7 @@ function SupportPage({ api }: { api: EwApi }) {
   if (tab === 1) {
     body = (
       <>
-        {TK.length ? <div className="grp">{TK.map((k) => <div className="tkr" key={k.id}><div><b>{k.t}</b><small>{k.id} · {k.d}{k.who ? ` · atendido por ${k.who}` : ''}</small></div><span className="tst"><i style={{ background: k.c }} />{k.s}</span></div>)}</div> : <div className="hint" style={{ padding: 30 }}>Você ainda não abriu chamados</div>}
+        {TK.length ? <div className="grp">{TK.map((k) => <div className="tkr" key={k.id} style={{ cursor: k.num ? 'pointer' : undefined }} onClick={() => { if (k.num) api.pgShow({ kind: 'ticket', id: k.num, label: k.id, staff: false, title: k.t }); }}><div><b>{k.t}</b><small>{k.id} · {k.d}{k.who ? ` · atendido por ${k.who}` : ''}</small></div><span className="tst"><i style={{ background: k.c }} />{k.s}</span></div>)}</div> : <div className="hint" style={{ padding: 30 }}>Você ainda não abriu chamados</div>}
         {contact}
       </>
     );
@@ -362,5 +364,62 @@ function SupportPage({ api }: { api: EwApi }) {
       {sent && tab === 0 ? null : <><Seg id="st" items={['Reportar problema', `Meus chamados (${TK.length})`]} value={tab} onChange={setTab} /><div style={{ height: 14 }} /></>}
       {body}
     </>
+  );
+}
+
+/** Conversation between the ticket reporter and the support staff. */
+function TicketChat({ spec, api }: { spec: Extract<PageSpec, { kind: 'ticket' }>; api: EwApi }) {
+  const [msgs, setMsgs] = useState<D.TicketMsg[] | null>(null);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const meId = api.me.id;
+
+  useEffect(() => {
+    let alive = true;
+    D.listTicketMessages(spec.id, meId).then((m) => { if (alive) setMsgs(m); }).catch(() => { if (alive) setMsgs([]); });
+    const unsub = D.subscribeTicketMessages(spec.id, (r) => {
+      setMsgs((m) => (m && !m.some((x) => x.id === r.id) ? [...m, { id: r.id, body: r.body, at: r.created_at, mine: r.author_profile_id === meId, staff: !!r.from_staff, author: r.author_name || (r.from_staff ? 'Suporte' : 'Usuário') }] : m));
+    });
+    return () => { alive = false; unsub(); };
+  }, [spec.id, meId]);
+  useEffect(() => { const b = box.current; if (b) b.scrollTop = b.scrollHeight; }, [msgs?.length]);
+
+  const send = async () => {
+    const v = text.trim();
+    if (!v || busy) return;
+    setBusy(true);
+    const tmp: D.TicketMsg = { id: 'tmp-' + Date.now(), body: v, at: new Date().toISOString(), mine: true, staff: spec.staff, author: api.me.n };
+    setMsgs((m) => [...(m || []), tmp]);
+    setText('');
+    try {
+      const r = await D.sendTicketMessage(spec.id, v, meId, spec.staff);
+      setMsgs((m) => (m || []).map((x) => (x.id === tmp.id ? { ...x, id: r.id, at: r.created_at } : x)).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i));
+    } catch {
+      setMsgs((m) => (m || []).filter((x) => x.id !== tmp.id));
+      setText(v);
+      api.toast('Mensagem não enviada');
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="ewx-tchat">
+      <div className="ewx-tchat-h"><b>{spec.label}</b><small>{spec.title || ''}</small><span>{spec.staff ? 'Você está atendendo como suporte' : 'Converse com quem está atendendo seu chamado'}</span></div>
+      <div className="ewx-tchat-list" ref={box}>
+        {msgs === null ? <div className="ewx-skel">{[60, 42, 54].map((w, i) => <div key={i} className={'ewx-skel-b' + (i === 1 ? ' me' : '')} style={{ width: w + '%' }} />)}</div> : null}
+        {msgs && !msgs.length ? <div className="hint" style={{ padding: 24 }}>{spec.staff ? 'Escreva para quem abriu o chamado.' : 'Envie uma mensagem para a equipe de suporte. Você recebe a resposta aqui.'}</div> : null}
+        {msgs?.map((m) => (
+          <div key={m.id} className={'ewx-tm' + (m.mine ? ' me' : '')}>
+            {!m.mine ? <small className="ewx-tm-a">{m.author}{m.staff ? ' · Suporte' : ''}</small> : null}
+            <div className="ewx-tm-b">{m.body}</div>
+            <small className="ewx-tm-t">{new Date(m.at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</small>
+          </div>
+        ))}
+      </div>
+      <div className="cmp ewx-tchat-cmp">
+        <input placeholder="Escreva uma mensagem" value={text} maxLength={2000} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} />
+        <button className="snd" aria-label="Enviar" disabled={busy || !text.trim()} onClick={() => void send()}><I n="send" /></button>
+      </div>
+    </div>
   );
 }

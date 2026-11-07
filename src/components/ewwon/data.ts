@@ -36,7 +36,7 @@ export interface Chat {
   sum?: Summary; welcome?: boolean;
 }
 export interface Notice { id: string; title: string; body: string; preview: string; at: string; unread: boolean; acked: boolean; pinned: boolean; author: string; priority: string }
-export interface Ticket { id: string; t: string; s: string; c: string; d: string; who?: string | null }
+export interface Ticket { id: string; num: number; t: string; s: string; c: string; d: string; who?: string | null }
 export interface DeskTicket {
   id: number; label: string; companyId: string; companyName: string; reporterId: string; reporterName: string; reporterEmail: string;
   category: string; area: string; severity: string; description: string; screenshotPath: string | null; device: Row; status: string;
@@ -285,7 +285,13 @@ function toTicket(r: Row): Ticket {
   const colors: Record<string, string> = { Recebido: '#7cc6ff', 'Em análise': '#ffc36b', Resolvido: '#46d37b', Fechado: '#8b8b94' };
   const d = String(r.description || r.category || '');
   const num = /^\d+$/.test(String(r.id)) ? String(r.id).padStart(4, '0') : String(r.id).slice(0, 6).toUpperCase();
-  return { id: '#EW-' + num, t: d.slice(0, 38) + (d.length > 38 ? '…' : ''), s: r.status, c: colors[r.status] || '#7cc6ff', d: relDays(r.created_at), who: r.assignee_name || null };
+  return { num: Number(r.id) || 0, id: '#EW-' + num, t: d.slice(0, 38) + (d.length > 38 ? '…' : ''), s: r.status, c: colors[r.status] || '#7cc6ff', d: relDays(r.created_at), who: r.assignee_name || null };
+}
+
+/** Re-reads only the signed-in user's dashboard numbers (Início tab). */
+export async function refreshDashboard(profileId: string, companyId: string, chats: Chat[]): Promise<Dashboard> {
+  const today0 = startOfDay(new Date());
+  return loadDashboard(profileId, companyId, today0, new Date(today0.getTime() - 6 * 864e5), new Date(today0.getTime() - 34 * 864e5), chats);
 }
 
 async function loadDashboard(profileId: string, companyId: string, today0: Date, d7: Date, d30: Date, chats: Chat[]): Promise<Dashboard> {
@@ -446,7 +452,8 @@ export async function sendMessage(chat: Chat, meId: string, companyId: string, t
   }
   const r = await sb.from('private_group_messages').insert({ group_id: chat.id, sender_id: meId, content: text }).select('id,created_at').single();
   if (r.error) throw r.error;
-  void sb.from('private_groups').update({ updated_at: new Date().toISOString() }).eq('id', chat.id);
+  // Postgrest builders only run when awaited/then'd.
+  void Promise.resolve(sb.from('private_groups').update({ updated_at: new Date().toISOString() }).eq('id', chat.id)).catch(() => undefined);
   return { id: r.data.id, at: r.data.created_at };
 }
 
@@ -704,4 +711,27 @@ export async function createGroup(name: string, description: string, members: Pe
     if (r.error) throw r.error;
   }
   return id;
+}
+
+// ---------------------------------------------------------------- ticket conversation
+
+export interface TicketMsg { id: string; body: string; at: string; mine: boolean; staff: boolean; author: string }
+
+export async function listTicketMessages(ticketId: number, meId: string): Promise<TicketMsg[]> {
+  const r = await sb.from('support_ticket_messages').select('id,body,created_at,author_profile_id,author_name,from_staff').eq('ticket_id', ticketId).order('created_at').limit(500);
+  if (r.error) throw r.error;
+  return (r.data || []).map((m: Row) => ({ id: m.id, body: m.body, at: m.created_at, mine: m.author_profile_id === meId, staff: !!m.from_staff, author: m.author_name || (m.from_staff ? 'Suporte' : 'Usuário') }));
+}
+
+export async function sendTicketMessage(ticketId: number, body: string, meId: string, staff: boolean) {
+  const r = await sb.from('support_ticket_messages').insert({ ticket_id: ticketId, body: body.slice(0, 2000), author_profile_id: meId, from_staff: staff }).select('id,created_at').single();
+  if (r.error) throw r.error;
+  return r.data as { id: string; created_at: string };
+}
+
+export function subscribeTicketMessages(ticketId: number, onNew: (row: Row) => void): () => void {
+  const ch = sb.channel(`ticket-${ticketId}-${Date.now()}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_ticket_messages', filter: `ticket_id=eq.${ticketId}` }, (p: Row) => onNew(p.new))
+    .subscribe();
+  return () => { void sb.removeChannel(ch); };
 }

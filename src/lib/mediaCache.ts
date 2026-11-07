@@ -4,6 +4,7 @@
 // (chat media retention, see register_chat_media).
 import { useEffect, useState } from 'react';
 import { createSignedStorageUrl, getStorageTarget } from '@/lib/storageUrls';
+import { supabase } from '@/integrations/supabase/client';
 
 const CACHE = 'ewwon-media-v1';
 const keyOf = (bucket: string, path: string) => `https://media.ewwon.local/${bucket}/${path}`;
@@ -54,6 +55,11 @@ export function loadMedia(url: string): Promise<string | null> {
           const c = await caches.open(CACHE);
           await c.put(key, new Response(blob, { headers: { 'Content-Type': blob.type || 'application/octet-stream' } }));
         } catch { /* quota exceeded: still show the media */ }
+      }
+      // Tell the server this device has its copy: when every recipient has one,
+      // the server copy is removed (WhatsApp-like). Only chat media is tracked.
+      if (target.bucket === 'attachments' && target.path.split('/')[1] === 'chat') {
+        void Promise.resolve((supabase as unknown as { rpc: (n: string, a: Record<string, string>) => PromiseLike<unknown> }).rpc('ack_chat_media', { _path: target.path })).catch(() => undefined);
       }
       const u = URL.createObjectURL(blob);
       objectUrls.set(key, u);
