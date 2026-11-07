@@ -1,1653 +1,428 @@
-import { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { ClipboardCheck, Plus, Search, BarChart3, Settings2, Users, FileText, TrendingUp, Star, ThumbsUp, ThumbsDown, AlertTriangle, Eye, Send, Download, ChevronDown, ChevronUp, MessageSquare, Clock, Edit2, Trash2, Bell, CheckCircle2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { SectionSkeleton } from '@/components/ui/skeletons';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/contexts/AuthContext';
-import { useEvaluations, statusLabels, statusColors, classifyLabel, classifyColor, classifyScore } from '@/hooks/useEvaluations';
-import type { EvaluationItem, Evaluation } from '@/hooks/useEvaluations';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
+// "Avaliações" tab — simple performance evaluations.
+// Gestores (admin/gerente/supervisor/diretoria) criam avaliações a partir de uma
+// lista de critérios, dão nota de 1 a 5 em cada um e escrevem o feedback.
+// O colaborador recebe, lê e dá ciência (ou pede revisão). Logic in src/lib/evaluations.ts.
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ClipboardCheck, Plus, Search, FileText, Send, Save, Trash2, Check, RotateCcw, Pencil, Sparkles, Star, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import appLogo from '@/assets/nuvexa-logo.png';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend,
-  LineChart, Line, PieChart, Pie, Cell,
-} from 'recharts';
+import { PageHeader } from '@/components/common/PageHeader';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { getActiveCompanyId } from '@/lib/companyScope';
+import { openReport } from '@/lib/reports';
+import { cn } from '@/lib/utils';
+import * as E from '@/lib/evaluations';
+import type { Criterion, EvalItem, EvalRow, EvalStatus } from '@/lib/evaluations';
 
-const CHART_COLORS = ['hsl(142, 76%, 36%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(262, 83%, 58%)', 'hsl(221, 83%, 53%)'];
+const MANAGER_LEVELS = ['admin', 'gerente', 'supervisor', 'diretoria'];
+const FILTERS: { id: 'all' | EvalStatus; label: string }[] = [
+  { id: 'all', label: 'Todas' }, { id: 'draft', label: 'Rascunhos' }, { id: 'sent', label: 'Aguardando ciência' },
+  { id: 'contested', label: 'Revisão pedida' }, { id: 'finalized', label: 'Concluídas' },
+];
+const TONE_CLS: Record<string, string> = {
+  good: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30',
+  info: 'bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/30',
+  warn: 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30',
+  bad: 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/30',
+  neutral: 'bg-zinc-100 text-zinc-600 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700',
+};
+const SOLID: Record<string, string> = { good: '#16a34a', info: '#0284c7', warn: '#d97706', bad: '#e11d48', neutral: '#52525b' };
+const initials = (n: string) => n.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+
+function StatusPill({ s }: { s: EvalStatus }) {
+  return <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1', TONE_CLS[E.STATUS_TONE[s]])}>{E.STATUS_LABEL[s]}</span>;
+}
+function ScoreBadge({ v, big }: { v: number | null; big?: boolean }) {
+  return (
+    <div className={cn('flex shrink-0 flex-col items-center justify-center rounded-2xl ring-1', TONE_CLS[E.scoreTone(v)], big ? 'h-20 w-20' : 'h-12 w-12')}>
+      <b className={big ? 'text-2xl' : 'text-base'}>{E.fmtScore(v)}</b>
+      {big ? <span className="text-[10px] font-medium opacity-80">de 5</span> : null}
+    </div>
+  );
+}
 
 export function EvaluationsSection() {
   const { profile, isAdmin } = useAuth();
-  const isMobile = useIsMobile();
-  const autonomy = profile?.autonomy_level || 'colaborador';
-  const canManageStructure = isAdmin || autonomy === 'supervisor' || autonomy === 'diretoria';
-  const canCreateEvaluations = isAdmin || autonomy === 'gerente' || autonomy === 'gestor' || autonomy === 'diretoria' || autonomy === 'supervisor';
-  const isDirectoria = autonomy === 'diretoria' || isAdmin;
+  const canManage = isAdmin || MANAGER_LEVELS.includes(profile?.autonomy_level || '');
+  const [list, setList] = useState<EvalRow[]>([]);
+  const [criteria, setCriteria] = useState<Criterion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'team' | 'mine' | 'criteria'>(canManage ? 'team' : 'mine');
+  const [filter, setFilter] = useState<'all' | EvalStatus>('all');
+  const [q, setQ] = useState('');
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
-  const {
-    positions, competencies, positionCompetencies, cycles, evaluations, loading,
-    createPosition, createCompetency, createCycle, createEvaluation,
-    updateEvaluation, sendEvaluation, approveEvaluation, contestEvaluation, respondToContestation, finalizeEvaluation,
-    fetchEvaluationItems, saveEvaluationItems, fetchPositionCompetencies, savePositionCompetencies,
-    fetchEvaluationHistory,
-    refreshData,
-    updatePosition, deletePosition, updateCompetency, deleteCompetency, updateCycle, deleteCycle,
-  } = useEvaluations();
-
-  const [activeTab, setActiveTab] = useState('dashboard');
-
-  // Dialog states
-  const [showNewPosition, setShowNewPosition] = useState(false);
-  const [showNewCompetency, setShowNewCompetency] = useState(false);
-  const [showNewCycle, setShowNewCycle] = useState(false);
-  const [showNewEval, setShowNewEval] = useState(false);
-  const [showEvalDetail, setShowEvalDetail] = useState<string | null>(null);
-  const [showContestDialog, setShowContestDialog] = useState<string | null>(null);
-  const [showRespondDialog, setShowRespondDialog] = useState<string | null>(null);
-  const [showPosCompetencies, setShowPosCompetencies] = useState<string | null>(null);
-  const [showEditPosition, setShowEditPosition] = useState<string | null>(null);
-  const [showEditCompetency, setShowEditCompetency] = useState<string | null>(null);
-  const [showEditCycle, setShowEditCycle] = useState<string | null>(null);
-
-  // Form states
-  const [posName, setPosName] = useState('');
-  const [posDesc, setPosDesc] = useState('');
-  const [posSector, setPosSector] = useState('');
-  const [compName, setCompName] = useState('');
-  const [compDesc, setCompDesc] = useState('');
-  const [compCategory, setCompCategory] = useState('behavioral');
-  const [cycleName, setCycleName] = useState('');
-  const [cycleStart, setCycleStart] = useState('');
-  const [cycleEnd, setCycleEnd] = useState('');
-  const [cycleDesc, setCycleDesc] = useState('');
-  const [evalTarget, setEvalTarget] = useState('');
-  const [evalCycle, setEvalCycle] = useState('');
-  const [evalPosition, setEvalPosition] = useState('');
-  const [teamMembers, setTeamMembers] = useState<any[]>([]);
-  const [sectors, setSectors] = useState<any[]>([]);
-
-  // Evaluation detail states
-  const [evalItems, setEvalItems] = useState<EvaluationItem[]>([]);
-  const [editingItems, setEditingItems] = useState<{ competency_id: string; score: number | null; weight: number; evaluator_comment: string }[]>([]);
-  const [overallComment, setOverallComment] = useState('');
-  const [contestComment, setContestComment] = useState('');
-  const [itemContestations, setItemContestations] = useState<Record<string, string>>({});
-  const [respondComment, setRespondComment] = useState('');
-  const [itemReplies, setItemReplies] = useState<Record<string, { reply: string; new_score?: number }>>({});
-  const [posCompItems, setPosCompItems] = useState<{ competency_id: string; weight: number }[]>([]);
-
-  // Dashboard filter
-  const [dashDateFrom, setDashDateFrom] = useState('');
-  const [dashDateTo, setDashDateTo] = useState('');
-
-  // Pendencies sub-tab — regular users only see "Para Aprovar" / "Contestadas"
-  const [pendencyTab, setPendencyTab] = useState(canCreateEvaluations ? 'to-evaluate' : 'awaiting-approval');
-
-  // Filtered evaluations based on role
-  const myEvaluations = evaluations.filter(e => e.evaluated_id === profile?.id);
-  const teamEvaluations = useMemo(() => {
-    if (isDirectoria) return evaluations;
-    return evaluations.filter(e => e.evaluator_id === profile?.id);
-  }, [evaluations, profile, isDirectoria]);
-
-  // Pendency counts
-  const pendingApproval = evaluations.filter(e => e.status === 'sent' && e.evaluated_id === profile?.id);
-  const toEvaluate = evaluations.filter(e => ['draft', 'in_progress'].includes(e.status) && e.evaluator_id === profile?.id);
-  // For evaluators: contested evaluations they need to respond to
-  // For regular users: their own contested evaluations awaiting evaluator response
-  const contested = canCreateEvaluations
-    ? evaluations.filter(e => e.status === 'contested' && e.evaluator_id === profile?.id)
-    : evaluations.filter(e => e.status === 'contested' && e.evaluated_id === profile?.id);
-  const awaitingFinalization = evaluations.filter(e => ['approved', 'approved_with_obs'].includes(e.status) && e.evaluator_id === profile?.id);
-
-  const totalPendencies = canCreateEvaluations
-    ? pendingApproval.length + toEvaluate.length + contested.length + awaitingFinalization.length
-    : pendingApproval.length + contested.length;
-
-  const draftCount = toEvaluate.length;
-  const pendingCount = pendingApproval.length;
-  const contestedCount = contested.length;
-  const finalizedCount = evaluations.filter(e => e.status === 'finalized').length;
-
-  const fetchTeamMembers = async () => {
-    if (!profile) return;
-    const { data: teamData } = await supabase.from('supervisor_team_members').select('member_profile_id').eq('supervisor_id', profile.user_id);
-    const memberIds = (teamData || []).map(t => t.member_profile_id);
-
-    let query = supabase.from('profiles').select('id, name, display_name, email, sector_id, autonomy_level').eq('is_active', true);
-
-    if (!isDirectoria && memberIds.length > 0) {
-      query = query.in('id', memberIds);
-    } else if (!isDirectoria) {
-      query = query.neq('id', profile.id);
-    }
-
-    const { data } = await query.order('name');
-    const baseMembers = (data as any[]) || [];
-
-    // Enrich with registration_number via secure RPC (mgmt/admin/supervisor only)
-    const ids = baseMembers.map((m) => m.id);
-    let regMap = new Map<string, string | null>();
-    if (ids.length > 0) {
-      const { data: regs } = await supabase.rpc('get_profiles_registration', { _ids: ids });
-      regMap = new Map(((regs as any[]) || []).map((r) => [r.id, r.registration_number]));
-    }
-    setTeamMembers(baseMembers.map((m) => ({ ...m, registration_number: regMap.get(m.id) ?? null })));
-
-
-    const { data: sectorData } = await supabase.from('sectors').select('id, name');
-    setSectors(sectorData || []);
-  };
-
-  const openEvalDetail = async (evalId: string) => {
-    const items = await fetchEvaluationItems(evalId);
-    setEvalItems(items);
-    const ev = evaluations.find(e => e.id === evalId);
-    setOverallComment(ev?.overall_comment || '');
-
-    if (ev && (ev.evaluator_id === profile?.id || isAdmin) && ['draft', 'in_progress'].includes(ev.status)) {
-      if (items.length > 0) {
-        setEditingItems(items.map(i => ({
-          competency_id: i.competency_id,
-          score: i.score,
-          weight: i.weight,
-          evaluator_comment: i.evaluator_comment || '',
-        })));
-      } else if (ev.position_id) {
-        const posComps = await fetchPositionCompetencies(ev.position_id);
-        setEditingItems(posComps.map(pc => ({
-          competency_id: pc.competency_id,
-          score: null,
-          weight: pc.weight,
-          evaluator_comment: '',
-        })));
-      }
-    } else {
-      setEditingItems([]);
-    }
-
-    setShowEvalDetail(evalId);
-  };
-
-  const handleSaveEvalItems = async () => {
-    if (!showEvalDetail) return;
-    await saveEvaluationItems(showEvalDetail, editingItems.map(i => ({
-      ...i,
-      evaluator_comment: i.evaluator_comment || undefined,
-    })));
-    const ev = evaluations.find(e => e.id === showEvalDetail);
-    if (overallComment && ev) {
-      await supabase.from('evaluations').update({ overall_comment: overallComment }).eq('id', showEvalDetail);
-    }
-    const updatedItems = await fetchEvaluationItems(showEvalDetail);
-    setEvalItems(updatedItems);
-    refreshData();
-  };
-
-  const handleSendFromDetail = async () => {
-    if (!showEvalDetail) return;
-    await handleSaveEvalItems();
-    await sendEvaluation(showEvalDetail);
-    setShowEvalDetail(null);
-  };
-
-  const handleContest = async () => {
-    if (!showContestDialog || !contestComment.trim()) { toast.error('Justificativa obrigatória.'); return; }
-    const contestations = Object.entries(itemContestations)
-      .filter(([, v]) => v.trim())
-      .map(([itemId, response]) => ({ item_id: itemId, response }));
-    await contestEvaluation(showContestDialog, contestComment, contestations);
-    setShowContestDialog(null);
-    setContestComment('');
-    setItemContestations({});
-    setShowEvalDetail(null);
-  };
-
-  const handleRespond = async () => {
-    if (!showRespondDialog || !respondComment.trim()) { toast.error('Resposta obrigatória.'); return; }
-    const replies = Object.entries(itemReplies)
-      .filter(([, v]) => v.reply.trim())
-      .map(([itemId, v]) => ({ item_id: itemId, reply: v.reply, new_score: v.new_score }));
-    await respondToContestation(showRespondDialog, respondComment, replies);
-    setShowRespondDialog(null);
-    setRespondComment('');
-    setItemReplies({});
-    setShowEvalDetail(null);
-  };
-
-  const getCompetencyName = (id: string) => competencies.find(c => c.id === id)?.name || id;
-
-  const groupItemsByClassification = (items: EvaluationItem[]) => {
-    const excellent = items.filter(i => i.score != null && i.score >= 4);
-    const good = items.filter(i => i.score != null && i.score === 3);
-    const needsImprovement = items.filter(i => i.score != null && i.score <= 2);
-    return { excellent, good, needsImprovement };
-  };
-
-  // ======= PDF GENERATION =======
-  // Brand colors: primary #3D2FD6, secondary #12C2F0
-  const BRAND_PRIMARY: [number, number, number] = [61, 47, 214];
-  const BRAND_SECONDARY: [number, number, number] = [18, 194, 240];
-  const ZEBRA_FILL: [number, number, number] = [246, 247, 251];
-
-  const addPdfHeader = (doc: jsPDF, title: string) => {
-    doc.setFillColor(...BRAND_PRIMARY);
-    doc.rect(0, 0, 210, 30, 'F');
-    doc.setFillColor(...BRAND_SECONDARY);
-    doc.rect(0, 28, 210, 2, 'F');
-
+  const load = useCallback(async () => {
     try {
-      doc.addImage(appLogo, 'PNG', 14, 7, 16, 16);
-    } catch (e) {
-      doc.setFillColor(255, 255, 255);
-      doc.circle(22, 15, 8, 'F');
-    }
+      const [evs, crs] = await Promise.all([E.listEvaluations(), canManage ? E.listCriteria(true) : Promise.resolve([])]);
+      setList(evs); setCriteria(crs);
+    } catch (e) { toast.error((e as Error).message); } finally { setLoading(false); }
+  }, [canManage]);
+  useEffect(() => { void load(); }, [load]);
 
-    doc.setFontSize(13);
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Ewvor', 34, 13);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Plataforma de Gestão • Relatórios', 34, 19);
-
-    doc.setFontSize(14);
-    doc.setTextColor(30, 41, 59);
-    doc.setFont('helvetica', 'bold');
-    doc.text(title, 14, 42);
-    doc.setFont('helvetica', 'normal');
-
-    doc.setFontSize(8);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Emitido em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 14, 48);
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.3);
-    doc.line(14, 51, 196, 51);
-
-    return 58;
-  };
-
-  const addPdfFooter = (doc: jsPDF, pageNum: number, totalPages: number) => {
-    const h = doc.internal.pageSize.getHeight();
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.3);
-    doc.line(14, h - 15, 196, h - 15);
-    doc.setFontSize(7);
-    doc.setTextColor(100, 116, 139);
-    doc.text('Ewvor • Avaliação de Desempenho', 14, h - 10);
-    doc.text(`Página ${pageNum} de ${totalPages}`, 196, h - 10, { align: 'right' });
-  };
-
-  const addAllFooters = (doc: jsPDF) => {
-    const pages = doc.getNumberOfPages();
-    for (let i = 1; i <= pages; i++) {
-      doc.setPage(i);
-      addPdfFooter(doc, i, pages);
-    }
-  };
-
-  const generateFinalReport = (ev: Evaluation, items: EvaluationItem[]) => {
-    const doc = new jsPDF();
-    const { excellent, good, needsImprovement } = groupItemsByClassification(items);
-
-    let y = addPdfHeader(doc, 'Relatório de Avaliação de Desempenho');
-
-    // Info block
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(14, y, 182, 36, 3, 3, 'F');
-    doc.setFontSize(9);
-    doc.setTextColor(30, 41, 59);
-    y += 7;
-    doc.text(`Colaborador: ${ev.evaluated_name}`, 18, y);
-    if (ev.evaluated_registration) { doc.text(`Matrícula: ${ev.evaluated_registration}`, 120, y); }
-    y += 5;
-    if (ev.evaluated_sector) doc.text(`Setor: ${ev.evaluated_sector}`, 18, y);
-    if (ev.position_name) doc.text(`Cargo: ${ev.position_name}`, 120, y);
-    y += 5;
-    doc.text(`Avaliador: ${ev.evaluator_name}`, 18, y);
-    if (ev.cycle_name) doc.text(`Ciclo: ${ev.cycle_name}`, 120, y);
-    y += 5;
-    doc.setFontSize(10);
-    doc.setTextColor(234, 88, 12);
-    doc.text(`Nota Final: ${ev.overall_score ?? '-'}/5`, 18, y);
-    doc.setFontSize(9);
-    doc.setTextColor(30, 41, 59);
-    doc.text(`Status: ${statusLabels[ev.status]}`, 120, y);
-    y += 12;
-
-    const checkPage = (needed: number) => {
-      if (y + needed > 265) { doc.addPage(); y = addPdfHeader(doc, 'Relatório de Avaliação de Desempenho'); }
-    };
-
-    // Excellent
-    if (excellent.length > 0) {
-      checkPage(20);
-      doc.setFontSize(11);
-      doc.setTextColor(22, 163, 74);
-      doc.text('★ Habilidades Excelentes', 14, y); y += 5;
-      autoTable(doc, {
-        startY: y, head: [['Competência', 'Nota', 'Peso', 'Observação']],
-        body: excellent.map(i => [i.competency_name, `${i.score}/5`, String(i.weight), i.evaluator_comment || '-']),
-        styles: { fontSize: 8, cellPadding: 3, overflow: 'ellipsize' }, headStyles: { fillColor: [22, 163, 74] },
-        alternateRowStyles: { fillColor: ZEBRA_FILL },
-        columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 18 }, 2: { cellWidth: 16 }, 3: { cellWidth: 'auto' } },
-        margin: { left: 14, right: 14 },
-      });
-      y = (doc as any).lastAutoTable.finalY + 6;
-    }
-
-    if (good.length > 0) {
-      checkPage(20);
-      doc.setFontSize(11);
-      doc.setTextColor(202, 138, 4);
-      doc.text('● Habilidades Boas', 14, y); y += 5;
-      autoTable(doc, {
-        startY: y, head: [['Competência', 'Nota', 'Peso', 'Observação']],
-        body: good.map(i => [i.competency_name, `${i.score}/5`, String(i.weight), i.evaluator_comment || '-']),
-        styles: { fontSize: 8, cellPadding: 3, overflow: 'ellipsize' }, headStyles: { fillColor: [202, 138, 4] },
-        alternateRowStyles: { fillColor: ZEBRA_FILL },
-        columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 18 }, 2: { cellWidth: 16 }, 3: { cellWidth: 'auto' } },
-        margin: { left: 14, right: 14 },
-      });
-      y = (doc as any).lastAutoTable.finalY + 6;
-    }
-
-    if (needsImprovement.length > 0) {
-      checkPage(20);
-      doc.setFontSize(11);
-      doc.setTextColor(220, 38, 38);
-      doc.text('▲ Habilidades que Precisam Melhorar', 14, y); y += 5;
-      autoTable(doc, {
-        startY: y, head: [['Competência', 'Nota', 'Peso', 'Observação']],
-        body: needsImprovement.map(i => [i.competency_name, `${i.score}/5`, String(i.weight), i.evaluator_comment || '-']),
-        styles: { fontSize: 8, cellPadding: 3, overflow: 'ellipsize' }, headStyles: { fillColor: [220, 38, 38] },
-        alternateRowStyles: { fillColor: ZEBRA_FILL },
-        columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 18 }, 2: { cellWidth: 16 }, 3: { cellWidth: 'auto' } },
-        margin: { left: 14, right: 14 },
-      });
-      y = (doc as any).lastAutoTable.finalY + 6;
-    }
-
-    if (ev.overall_comment) {
-      checkPage(25);
-      doc.setFontSize(10);
-      doc.setTextColor(30, 41, 59);
-      doc.text('Observação Geral:', 14, y); y += 5;
-      doc.setFontSize(8);
-      const lines = doc.splitTextToSize(ev.overall_comment, 178);
-      doc.text(lines, 14, y); y += lines.length * 4 + 8;
-    }
-
-    // Signature
-    checkPage(30);
-    y += 15;
-    doc.setDrawColor(150);
-    doc.line(14, y, 90, y);
-    doc.line(110, y, 196, y);
-    doc.setFontSize(8);
-    doc.setTextColor(100);
-    doc.text('Avaliador', 42, y + 5);
-    doc.text('Colaborador', 145, y + 5);
-    y += 8;
-    doc.setFontSize(7);
-    doc.text(ev.evaluator_name || '', 30, y + 4);
-    doc.text(ev.evaluated_name || '', 133, y + 4);
-
-    addAllFooters(doc);
-    doc.save(`avaliacao_${ev.evaluated_name?.replace(/\s/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
-    toast.success('Relatório final gerado!');
-  };
-
-  const generateFullProcessReport = async (ev: Evaluation, items: EvaluationItem[]) => {
-    const doc = new jsPDF();
-    const history = await fetchEvaluationHistory(ev.id);
-    const { excellent, good, needsImprovement } = groupItemsByClassification(items);
-
-    let y = addPdfHeader(doc, 'Relatório Completo do Processo Avaliativo');
-
-    const checkPage = (needed: number) => {
-      if (y + needed > 265) { doc.addPage(); y = addPdfHeader(doc, 'Relatório Completo do Processo Avaliativo'); }
-    };
-
-    // Info block
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(14, y, 182, 28, 3, 3, 'F');
-    doc.setFontSize(9);
-    doc.setTextColor(30, 41, 59);
-    y += 7;
-    doc.text(`Colaborador: ${ev.evaluated_name}`, 18, y);
-    if (ev.evaluated_registration) doc.text(`Matrícula: ${ev.evaluated_registration}`, 120, y);
-    y += 5;
-    doc.text(`Avaliador: ${ev.evaluator_name}`, 18, y);
-    if (ev.position_name) doc.text(`Cargo: ${ev.position_name}`, 120, y);
-    y += 5;
-    doc.text(`Versão: ${ev.version}`, 18, y);
-    doc.text(`Nota: ${ev.overall_score ?? '-'}/5`, 120, y);
-    y += 12;
-
-    // Full items table
-    checkPage(20);
-    doc.setFontSize(11);
-    doc.setTextColor(30, 41, 59);
-    doc.text('Avaliação por Competência', 14, y); y += 5;
-    autoTable(doc, {
-      startY: y,
-      head: [['Competência', 'Nota', 'Class.', 'Obs. Avaliador', 'Contestação', 'Resposta']],
-      body: items.map(i => [
-        i.competency_name, i.score ? `${i.score}/5` : '-',
-        classifyLabel(classifyScore(i.score)),
-        i.evaluator_comment || '-', i.evaluated_response || '-', i.evaluator_reply || '-'
-      ]),
-      styles: { fontSize: 7, cellPadding: 2, overflow: 'ellipsize' }, headStyles: { fillColor: BRAND_PRIMARY },
-      alternateRowStyles: { fillColor: ZEBRA_FILL },
-      margin: { left: 14, right: 14 },
-      columnStyles: { 0: { cellWidth: 28 }, 1: { cellWidth: 14 }, 2: { cellWidth: 18 }, 3: { cellWidth: 28 }, 4: { cellWidth: 28 }, 5: { cellWidth: 28 } },
-    });
-    y = (doc as any).lastAutoTable.finalY + 8;
-
-    // Comments
-    if (ev.overall_comment) {
-      checkPage(20);
-      doc.setFillColor(255, 251, 235);
-      doc.roundedRect(14, y, 182, 14, 2, 2, 'F');
-      doc.setFontSize(8);
-      doc.setTextColor(30, 41, 59);
-      doc.text('Obs. Geral do Avaliador:', 16, y + 5);
-      doc.setFontSize(7);
-      const lines = doc.splitTextToSize(ev.overall_comment, 174);
-      doc.text(lines, 16, y + 9);
-      y += 16;
-    }
-
-    if (ev.evaluated_comment) {
-      checkPage(20);
-      doc.setFillColor(254, 242, 242);
-      doc.roundedRect(14, y, 182, 14, 2, 2, 'F');
-      doc.setFontSize(8);
-      doc.text('Obs. do Colaborador:', 16, y + 5);
-      doc.setFontSize(7);
-      const lines = doc.splitTextToSize(ev.evaluated_comment, 174);
-      doc.text(lines, 16, y + 9);
-      y += 16;
-    }
-
-    if (ev.evaluator_response) {
-      checkPage(20);
-      doc.setFillColor(239, 246, 255);
-      doc.roundedRect(14, y, 182, 14, 2, 2, 'F');
-      doc.setFontSize(8);
-      doc.text('Resposta do Avaliador:', 16, y + 5);
-      doc.setFontSize(7);
-      const lines = doc.splitTextToSize(ev.evaluator_response, 174);
-      doc.text(lines, 16, y + 9);
-      y += 16;
-    }
-
-    // History
-    if (history.length > 0) {
-      checkPage(30);
-      doc.setFontSize(11);
-      doc.setTextColor(30, 41, 59);
-      doc.text('Histórico do Processo', 14, y); y += 5;
-      autoTable(doc, {
-        startY: y,
-        head: [['Data', 'Ação', 'De', 'Para', 'Detalhes']],
-        body: history.map(h => [
-          new Date(h.created_at).toLocaleString('pt-BR'),
-          h.action, h.old_status || '-', h.new_status || '-',
-          h.details ? h.details.substring(0, 80) : '-'
-        ]),
-        styles: { fontSize: 7, cellPadding: 2, overflow: 'ellipsize' }, headStyles: { fillColor: BRAND_SECONDARY },
-        alternateRowStyles: { fillColor: ZEBRA_FILL },
-        columnStyles: { 0: { cellWidth: 34 }, 1: { cellWidth: 24 }, 2: { cellWidth: 24 }, 3: { cellWidth: 24 }, 4: { cellWidth: 'auto' } },
-        margin: { left: 14, right: 14 },
-      });
-    }
-
-    addAllFooters(doc);
-    doc.save(`processo_avaliacao_${ev.evaluated_name?.replace(/\s/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
-    toast.success('Relatório do processo gerado!');
-  };
-
-  // ======= DASHBOARD DATA =======
-  const dashboardScores = useMemo(() => {
-    const finalized = evaluations.filter(e => {
-      if (e.status !== 'finalized' || e.overall_score == null) return false;
-      if (dashDateFrom && new Date(e.created_at) < new Date(dashDateFrom)) return false;
-      if (dashDateTo && new Date(e.created_at) > new Date(dashDateTo + 'T23:59:59')) return false;
-      return true;
-    });
-    return finalized;
-  }, [evaluations, dashDateFrom, dashDateTo]);
-
-  // Average score per employee month-to-month
-  const monthlyAvgByEmployee = useMemo(() => {
-    const finalized = evaluations.filter(e => e.status === 'finalized' && e.overall_score != null);
-    const monthMap = new Map<string, { name: string; scores: number[] }>();
-    finalized.forEach(e => {
-      const month = e.created_at.slice(0, 7); // YYYY-MM
-      const key = `${e.evaluated_name}|${month}`;
-      if (!monthMap.has(key)) monthMap.set(key, { name: e.evaluated_name || '', scores: [] });
-      monthMap.get(key)!.scores.push(e.overall_score!);
-    });
-
-    const months = [...new Set(finalized.map(e => e.created_at.slice(0, 7)))].sort();
-    const employees = [...new Set(finalized.map(e => e.evaluated_name || ''))];
-
-    return months.map(m => {
-      const entry: any = { month: m.slice(5) + '/' + m.slice(0, 4) };
-      employees.forEach(emp => {
-        const key = `${emp}|${m}`;
-        const data = monthMap.get(key);
-        entry[emp] = data ? Math.round((data.scores.reduce((a, b) => a + b, 0) / data.scores.length) * 100) / 100 : null;
-      });
-      return entry;
-    });
-  }, [evaluations]);
-
-  const employeeNames = useMemo(() => {
-    return [...new Set(evaluations.filter(e => e.status === 'finalized' && e.overall_score != null).map(e => e.evaluated_name || ''))];
-  }, [evaluations]);
-
-  const avgScore = useMemo(() => {
-    const scores = dashboardScores.map(d => d.overall_score!).filter(Boolean);
-    return scores.length > 0 ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100 : 0;
-  }, [dashboardScores]);
-
-  // Classification distribution for pie chart
-  const classDistribution = useMemo(() => {
-    const counts = { excellent: 0, good: 0, needs_improvement: 0 };
-    dashboardScores.forEach(e => {
-      const c = classifyScore(e.overall_score);
-      if (c === 'excellent') counts.excellent++;
-      else if (c === 'good') counts.good++;
-      else if (c === 'needs_improvement') counts.needs_improvement++;
-    });
-    return [
-      { name: 'Excelente', value: counts.excellent, color: 'hsl(142, 76%, 36%)' },
-      { name: 'Bom', value: counts.good, color: 'hsl(38, 92%, 50%)' },
-      { name: 'Precisa Melhorar', value: counts.needs_improvement, color: 'hsl(0, 72%, 51%)' },
-    ].filter(d => d.value > 0);
-  }, [dashboardScores]);
-
-  const renderStars = (score: number | null, onChange?: (v: number) => void) => {
-    const stars = [1, 2, 3, 4, 5];
-    return (
-      <div className={cn("inline-flex items-center gap-0.5 rounded-full px-1.5 py-1", onChange && "bg-muted/50")}>
-        {stars.map(s => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => onChange?.(s)}
-            disabled={!onChange}
-            aria-label={`Nota ${s}`}
-            className={cn(
-              "flex h-6 w-6 items-center justify-center rounded-full transition-all duration-150",
-              onChange ? "cursor-pointer hover:scale-125 active:scale-95" : "cursor-default",
-              s <= (score || 0) ? "text-amber-500" : "text-muted-foreground/25"
-            )}
-          >
-            <Star className={cn("h-4 w-4 transition-transform", s <= (score || 0) && "fill-amber-500")} />
-          </button>
-        ))}
-      </div>
-    );
-  };
-
-  const currentEval = showEvalDetail ? evaluations.find(e => e.id === showEvalDetail) : null;
-  const isEvaluator = currentEval?.evaluator_id === profile?.id || isAdmin;
-  const isEvaluated = currentEval?.evaluated_id === profile?.id;
-  const canEdit = isEvaluator && currentEval && ['draft', 'in_progress'].includes(currentEval.status);
-
-  // Render evaluation card list
-  const evalInitials = (name: string) => (name || '?').split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase();
-
-  const renderEvalCard = (ev: Evaluation, showActions = true) => (
-    <div
-      key={ev.id}
-      className="group flex items-center gap-3 rounded-2xl border border-border/60 bg-card/60 p-3.5 transition-all hover:border-primary/30 hover:bg-card hover:shadow-sm sm:p-4"
-    >
-      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-        {evalInitials(ev.evaluated_name)}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-foreground">{ev.evaluated_name}</p>
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <Badge className={cn("rounded-full text-[10px] font-medium", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
-          {ev.position_name && <span className="text-xs text-muted-foreground">{ev.position_name}</span>}
-          {ev.overall_score != null && <span className="text-xs font-semibold text-foreground">{ev.overall_score}/5</span>}
-          <span className="text-[10px] text-muted-foreground/80">{new Date(ev.created_at).toLocaleDateString('pt-BR')}</span>
-        </div>
-      </div>
-      {showActions && (
-        <div className="flex flex-shrink-0 items-center gap-1">
-          <Button size="sm" variant="ghost" className="rounded-xl text-xs" onClick={() => openEvalDetail(ev.id)}>
-            <Eye className="h-4 w-4" />
-          </Button>
-          {ev.status === 'contested' && ev.evaluator_id === profile?.id && (
-            <Button size="sm" variant="outline" className="rounded-xl text-xs text-amber-600" onClick={() => openEvalDetail(ev.id)}>Responder</Button>
-          )}
-          {['approved', 'approved_with_obs'].includes(ev.status) && ev.evaluator_id === profile?.id && (
-            <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => finalizeEvaluation(ev.id)}>Finalizar</Button>
-          )}
-          {ev.status === 'finalized' && (
-            <Button size="sm" variant="ghost" className="rounded-xl text-xs" onClick={async () => {
-              const items = await fetchEvaluationItems(ev.id);
-              generateFinalReport(ev, items);
-            }}>
-              <Download className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-
-  // Number of tabs
-  const tabCount = 2 + (canCreateEvaluations ? 1 : 0) + (canManageStructure ? 1 : 0) + 1; // +1 for pendencies
-
-  if (loading) {
-    return <SectionSkeleton cardCount={6} />;
-  }
+  const mine = useMemo(() => list.filter((e) => e.evaluatedId === profile?.id && e.status !== 'draft'), [list, profile?.id]);
+  const team = useMemo(() => list.filter((e) => e.evaluatedId !== profile?.id), [list, profile?.id]);
+  const base = tab === 'mine' ? mine : team;
+  const shown = base.filter((e) => (filter === 'all' || e.status === filter) && (!q.trim() || [e.evaluatedName, e.evaluatorName, e.period, e.evaluatedSector || ''].some((x) => x.toLowerCase().includes(q.trim().toLowerCase()))));
+  const scored = base.filter((e) => e.score != null && e.status !== 'draft');
+  const avg = scored.length ? scored.reduce((s, e) => s + (e.score || 0), 0) / scored.length : null;
+  const pendingMine = mine.filter((e) => e.status === 'sent').length;
+  const current = list.find((e) => e.id === openId) || null;
+  const activeCriteria = criteria.filter((c) => c.is_active);
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 md:p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl gradient-primary shadow-glow">
-            <ClipboardCheck className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h3 className="font-display text-xl sm:text-2xl font-bold text-foreground">Avaliações de Desempenho</h3>
-            <p className="text-muted-foreground text-sm mt-0.5">Gestão de avaliações, competências e feedbacks</p>
-          </div>
-        </div>
-        {canCreateEvaluations && (
-          <Button onClick={() => { fetchTeamMembers(); setShowNewEval(true); }} className="gap-2 rounded-xl">
-            <Plus className="h-4 w-4" /> Nova Avaliação
-          </Button>
-        )}
-      </div>
+    <div className="space-y-5 p-4 md:p-6">
+      <PageHeader
+        icon={<ClipboardCheck />} eyebrow="Desempenho" title="Avaliações"
+        subtitle={canManage ? 'Avalie sua equipe por critérios simples, de 1 a 5, e acompanhe a ciência de cada pessoa.' : 'Veja as avaliações que você recebeu, as notas e os feedbacks.'}
+        actions={<>
+          {base.length ? <Button variant="outline" className="rounded-xl" onClick={() => { if (!openReport(E.summaryReport(base, tab === 'mine' ? 'Minhas avaliações' : 'Avaliações da equipe'))) toast.error('Permita pop-ups para abrir o relatório.'); }}><FileText className="mr-2 h-4 w-4" />Relatório</Button> : null}
+          {canManage ? <Button className="rounded-xl" onClick={() => { if (!activeCriteria.length) { setTab('criteria'); toast('Cadastre os critérios antes de avaliar.'); return; } setCreating(true); }}><Plus className="mr-2 h-4 w-4" />Nova avaliação</Button> : null}
+        </>}
+      />
 
-      {/* Metric Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
-          { label: 'Pendências', value: totalPendencies, icon: Bell, color: 'text-amber-500 bg-amber-500/10' },
-          { label: 'Rascunhos', value: draftCount, icon: Settings2, color: 'text-blue-500 bg-blue-500/10' },
-          { label: 'Contestadas', value: contestedCount, icon: AlertTriangle, color: 'text-destructive bg-destructive/10' },
-          { label: 'Finalizadas', value: finalizedCount, icon: BarChart3, color: 'text-green-500 bg-green-500/10' },
-          { label: 'Nota Média', value: avgScore || '-', icon: TrendingUp, color: 'text-primary bg-primary/10' },
-        ].map(m => (
-          <Card key={m.label} className="group cursor-pointer rounded-2xl border-border/60 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-primary/30" onClick={() => m.label === 'Pendências' && setActiveTab('pendencies')}>
-            <CardContent className="p-3.5 sm:p-4 flex items-center gap-3">
-              <div className={cn("flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl", m.color)}>
-                <m.icon className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-bold text-foreground leading-tight">{m.value}</p>
-                <p className="text-xs text-muted-foreground truncate">{m.label}</p>
-              </div>
-            </CardContent>
-          </Card>
+          { l: tab === 'mine' ? 'Recebidas' : 'Avaliações', v: base.length },
+          { l: 'Aguardando ciência', v: base.filter((e) => e.status === 'sent').length },
+          { l: 'Concluídas', v: base.filter((e) => e.status === 'finalized').length },
+          { l: 'Nota média', v: E.fmtScore(avg), sub: E.scaleLabel(avg) },
+        ].map((k) => (
+          <div key={k.l} className="ewvon-glass-panel rounded-2xl border border-white/80 p-4 shadow-[0_8px_30px_rgba(24,24,27,0.04)]">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{k.l}</p>
+            <p className="mt-1 text-2xl font-semibold text-foreground">{k.v}</p>
+            {k.sub ? <p className="text-xs text-zinc-500">{k.sub}</p> : null}
+          </div>
         ))}
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <ScrollArea className="w-full">
-          <TabsList className="grid w-full rounded-xl bg-muted/60 p-1" style={{ gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))` }}>
-            <TabsTrigger value="dashboard" className="rounded-lg text-xs">Dashboard</TabsTrigger>
-            <TabsTrigger value="pendencies" className="rounded-lg text-xs relative">
-              Pendências
-              {totalPendencies > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[9px] text-destructive-foreground flex items-center justify-center">{totalPendencies}</span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="my-evals" className="rounded-lg text-xs">Minhas Avaliações</TabsTrigger>
-            {canCreateEvaluations && <TabsTrigger value="team" className="rounded-lg text-xs">Avaliações da Equipe</TabsTrigger>}
-            {canManageStructure && <TabsTrigger value="structure" className="rounded-lg text-xs">Estrutura</TabsTrigger>}
-          </TabsList>
-        </ScrollArea>
+      {pendingMine && tab !== 'mine' ? (
+        <button onClick={() => { setTab('mine'); setFilter('sent'); }} className="flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          <Star className="h-4 w-4" /><span><b>{pendingMine} {pendingMine === 1 ? 'avaliação sua aguarda' : 'avaliações suas aguardam'}</b> sua ciência. Clique para ver.</span>
+        </button>
+      ) : null}
 
-        {/* ===== PENDENCIES TAB ===== */}
-        <TabsContent value="pendencies" className="space-y-4">
-          <Card className="rounded-2xl border-border/60 shadow-sm">
-            <CardContent className="p-4">
-              <Tabs value={pendencyTab} onValueChange={setPendencyTab}>
-                <TabsList className="grid w-full mb-4 rounded-xl bg-muted/60 p-1" style={{ gridTemplateColumns: `repeat(${canCreateEvaluations ? 4 : 2}, minmax(0, 1fr))` }}>
-                  {canCreateEvaluations && (
-                    <TabsTrigger value="to-evaluate" className="rounded-lg text-[10px] md:text-xs relative">
-                      Avaliar
-                      {toEvaluate.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-blue-500 hover:bg-blue-500">{toEvaluate.length}</Badge>}
-                    </TabsTrigger>
-                  )}
-                  <TabsTrigger value="awaiting-approval" className="rounded-lg text-[10px] md:text-xs relative">
-                    Para Aprovar
-                    {pendingApproval.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-amber-500 hover:bg-amber-500">{pendingApproval.length}</Badge>}
-                  </TabsTrigger>
-                  <TabsTrigger value="contested" className="rounded-lg text-[10px] md:text-xs relative">
-                    Contestadas
-                    {contested.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-destructive hover:bg-destructive">{contested.length}</Badge>}
-                  </TabsTrigger>
-                  {canCreateEvaluations && (
-                    <TabsTrigger value="finalize" className="rounded-lg text-[10px] md:text-xs relative">
-                      Finalizar
-                      {awaitingFinalization.length > 0 && <Badge className="ml-1 h-4 min-w-4 text-[9px] bg-green-500 hover:bg-green-500">{awaitingFinalization.length}</Badge>}
-                    </TabsTrigger>
-                  )}
-                </TabsList>
-
-                {canCreateEvaluations && (
-                  <TabsContent value="to-evaluate">
-                    {toEvaluate.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-10 text-center">
-                        <CheckCircle2 className="h-9 w-9 text-green-500/60" />
-                        <p className="text-sm text-muted-foreground">Nenhuma avaliação pendente de preenchimento.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">{toEvaluate.map(ev => renderEvalCard(ev))}</div>
-                    )}
-                  </TabsContent>
-                )}
-
-                <TabsContent value="awaiting-approval">
-                  {pendingApproval.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-10 text-center">
-                        <CheckCircle2 className="h-9 w-9 text-green-500/60" />
-                        <p className="text-sm text-muted-foreground">Nenhuma avaliação aguardando sua aprovação.</p>
-                      </div>
-                  ) : (
-                    <div className="space-y-2">{pendingApproval.map(ev => renderEvalCard(ev))}</div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="contested">
-                  {contested.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-10 text-center">
-                        <CheckCircle2 className="h-9 w-9 text-green-500/60" />
-                        <p className="text-sm text-muted-foreground">Nenhuma avaliação contestada.</p>
-                      </div>
-                  ) : (
-                    <div className="space-y-2">{contested.map(ev => renderEvalCard(ev))}</div>
-                  )}
-                </TabsContent>
-
-                {canCreateEvaluations && (
-                  <TabsContent value="finalize">
-                    {awaitingFinalization.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-10 text-center">
-                        <CheckCircle2 className="h-9 w-9 text-green-500/60" />
-                        <p className="text-sm text-muted-foreground">Nenhuma avaliação aguardando finalização.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">{awaitingFinalization.map(ev => renderEvalCard(ev))}</div>
-                    )}
-                  </TabsContent>
-                )}
-              </Tabs>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ===== DASHBOARD ===== */}
-        <TabsContent value="dashboard" className="space-y-4">
-          {/* Date filters */}
-          <div className="flex flex-wrap gap-3 items-end">
-            <div className="space-y-1">
-              <Label className="text-xs">De</Label>
-              <Input type="date" value={dashDateFrom} onChange={e => setDashDateFrom(e.target.value)} className="h-8 text-xs w-40" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Até</Label>
-              <Input type="date" value={dashDateTo} onChange={e => setDashDateTo(e.target.value)} className="h-8 text-xs w-40" />
-            </div>
-            {(dashDateFrom || dashDateTo) && (
-              <Button size="sm" variant="ghost" className="text-xs h-8" onClick={() => { setDashDateFrom(''); setDashDateTo(''); }}>Limpar</Button>
-            )}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        {canManage ? (
+          <div className="inline-flex w-fit rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
+            {([['team', 'Equipe'], ['mine', 'Minhas'], ['criteria', 'Critérios']] as const).map(([id, label]) => (
+              <button key={id} onClick={() => { setTab(id); setFilter('all'); }} className={cn('rounded-lg px-4 py-1.5 text-sm font-medium transition', tab === id ? 'bg-white text-foreground shadow-sm dark:bg-zinc-950' : 'text-zinc-500 hover:text-foreground')}>
+                {label}{id === 'mine' && pendingMine ? <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[10px] text-white">{pendingMine}</span> : null}
+              </button>
+            ))}
           </div>
+        ) : <div />}
+        {tab !== 'criteria' ? (
+          <label className="relative block w-full lg:w-72">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar pessoa ou período" className="rounded-xl pl-9" />
+          </label>
+        ) : null}
+      </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            {/* Score chart */}
-            <Card className="rounded-2xl border-border/60 shadow-sm">
-              <CardHeader><CardTitle className="text-sm">Notas por Colaborador</CardTitle></CardHeader>
-              <CardContent>
-                {dashboardScores.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">Nenhuma avaliação finalizada.</p>
-                ) : (
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={dashboardScores.map(e => ({ name: (e.evaluated_name || '').split(' ')[0], score: e.overall_score }))}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                      <YAxis domain={[0, 5]} />
-                      <Tooltip />
-                      <Bar dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Nota" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Classification pie */}
-            <Card className="rounded-2xl border-border/60 shadow-sm">
-              <CardHeader><CardTitle className="text-sm">Distribuição por Classificação</CardTitle></CardHeader>
-              <CardContent>
-                {classDistribution.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">Sem dados.</p>
-                ) : (
-                  <ResponsiveContainer width="100%" height={250}>
-                    <PieChart>
-                      <Pie data={classDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name}: ${value}`}>
-                        {classDistribution.map((d, i) => <Cell key={i} fill={d.color} />)}
-                      </Pie>
-                      <Tooltip />
-                      <Legend wrapperStyle={{ fontSize: '11px' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
+      {tab === 'criteria' ? (
+        <CriteriaPanel criteria={criteria} userId={profile?.user_id || ''} onChange={load} />
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-2">
+            {FILTERS.filter((f) => tab === 'team' || f.id !== 'draft').map((f) => {
+              const n = f.id === 'all' ? base.length : base.filter((e) => e.status === f.id).length;
+              return <button key={f.id} onClick={() => setFilter(f.id)} className={cn('rounded-full border px-3 py-1 text-xs font-medium transition', filter === f.id ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900' : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800')}>{f.label} · {n}</button>;
+            })}
           </div>
-
-          {/* Monthly avg by employee */}
-          {monthlyAvgByEmployee.length > 0 && (
-            <Card className="rounded-2xl border-border/60 shadow-sm">
-              <CardHeader><CardTitle className="text-sm">Evolução Mensal de Notas por Colaborador</CardTitle></CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={monthlyAvgByEmployee}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                    <YAxis domain={[0, 5]} />
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: '11px' }} />
-                    {employeeNames.slice(0, 8).map((name, i) => (
-                      <Line key={name} type="monotone" dataKey={name} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Recent evaluations - last 10 with scroll */}
-          <Card className="rounded-2xl border-border/60 shadow-sm">
-            <CardHeader><CardTitle className="text-sm">Últimas Avaliações</CardTitle></CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[300px]">
-                {evaluations.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">Nenhuma avaliação.</p>
-                ) : (
-                  <div className="space-y-2 pr-3">
-                    {evaluations.slice(0, 10).map(ev => (
-                      <button
-                        key={ev.id}
-                        onClick={() => openEvalDetail(ev.id)}
-                        className="flex w-full items-center justify-between rounded-2xl border border-border/60 bg-card/60 p-3.5 text-left transition-all hover:border-primary/30 hover:bg-muted/30"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-medium text-foreground">{ev.evaluated_name}</p>
-                            <Badge className={cn("rounded-full text-[10px]", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {ev.evaluator_name}{ev.overall_score != null && ` • ${ev.overall_score}/5`} • {new Date(ev.created_at).toLocaleDateString('pt-BR')}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* My Evaluations */}
-        <TabsContent value="my-evals" className="space-y-4">
-          <Card className="rounded-2xl border-border/60 shadow-sm">
-            <CardHeader><CardTitle className="text-base">Avaliações Recebidas</CardTitle></CardHeader>
-            <CardContent>
-              {myEvaluations.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">Nenhuma avaliação recebida.</p>
-              ) : (
-                <div className="space-y-2">
-                  {myEvaluations.map(ev => (
-                    <div key={ev.id} className="rounded-2xl border border-border/60 bg-card/60 p-4 space-y-3 transition-all hover:border-primary/30 hover:shadow-sm sm:p-5">
-                      <div className="flex items-center justify-between flex-wrap gap-3">
-                        <div>
-                          <Badge className={cn("rounded-full text-[10px]", statusColors[ev.status])}>{statusLabels[ev.status]}</Badge>
-                          <p className="text-xs text-muted-foreground mt-1.5">
-                            Avaliador: {ev.evaluator_name} • {new Date(ev.created_at).toLocaleDateString('pt-BR')}
-                            {ev.position_name && ` • Cargo: ${ev.position_name}`}
-                          </p>
-                        </div>
-                        {ev.overall_score != null && (
-                          <div className="text-right">
-                            <p className="text-2xl font-bold text-foreground leading-tight">{ev.overall_score}</p>
-                            <p className={cn("text-[10px] font-medium", classifyColor(classifyScore(ev.overall_score) || ''))}>{classifyLabel(classifyScore(ev.overall_score) || '')}</p>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2 flex-wrap">
-                        <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1" onClick={() => openEvalDetail(ev.id)}>
-                          <Eye className="h-3.5 w-3.5" /> Ver Detalhes
-                        </Button>
-                      </div>
+          {loading ? (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-32 rounded-2xl" />)}</div>
+          ) : !shown.length ? (
+            <div className="ewvon-glass-panel flex flex-col items-center gap-2 rounded-2xl border border-white/80 px-6 py-14 text-center">
+              <ClipboardCheck className="h-8 w-8 text-zinc-400" />
+              <p className="font-medium text-foreground">{tab === 'mine' ? 'Você ainda não recebeu avaliações' : 'Nenhuma avaliação por aqui'}</p>
+              <p className="max-w-sm text-sm text-zinc-500">{tab === 'mine' ? 'Quando seu gestor enviar uma avaliação, ela aparece aqui para você ler e dar ciência.' : 'Crie uma nova avaliação escolhendo a pessoa e os critérios.'}</p>
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {shown.map((e) => (
+                <button key={e.id} onClick={() => setOpenId(e.id)} className="ewvon-glass-panel group flex flex-col gap-3 rounded-2xl border border-white/80 p-4 text-left shadow-[0_8px_30px_rgba(24,24,27,0.04)] transition hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm font-semibold text-white dark:bg-white dark:text-zinc-900">{initials(tab === 'mine' ? e.evaluatorName : e.evaluatedName)}</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-foreground">{tab === 'mine' ? e.period : e.evaluatedName}</p>
+                      <p className="truncate text-xs text-zinc-500">{tab === 'mine' ? `Avaliado por ${e.evaluatorName}` : [e.evaluatedSector, e.period].filter(Boolean).join(' · ')}</p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {myEvaluations.filter(e => e.overall_score != null).length > 1 && (
-            <Card className="rounded-2xl border-border/60 shadow-sm">
-              <CardHeader><CardTitle className="text-sm">Minha Evolução</CardTitle></CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={myEvaluations.filter(e => e.overall_score != null).reverse().map(e => ({
-                    date: new Date(e.created_at).toLocaleDateString('pt-BR'),
-                    score: e.overall_score,
-                  }))}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                    <YAxis domain={[0, 5]} />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} name="Nota" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* Team - renamed for clarity */}
-        {canCreateEvaluations && (
-          <TabsContent value="team" className="space-y-4">
-            <Card className="rounded-2xl border-border/60 shadow-sm">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">Avaliações dos Colaboradores</CardTitle>
-                    <p className="text-xs text-muted-foreground mt-1">Avaliações criadas por você para membros da sua equipe</p>
+                    <ScoreBadge v={e.score} />
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {teamEvaluations.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">Nenhuma avaliação criada para a equipe.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {teamEvaluations.map(ev => renderEvalCard(ev))}
+                  <div className="flex items-center justify-between gap-2">
+                    <StatusPill s={e.status} />
+                    <span className="text-xs text-zinc-500">{new Date(e.sentAt || e.createdAt).toLocaleDateString('pt-BR')}</span>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-
-        {/* Structure */}
-        {canManageStructure && (
-          <TabsContent value="structure" className="space-y-4">
-            <div className="grid md:grid-cols-3 gap-4">
-              {/* Positions */}
-              <Card className="rounded-2xl border-border/60 shadow-sm">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm">Cargos</CardTitle>
-                    <Button size="sm" variant="ghost" onClick={() => { setPosName(''); setPosDesc(''); setShowNewPosition(true); }}><Plus className="h-3.5 w-3.5" /></Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="max-h-[300px]">
-                    {positions.length === 0 ? <p className="text-xs text-muted-foreground text-center py-4">Nenhum cargo.</p> : (
-                      <div className="space-y-1">{positions.map(p => {
-                        const compCount = positionCompetencies.filter(pc => pc.position_id === p.id).length;
-                        return (
-                          <div key={p.id} className="flex items-center justify-between p-2 rounded hover:bg-muted/50 text-sm group">
-                            <button
-                              onClick={() => {
-                                setShowPosCompetencies(p.id);
-                                fetchPositionCompetencies(p.id).then(pcs => {
-                                  setPosCompItems(pcs.map(pc => ({ competency_id: pc.competency_id, weight: pc.weight })));
-                                });
-                              }}
-                              className="flex-1 text-left"
-                            >
-                              <span className="text-foreground">{p.name}</span>
-                              <Badge variant="outline" className="text-[10px] ml-2">{compCount} comp.</Badge>
-                            </button>
-                            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => {
-                                setPosName(p.name); setPosDesc(p.description || '');
-                                setShowEditPosition(p.id);
-                              }}><Edit2 className="h-3 w-3" /></Button>
-                              <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={async () => {
-                                if (confirm('Excluir este cargo?')) { await deletePosition(p.id); }
-                              }}><Trash2 className="h-3 w-3" /></Button>
-                            </div>
-                          </div>
-                        );
-                      })}</div>
-                    )}
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-
-              {/* Competencies */}
-              <Card className="rounded-2xl border-border/60 shadow-sm">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm">Competências</CardTitle>
-                    <Button size="sm" variant="ghost" onClick={() => { setCompName(''); setCompDesc(''); setCompCategory('behavioral'); setShowNewCompetency(true); }}><Plus className="h-3.5 w-3.5" /></Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="max-h-[300px]">
-                    {competencies.length === 0 ? <p className="text-xs text-muted-foreground text-center py-4">Nenhuma competência.</p> : (
-                      <div className="space-y-1">{competencies.map(c => (
-                        <div key={c.id} className="flex items-center justify-between p-2 rounded hover:bg-muted/50 text-sm group">
-                          <div className="flex-1">
-                            <span className="text-foreground">{c.name}</span>
-                            {c.description && <p className="text-[10px] text-muted-foreground">{c.description}</p>}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Badge variant="outline" className="text-[10px]">{c.category === 'technical' ? 'Técnica' : 'Comp.'}</Badge>
-                            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => {
-                                setCompName(c.name); setCompDesc(c.description || ''); setCompCategory(c.category);
-                                setShowEditCompetency(c.id);
-                              }}><Edit2 className="h-3 w-3" /></Button>
-                              <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={async () => {
-                                if (confirm('Excluir esta competência?')) { await deleteCompetency(c.id); }
-                              }}><Trash2 className="h-3 w-3" /></Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}</div>
-                    )}
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-
-              {/* Cycles */}
-              <Card className="rounded-2xl border-border/60 shadow-sm">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm">Ciclos</CardTitle>
-                    <Button size="sm" variant="ghost" onClick={() => { setCycleName(''); setCycleStart(''); setCycleEnd(''); setCycleDesc(''); setShowNewCycle(true); }}><Plus className="h-3.5 w-3.5" /></Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="max-h-[300px]">
-                    {cycles.length === 0 ? <p className="text-xs text-muted-foreground text-center py-4">Nenhum ciclo.</p> : (
-                      <div className="space-y-1">{cycles.map(c => (
-                        <div key={c.id} className="flex items-center justify-between p-2 rounded hover:bg-muted/50 text-sm group">
-                          <div className="flex-1">
-                            <span className="text-foreground">{c.name}</span>
-                            <p className="text-[10px] text-muted-foreground">
-                              {new Date(c.start_date).toLocaleDateString('pt-BR')} — {new Date(c.end_date).toLocaleDateString('pt-BR')}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Badge variant={c.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">{c.status === 'active' ? 'Ativo' : 'Encerrado'}</Badge>
-                            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => {
-                                setCycleName(c.name); setCycleStart(c.start_date); setCycleEnd(c.end_date); setCycleDesc(c.description || '');
-                                setShowEditCycle(c.id);
-                              }}><Edit2 className="h-3 w-3" /></Button>
-                              <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={async () => {
-                                if (confirm('Excluir este ciclo?')) { await deleteCycle(c.id); }
-                              }}><Trash2 className="h-3 w-3" /></Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}</div>
-                    )}
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        )}
-      </Tabs>
-
-      {/* ===== DIALOGS ===== */}
-
-      {/* New Position */}
-      <Dialog open={showNewPosition} onOpenChange={setShowNewPosition}>
-        <DialogContent className="max-w-sm rounded-2xl">
-          <DialogHeader><DialogTitle>Novo Cargo</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={posName} onChange={e => setPosName(e.target.value)} placeholder="Ex: Atendente" /></div>
-            <div className="space-y-1"><Label className="text-xs">Descrição</Label><Input value={posDesc} onChange={e => setPosDesc(e.target.value)} placeholder="Opcional" /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewPosition(false)}>Cancelar</Button>
-            <Button onClick={async () => { if (!posName.trim()) return; await createPosition({ name: posName, description: posDesc || undefined }); setShowNewPosition(false); }}>Criar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Position */}
-      <Dialog open={!!showEditPosition} onOpenChange={() => setShowEditPosition(null)}>
-        <DialogContent className="max-w-sm rounded-2xl">
-          <DialogHeader><DialogTitle>Editar Cargo</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={posName} onChange={e => setPosName(e.target.value)} /></div>
-            <div className="space-y-1"><Label className="text-xs">Descrição</Label><Input value={posDesc} onChange={e => setPosDesc(e.target.value)} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditPosition(null)}>Cancelar</Button>
-            <Button onClick={async () => { if (!showEditPosition || !posName.trim()) return; await updatePosition(showEditPosition, { name: posName, description: posDesc || undefined }); setShowEditPosition(null); }}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* New Competency */}
-      <Dialog open={showNewCompetency} onOpenChange={setShowNewCompetency}>
-        <DialogContent className="max-w-sm rounded-2xl">
-          <DialogHeader><DialogTitle>Nova Competência</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={compName} onChange={e => setCompName(e.target.value)} placeholder="Ex: Comunicação" /></div>
-            <div className="space-y-1"><Label className="text-xs">Descrição</Label><Input value={compDesc} onChange={e => setCompDesc(e.target.value)} placeholder="Opcional" /></div>
-            <div className="space-y-1">
-              <Label className="text-xs">Categoria</Label>
-              <Select value={compCategory} onValueChange={setCompCategory}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="behavioral">Comportamental</SelectItem>
-                  <SelectItem value="technical">Técnica</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewCompetency(false)}>Cancelar</Button>
-            <Button onClick={async () => { if (!compName.trim()) return; await createCompetency({ name: compName, description: compDesc || undefined, category: compCategory }); setShowNewCompetency(false); }}>Criar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Competency */}
-      <Dialog open={!!showEditCompetency} onOpenChange={() => setShowEditCompetency(null)}>
-        <DialogContent className="max-w-sm rounded-2xl">
-          <DialogHeader><DialogTitle>Editar Competência</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={compName} onChange={e => setCompName(e.target.value)} /></div>
-            <div className="space-y-1"><Label className="text-xs">Descrição</Label><Input value={compDesc} onChange={e => setCompDesc(e.target.value)} /></div>
-            <div className="space-y-1">
-              <Label className="text-xs">Categoria</Label>
-              <Select value={compCategory} onValueChange={setCompCategory}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="behavioral">Comportamental</SelectItem>
-                  <SelectItem value="technical">Técnica</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditCompetency(null)}>Cancelar</Button>
-            <Button onClick={async () => { if (!showEditCompetency || !compName.trim()) return; await updateCompetency(showEditCompetency, { name: compName, description: compDesc || undefined, category: compCategory }); setShowEditCompetency(null); }}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* New Cycle */}
-      <Dialog open={showNewCycle} onOpenChange={setShowNewCycle}>
-        <DialogContent className="max-w-sm rounded-2xl">
-          <DialogHeader><DialogTitle>Novo Ciclo</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={cycleName} onChange={e => setCycleName(e.target.value)} placeholder="Ex: 1º Semestre 2026" /></div>
-            <div className="space-y-1"><Label className="text-xs">Descrição</Label><Input value={cycleDesc} onChange={e => setCycleDesc(e.target.value)} placeholder="Opcional" /></div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1"><Label className="text-xs">Início</Label><Input type="date" value={cycleStart} onChange={e => setCycleStart(e.target.value)} /></div>
-              <div className="space-y-1"><Label className="text-xs">Fim</Label><Input type="date" value={cycleEnd} onChange={e => setCycleEnd(e.target.value)} /></div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewCycle(false)}>Cancelar</Button>
-            <Button onClick={async () => { if (!cycleName.trim() || !cycleStart || !cycleEnd) return; await createCycle({ name: cycleName, start_date: cycleStart, end_date: cycleEnd, description: cycleDesc || undefined }); setShowNewCycle(false); }}>Criar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Cycle */}
-      <Dialog open={!!showEditCycle} onOpenChange={() => setShowEditCycle(null)}>
-        <DialogContent className="max-w-sm rounded-2xl">
-          <DialogHeader><DialogTitle>Editar Ciclo</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={cycleName} onChange={e => setCycleName(e.target.value)} /></div>
-            <div className="space-y-1"><Label className="text-xs">Descrição</Label><Input value={cycleDesc} onChange={e => setCycleDesc(e.target.value)} /></div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1"><Label className="text-xs">Início</Label><Input type="date" value={cycleStart} onChange={e => setCycleStart(e.target.value)} /></div>
-              <div className="space-y-1"><Label className="text-xs">Fim</Label><Input type="date" value={cycleEnd} onChange={e => setCycleEnd(e.target.value)} /></div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditCycle(null)}>Cancelar</Button>
-            <Button onClick={async () => { if (!showEditCycle || !cycleName.trim()) return; await updateCycle(showEditCycle, { name: cycleName, start_date: cycleStart, end_date: cycleEnd, description: cycleDesc || undefined }); setShowEditCycle(null); }}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* New Evaluation */}
-      <Dialog open={showNewEval} onOpenChange={setShowNewEval}>
-        <DialogContent className="max-w-sm rounded-2xl">
-          <DialogHeader><DialogTitle>Nova Avaliação</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Colaborador</Label>
-              <Select value={evalTarget} onValueChange={setEvalTarget}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>
-                  {teamMembers.filter(m => m.id !== profile?.id).map(m => (
-                    <SelectItem key={m.id} value={m.id}>{m.display_name || m.name} {m.registration_number && `(${m.registration_number})`}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Cargo</Label>
-              <Select value={evalPosition} onValueChange={setEvalPosition}>
-                <SelectTrigger><SelectValue placeholder="Selecione o cargo" /></SelectTrigger>
-                <SelectContent>
-                  {positions.map(p => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Ciclo (opcional)</Label>
-              <Select value={evalCycle} onValueChange={setEvalCycle}>
-                <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
-                <SelectContent>
-                  {cycles.filter(c => c.status === 'active').map(c => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewEval(false)}>Cancelar</Button>
-            <Button onClick={async () => {
-              if (!evalTarget) { toast.error('Selecione o colaborador.'); return; }
-              if (!evalPosition) { toast.error('Selecione o cargo.'); return; }
-              await createEvaluation({ evaluated_id: evalTarget, cycle_id: evalCycle || undefined, position_id: evalPosition || undefined });
-              setShowNewEval(false);
-              setEvalTarget(''); setEvalCycle(''); setEvalPosition('');
-            }}>Criar Avaliação</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Position Competencies Dialog */}
-      <Dialog open={!!showPosCompetencies} onOpenChange={() => setShowPosCompetencies(null)}>
-        <DialogContent className="max-w-lg rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Competências do Cargo: {positions.find(p => p.id === showPosCompetencies)?.name}</DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="max-h-[400px]">
-            <div className="space-y-3 pr-2">
-              {posCompItems.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-2 rounded border border-border">
-                  <div className="flex-1">
-                    <Select value={item.competency_id} onValueChange={v => {
-                      const next = [...posCompItems]; next[idx].competency_id = v; setPosCompItems(next);
-                    }}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Competência" /></SelectTrigger>
-                      <SelectContent>
-                        {competencies.map(c => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="w-20">
-                    <Input type="number" min={1} max={10} value={item.weight} onChange={e => {
-                      const next = [...posCompItems]; next[idx].weight = Number(e.target.value); setPosCompItems(next);
-                    }} className="h-8 text-xs" placeholder="Peso" />
-                  </div>
-                  <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setPosCompItems(posCompItems.filter((_, i) => i !== idx))}>✕</Button>
-                </div>
+                </button>
               ))}
-              <Button size="sm" variant="outline" className="text-xs w-full" onClick={() => setPosCompItems([...posCompItems, { competency_id: '', weight: 1 }])}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar Competência
-              </Button>
             </div>
-          </ScrollArea>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPosCompetencies(null)}>Cancelar</Button>
-            <Button onClick={async () => {
-              if (!showPosCompetencies) return;
-              await savePositionCompetencies(showPosCompetencies, posCompItems.filter(i => i.competency_id));
-              setShowPosCompetencies(null);
-              refreshData();
-            }}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ===== Evaluation Detail Dialog ===== */}
-      <Dialog open={!!showEvalDetail} onOpenChange={() => setShowEvalDetail(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl">
-          {currentEval && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 flex-wrap">
-                  Avaliação: {currentEval.evaluated_name}
-                  <Badge className={cn("text-[10px]", statusColors[currentEval.status])}>{statusLabels[currentEval.status]}</Badge>
-                </DialogTitle>
-                <div className="text-xs text-muted-foreground space-y-0.5">
-                  {currentEval.evaluated_registration && <p>Matrícula: {currentEval.evaluated_registration}</p>}
-                  {currentEval.position_name && <p>Cargo: {currentEval.position_name}</p>}
-                  {currentEval.evaluated_sector && <p>Setor: {currentEval.evaluated_sector}</p>}
-                  <p>Avaliador: {currentEval.evaluator_name} • Versão: {currentEval.version}</p>
-                </div>
-              </DialogHeader>
-
-              <ScrollArea className="flex-1 pr-2">
-                <div className="space-y-4 pb-4">
-                  {/* Editing mode */}
-                  {canEdit && editingItems.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-semibold text-foreground">Avaliar Competências</h4>
-                      {editingItems.map((item, idx) => {
-                        const comp = competencies.find(c => c.id === item.competency_id);
-                        return (
-                          <Card key={idx} className="rounded-2xl border-border/60">
-                            <CardContent className="p-4 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-sm font-medium text-foreground">{comp?.name || 'Competência'}</p>
-                                  {comp?.description && <p className="text-[10px] text-muted-foreground">{comp.description}</p>}
-                                </div>
-                                <Badge variant="outline" className="text-[10px]">Peso: {item.weight}</Badge>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className="text-xs text-muted-foreground">Nota:</span>
-                                {renderStars(item.score, (v) => {
-                                  const next = [...editingItems]; next[idx].score = v; setEditingItems(next);
-                                })}
-                                {item.score && (
-                                  <Badge className={cn("text-[10px]", classifyColor(classifyScore(item.score)))}>{classifyLabel(classifyScore(item.score))}</Badge>
-                                )}
-                              </div>
-                              <Textarea
-                                value={item.evaluator_comment}
-                                onChange={e => { const next = [...editingItems]; next[idx].evaluator_comment = e.target.value; setEditingItems(next); }}
-                                placeholder="Observação sobre esta competência..."
-                                rows={2}
-                                className="text-xs"
-                              />
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                      <div className="space-y-1">
-                        <Label className="text-xs">Observação Geral</Label>
-                        <Textarea value={overallComment} onChange={e => setOverallComment(e.target.value)} placeholder="Comentário geral..." rows={3} />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button className="gap-1" onClick={handleSaveEvalItems}><FileText className="h-4 w-4" /> Salvar Rascunho</Button>
-                        <Button variant="secondary" className="gap-1" onClick={handleSendFromDetail}><Send className="h-4 w-4" /> Enviar para Ciência</Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Read-only view */}
-                  {!canEdit && evalItems.length > 0 && (
-                    <div className="space-y-3">
-                      {(() => {
-                        const { excellent, good, needsImprovement } = groupItemsByClassification(evalItems);
-                        return (
-                          <>
-                            {excellent.length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-semibold text-green-600 flex items-center gap-1 mb-2"><Star className="h-4 w-4" /> Excelente ({excellent.length})</h4>
-                                {excellent.map(i => (
-                                  <div key={i.id} className="rounded-2xl border border-green-200/70 dark:border-green-800/60 bg-green-50/60 dark:bg-green-950/20 p-3.5 mb-2">
-                                    <div className="flex items-center justify-between">
-                                      <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
-                                      {renderStars(i.score)}
-                                    </div>
-                                    {i.evaluator_comment && <p className="text-xs text-muted-foreground mt-1">💬 {i.evaluator_comment}</p>}
-                                    {i.evaluated_response && <p className="text-xs text-destructive mt-1 bg-destructive/5 rounded p-1">⚠️ Contestação: {i.evaluated_response}</p>}
-                                    {i.evaluator_reply && <p className="text-xs text-primary mt-1 bg-primary/5 rounded p-1">↩️ Resposta: {i.evaluator_reply}</p>}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            {good.length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-semibold text-amber-600 flex items-center gap-1 mb-2"><ThumbsUp className="h-4 w-4" /> Bom ({good.length})</h4>
-                                {good.map(i => (
-                                  <div key={i.id} className="rounded-2xl border border-amber-200/70 dark:border-amber-800/60 bg-amber-50/60 dark:bg-amber-950/20 p-3.5 mb-2">
-                                    <div className="flex items-center justify-between">
-                                      <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
-                                      {renderStars(i.score)}
-                                    </div>
-                                    {i.evaluator_comment && <p className="text-xs text-muted-foreground mt-1">💬 {i.evaluator_comment}</p>}
-                                    {i.evaluated_response && <p className="text-xs text-destructive mt-1 bg-destructive/5 rounded p-1">⚠️ Contestação: {i.evaluated_response}</p>}
-                                    {i.evaluator_reply && <p className="text-xs text-primary mt-1 bg-primary/5 rounded p-1">↩️ Resposta: {i.evaluator_reply}</p>}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            {needsImprovement.length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-semibold text-destructive flex items-center gap-1 mb-2"><AlertTriangle className="h-4 w-4" /> Precisa Melhorar ({needsImprovement.length})</h4>
-                                {needsImprovement.map(i => (
-                                  <div key={i.id} className="rounded-2xl border border-red-200/70 dark:border-red-800/60 bg-red-50/60 dark:bg-red-950/20 p-3.5 mb-2">
-                                    <div className="flex items-center justify-between">
-                                      <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
-                                      {renderStars(i.score)}
-                                    </div>
-                                    {i.evaluator_comment && <p className="text-xs text-muted-foreground mt-1">💬 {i.evaluator_comment}</p>}
-                                    {i.evaluated_response && <p className="text-xs text-destructive mt-1 bg-destructive/5 rounded p-1">⚠️ Contestação: {i.evaluated_response}</p>}
-                                    {i.evaluator_reply && <p className="text-xs text-primary mt-1 bg-primary/5 rounded p-1">↩️ Resposta: {i.evaluator_reply}</p>}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            {evalItems.filter(i => i.score == null).length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-semibold text-muted-foreground mb-2">Sem Avaliação</h4>
-                                {evalItems.filter(i => i.score == null).map(i => (
-                                  <div key={i.id} className="rounded-2xl border border-border/60 bg-muted/20 p-3.5 mb-2">
-                                    <p className="text-sm font-medium text-foreground">{i.competency_name}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </>
-                        );
-                      })()}
-
-                      {currentEval.overall_comment && (
-                        <div className="rounded-2xl bg-muted/40 border border-border/60 p-3.5">
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Observação Geral do Avaliador</p>
-                          <p className="text-sm text-foreground">{currentEval.overall_comment}</p>
-                        </div>
-                      )}
-                      {currentEval.evaluated_comment && (
-                        <div className="rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-800/60 p-3.5">
-                          <p className="text-xs font-medium text-amber-600 mb-1">Observação do Colaborador</p>
-                          <p className="text-sm text-foreground">{currentEval.evaluated_comment}</p>
-                        </div>
-                      )}
-                      {currentEval.evaluator_response && (
-                        <div className="rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-800/60 p-3.5">
-                          <p className="text-xs font-medium text-blue-600 mb-1">Resposta do Avaliador</p>
-                          <p className="text-sm text-foreground">{currentEval.evaluator_response}</p>
-                        </div>
-                      )}
-
-                      {currentEval.overall_score != null && (
-                        <div className="flex items-center justify-center gap-4 rounded-2xl bg-gradient-to-br from-muted/40 to-muted/10 border border-border/60 p-5">
-                          <div className="text-center">
-                            <p className="text-3xl font-bold text-foreground">{currentEval.overall_score}</p>
-                            <p className={cn("text-sm font-medium", classifyColor(classifyScore(currentEval.overall_score) || ''))}>
-                              {classifyLabel(classifyScore(currentEval.overall_score) || '')}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Action buttons */}
-                  <Separator />
-                  <div className="flex gap-2 flex-wrap">
-                    {isEvaluated && currentEval.status === 'sent' && (
-                      <>
-                        <Button size="sm" className="gap-1" onClick={async () => { await approveEvaluation(currentEval.id); setShowEvalDetail(null); }}>
-                          <ThumbsUp className="h-3.5 w-3.5" /> Aprovar
-                        </Button>
-                        <Button size="sm" variant="outline" className="gap-1" onClick={async () => { await approveEvaluation(currentEval.id, 'Aprovada com observação'); setShowEvalDetail(null); }}>
-                          Aprovar com Observação
-                        </Button>
-                        <Button size="sm" variant="destructive" className="gap-1" onClick={() => {
-                          setItemContestations({}); setContestComment(''); setShowContestDialog(currentEval.id);
-                        }}>
-                          <ThumbsDown className="h-3.5 w-3.5" /> Contestar
-                        </Button>
-                      </>
-                    )}
-
-                    {isEvaluator && currentEval.status === 'contested' && (
-                      <Button size="sm" variant="outline" className="gap-1 text-amber-600" onClick={() => {
-                        setItemReplies({}); setRespondComment(''); setShowRespondDialog(currentEval.id);
-                      }}>
-                        <MessageSquare className="h-3.5 w-3.5" /> Responder Contestação
-                      </Button>
-                    )}
-
-                    {isEvaluator && ['approved', 'approved_with_obs'].includes(currentEval.status) && (
-                      <Button size="sm" className="gap-1" onClick={async () => { await finalizeEvaluation(currentEval.id); setShowEvalDetail(null); }}>
-                        <ClipboardCheck className="h-3.5 w-3.5" /> Finalizar
-                      </Button>
-                    )}
-
-                    {currentEval.status === 'finalized' && (
-                      <>
-                        <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => generateFinalReport(currentEval, evalItems)}>
-                          <Download className="h-3.5 w-3.5" /> Relatório Final
-                        </Button>
-                        <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => generateFullProcessReport(currentEval, evalItems)}>
-                          <Download className="h-3.5 w-3.5" /> Relatório Completo
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </ScrollArea>
-            </>
           )}
-        </DialogContent>
-      </Dialog>
+        </>
+      )}
 
-      {/* Contest Dialog */}
-      <Dialog open={!!showContestDialog} onOpenChange={() => setShowContestDialog(null)}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col rounded-2xl">
-          <DialogHeader><DialogTitle className="text-destructive">Contestar Avaliação</DialogTitle></DialogHeader>
-          <ScrollArea className="flex-1 pr-2">
-            <div className="space-y-4 pb-4">
-              <p className="text-xs text-muted-foreground">Conteste competências específicas ou deixe uma observação geral.</p>
-              {evalItems.filter(i => i.score != null).map(item => (
-                <div key={item.id} className="rounded-2xl border border-border/60 bg-card/40 p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-foreground">{item.competency_name}</p>
-                    <div className="flex items-center gap-2">
-                      {renderStars(item.score)}
-                      <Badge className={cn("text-[10px]", classifyColor(classifyScore(item.score) || ''))}>{classifyLabel(classifyScore(item.score) || '')}</Badge>
-                    </div>
-                  </div>
-                  {item.evaluator_comment && <p className="text-xs text-muted-foreground">💬 {item.evaluator_comment}</p>}
-                  <Textarea
-                    value={itemContestations[item.id] || ''}
-                    onChange={e => setItemContestations(prev => ({ ...prev, [item.id]: e.target.value }))}
-                    placeholder="Contestar esta competência (opcional)..."
-                    rows={2}
-                    className="text-xs"
-                  />
-                </div>
+      {creating && profile ? (
+        <NewEvaluationDialog criteria={activeCriteria} meId={profile.id} onClose={() => setCreating(false)} onCreated={async (id) => { setCreating(false); await load(); setOpenId(id); }} />
+      ) : null}
+      {current && profile ? (
+        <EvaluationDialog ev={current} meId={profile.id} canManage={canManage} isAdmin={isAdmin} onClose={() => setOpenId(null)} onChanged={load} />
+      ) : null}
+    </div>
+  );
+}
+
+// ---------- new evaluation ----------
+function NewEvaluationDialog({ criteria, meId, onClose, onCreated }: { criteria: Criterion[]; meId: string; onClose: () => void; onCreated: (id: string) => void }) {
+  const [people, setPeople] = useState<{ id: string; name: string; sector: string }[]>([]);
+  const [who, setWho] = useState<string | null>(null);
+  const [q, setQ] = useState('');
+  const [period, setPeriod] = useState(E.currentPeriod());
+  const [sel, setSel] = useState<string[]>(criteria.map((c) => c.id));
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let query = (supabase as any).from('profiles').select('id, name, display_name, sector_id').eq('is_active', true).order('name');
+      const cid = getActiveCompanyId(); if (cid) query = query.eq('company_id', cid);
+      const [{ data }, { data: secs }] = await Promise.all([query, supabase.from('sectors').select('id, name')]);
+      const S = new Map((secs || []).map((s) => [s.id, s.name]));
+      setPeople(((data || []) as { id: string; name: string; display_name: string | null; sector_id: string | null }[]).filter((p) => p.id !== meId).map((p) => ({ id: p.id, name: p.display_name || p.name, sector: (p.sector_id && S.get(p.sector_id)) || '' })));
+    })();
+  }, [meId]);
+
+  const filtered = people.filter((p) => !q.trim() || (p.name + ' ' + p.sector).toLowerCase().includes(q.trim().toLowerCase()));
+  const create = async () => {
+    if (!who) return toast.error('Escolha quem será avaliado.');
+    setBusy(true);
+    try { onCreated(await E.createEvaluation({ evaluatedId: who, period, criteriaIds: sel, meProfileId: meId })); toast.success('Avaliação criada. Agora preencha as notas.'); }
+    catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-2xl rounded-3xl">
+        <DialogHeader><DialogTitle>Nova avaliação</DialogTitle><DialogDescription>Escolha a pessoa, o período e os critérios. Você preenche as notas em seguida.</DialogDescription></DialogHeader>
+        <div className="grid gap-5 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>1. Quem será avaliado</Label>
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar pessoa" className="rounded-xl" />
+            <div className="max-h-64 space-y-1 overflow-y-auto rounded-xl border p-1">
+              {filtered.map((p) => (
+                <button key={p.id} onClick={() => setWho(p.id)} className={cn('flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm', who === p.id ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800')}>
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[11px] font-semibold text-zinc-700">{initials(p.name)}</span>
+                  <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                  <span className="truncate text-xs opacity-70">{p.sector}</span>
+                </button>
               ))}
-              <Separator />
-              <div className="space-y-1">
-                <Label className="text-xs font-medium text-destructive">Justificativa Geral (obrigatória)</Label>
-                <Textarea value={contestComment} onChange={e => setContestComment(e.target.value)} placeholder="Descreva o motivo da contestação..." rows={3} />
+              {!filtered.length ? <p className="p-3 text-center text-xs text-zinc-500">Ninguém encontrado</p> : null}
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>2. Período</Label><Input value={period} onChange={(e) => setPeriod(e.target.value)} placeholder="Ex.: 1º semestre de 2026" className="rounded-xl" /></div>
+            <div className="space-y-2">
+              <Label>3. Critérios ({sel.length})</Label>
+              <div className="max-h-48 space-y-1 overflow-y-auto rounded-xl border p-2">
+                {criteria.map((c) => (
+                  <label key={c.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                    <Checkbox checked={sel.includes(c.id)} onCheckedChange={(v) => setSel((s) => (v ? [...s, c.id] : s.filter((x) => x !== c.id)))} />{c.name}
+                  </label>
+                ))}
               </div>
             </div>
-          </ScrollArea>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowContestDialog(null)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleContest}>Contestar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" className="rounded-xl" onClick={onClose}>Cancelar</Button>
+          <Button className="rounded-xl" disabled={busy || !who || !sel.length} onClick={() => void create()}>Criar e preencher</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
-      {/* Respond to Contestation Dialog */}
-      <Dialog open={!!showRespondDialog} onOpenChange={() => setShowRespondDialog(null)}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col rounded-2xl">
-          <DialogHeader><DialogTitle className="text-amber-600">Responder Contestação</DialogTitle></DialogHeader>
-          <ScrollArea className="flex-1 pr-2">
-            <div className="space-y-4 pb-4">
-              <p className="text-xs text-muted-foreground">Revise as contestações e responda. Você pode ajustar notas.</p>
-              {evalItems.filter(i => i.evaluated_response).map(item => (
-                <div key={item.id} className="rounded-2xl border border-amber-200/70 dark:border-amber-800/60 bg-amber-50/30 dark:bg-amber-950/10 p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-foreground">{item.competency_name}</p>
-                    {renderStars(item.score)}
-                  </div>
-                  <p className="text-xs text-destructive bg-destructive/5 rounded p-2">⚠️ Contestação: {item.evaluated_response}</p>
-                  <Textarea
-                    value={itemReplies[item.id]?.reply || ''}
-                    onChange={e => setItemReplies(prev => ({ ...prev, [item.id]: { ...prev[item.id], reply: e.target.value } }))}
-                    placeholder="Sua resposta..."
-                    rows={2}
-                    className="text-xs"
-                  />
-                  <div className="flex items-center gap-2">
-                    <Label className="text-[10px]">Ajustar nota?</Label>
-                    <Select
-                      value={String(itemReplies[item.id]?.new_score || item.score || '')}
-                      onValueChange={v => setItemReplies(prev => ({ ...prev, [item.id]: { ...prev[item.id] || { reply: '' }, new_score: Number(v) } }))}
-                    >
-                      <SelectTrigger className="w-20 h-7 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5].map(n => (<SelectItem key={n} value={String(n)}>{n}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              ))}
-              <Separator />
-              <div className="space-y-1">
-                <Label className="text-xs font-medium">Resposta Geral (obrigatória)</Label>
-                <Textarea value={respondComment} onChange={e => setRespondComment(e.target.value)} placeholder="Sua resposta à contestação..." rows={3} />
-              </div>
+// ---------- detail / fill / respond ----------
+function EvaluationDialog({ ev, meId, canManage, isAdmin, onClose, onChanged }: { ev: EvalRow; meId: string; canManage: boolean; isAdmin: boolean; onClose: () => void; onChanged: () => Promise<void> }) {
+  const [items, setItems] = useState<EvalItem[] | null>(null);
+  const [feedback, setFeedback] = useState(ev.feedback || '');
+  const [strengths, setStrengths] = useState(ev.strengths || '');
+  const [improvements, setImprovements] = useState(ev.improvements || '');
+  const [reply, setReply] = useState('');
+  const [mode, setMode] = useState<'view' | 'review'>('view');
+  const [busy, setBusy] = useState(false);
+  const editable = (ev.evaluatorId === meId || isAdmin || canManage) && (ev.status === 'draft' || ev.status === 'contested') && ev.evaluatedId !== meId;
+  const isEvaluated = ev.evaluatedId === meId;
+
+  useEffect(() => { E.getItems(ev.id).then(setItems).catch((e) => toast.error((e as Error).message)); }, [ev.id]);
+
+  const patch = (): E.DraftPatch => ({ items: (items || []).map((i) => ({ id: i.id, score: i.score, comment: i.comment })), feedback, strengths, improvements });
+  const live = items?.filter((i) => i.score != null) || [];
+  const liveAvg = live.length ? live.reduce((s, i) => s + (i.score || 0), 0) / live.length : null;
+  const run = async (fn: () => Promise<unknown>, ok: string, close = true) => {
+    setBusy(true);
+    try { await fn(); toast.success(ok); await onChanged(); if (close) onClose(); }
+    catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+  };
+  const report = () => { if (items && !openReport(E.evaluationReport({ ...ev, feedback, strengths, improvements, score: editable ? liveAvg : ev.score }, items))) toast.error('Permita pop-ups para abrir o relatório.'); };
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto rounded-3xl">
+        <DialogHeader>
+          <div className="flex items-start gap-4 pr-6">
+            <ScoreBadge v={editable ? liveAvg : ev.score} big />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium uppercase tracking-[.16em] text-zinc-500">{ev.period}</p>
+              <DialogTitle className="mt-1 text-2xl">{ev.evaluatedName}</DialogTitle>
+              <DialogDescription className="mt-1">{[ev.evaluatedSector, `Avaliador: ${ev.evaluatorName}`].filter(Boolean).join(' · ')}</DialogDescription>
+              <div className="mt-2 flex flex-wrap items-center gap-2"><StatusPill s={ev.status} />{(editable ? liveAvg : ev.score) != null ? <span className="text-xs text-zinc-500">{E.scaleLabel(editable ? liveAvg : ev.score)}</span> : null}</div>
             </div>
-          </ScrollArea>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRespondDialog(null)}>Cancelar</Button>
-            <Button onClick={handleRespond}>Enviar Resposta</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </motion.div>
+          </div>
+        </DialogHeader>
+
+        {ev.status === 'contested' && ev.evaluatedComment ? (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+            <b>Pedido de revisão:</b> {ev.evaluatedComment}
+          </div>
+        ) : null}
+
+        {!items ? <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div> : (
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-foreground">Critérios</p>
+            {items.map((it, idx) => (
+              <div key={it.id} className="rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground">{it.name}</p>
+                    {it.description ? <p className="text-xs text-zinc-500">{it.description}</p> : null}
+                  </div>
+                  {editable ? (
+                    <div className="flex shrink-0 gap-1">
+                      {E.SCALE.map((s) => (
+                        <button key={s.v} title={s.label} aria-pressed={it.score === s.v} onClick={() => setItems((xs) => xs!.map((x, i) => (i === idx ? { ...x, score: s.v } : x)))}
+                          style={it.score === s.v ? { background: SOLID[E.scoreTone(s.v)], color: '#fff', boxShadow: `0 6px 16px -6px ${SOLID[E.scoreTone(s.v)]}` } : undefined}
+                          className={cn('h-9 w-9 rounded-xl text-sm font-semibold transition', it.score === s.v ? 'scale-105' : 'text-zinc-500 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:ring-zinc-700 dark:hover:bg-zinc-800')}>{s.v}</button>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className={cn('inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold ring-1', TONE_CLS[E.scoreTone(it.score)])}>{it.score ?? '—'} <span className="text-xs font-medium opacity-80">{E.scaleLabel(it.score)}</span></span>
+                  )}
+                </div>
+                {editable ? (
+                  <Input className="mt-2 rounded-xl" placeholder="Comentário sobre este critério (opcional)" value={it.comment || ''} onChange={(e) => setItems((xs) => xs!.map((x, i) => (i === idx ? { ...x, comment: e.target.value } : x)))} />
+                ) : it.comment ? <p className="mt-2 rounded-xl bg-zinc-50 px-3 py-2 text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">{it.comment}</p> : null}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <FeedbackField label="Pontos fortes" value={strengths} onChange={setStrengths} editable={editable} placeholder="O que essa pessoa faz muito bem" />
+          <FeedbackField label="Pontos a desenvolver" value={improvements} onChange={setImprovements} editable={editable} placeholder="O que pode melhorar e como" />
+        </div>
+        <FeedbackField label="Feedback geral" value={feedback} onChange={setFeedback} editable={editable} placeholder="Mensagem final para o colaborador (obrigatório para enviar)" rows={4} />
+
+        {ev.status === 'finalized' && ev.evaluatedComment ? <FeedbackField label="Comentário do colaborador" value={ev.evaluatedComment} editable={false} /> : null}
+        {ev.status === 'finalized' && ev.finishedAt ? <p className="text-xs text-zinc-500"><Check className="mr-1 inline h-3.5 w-3.5" />Ciência dada em {new Date(ev.finishedAt).toLocaleString('pt-BR')}</p> : null}
+
+        {isEvaluated && ev.status === 'sent' ? (
+          <div className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+            <p className="text-sm font-semibold text-foreground">{mode === 'review' ? 'O que precisa ser revisado?' : 'Sua resposta'}</p>
+            <Textarea rows={3} className="rounded-xl bg-background" value={reply} onChange={(e) => setReply(e.target.value)} placeholder={mode === 'review' ? 'Explique o que você não concorda (obrigatório)' : 'Comentário opcional para o avaliador'} />
+          </div>
+        ) : null}
+
+        <DialogFooter className="flex-wrap gap-2 sm:justify-between">
+          <div className="flex gap-2">
+            {items?.length ? <Button variant="outline" className="rounded-xl" onClick={report}><FileText className="mr-2 h-4 w-4" />PDF</Button> : null}
+            {(isAdmin || (ev.evaluatorId === meId && ev.status === 'draft')) ? <Button variant="ghost" className="rounded-xl text-rose-600" disabled={busy} onClick={() => { if (window.confirm('Excluir esta avaliação?')) void run(() => E.deleteEvaluation(ev.id), 'Avaliação excluída'); }}><Trash2 className="mr-2 h-4 w-4" />Excluir</Button> : null}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {editable ? <>
+              <Button variant="outline" className="rounded-xl" disabled={busy || !items} onClick={() => void run(() => E.saveDraft(ev.id, patch()), 'Rascunho salvo', false)}><Save className="mr-2 h-4 w-4" />Salvar rascunho</Button>
+              <Button className="rounded-xl" disabled={busy || !items} onClick={() => void run(() => E.sendEvaluation(ev, patch(), meId), ev.status === 'contested' ? 'Avaliação reenviada' : 'Avaliação enviada ao colaborador')}><Send className="mr-2 h-4 w-4" />{ev.status === 'contested' ? 'Reenviar' : 'Enviar ao colaborador'}</Button>
+            </> : null}
+            {isEvaluated && ev.status === 'sent' ? (mode === 'view' ? <>
+              <Button variant="outline" className="rounded-xl" onClick={() => setMode('review')}><RotateCcw className="mr-2 h-4 w-4" />Pedir revisão</Button>
+              <Button className="rounded-xl" disabled={busy} onClick={() => void run(() => E.respondEvaluation(ev.id, true, reply), 'Ciência registrada')}><Check className="mr-2 h-4 w-4" />Dar ciência</Button>
+            </> : <>
+              <Button variant="outline" className="rounded-xl" onClick={() => setMode('view')}>Voltar</Button>
+              <Button className="rounded-xl" disabled={busy || !reply.trim()} onClick={() => void run(() => E.respondEvaluation(ev.id, false, reply), 'Pedido de revisão enviado')}><Send className="mr-2 h-4 w-4" />Enviar pedido</Button>
+            </>) : null}
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function FeedbackField({ label, value, onChange, editable, placeholder, rows = 3 }: { label: string; value: string; onChange?: (v: string) => void; editable: boolean; placeholder?: string; rows?: number }) {
+  if (!editable && !value) return null;
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm font-semibold">{label}</Label>
+      {editable ? <Textarea rows={rows} className="rounded-xl" value={value} onChange={(e) => onChange?.(e.target.value)} placeholder={placeholder} />
+        : <p className="whitespace-pre-wrap rounded-2xl bg-zinc-50 px-3 py-2.5 text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">{value}</p>}
+    </div>
+  );
+}
+
+// ---------- criteria ----------
+function CriteriaPanel({ criteria, userId, onChange }: { criteria: Criterion[]; userId: string; onChange: () => Promise<void> }) {
+  const [edit, setEdit] = useState<{ id?: string; name: string; description: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const run = async (fn: () => Promise<unknown>, ok: string) => {
+    setBusy(true);
+    try { await fn(); toast.success(ok); setEdit(null); await onChange(); } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+  };
+  return (
+    <div className="space-y-3">
+      <div className="ewvon-glass-panel flex flex-col gap-3 rounded-2xl border border-white/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-semibold text-foreground">Critérios de avaliação</p>
+          <p className="text-sm text-zinc-500">São os itens que recebem nota de 1 a 5. Ao criar uma avaliação você escolhe quais usar.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" className="rounded-xl" disabled={busy} onClick={() => void run(async () => { const n = await E.addSuggestedCriteria(userId, criteria.map((c) => c.name)); if (!n) throw new Error('Os critérios sugeridos já foram adicionados.'); }, 'Critérios sugeridos adicionados')}><Sparkles className="mr-2 h-4 w-4" />Usar sugeridos</Button>
+          <Button className="rounded-xl" onClick={() => setEdit({ name: '', description: '' })}><Plus className="mr-2 h-4 w-4" />Novo critério</Button>
+        </div>
+      </div>
+      {!criteria.length ? <p className="py-10 text-center text-sm text-zinc-500">Nenhum critério ainda. Clique em <b>Usar sugeridos</b> para começar rápido.</p> : null}
+      <div className="grid gap-2 md:grid-cols-2">
+        {criteria.map((c) => (
+          <div key={c.id} className={cn('flex items-start gap-3 rounded-2xl border border-zinc-200 bg-background p-3 dark:border-zinc-800', !c.is_active && 'opacity-60')}>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-foreground">{c.name}{!c.is_active ? <span className="ml-2 text-xs text-zinc-500">(desativado)</span> : null}</p>
+              {c.description ? <p className="text-xs text-zinc-500">{c.description}</p> : null}
+            </div>
+            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg" title="Editar" onClick={() => setEdit({ id: c.id, name: c.name, description: c.description || '' })}><Pencil className="h-4 w-4" /></Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg" title={c.is_active ? 'Desativar' : 'Ativar'} disabled={busy} onClick={() => void run(() => E.setCriterionActive(c.id, !c.is_active), c.is_active ? 'Critério desativado' : 'Critério ativado')}>{c.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button>
+          </div>
+        ))}
+      </div>
+      {edit ? (
+        <Dialog open onOpenChange={(o) => { if (!o) setEdit(null); }}>
+          <DialogContent className="max-w-md rounded-3xl">
+            <DialogHeader><DialogTitle>{edit.id ? 'Editar critério' : 'Novo critério'}</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1.5"><Label>Nome</Label><Input className="rounded-xl" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="Ex.: Atendimento ao cliente" /></div>
+              <div className="space-y-1.5"><Label>O que é avaliado</Label><Textarea className="rounded-xl" rows={3} value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} placeholder="Explique em uma frase" /></div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" className="rounded-xl" onClick={() => setEdit(null)}>Cancelar</Button>
+              <Button className="rounded-xl" disabled={busy || !edit.name.trim()} onClick={() => void run(() => E.saveCriterion(edit, userId), 'Critério salvo')}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+    </div>
   );
 }

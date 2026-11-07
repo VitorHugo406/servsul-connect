@@ -450,7 +450,7 @@ function generateDocumentationPDF() {
     ['📬 Resumos Agendados', 'ScheduledSummaryConfig.tsx', 'Envio automático de resumos de produtividade por DM (diário/semanal/mensal)'],
     ['🤖 Chatbot', 'ChatbotWidget.tsx', 'Assistente inteligente integrado para suporte interno'],
     ['🏆 Pontuação Mensal', 'ScorePanel.tsx', 'Ranking de membros por quadro com pontuação baseada em tarefas concluídas'],
-    ['📝 Avaliações', 'EvaluationsSection.tsx', 'Avaliação de desempenho: cargos, competências, ciclos, aprovação, contestação, dashboards'],
+    ['📝 Avaliações', 'EvaluationsSection.tsx', 'Avaliação de desempenho simples: critérios de 1 a 5, feedback, ciência ou pedido de revisão do colaborador'],
     ['🔗 API Integração', 'ApiManagementSection.tsx', 'API REST externa: métricas, dados de usuários, departamentos, equipes para sistemas externos'],
   ], [30, 42, contentW - 72]);
 

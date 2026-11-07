@@ -1011,6 +1011,7 @@ export function pageTitle(p: PageSpec): string {
     case 'muted': return 'Conversas silenciadas';
     case 'support': return 'Suporte';
     case 'ticket': return 'Conversa do chamado';
+    case 'eval': return 'Avaliação';
     default: return '';
   }
 }

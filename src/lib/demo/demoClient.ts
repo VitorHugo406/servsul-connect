@@ -161,6 +161,15 @@ function rpc(s: DemoSession, name: string, args: Row = {}) {
       });
       writeTable('support_tickets', rows); return { data: out, error: out ? null : { message: 'ticket not found' } };
     }
+    case 'evaluation_respond': {
+      let out: Row | null = null; const now = new Date().toISOString();
+      const rows = readTable('evaluations').map(e => {
+        if (e.id !== args._id || e.evaluated_id !== me?.id || e.status !== 'sent') return e;
+        out = { ...e, status: args._accept ? 'finalized' : 'contested', evaluated_comment: args._comment || null, responded_at: now, finalized_at: args._accept ? now : null, acknowledged_at: args._accept ? now : null };
+        return out;
+      });
+      writeTable('evaluations', rows); return { data: out, error: out ? null : { message: 'Esta avaliação não está aguardando sua ciência' } };
+    }
     default: return { data: null, error: null };
   }
 }
