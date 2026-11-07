@@ -558,7 +558,8 @@ export default function EwwonApp() {
   // deep link: /?chat=<key> opens that conversation once the data is loaded
   useEffect(() => {
     if (!boot) return;
-    if (new URLSearchParams(window.location.search).get('tab') === 'notices') setTab(2);
+    const qt = new URLSearchParams(window.location.search).get('tab');
+    if (qt === 'notices') setTab(2); else if (qt === 'birthdays') setTab(3);
     const k = new URLSearchParams(window.location.search).get('chat');
     if (k && boot.chats.some((c) => c.key === k)) { setTab(1); void openRoom(k); }
     // eslint-disable-next-line react-hooks/exhaustive-deps

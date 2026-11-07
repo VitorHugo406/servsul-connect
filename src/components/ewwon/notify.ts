@@ -79,6 +79,14 @@ export function playSound(name: 'msg' | 'aviso') {
   } catch { /* autoplay blocked */ }
 }
 
+const localIcon = (evt: NotifyEvent) => {
+  if (evt.type === 'notice') return '/icons/notify-notice.png?v=3';
+  if (evt.type === 'birthday') return '/icons/notify-birthday.png?v=3';
+  const c = evt.chat;
+  if (c?.photo && /^https:/.test(c.photo)) return c.photo;
+  return c?.kind === 'group' ? '/icons/notify-group.png?v=3' : c?.kind === 'sector' ? '/icons/notify-sector.png?v=3' : '/icons/notify-person.png?v=3';
+};
+
 async function show(evt: NotifyEvent) {
   const p = ctx.prefs() || {};
   const body = p.prev === 0 && evt.type === 'message' ? 'Nova mensagem' : evt.body;
@@ -89,12 +97,12 @@ async function show(evt: NotifyEvent) {
     await LN.schedule({ notifications: [{ id, title: evt.title, body, channelId, smallIcon: 'ic_stat_ewwon', iconColor: '#FFFFFF', group: evt.chat ? 'chat_' + evt.chat.key : undefined, extra: evt.data || {} }] });
   } else if ('Notification' in window && Notification.permission === 'granted') {
     try {
-      const n = new Notification(evt.title, { body, icon: '/ewwon/img/icon-192.png', tag: evt.chat ? evt.chat.key : evt.type });
+      const n = new Notification(evt.title, { body, icon: localIcon(evt), badge: '/icons/badge-96.png?v=3', tag: evt.chat ? evt.chat.key : evt.type });
       n.onclick = () => { window.focus(); ctx.open(evt.data || {}); };
     } catch {
       // Some mobile browsers only allow notifications through the service worker.
       const reg = await navigator.serviceWorker?.getRegistration?.();
-      await reg?.showNotification(evt.title, { body, icon: '/ewwon/img/icon-192.png', tag: evt.chat ? evt.chat.key : evt.type, data: evt.data });
+      await reg?.showNotification(evt.title, { body, icon: localIcon(evt), badge: '/icons/badge-96.png?v=3', tag: evt.chat ? evt.chat.key : evt.type, data: evt.data });
     }
   }
 }
@@ -234,7 +242,7 @@ export async function init(context: Ctx) {
     if (m.type !== 'ewvon-open' || !m.url) return;
     const q = new URL(m.url, location.origin).searchParams;
     const chat = q.get('chat');
-    ctx.open(chat ? { type: 'message', chatId: chat } : q.get('tab') === 'notices' ? { type: 'notice' } : {});
+    ctx.open(chat ? { type: 'message', chatId: chat } : q.get('tab') === 'notices' ? { type: 'notice' } : q.get('tab') === 'birthdays' ? { type: 'birthday' } : {});
   });
   const LN = plug('LocalNotifications');
   if (LN) {

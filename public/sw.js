@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ewvor-runtime-v6';
+const CACHE_NAME = 'ewvor-runtime-v7';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/icons/logo-192.png',
@@ -129,11 +129,11 @@ self.addEventListener('push', (event) => {
     const prev = (await self.registration.getNotifications({ tag }))[0];
     const count = (prev && prev.data && prev.data.count ? prev.data.count : 0) + 1;
     const lines = [...((prev && prev.data && prev.data.lines) || []), d.body || ''].slice(-6);
-    const isNotice = d.kind === 'notice';
+    const isNotice = d.kind === 'notice' || d.kind === 'birthday';
     const title = isNotice ? (d.title || 'Novo aviso') : count > 1 ? `${d.title} · ${count} mensagens` : (d.title || 'ewvon');
     await self.registration.showNotification(title, {
       body: isNotice ? `${d.body || ''}${d.company ? `\n${d.company} · Avisos` : ''}` : count > 1 ? lines.join('\n') : (d.body || 'Nova mensagem'),
-      icon: d.icon || '/icons/logo-192.png',
+      icon: d.icon || '/icons/notify-person.png?v=3',
       badge: d.badge || '/icons/badge-96.png',
       tag,
       renotify: true,
@@ -141,7 +141,7 @@ self.addEventListener('push', (event) => {
       vibrate: isNotice ? [200, 100, 200, 100, 300] : [90, 40, 90],
       requireInteraction: !!(isNotice && d.urgent),
       data: { url: d.url || '/', lines, count, kind: d.kind || 'message' },
-      actions: isNotice ? [{ action: 'open', title: 'Ver aviso' }] : [{ action: 'open', title: 'Abrir conversa' }],
+      actions: d.kind === 'birthday' ? [{ action: 'open', title: 'Dar parabéns' }] : isNotice ? [{ action: 'open', title: 'Ver aviso' }] : [{ action: 'open', title: 'Abrir conversa' }],
     });
   })());
 });

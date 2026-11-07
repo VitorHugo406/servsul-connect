@@ -5,8 +5,14 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
 
-const ICON = 'https://ewvon.vercel.app/icons/logo-192.png'
-const BADGE = 'https://ewvon.vercel.app/icons/badge-96.png'
+// Large icon per type (Android shows it next to the text); ?v busts old cached logos.
+const SITE = 'https://ewvon.vercel.app'
+const IC = {
+  person: `${SITE}/icons/notify-person.png?v=3`, group: `${SITE}/icons/notify-group.png?v=3`, sector: `${SITE}/icons/notify-sector.png?v=3`,
+  notice: `${SITE}/icons/notify-notice.png?v=3`, birthday: `${SITE}/icons/notify-birthday.png?v=3`,
+}
+const BADGE = `${SITE}/icons/badge-96.png?v=3`
+const photo = (u: unknown) => (typeof u === 'string' && /^https:\/\//.test(u) ? u : null)
 const GERAL = '00000000-0000-0000-0000-000000000001'
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { 'Content-Type': 'application/json' } })
 
@@ -47,7 +53,7 @@ Deno.serve(async (req) => {
     const from = await profile(r.sender_id)
     recipients = [r.receiver_id]
     chatKey = () => `dm:${r.sender_id}`
-    payload = { kind: 'message', title: nm(from), body: preview(r.content), icon: from?.avatar_url || ICON, tag: `dm:${r.sender_id}`, url: `/?chat=${encodeURIComponent(`dm:${r.sender_id}`)}`, group: nm(from) }
+    payload = { kind: 'message', title: nm(from), body: preview(r.content), icon: photo(from?.avatar_url) || IC.person, tag: `dm:${r.sender_id}`, url: `/?chat=${encodeURIComponent(`dm:${r.sender_id}`)}`, group: nm(from) }
   } else if (table === 'private_group_messages') {
     const [from, { data: g }, { data: mem }] = await Promise.all([
       profile(r.sender_id),
@@ -56,14 +62,14 @@ Deno.serve(async (req) => {
     ])
     recipients = (mem || []).map((m: Row) => m.profile_id)
     chatKey = () => `group:${r.group_id}`
-    payload = { kind: 'message', title: g?.name || 'Grupo', body: `${nm(from).split(' ')[0]}: ${preview(r.content)}`, icon: g?.avatar_url || from?.avatar_url || ICON, tag: `group:${r.group_id}`, url: `/?chat=${encodeURIComponent(`group:${r.group_id}`)}`, sender: nm(from) }
+    payload = { kind: 'message', title: g?.name || 'Grupo', body: `${nm(from).split(' ')[0]}: ${preview(r.content)}`, icon: photo(g?.avatar_url) || IC.group, tag: `group:${r.group_id}`, url: `/?chat=${encodeURIComponent(`group:${r.group_id}`)}`, sender: nm(from) }
   } else if (table === 'messages') {
     const [from, { data: sector }] = await Promise.all([profile(r.author_id), admin.from('sectors').select('id, name').eq('id', r.sector_id).maybeSingle()])
     let q = admin.from('profiles').select('id').eq('company_id', r.company_id).eq('is_active', true)
     if (r.sector_id !== GERAL) q = q.eq('sector_id', r.sector_id)
     recipients = ((await q).data || []).map((p: Row) => p.id)
     chatKey = () => `sector:${r.sector_id}`
-    payload = { kind: 'message', title: sector?.name || 'Setor', body: `${nm(from).split(' ')[0]}: ${preview(r.content)}`, icon: from?.avatar_url || ICON, tag: `sector:${r.sector_id}`, url: `/?chat=${encodeURIComponent(`sector:${r.sector_id}`)}`, sender: nm(from) }
+    payload = { kind: 'message', title: sector?.name || 'Setor', body: `${nm(from).split(' ')[0]}: ${preview(r.content)}`, icon: IC.sector, tag: `sector:${r.sector_id}`, url: `/?chat=${encodeURIComponent(`sector:${r.sector_id}`)}`, sender: nm(from) }
   } else if (table === 'announcements') {
     if (r.start_at && new Date(r.start_at).getTime() > Date.now() + 60_000) return json({ skipped: 'scheduled' })
     const [{ data: people }, { data: company }] = await Promise.all([
@@ -72,7 +78,34 @@ Deno.serve(async (req) => {
     ])
     recipients = (people || []).map((p: Row) => p.id)
     const urgent = r.priority === 'urgent' || r.priority === 'high' || r.is_pinned
-    payload = { kind: 'notice', title: `📢 ${r.title}`, body: String(r.content || '').replace(/\s+/g, ' ').slice(0, 180), icon: company?.logo_url?.startsWith('http') ? company.logo_url : ICON, tag: `notice:${r.id}`, url: '/?tab=notices', urgent, company: company?.name || 'ewvon' }
+    payload = { kind: 'notice', title: `📢 ${r.title}`, body: String(r.content || '').replace(/\s+/g, ' ').slice(0, 180), icon: IC.notice, tag: `notice:${r.id}`, url: '/?tab=notices', urgent, company: company?.name || 'ewvon' }
+  } else if (table === 'birthday_daily') {
+    // Called once a day by pg_cron: everyone in the company hears about today's birthdays.
+    const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
+    const md = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const { data: all } = await admin.from('profiles').select('id, name, display_name, company_id, birth_date').eq('is_active', true).not('birth_date', 'is', null)
+    const today = (all || []).filter((p: Row) => String(p.birth_date).slice(5, 10) === md)
+    let sentAll = 0
+    for (const companyId of [...new Set(today.map((p: Row) => p.company_id))]) {
+      const people = today.filter((p: Row) => p.company_id === companyId)
+      const names = people.map((p: Row) => nm(p))
+      const ids = (all || []).filter((p: Row) => p.company_id === companyId).map((p: Row) => p.id)
+      const { data: subs } = await admin.from('web_push_subscriptions').select('endpoint, p256dh, auth, profile_id').in('profile_id', ids)
+      for (const s of subs || []) {
+        const own = people.some((p: Row) => p.id === s.profile_id)
+        const others = names.filter((_, i) => people[i].id !== s.profile_id)
+        const body = own && !others.length ? 'Feliz aniversário! 🎉 A equipe toda deseja um dia incrível.'
+          : `Hoje é aniversário de ${others.join(', ').replace(/, ([^,]*)$/, ' e $1')}. Mande os parabéns! 🎉`
+        try {
+          await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify({ kind: 'birthday', title: own && !others.length ? '🎂 Parabéns!' : '🎂 Aniversário hoje', body, icon: IC.birthday, badge: BADGE, tag: `birthday:${md}`, url: '/?tab=birthdays', at: Date.now() }), { TTL: 60 * 60 * 12 })
+          sentAll++
+        } catch (e) {
+          const code = (e as { statusCode?: number }).statusCode
+          if (code === 404 || code === 410) await admin.from('web_push_subscriptions').delete().eq('endpoint', s.endpoint)
+        }
+      }
+    }
+    return json({ sent: sentAll, birthdays: today.length })
   } else {
     return json({ skipped: table })
   }
