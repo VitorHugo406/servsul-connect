@@ -1,3 +1,5 @@
+import { StickerView } from '@/components/common/Stickers';
+import { parseSticker } from '@/lib/stickers';
 import React, { useEffect, useRef, useState, memo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -132,6 +134,7 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
   };
 
   const renderContent = (content: string, isOwnMsg: boolean) => {
+    const __stk = parseSticker(content); if (__stk) return <span className="stk-msg"><StickerView sticker={__stk} size={140} /></span>;
     const lines = content.split('\n');
     const textLines: string[] = [];
     const attachments: { type: 'image' | 'file'; name: string; url: string }[] = [];
