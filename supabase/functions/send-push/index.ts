@@ -22,6 +22,8 @@ type Row = Record<string, any>
 function preview(content: string): string {
   const c = String(content || '').trim()
   if (/^✨ sticker:/.test(c)) return '✨ Figurinha'
+  const voice = c.match(/^🎤 \[(\d{1,2}:\d{2})\]\(voice:/)
+  if (voice) return `🎤 Áudio (${voice[1]})`
   const lines = c.split('\n')
   const text = lines.filter((l) => !/^(📷|📎) \[.+?\]\(.+?\)$/.test(l) && !/^(📝|🏷️|⚡|📅|📌) /.test(l)).join(' ').replace(/^📋 Card #\d+ — /, '📋 ').trim()
   if (text) return text.length > 140 ? text.slice(0, 139) + '…' : text

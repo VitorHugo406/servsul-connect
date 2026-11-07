@@ -28,3 +28,14 @@
 
 ## Chamados de suporte
 - Chamado encerrado: chat somente leitura e avaliação do atendimento (1–5 + comentário) pela RPC `support_rate_ticket`, uma única vez.
+
+## Áudio criptografado de ponta a ponta (08/11/2026)
+- Cada aparelho (celular/PC) gera seu par de chaves ECDH P-256 no navegador; a chave privada é **não exportável** e fica no IndexedDB do aparelho. Só a chave pública vai para `e2e_device_keys`.
+- O áudio é cifrado com AES-256-GCM (chave aleatória por mensagem). Essa chave é selada para cada aparelho de cada membro da conversa (ECDH com chave efêmera + AES-GCM) em `e2e_media_keys`, que cada aparelho só consegue ler para si (RLS).
+- O servidor guarda apenas o arquivo cifrado (bucket privado `voice`, 7 dias, função `voice-cleanup` de hora em hora) e as chaves seladas: não consegue ouvir o áudio.
+- Limitação (igual ao WhatsApp): um aparelho conectado depois do envio não abre áudios antigos; se o app for reinstalado ou os dados do navegador apagados, os áudios antigos ficam indisponíveis naquele aparelho.
+- Gravação no app mobile (botão de microfone quando a caixa de texto está vazia); reprodução no celular e no PC.
+
+## Sessão e app instalado (08/11/2026)
+- `signOut` agora usa `scope: 'local'`: sair num aparelho não derruba os outros (antes o padrão global revogava todas as sessões e o app deslogava sozinho).
+- App instalado (PWA/Android) abre direto no login, pede notificações (obrigatório) e microfone no primeiro acesso; a opção "Baixar aplicativo" aparece só no navegador.
