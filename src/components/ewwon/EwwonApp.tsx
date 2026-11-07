@@ -1,5 +1,7 @@
 // Ewwon mobile app — React port of the "Ewwon · App mobile" prototype,
 // backed by the existing Supabase data (see ./data.ts).
+import { useVoiceRecorder } from '@/components/common/Voice';
+import { fmtDuration, sendVoice } from '@/lib/e2e';
 import { PermissionGate, needsPermissionGate } from './permgate';
 import { StickerPicker, StickerView } from '@/components/common/Stickers';
 import { addFavorite, isSticker, parseSticker, stickerContent } from '@/lib/stickers';
@@ -332,6 +334,22 @@ export default function EwwonApp() {
     }
   }, [boot, meId, patchChat, toast]);
 
+  const voiceRec = useVoiceRecorder(300);
+  const startVoice = async () => {
+    try { N.haptic('light'); await voiceRec.start(); }
+    catch { toast('Permita o microfone para gravar áudio'); }
+  };
+  const sendVoiceNote = async () => {
+    const c = stateRef.current.chats.find((x) => x.key === stateRef.current.curKey);
+    const r = await voiceRec.stop();
+    if (!r || !c) { if (!r) toast('Áudio muito curto'); return; }
+    setSending(true);
+    try {
+      const content = await sendVoice(r.blob, r.seconds, c.mem.length ? c.mem : [c.id], meId);
+      await send(content);
+    } catch (e) { toast((e as Error).message || 'Não foi possível enviar o áudio'); }
+    finally { setSending(false); }
+  };
   const doSend = async () => {
     const v = draft.trim();
     if (!v && !pending.length) return;
@@ -966,14 +984,26 @@ export default function EwwonApp() {
             ) : attOn === 'emoji' ? (
               <div className="ewx-emo">{EMOJIS.map((e) => <button key={e} onClick={() => setDraft((d) => d + e)}>{e}</button>)}</div>
             ) : null}
+            {voiceRec.recording ? (
+              <div className="cmp ewx-rec">
+                <button className="ewx-rec-x" aria-label="Cancelar áudio" onClick={() => voiceRec.cancel()}><I n="trash" /></button>
+                <span className="ewx-rec-dot" />
+                <span className="ewx-rec-t">{fmtDuration(voiceRec.seconds)}</span>
+                <span className="ewx-rec-hint">🔒 Gravando · criptografado</span>
+                <button className="snd" aria-label="Enviar áudio" onClick={() => void sendVoiceNote()}><I n="send" /></button>
+              </div>
+            ) : (
             <div className="cmp">
               <button className={'plus' + (attOn ? ' on' : '')} aria-label="Anexar" onClick={() => setAttOn(attOn ? false : 'menu')}><I n={attOn ? 'x' : 'plus'} /></button>
               <input id="inp" ref={inpRef} placeholder={pending.length ? 'Adicione uma legenda' : 'Escreva uma mensagem'} autoComplete="off" value={draft} maxLength={4000}
                 onFocus={() => setAttOn((a) => (a === 'menu' ? false : a))}
                 onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); void doSend(); } }} />
-              <button className="snd" id="snd" aria-label="Enviar" disabled={sending} onClick={() => void doSend()}>{sending ? <span className="ewx-spin" /> : <I n="send" />}</button>
+              {!draft.trim() && !pending.length && !sending
+                ? <button className="snd ewx-mic" id="snd" aria-label="Gravar áudio" onClick={() => void startVoice()}><I n="mic" /></button>
+                : <button className="snd" id="snd" aria-label="Enviar" disabled={sending} onClick={() => void doSend()}>{sending ? <span className="ewx-spin" /> : <I n="send" />}</button>}
               <input ref={attRef} type="file" multiple hidden onChange={(e) => addFiles(e.target.files)} />
             </div>
+            )}
             <div className={'shs' + (sheetOn ? ' on' : '')} id="shs" onClick={() => setSheetOn(false)} />
             <div className={'sheet' + (sheetOn ? ' on' : '')} id="sheet">
               {cur && sheetOn ? <ChatSheet c={cur} api={api} P={P} tasks={tasksOn[cur.key]} onTasks={(v) => {

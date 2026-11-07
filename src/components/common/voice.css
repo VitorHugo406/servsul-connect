@@ -1,0 +1,13 @@
+/* Voice note player — desktop (Tailwind tokens) and mobile (.ew tokens). */
+.vc { --vc-fg: currentColor; --vc-dim: color-mix(in srgb, currentColor 30%, transparent); display: flex; align-items: center; gap: 10px; min-width: 230px; max-width: 300px; padding: 2px 0; flex-wrap: wrap; }
+.vc button.vc-play { width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 0; cursor: pointer; background: color-mix(in srgb, currentColor 14%, transparent) !important; background-image: none !important; box-shadow: none !important; color: inherit; }
+.vc button.vc-play svg { width: 18px; height: 18px; fill: currentColor; }
+.vc-wave { flex: 1; min-width: 120px; height: 28px; display: flex; align-items: center; gap: 2px; cursor: pointer; }
+.vc-wave i { flex: 1; border-radius: 2px; background: var(--vc-dim); transition: background .15s; }
+.vc-wave i.on { background: var(--vc-fg); }
+.vc-t { font-size: 12px; font-variant-numeric: tabular-nums; opacity: .75; min-width: 32px; }
+.vc-lock { font-size: 11px; opacity: .55; }
+.vc-err { flex-basis: 100%; font-size: 11px; opacity: .7; }
+.vc-off { display: block; max-width: 260px; font-size: 12.5px; opacity: .8; line-height: 1.4; }
+.vc-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: vc-rot .8s linear infinite; }
+@keyframes vc-rot { to { transform: rotate(360deg); } }

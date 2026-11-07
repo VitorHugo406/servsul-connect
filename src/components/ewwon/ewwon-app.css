@@ -419,3 +419,14 @@
 .ew .ewx-pg-help { width: 100%; padding: 12px 14px; border-radius: 16px; background: rgba(255, 195, 107, .12); color: #ffc36b; font-size: 13px; text-align: left; line-height: 1.45; }
 .ew .ewx-pg .btn.full { margin-top: 6px; }
 .ew .ewx-pg-help .btn { display: flex; margin-top: 10px; }
+
+/* Voice notes */
+.ew .ewx-mic svg.i { width: 20px; height: 20px; }
+.ew .cmp.ewx-rec { align-items: center; gap: 10px; }
+.ew .ewx-rec-x { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #ff7a7a; flex-shrink: 0; }
+.ew .ewx-rec-x svg.i { width: 20px; height: 20px; }
+.ew .ewx-rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff4d4f; animation: ewx-rec-blink 1s ease-in-out infinite; flex-shrink: 0; }
+.ew .ewx-rec-t { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; }
+.ew .ewx-rec-hint { flex: 1; min-width: 0; font-size: 12px; color: var(--mu); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes ewx-rec-blink { 50% { opacity: .25; } }
+.ew .bub .vc { color: inherit; }

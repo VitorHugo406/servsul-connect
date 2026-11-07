@@ -113,6 +113,8 @@ export function chatPreview(content: string | null | undefined, max = 60): strin
   const c = String(content || '').trim();
   if (!c) return '';
   if (isSticker(c)) return '✨ Figurinha';
+  const voice = c.match(/^🎤 \[(\d{1,2}:\d{2})\]\(voice:/);
+  if (voice) return `🎤 Áudio (${voice[1]})`;
   const lines = c.split('\n');
   const text = lines.filter((l) => !/^(📷|📎) \[.+?\]\(.+?\)$/.test(l) && !/^(📝|🏷️|⚡|📅|📌) /.test(l)).join(' ').replace(/^📋 Card #\d+ — /, '📋 ').replace(/\s+/g, ' ').trim();
   const imgs = lines.filter((l) => l.startsWith('📷 [')).length;

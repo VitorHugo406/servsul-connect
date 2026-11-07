@@ -1,3 +1,5 @@
+import { VoicePlayer } from '@/components/common/Voice';
+import { parseVoice } from '@/lib/e2e';
 import { StickerView } from '@/components/common/Stickers';
 import { parseSticker } from '@/lib/stickers';
 import React, { useEffect, useRef, useState, memo } from 'react';
@@ -134,7 +136,7 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
   };
 
   const renderContent = (content: string, isOwnMsg: boolean) => {
-    const __stk = parseSticker(content); if (__stk) return <span className="stk-msg"><StickerView sticker={__stk} size={140} /></span>;
+    const __stk = parseSticker(content); if (__stk) return <span className="stk-msg"><StickerView sticker={__stk} size={140} /></span>; const __vc = parseVoice(content); if (__vc) return <VoicePlayer voice={__vc} />;
     const lines = content.split('\n');
     const textLines: string[] = [];
     const attachments: { type: 'image' | 'file'; name: string; url: string }[] = [];

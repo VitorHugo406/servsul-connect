@@ -6,6 +6,8 @@
 import { useState } from 'react';
 import { openMedia, useCachedMedia } from '@/lib/mediaCache';
 import { isSticker } from '@/lib/stickers';
+import { parseVoice } from '@/lib/e2e';
+import { VoicePlayer } from '@/components/common/Voice';
 
 export interface ParsedMsg {
   text: string;
@@ -43,6 +45,7 @@ export function parseMsg(content: string): ParsedMsg {
 /** One-line preview for the conversation list. */
 export function previewText(content: string): string {
   if (isSticker(content)) return '✨ Figurinha';
+  const v = parseVoice(content); if (v) return `🎤 Áudio (${v.duration})`;
   const p = parseMsg(content);
   if (p.text) return p.text.split('\n')[0];
   if (p.images.length) return p.images.length > 1 ? `📷 ${p.images.length} fotos` : '📷 Foto';
@@ -82,6 +85,8 @@ function FileCard({ url, name }: { url: string; name: string }) {
 }
 
 export function MsgBody({ content, onOpenImage }: { content: string; onOpenImage: (u: string, url: string, name: string, caption?: string) => void }) {
+  const voice = parseVoice(content);
+  if (voice) return <VoicePlayer voice={voice} />;
   const p = parseMsg(content);
   const openWithCaption = (u: string, url: string, name: string) => onOpenImage(u, url, name, p.text || undefined);
   return (

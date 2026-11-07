@@ -1,3 +1,5 @@
+import { VoicePlayer } from '@/components/common/Voice';
+import { parseVoice } from '@/lib/e2e';
 import { StickerView } from '@/components/common/Stickers';
 import { parseSticker } from '@/lib/stickers';
 import { ChatTasksControl } from './ChatTasksControl';
@@ -79,7 +81,7 @@ export function PrivateGroupChat({ group }: PrivateGroupChatProps) {
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   const formatTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const renderMessageContent = (content: string, isOwn: boolean) => {
-    const __stk = parseSticker(content); if (__stk) return <span className="stk-msg"><StickerView sticker={__stk} size={140} /></span>;
+    const __stk = parseSticker(content); if (__stk) return <span className="stk-msg"><StickerView sticker={__stk} size={140} /></span>; const __vc = parseVoice(content); if (__vc) return <VoicePlayer voice={__vc} />;
     const lines = content.split('\n'); const textLines: string[] = []; const atts: { type: 'image' | 'file'; name: string; url: string }[] = [];
     for (const line of lines) { const imageMatch = line.match(/^📷 \[(.+?)\]\((.+?)\)$/); const fileMatch = line.match(/^📎 \[(.+?)\]\((.+?)\)$/); if (imageMatch) atts.push({ type: 'image', name: imageMatch[1], url: imageMatch[2] }); else if (fileMatch) atts.push({ type: 'file', name: fileMatch[1], url: fileMatch[2] }); else textLines.push(line); }
     const textContent = textLines.join('\n').trim();
