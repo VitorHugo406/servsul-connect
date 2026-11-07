@@ -639,6 +639,12 @@ export async function registerDevice(token: string, platform: 'android' | 'ios' 
   await sb.from('push_devices').upsert({ profile_id: meId, company_id: companyId, token, platform, app_version: appVersion, updated_at: new Date().toISOString() }, { onConflict: 'token' });
 }
 
+/** Web Push subscription of this browser / installed app (see send-push function). */
+export async function saveWebPush(sub: { endpoint: string; p256dh: string; auth: string }, meId: string, companyId: string) {
+  const r = await sb.from('web_push_subscriptions').upsert({ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth, profile_id: meId, company_id: companyId, user_agent: navigator.userAgent.slice(0, 200), updated_at: new Date().toISOString() }, { onConflict: 'endpoint' });
+  if (r.error) throw r.error;
+}
+
 // ---------------------------------------------------------------- realtime
 
 export interface RealtimeHandlers {

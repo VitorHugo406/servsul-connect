@@ -3,7 +3,8 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import brandLogo from '@/assets/nuvexa-logo.png';
+import markDark from '@/assets/ewvon-mark-dark.png';
+import markLight from '@/assets/ewvon-mark-light.png';
 
 const Dialog = DialogPrimitive.Root;
 
@@ -55,7 +56,7 @@ DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)} {...props}>
-    <img src={brandLogo} alt="Nuvexa" className="mb-3 h-7 w-auto max-w-32 self-start object-contain" />
+    <img src={markDark} alt="ewvon" className="mb-3 h-6 w-auto self-start object-contain dark:hidden" /><img src={markLight} alt="" aria-hidden="true" className="mb-3 hidden h-6 w-auto self-start object-contain dark:block" />
     {props.children}
   </div>
 );

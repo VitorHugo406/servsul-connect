@@ -1,8 +1,9 @@
-const CACHE_NAME = 'ewvor-runtime-v5';
+const CACHE_NAME = 'ewvor-runtime-v6';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/icons/logo-192.png',
   '/icons/logo-512.png',
+  '/icons/badge-96.png',
   '/apple-touch-icon.png'
 ];
 
@@ -111,33 +112,51 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Web Push (sent by the send-push edge function even when the app is closed).
+// Messages look like WhatsApp: title = person / group / sector, body = the message,
+// photo as the icon; several messages of the same chat stack in one notification.
 self.addEventListener('push', (event) => {
-  if (!event.data) return;
-  let data;
-  try {
-    data = event.data.json();
-  } catch {
-    data = { body: event.data.text() };
-  }
-  const options = {
-    body: data.body || 'Nova notificação',
-    icon: '/icons/logo-192.png',
-    badge: '/icons/logo-192.png',
-    vibrate: [100, 50, 100],
-    data: { url: data.url || '/' }
-  };
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'Ewvor', options)
-  );
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch { d = { body: event.data ? event.data.text() : '' }; }
+  event.waitUntil((async () => {
+    const wins = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    // The app is open on screen: it shows its own in-app banner instead.
+    if (d.kind === 'message' && wins.some((c) => c.visibilityState === 'visible' && c.focused)) {
+      wins.forEach((c) => c.postMessage({ type: 'ewvon-push', data: d }));
+      return;
+    }
+    const tag = d.tag || 'ewvon';
+    const prev = (await self.registration.getNotifications({ tag }))[0];
+    const count = (prev && prev.data && prev.data.count ? prev.data.count : 0) + 1;
+    const lines = [...((prev && prev.data && prev.data.lines) || []), d.body || ''].slice(-6);
+    const isNotice = d.kind === 'notice';
+    const title = isNotice ? (d.title || 'Novo aviso') : count > 1 ? `${d.title} · ${count} mensagens` : (d.title || 'ewvon');
+    await self.registration.showNotification(title, {
+      body: isNotice ? `${d.body || ''}${d.company ? `\n${d.company} · Avisos` : ''}` : count > 1 ? lines.join('\n') : (d.body || 'Nova mensagem'),
+      icon: d.icon || '/icons/logo-192.png',
+      badge: d.badge || '/icons/badge-96.png',
+      tag,
+      renotify: true,
+      timestamp: d.at || Date.now(),
+      vibrate: isNotice ? [200, 100, 200, 100, 300] : [90, 40, 90],
+      requireInteraction: !!(isNotice && d.urgent),
+      data: { url: d.url || '/', lines, count, kind: d.kind || 'message' },
+      actions: isNotice ? [{ action: 'open', title: 'Ver aviso' }] : [{ action: 'open', title: 'Abrir conversa' }],
+    });
+  })());
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  const targetUrl = new URL(url, self.location.origin).href;
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      const existing = clientList.find((client) => client.url === targetUrl);
-      if (existing && 'focus' in existing) return existing.focus();
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const existing = list.find((c) => new URL(c.url).origin === self.location.origin);
+      if (existing) {
+        existing.postMessage({ type: 'ewvon-open', url });
+        return 'focus' in existing ? existing.focus() : undefined;
+      }
       return clients.openWindow ? clients.openWindow(targetUrl) : undefined;
     })
   );

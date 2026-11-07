@@ -469,11 +469,13 @@ export default function EwwonApp() {
       prefs: () => stateRef.current.prefs, me: () => stateRef.current.people[meId] || null, open: openFrom,
       chat: (id) => stateRef.current.chats.find((c) => c.key === id) || null, banner: showBanner,
       onToken: (t) => void D.registerDevice(t, N.isNative() ? 'android' : 'web', '1.0.0', meId, boot.companyId).catch(() => undefined),
+      savePush: (sub) => D.saveWebPush(sub, meId, boot.companyId),
     });
     void N.init({
       prefs: () => stateRef.current.prefs, me: () => stateRef.current.people[meId] || null, open: openFrom,
       chat: (id) => stateRef.current.chats.find((c) => c.key === id) || null, banner: showBanner,
       onToken: (t) => void D.registerDevice(t, N.isNative() ? 'android' : 'web', '1.0.0', meId, boot.companyId).catch(() => undefined),
+      savePush: (sub) => D.saveWebPush(sub, meId, boot.companyId),
     }).then(() => setPerm(N.getPermission()));
   }, [boot, meId, openFrom, showBanner]);
 
@@ -556,6 +558,7 @@ export default function EwwonApp() {
   // deep link: /?chat=<key> opens that conversation once the data is loaded
   useEffect(() => {
     if (!boot) return;
+    if (new URLSearchParams(window.location.search).get('tab') === 'notices') setTab(2);
     const k = new URLSearchParams(window.location.search).get('chat');
     if (k && boot.chats.some((c) => c.key === k)) { setTab(1); void openRoom(k); }
     // eslint-disable-next-line react-hooks/exhaustive-deps

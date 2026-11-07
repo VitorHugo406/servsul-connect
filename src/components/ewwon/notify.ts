@@ -23,7 +23,7 @@ const CH_OF: Record<string, string> = { message: 'mensagens', notice: 'avisos', 
 export type NotifyType = 'message' | 'notice' | 'meeting' | 'birthday';
 export interface NotifyEvent { type: NotifyType; chat?: Chat | null; urgent?: boolean; title: string; body: string; data?: Record<string, string>; id?: number }
 
-interface Ctx { prefs: () => Prefs; me: () => Person | null; open: (d: Record<string, string>) => void; chat: (id: string) => Chat | null; banner: (o: { title: string; body: string; data: Record<string, string> }) => void; onToken?: (t: string) => void }
+interface Ctx { prefs: () => Prefs; me: () => Person | null; open: (d: Record<string, string>) => void; chat: (id: string) => Chat | null; banner: (o: { title: string; body: string; data: Record<string, string> }) => void; onToken?: (t: string) => void; savePush?: (s: { endpoint: string; p256dh: string; auth: string }) => Promise<void> }
 let ctx: Ctx = { prefs: () => ({}), me: () => null, open: () => undefined, chat: () => null, banner: () => undefined };
 let fg = typeof document === 'undefined' ? true : !document.hidden;
 let perm: 'granted' | 'denied' | 'prompt' | 'unknown' = 'unknown';
@@ -108,6 +108,9 @@ export async function deliver(evt: NotifyEvent): Promise<{ shown: boolean; mode?
     if ((ctx.prefs() || {}).vib !== 0) haptic('medium');
     return { shown: true, mode: 'banner' };
   }
+  // With Web Push active the server already notifies messages and notices (even with
+  // the app closed), so the page doesn't show a second copy.
+  if (webPushOn && (evt.type === 'message' || evt.type === 'notice')) return { shown: false, reason: 'web push' };
   await show(evt);
   return { shown: true, mode: 'system' };
 }
@@ -136,11 +139,40 @@ export async function ensurePermission() {
     } else if ('Notification' in window) {
       const v = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;
       perm = v === 'default' ? 'prompt' : v;
+      if (perm === 'granted') await subscribeWebPush();
     }
   } catch (e) {
     console.warn('permissão de notificação:', e);
   }
   return perm;
+}
+
+// ---------------------------------------------------------------- Web Push (PWA)
+// Public VAPID key; the private key stays in the database vault (send-push function).
+const VAPID_PUBLIC = 'BOT6DPYNW5XRs63_iI4BVRkOOuhIqoy184vKp1Z6ykeffE_ozv2252u-OPG0JSISC9mGwA9UBleGOxZpYgb8i7o';
+let webPushOn = false;
+export const webPushActive = () => webPushOn;
+const b64ToBytes = (b64: string) => { const p = '='.repeat((4 - (b64.length % 4)) % 4); const raw = atob((b64 + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...raw].map((c) => c.charCodeAt(0))); };
+
+/** Subscribes this browser/installed app to server push (works with the app closed). */
+export async function subscribeWebPush() {
+  try {
+    if (isNative() || !('serviceWorker' in navigator) || !('PushManager' in window) || Notification.permission !== 'granted') return false;
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    const key = sub?.options?.applicationServerKey ? new Uint8Array(sub.options.applicationServerKey as ArrayBuffer) : null;
+    const want = b64ToBytes(VAPID_PUBLIC);
+    if (sub && key && (key.length !== want.length || key.some((b, i) => b !== want[i]))) { await sub.unsubscribe(); sub = null; }
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: want });
+    const j = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+    if (!j.endpoint || !j.keys?.p256dh || !j.keys?.auth) return false;
+    await ctx.savePush?.({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth });
+    webPushOn = true;
+    return true;
+  } catch (e) {
+    console.warn('web push:', e);
+    return false;
+  }
 }
 
 let pushReady = false;
@@ -195,6 +227,15 @@ export async function init(context: Ctx) {
   if (started) return;
   started = true;
   document.addEventListener('visibilitychange', () => { fg = !document.hidden; if (fg) resumed(); else hiddenAt = Date.now(); });
+  if (!isNative() && typeof Notification !== 'undefined' && Notification.permission === 'granted') void subscribeWebPush();
+  // Tapping a system notification while the app is running opens that chat.
+  navigator.serviceWorker?.addEventListener?.('message', (e: MessageEvent) => {
+    const m = e.data || {};
+    if (m.type !== 'ewvon-open' || !m.url) return;
+    const q = new URL(m.url, location.origin).searchParams;
+    const chat = q.get('chat');
+    ctx.open(chat ? { type: 'message', chatId: chat } : q.get('tab') === 'notices' ? { type: 'notice' } : {});
+  });
   const LN = plug('LocalNotifications');
   if (LN) {
     for (const c of CHANNELS) { try { await LN.createChannel(c); } catch (e) { console.warn('canal', c.id, e); } }
