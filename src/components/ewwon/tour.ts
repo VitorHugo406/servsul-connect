@@ -67,7 +67,7 @@ export function runTour(ref: MutableRefObject<TourController | null>, onEnd: () 
     { ui: { tab: 2 }, sel: () => tabEl(3), t: 'Aba Aniversários', d: 'Veja quem faz aniversário e comemore com a equipe.', r: 18, act: async (w) => { await tap(tabEl(3), w); C().go(3); } },
     { ui: { tab: 3 }, sel: () => ($('#hb:not(.hid) #bd') as Element) || $('#nxg'), t: 'Mande parabéns', d: 'Um toque envia a mensagem direto no chat da pessoa. O sininho cria um lembrete.', r: 28 },
     {
-      ui: { tab: 3 }, pos: 'bottom', t: 'Seu menu pessoal', d: 'Em qualquer tela, deslize da esquerda para a direita (ou toque na sua foto no Início). Perfil, status, salas de reunião, configurações e suporte ficam ali.',
+      ui: { tab: 3 }, pos: 'bottom', t: 'Seu menu pessoal', d: 'Em qualquer tela, deslize da esquerda para a direita. Perfil, status, configurações e suporte ficam ali.',
       act: async (w, focus) => {
         fg.style.transition = 'none';
         fg.style.transform = `translate3d(28px,${phone.offsetHeight * 0.45}px,0)`;

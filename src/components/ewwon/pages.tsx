@@ -316,7 +316,7 @@ function SupportPage({ api }: { api: EwApi }) {
   if (tab === 1) {
     body = (
       <>
-        {TK.length ? <div className="grp">{TK.map((k) => <div className="tkr" key={k.id}><div><b>{k.t}</b><small>{k.id} · {k.d}</small></div><span className="tst"><i style={{ background: k.c }} />{k.s}</span></div>)}</div> : <div className="hint" style={{ padding: 30 }}>Você ainda não abriu chamados</div>}
+        {TK.length ? <div className="grp">{TK.map((k) => <div className="tkr" key={k.id}><div><b>{k.t}</b><small>{k.id} · {k.d}{k.who ? ` · atendido por ${k.who}` : ''}</small></div><span className="tst"><i style={{ background: k.c }} />{k.s}</span></div>)}</div> : <div className="hint" style={{ padding: 30 }}>Você ainda não abriu chamados</div>}
         {contact}
       </>
     );

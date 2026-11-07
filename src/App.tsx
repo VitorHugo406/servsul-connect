@@ -7,6 +7,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { DemoTimer } from "@/components/demo/DemoTimer";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { FloatingNoteProvider } from "@/contexts/FloatingNoteContext";
 import { supabase } from "@/integrations/supabase/client";
 import { applyBrand, getCachedBrand } from "@/lib/branding";
@@ -36,6 +37,7 @@ const Auth = lazyWithRetry(() => import("./pages/Auth"));
 const SelectCompany = lazyWithRetry(() => import("./pages/SelectCompany"));
 const BirthdayShare = lazyWithRetry(() => import("./pages/BirthdayShare"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
+const EwwonLogin = lazyWithRetry(() => import("./components/ewwon/EwwonLogin"));
 
 const queryClient = new QueryClient();
 function LoadingScreen({ message = 'Carregando ambiente da empresa...' }: { message?: string }) { return <div className="flex min-h-screen items-center justify-center bg-white dark:bg-slate-950"><div className="flex flex-col items-center gap-4"><div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-400 dark:border-slate-800 dark:border-t-slate-500"/><p className="text-sm text-slate-500 dark:text-slate-400">{message}</p></div></div>; }
@@ -93,7 +95,15 @@ function PersistentAccessNavigation() {
     </div>
   </div>;
 }
-function AppRoutes() { const location = useLocation(); const authContent = <PublicRoute><Auth /></PublicRoute>; return <><PersistentAccessNavigation /><Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><Routes><Route path="/" element={<RootRoute />} /><Route path="/auth" element={location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={<PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="*" element={<RootRoute />} /></Routes></Suspense></>; }
+function AppRoutes() {
+  const location = useLocation();
+  const isMobile = useIsMobile();
+  const full = new URLSearchParams(location.search).get('full') === '1';
+  // Phones get the Ewwon login (company + e-mail/password); "full=1" keeps the complete form (sign-up, facial login).
+  const mobileLogin = isMobile && !full;
+  const authContent = mobileLogin ? <PublicRoute><EwwonLogin /></PublicRoute> : <PublicRoute><Auth /></PublicRoute>;
+  return <>{mobileLogin ? null : <PersistentAccessNavigation />}<Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><Routes><Route path="/" element={<RootRoute />} /><Route path="/auth" element={!mobileLogin && location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={mobileLogin ? authContent : <PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="*" element={<RootRoute />} /></Routes></Suspense></>;
+}
 function AppShell() { return <><DemoTimer /><AuthProvider><CompanyProvider><FloatingNoteProvider><AppRoutes /></FloatingNoteProvider></CompanyProvider></AuthProvider></>; }
 const App = () => (<QueryClientProvider client={queryClient}><TooltipProvider><Toaster /><Sonner /><BrowserRouter><AppShell /></BrowserRouter></TooltipProvider></QueryClientProvider>);
 export default App;

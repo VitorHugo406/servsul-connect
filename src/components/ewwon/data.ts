@@ -36,7 +36,14 @@ export interface Chat {
   sum?: Summary; welcome?: boolean;
 }
 export interface Notice { id: string; title: string; body: string; preview: string; at: string; unread: boolean; acked: boolean; pinned: boolean; author: string; priority: string }
-export interface Ticket { id: string; t: string; s: string; c: string; d: string }
+export interface Ticket { id: string; t: string; s: string; c: string; d: string; who?: string | null }
+export interface DeskTicket {
+  id: number; label: string; companyId: string; companyName: string; reporterId: string; reporterName: string; reporterEmail: string;
+  category: string; area: string; severity: string; description: string; screenshotPath: string | null; device: Row; status: string;
+  assigneeId: string | null; assigneeName: string | null; createdAt: string; updatedAt: string;
+}
+export const TICKET_STATUS = ['Recebido', 'Em análise', 'Resolvido', 'Fechado'];
+export const TICKET_COLOR: Record<string, string> = { Recebido: '#7cc6ff', 'Em análise': '#ffc36b', Resolvido: '#46d37b', Fechado: '#8b8b94' };
 export interface Dashboard {
   tasksTotal: number; tasksDone: number; late: number; open: number; actions: number; activity: number[];
   counters: { msg: number; tasks: number; meet: number; late: number };
@@ -59,7 +66,7 @@ export const DEFAULT_SET: ChatSet = { pin: false, mute: false, muteUntil: 0, mut
 export interface Boot {
   me: Person; people: Record<string, Person>; chats: Chat[]; notices: Notice[]; dashboard: Dashboard;
   birthdays: Birthdays; tickets: Ticket[]; prefs: Prefs; companyId: string; isAdmin: boolean;
-  canPostNotices: boolean; sectorsCount: number;
+  canPostNotices: boolean; sectorsCount: number; supportStaff: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -117,17 +124,18 @@ export async function bootstrap(opts: {
   const d30 = new Date(today0.getTime() - 34 * 864e5);
   const d7 = new Date(today0.getTime() - 6 * 864e5);
 
-  const [profilesR, sectorsR, groupsR, prefsR, chatPrefsR, noticesR, readsR, ticketsR] = await Promise.all([
+  const [profilesR, sectorsR, groupsR, prefsR, chatPrefsR, noticesR, readsR, ticketsR, staffR] = await Promise.all([
     sb.from('profiles').select(PROFILE_COLS).eq('company_id', companyId).eq('is_active', true).order('name'),
     sb.from('sectors').select('id,name,color,company_id').order('name'),
-    sb.from('private_groups').select('id,name,description,avatar_url,cover_url,wallpaper,automations,created_by,updated_at,private_group_members(profile_id,user_id,role)').eq('company_id', companyId),
+    sb.from('private_groups').select('id,name,description,avatar_url,cover_url,wallpaper,automations,created_by,updated_at').eq('company_id', companyId),
     sb.from('user_preferences').select('data').eq('profile_id', profileId).maybeSingle(),
     sb.from('chat_member_prefs').select('*').eq('profile_id', profileId),
     sb.from('announcements').select('id,title,content,priority,is_pinned,created_at,start_at,expire_at,author_id').eq('company_id', companyId)
       .or(`start_at.is.null,start_at.lte.${nowIso}`).or(`expire_at.is.null,expire_at.gt.${nowIso}`)
       .order('is_pinned', { ascending: false }).order('created_at', { ascending: false }).limit(60),
     authUserId ? sb.from('announcement_reads').select('announcement_id,acked_at').eq('user_id', authUserId) : Promise.resolve({ data: [] }),
-    sb.from('support_tickets').select('id,description,category,status,created_at').eq('profile_id', profileId).order('created_at', { ascending: false }).limit(30),
+    sb.from('support_tickets').select('id,description,category,status,created_at,assignee_name').eq('profile_id', profileId).order('created_at', { ascending: false }).limit(30),
+    sb.rpc('is_support_staff'),
   ]);
 
   const sectorRows: Row[] = (sectorsR.data || []).filter((s: Row) => !s.company_id || s.company_id === companyId || s.id === GERAL_SECTOR_ID);
@@ -155,13 +163,16 @@ export async function bootstrap(opts: {
   const groups: Row[] = groupsR.data || [];
   const groupIds = groups.map((g) => g.id);
 
-  const [sectorMsgsR, dmR, groupMsgsR, groupReadsR, summariesR] = await Promise.all([
+  const [sectorMsgsR, dmR, groupMsgsR, groupReadsR, summariesR, membersR] = await Promise.all([
     sectorIds.length ? sb.from('messages').select('id,sector_id,author_id,content,created_at').in('sector_id', sectorIds).eq('company_id', companyId).order('created_at', { ascending: false }).limit(400) : Promise.resolve({ data: [] }),
     sb.from('direct_messages').select('id,sender_id,receiver_id,content,is_read,created_at').eq('company_id', companyId).or(`sender_id.eq.${profileId},receiver_id.eq.${profileId}`).order('created_at', { ascending: false }).limit(800),
     groupIds.length ? sb.from('private_group_messages').select('id,group_id,sender_id,content,created_at').in('group_id', groupIds).order('created_at', { ascending: false }).limit(600) : Promise.resolve({ data: [] }),
     groupIds.length && authUserId ? sb.from('private_group_message_reads').select('group_id,last_read_at').eq('user_id', authUserId) : Promise.resolve({ data: [] }),
     sb.from('scheduled_summaries').select('*').eq('company_id', companyId).eq('frequency', 'daily'),
+    groupIds.length ? sb.from('private_group_members').select('group_id,profile_id,user_id,role').in('group_id', groupIds) : Promise.resolve({ data: [] }),
   ]);
+  const membersByGroup = new Map<string, Row[]>();
+  for (const m of membersR.data || []) membersByGroup.set(m.group_id, [...(membersByGroup.get(m.group_id) || []), m]);
   const summaryByTarget = new Map<string, Row>((summariesR.data || []).map((r: Row) => [`${r.target_type}:${r.target_id}`, r]));
 
   const chats: Chat[] = [];
@@ -210,7 +221,7 @@ export async function bootstrap(opts: {
     if (m.sender_id !== profileId && new Date(m.created_at).getTime() > readAt) groupUnread.set(m.group_id, (groupUnread.get(m.group_id) || 0) + 1);
   }
   for (const g of groups) {
-    const members: Row[] = g.private_group_members || [];
+    const members: Row[] = membersByGroup.get(g.id) || [];
     if (!members.some((m) => m.profile_id === profileId)) continue;
     const key = `group:${g.id}`;
     const l = groupLast.get(g.id);
@@ -249,7 +260,7 @@ export async function bootstrap(opts: {
 
   return {
     me, people, chats, notices, dashboard, birthdays, tickets, prefs, companyId, isAdmin, canPostNotices: opts.canPostNotices,
-    sectorsCount: sectors.length,
+    sectorsCount: sectors.length, supportStaff: staffR?.data === true,
   };
 }
 
@@ -274,7 +285,7 @@ function toTicket(r: Row): Ticket {
   const colors: Record<string, string> = { Recebido: '#7cc6ff', 'Em análise': '#ffc36b', Resolvido: '#46d37b', Fechado: '#8b8b94' };
   const d = String(r.description || r.category || '');
   const num = /^\d+$/.test(String(r.id)) ? String(r.id).padStart(4, '0') : String(r.id).slice(0, 6).toUpperCase();
-  return { id: '#EW-' + num, t: d.slice(0, 38) + (d.length > 38 ? '…' : ''), s: r.status, c: colors[r.status] || '#7cc6ff', d: relDays(r.created_at) };
+  return { id: '#EW-' + num, t: d.slice(0, 38) + (d.length > 38 ? '…' : ''), s: r.status, c: colors[r.status] || '#7cc6ff', d: relDays(r.created_at), who: r.assignee_name || null };
 }
 
 async function loadDashboard(profileId: string, companyId: string, today0: Date, d7: Date, d30: Date, chats: Chat[]): Promise<Dashboard> {
@@ -638,4 +649,59 @@ export function subscribe(companyId: string, meId: string, h: RealtimeHandlers):
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `company_id=eq.${companyId}` }, (p: Row) => h.onProfile(p.new))
     .subscribe();
   return () => { void sb.removeChannel(ch); };
+}
+
+// ---------------------------------------------------------------- support desk (system company)
+
+export function ticketLabel(id: number | string) {
+  return '#EW-' + (/^\d+$/.test(String(id)) ? String(id).padStart(4, '0') : String(id).slice(0, 6).toUpperCase());
+}
+
+export async function listDeskTickets(): Promise<DeskTicket[]> {
+  const r = await sb.rpc('support_list_tickets');
+  if (r.error) throw r.error;
+  return (r.data || []).map((t: Row) => ({
+    id: t.id, label: ticketLabel(t.id), companyId: t.company_id, companyName: t.company_name || '—', reporterId: t.reporter_id,
+    reporterName: t.reporter_name || 'Usuário', reporterEmail: t.reporter_email || '', category: t.category, area: t.area || '—',
+    severity: t.severity || '—', description: t.description, screenshotPath: t.screenshot_path, device: t.device, status: t.status,
+    assigneeId: t.assignee_profile_id, assigneeName: t.assignee_name, createdAt: t.created_at, updatedAt: t.updated_at,
+  }));
+}
+
+export async function updateDeskTicket(id: number, status: string | null, take: boolean) {
+  const r = await sb.rpc('support_update_ticket', { _id: id, _status: status, _take: take });
+  if (r.error) throw r.error;
+  return r.data as Row;
+}
+
+export async function ticketScreenshotUrl(path: string): Promise<string | null> {
+  const r = await sb.storage.from('attachments').createSignedUrl(path, 600);
+  return r.error ? null : (r.data?.signedUrl as string);
+}
+
+export function subscribeTickets(onChange: (row: Row, isNew: boolean) => void): () => void {
+  const ch = sb.channel(`ewwon-tickets-${Date.now()}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, (p: Row) => onChange(p.new, p.eventType === 'INSERT'))
+    .subscribe();
+  return () => { void sb.removeChannel(ch); };
+}
+
+// ---------------------------------------------------------------- create groups
+
+export async function createGroup(name: string, description: string, members: Person[], me: Person, companyId: string): Promise<string> {
+  const { data: auth } = await sb.auth.getUser();
+  const g = await sb.from('private_groups').insert({
+    name: name.slice(0, 30), description: description.slice(0, 160), created_by: auth?.user?.id, company_id: companyId,
+    automations: { welcome: true },
+  }).select('id').single();
+  if (g.error) throw g.error;
+  const id = g.data.id as string;
+  // The creator joins first (allowed while the group is empty) and becomes its admin.
+  const self = await sb.from('private_group_members').insert({ group_id: id, user_id: me.userId, profile_id: me.id, role: 'admin' });
+  if (self.error) throw self.error;
+  if (members.length) {
+    const r = await sb.from('private_group_members').insert(members.map((p) => ({ group_id: id, user_id: p.userId, profile_id: p.id, role: 'member' })));
+    if (r.error) throw r.error;
+  }
+  return id;
 }

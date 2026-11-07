@@ -1,0 +1,128 @@
+// "Tickets" tab: support desk for users of the system (master) company.
+// Lists every support ticket from every company, shows who is handling it,
+// lets the attendant take the ticket and change its status.
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import * as D from './data';
+import type { DeskTicket } from './data';
+import { Seg } from './EwwonApp';
+import { I } from './icons';
+import { fmtTime, relDays } from './util';
+import * as N from './notify';
+
+const FILTERS = ['Abertos', 'Meus', 'Concluídos', 'Todos'];
+
+export function TicketsDesk({ meId, toast, active, onCount }: { meId: string; toast: (t: string) => void; active: boolean; onCount: (n: number) => void }) {
+  const [list, setList] = useState<DeskTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const [f, setF] = useState(0);
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState<number | null>(null);
+  const [busy, setBusy] = useState<number | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setErr(null);
+      setList(await D.listDeskTickets());
+    } catch (e) {
+      console.warn(e);
+      setErr('Não foi possível carregar os tickets.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const unsub = D.subscribeTickets((row, isNew) => {
+      void load();
+      if (isNew && row?.profile_id !== meId) {
+        void N.deliver({ type: 'notice', urgent: true, title: 'Novo ticket de suporte', body: String(row?.description || '').slice(0, 80), data: { type: 'ticket' } });
+      }
+    });
+    return unsub;
+  }, [load, meId]);
+
+  const openCount = useMemo(() => list.filter((t) => t.status === 'Recebido').length, [list]);
+  useEffect(() => { onCount(openCount); }, [openCount, onCount]);
+
+  const shown = list.filter((t) => {
+    const ok = f === 0 ? t.status === 'Recebido' || t.status === 'Em análise' : f === 1 ? t.assigneeId === meId : f === 2 ? t.status === 'Resolvido' || t.status === 'Fechado' : true;
+    const s = q.trim().toLowerCase();
+    return ok && (!s || [t.label, t.companyName, t.reporterName, t.description, t.assigneeName || ''].some((x) => x.toLowerCase().includes(s)));
+  });
+
+  const update = async (t: DeskTicket, status: string | null, take: boolean) => {
+    setBusy(t.id);
+    try {
+      const r = await D.updateDeskTicket(t.id, status, take);
+      setList((ls) => ls.map((x) => (x.id === t.id ? { ...x, status: r.status, assigneeId: r.assignee_profile_id, assigneeName: r.assignee_name, updatedAt: r.updated_at } : x)));
+      toast(take ? 'Você está atendendo este ticket' : `Status: ${status}`);
+    } catch (e) {
+      console.warn(e);
+      toast('Não foi possível atualizar o ticket.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const shot = async (path: string) => {
+    const url = await D.ticketScreenshotUrl(path);
+    if (url) window.open(url, '_blank', 'noopener'); else toast('Captura indisponível');
+  };
+
+  if (!active && loading) return null;
+  return (
+    <>
+      <h1>Tickets</h1>
+      <p className="sub">Suporte de todas as empresas</p>
+      <div className="g2 mn ewx-tk-stats">
+        <div className="mini"><b>{openCount}</b><span>novos aguardando</span></div>
+        <div className="mini"><b>{list.filter((t) => t.status === 'Em análise').length}</b><span>em atendimento</span></div>
+      </div>
+      <Seg id="tkf" items={FILTERS} value={f} onChange={setF} />
+      <label className="srch" style={{ margin: '12px 0' }}><I n="search" /><input placeholder="Buscar por empresa, pessoa ou número" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+      {loading ? <div className="hint" style={{ padding: 30 }}>Carregando…</div> : null}
+      {err ? <div className="hint" style={{ padding: 30 }}>{err} <button className="btn sm sec" onClick={() => void load()}>Tentar de novo</button></div> : null}
+      {!loading && !err && !shown.length ? <div className="hint" style={{ padding: 30 }}>Nenhum ticket aqui</div> : null}
+      <div className="ewx-tk-list">
+        {shown.map((t) => {
+          const isOpen = open === t.id;
+          const mine = t.assigneeId === meId;
+          return (
+            <div key={t.id} className={'card ewx-tk' + (isOpen ? ' open' : '')}>
+              <button className="ewx-tk-head" onClick={() => setOpen(isOpen ? null : t.id)}>
+                <div className="ewx-tk-top">
+                  <b>{t.label}</b>
+                  <span className="tst"><i style={{ background: D.TICKET_COLOR[t.status] || '#7cc6ff' }} />{t.status}</span>
+                </div>
+                <div className="ewx-tk-title">{t.description}</div>
+                <div className="ewx-tk-meta">
+                  <span>{t.companyName}</span><span>·</span><span>{t.reporterName}</span><span>·</span><span>{relDays(t.createdAt)}</span>
+                </div>
+                <div className="ewx-tk-who">{t.assigneeName ? <>Atendido por <b>{mine ? 'você' : t.assigneeName}</b></> : <span className="ewx-tk-free">Sem atendente</span>}</div>
+              </button>
+              {isOpen ? (
+                <div className="ewx-tk-body">
+                  <div className="cr"><span>Categoria</span><b>{t.category}</b></div>
+                  <div className="cr"><span>Área</span><b>{t.area}</b></div>
+                  <div className="cr"><span>Gravidade</span><b>{t.severity}</b></div>
+                  <div className="cr"><span>Empresa</span><b>{t.companyName}</b></div>
+                  <div className="cr"><span>Quem reportou</span><b>{t.reporterName}</b></div>
+                  {t.reporterEmail ? <div className="cr"><span>E-mail</span><b>{t.reporterEmail}</b></div> : null}
+                  <div className="cr"><span>Aberto em</span><b>{new Date(t.createdAt).toLocaleDateString('pt-BR')} {fmtTime(t.createdAt).includes(':') ? fmtTime(t.createdAt) : ''}</b></div>
+                  {t.device ? <div className="cr"><span>Aparelho</span><b>{[t.device.platform, t.device.screen, t.device.app && 'v' + t.device.app].filter(Boolean).join(' · ')}</b></div> : null}
+                  <p className="ewx-tk-desc">{t.description}</p>
+                  {t.screenshotPath ? <button className="btn sm sec" onClick={() => void shot(t.screenshotPath as string)}><I n="upload" />Ver captura de tela</button> : null}
+                  {!mine ? <button className="btn full" disabled={busy === t.id} onClick={() => void update(t, t.status === 'Recebido' ? 'Em análise' : null, true)}>{t.assigneeName ? 'Assumir atendimento' : 'Atender este ticket'}</button> : null}
+                  <div className="sl">Status</div>
+                  <Seg id={'tks' + t.id} items={D.TICKET_STATUS} value={Math.max(0, D.TICKET_STATUS.indexOf(t.status))} onChange={(v) => { if (D.TICKET_STATUS[v] !== t.status) void update(t, D.TICKET_STATUS[v], false); }} />
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}

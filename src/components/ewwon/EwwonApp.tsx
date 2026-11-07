@@ -1,6 +1,6 @@
 // Ewwon mobile app — React port of the "Ewwon · App mobile" prototype,
 // backed by the existing Supabase data (see ./data.ts).
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import './ewwon.css';
 import './ewwon-app.css';
@@ -11,8 +11,8 @@ import { I, Chev } from './icons';
 import { ST, StatusKey, fmtTime, hm, safeStore } from './util';
 import { runTour, type TourController } from './tour';
 import { EwwonPage, type PageSpec } from './pages';
+import { TicketsDesk } from './tickets';
 
-const MeetingRoomsSection = lazy(() => import('@/components/sections/MeetingRoomsSection').then((m) => ({ default: m.MeetingRoomsSection })));
 
 const gr = (h: number) => `hsl(${h} 30% 30%)`;
 export const avStyle = (p: { photo: string | null; hue: number }) => (p.photo ? { background: `url("${p.photo}") center/cover` } : { background: gr(p.hue) });
@@ -46,7 +46,7 @@ export function Tg({ t, d, on, onChange, id }: { t: string; d: string; on: boole
 const MUTE_MS = [3600e3, 8 * 3600e3, 0];
 const REACTIONS = ['👍', '❤️', '😂', '🎉', '🙏'];
 const WISHES = ['Parabéns! 🎉', 'Felicidades 🎂', 'Feliz niver! 🥳'];
-type GsSpec = { kind: 'status' } | { kind: 'member'; id: string } | { kind: 'add' } | { kind: 'notice' } | { kind: 'newchat' };
+type GsSpec = { kind: 'status' } | { kind: 'member'; id: string } | { kind: 'add' } | { kind: 'notice' } | { kind: 'newchat' } | { kind: 'newgroup' };
 
 export interface EwApi {
   boot: Boot; people: Record<string, Person>; chats: Chat[]; prefs: Prefs; cur: Chat | null; me: Person;
@@ -54,7 +54,8 @@ export interface EwApi {
   setPrefs: (p: Prefs) => void; patchChat: (key: string, fn: (c: Chat) => Chat) => void; patchPerson: (id: string, fn: (p: Person) => Person) => void;
   openDm: (personId: string) => void; setStatus: (k: StatusKey, clearMs?: number | null) => void; saveMe: (p: Person) => void;
   pickImg: (cb: (file: File, dataUrl: string) => void) => void; setTheme: (v: number) => void; perm: string; askPerm: () => void;
-  tickets: D.Ticket[]; setTickets: (t: D.Ticket[]) => void; sv: <T>(p: Promise<T>) => Promise<T | undefined>; meetingsOpen: () => void;
+  tickets: D.Ticket[]; setTickets: (t: D.Ticket[]) => void; sv: <T>(p: Promise<T>) => Promise<T | undefined>;
+  reload: () => Promise<void>; openChat: (key: string) => void;
 }
 
 export default function EwwonApp() {
@@ -87,9 +88,9 @@ export default function EwwonApp() {
   const [reminders, setReminders] = useState<Record<string, boolean>>(() => safeStore.get('bdayReminders', {}));
   const [typing, setTyping] = useState<string | null>(null);
   const [perm, setPerm] = useState<string>(N.getPermission());
-  const [meetingsOn, setMeetingsOn] = useState(false);
   const [tourOn, setTourOn] = useState(false);
   const [statusClear, setStatusClear] = useState(3);
+  const [deskCount, setDeskCount] = useState(0);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const phoneRef = useRef<HTMLDivElement>(null);
@@ -394,11 +395,12 @@ export default function EwwonApp() {
 
   // ------------------------------------------------------------ realtime + notifications
   const openFrom = useCallback((d: Record<string, string>) => {
-    setPages([]); setSheetOn(false); setGs(null); setOpen(false); setMeetingsOn(false);
+    setPages([]); setSheetOn(false); setGs(null); setOpen(false);
     if (d?.type === 'message' && d.chatId) { setTab(1); void openRoom(d.chatId); }
     else if (d?.type === 'notice') { setRoomOn(false); setTab(2); }
     else if (d?.type === 'birthday') { setRoomOn(false); setTab(3); }
     else if (d?.type === 'meeting') { setRoomOn(false); setTab(0); }
+    else if (d?.type === 'ticket') { setRoomOn(false); setTab(4); }
   }, [openRoom, setOpen]);
 
   const showBanner = useCallback((o: { title: string; body: string; data: Record<string, string>; av?: Chat | null }) => {
@@ -502,7 +504,6 @@ export default function EwwonApp() {
     N.setBackHandler(() => {
       const r = rootRef.current;
       if (r?.dataset.tour === '1') { setTourOn(false); return true; }
-      if (meetingsOnRef.current) { setMeetingsOn(false); return true; }
       if (gsRef.current) { setGs(null); return true; }
       if (pagesRef.current.length) { setPages((s) => s.slice(0, -1)); return true; }
       if (sheetRef.current) { setSheetOn(false); return true; }
@@ -513,7 +514,6 @@ export default function EwwonApp() {
     });
     N.setResumeHandler(() => { void load(); });
   }, [closeRoom, setOpen, load]);
-  const meetingsOnRef = useRef(meetingsOn); meetingsOnRef.current = meetingsOn;
   const gsRef = useRef(gs); gsRef.current = gs;
   const pagesRef = useRef(pages); pagesRef.current = pages;
   const sheetRef = useRef(sheetOn); sheetRef.current = sheetOn;
@@ -625,15 +625,18 @@ export default function EwwonApp() {
   const fsPx = [13.5, 14.5, 16.5][cur?.set.fs ?? 1];
   const ffCss = ['inherit', 'Georgia,serif', 'ui-monospace,Menlo,monospace'][cur?.set.ff ?? 0];
   const col = [['var(--ac)', 'var(--acx)'], ['#4f8cff', '#fff'], ['#2fbf71', '#fff'], ['#8b5cf6', '#fff']][cur?.set.col ?? 0];
-  const msgsStyle: React.CSSProperties & Record<string, string> = {
+  const msgsVars: React.CSSProperties & Record<string, string> = {
     ['--fs' as string]: fsPx + 'px', ['--ff' as string]: ffCss, ['--mebg' as string]: col[0], ['--mefg' as string]: col[1],
-    backgroundImage: cur?.wp ? `linear-gradient(rgba(8,8,10,.55),rgba(8,8,10,.55)),url("${cur.wp}")` : ['none', 'radial-gradient(rgba(255,255,255,.08) 1px,transparent 1.2px)', 'linear-gradient(rgba(255,255,255,.05),rgba(255,255,255,.05))'][cur?.set.wall ?? 0],
+  };
+  // Chat wallpaper covers the whole conversation screen (header, messages and composer).
+  const roomStyle: React.CSSProperties = {
+    backgroundImage: cur?.wp ? `linear-gradient(rgba(8,8,10,.55),rgba(8,8,10,.55)),url("${cur.wp}")` : ['none', 'radial-gradient(rgba(128,128,140,.28) 1px,transparent 1.2px)', 'linear-gradient(rgba(128,128,140,.1),rgba(128,128,140,.1))'][cur?.set.wall ?? 0],
     backgroundSize: cur?.wp ? 'cover' : cur?.set.wall === 1 ? '16px 16px' : 'auto', backgroundPosition: 'center',
   };
 
   const api: EwApi = {
     boot, people, chats, prefs, cur, me, toast, pgShow, pgBack, pgClose, gsOpen, setPrefs, patchChat, patchPerson, openDm, setStatus, saveMe,
-    pickImg, setTheme: (v) => setPrefs({ ...prefs, theme: v }), perm, askPerm, tickets, setTickets, sv, meetingsOpen: () => setMeetingsOn(true),
+    pickImg, setTheme: (v) => setPrefs({ ...prefs, theme: v }), perm, askPerm, tickets, setTickets, sv, reload: load, openChat: (key) => { setPages([]); setGs(null); setTab(1); window.setTimeout(() => void openRoom(key), 60); },
   };
 
   const top = pages[pages.length - 1];
@@ -653,7 +656,6 @@ export default function EwwonApp() {
           <button className="mi" onClick={() => setPrefs({ ...prefs, snd: prefs.snd ? 0 : 1 })}><I n="sound" />Som das mensagens<span className={'sw' + (prefs.snd ? ' on' : '')} /></button>
           <button className="mi" onClick={() => setPrefs({ ...prefs, theme: prefs.theme === 1 ? 0 : 1 })}><I n="moon" />Tema escuro<span className={'sw' + (prefs.theme !== 1 ? ' on' : '')} /></button>
           <div className="sep" />
-          <button className="mi" onClick={() => { setOpen(false); window.setTimeout(() => setMeetingsOn(true), 260); }}><I n="door" />Salas de reunião</button>
           <button className="mi" id="rt" onClick={() => { setOpen(false); window.setTimeout(() => setTourOn(true), 450); }}><I n="play" />Ver tutorial</button>
           <button className="mi" id="cfg" onClick={() => { setOpen(false); window.setTimeout(() => pgShow({ kind: 'settings' }), 260); }}><I n="sliders" />Configurações</button>
           <button className="mi" id="sup" onClick={() => { setOpen(false); window.setTimeout(() => pgShow({ kind: 'support' }), 260); }}><I n="help" />Suporte</button>
@@ -665,7 +667,6 @@ export default function EwwonApp() {
           <div className="views">
             {/* ---------------- Início ---------------- */}
             <section className={'view' + (tab === 0 ? ' on' : '')} id="v0">
-              <div className="ewx-top"><button className="ewx-menu lq" aria-label="Abrir menu" onClick={() => setOpen(true)}><Av p={me} /></button></div>
               <h1 id="hi">{hello}</h1><p className="sub">Seu resumo de hoje</p>
               <div className="card" id="hero">
                 <div className="stage">
@@ -688,14 +689,14 @@ export default function EwwonApp() {
                   <div className="hc">Atrasadas<b id="hsr">{dash.late}</b></div>
                 </div>
               </div>
-              <div className="g2">
-                <div className="card" id="actcard"><h3>Atividade</h3><div className="big"><span id="n12"><Count to={dash.actions} k={anim} /></span> {dash.actions === 1 ? 'mensagem' : 'mensagens'}</div>
-                  <svg viewBox="0 0 120 56" style={{ width: '100%', marginTop: 6 }}><path ref={lineRef} id="ln" d={linePath} fill="none" stroke="var(--ac)" strokeWidth="3" strokeLinecap="round" strokeDasharray="200" strokeDashoffset="200" /></svg>
+              <div className="g2 ewx-sq">
+                <div className="card" id="actcard"><h3>Atividade</h3><div className="big"><span id="n12"><Count to={dash.actions} k={anim} /></span></div><small className="ewx-sq-sub">{dash.actions === 1 ? 'mensagem enviada' : 'mensagens enviadas'}</small>
+                  <svg viewBox="0 0 120 56" className="ewx-sq-line"><path ref={lineRef} id="ln" d={linePath} fill="none" stroke="var(--ac)" strokeWidth="3" strokeLinecap="round" strokeDasharray="200" strokeDashoffset="200" /></svg>
                   <div className="days"><span>7 dias</span><span>hoje</span></div></div>
-                <div className="card" onClick={() => setMeetingsOn(true)} style={{ cursor: 'pointer' }}><h3>Próxima reunião</h3><div className="big" id="nmt">{dash.nextMeeting ? dash.nextMeeting.time : '—'}</div>
-                  <div id="nmr" style={{ marginTop: 12, fontSize: 13, fontWeight: 600 }}>{dash.nextMeeting ? dash.nextMeeting.room : 'Sem reuniões marcadas'}</div>
-                  <div id="nml" style={{ fontSize: 12, color: 'var(--mu)', marginTop: 3 }}>{dash.nextMeeting ? dash.nextMeeting.title : 'Toque para reservar uma sala'}</div>
-                  <div className="hc" style={{ marginTop: 12, padding: '9px 12px', display: 'flex', justifyContent: 'space-between' }}>faltam<b id="nmi" style={{ margin: 0, fontSize: 12 }}>{dash.nextMeeting ? dash.nextMeeting.inLabel : '—'}</b></div></div>
+                <div className="card" id="meetcard"><h3>Próxima reunião</h3><div className="big" id="nmt">{dash.nextMeeting ? dash.nextMeeting.time.slice(-5) : '—'}</div>
+                  <small className="ewx-sq-sub" id="nmr">{dash.nextMeeting ? (dash.nextMeeting.time.length > 5 ? dash.nextMeeting.time.slice(0, 5) + ' · ' : 'Hoje · ') + dash.nextMeeting.room : 'Sem reuniões marcadas'}</small>
+                  <small className="ewx-sq-sub ewx-sq-mu" id="nml">{dash.nextMeeting ? dash.nextMeeting.title : 'Nada na agenda'}</small>
+                  <div className="hc ewx-sq-foot">faltam<b id="nmi">{dash.nextMeeting ? dash.nextMeeting.inLabel : '—'}</b></div></div>
               </div>
               <div className="card" id="chartcard">
                 <div className="row"><div><h3>Tarefas concluídas</h3><div className="big" id="pc">{chart.p}</div></div>
@@ -724,7 +725,7 @@ export default function EwwonApp() {
                 {pinL.length ? <><div className="lb">Fixadas</div><div className="grp">{pinL.map(row)}</div></> : null}
                 {restL.length ? <><div className="lb">Recentes</div><div className="grp">{restL.map(row)}</div></> : null}
                 {!pinL.length && !restL.length ? <div className="hint" style={{ padding: 30 }}>Nenhuma conversa encontrada</div> : null}
-                <button className="btn sec ewx-newchat" onClick={() => gsOpen({ kind: 'newchat' })}><I n="plus" />Nova conversa</button>
+                <button className="btn sec ewx-newchat" onClick={() => gsOpen({ kind: 'newchat' })}><I n="plus" />Nova conversa ou grupo</button>
               </div>
             </section>
 
@@ -801,27 +802,34 @@ export default function EwwonApp() {
                 {!boot.birthdays.upcoming.length ? <div className="hint" style={{ padding: 24 }}>Nenhuma data de aniversário cadastrada</div> : null}
               </div>
             </section>
+
+            {boot.supportStaff ? (
+              <section className={'view' + (tab === 4 ? ' on' : '')} id="v4">
+                <TicketsDesk meId={meId} toast={toast} active={tab === 4} onCount={setDeskCount} />
+              </section>
+            ) : null}
           </div>
 
-          <nav className="tabs" id="tabs">
-            {[['home', 'Início'], ['chat', 'Chat'], ['bell', 'Avisos'], ['gift', 'Aniversários']].map(([icon, label], i) => (
+          <nav className="tabs" id="tabs" style={boot.supportStaff ? { gridTemplateColumns: 'repeat(5,1fr)' } : undefined}>
+            {[['home', 'Início'], ['chat', 'Chat'], ['bell', 'Avisos'], ['gift', 'Aniversários'], ...(boot.supportStaff ? [['ticket', 'Tickets']] : [])].map(([icon, label], i) => (
               <button key={label} className={'tab' + (tab === i ? ' on' : '')} data-i={i} onClick={() => go(i)}>
                 <I n={icon} />{label}
                 {i === 1 && totalUnread ? <span className="bd" id="bg" style={{ display: 'grid' }}>{totalUnread > 99 ? '99+' : totalUnread}</span> : null}
                 {i === 2 && unreadNotices ? <span className="bd" id="bga" style={{ display: 'grid' }}>{unreadNotices}</span> : null}
+                {i === 4 && deskCount ? <span className="bd" style={{ display: 'grid' }}>{deskCount > 99 ? '99+' : deskCount}</span> : null}
               </button>
             ))}
           </nav>
 
           {/* ---------------- Sala de conversa ---------------- */}
-          <div id="room" className={roomOn ? 'on' : ''}>
+          <div id="room" className={(roomOn ? 'on' : '') + (cur && (cur.wp || cur.set.wall) ? ' ewx-wp' : '')} style={roomStyle}>
             <div className="rh">
               <button id="back" aria-label="Voltar" onClick={closeRoom}><I n="chevL" /></button>
               {cur ? <div className={'av' + (cur.p ? ' on' : '')} id="rav" style={{ ...avStyle(cur.p ? P[cur.p] : cur), ['--sc' as string]: cur.p ? ST[P[cur.p]?.st || 'disp'][1] : '#46d37b' }} onClick={() => (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}>{(cur.p ? P[cur.p]?.photo : cur.photo) ? '' : cur.i}</div> : <div className="av" id="rav" />}
               <div className="rt" onClick={() => cur && (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}><b id="rn">{cur?.n}</b><small id="rs">{typing && cur && typing === cur.key ? 'digitando…' : cur ? stt(cur) : ''}</small></div>
               <button className="lq" id="gear" aria-label="Configurações do chat" onClick={() => setSheetOn(true)}><I n="gear" /></button>
             </div>
-            <div id="msgs" ref={msgsRef} style={msgsStyle} onClick={() => setPickFor(null)}>
+            <div id="msgs" ref={msgsRef} style={msgsVars} onClick={() => setPickFor(null)}>
               <div className="dv">{cur && cur.m.length ? 'Mensagens recentes' : 'Hoje'}</div>
               <div className="hint">Segure ou toque 2x numa mensagem para reagir</div>
               {cur && !cur.loaded ? <div className="hint" style={{ padding: 20 }}>Carregando…</div> : null}
@@ -870,14 +878,6 @@ export default function EwwonApp() {
       </div>
 
     </div>
-      {meetingsOn ? (
-        <div className="ewx-meetings">
-          <div className="ewx-meetings-head"><button className="lq" aria-label="Voltar" onClick={() => setMeetingsOn(false)}><I n="chevL" /></button><b>Salas de reunião</b><span /></div>
-          <div className="ewx-meetings-body">
-            <Suspense fallback={<div className="hint" style={{ padding: 40 }}>Carregando…</div>}><MeetingRoomsSection /></Suspense>
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }
@@ -994,7 +994,7 @@ function ChatSheet({ c, api, P, isMuted, onMute, onSet, onClose }: { c: Chat; ap
       <Tg id="mute" t="Silenciar notificações" d="Não receber alertas desta conversa" on={isMuted} onChange={(v) => onMute(v, s.muteDur ?? 2)} />
       <div className="sl" style={{ marginTop: 12 }}>Silenciar por</div>
       <Seg id="muteDur" items={['1 hora', '8 horas', 'Até eu reativar']} value={s.muteDur ?? 2} onChange={(v) => { if (isMuted) onMute(true, v); else onSet({ muteDur: v }); }} />
-      <div className="opt" onClick={onClose} style={{ justifyContent: 'center', color: 'var(--mu)' }}>Fechar</div>
+      <button className="btn sec full ewx-close" onClick={onClose}>Fechar</button>
     </>
   );
 }
@@ -1006,6 +1006,7 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
   const [pinned, setPinned] = useState(false);
   const [busy, setBusy] = useState(false);
   const [qq, setQq] = useState('');
+  const [sel, setSel] = useState<string[]>([]);
   if (spec.kind === 'status') {
     const clearMs = [30 * 60e3, 3600e3, null, null][statusClear];
     const endOfDay = () => { const d = new Date(); d.setHours(23, 59, 0, 0); return d.getTime() - Date.now(); };
@@ -1082,6 +1083,10 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
       <>
         <div className="gp" />
         <div className="shh"><div><b>Nova conversa</b><small>Escolha uma pessoa da equipe</small></div></div>
+        <div className="opt" onClick={() => { setQq(''); api.gsOpen({ kind: 'newgroup' }); }}>
+          <div className="ewx-ic"><I n="users" /></div><div>Novo grupo<small>Converse com várias pessoas e receba resumos automáticos</small></div><Chev />
+        </div>
+        <div className="sl">Pessoas</div>
         <label className="srch" style={{ margin: '0 0 10px' }}><I n="search" /><input placeholder="Buscar pessoa" value={qq} onChange={(e) => setQq(e.target.value)} /></label>
         {list.map((p) => (
           <div key={p.id} className="opt" onClick={() => { close(); api.openDm(p.id); }}>
@@ -1089,6 +1094,40 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
           </div>
         ))}
         {!list.length ? <div className="hint" style={{ padding: 20 }}>Ninguém encontrado</div> : null}
+      </>
+    );
+  }
+  if (spec.kind === 'newgroup') {
+    const list = Object.values(P).filter((p) => !p.me && p.n.toLowerCase().includes(qq.toLowerCase()));
+    return (
+      <>
+        <div className="gp" />
+        <div className="shh"><div><b>Novo grupo</b><small>Você será o administrador</small></div></div>
+        <div className="sl">Nome do grupo</div>
+        <input className="fld" value={title} maxLength={30} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Projeto Expansão" />
+        <div className="sl">Descrição (opcional)</div>
+        <textarea className="fld" rows={2} value={body} maxLength={160} onChange={(e) => setBody(e.target.value)} placeholder="Para que serve este grupo" />
+        <div className="sl">Participantes · {sel.length} selecionados</div>
+        <label className="srch" style={{ margin: '0 0 10px' }}><I n="search" /><input placeholder="Buscar pessoa" value={qq} onChange={(e) => setQq(e.target.value)} /></label>
+        {list.map((p) => {
+          const on = sel.includes(p.id);
+          return (
+            <div key={p.id} className="opt" onClick={() => setSel((s) => (on ? s.filter((x) => x !== p.id) : [...s, p.id]))}>
+              <Av p={p} st={p.st} /><div>{p.n}<small>{p.dept}</small></div><span className={'ewx-chk' + (on ? ' on' : '')}>{on ? '✓' : ''}</span>
+            </div>
+          );
+        })}
+        <button className="btn full" style={{ marginTop: 14 }} disabled={busy || title.trim().length < 2 || !sel.length} onClick={async () => {
+          setBusy(true);
+          const id = await api.sv(D.createGroup(title.trim(), body.trim(), sel.map((x) => P[x]).filter(Boolean), api.me, api.boot.companyId));
+          if (id) {
+            await api.reload();
+            api.toast('Grupo criado');
+            close();
+            api.openChat(`group:${id}`);
+          }
+          setBusy(false);
+        }}>{busy ? 'Criando…' : 'Criar grupo'}</button>
       </>
     );
   }

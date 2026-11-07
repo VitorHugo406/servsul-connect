@@ -36,11 +36,13 @@ const P: Record<string, string> = {
   bug: 'M8 8h8v6a4 4 0 0 1-8 0zM9 8V6a3 3 0 0 1 6 0v2M4 12h4M16 12h4M5 19l3-2M19 19l-3-2M5 6l3 2M19 6l-3 2',
   bulb: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z',
   info: 'M12 8v5M12 16h.01',
-  door: 'M3 21h18M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M14 12h.01',
+  ticket: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4zM14 5v2M14 11v2M14 17v2',
+  users: 'M16 21v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M22 21v-1a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
 };
 
 const EXTRA: Record<string, JSX.Element> = {
   user: <circle cx="12" cy="8" r="4" />,
+  users: <circle cx="9" cy="7" r="4" />,
   gift: <rect x="3" y="8" width="18" height="4" rx="1" />,
   play: <circle cx="12" cy="12" r="9" />,
   help: <circle cx="12" cy="12" r="9" />,
