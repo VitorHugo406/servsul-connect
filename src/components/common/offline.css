@@ -1,0 +1,16 @@
+.off-screen { position: fixed; inset: 0; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; text-align: center; background: #faf7f0; color: #26231e; font-family: "Segoe Print", "Bradley Hand", "Chalkboard SE", "Comic Sans MS", system-ui, sans-serif; background-image: radial-gradient(circle at 1px 1px, rgba(38, 35, 30, .08) 1px, transparent 0); background-size: 18px 18px; animation: off-in .35s ease; }
+@media (prefers-color-scheme: dark) { .off-screen { background-color: #121212; color: #ecebe6; background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, .06) 1px, transparent 0); } }
+.off-art { overflow: visible; margin-bottom: 4px; }
+.off-s { fill: none; stroke: currentColor; stroke-width: 4.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 2; stroke-dashoffset: 1; opacity: 0; animation: off-draw .7s cubic-bezier(.6, 0, .3, 1) forwards; }
+.off-s.ghost { stroke-width: 1.6; }
+.off-s.ghost { animation-name: off-draw-ghost; }
+.off-s.red { stroke: #e5484d; }
+.off-screen h2 { font-family: inherit; margin: 6px 0 0; font-size: 30px; font-weight: 700; transform: rotate(-1.5deg); }
+.off-screen p { margin: 0; max-width: 320px; font-size: 15px; line-height: 1.5; opacity: .75; }
+.off-screen button { margin-top: 14px; padding: 10px 22px; border: 2.5px solid currentColor; border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; background: transparent !important; background-image: none !important; box-shadow: 3px 3px 0 currentColor !important; color: inherit; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; transition: transform .12s, box-shadow .12s; }
+.off-screen button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 currentColor !important; }
+.off-screen button:disabled { opacity: .6; }
+@keyframes off-draw { 0% { opacity: 0; } 8% { opacity: 1; } 100% { opacity: 1; stroke-dashoffset: 0; } }
+@keyframes off-draw-ghost { 0% { opacity: 0; } 8% { opacity: .55; } 100% { opacity: .55; stroke-dashoffset: 0; } }
+@keyframes off-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .off-s { animation: none; stroke-dashoffset: 0; opacity: 1; } }
