@@ -608,6 +608,8 @@ export async function markNotice(id: string, ack: boolean) {
 export async function createNotice(meId: string, companyId: string, title: string, content: string, pinned: boolean) {
   const r = await sb.from('announcements').insert({ title, content, author_id: meId, company_id: companyId, is_pinned: pinned, priority: pinned ? 'high' : 'normal' }).select('id,created_at').single();
   if (r.error) throw r.error;
+  // Same as desktop: e-mail the notice to the company (runs in the background).
+  void Promise.resolve(sb.functions.invoke('send-announcement-email', { body: { announcementId: r.data.id } })).catch(() => undefined);
   return r.data as { id: string; created_at: string };
 }
 

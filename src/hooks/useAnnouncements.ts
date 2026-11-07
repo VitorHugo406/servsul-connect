@@ -142,9 +142,8 @@ export function useAnnouncements() {
 
     // Send email notification in background
     if (!error && data) {
-      const authorName = profile.display_name || profile.name || 'Administrador';
       supabase.functions.invoke('send-announcement-email', {
-        body: { title, content, priority, authorName },
+        body: { announcementId: data.id },
       }).then(res => {
         if (res.error) console.error('Error sending announcement email:', res.error);
         else console.log('Announcement email sent successfully');

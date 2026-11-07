@@ -1,120 +1,71 @@
+// E-mails a new announcement (aviso) to every active user of the author's company,
+// through the support Gmail account (see ../_shared/mailer.ts), with the ewvon signature.
+// The announcement is read from the database (never trusted from the request body)
+// and only its author can trigger the e-mail.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { Resend } from 'npm:resend@4.0.0'
+import { esc, layout, sendBulk } from '../_shared/mailer.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+
+const PRIORITY: Record<string, { label: string; color: string }> = {
+  normal: { label: 'Aviso', color: '#18181b' },
+  high: { label: 'Importante', color: '#d97706' },
+  important: { label: 'Importante', color: '#d97706' },
+  urgent: { label: 'Urgente', color: '#dc2626' },
+}
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
-
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   try {
-    const resendApiKey = Deno.env.get('RESEND_API_KEY')
-    if (!resendApiKey) {
-      throw new Error('RESEND_API_KEY not configured')
-    }
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const admin = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
-    // Auth check
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    const authHeader = req.headers.get('Authorization') || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+    if (!token) return json({ error: 'Unauthorized' }, 401)
+    const { data: { user }, error: userError } = await admin.auth.getUser(token)
+    if (userError || !user) return json({ error: 'Unauthorized' }, 401)
 
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } }
-    })
-    const token = authHeader.replace('Bearer ', '')
-    const { data: claims, error: claimsError } = await userClient.auth.getClaims(token)
-    if (claimsError || !claims?.claims) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    const body = await req.json().catch(() => ({}))
+    const announcementId = typeof body?.announcementId === 'string' ? body.announcementId : null
+    if (!announcementId) return json({ error: 'announcementId obrigatório' }, 400)
 
-    const body = await req.json()
-    const { title, content, priority, authorName } = body
+    const { data: me } = await admin.from('profiles').select('id, company_id, name, display_name').eq('user_id', user.id).eq('is_active', true).maybeSingle()
+    if (!me) return json({ error: 'Perfil não encontrado' }, 403)
 
-    const resend = new Resend(resendApiKey)
+    const { data: a } = await admin.from('announcements').select('id, title, content, priority, author_id, company_id, created_at').eq('id', announcementId).maybeSingle()
+    if (!a || a.author_id !== me.id || a.company_id !== me.company_id) return json({ error: 'Aviso não encontrado' }, 404)
+    if (Date.now() - new Date(a.created_at).getTime() > 15 * 60e3) return json({ error: 'Aviso antigo demais para disparo' }, 400)
 
-    // Get all active users' emails
-    const { data: profiles } = await supabase.from('profiles').select('email').eq('is_active', true)
-    const emails = (profiles || []).map(p => p.email).filter(Boolean)
+    const [{ data: company }, { data: people }] = await Promise.all([
+      admin.from('companies').select('name').eq('id', a.company_id).maybeSingle(),
+      admin.from('profiles').select('email').eq('company_id', a.company_id).eq('is_active', true).neq('profile_type', 'bot'),
+    ])
+    const emails = (people || []).map((p: { email: string | null }) => p.email || '').filter(Boolean)
+    if (!emails.length) return json({ error: 'Nenhum destinatário' }, 400)
 
-    if (emails.length === 0) {
-      return new Response(JSON.stringify({ error: 'No recipients' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
-
-    const priorityLabel: Record<string, string> = { normal: 'Normal', important: '⚠️ Importante', urgent: '🚨 Urgente' }
-    const priorityColor: Record<string, string> = { normal: '#6366f1', important: '#f59e0b', urgent: '#ef4444' }
-    const pLabel = priorityLabel[priority] || 'Normal'
-    const pColor = priorityColor[priority] || '#6366f1'
-
-    const emailHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-    <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-      <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
-        <div style="background:linear-gradient(135deg,${pColor},${pColor}dd);border-radius:16px 16px 0 0;padding:40px 32px;text-align:center;">
-          <h1 style="color:white;margin:0;font-size:28px;font-weight:700;">📢 Novo Aviso</h1>
-          <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:14px;">Ewvor — Ewvor</p>
-        </div>
-        <div style="background:white;border-radius:0 0 16px 16px;padding:32px;box-shadow:0 4px 6px rgba(0,0,0,0.05);">
-          <div style="display:inline-block;background:${pColor}15;color:${pColor};font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;border:1px solid ${pColor}30;margin:0 0 16px;">
-            ${pLabel}
-          </div>
-          <h2 style="color:#1f2937;margin:0 0 16px;font-size:22px;font-weight:700;">${title}</h2>
-          <div style="color:#4b5563;line-height:1.7;margin:0 0 24px;font-size:15px;white-space:pre-wrap;">${content}</div>
-          <div style="border-top:1px solid #e5e7eb;padding-top:16px;display:flex;align-items:center;gap:12px;">
-            <div style="width:36px;height:36px;border-radius:50%;background:${pColor};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;">
-              ${(authorName || 'U').charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p style="margin:0;color:#374151;font-size:14px;font-weight:600;">${authorName || 'Administrador'}</p>
-              <p style="margin:0;color:#9ca3af;font-size:12px;">${new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-            </div>
-          </div>
-        </div>
-        <div style="text-align:center;padding:24px 0;">
-          <p style="color:#9ca3af;font-size:11px;margin:0;">
-            Este e-mail foi enviado automaticamente pelo Ewvor.<br>
-            © ${new Date().getFullYear()} Ewvor. Todos os direitos reservados.
-          </p>
-        </div>
-      </div>
-    </body>
-    </html>`
-
-    const resendAccountEmail = 'servchatadm@gmail.com'
-
-    // With onboarding@resend.dev, can only send to the account owner
-    const { error } = await resend.emails.send({
-      from: 'Ewvor <onboarding@resend.dev>',
-      to: [resendAccountEmail],
-      subject: `📢 ${pLabel}: ${title}`,
-      html: emailHtml,
-    })
-
-    if (error) throw error
-
-    console.log(`Announcement email sent to ${emails.length} recipients for: ${title}`)
-
-    return new Response(JSON.stringify({ success: true, count: emails.length }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  } catch (error: unknown) {
+    const p = PRIORITY[a.priority] || PRIORITY.normal
+    const author = me.display_name || me.name || 'Administração'
+    const companyName = company?.name || 'ewvon'
+    const when = new Date(a.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    const inner = `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#ffffff;border-radius:20px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
+  <tr><td style="padding:28px 28px 8px">
+    <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#71717a;font-weight:700">${esc(companyName)} · Avisos</div>
+    <div style="margin-top:12px"><span style="display:inline-block;padding:4px 12px;border-radius:999px;background:${p.color};color:#fff;font-size:12px;font-weight:700">${esc(p.label)}</span></div>
+    <h1 style="margin:14px 0 0;font-size:24px;line-height:1.25;color:#09090b">${esc(a.title)}</h1>
+  </td></tr>
+  <tr><td style="padding:12px 28px 24px;color:#3f3f46;font-size:15px;line-height:1.65;white-space:pre-wrap">${esc(a.content)}</td></tr>
+  <tr><td style="padding:16px 28px;border-top:1px solid #f4f4f5;color:#71717a;font-size:13px">Publicado por <b style="color:#18181b">${esc(author)}</b> · ${esc(when)}</td></tr>
+</table>`
+    const sent = await sendBulk(emails, { subject: `${p.label}: ${a.title}`, html: layout(inner, a.content.slice(0, 120)), fromName: companyName })
+    return json({ success: true, count: sent })
+  } catch (error) {
     console.error('Error sending announcement email:', error)
-    const msg = error instanceof Error ? error.message : 'Unknown error'
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
   }
 })

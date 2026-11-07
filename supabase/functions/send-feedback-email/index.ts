@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { Resend } from 'npm:resend@4.0.0'
+import { sendMail, mailerConfigured, esc } from '../_shared/mailer.ts'
 import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1'
 
 const corsHeaders = {
@@ -104,52 +104,19 @@ function buildChatMessage(displayName: string, stats: any, recommendations: stri
     recommendations.forEach(r => { msg += `_${r}_\n` })
   }
   if (pdfUrl) msg += `\n[Baixar Relatorio PDF](${pdfUrl})`
-  msg += `\n\n_Mensagem automatica do Ewvor_`
+  msg += `\n\n_Mensagem automatica do ewvon_`
   return msg
 }
 
 function buildEmailHtml(displayName: string, stats: any, recommendations: string[], currentMonth: string, companyName: string): string {
   const rate = stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
-    <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px 16px 0 0;padding:40px 32px;text-align:center;">
-      <h1 style="color:white;margin:0;font-size:28px;font-weight:700;">Ewvor</h1>
-      <p style="color:rgba(255,255,255,0.8);margin:8px 0 0;font-size:14px;">${companyName}</p>
-    </div>
-    <div style="background:white;border-radius:0 0 16px 16px;padding:32px;box-shadow:0 4px 6px rgba(0,0,0,0.05);">
-      <h2 style="color:#1f2937;margin:0 0 8px;font-size:22px;">Feedback Mensal - ${currentMonth}</h2>
-      <p style="color:#4b5563;line-height:1.6;margin:0 0 24px;">Ola, <strong>${displayName}</strong>! Aqui esta o resumo da sua atividade este mes.</p>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;margin:0 0 24px;">
-        <div style="flex:1;min-width:120px;background:#f0fdf4;border-radius:12px;padding:16px;text-align:center;border:1px solid #bbf7d0;">
-          <p style="color:#16a34a;font-size:28px;font-weight:700;margin:0;">${stats.totalMessages}</p>
-          <p style="color:#4b5563;font-size:12px;margin:4px 0 0;">Mensagens Enviadas</p>
-        </div>
-        <div style="flex:1;min-width:120px;background:#eff6ff;border-radius:12px;padding:16px;text-align:center;border:1px solid #bfdbfe;">
-          <p style="color:#2563eb;font-size:28px;font-weight:700;margin:0;">${stats.completedTasks}/${stats.totalTasks}</p>
-          <p style="color:#4b5563;font-size:12px;margin:4px 0 0;">Tarefas Concluidas</p>
-        </div>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;margin:0 0 24px;">
-        <div style="flex:1;min-width:120px;background:#fef2f2;border-radius:12px;padding:16px;text-align:center;border:1px solid #fecaca;">
-          <p style="color:#dc2626;font-size:28px;font-weight:700;margin:0;">${stats.lateTasks}</p>
-          <p style="color:#4b5563;font-size:12px;margin:4px 0 0;">Entregas com Atraso</p>
-        </div>
-        <div style="flex:1;min-width:120px;background:#fff7ed;border-radius:12px;padding:16px;text-align:center;border:1px solid #fed7aa;">
-          <p style="color:#ea580c;font-size:28px;font-weight:700;margin:0;">${stats.overdueTasks}</p>
-          <p style="color:#4b5563;font-size:12px;margin:4px 0 0;">Tarefas Pendentes</p>
-        </div>
-      </div>
-      ${recommendations.length > 0 ? `<div style="background:#f8fafc;border-radius:12px;padding:24px;margin:0 0 24px;border:1px solid #e2e8f0;">
-        <h3 style="color:#374151;margin:0 0 12px;font-size:16px;">Recomendacoes:</h3>
-        <ul style="color:#4b5563;margin:0;padding:0 0 0 20px;line-height:1.8;">${recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
-      </div>` : ''}
-      <div style="text-align:center;padding:16px 0;">
-        <p style="color:#9ca3af;font-size:12px;margin:0;">Este e-mail foi enviado automaticamente pelo sistema Ewvor.<br>2026 ${companyName}.</p>
-      </div>
-    </div>
-  </div>
-</body></html>`
+  const tile = (v: string | number, l: string, c: string) => `<td width="25%" style="padding:4px"><div style="background:#f4f4f5;border-radius:14px;padding:14px 8px;text-align:center"><div style="font-size:22px;font-weight:800;color:${c}">${v}</div><div style="font-size:11px;color:#71717a;margin-top:2px">${l}</div></div></td>`
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border-radius:20px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
+<tr><td style="background:#0b0b0e;padding:26px 28px"><div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#a1a1aa;font-weight:700">${esc(companyName)} · Feedback mensal</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:8px">${esc(currentMonth)}</div></td></tr>
+<tr><td style="padding:24px 28px 8px;color:#3f3f46;font-size:15px;line-height:1.6">Olá, <b style="color:#09090b">${esc(displayName)}</b>! Aqui está o resumo da sua atividade no mês. O relatório completo segue em PDF anexo.</td></tr>
+<tr><td style="padding:8px 24px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>${tile(stats.totalMessages, 'mensagens', '#18181b')}${tile(`${rate}%`, `${stats.completedTasks}/${stats.totalTasks} tarefas`, '#16a34a')}${tile(stats.lateTasks, 'com atraso', '#d97706')}${tile(stats.overdueTasks, 'pendentes', '#dc2626')}</tr></table></td></tr>
+${recommendations.length ? `<tr><td style="padding:16px 28px 26px"><div style="font-size:13px;font-weight:700;color:#09090b;margin-bottom:8px">Recomendações</div>${recommendations.map((r) => `<div style="font-size:14px;color:#3f3f46;line-height:1.55;padding:8px 12px;border-left:3px solid #18181b;background:#fafafa;border-radius:0 10px 10px 0;margin-bottom:6px">${esc(r)}</div>`).join('')}</td></tr>` : ''}
+</table>`
 }
 
 // Helper to draw rounded rectangle
@@ -203,7 +170,7 @@ async function generatePdf(displayName: string, stats: any, recommendations: str
   drawRoundedRect(page, 30, height - 140, width - 60, 110, 12, headerBlue)
 
   // Header content - centered
-  const titleText = 'Ewvor'
+  const titleText = 'ewvon'
   const titleWidth = helveticaBold.widthOfTextAtSize(titleText, 30)
   page.drawText(titleText, { x: (width - titleWidth) / 2, y: height - 60, size: 30, font: helveticaBold, color: white })
 
@@ -335,7 +302,7 @@ async function generatePdf(displayName: string, stats: any, recommendations: str
   }
 
   // === FOOTER ===
-  const footerText = `Relatorio gerado automaticamente pelo Ewvor em ${dateStr}`
+  const footerText = `Relatorio gerado automaticamente pelo ewvon em ${dateStr}`
   const fWidth = helvetica.widthOfTextAtSize(footerText, 8)
   page.drawText(footerText, { x: (width - fWidth) / 2, y: 40, size: 8, font: helvetica, color: lightText })
 
@@ -352,7 +319,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const resendApiKey = Deno.env.get('RESEND_API_KEY')
+    const canEmail = mailerConfigured()
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
@@ -391,6 +358,13 @@ Deno.serve(async (req) => {
     console.log(`Feedback request: type=${type}, targetUserId=${targetUserId}, cron=${isCron}`)
 
     const defaultSenderProfileId = userId ? await getAdminProfileId(supabase, userId) : null
+    // A company admin only reaches people of their own company; the monthly cron covers everyone.
+    let adminCompanyId: string | null = null
+    if (!isCron && defaultSenderProfileId) {
+      const { data: me } = await supabase.from('profiles').select('company_id').eq('id', defaultSenderProfileId).single()
+      adminCompanyId = me?.company_id ?? null
+      if (!adminCompanyId) return new Response(JSON.stringify({ error: 'Empresa do administrador não encontrada' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
 
     let targetProfiles: any[] = []
     if (type === 'individual' && targetUserId) {
@@ -399,16 +373,18 @@ Deno.serve(async (req) => {
         .select('id, user_id, name, display_name, email, company_id')
         .eq('id', targetUserId)
         .single()
-      if (profileError) {
+      if (profileError || (adminCompanyId && data?.company_id !== adminCompanyId)) {
         return new Response(JSON.stringify({ error: 'User not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
       if (data) targetProfiles = [data]
     } else if (type === 'all') {
-      const { data } = await supabase
+      let q = supabase
         .from('profiles')
         .select('id, user_id, name, display_name, email, company_id')
         .eq('is_active', true)
         .neq('profile_type', 'bot')
+      if (adminCompanyId) q = q.eq('company_id', adminCompanyId)
+      const { data } = await q
       targetProfiles = data || []
     } else {
       return new Response(JSON.stringify({ error: 'Invalid type' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
@@ -418,7 +394,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'No recipients found' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const companyName = 'Ewvor'
+    const companyName = 'ewvon'
     const brNow = getBrazilNow()
     const dateStr = formatBrDate(brNow)
     const now = new Date()
@@ -509,8 +485,9 @@ Deno.serve(async (req) => {
 
         // Generate real PDF using pdf-lib
         let pdfUrl: string | undefined
+        let pdfBytes: Uint8Array | null = null
         try {
-          const pdfBytes = await generatePdf(displayName, stats, recommendations, currentMonth, companyName, dateStr)
+          pdfBytes = await generatePdf(displayName, stats, recommendations, currentMonth, companyName, dateStr)
           const monthSlug = currentMonth.replace(/\s+/g, '-').toLowerCase()
           const fileName = `feedback/${monthSlug}/${profile.id}.pdf`
 
@@ -551,24 +528,22 @@ Deno.serve(async (req) => {
         }
 
         // Send email
-        if (resendApiKey && profile.email) {
+        if (canEmail && profile.email) {
           try {
-            const resend = new Resend(resendApiKey)
             const emailHtml = buildEmailHtml(displayName, stats, recommendations, currentMonth, companyName)
-            const { error: emailError } = await resend.emails.send({
-              from: 'Ewvor <onboarding@resend.dev>',
-              to: [profile.email],
-              subject: `Feedback Mensal - ${currentMonth} | Ewvor`,
+            await sendMail({
+              to: profile.email,
+              subject: `Feedback mensal · ${currentMonth}`,
               html: emailHtml,
+              attachments: pdfBytes ? [{ filename: `feedback-${currentMonth.replace(/\s+/g, '-').toLowerCase()}.pdf`, content: pdfBytes, contentType: 'application/pdf' }] : [],
             })
-            if (emailError) {
-              console.error(`Email error for ${profile.name}:`, emailError)
-            } else {
-              sentEmailCount++
-            }
+            sentEmailCount++
           } catch (e) {
             console.error(`Email exception for ${profile.name}:`, e)
+            errors.push(`E-mail para ${profile.name}: ${e instanceof Error ? e.message : 'falha no envio'}`)
           }
+        } else if (!canEmail && profile.email) {
+          if (!errors.includes('E-mail desativado: configure GMAIL_APP_PASSWORD')) errors.push('E-mail desativado: configure GMAIL_APP_PASSWORD')
         }
       } catch (profileError) {
         console.error(`Error processing ${profile.name}:`, profileError)
