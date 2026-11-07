@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/common/PageHeader';
  import { useState } from 'react';
  import { motion } from 'framer-motion';
   import { 
@@ -246,19 +247,7 @@ interface DeletionOption {
        animate={{ opacity: 1 }}
        className="p-4 md:p-6 space-y-6"
      >
-       <div className="flex items-center gap-3 mb-6">
-         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
-           <Trash2 className="h-6 w-6 text-destructive" />
-         </div>
-         <div>
-           <h2 className="font-display text-2xl font-bold text-foreground">
-             Exclusão de Dados
-           </h2>
-           <p className="text-muted-foreground">
-             Gerenciamento de informações do sistema
-           </p>
-         </div>
-       </div>
+       <PageHeader eyebrow="Administração" icon={<Trash2 />} title={`Exclusão de Dados`} subtitle={`Gerenciamento de informações do sistema`} />
  
        <Alert variant="destructive" className="mb-6">
          <AlertTriangle className="h-4 w-4" />

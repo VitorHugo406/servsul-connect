@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/common/PageHeader';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { HardDrive, Database, RefreshCw, Shield } from 'lucide-react';
@@ -152,25 +153,10 @@ export function StorageMonitoringSection() {
       animate={{ opacity: 1 }}
       className="p-4 md:p-6 space-y-6"
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <HardDrive className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h2 className="font-display text-2xl font-bold text-foreground">
-              Armazenamento
-            </h2>
-            <p className="text-muted-foreground">
-              Monitoramento do uso do banco de dados
-            </p>
-          </div>
-        </div>
-        <Button variant="outline" size="sm" onClick={fetchStorageInfo} disabled={loading} className="gap-2">
+      <PageHeader eyebrow="Sistema" icon={<HardDrive />} title={`Armazenamento`} subtitle={`Monitoramento do uso do banco de dados`} actions={<Button variant="outline" size="sm" onClick={fetchStorageInfo} disabled={loading} className="gap-2">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           Atualizar
-        </Button>
-      </div>
+        </Button>} />
 
       {/* Usage Cards */}
       <div className="grid gap-4 md:grid-cols-2">

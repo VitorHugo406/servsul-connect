@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/common/PageHeader';
  import { useState } from 'react';
  import { motion } from 'framer-motion';
  import { 
@@ -149,25 +150,10 @@ import { SectorIconPicker, SECTOR_ICON_MAP } from '@/components/sectors/SectorIc
        animate={{ opacity: 1 }}
        className="p-4 md:p-6 space-y-6"
      >
-       <div className="flex items-center justify-between">
-         <div className="flex items-center gap-3">
-           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-             <Building2 className="h-6 w-6 text-primary" />
-           </div>
-           <div>
-             <h2 className="font-display text-2xl font-bold text-foreground">
-               Gestão de Setores
-             </h2>
-             <p className="text-muted-foreground">
-               Adicione ou remova departamentos
-             </p>
-           </div>
-         </div>
-         <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+       <PageHeader eyebrow="Administração" icon={<Building2 />} title={`Gestão de Setores`} subtitle={`Adicione ou remova departamentos`} actions={<Button onClick={() => setShowCreateDialog(true)} className="gap-2">
            <Plus className="h-4 w-4" />
            Novo Setor
-         </Button>
-       </div>
+         </Button>} />
  
        {loading ? (
          <div className="flex items-center justify-center py-12">

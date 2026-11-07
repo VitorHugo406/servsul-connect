@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/common/PageHeader';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -199,21 +200,10 @@ export function TaskBoardSection() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="clean-section board-selection flex flex-col h-full">
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-            <ListTodo className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="font-display text-xl font-bold text-foreground">Gestão de Tarefas</h2>
-            <p className="text-sm text-muted-foreground">{boards.length} murais</p>
-          </div>
-        </div>
-        <Button onClick={() => setShowCreateBoard(true)} className="gap-2">
+      <div className="p-4 pb-0"><PageHeader eyebrow="Produtividade" icon={<ListTodo />} title="Gestão de Tarefas" subtitle={`${boards.length} ${boards.length === 1 ? 'mural' : 'murais'}`} actions={<Button onClick={() => setShowCreateBoard(true)} className="gap-2">
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Novo Mural</span>
-        </Button>
-      </div>
+        </Button>} /></div>
 
       <ScrollArea className="flex-1 p-4">
         {boards.length === 0 ? (

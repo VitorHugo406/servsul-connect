@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/common/PageHeader';
 import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Link, Pencil, Plus, Save, Trash2, Users, Building2, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -106,7 +107,7 @@ export function ShortcutsManagementSection() {
 
   if (!isAdmin) return null;
   return <div className="space-y-6 p-4 md:p-6">
-    <div><h2 className="text-2xl font-bold">Atalhos do sistema</h2><p className="mt-1 text-sm text-muted-foreground">Crie atalhos personalizados para sistemas externos e escolha quem poderá vê-los no cabeçalho da tela inicial do PC.</p></div>
+    <PageHeader eyebrow="Administração" icon={<Link />} title="Atalhos do sistema" subtitle="Crie atalhos para sistemas externos e escolha quem poderá vê-los no cabeçalho da tela inicial do PC." />
     <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
       <Card className="rounded-2xl border-border/60"><CardHeader><CardTitle className="flex items-center gap-2"><Plus className="h-5 w-5" />{editingId ? 'Editar atalho' : 'Novo atalho'}</CardTitle></CardHeader><CardContent className="space-y-5">
         <div className="space-y-2"><Label>Nome do atalho</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder="Ex.: Banco de Horas" maxLength={60} /></div>

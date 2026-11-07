@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/common/PageHeader';
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -1236,21 +1237,10 @@ export function MyDashboardSection() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-            <LayoutDashboard className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="font-display text-lg font-bold text-foreground">Meu Painel</h2>
-            <p className="text-xs text-muted-foreground">Olá, {profile?.display_name || profile?.name}! Veja seu desempenho personalizado.</p>
-          </div>
-        </div>
-        <Button onClick={() => setShowPicker(true)} className="gap-2" size="sm">
+      <PageHeader className="mx-4 mt-4 md:mx-6" eyebrow="Desempenho" icon={<LayoutDashboard />} title={`Meu Painel`} subtitle=<>Olá, {profile?.display_name || profile?.name}! Veja seu desempenho personalizado.</> actions={<Button onClick={() => setShowPicker(true)} className="gap-2" size="sm">
           <Plus className="h-4 w-4" />
           Adicionar widget
-        </Button>
-      </div>
+        </Button>} />
 
       {/* Grid */}
       <ScrollArea className="flex-1 p-6">

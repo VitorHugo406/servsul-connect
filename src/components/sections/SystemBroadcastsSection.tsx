@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/common/PageHeader';
 import { useState } from 'react';
 import { Megaphone, Loader2, Trash2, Power, Shield } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,15 +56,7 @@ export function SystemBroadcastsSection() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
-          <Megaphone className="h-6 w-6 text-primary" />
-        </div>
-        <div>
-          <h2 className="font-display text-2xl font-bold text-foreground">Comunicados Globais</h2>
-          <p className="text-muted-foreground">Avisos exibidos para todos os usuários de todas as empresas</p>
-        </div>
-      </div>
+      <PageHeader eyebrow="Sistema" icon={<Megaphone />} title={`Comunicados Globais`} subtitle={`Avisos exibidos para todos os usuários de todas as empresas`} />
 
       <Card className="rounded-2xl">
         <CardHeader>

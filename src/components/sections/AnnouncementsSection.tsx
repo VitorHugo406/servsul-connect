@@ -1,6 +1,7 @@
+import { PageHeader } from '@/components/common/PageHeader';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pin, AlertTriangle, Clock, Trash2, Plus, X, Send, CalendarClock, Calendar, Sparkles } from 'lucide-react';
+import { Pin, AlertTriangle, Clock, Trash2, Plus, X, Send, CalendarClock, Calendar, Sparkles , Megaphone} from 'lucide-react';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CardGridSkeleton } from '@/components/ui/skeletons';
@@ -288,6 +289,8 @@ export function AnnouncementsSection() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
       <div className="flex-1 overflow-auto p-4 sm:p-6">
+        <PageHeader className="mb-5" eyebrow="Comunicação" icon={<Megaphone />} title="Avisos" subtitle="Comunicados da empresa para toda a equipe"
+          />
         <AnimatePresence>
           {showForm && canManageAnnouncements && (
             <motion.div

@@ -116,18 +116,30 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
   const visibleBirthdays = birthdayPeople.slice(0, 4);
   const latestAnnouncement = announcements[0];
 
+  // Task status is the board column id: show the column title instead of the raw id.
+  const [columnNames, setColumnNames] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const ids = Array.from(new Set(tasks.map((t) => t.status).filter((v): v is string => !!v && /^[0-9a-f-]{36}$/i.test(v))));
+    if (!ids.length) return;
+    let alive = true;
+    void (supabase as any).from('task_board_columns').select('id,title').in('id', ids).then(({ data }: { data: { id: string; title: string }[] | null }) => {
+      if (alive && data) setColumnNames(Object.fromEntries(data.map((c) => [c.id, c.title])));
+    });
+    return () => { alive = false; };
+  }, [tasks]);
+
   const taskStatusData = useMemo(() => {
     const counts = new Map<string, number>();
     tasks.forEach((task) => {
-      const status = (task.status || 'pending').toLowerCase();
+      const status = /^[0-9a-f-]{36}$/i.test(task.status || '') ? (task.status as string) : (task.status || 'pending').toLowerCase();
       counts.set(status, (counts.get(status) || 0) + 1);
     });
     return Array.from(counts.entries()).map(([status, value], index) => ({
-      name: statusLabels[status] || status.replace(/_/g, ' '),
+      name: columnNames[status] || statusLabels[status] || (/^[0-9a-f-]{36}$/i.test(status) ? 'Coluna' : status.replace(/_/g, ' ')),
       value,
       fill: statusColors[index % statusColors.length],
     })).sort((a, b) => b.value - a.value).slice(0, 5);
-  }, [tasks]);
+  }, [tasks, columnNames]);
 
   const activityData = useMemo(() => Array.from({ length: 7 }, (_, index) => {
     const day = startOfDay(subDays(new Date(), 6 - index));

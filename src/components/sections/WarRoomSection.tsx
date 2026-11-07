@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/common/PageHeader';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useWarRooms, useWarRoomDetail, WarRoom, EmergencyTaskInput } from '@/hooks/useWarRooms';
@@ -506,15 +507,7 @@ export function WarRoomSection() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Shield className="h-6 w-6 text-destructive" /> War Room
-          </h2>
-          <p className="text-sm text-muted-foreground">Gestão de incidentes críticos e respostas de emergência</p>
-        </div>
-        {canCreateWarRoom && <CreateWarRoomDialog onCreated={room => setSelectedRoom(room)} />}
-      </div>
+      <PageHeader eyebrow="Operação" icon={<Shield />} title="War Room" subtitle="Gestão de incidentes críticos e respostas de emergência" actions={canCreateWarRoom && <CreateWarRoomDialog onCreated={room => setSelectedRoom(room)} />} />
 
       <div className="flex gap-2">
         <Button variant={filter === 'active' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('active')} className="gap-1.5">

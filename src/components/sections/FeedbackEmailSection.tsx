@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/common/PageHeader';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Send, Users, User, Loader2, Shield, CheckCircle, Calendar } from 'lucide-react';
@@ -99,15 +100,7 @@ export function FeedbackEmailSection() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 md:p-6 space-y-6">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-          <Mail className="h-6 w-6 text-primary" />
-        </div>
-        <div>
-          <h2 className="font-display text-2xl font-bold text-foreground">Disparo de Feedback</h2>
-          <p className="text-muted-foreground">Envio de e-mails e mensagens no chat com resumo mensal</p>
-        </div>
-      </div>
+      <PageHeader eyebrow="Pessoas" icon={<Mail />} title={`Disparo de Feedback`} subtitle={`Envio de e-mails e mensagens no chat com resumo mensal`} />
 
       {/* Auto info */}
       <Card className="border-primary/20 bg-primary/5">

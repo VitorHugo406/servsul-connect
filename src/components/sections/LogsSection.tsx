@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/common/PageHeader';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -277,16 +278,8 @@ export function LogsSection() {
         className="space-y-4 md:space-y-6"
       >
         {/* Header */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="font-display text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
-              <FileText className="h-6 w-6 text-primary" />
-              Logs do Sistema
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {filteredLogs.length} registro{filteredLogs.length !== 1 ? 's' : ''} encontrado{filteredLogs.length !== 1 ? 's' : ''}
-            </p>
-          </div>
+        <PageHeader eyebrow="Sistema" icon={<FileText />} title="Logs do Sistema" subtitle={<>{filteredLogs.length} registro{filteredLogs.length !== 1 ? 's' : ''} encontrado{filteredLogs.length !== 1 ? 's' : ''}</>} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"

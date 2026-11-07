@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/common/PageHeader';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Key, Plus, Copy, Eye, EyeOff, RefreshCw, Trash2, Power, PowerOff, History, Shield, AlertTriangle, Check, X, Search, Globe } from 'lucide-react';
@@ -226,19 +227,10 @@ export function ApiManagementSection() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="font-display text-2xl font-bold text-foreground flex items-center gap-2">
-            <Globe className="h-7 w-7 text-primary" />
-            API de Integração
-          </h3>
-          <p className="text-muted-foreground text-sm mt-1">Gerencie integrações externas para acesso a métricas e dados do sistema</p>
-        </div>
-        <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+      <PageHeader eyebrow="Integrações" icon={<Globe />} title="API de Integração" subtitle="Gerencie integrações externas para acesso a métricas e dados do sistema" actions={<Button onClick={() => setShowCreateDialog(true)} className="gap-2">
           <Plus className="h-4 w-4" />
           Nova Integração
-        </Button>
-      </div>
+        </Button>} />
 
       {/* Security notice */}
       <Card className="border-amber-500/30 bg-amber-500/5">

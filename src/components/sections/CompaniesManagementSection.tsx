@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/common/PageHeader';
 import { useEffect, useState } from 'react';
 import {
   Building2,
@@ -308,16 +309,7 @@ export function CompaniesManagementSection() {
 
   return (
     <div className="p-6 md:p-8 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Building2 className="w-6 h-6" /> Empresas
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Metadados, cores, módulos habilitados e administradores por empresa.
-          </p>
-        </div>
-        <Dialog open={openNew} onOpenChange={setOpenNew}>
+      <PageHeader eyebrow="Sistema" icon={<Building2 />} title="Empresas" subtitle="Metadados, cores, módulos habilitados e administradores por empresa." actions={<Dialog open={openNew} onOpenChange={setOpenNew}>
           <DialogTrigger asChild>
             <Button><Plus className="w-4 h-4 mr-2" /> Nova empresa</Button>
           </DialogTrigger>
@@ -354,8 +346,7 @@ export function CompaniesManagementSection() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
-      </div>
+        </Dialog>} />
 
       {loading ? (
         <div className="py-12 flex justify-center">
