@@ -70,20 +70,16 @@ export function FeedbackEmailSection() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      if (targetUserId) {
-        setSentUsers(prev => new Set([...prev, targetUserId]));
-        const parts = [];
-        if (data.emailCount > 0) parts.push('e-mail');
-        if (data.dmCount > 0) parts.push('mensagem no chat');
-        if (data.pdfCount > 0) parts.push('PDF');
-        toast.success(`Feedback enviado com sucesso (${parts.join(' + ')})!`);
-      } else {
-        setSentUsers(new Set(users.map(u => u.id)));
-        toast.success(`Feedback enviado: ${data.emailCount} e-mail(s) + ${data.dmCount} chat(s) + ${data.pdfCount} PDF(s)!`);
-      }
-
-      if (data?.errors && data.errors.length > 0) {
-        toast.warning(`${data.errors.length} erro(s) parcial(is). Verifique os logs.`);
+      const d = data?.details || {};
+      const emails = d.sentEmailCount ?? 0, dms = d.sentDmCount ?? 0, pdfs = d.sentPdfCount ?? 0;
+      if (targetUserId) setSentUsers(prev => new Set([...prev, targetUserId]));
+      else setSentUsers(new Set(users.map(u => u.id)));
+      toast.success(`Feedback enviado: ${dms} no chat · ${emails} por e-mail · ${pdfs} PDF(s)`);
+      const errs: string[] = data?.errors || [];
+      if (errs.some((e) => /GMAIL_APP_PASSWORD/.test(e))) {
+        toast.warning('E-mail não enviado: falta configurar a senha de app do Gmail (GMAIL_APP_PASSWORD) nas Secrets das Edge Functions do Supabase.', { duration: 10000 });
+      } else if (errs.length) {
+        toast.warning(`${errs.length} problema(s): ${errs.slice(0, 2).join(' · ')}`, { duration: 8000 });
       }
     } catch (error) {
       console.error('Error sending feedback:', error);
