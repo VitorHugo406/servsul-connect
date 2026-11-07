@@ -124,7 +124,7 @@ export default function EwwonLogin() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: prof } = await (supabase as any).from('profiles').select('company_id').eq('user_id', u.user?.id).maybeSingle();
         if (!prof || prof.company_id !== company.id) {
-          await supabase.auth.signOut();
+          await supabase.auth.signOut({ scope: 'local' });
           setErr('Cadastro não encontrado para esta empresa');
           return;
         }

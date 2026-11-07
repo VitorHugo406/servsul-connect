@@ -1,4 +1,5 @@
 import { OfflineScreen } from "@/components/common/OfflineScreen";
+import { isInstalledApp } from "@/lib/appMode";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -52,6 +53,8 @@ function RootRoute() {
   const { user, loading, verifying } = useAuth();
   if (loading || verifying) return <LoadingScreen />;
   if (user) return <Index />;
+  // Installed app: straight to the login; the marketing home page is only for the browser.
+  if (isInstalledApp()) return <Navigate to="/select-company" replace />;
   return <LandingPage />;
 }
 function PersistentAccessNavigation() {

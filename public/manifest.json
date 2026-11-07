@@ -3,7 +3,7 @@
   "short_name": "ewvon",
   "description": "Comunicação, tarefas e pessoas em um só lugar.",
   "id": "/",
-  "start_url": "/",
+  "start_url": "/?app=1",
   "display": "standalone",
   "background_color": "#08080a",
   "theme_color": "#08080a",

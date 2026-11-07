@@ -320,7 +320,7 @@ const Auth = () => {
             .eq('user_id', uid)
             .maybeSingle();
           if (!prof || prof.company_id !== companyBrand.id) {
-            await supabase.auth.signOut();
+            await supabase.auth.signOut({ scope: 'local' });
             setError('Cadastro não encontrado para esta empresa');
             setLoading(false);
             setVerifying(false);
