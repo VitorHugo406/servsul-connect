@@ -5,7 +5,7 @@ import { fmtDuration, sendVoice, watchKeyRequests } from '@/lib/e2e';
 import { PermissionGate, needsPermissionGate } from './permgate';
 import { StickerPicker, StickerMessage } from '@/components/common/Stickers';
 import { addFavorite, isSticker, parseSticker, stickerContent } from '@/lib/stickers';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import * as CT from '@/lib/chatTasks';
@@ -54,6 +54,15 @@ export function Tg({ t, d, on, onChange, id }: { t: string; d: string; on: boole
 }
 
 const MUTE_MS = [3600e3, 8 * 3600e3, 0];
+const dayKey = (iso: string) => new Date(iso).toDateString();
+function dayLabel(iso: string) {
+  const d = new Date(iso); const t = new Date(); const y = new Date(); y.setDate(t.getDate() - 1);
+  if (d.toDateString() === t.toDateString()) return 'Hoje';
+  if (d.toDateString() === y.toDateString()) return 'Ontem';
+  const diff = (t.getTime() - d.getTime()) / 864e5;
+  if (diff < 7) { const w = d.toLocaleDateString('pt-BR', { weekday: 'long' }); return w.charAt(0).toUpperCase() + w.slice(1); }
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: d.getFullYear() === t.getFullYear() ? undefined : 'numeric' });
+}
 const REACTIONS = ['👍', '❤️', '😂', '🎉', '🙏'];
 const EMOJIS = '😀 😃 😄 😁 😆 😅 😂 🙂 😉 😊 😍 🥰 😘 😎 🤩 🥳 🤔 🤗 🙄 😴 😮 😢 😭 😡 🤯 😱 👍 👎 👏 🙌 🙏 💪 👋 🤝 ✌️ 👌 ❤️ 🧡 💛 💚 💙 💜 🔥 ✨ ⭐ 🎉 🎂 🎁 ✅ ❌ ⚠️ 📌 📎 📷 💬 📅 ⏰ 🚀 💡 ☕'.split(' ');
 const WISHES = ['Parabéns! 🎉', 'Felicidades 🎂', 'Feliz niver! 🥳'];
@@ -100,6 +109,13 @@ export default function EwwonApp() {
   const [typing, setTyping] = useState<string | null>(null);
   const [perm, setPerm] = useState<string>(N.getPermission());
   const [tourOn, setTourOn] = useState(false);
+  const [ctMenu, setCtMenu] = useState<Chat | null>(null);
+  const [dots, setDots] = useState(false);
+  const [search, setSearch] = useState<{ q: string; i: number } | null>(null);
+  const [dayFloat, setDayFloat] = useState<string | null>(null);
+  const dayTimer = useRef<number>(0);
+  const ctHold = useRef<{ t: number; fired: boolean }>({ t: 0, fired: false });
+  const [groupWm, setGroupWm] = useState<number | null>(null);
   const [permGate, setPermGate] = useState(() => needsPermissionGate());
   const [statusClear, setStatusClear] = useState(3);
   const [deskCount, setDeskCount] = useState(0);
@@ -129,6 +145,30 @@ export default function EwwonApp() {
   const companyRef = useRef(''); companyRef.current = boot?.companyId || '';
   const me = people[meId] || boot?.me;
   const cur = useMemo(() => chats.find((c) => c.key === curKey) || null, [chats, curKey]);
+  const hits = useMemo(() => {
+    const q = search?.q.trim().toLowerCase();
+    if (!q || !cur) return [] as string[];
+    return cur.m.filter((m) => D.plainText(m.t).toLowerCase().includes(q)).map((m) => m.id).reverse();
+  }, [search?.q, cur]);
+  useEffect(() => {
+    document.querySelectorAll('.ewx-hit').forEach((el) => el.classList.remove('ewx-hit'));
+    const id = hits[search?.i ?? 0];
+    if (!id) return;
+    const el = document.querySelector(`[data-mid="${id}"]`);
+    if (el) { el.classList.add('ewx-hit'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  }, [hits, search?.i]);
+  useEffect(() => { setSearch(null); setDots(false); setDayFloat(null); }, [curKey, roomOn]);
+  const onMsgsScroll = () => {
+    const box = msgsRef.current;
+    if (!box) return;
+    const top = box.getBoundingClientRect().top + 8;
+    let label: string | null = null;
+    box.querySelectorAll<HTMLElement>('.ewx-dsep').forEach((el) => { if (el.getBoundingClientRect().top <= top) label = el.dataset.day || null; });
+    if (!label) { const first = box.querySelector<HTMLElement>('.ewx-dsep'); label = first?.dataset.day || null; }
+    setDayFloat(label);
+    window.clearTimeout(dayTimer.current);
+    dayTimer.current = window.setTimeout(() => setDayFloat(null), 1500);
+  };
 
   // ------------------------------------------------------------ helpers
   const toast = useCallback((t: string) => {
@@ -458,6 +498,13 @@ export default function EwwonApp() {
   };
 
   // ------------------------------------------------------------ notices
+  const canDeleteNotice = (n: Notice) => n.authorId === meId || boot?.isAdmin || boot?.canPostNotices;
+  const removeNotice = (n: Notice) => {
+    if (!window.confirm(`Excluir o aviso “${n.title}” para todos?`)) return;
+    const before = notices;
+    setNotices((ns) => ns.filter((x) => x.id !== n.id));
+    void D.deleteNotice(n.id).then(() => toast('Aviso excluído')).catch(() => { setNotices(before); toast('Não foi possível excluir o aviso'); });
+  };
   const pinned = notices.find((n) => n.pinned) || null;
   const rest = notices.filter((n) => n !== pinned);
   const unreadNotices = notices.filter((n) => n.unread).length;
@@ -498,6 +545,31 @@ export default function EwwonApp() {
       savePush: (sub) => D.saveWebPush(sub, meId, boot.companyId),
     }).then(() => setPerm(N.getPermission()));
   }, [boot, meId, openFrom, showBanner]);
+
+  // Read receipts: DMs in real time; groups refreshed while the group is open.
+  useEffect(() => {
+    if (!boot || !meId) return;
+    return D.subscribeDmReads(meId, (row) => {
+      const key = `dm:${row.receiver_id}`;
+      const upto = new Date(row.created_at).getTime();
+      setChats((cs) => cs.map((c) => (c.key !== key ? c : {
+        ...c,
+        m: c.m.map((x) => (x.me && !x.rd && new Date(x.at).getTime() <= upto ? { ...x, rd: true } : x)),
+        last: c.last && c.last.me && new Date(c.last.at).getTime() <= upto ? { ...c.last, rd: true } : c.last,
+      })));
+    });
+  }, [boot, meId]);
+  useEffect(() => {
+    const c = cur;
+    setGroupWm(null);
+    if (!roomOn || !c || c.kind !== 'group') return;
+    let alive = true;
+    const tick = () => { void D.groupReadWatermark(c.id).then((w) => { if (alive) setGroupWm(w); }); };
+    tick();
+    const t = window.setInterval(tick, 15000);
+    return () => { alive = false; window.clearInterval(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomOn, curKey]);
 
   // E2E voice: re-seal keys of my voice notes for new devices of conversation members.
   useEffect(() => {
@@ -734,10 +806,14 @@ export default function EwwonApp() {
 
   const row = (c: Chat) => {
     const l = c.last;
-    const pre = l ? (l.me ? <><span className="tk">✓✓</span> </> : c.g && l.from && P[l.from] ? P[l.from].n.split(' ')[0] + ': ' : '') : '';
+    const pre = l ? (l.me ? <><Ticks read={!!l.rd} small /> </> : c.g && l.from && P[l.from] ? P[l.from].n.split(' ')[0] + ': ' : '') : '';
     const e = c.p ? P[c.p] : null;
     return (
-      <button key={c.key} className="ct" data-k={c.key} onClick={() => void openRoom(c.key)}>
+      <button key={c.key} className="ct" data-k={c.key}
+        onClick={() => { if (ctHold.current.fired) { ctHold.current.fired = false; return; } void openRoom(c.key); }}
+        onTouchStart={() => { ctHold.current.fired = false; ctHold.current.t = window.setTimeout(() => { ctHold.current.fired = true; N.haptic('light'); setCtMenu(c); }, 480); }}
+        onTouchMove={() => window.clearTimeout(ctHold.current.t)} onTouchEnd={() => window.clearTimeout(ctHold.current.t)}
+        onContextMenu={(e) => { e.preventDefault(); setCtMenu(c); }}>
         <Av p={e || { id: '', photo: c.photo, hue: c.hue, i: c.i }} st={e ? e.st : null} onClick={e ? (ev) => { ev.stopPropagation(); pgShow({ kind: 'profile', id: e.id }); } : undefined} />
         <div className="mid">
           <div className="l1"><b>{c.n}</b><span className="tmx">{l ? fmtTime(l.at) : ''}</span></div>
@@ -857,19 +933,20 @@ export default function EwwonApp() {
 
             {/* ---------------- Avisos ---------------- */}
             <section className={'view' + (tab === 2 ? ' on' : '')} id="v2">
-              {boot.canPostNotices ? <div className="ewx-notice-head"><button className="btn sm" onClick={() => gsOpen({ kind: 'notice' })}><I n="plus" />Novo aviso</button></div> : null}
+              {boot.canPostNotices ? <div className="ewx-notice-head"><button className="btn full" onClick={() => gsOpen({ kind: 'notice' })}><I n="plus" />Novo aviso</button></div> : null}
               <div className={'feat' + (pinned ? '' : ' hid')} id="feat" data-t="Importante" style={{ ['--c' as string]: '#ff8f80' }}>
                 <I n="mega" className="bgi" />
                 <div className="fh"><span className="pn"><I n="pin" />Fixado</span></div>
                 <h3 id="fth">{pinned?.title}</h3><p id="ftp">{pinned?.body}</p>
                 <div className="ff"><span id="ftw">{pinned ? `${pinned.author} · ${fmtTime(pinned.at)}` : ''}</span>
-                  <button className="btn sm" id="ciente" onClick={() => { if (pinned) { readNotice(pinned, true); toast('Leitura confirmada'); } }}>{pinned && pinned.acked ? 'Ciente ✓' : 'Ciente'}</button></div>
+                  <span className="ewx-ff-acts">{pinned && canDeleteNotice(pinned) ? <button className="btn sm sec ewx-del" onClick={() => removeNotice(pinned)}><I n="trash" /></button> : null}
+                  <button className="btn sm" id="ciente" onClick={() => { if (pinned) { readNotice(pinned, true); toast('Leitura confirmada'); } }}>{pinned && pinned.acked ? 'Ciente ✓' : 'Ciente'}</button></span></div>
               </div>
               <div id="avisos">
                 {rest.map((a) => (
                   <div key={a.id} className={'av-i' + (a.unread ? '' : ' read') + (openNotice[a.id] ? ' open' : '')} data-id={a.id} onClick={() => { setOpenNotice((o) => ({ ...o, [a.id]: !o[a.id] })); readNotice(a); }}>
                     <div className="ah"><span className="ti"><I n="mega" /></span><div className="am"><h4>{a.title}</h4><div className="pv">{a.preview}</div></div><div className="ar"><span>{fmtTime(a.at)}</span><i className="dot" /></div></div>
-                    <div className="tx"><div><p>{a.body}</p><div className="af"><span>{a.author}</span><button className="btn sm lido" onClick={(e) => { e.stopPropagation(); readNotice(a); toast('Aviso marcado como lido'); }}>{a.unread ? 'Marcar como lido' : 'Lido ✓'}</button></div></div></div>
+                    <div className="tx"><div><p>{a.body}</p><div className="af"><span>{a.author}{a.expiresAt ? ` · expira ${new Date(a.expiresAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : ''}</span>{canDeleteNotice(a) ? <button className="btn sm sec ewx-del" aria-label="Excluir aviso" onClick={(e) => { e.stopPropagation(); removeNotice(a); }}><I n="trash" /></button> : null}<button className="btn sm lido" onClick={(e) => { e.stopPropagation(); readNotice(a); toast('Aviso marcado como lido'); }}>{a.unread ? 'Marcar como lido' : 'Lido ✓'}</button></div></div></div>
                   </div>
                 ))}
                 {!notices.length ? <div className="hint" style={{ padding: 40 }}>Nenhum aviso por enquanto</div> : null}
@@ -953,10 +1030,26 @@ export default function EwwonApp() {
               <button id="back" aria-label="Voltar" onClick={closeRoom}><I n="chevL" /></button>
               {cur ? <div className={'av' + (cur.p ? ' on' : '')} id="rav" style={{ ...avStyle(cur.p ? P[cur.p] : cur), ['--sc' as string]: cur.p ? ST[P[cur.p]?.st || 'disp'][1] : '#46d37b' }} onClick={() => (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}>{(cur.p ? P[cur.p]?.photo : cur.photo) ? '' : cur.i}</div> : <div className="av" id="rav" />}
               <div className="rt" onClick={() => cur && (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}><b id="rn">{cur?.n}</b><small id="rs">{typing && cur && typing === cur.key ? 'digitando…' : cur ? stt(cur) : ''}</small></div>
-              <button className="lq" id="gear" aria-label="Configurações do chat" onClick={() => setSheetOn(true)}><I n="gear" /></button>
+              <button className="lq" id="gear" aria-label="Mais opções" onClick={(e) => { e.stopPropagation(); setDots((v) => !v); }}><I n="dots" /></button>
+              {dots ? (
+                <div className="ewx-dots" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={() => { setDots(false); setSearch({ q: '', i: 0 }); }}><I n="search" />Pesquisar</button>
+                  <button onClick={() => { setDots(false); setSheetOn(true); }}><I n="gear" />Configurações</button>
+                </div>
+              ) : null}
             </div>
-            <div id="msgs" ref={msgsRef} style={msgsVars} onClick={() => setPickFor(null)}>
-              <div className="dv">{cur && cur.m.length ? 'Mensagens recentes' : 'Hoje'}</div>
+            {search ? (
+              <div className="ewx-search">
+                <I n="search" />
+                <input autoFocus placeholder="Pesquisar nesta conversa" value={search.q} onChange={(e) => setSearch({ q: e.target.value, i: 0 })} />
+                <span className="ewx-search-n">{search.q.trim() ? (hits.length ? `${Math.min(search.i + 1, hits.length)} de ${hits.length}` : '0') : ''}</span>
+                <button aria-label="Anterior" disabled={!hits.length} onClick={() => setSearch((x) => x && ({ ...x, i: (x.i + 1) % hits.length }))}><I n="chevD" style={{ transform: 'rotate(180deg)' }} /></button>
+                <button aria-label="Próximo" disabled={!hits.length} onClick={() => setSearch((x) => x && ({ ...x, i: (x.i - 1 + hits.length) % hits.length }))}><I n="chevD" /></button>
+                <button aria-label="Fechar pesquisa" onClick={() => setSearch(null)}><I n="x" /></button>
+              </div>
+            ) : null}
+            {dayFloat ? <div className="ewx-dfloat">{dayFloat}</div> : null}
+            <div id="msgs" ref={msgsRef} style={msgsVars} onClick={() => { setPickFor(null); setDots(false); }} onScroll={onMsgsScroll}>
               <div className="hint">Segure ou toque 2x numa mensagem para reagir</div>
               {cur && !cur.loaded && !cur.m.length ? (
                 <div className="ewx-skel" aria-label="Carregando mensagens" role="status">
@@ -964,7 +1057,7 @@ export default function EwwonApp() {
                 </div>
               ) : null}
               {cur && cur.loaded && !cur.m.length ? <div className="hint" style={{ padding: 20 }}>Nenhuma mensagem ainda. Diga oi! 👋</div> : null}
-              {cur?.m.map((m) => <Bubble key={m.id} m={m} sender={m.from ? P[m.from] : null} group={cur.g} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} onImage={(src, url, name, caption) => setViewer({ src, url, name, caption })} />)}
+              {cur?.m.map((m, idx) => <Fragment key={m.id}>{idx === 0 || dayKey(cur.m[idx - 1].at) !== dayKey(m.at) ? <div className="ewx-dsep" data-day={dayLabel(m.at)}><span>{dayLabel(m.at)}</span></div> : null}<Bubble key={m.id} m={m} read={m.me && (!!m.rd || (cur.kind === 'group' && !!groupWm && new Date(m.at).getTime() <= groupWm))} sender={m.from ? P[m.from] : null} group={cur.g} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} onImage={(src, url, name, caption) => setViewer({ src, url, name, caption })} /></Fragment>)}
             </div>
             {pending.length ? (
               <div className="ewx-tray">
@@ -1031,6 +1124,18 @@ export default function EwwonApp() {
           <div className="pgh"><button className="lq pgb" id="pgb" aria-label="Voltar" onClick={pgBack}><I n="chevL" /></button><b id="pgt">{top ? pageTitle(top) : ''}</b><span style={{ minWidth: 38 }} /></div>
           <div className="pgc" id="pgc" key={pages.length + (top?.kind || '')}>{top ? <EwwonPage spec={top} api={api} /> : null}</div>
         </div>
+
+        {ctMenu ? (
+          <div className="ewx-ctm-bg" onClick={() => setCtMenu(null)}>
+            <div className="ewx-ctm" onClick={(e) => e.stopPropagation()}>
+              <div className="ewx-ctm-h"><Av p={ctMenu.p ? P[ctMenu.p] : { id: '', photo: ctMenu.photo, hue: ctMenu.hue, i: ctMenu.i }} st={null} /><div><b>{ctMenu.n}</b><small>{ctMenu.kind === 'dm' ? 'Conversa' : ctMenu.kind === 'group' ? 'Grupo' : 'Setor'}</small></div></div>
+              <button onClick={() => { const c = ctMenu; setCtMenu(null); if (c.kind === 'dm' && c.p) pgShow({ kind: 'profile', id: c.p }); else { void openRoom(c.key); window.setTimeout(() => setSheetOn(true), 350); } }}><I n="info" />{ctMenu.kind === 'dm' ? 'Ver detalhes do contato' : ctMenu.kind === 'group' ? 'Ver detalhes do grupo' : 'Ver detalhes do setor'}</button>
+              <button onClick={() => { const c = ctMenu; setCtMenu(null); setChatSet(c, { pin: !c.set.pin }); setChats((cs) => { const a2 = [...cs]; D.sortChats(a2); return a2; }); toast(c.set.pin ? 'Conversa desafixada' : 'Conversa fixada no topo'); }}><I n="pin" />{ctMenu.set.pin ? 'Desafixar conversa' : 'Fixar conversa'}</button>
+              {ctMenu.u ? <button onClick={() => { const c = ctMenu; setCtMenu(null); patchChat(c.key, (x) => ({ ...x, u: 0 })); void sv(D.markRead(c, meId)); }}><I n="check" />Marcar como lida</button> : null}
+              <button className="ewx-ctm-x" onClick={() => setCtMenu(null)}>Cancelar</button>
+            </div>
+          </div>
+        ) : null}
 
         {/* ---------------- Sheet global ---------------- */}
         <div className={'gss' + (gs ? ' on' : '')} id="gss" onClick={gsClose} />
@@ -1107,28 +1212,38 @@ function Bars({ v, k }: { v: number[]; k: string }) {
   return <div className="bars ewx-chart" id="bars" ref={ref}>{v.map((_, i) => <i key={i} />)}</div>;
 }
 
-function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage }: {
-  m: Msg; sender: Person | null; group: boolean; picking: boolean; onPick: () => void; onReact: (x: string, wrap: HTMLElement | null) => void; onProfile: (id: string) => void; onImage: (src: string, url: string, name: string, caption?: string) => void;
+/** Sent / delivered (white) / read (blue) marks, WhatsApp-like. */
+function Ticks({ pending, read, small }: { pending?: boolean; read?: boolean; small?: boolean }) {
+  return (
+    <span className={'ck' + (pending ? ' one' : '') + (read ? ' rd' : '') + (small ? ' sm' : '')} aria-label={pending ? 'Enviando' : read ? 'Visualizada' : 'Entregue'}>
+      <svg viewBox="0 0 18 11" aria-hidden="true"><path d="M1 5.8l3.2 3.2L10.6 2.4" />{pending ? null : <path d="M7.4 9l6.6-6.6" />}</svg>
+    </span>
+  );
+}
+
+function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage, read }: {
+  read?: boolean; m: Msg; sender: Person | null; group: boolean; picking: boolean; onPick: () => void; onReact: (x: string, wrap: HTMLElement | null) => void; onProfile: (id: string) => void; onImage: (src: string, url: string, name: string, caption?: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const tm = useRef<number>();
+  const [moreRx, setMoreRx] = useState(false);
   const gm = !m.me && !!sender && group;
   const start = () => { tm.current = window.setTimeout(onPick, 450); };
   const stop = () => window.clearTimeout(tm.current);
   const rx = m.r.length ? <div className="rx" style={{ display: 'flex' }}>{m.r.map((e) => <span key={e} onClick={(ev) => { ev.stopPropagation(); onReact(e, ref.current); }}>{e}</span>)}</div> : <div className="rx" style={{ display: 'none' }} />;
-  const tmh = <div className="tm">{m.h}{m.me ? <> · <span className={'ck' + (m.pending ? ' one' : '')} aria-label={m.pending ? 'Enviando' : 'Enviada'}><svg viewBox="0 0 18 11" aria-hidden="true"><path d="M1 5.8l3.2 3.2L10.6 2.4" />{m.pending ? null : <path d="M7.4 9l6.6-6.6" />}</svg></span></> : null}</div>;
+  const tmh = <div className="tm">{m.h}{m.me ? <> · <Ticks pending={m.pending} read={read} /></> : null}</div>;
   const stk = parseSticker(m.t);
   const bub = stk ? <div className="ewx-stkb" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><StickerMessage sticker={stk} mine={m.me} /></div>
     : <div className="bub" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><MsgBody content={m.t} onOpenImage={onImage} /></div>;
   return (
-    <div className={'m' + (m.me ? ' me' : '') + (gm ? ' gm' : '')} ref={ref} style={{ animation: 'none' }}>
+    <div className={'m' + (m.me ? ' me' : '') + (gm ? ' gm' : '')} ref={ref} data-mid={m.id} style={{ animation: 'none' }}>
       {gm && sender ? (
         <>
           <div className="gav" style={avStyle(sender)} onClick={() => onProfile(sender.id)}>{sender.photo ? '' : sender.i}</div>
           <div className="gb"><div className="sn">{sender.n}</div>{bub}{rx}{tmh}</div>
         </>
       ) : <>{!m.me && sender && !group ? null : null}{bub}{rx}{tmh}</>}
-      {picking ? <div className="pick" onClick={(e) => e.stopPropagation()}>{REACTIONS.map((e) => <button key={e} onClick={(ev) => { ev.stopPropagation(); onReact(e, ref.current); }}>{e}</button>)}{stk && stk.kind === 'img' && !m.me ? <button className="ewx-stk-save" aria-label="Salvar figurinha" onClick={(ev) => { ev.stopPropagation(); void addFavorite(stk).then(() => window.dispatchEvent(new CustomEvent('ew:toast', { detail: 'Figurinha salva em Minhas' }))).catch(() => undefined); }}>⭐</button> : null}</div> : null}
+      {picking ? <div className="pick" onClick={(e) => e.stopPropagation()}>{REACTIONS.map((e) => <button key={e} onClick={(ev) => { ev.stopPropagation(); onReact(e, ref.current); }}>{e}</button>)}<button className="ewx-more-rx" aria-label="Mais reações" onClick={(ev) => { ev.stopPropagation(); setMoreRx((v) => !v); }}>{moreRx ? '×' : '+'}</button>{stk && stk.kind === 'img' && !m.me ? <button className="ewx-stk-save" aria-label="Salvar figurinha" onClick={(ev) => { ev.stopPropagation(); void addFavorite(stk).then(() => window.dispatchEvent(new CustomEvent('ew:toast', { detail: 'Figurinha salva em Minhas' }))).catch(() => undefined); }}>⭐</button> : null}{moreRx ? <div className="ewx-rx-all">{EMOJIS.map((e) => <button key={e} onClick={(ev) => { ev.stopPropagation(); setMoreRx(false); onReact(e, ref.current); }}>{e}</button>)}</div> : null}</div> : null}
     </div>
   );
 }

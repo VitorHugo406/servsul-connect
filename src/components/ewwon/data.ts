@@ -24,18 +24,18 @@ export interface Person {
   st: StatusKey; h: [string, string]; days: number[]; mail: string; bio: string; since: string;
   photo: string | null; cover: string | null; birth: string | null; me?: boolean;
 }
-export interface Msg { id: string; t: string; at: string; h: string; me: boolean; from: string | null; r: string[]; mine: string[]; pending?: boolean }
+export interface Msg { id: string; t: string; at: string; h: string; me: boolean; from: string | null; r: string[]; mine: string[]; pending?: boolean; rd?: boolean }
 export interface ChatSet { pin: boolean; mute: boolean; muteUntil: number; muteDur: number; fs: number; ff: number; col: number; wall: number }
 export interface Summary { id?: string; on: boolean; h: number; d: number; it: Record<string, boolean> }
 export type ChatKind = 'sector' | 'dm' | 'group';
 export interface Chat {
   key: string; kind: ChatKind; id: string; g: boolean; n: string; i: string; hue: number; s: string;
   p?: string; mem: string[]; adm: string[]; desc: string; photo: string | null; cover: string | null;
-  u: number; last: { t: string; at: string; me: boolean; from: string | null } | null;
+  u: number; last: { t: string; at: string; me: boolean; from: string | null; rd?: boolean } | null;
   m: Msg[]; loaded: boolean; set: ChatSet; wp: string | null; canEdit: boolean; canSummary: boolean;
   sum?: Summary; welcome?: boolean;
 }
-export interface Notice { id: string; title: string; body: string; preview: string; at: string; unread: boolean; acked: boolean; pinned: boolean; author: string; priority: string }
+export interface Notice { id: string; title: string; body: string; preview: string; at: string; unread: boolean; acked: boolean; pinned: boolean; author: string; priority: string; authorId?: string; expiresAt?: string | null }
 export interface Ticket { id: string; num: number; t: string; s: string; c: string; d: string; who?: string | null }
 export interface DeskTicket {
   id: number; label: string; companyId: string; companyName: string; reporterId: string; reporterName: string; reporterEmail: string;
@@ -247,7 +247,7 @@ export async function bootstrap(opts: {
     const body = String(a.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     return {
       id: a.id, title: a.title, body, preview: body.slice(0, 80), at: a.created_at, unread: !reads.has(a.id), acked: !!reads.get(a.id)?.acked_at,
-      pinned: !!a.is_pinned, author: people[a.author_id]?.n || 'Administração', priority: a.priority || 'normal',
+      pinned: !!a.is_pinned, author: people[a.author_id]?.n || 'Administração', priority: a.priority || 'normal', authorId: a.author_id, expiresAt: a.expire_at || null,
     };
   });
 
@@ -269,7 +269,7 @@ export function makeDm(p: Person, last: Row | null, u: number, meId: string, pre
   return {
     key: `dm:${p.id}`, kind: 'dm', id: p.id, g: false, p: p.id, n: p.n, i: p.i, hue: p.hue, s: p.dept, mem: [meId, p.id], adm: [], desc: '',
     photo: p.photo, cover: p.cover, u: Math.min(u, 99),
-    last: last ? { t: last.content, at: last.created_at, me: last.sender_id === meId, from: last.sender_id } : null,
+    last: last ? { t: last.content, at: last.created_at, me: last.sender_id === meId, from: last.sender_id, rd: !!last.is_read } : null,
     m: [], loaded: false, set: setFromRow(prefRow), wp: null, canEdit: false, canSummary: false,
   };
 }
@@ -406,10 +406,10 @@ export async function loadMessages(chat: Chat, meId: string): Promise<Msg[]> {
   } else if (chat.kind === 'dm') {
     // Both directions of the pair (sender/receiver are always me or the partner).
     const pair = [meId, chat.id];
-    const r = await sb.from('direct_messages').select('id,sender_id,content,created_at')
+    const r = await sb.from('direct_messages').select('id,sender_id,content,created_at,is_read')
       .in('sender_id', pair).in('receiver_id', pair)
       .order('created_at', { ascending: false }).limit(60);
-    rows = (r.data || []).map((m: Row) => ({ id: m.id, from: m.sender_id, t: m.content, at: m.created_at }));
+    rows = (r.data || []).map((m: Row) => ({ id: m.id, from: m.sender_id, t: m.content, at: m.created_at, rd: !!m.is_read }));
   } else {
     const r = await sb.from('private_group_messages').select('id,sender_id,content,created_at').eq('group_id', chat.id).order('created_at', { ascending: false }).limit(60);
     rows = (r.data || []).map((m: Row) => ({ id: m.id, from: m.sender_id, t: m.content, at: m.created_at }));
@@ -428,7 +428,7 @@ export async function loadMessages(chat: Chat, meId: string): Promise<Msg[]> {
       reactions.set(x.message_id, cur);
     }
   }
-  return rows.map((m) => toMsg(m, meId, reactions.get(m.id)));
+  return rows.map((m) => ({ ...toMsg(m, meId, reactions.get(m.id)), rd: !!m.rd }));
 }
 
 export function toMsg(m: { id: string; from: string; t: string; at: string }, meId: string, rx?: { r: string[]; mine: string[] }): Msg {
@@ -605,6 +605,11 @@ export async function markNotice(id: string, ack: boolean) {
   if (r.error) throw r.error;
 }
 
+export async function deleteNotice(id: string) {
+  const r = await sb.from('announcements').delete().eq('id', id).select('id');
+  if (r.error || !(r.data || []).length) throw new Error('Não foi possível excluir o aviso');
+}
+
 export async function createNotice(meId: string, companyId: string, title: string, content: string, pinned: boolean, expireAt: string | null = null) {
   const r = await sb.from('announcements').insert({ title, content, author_id: meId, company_id: companyId, is_pinned: pinned, priority: pinned ? 'important' : 'normal', start_at: new Date().toISOString(), expire_at: expireAt }).select('id,created_at').single();
   if (r.error) throw r.error;
@@ -765,6 +770,20 @@ export async function rateTicket(ticketId: number, rating: number, comment: stri
 export function subscribeTicket(ticketId: number, onChange: () => void): () => void {
   const ch = sb.channel(`ticket-row-${ticketId}-${Date.now()}`)
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'support_tickets', filter: `id=eq.${ticketId}` }, () => onChange())
+    .subscribe();
+  return () => { void sb.removeChannel(ch); };
+}
+
+// ---------------------------------------------------------------- read receipts
+/** Moment up to which every other member read the group (blue ticks), or null. */
+export async function groupReadWatermark(groupId: string): Promise<number | null> {
+  const r = await sb.rpc('group_read_watermark', { _group_id: groupId });
+  return r.error || !r.data ? null : new Date(r.data as string).getTime();
+}
+/** Fires when the other person reads my direct messages. */
+export function subscribeDmReads(meId: string, onRead: (row: Row) => void): () => void {
+  const ch = sb.channel(`dm-reads-${meId}-${Date.now()}`)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'direct_messages', filter: `sender_id=eq.${meId}` }, (p: Row) => { if (p.new?.is_read) onRead(p.new); })
     .subscribe();
   return () => { void sb.removeChannel(ch); };
 }

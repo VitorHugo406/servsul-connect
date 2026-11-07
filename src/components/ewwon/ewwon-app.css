@@ -387,7 +387,7 @@
 /* Stickers */
 .ew .ewx-stkb { display: inline-flex; touch-action: manipulation; }
 .ew .m.me .ewx-stkb { align-self: flex-end; }
-.ew .ewx-stkp { margin: 0 10px 8px; padding: 10px; border-radius: 22px; background: var(--card); border: 1px solid var(--bd); }
+.ew .ewx-stkp { margin: 0 12px 8px; padding: 10px; border-radius: 22px; background: var(--card); border: 1px solid var(--bd); overflow: hidden; }
 .ew .pick .ewx-stk-save { border-left: 1px solid var(--bd); margin-left: 2px; padding-left: 8px; }
 
 /* Baixar aplicativo (browser only) */
@@ -452,3 +452,58 @@
 .ew .ewx-stkbtn { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--mu); flex-shrink: 0; }
 .ew .ewx-stkbtn.on { color: var(--tx); background: var(--c2); }
 .ew .ewx-stkbtn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Notices: full-width "Novo aviso" and delete buttons */
+.ew .ewx-notice-head { display: block; }
+.ew .ewx-notice-head .btn.full { display: flex; justify-content: center; border-radius: 16px; padding: 13px 16px; }
+.ew .ewx-ff-acts { display: inline-flex; align-items: center; gap: 6px; }
+.ew .ewx-del { padding: 7px 9px; color: #ff7a7a; }
+.ew .ewx-del svg.i { width: 15px; height: 15px; }
+.ew .af { display: flex; align-items: center; gap: 8px; }
+
+/* Meu status: the odd last option uses the whole row, labels never wrap */
+.ew .stc button { white-space: nowrap; min-width: 0; }
+.ew .stc button:last-child:nth-child(odd) { grid-column: 1 / -1; justify-content: center; }
+
+/* Read receipts: white = delivered, blue = read */
+.ew .ck { display: inline-flex; vertical-align: -1px; color: var(--tx); }
+.ew .ck svg { width: 16px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ew .ck.one { color: var(--mu); }
+.ew .ck.one svg { width: 12px; }
+.ew .ck.rd { color: #53bdeb; }
+.ew .ck.sm svg { width: 15px; height: 9px; }
+
+/* Press-and-hold menu on a conversation */
+.ew .ewx-ctm-bg { position: absolute; inset: 0; z-index: 120; background: rgba(0, 0, 0, .45); display: flex; align-items: flex-end; animation: ew-pgin .2s ease; }
+.ew .ewx-ctm { width: 100%; padding: 14px 14px calc(env(safe-area-inset-bottom, 0px) + 14px); background: var(--card); border-radius: 26px 26px 0 0; display: flex; flex-direction: column; gap: 4px; }
+.ew .ewx-ctm-h { display: flex; align-items: center; gap: 12px; padding: 4px 4px 10px; border-bottom: 1px solid var(--bd); margin-bottom: 4px; }
+.ew .ewx-ctm-h b { display: block; font-size: 16px; }
+.ew .ewx-ctm-h small { color: var(--mu); font-size: 12.5px; }
+.ew .ewx-ctm > button { display: flex; align-items: center; gap: 12px; padding: 13px 8px; border-radius: 14px; font-size: 15px; text-align: left; }
+.ew .ewx-ctm > button:active { background: var(--c2); }
+.ew .ewx-ctm > button svg.i { width: 20px; height: 20px; color: var(--mu); }
+.ew .ewx-ctm > button.ewx-ctm-x { justify-content: center; color: var(--mu); margin-top: 4px; }
+/* More reactions */
+.ew .pick { flex-wrap: wrap; max-width: 290px; }
+.ew .pick .ewx-more-rx { font-size: 20px; font-weight: 700; color: var(--mu); }
+.ew .ewx-rx-all { flex-basis: 100%; display: grid; grid-template-columns: repeat(7, 1fr); max-height: 170px; overflow-y: auto; border-top: 1px solid var(--bd); margin-top: 4px; padding-top: 4px; }
+.ew .ewx-rx-all button { font-size: 22px; padding: 4px 0; }
+
+/* Date separators + floating date (WhatsApp-like) */
+.ew .ewx-dsep { display: flex; justify-content: center; margin: 10px 0 6px; }
+.ew .ewx-dsep span, .ew .ewx-dfloat { padding: 5px 12px; border-radius: 10px; background: var(--c2); color: var(--mu); font-size: 12px; font-weight: 600; }
+.ew .ewx-dfloat { position: absolute; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 74px); z-index: 6; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); pointer-events: none; animation: ew-pgin .2s ease; }
+/* ⋮ menu */
+.ew .ewx-dots { position: absolute; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 62px); z-index: 30; min-width: 190px; padding: 6px; border-radius: 18px; background: var(--card); border: 1px solid var(--bd); box-shadow: 0 16px 40px rgba(0, 0, 0, .35); animation: ew-pgin .18s ease; }
+.ew .ewx-dots button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 12px; border-radius: 12px; font-size: 14.5px; text-align: left; }
+.ew .ewx-dots button:active { background: var(--c2); }
+.ew .ewx-dots svg.i { width: 18px; height: 18px; color: var(--mu); }
+/* Search inside the chat */
+.ew .ewx-search { position: absolute; left: 10px; right: 10px; top: calc(env(safe-area-inset-top, 0px) + 64px); z-index: 25; display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 12px; border-radius: 18px; background: var(--card); border: 1px solid var(--bd); box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
+.ew .ewx-search > svg.i { width: 17px; height: 17px; color: var(--mu); flex-shrink: 0; }
+.ew .ewx-search input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--tx); font: inherit; font-size: 15px; padding: 6px 2px; user-select: text; -webkit-user-select: text; }
+.ew .ewx-search-n { font-size: 12px; color: var(--mu); white-space: nowrap; }
+.ew .ewx-search button { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ew .ewx-search button:disabled { opacity: .35; }
+.ew .ewx-search button svg.i { width: 18px; height: 18px; }
+.ew .m.ewx-hit .bub { box-shadow: 0 0 0 2px #ffc36b; }

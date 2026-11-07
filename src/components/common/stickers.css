@@ -58,3 +58,10 @@ button.stk-save { display: block; margin-top: 4px; padding: 6px 12px; border-rad
 .stk-pack-own { font-weight: 600; }
 button.stk-pack-add { margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 12px; border: 0; background: #0b0b0e !important; background-image: none !important; box-shadow: none !important; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
 button.stk-pack-add:disabled { opacity: .7; }
+
+/* Fixed-height panel (same feel as the emoji panel) and actions that never overflow. */
+.stk { height: 300px; min-height: 0; }
+.stk-tabs { flex-wrap: wrap; row-gap: 2px; flex-shrink: 0; }
+.stk button.stk-t { white-space: nowrap; padding: 6px 8px; }
+.stk-grid, .stk-pack-list { flex: 1; min-height: 0; max-height: none; align-content: start; }
+.stk-pack-h, .stk-actions { flex-shrink: 0; }
