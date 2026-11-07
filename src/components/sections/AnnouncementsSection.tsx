@@ -290,6 +290,7 @@ export function AnnouncementsSection() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
       <div className="flex-1 overflow-auto p-4 sm:p-6">
         <PageHeader className="mb-5" eyebrow="Comunicação" icon={<Megaphone />} title="Avisos" subtitle="Comunicados da empresa para toda a equipe"
+          actions={canManageAnnouncements && !showForm ? <Button className="rounded-xl" onClick={() => setShowForm(true)}><Plus className="mr-2 h-4 w-4" />Novo aviso</Button> : undefined}
           />
         <AnimatePresence>
           {showForm && canManageAnnouncements && (

@@ -32,7 +32,7 @@ export function useAnnouncements() {
   const [loading, setLoading] = useState(true);
   const { profile, isAdmin, canAccess } = useAuth();
 
-  const canManageAnnouncements = isAdmin || canAccess('can_post_announcements');
+  const canManageAnnouncements = isAdmin || ['admin', 'gerente'].includes(profile?.autonomy_level || '') || canAccess('can_post_announcements');
 
   const fetchAnnouncements = useCallback(async () => {
     setLoading(true);

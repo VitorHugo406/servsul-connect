@@ -148,7 +148,7 @@ export default function EwwonApp() {
       setErr(null);
       const b = await D.bootstrap({
         profileId: profile.id, companyId: profile.company_id, isAdmin, accessibleSectorIds: allAccessibleSectorIds || [],
-        canPostNotices: isAdmin || canAccess('can_post_announcements' as never),
+        canPostNotices: isAdmin || ['admin', 'gerente'].includes(profile.autonomy_level || '') || canAccess('can_post_announcements' as never),
       });
       for (const c of b.chats) if (c.kind === 'sector') D.primeSectorRead(profile.id, c.id);
       // A reload (resume after the file picker, token refresh…) keeps the messages already
