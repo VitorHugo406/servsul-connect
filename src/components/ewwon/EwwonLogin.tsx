@@ -139,56 +139,57 @@ export default function EwwonLogin() {
     }
   };
 
-  const h = new Date().getHours();
-  const hello = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+  const locked = step === 'login' && !!company;
 
   return (
     <div className="ew ewx-root ewx-login" data-theme="dark">
-      <div className="ewx-login-scroll">
-        <div className="ewx-login-brand"><img src="/ewwon/img/logo-full.png" alt="ewwon" /></div>
-        <h1>{step === 'login' && company ? hello : 'Entre no seu ambiente'}</h1>
-        <p className="sub">{step === 'login' && company ? `Acesse a conta da ${company.name}` : 'Informe o nome da empresa para continuar.'}</p>
-
-        <div className="card ewx-login-hero">
-          <div className="stage"><div className="fl"><div className="iso"><div className="ly" /><div className="ly" /><div className="ly"><i /><i /><i /></div></div></div></div>
+      <form className="ewx-lg" onSubmit={(e) => { if (!locked) { e.preventDefault(); goLogin(); return; } void submit(e); }}>
+        <div className="ewx-lg-top">
+          <img className="ewx-lg-mark" src="/ewwon/img/logo-mark.png" alt="" />
+          <h1>{locked ? 'Entrar' : 'Bem-vindo'}</h1>
+          <p>{locked ? `Use seu e-mail e senha da ${company?.name}.` : 'Comece encontrando a sua empresa.'}</p>
         </div>
 
-        {step === 'company' ? (
-          <div className="card ewx-login-card">
-            <h3>Empresa</h3>
-            <label className="srch ewx-login-field"><I n="search" /><input autoFocus placeholder="Buscar pelo nome da empresa" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="organization" aria-label="Empresa" /></label>
-            {company ? (
-              <button type="button" className="ewx-login-company" onClick={goLogin}>
-                <span className="ewx-login-logo" style={{ background: company.primary_color || 'var(--c2)' }}>{logo ? <img src={logo} alt="" /> : company.name.charAt(0)}</span>
-                <span className="ewx-login-cn"><b>{company.name}</b><small>Empresa encontrada</small></span>
-                <span className="ewx-login-ok"><I n="check" /></span>
-              </button>
-            ) : searching ? <div className="hint ewx-login-hint">Procurando empresa…</div> : notFound ? <div className="hint ewx-login-hint">Empresa não encontrada</div> : null}
-            <button className="btn full" disabled={!company} onClick={goLogin}>Continuar</button>
-          </div>
-        ) : (
-          <form className="card ewx-login-card" onSubmit={submit}>
-            {company ? (
-              <div className="ewx-login-company is-static">
-                <span className="ewx-login-logo" style={{ background: company.primary_color || 'var(--c2)' }}>{logo ? <img src={logo} alt="" /> : company.name.charAt(0)}</span>
-                <span className="ewx-login-cn"><b>{company.name}</b><small>Ambiente corporativo</small></span>
-                <button type="button" className="btn sm sec" onClick={changeCompany}>Trocar</button>
-              </div>
-            ) : <div className="hint ewx-login-hint">Carregando empresa…</div>}
-            <h3>E-mail</h3>
-            <input className="fld ewx-login-input" type="email" inputMode="email" autoComplete="email" placeholder="voce@empresa.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <h3>Senha</h3>
-            <div className="ewx-login-pass">
-              <input className="fld ewx-login-input" type={show ? 'text' : 'password'} autoComplete="current-password" placeholder="Sua senha" value={password} onChange={(e) => setPassword(e.target.value)} />
-              <button type="button" className="ewx-login-eye" onClick={() => setShow(!show)}>{show ? 'Ocultar' : 'Mostrar'}</button>
+        <div className="ewx-lg-fields">
+          {locked && company ? (
+            <div className="ewx-lg-co">
+              <span className="ewx-login-logo" style={{ background: company.primary_color || 'var(--c2)' }}>{logo ? <img src={logo} alt="" /> : company.name.charAt(0)}</span>
+              <span className="ewx-lg-co-n">{company.name}</span>
+              <button type="button" onClick={changeCompany}>Trocar</button>
             </div>
-            {err ? <div className="ewx-login-err"><I n="warn" /><span>{err}</span></div> : null}
-            <button className="btn full" type="submit" disabled={busy || !company}>{busy ? 'Entrando…' : 'Entrar'}</button>
-            {company ? <button type="button" className="ewx-login-link" onClick={() => navigate(`/auth?company=${encodeURIComponent(company.slug)}&full=1`)}>Primeiro acesso? Criar conta</button> : null}
-          </form>
-        )}
-        <p className="ewx-login-foot"><I n="lock" /> Acesso protegido para sua organização</p>
-      </div>
+          ) : (
+            <>
+              <label className="ewx-lg-f">
+                <span>Empresa</span>
+                <input autoFocus placeholder="Nome da empresa" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="organization" aria-label="Empresa" />
+                {company ? <i className="ewx-lg-ok"><I n="check" /></i> : searching ? <i className="ewx-spin ewx-lg-sp" /> : null}
+              </label>
+              <div className="ewx-lg-hint">{company ? `${company.name} encontrada` : notFound && q.trim() ? 'Nenhuma empresa com esse nome' : ' '}</div>
+            </>
+          )}
+
+          {locked ? (
+            <>
+              <label className="ewx-lg-f">
+                <span>E-mail</span>
+                <input type="email" inputMode="email" autoComplete="email" placeholder="voce@empresa.com" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />
+              </label>
+              <label className="ewx-lg-f">
+                <span>Senha</span>
+                <input type={show ? 'text' : 'password'} autoComplete="current-password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <button type="button" className="ewx-lg-eye" onClick={() => setShow(!show)}>{show ? 'Ocultar' : 'Mostrar'}</button>
+              </label>
+            </>
+          ) : null}
+          {err ? <div className="ewx-lg-err">{err}</div> : null}
+        </div>
+
+        <div className="ewx-lg-bottom">
+          <button className="ewx-lg-btn" type="submit" disabled={busy || !company}>{busy ? <i className="ewx-spin" /> : locked ? 'Entrar' : 'Continuar'}</button>
+          {locked && company ? <button type="button" className="ewx-lg-link" onClick={() => navigate(`/auth?company=${encodeURIComponent(company.slug)}&full=1`)}>Primeiro acesso? <b>Criar conta</b></button>
+            : <p className="ewx-lg-foot"><I n="lock" /> Conexão segura</p>}
+        </div>
+      </form>
     </div>
   );
 }

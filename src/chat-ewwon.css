@@ -1,0 +1,45 @@
+/* Desktop chat in the same visual language as the Ewwon mobile app:
+   rounded bubbles without tails, accent outgoing bubble, quiet incoming bubble,
+   reaction chips overlapping the bubble edge, Plus Jakarta Sans. */
+:root {
+  --chat-canvas: 228 18% 94%;
+  --chat-incoming: 0 0% 100%;
+  --chat-outgoing: 240 14% 5%;
+  --chat-outgoing-foreground: 0 0% 100%;
+  --chat-meta: 240 5% 42%;
+}
+.dark {
+  --chat-canvas: 240 11% 4%;
+  --chat-incoming: 240 9% 13%;
+  --chat-outgoing: 0 0% 100%;
+  --chat-outgoing-foreground: 240 11% 4%;
+  --chat-meta: 240 6% 63%;
+}
+.chat-workspace, .chat-thread { font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif; }
+.chat-bubble { border-radius: 20px 20px 20px 6px !important; padding: 9px 14px 7px !important; box-shadow: none !important; overflow-wrap: anywhere; }
+.chat-bubble-outgoing { border-radius: 20px 20px 6px 20px !important; }
+.chat-bubble::before { display: none !important; }
+.chat-message-text { font-size: 14.5px; line-height: 1.4; }
+.chat-message-meta { font-size: 10.5px; margin-left: 12px; }
+.chat-bubble-outgoing .chat-message-meta { color: hsl(var(--chat-outgoing-foreground) / .6); }
+.chat-bubble img { border-radius: 14px; }
+.chat-date-label { border-radius: 12px; box-shadow: none; padding-inline: 10px; font-weight: 600; }
+
+/* reactions (sector, direct and group chats) */
+.chat-reactions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: -8px 10px 2px !important; position: relative; z-index: 2; }
+.chat-reactions.is-own { justify-content: flex-end; }
+.chat-reaction { display: inline-flex; align-items: center; gap: 3px; border-radius: 14px; padding: 1px 7px; font-size: 14px; line-height: 1.5; background: hsl(var(--card)); border: 2px solid hsl(var(--chat-canvas)); box-shadow: none !important; background-image: none !important; transition: transform .15s; }
+.chat-reaction:hover { transform: scale(1.08); }
+.chat-reaction b { font-size: 11px; font-weight: 700; color: hsl(var(--muted-foreground)); }
+.chat-reaction.is-mine { border-color: hsl(var(--foreground) / .35); }
+.chat-reaction-add-wrap { position: relative; display: inline-flex; }
+.chat-reaction-add { width: 24px; height: 22px; border-radius: 12px; display: grid; place-items: center; color: hsl(var(--muted-foreground)); background: hsl(var(--card)) !important; border: 2px solid hsl(var(--chat-canvas)); box-shadow: none !important; opacity: 0; transition: opacity .15s; }
+.chat-bubble-col:hover .chat-reaction-add, .chat-reaction-add:focus-visible { opacity: 1; }
+.chat-reactions:has(.chat-reaction) .chat-reaction-add { opacity: .8; }
+.chat-reaction-picker { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 5px; border-radius: 22px; background: hsl(var(--card)); border: 1px solid hsl(var(--border)); box-shadow: 0 10px 30px hsl(0 0% 0% / .2); z-index: 30; }
+.chat-reaction-picker button { font-size: 20px; width: 34px; height: 34px; border-radius: 50%; background: none !important; box-shadow: none !important; transition: transform .15s; }
+.chat-reaction-picker button:hover { transform: scale(1.25); }
+.chat-reactions:not(:has(.chat-reaction)) { margin-top: -4px !important; }
+
+/* composer: rounded pill like the mobile app */
+.chat-composer > div, .chat-composer form { border-radius: 28px; }

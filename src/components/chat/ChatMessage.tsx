@@ -212,8 +212,8 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
           </div>
         </div>
 
-        {reactions && reactions.length > 0 && <div className={cn('relative z-10 flex max-w-full flex-wrap gap-1 mt-1', isOwn && 'justify-end')}>
-          {reactions.map(r => <Popover key={r.emoji}><PopoverTrigger asChild><button type="button" className={cn('text-xs rounded-full px-2 py-0.5 border transition-all', r.reactedByMe ? 'bg-primary/20 border-primary/40 text-foreground' : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted')}>{r.emoji} {r.count}</button></PopoverTrigger>
+        {reactions && reactions.length > 0 && <div className={cn('chat-reactions relative z-10 flex max-w-full flex-wrap gap-1 mt-1', isOwn && 'is-own justify-end')}>
+          {reactions.map(r => <Popover key={r.emoji}><PopoverTrigger asChild><button type="button" className={cn('chat-reaction', r.reactedByMe && 'is-mine')}><span>{r.emoji}</span>{r.count > 1 ? <b>{r.count}</b> : null}</button></PopoverTrigger>
             <PopoverContent align={isOwn ? 'end' : 'start'} sideOffset={6} className="z-[500] w-64 p-2" onOpenAutoFocus={(e) => e.preventDefault()}><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-foreground">{r.emoji} · {r.count}</span><button type="button" onClick={() => onToggleReaction?.(message.id, r.emoji)} className="text-xs text-primary hover:text-primary/80">{r.reactedByMe ? 'Remover' : 'Reagir'}</button></div><div className="mt-2 max-h-44 space-y-1 overflow-auto">{(r.reactors || []).length === 0 ? <p className="text-xs text-muted-foreground">Sem detalhes.</p> : (r.reactors || []).map(u => { const name = u.display_name || u.name || 'Usuário'; return <div key={u.id} className="flex items-center gap-2"><Avatar className="h-5 w-5"><AvatarImage src={u.avatar_url || ''} alt={name} /><AvatarFallback className="text-[10px]">{name[0]}</AvatarFallback></Avatar><span className="truncate text-xs text-foreground">{name}</span></div>; })}</div></PopoverContent>
           </Popover>)}
         </div>}

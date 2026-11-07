@@ -147,7 +147,7 @@ function rpc(s: DemoSession, name: string, args: Row = {}) {
     case 'get_profiles_registration': return { data: profiles.filter(p => (args._ids || []).includes(p.id)).map(p => ({ id: p.id, registration_number: p.registration_number ?? null })), error: null };
     case 'current_company_id': return { data: s.companyId, error: null };
     case 'is_admin': case 'is_super_admin': return { data: true, error: null };
-    case 'is_support_staff': return { data: true, error: null };
+    case 'is_support_staff': case 'can_manage_chat': return { data: true, error: null };
     case 'support_list_tickets': {
       const companies = readTable('companies');
       return { data: readTable('support_tickets').map((t): Row => { const p = profiles.find(x => x.id === t.profile_id); return { ...t, company_name: companies.find(c => c.id === t.company_id)?.name ?? 'Empresa Teste', reporter_id: t.profile_id, reporter_name: p?.display_name || p?.name || 'Usuário', reporter_email: p?.email || '' }; }).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))), error: null };

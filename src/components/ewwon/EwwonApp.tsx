@@ -2,6 +2,8 @@
 // backed by the existing Supabase data (see ./data.ts).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import * as CT from '@/lib/chatTasks';
 import './ewwon.css';
 import './ewwon-app.css';
 import * as D from './data';
@@ -12,6 +14,8 @@ import { ST, StatusKey, fmtTime, hm, safeStore } from './util';
 import { runTour, type TourController } from './tour';
 import { EwwonPage, type PageSpec } from './pages';
 import { TicketsDesk } from './tickets';
+import { MsgBody, ImageViewer, previewText } from './msgbody';
+import { TasksSheet } from './tasksheet';
 
 
 const gr = (h: number) => `hsl(${h} 30% 30%)`;
@@ -45,8 +49,9 @@ export function Tg({ t, d, on, onChange, id }: { t: string; d: string; on: boole
 
 const MUTE_MS = [3600e3, 8 * 3600e3, 0];
 const REACTIONS = ['👍', '❤️', '😂', '🎉', '🙏'];
+const EMOJIS = '😀 😃 😄 😁 😆 😅 😂 🙂 😉 😊 😍 🥰 😘 😎 🤩 🥳 🤔 🤗 🙄 😴 😮 😢 😭 😡 🤯 😱 👍 👎 👏 🙌 🙏 💪 👋 🤝 ✌️ 👌 ❤️ 🧡 💛 💚 💙 💜 🔥 ✨ ⭐ 🎉 🎂 🎁 ✅ ❌ ⚠️ 📌 📎 📷 💬 📅 ⏰ 🚀 💡 ☕'.split(' ');
 const WISHES = ['Parabéns! 🎉', 'Felicidades 🎂', 'Feliz niver! 🥳'];
-type GsSpec = { kind: 'status' } | { kind: 'member'; id: string } | { kind: 'add' } | { kind: 'notice' } | { kind: 'newchat' } | { kind: 'newgroup' };
+type GsSpec = { kind: 'status' } | { kind: 'member'; id: string } | { kind: 'add' } | { kind: 'notice' } | { kind: 'newchat' } | { kind: 'newgroup' } | { kind: 'tasks'; mode: 0 | 1 };
 
 export interface EwApi {
   boot: Boot; people: Record<string, Person>; chats: Chat[]; prefs: Prefs; cur: Chat | null; me: Person;
@@ -91,6 +96,13 @@ export default function EwwonApp() {
   const [tourOn, setTourOn] = useState(false);
   const [statusClear, setStatusClear] = useState(3);
   const [deskCount, setDeskCount] = useState(0);
+  const [attOn, setAttOn] = useState<false | 'menu' | 'emoji'>(false);
+  const [pending, setPending] = useState<{ file: File; url: string | null; name: string; size: number; image: boolean }[]>([]);
+  const [sending, setSending] = useState(false);
+  const [viewer, setViewer] = useState<string | null>(null);
+  const [tasksOn, setTasksOn] = useState<Record<string, { enabled: boolean; manage: boolean }>>({});
+  const attRef = useRef<HTMLInputElement>(null);
+  const { uploadFile } = useFileUpload();
 
   const rootRef = useRef<HTMLDivElement>(null);
   const phoneRef = useRef<HTMLDivElement>(null);
@@ -250,7 +262,9 @@ export default function EwwonApp() {
   const openRoom = useCallback(async (key: string) => {
     const c = stateRef.current.chats.find((x) => x.key === key);
     if (!c || !meId) return;
-    setCurKey(key); setSheetOn(false); setRoomOn(true); setPickFor(null);
+    setCurKey(key); setSheetOn(false); setRoomOn(true); setPickFor(null); setAttOn(false); setPending([]);
+    const sk = CT.chatSettingsKey(c.kind, c.id, meId);
+    void Promise.all([CT.getTasksEnabled(sk), CT.canManageChat(sk)]).then(([enabled, manage]) => setTasksOn((t) => ({ ...t, [key]: { enabled, manage } }))).catch(() => undefined);
     if (c.u) { patchChat(key, (x) => ({ ...x, u: 0 })); }
     void sv(D.markRead(c, meId));
     if (!c.loaded) {
@@ -298,13 +312,35 @@ export default function EwwonApp() {
     }
   }, [boot, meId, patchChat, toast]);
 
-  const doSend = () => {
+  const doSend = async () => {
     const v = draft.trim();
-    if (!v) return;
-    setDraft('');
-    void send(v);
-    inpRef.current?.focus();
+    if (!v && !pending.length) return;
+    if (!pending.length) { setDraft(''); void send(v); inpRef.current?.focus(); return; }
+    setSending(true);
+    const lines: string[] = [];
+    for (const f of pending) {
+      const r = await uploadFile(f.file, 'attachments');
+      if (!r) { setSending(false); return; }
+      lines.push(`${r.fileType.startsWith('image/') ? '📷' : '📎'} [${r.fileName}](${r.url})`);
+    }
+    setSending(false);
+    setPending([]); setDraft(''); setAttOn(false);
+    void send([v, ...lines].filter(Boolean).join('\n'));
   };
+  const addFiles = (list: FileList | null) => {
+    if (!list?.length) return;
+    const items = Array.from(list).slice(0, 10).map((file) => ({ file, url: file.type.startsWith('image/') ? URL.createObjectURL(file) : null, name: file.name, size: file.size, image: file.type.startsWith('image/') }));
+    setPending((p) => [...p, ...items].slice(0, 10));
+    setAttOn(false);
+  };
+  const pickAttach = (accept: string, capture?: boolean) => {
+    const el = attRef.current;
+    if (!el) return;
+    el.value = ''; el.accept = accept;
+    if (capture) el.setAttribute('capture', 'environment'); else el.removeAttribute('capture');
+    el.click();
+  };
+  const chatKeyFor = (c: Chat) => CT.chatSettingsKey(c.kind, c.id, meId);
 
   const burst = (bubbleWrap: HTMLElement | null, x: string) => {
     if (!bubbleWrap || prefs.red) return;
@@ -480,6 +516,25 @@ export default function EwwonApp() {
     return unsub;
   }, [boot, meId, showBanner]);
 
+  // Keyboard: size the app to the visual viewport so the header stays put and only
+  // the messages area shrinks (WhatsApp-like), instead of the page sliding up.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const r = rootRef.current;
+    if (!vv || !r) return;
+    const fit = () => {
+      r.style.height = vv.height + 'px';
+      r.style.transform = vv.offsetTop ? `translateY(${vv.offsetTop}px)` : '';
+      if (window.scrollY || document.documentElement.scrollTop) window.scrollTo(0, 0);
+      const b = msgsRef.current;
+      if (b && stateRef.current.roomOn) b.scrollTop = b.scrollHeight;
+    };
+    vv.addEventListener('resize', fit);
+    vv.addEventListener('scroll', fit);
+    fit();
+    return () => { vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); r.style.height = ''; r.style.transform = ''; };
+  }, [boot]);
+
   // deep link: /?chat=<key> opens that conversation once the data is loaded
   useEffect(() => {
     if (!boot) return;
@@ -507,6 +562,7 @@ export default function EwwonApp() {
       if (gsRef.current) { setGs(null); return true; }
       if (pagesRef.current.length) { setPages((s) => s.slice(0, -1)); return true; }
       if (sheetRef.current) { setSheetOn(false); return true; }
+      if (attRefState.current) { setAttOn(false); return true; }
       if (stateRef.current.roomOn) { closeRoom(); return true; }
       if (openRef.current) { setOpen(false); return true; }
       if (stateRef.current.tab !== 0) { setTab(0); return true; }
@@ -517,6 +573,7 @@ export default function EwwonApp() {
   const gsRef = useRef(gs); gsRef.current = gs;
   const pagesRef = useRef(pages); pagesRef.current = pages;
   const sheetRef = useRef(sheetOn); sheetRef.current = sheetOn;
+  const attRefState = useRef(attOn); attRefState.current = attOn;
 
   // ------------------------------------------------------------ home animation
   const ringRef = useRef<SVGCircleElement>(null);
@@ -616,7 +673,7 @@ export default function EwwonApp() {
         <Av p={e || { id: '', photo: c.photo, hue: c.hue, i: c.i }} st={e ? e.st : null} onClick={e ? (ev) => { ev.stopPropagation(); pgShow({ kind: 'profile', id: e.id }); } : undefined} />
         <div className="mid">
           <div className="l1"><b>{c.n}</b><span className="tmx">{l ? fmtTime(l.at) : ''}</span></div>
-          <div className="l2"><p>{pre}{l ? D.plainText(l.t) : <i style={{ opacity: 0.6 }}>Sem mensagens</i>}</p>{isMuted(c) ? <I n="mute" className="pin" /> : null}{c.u ? <span className="un">{c.u}</span> : c.set.pin ? <I n="pin" className="pin" /> : null}</div>
+          <div className="l2"><p>{pre}{l ? previewText(D.plainText(l.t)) : <i style={{ opacity: 0.6 }}>Sem mensagens</i>}</p>{isMuted(c) ? <I n="mute" className="pin" /> : null}{c.u ? <span className="un">{c.u}</span> : c.set.pin ? <I n="pin" className="pin" /> : null}</div>
         </div>
       </button>
     );
@@ -834,20 +891,51 @@ export default function EwwonApp() {
               <div className="hint">Segure ou toque 2x numa mensagem para reagir</div>
               {cur && !cur.loaded ? <div className="hint" style={{ padding: 20 }}>Carregando…</div> : null}
               {cur && cur.loaded && !cur.m.length ? <div className="hint" style={{ padding: 20 }}>Nenhuma mensagem ainda. Diga oi! 👋</div> : null}
-              {cur?.m.map((m) => <Bubble key={m.id} m={m} sender={m.from ? P[m.from] : null} group={cur.g} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} />)}
+              {cur?.m.map((m) => <Bubble key={m.id} m={m} sender={m.from ? P[m.from] : null} group={cur.g} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} onImage={setViewer} />)}
             </div>
+            {pending.length ? (
+              <div className="ewx-tray">
+                {pending.map((f, i) => (
+                  <div key={i} className={'ewx-tray-it' + (f.image ? ' img' : '')}>
+                    {f.image && f.url ? <img src={f.url} alt="" /> : <><span className="ewx-file-ic" style={{ background: '#6b7280' }}>{(f.name.split('.').pop() || 'ARQ').slice(0, 4).toUpperCase()}</span><span className="ewx-tray-n">{f.name}<small>{(f.size / 1024 / 1024).toFixed(1)} MB</small></span></>}
+                    <button aria-label="Remover" onClick={() => setPending((p) => p.filter((_, j) => j !== i))}><I n="x" /></button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {attOn === 'menu' ? (
+              <div className="ewx-att">
+                <button onClick={() => setAttOn('emoji')}><span style={{ background: '#ffb020' }}>😊</span>Emoji</button>
+                <button onClick={() => pickAttach('image/*')}><span style={{ background: '#8b5cf6' }}><I n="camera" /></span>Galeria</button>
+                <button onClick={() => pickAttach('image/*', true)}><span style={{ background: '#ff5d7a' }}><I n="camera" /></span>Câmera</button>
+                <button onClick={() => pickAttach('.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.zip,image/*')}><span style={{ background: '#4f8cff' }}><I n="upload" /></span>Arquivo</button>
+                {cur && tasksOn[cur.key]?.enabled ? <>
+                  <button onClick={() => { setAttOn(false); gsOpen({ kind: 'tasks', mode: 0 }); }}><span style={{ background: '#2fbf71' }}><I n="tasks" /></span>Nova tarefa</button>
+                  <button onClick={() => { setAttOn(false); gsOpen({ kind: 'tasks', mode: 1 }); }}><span style={{ background: '#14b8a6' }}><I n="chevR" /></span>Mover tarefa</button>
+                </> : null}
+              </div>
+            ) : attOn === 'emoji' ? (
+              <div className="ewx-emo">{EMOJIS.map((e) => <button key={e} onClick={() => setDraft((d) => d + e)}>{e}</button>)}</div>
+            ) : null}
             <div className="cmp">
-              <button className="plus" aria-label="Emojis" onClick={() => setDraft((d) => d + '🙂')}><I n="plus" /></button>
-              <input id="inp" ref={inpRef} placeholder="Escreva uma mensagem" autoComplete="off" value={draft} maxLength={4000}
-                onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); doSend(); } }} />
-              <button className="snd" id="snd" aria-label="Enviar" onClick={doSend}><I n="send" /></button>
+              <button className={'plus' + (attOn ? ' on' : '')} aria-label="Anexar" onClick={() => setAttOn(attOn ? false : 'menu')}><I n={attOn ? 'x' : 'plus'} /></button>
+              <input id="inp" ref={inpRef} placeholder={pending.length ? 'Adicione uma legenda' : 'Escreva uma mensagem'} autoComplete="off" value={draft} maxLength={4000}
+                onFocus={() => setAttOn((a) => (a === 'menu' ? false : a))}
+                onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); void doSend(); } }} />
+              <button className="snd" id="snd" aria-label="Enviar" disabled={sending} onClick={() => void doSend()}>{sending ? <span className="ewx-spin" /> : <I n="send" />}</button>
+              <input ref={attRef} type="file" multiple hidden onChange={(e) => addFiles(e.target.files)} />
             </div>
             <div className={'shs' + (sheetOn ? ' on' : '')} id="shs" onClick={() => setSheetOn(false)} />
             <div className={'sheet' + (sheetOn ? ' on' : '')} id="sheet">
-              {cur && sheetOn ? <ChatSheet c={cur} api={api} P={P} isMuted={isMuted(cur)} onMute={(on, dur) => { setMute(cur, on, dur); toast(on ? 'Conversa silenciada' : 'Notificações reativadas'); }} onSet={(patch) => setChatSet(cur, patch)} onClose={() => setSheetOn(false)} /> : null}
+              {cur && sheetOn ? <ChatSheet c={cur} api={api} P={P} tasks={tasksOn[cur.key]} onTasks={(v) => {
+                setTasksOn((t) => ({ ...t, [cur.key]: { enabled: v, manage: true } }));
+                void sv(CT.setTasksEnabled(chatKeyFor(cur), v, boot.companyId).then(() => true)).then((ok) => { if (ok === undefined) setTasksOn((t) => ({ ...t, [cur.key]: { enabled: !v, manage: true } })); });
+                toast(v ? 'Tarefas pelo chat ativadas' : 'Tarefas pelo chat desativadas');
+              }} isMuted={isMuted(cur)} onMute={(on, dur) => { setMute(cur, on, dur); toast(on ? 'Conversa silenciada' : 'Notificações reativadas'); }} onSet={(patch) => setChatSet(cur, patch)} onClose={() => setSheetOn(false)} /> : null}
             </div>
           </div>
           <div id="toast" className={toastOn ? 'on' : ''}>{toastTxt}</div>
+          <ImageViewer src={viewer} onClose={() => setViewer(null)} />
         </div>
 
         {/* ---------------- Páginas ---------------- */}
@@ -859,7 +947,8 @@ export default function EwwonApp() {
         {/* ---------------- Sheet global ---------------- */}
         <div className={'gss' + (gs ? ' on' : '')} id="gss" onClick={gsClose} />
         <div className={'sheet gs' + (gs ? ' on' : '')} id="gs">
-          {gs ? <GlobalSheet spec={gs} api={api} close={gsClose} statusClear={statusClear} setStatusClear={setStatusClear} /> : null}
+          {gs && gs.kind === 'tasks' ? <TasksSheet mode={gs.mode} meId={meId} people={P} toast={toast} post={(t) => void send(t)} close={gsClose} />
+            : gs ? <GlobalSheet spec={gs} api={api} close={gsClose} statusClear={statusClear} setStatusClear={setStatusClear} /> : null}
         </div>
         <input type="file" id="fi" ref={fiRef} accept="image/*" hidden onChange={onFile} />
         <div id="ban" className={'ban' + (ban ? ' on' : '')} onClick={() => { if (ban) { setBan(null); openFrom(ban.data); } }}>
@@ -928,8 +1017,8 @@ function Bars({ v, k }: { v: number[]; k: string }) {
   return <div className="bars ewx-chart" id="bars" ref={ref}>{v.map((_, i) => <i key={i} />)}</div>;
 }
 
-function Bubble({ m, sender, group, picking, onPick, onReact, onProfile }: {
-  m: Msg; sender: Person | null; group: boolean; picking: boolean; onPick: () => void; onReact: (x: string, wrap: HTMLElement | null) => void; onProfile: (id: string) => void;
+function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage }: {
+  m: Msg; sender: Person | null; group: boolean; picking: boolean; onPick: () => void; onReact: (x: string, wrap: HTMLElement | null) => void; onProfile: (id: string) => void; onImage: (u: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const tm = useRef<number>();
@@ -938,7 +1027,7 @@ function Bubble({ m, sender, group, picking, onPick, onReact, onProfile }: {
   const stop = () => window.clearTimeout(tm.current);
   const rx = m.r.length ? <div className="rx" style={{ display: 'flex' }}>{m.r.map((e) => <span key={e} onClick={(ev) => { ev.stopPropagation(); onReact(e, ref.current); }}>{e}</span>)}</div> : <div className="rx" style={{ display: 'none' }} />;
   const tmh = <div className="tm">{m.h}{m.me ? <> · <span className="ck">{m.pending ? '✓' : '✓✓'}</span></> : null}</div>;
-  const bub = <div className="bub" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}>{m.t}</div>;
+  const bub = <div className="bub" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><MsgBody content={m.t} onOpenImage={onImage} /></div>;
   return (
     <div className={'m' + (m.me ? ' me' : '') + (gm ? ' gm' : '')} ref={ref} style={{ animation: 'none' }}>
       {gm && sender ? (
@@ -952,7 +1041,7 @@ function Bubble({ m, sender, group, picking, onPick, onReact, onProfile }: {
   );
 }
 
-function ChatSheet({ c, api, P, isMuted, onMute, onSet, onClose }: { c: Chat; api: EwApi; P: Record<string, Person>; isMuted: boolean; onMute: (on: boolean, dur: number) => void; onSet: (p: Partial<Chat['set']>) => void; onClose: () => void }) {
+function ChatSheet({ c, api, P, tasks, onTasks, isMuted, onMute, onSet, onClose }: { c: Chat; api: EwApi; P: Record<string, Person>; tasks?: { enabled: boolean; manage: boolean }; onTasks: (v: boolean) => void; isMuted: boolean; onMute: (on: boolean, dur: number) => void; onSet: (p: Partial<Chat['set']>) => void; onClose: () => void }) {
   const e = c.p ? P[c.p] : null;
   const pr = c.g ? c.mem.filter((id) => P[id] && P[id].st !== 'fora') : [];
   const s = c.set;
@@ -983,6 +1072,9 @@ function ChatSheet({ c, api, P, isMuted, onMute, onSet, onClose }: { c: Chat; ap
           {c.canSummary && c.sum ? <div className="opt" onClick={() => api.pgShow({ kind: 'summary', key: c.key })}><div>Resumo diário<small>{c.sum.on ? `Ativo · ${['08:00', '12:00', '18:00'][c.sum.h]} · ${Object.values(c.sum.it).filter(Boolean).length} itens` : 'Desativado'}</small></div><Chev /></div> : null}
         </>
       ) : null}
+      <div className="sl">Tarefas</div>
+      {tasks?.manage ? <Tg t="Tarefas pelo chat" d="Criar e mover tarefas dos quadros pelo + da conversa" on={!!tasks?.enabled} onChange={onTasks} />
+        : <div className="opt"><div>Tarefas pelo chat<small>{tasks?.enabled ? 'Ativado' : 'Desativado'} · só administradores podem mudar</small></div></div>}
       <div className="sl">Fixar</div>
       <Tg t="Fixar conversa" d="Mostra no topo da lista" on={s.pin} onChange={(v) => onSet({ pin: v })} />
       <div className="sl">Tamanho do texto</div><Seg id="fs" items={['Pequeno', 'Médio', 'Grande']} value={s.fs} onChange={(v) => onSet({ fs: v })} />

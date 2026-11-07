@@ -9,7 +9,19 @@ import { I } from './icons';
 import { fmtTime, relDays } from './util';
 import * as N from './notify';
 
-const FILTERS = ['Abertos', 'Meus', 'Concluídos', 'Todos'];
+const FILTERS = ['Abertos', 'Prazo', 'Meus', 'Concluídos', 'Todos'];
+const SLA_H = 24;
+const WARN_H = 20;
+const isOpen = (t: DeskTicket) => t.status === 'Recebido' || t.status === 'Em análise';
+const ageH = (t: DeskTicket) => (Date.now() - new Date(t.createdAt).getTime()) / 36e5;
+/** Open tickets near (>= 20h) or past the 24h limit. */
+const slaState = (t: DeskTicket): 'late' | 'warn' | null => (!isOpen(t) ? null : ageH(t) >= SLA_H ? 'late' : ageH(t) >= WARN_H ? 'warn' : null);
+function slaLabel(t: DeskTicket) {
+  const h = ageH(t);
+  if (h >= SLA_H) { const over = Math.floor(h - SLA_H); return over < 1 ? 'Prazo de 24h estourado' : `Prazo estourado há ${over}h`; }
+  const left = SLA_H - h;
+  return left < 1 ? `Faltam ${Math.max(1, Math.round(left * 60))} min` : `Faltam ${Math.floor(left)}h${String(Math.round((left % 1) * 60)).padStart(2, '0')}`;
+}
 
 export function TicketsDesk({ meId, toast, active, onCount }: { meId: string; toast: (t: string) => void; active: boolean; onCount: (n: number) => void }) {
   const [list, setList] = useState<DeskTicket[]>([]);
@@ -44,10 +56,14 @@ export function TicketsDesk({ meId, toast, active, onCount }: { meId: string; to
   }, [load, meId]);
 
   const openCount = useMemo(() => list.filter((t) => t.status === 'Recebido').length, [list]);
+  const [, tick] = useState(0);
+  useEffect(() => { const i = window.setInterval(() => tick((x) => x + 1), 60000); return () => window.clearInterval(i); }, []);
+  const late = list.filter((t) => slaState(t) === 'late');
+  const warn = list.filter((t) => slaState(t) === 'warn');
   useEffect(() => { onCount(openCount); }, [openCount, onCount]);
 
   const shown = list.filter((t) => {
-    const ok = f === 0 ? t.status === 'Recebido' || t.status === 'Em análise' : f === 1 ? t.assigneeId === meId : f === 2 ? t.status === 'Resolvido' || t.status === 'Fechado' : true;
+    const ok = f === 0 ? isOpen(t) : f === 1 ? !!slaState(t) : f === 2 ? t.assigneeId === meId : f === 3 ? t.status === 'Resolvido' || t.status === 'Fechado' : true;
     const s = q.trim().toLowerCase();
     return ok && (!s || [t.label, t.companyName, t.reporterName, t.description, t.assigneeName || ''].some((x) => x.toLowerCase().includes(s)));
   });
@@ -80,6 +96,15 @@ export function TicketsDesk({ meId, toast, active, onCount }: { meId: string; to
         <div className="mini"><b>{openCount}</b><span>novos aguardando</span></div>
         <div className="mini"><b>{list.filter((t) => t.status === 'Em análise').length}</b><span>em atendimento</span></div>
       </div>
+      {late.length || warn.length ? (
+        <button className={'ewx-sla' + (late.length ? ' late' : '')} onClick={() => setF(1)}>
+          <span className="ewx-sla-ic"><I n="clock" /></span>
+          <span className="ewx-sla-tx">
+            <b>{late.length ? `${late.length} ${late.length === 1 ? 'chamado passou' : 'chamados passaram'} de 24h` : `${warn.length} ${warn.length === 1 ? 'chamado perto' : 'chamados perto'} do limite de 24h`}</b>
+            <small>{late.length && warn.length ? `+ ${warn.length} perto do limite · ` : ''}Toque para ver e priorizar</small>
+          </span>
+        </button>
+      ) : null}
       <Seg id="tkf" items={FILTERS} value={f} onChange={setF} />
       <label className="srch" style={{ margin: '12px 0' }}><I n="search" /><input placeholder="Buscar por empresa, pessoa ou número" value={q} onChange={(e) => setQ(e.target.value)} /></label>
       {loading ? <div className="hint" style={{ padding: 30 }}>Carregando…</div> : null}
@@ -100,6 +125,7 @@ export function TicketsDesk({ meId, toast, active, onCount }: { meId: string; to
                 <div className="ewx-tk-meta">
                   <span>{t.companyName}</span><span>·</span><span>{t.reporterName}</span><span>·</span><span>{relDays(t.createdAt)}</span>
                 </div>
+                {slaState(t) ? <div className={'ewx-tk-sla ' + slaState(t)}><I n="clock" />{slaLabel(t)}</div> : null}
                 <div className="ewx-tk-who">{t.assigneeName ? <>Atendido por <b>{mine ? 'você' : t.assigneeName}</b></> : <span className="ewx-tk-free">Sem atendente</span>}</div>
               </button>
               {isOpen ? (
