@@ -8,6 +8,7 @@ import * as N from './notify';
 import { I, Chev } from './icons';
 import { ST, StatusKey } from './util';
 import { MyEvaluationsBox, EvaluationPage } from './evals';
+import { InstallAppBox } from './installapp';
 
 export type PageSpec =
   | { kind: 'profile'; id: string }
@@ -104,6 +105,7 @@ function ProfilePage({ id, api }: { id: string; api: EwApi }) {
             <div className="dy">{DAYS.map((d, i) => <button key={d} className={p.days[i] ? 'on' : ''} disabled={!me} onClick={() => { const days = [...p.days]; days[i] = days[i] ? 0 : 1; api.saveMe({ ...p, days }); }}>{d}</button>)}</div>
           </div>
         ) : null}
+        {me ? <InstallAppBox api={api} /> : null}
         {me ? <MyEvaluationsBox api={api} /> : null}
         <div className="box"><h4>Contato</h4>
           <div className="cr"><span>E-mail</span><b>{p.mail || '—'}</b></div>

@@ -18,3 +18,25 @@ export function isInstalledApp(): boolean {
 }
 
 export const isMobileBrowser = () => !isInstalledApp() && typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
+
+// ---------------------------------------------------------------- install (browser only)
+type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> };
+let deferred: InstallPrompt | null = null;
+const listeners = new Set<() => void>();
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e as InstallPrompt; listeners.forEach((f) => f()); });
+  window.addEventListener('appinstalled', () => { deferred = null; listeners.forEach((f) => f()); });
+}
+export const canPromptInstall = () => !!deferred;
+export const onInstallChange = (f: () => void) => { listeners.add(f); return () => { listeners.delete(f); }; };
+export const isIOS = () => typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+/** Shows the browser's install dialog. Returns 'manual' when the browser needs the menu instead. */
+export async function installApp(): Promise<'installed' | 'dismissed' | 'manual'> {
+  if (!deferred) return 'manual';
+  const d = deferred;
+  await d.prompt();
+  const r = await d.userChoice;
+  deferred = null;
+  return r.outcome === 'accepted' ? 'installed' : 'dismissed';
+}

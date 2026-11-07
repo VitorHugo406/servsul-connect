@@ -1,5 +1,6 @@
 // Ewwon mobile app — React port of the "Ewwon · App mobile" prototype,
 // backed by the existing Supabase data (see ./data.ts).
+import { PermissionGate, needsPermissionGate } from './permgate';
 import { StickerPicker, StickerView } from '@/components/common/Stickers';
 import { addFavorite, isSticker, parseSticker, stickerContent } from '@/lib/stickers';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -97,6 +98,7 @@ export default function EwwonApp() {
   const [typing, setTyping] = useState<string | null>(null);
   const [perm, setPerm] = useState<string>(N.getPermission());
   const [tourOn, setTourOn] = useState(false);
+  const [permGate, setPermGate] = useState(() => needsPermissionGate());
   const [statusClear, setStatusClear] = useState(3);
   const [deskCount, setDeskCount] = useState(0);
   const [attOn, setAttOn] = useState<false | 'menu' | 'emoji' | 'sticker'>(false);
@@ -658,8 +660,9 @@ export default function EwwonApp() {
     return stop;
   }, [tourOn, meId, askPerm]);
   useEffect(() => {
+    if (permGate) return;
     if (boot && meId && !safeStore.get(`tut:${meId}`, false)) { const t = window.setTimeout(() => setTourOn(true), 900); return () => window.clearTimeout(t); }
-  }, [boot, meId]);
+  }, [boot, meId, permGate]);
 
   // ------------------------------------------------------------ render guards
   if (err) {
@@ -740,6 +743,7 @@ export default function EwwonApp() {
     <>
     <div className="ew ewx-root" data-theme={themeAttr} data-rm={prefs.red ? '' : undefined} ref={rootRef} data-tour={tourOn ? '1' : undefined}>
       <div id="phone" ref={phoneRef} className={tourOn ? 'tour' : ''}>
+        {permGate && boot ? <PermissionGate onDone={() => setPermGate(false)} /> : null}
         <aside id="panel" ref={panelRef}>
           <div className={'pf' + (me.photo ? ' ewx-pf-photo' : '')} style={{ ['--sc' as string]: ST[me.st][1], backgroundImage: me.photo ? `url("${me.photo}")` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>{me.photo ? '' : me.i}<i className="pfd" /></div>
           <h2 id="pnm">{me.n}</h2>

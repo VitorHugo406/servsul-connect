@@ -41,6 +41,10 @@ const P: Record<string, string> = {
 };
 
 const EXTRA: Record<string, JSX.Element> = {
+  mic: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></>,
+  stop: <rect x="7" y="7" width="10" height="10" rx="2" />,
+  trash: <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />,
+  pause: <path d="M9 5v14M15 5v14" />,
   user: <circle cx="12" cy="8" r="4" />,
   users: <circle cx="9" cy="7" r="4" />,
   gift: <rect x="3" y="8" width="18" height="4" rx="1" />,

@@ -389,3 +389,33 @@
 .ew .m.me .ewx-stkb { align-self: flex-end; }
 .ew .ewx-stkp { margin: 0 10px 8px; padding: 10px; border-radius: 22px; background: var(--card); border: 1px solid var(--bd); }
 .ew .pick .ewx-stk-save { border-left: 1px solid var(--bd); margin-left: 2px; padding-left: 8px; }
+
+/* Baixar aplicativo (browser only) */
+.ew .ewx-install { display: flex; flex-direction: column; gap: 12px; }
+.ew .ewx-install-h { display: flex; align-items: center; gap: 12px; }
+.ew .ewx-install-h img { width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0; }
+.ew .ewx-install-h b { display: block; font-size: 15px; }
+.ew .ewx-install-h small { display: block; font-size: 12.5px; color: var(--mu); margin-top: 2px; line-height: 1.4; }
+.ew .ewx-install-steps { margin: 0; padding-left: 20px; font-size: 13.5px; line-height: 1.6; color: var(--mu); }
+.ew .ewx-install-steps b { color: var(--tx); }
+
+/* First access permissions (installed app) */
+.ew .ewx-pg { position: absolute; inset: 0; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: calc(env(safe-area-inset-top, 0px) + 24px) 22px calc(env(safe-area-inset-bottom, 0px) + 24px); background: var(--bg); text-align: center; animation: ew-pgin .35s var(--e); }
+.ew .ewx-pg-logo { width: 72px; height: 72px; border-radius: 22px; }
+.ew .ewx-pg h2 { font-size: 26px; font-weight: 800; }
+.ew .ewx-pg > p { color: var(--mu); font-size: 14.5px; max-width: 320px; line-height: 1.5; }
+.ew .ewx-pg-list { width: 100%; display: flex; flex-direction: column; gap: 10px; margin: 6px 0; }
+.ew .ewx-pg-row { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 20px; background: var(--card); border: 1px solid var(--bd); text-align: left; }
+.ew .ewx-pg-row.granted { border-color: rgba(70, 211, 123, .45); }
+.ew .ewx-pg-row.denied { border-color: rgba(255, 122, 122, .5); }
+.ew .ewx-pg-ic { width: 40px; height: 40px; border-radius: 14px; background: var(--c2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ew .ewx-pg-ic svg.i { width: 20px; height: 20px; }
+.ew .ewx-pg-tx { flex: 1; min-width: 0; }
+.ew .ewx-pg-tx b { display: block; font-size: 15px; }
+.ew .ewx-pg-tx small { display: block; font-size: 12.5px; color: var(--mu); margin-top: 2px; line-height: 1.4; }
+.ew .ewx-pg-ok { width: 30px; height: 30px; border-radius: 50%; background: #46d37b; color: #08130c; display: flex; align-items: center; justify-content: center; }
+.ew .ewx-pg-ok svg.i { width: 16px; height: 16px; }
+.ew .ewx-pg-na { color: var(--mu); }
+.ew .ewx-pg-help { width: 100%; padding: 12px 14px; border-radius: 16px; background: rgba(255, 195, 107, .12); color: #ffc36b; font-size: 13px; text-align: left; line-height: 1.45; }
+.ew .ewx-pg .btn.full { margin-top: 6px; }
+.ew .ewx-pg-help .btn { display: flex; margin-top: 10px; }
