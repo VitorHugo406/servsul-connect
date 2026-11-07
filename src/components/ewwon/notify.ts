@@ -184,13 +184,17 @@ let backHandler: (() => boolean) | null = null;
 let resumeHandler: (() => void) | null = null;
 export const setBackHandler = (f: () => boolean) => { backHandler = f; };
 export const setResumeHandler = (f: () => void) => { resumeHandler = f; };
+// Short trips out of the app (file picker, camera, opening a file) don't reload anything:
+// realtime keeps the data fresh. Only a longer absence refreshes the whole app.
+let hiddenAt = 0;
+const resumed = () => { const away = hiddenAt ? Date.now() - hiddenAt : 0; hiddenAt = 0; if (away > 30_000) resumeHandler?.(); };
 
 let started = false;
 export async function init(context: Ctx) {
   ctx = { ...ctx, ...context };
   if (started) return;
   started = true;
-  document.addEventListener('visibilitychange', () => { fg = !document.hidden; if (fg) resumeHandler?.(); });
+  document.addEventListener('visibilitychange', () => { fg = !document.hidden; if (fg) resumed(); else hiddenAt = Date.now(); });
   const LN = plug('LocalNotifications');
   if (LN) {
     for (const c of CHANNELS) { try { await LN.createChannel(c); } catch (e) { console.warn('canal', c.id, e); } }
@@ -201,7 +205,7 @@ export async function init(context: Ctx) {
     try { if (SB) { await SB.setStyle({ style: 'DARK' }); await SB.setBackgroundColor({ color: '#08080a' }); } } catch { /* ignore */ }
     try {
       A?.addListener('backButton', () => { const handled = backHandler?.(); if (handled) return; if (A.minimizeApp) A.minimizeApp(); else A.exitApp(); });
-      A?.addListener('appStateChange', (s: AnyObj) => { fg = !!s.isActive; if (s.isActive) resumeHandler?.(); });
+      A?.addListener('appStateChange', (s: AnyObj) => { fg = !!s.isActive; if (s.isActive) resumed(); else hiddenAt = Date.now(); });
     } catch { /* ignore */ }
     try { if (SS) window.setTimeout(() => SS.hide(), 300); } catch { /* ignore */ }
   } else {

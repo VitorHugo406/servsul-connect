@@ -147,7 +147,21 @@ export default function EwwonApp() {
         canPostNotices: isAdmin || canAccess('can_post_announcements' as never),
       });
       for (const c of b.chats) if (c.kind === 'sector') D.primeSectorRead(profile.id, c.id);
-      setBoot(b); setPeople(b.people); setChats(b.chats); setNotices(b.notices); setTickets(b.tickets); setPrefsState(b.prefs);
+      // A reload (resume after the file picker, token refresh…) keeps the messages already
+      // on screen; chats are only marked stale and refreshed in the background.
+      setBoot(b); setPeople(b.people); setNotices(b.notices); setTickets(b.tickets); setPrefsState(b.prefs);
+      setChats((prev) => {
+        if (!prev.length) return b.chats;
+        const old = new Map(prev.map((c) => [c.key, c]));
+        const next = b.chats.map((c) => { const o = old.get(c.key); return o && o.m.length ? { ...c, m: o.m, loaded: false } : c; });
+        for (const o of prev) if (!next.some((c) => c.key === o.key) && o.kind === 'dm') next.push({ ...o, loaded: false });
+        return next;
+      });
+      const open = stateRef.current.roomOn ? stateRef.current.curKey : null;
+      if (open) {
+        const c = b.chats.find((x) => x.key === open) || stateRef.current.chats.find((x) => x.key === open);
+        if (c) void D.loadMessages(c, profile.id).then((m) => setChats((cs) => cs.map((x) => (x.key === open ? { ...x, m: mergeMsgs(m, x.m), loaded: true } : x)))).catch(() => setChats((cs) => cs.map((x) => (x.key === open ? { ...x, loaded: true } : x))));
+      }
     } catch (e) {
       console.error('Ewwon bootstrap', e);
       setErr('Não foi possível carregar o Ewwon.');
@@ -909,7 +923,7 @@ export default function EwwonApp() {
             <div id="msgs" ref={msgsRef} style={msgsVars} onClick={() => setPickFor(null)}>
               <div className="dv">{cur && cur.m.length ? 'Mensagens recentes' : 'Hoje'}</div>
               <div className="hint">Segure ou toque 2x numa mensagem para reagir</div>
-              {cur && !cur.loaded ? (
+              {cur && !cur.loaded && !cur.m.length ? (
                 <div className="ewx-skel" aria-label="Carregando mensagens" role="status">
                   {[62, 44, 70, 38, 56, 48].map((w, i) => <div key={i} className={'ewx-skel-b' + (i % 3 === 2 ? ' me' : '')} style={{ width: w + '%', animationDelay: i * 0.08 + 's' }} />)}
                 </div>
