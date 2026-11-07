@@ -1061,19 +1061,19 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
   -webkit-backdrop-filter: blur(22px) saturate(160%) !important;
 }
 
-:is(button, .apple-glass-button) {
+:is(button, .apple-glass-button):not(.ew *) {
   background-image: var(--glass-button-sheen) !important;
   backdrop-filter: blur(8px) saturate(145%);
   -webkit-backdrop-filter: blur(8px) saturate(145%);
 }
-:is(button, .apple-glass-button):not([role="switch"]):not([role="checkbox"]):not([role="radio"]):not([role="slider"]):not([role="tab"]):not(.chat-conversation-row):not(.chat-conversation-item > button) {
+:is(button, .apple-glass-button):not(.ew *):not([role="switch"]):not([role="checkbox"]):not([role="radio"]):not([role="slider"]):not([role="tab"]):not(.chat-conversation-row):not(.chat-conversation-item > button) {
   box-shadow: var(--glass-button-shadow);
 }
 .apple-glass-button:not([class*="bg-"]) {
   background-color: hsl(var(--glass-surface) / .30);
 }
 @media (hover: hover) {
-  :is(button, .apple-glass-button):not(:disabled):hover {
+  :is(button, .apple-glass-button):not(.ew *):not(:disabled):hover {
     background-image: var(--glass-sheen) !important;
   }
 }

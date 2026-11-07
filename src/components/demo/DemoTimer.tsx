@@ -12,7 +12,7 @@ export function DemoTimer() {
   }, []);
   if (!IS_DEMO) return null;
   return (
-    <div className="fixed bottom-3 left-1/2 z-[100] flex -translate-x-1/2 items-center gap-2 rounded-full border border-border/60 bg-card/85 px-3 py-1.5 text-xs font-semibold text-foreground shadow-lg backdrop-blur-xl" role="timer" aria-label="Tempo restante do teste">
+    <div className="fixed top-2 left-1/2 z-[130] md:top-auto md:bottom-3 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border/60 bg-card/85 px-3 py-1.5 text-xs font-semibold text-foreground shadow-lg backdrop-blur-xl" role="timer" aria-label="Tempo restante do teste">
       <Timer className="h-3.5 w-3.5 text-primary" />
       <span>Modo teste</span>
       <span className="tabular-nums text-primary">{formatRemaining(left)}</span>

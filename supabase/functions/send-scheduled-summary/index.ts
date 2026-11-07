@@ -41,6 +41,8 @@ Deno.serve(async (req) => {
       // Check frequency match
       if (summary.frequency === 'weekly' && summary.weekday !== currentWeekday) continue;
       if (summary.frequency === 'monthly' && summary.month_day !== currentMonthDay) continue;
+      // "Segunda a sexta" daily summaries (mobile app) skip weekends
+      if (summary.weekdays_only && (currentWeekday === 0 || currentWeekday === 6)) continue;
       // Claim it first so parallel runs don't double-send
       const { data: claimed } = await admin.from('scheduled_summaries').update({ last_sent_on: today })
         .eq('id', summary.id).or(`last_sent_on.is.null,last_sent_on.lt.${today}`).select('id');

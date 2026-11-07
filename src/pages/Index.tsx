@@ -11,6 +11,7 @@ import { useImportantAnnouncements } from '@/hooks/useImportantAnnouncements';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
+const EwwonApp = lazy(() => import('@/components/ewwon/EwwonApp'));
 const HomeSection = lazy(() => import('@/components/sections/HomeSection').then((module) => ({ default: module.HomeSection })));
 const ChatSection = lazy(() => import('@/components/sections/ChatSection').then((module) => ({ default: module.ChatSection })));
 const AnnouncementsSection = lazy(() => import('@/components/sections/AnnouncementsSection').then((module) => ({ default: module.AnnouncementsSection })));
@@ -48,7 +49,6 @@ import { ImportantAnnouncementModal } from '@/components/announcements/Important
 import { BoardJoinDialog } from '@/components/tasks/BoardJoinDialog';
 import { useWarRoomAlarm } from '@/hooks/useWarRoomAlarm';
 import { WarRoomAlarmOverlay } from '@/components/warroom/WarRoomAlarmOverlay';
-import { MobileShell } from '@/components/layout/mobile/MobileShell';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   home: { title: 'Início', subtitle: 'Visão geral do ewvon' },
@@ -227,7 +227,7 @@ const Index = () => {
   const handleNavigateToChat = () => handleSectionChange('chat'); const handleNavigateToAnnouncements = () => handleSectionChange('announcements');
   const handleRegisterFacial = () => { completeOnboarding(); handleSectionChange('facial'); };
 
-  if (showOnboarding && profile) return <OnboardingScreen userName={profile.display_name || profile.name} onComplete={completeOnboarding} onRegisterFacial={handleRegisterFacial} />;
+  if (showOnboarding && profile && !isMobile) return <OnboardingScreen userName={profile.display_name || profile.name} onComplete={completeOnboarding} onRegisterFacial={handleRegisterFacial} />;
   if (!isReady) return <div className="flex min-h-screen items-center justify-center bg-background"><div className="flex flex-col items-center gap-4"><div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" /><p className="text-muted-foreground">Carregando...</p></div></div>;
 
   const renderSection = () => {
@@ -264,7 +264,8 @@ const Index = () => {
 
   const currentSection = sectionTitles[activeSection] || sectionTitles.home; const isHomePage = activeSection === 'home';
   if (isMobile) {
-    return <><SectionTransitionIndicator section={activeSection} /><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><MobileShell activeSection={activeSection} onSectionChange={handleSectionChange} globalSearch={globalSearch} /><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} /><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && !showOnboarding && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></>;
+    // Phones get the Ewwon mobile app (src/components/ewwon); desktop keeps the full workspace below.
+    return <><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><Suspense fallback={<div className="fixed inset-0 bg-[#08080a]" />}><EwwonApp /></Suspense><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /></>;
   }
   return <div className="flex h-screen overflow-hidden bg-background"><SectionTransitionIndicator section={activeSection} /><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} /><div className="flex flex-1 flex-col overflow-hidden"><Header title={currentSection.title} subtitle={currentSection.subtitle} activeSection={activeSection} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} /><main data-section={activeSection} className={`ewvon-main min-w-0 flex-1 overflow-auto bg-card ${['chat', 'calendar', 'tasks', 'war-room'].includes(activeSection) ? '' : 'clean-section'}`}><Suspense fallback={<div className="flex min-h-48 items-center justify-center" role="status" aria-label="Carregando seção"><div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>}>{renderSection()}</Suspense></main></div><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} /><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && !showOnboarding && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></div>;
 };

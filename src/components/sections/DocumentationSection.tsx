@@ -464,7 +464,7 @@ function generateDocumentationPDF() {
     ['App.tsx', 'Componente', 'Roteamento principal com React Router (rotas: /, /auth, /*)'],
     ['main.tsx', 'Entry Point', 'Ponto de entrada: monta React no DOM com providers'],
     ['index.css', 'Estilos', 'Design tokens CSS com variáveis HSL para tema claro/escuro'],
-    ['components/layout/', 'Diretório', 'Header, Sidebar, MobileHeader, MobileNavigation, NotificationPanel'],
+    ['components/layout/', 'Diretório', 'Header, Sidebar, NotificationPanel'],
     ['components/sections/', 'Diretório', '16 seções/páginas principais (Home, Chat, Tasks, etc.)'],
     ['components/chat/', 'Diretório', 'ChatInput, ChatMessage, DM, Grupos, Mentions, TypingIndicator'],
     ['components/tasks/', 'Diretório', 'TaskDetailDialog, ReportDialog, AutomationRules, Filters, Constants'],
