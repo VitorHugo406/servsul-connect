@@ -214,7 +214,7 @@ export async function bootstrap(opts: {
     const partner = m.sender_id === profileId ? m.receiver_id : m.sender_id;
     if (!people[partner]) continue;
     const cur = dmByPartner.get(partner) || { last: m, u: 0 };
-    if (m.receiver_id === profileId && !m.is_read) cur.u++;
+    if (m.receiver_id === profileId && m.sender_id !== profileId && !m.is_read) cur.u++;
     dmByPartner.set(partner, cur);
   }
   for (const [partner, v] of dmByPartner) chats.push(makeDm(people[partner], v.last, v.u, profileId, chatPrefs.get(`dm:${partner}`) || null));
@@ -280,7 +280,7 @@ export const SYSTEM_PERSON: Person = {
 
 export function makeDm(p: Person, last: Row | null, u: number, meId: string, prefRow: Row | null): Chat {
   return {
-    key: `dm:${p.id}`, kind: 'dm', id: p.id, g: false, p: p.id, n: p.n, i: p.i, hue: p.hue, s: p.dept, mem: [meId, p.id], adm: [], desc: '',
+    key: `dm:${p.id}`, kind: 'dm', id: p.id, g: false, p: p.id, n: p.me ? `${p.n} (você)` : p.n, i: p.i, hue: p.hue, s: p.dept, mem: [meId, p.id], adm: [], desc: '',
     photo: p.photo, cover: p.cover, u: Math.min(u, 99),
     last: last ? { t: last.content, at: last.created_at, me: last.sender_id === meId, from: last.sender_id, rd: !!last.is_read } : null,
     m: [], loaded: false, set: setFromRow(prefRow), wp: null, canEdit: false, canSummary: false,

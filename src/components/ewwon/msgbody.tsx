@@ -3,7 +3,7 @@
 //   📷 [name](url)   image attachment
 //   📎 [name](url)   file attachment
 //   📋 Card #N — title (+ 📝 ⚡ 📅 📌 lines)   task card
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { openMedia, useCachedMedia } from '@/lib/mediaCache';
 import { isSticker, parsePack } from '@/lib/stickers';
@@ -49,7 +49,7 @@ export function previewText(content: string): string {
   if (isSticker(content)) return '✨ Figurinha';
   const v = parseVoice(content); if (v) return `🎤 Áudio (${v.duration})`;
   const p = parseMsg(content);
-  if (p.text) return p.text.split('\n')[0];
+  if (p.text) return p.text.split('\n').find((l) => l.trim())!.replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '$1').replace(/(^|\W)([*_~`])([^*_~`\n]+)\2(?=\W|$)/g, '$1$3');
   if (p.images.length) return p.images.length > 1 ? `📷 ${p.images.length} fotos` : '📷 Foto';
   if (p.files.length) return `📎 ${p.files[0].name}`;
   if (p.cards.length) return `📋 ${p.cards[0].title}`;
@@ -181,23 +181,54 @@ function LinkCard({ url }: { url: string }) {
   );
 }
 
-export function RichText({ text }: { text: string }) {
-  const parts: (string | { url: string })[] = [];
-  let last = 0;
-  for (const m of text.matchAll(URL_RE)) {
-    if (m.index! > last) parts.push(text.slice(last, m.index));
-    parts.push({ url: m[0] });
-    last = m.index! + m[0].length;
+// Same text styles as the desktop chat: *negrito*, _itálico_, ~riscado~, `código` and [texto](link).
+const FMT_RE = /(\*[^*\n]+\*|_[^_\n]+_|~[^~\n]+~|`[^`\n]+`)/g;
+function fmt(t: string, k: string): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  let last = 0, n = 0;
+  for (const m of t.matchAll(FMT_RE)) {
+    if (m.index! > last) out.push(t.slice(last, m.index));
+    const v = m[0], inner = v.slice(1, -1);
+    // "_" inside words (snake_case) is not italics
+    const before = t[m.index! - 1], after = t[m.index! + v.length];
+    if (/\w/.test(before || '') || /\w/.test(after || '')) out.push(v);
+    else if (v[0] === '*') out.push(<strong key={k + n++}>{fmt(inner, k + n + 'b')}</strong>);
+    else if (v[0] === '_') out.push(<em key={k + n++}>{fmt(inner, k + n + 'i')}</em>);
+    else if (v[0] === '~') out.push(<s key={k + n++}>{fmt(inner, k + n + 's')}</s>);
+    else out.push(<code key={k + n++} className="ewx-code">{inner}</code>);
+    last = m.index! + v.length;
   }
-  if (last < text.length) parts.push(text.slice(last));
+  if (last < t.length) out.push(t.slice(last));
+  return out;
+}
+const MDLINK_RE = /\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g;
+
+export function RichText({ text }: { text: string }) {
+  const parts: (string | { url: string; label?: string })[] = [];
+  const pushUrls = (seg: string) => {
+    let last = 0;
+    for (const m of seg.matchAll(URL_RE)) {
+      if (m.index! > last) parts.push(seg.slice(last, m.index));
+      parts.push({ url: m[0] });
+      last = m.index! + m[0].length;
+    }
+    if (last < seg.length) parts.push(seg.slice(last));
+  };
+  let lastMd = 0;
+  for (const m of text.matchAll(MDLINK_RE)) {
+    if (m.index! > lastMd) pushUrls(text.slice(lastMd, m.index));
+    parts.push({ url: m[2], label: m[1] });
+    lastMd = m.index! + m[0].length;
+  }
+  if (lastMd < text.length) pushUrls(text.slice(lastMd));
   const first = parts.find((p): p is { url: string } => typeof p !== 'string');
   const href = (u: string) => (u.startsWith('http') ? u : 'https://' + u);
   return (
     <>
       {first ? <LinkCard url={href(first.url)} /> : null}
       <span className="ewx-tx">
-        {parts.map((p, i) => typeof p === 'string' ? p
-          : <a key={i} className="ewx-url" href={href(p.url)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>{shortUrl(p.url)}</a>)}
+        {parts.map((p, i) => typeof p === 'string' ? <Fragment key={i}>{fmt(p, i + ':')}</Fragment>
+          : <a key={i} className="ewx-url" href={href(p.url)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>{p.label || shortUrl(p.url)}</a>)}
       </span>
     </>
   );

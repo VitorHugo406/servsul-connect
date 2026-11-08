@@ -107,3 +107,12 @@
 - Aba "Dúvidas": perguntas prontas; ao tocar, a pergunta aparece como mensagem e a bolha "fala" a resposta (respostas fixas, sem IA).
 - Ajuste: animação "falando" mais lenta e com mais estica-e-encolhe; a bolha flutua sobre as mensagens ao rolar, e o fim da conversa tem um espaço vazio para a última mensagem ficar acima dela.
 - O chat do "Comunicados" não tem configurações: no celular o botão ⋮ vira a lupa (pesquisa direta); no PC o botão de personalizar some nesse chat.
+
+## Ajustes (09/11/2026, tarde)
+- Bolha: animação suave e lenta, como no vídeo de referência (sem estica-e-encolhe forte).
+- App: estilos de texto iguais ao PC (*negrito*, _itálico_, ~riscado~, `código`, [texto](link)); ao selecionar texto na caixa aparece a barra B / I / S / código. `_` dentro de palavras (snake_case) não vira itálico. A prévia da lista mostra o texto sem os marcadores.
+- App: dá para conversar consigo mesmo ("Nome (você)", primeiro da lista em Nova conversa); mensagens próprias não contam como não lidas.
+- Assistente do PC: "Novos avisos" usa a mesma regra do sino (lido em `announcement_reads`), então zera ao ver os avisos; "Dúvidas" virou lista suspensa com uma resposta por vez.
+- PC: troca de aba sem a pílula animada no topo; enquanto a aba carrega aparece só a logo desenhando no centro da área da página (a tela cheia fica só na abertura do sistema).
+- PC: a conversa com o "Comunicados" aparece na lista para todas as empresas (antes a lista escondia quem era de outra empresa); o item da lista não estoura a largura e reserva espaço para o botão "...".
+- Cards: numeração por mural (migration `20261109070000_task_number_per_board.sql`): cada mural começa no #1; trigger com trava por mural evita números repetidos; card movido para outro mural ganha o próximo número de lá; os cards existentes foram renumerados por mural na ordem de criação. O número só é exibido (ninguém busca card pelo número).

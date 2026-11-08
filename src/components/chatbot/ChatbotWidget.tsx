@@ -5,9 +5,11 @@ import { Bot, X, Bell, HelpCircle, Sparkles, ChevronRight, Check, Building2, Mes
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useSound } from '@/hooks/useSound';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface Notification {
   id: string;
@@ -112,7 +114,9 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('notifications');
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCounts, setUnreadCounts] = useState<UnreadCounts>({ announcements: 0, messages: 0 });
+  // Same unread rule as the header bell: a notice counts until it is read in Avisos (announcement_reads).
+  const { counts: bell } = useNotifications();
+  const unreadCounts: UnreadCounts = { announcements: bell.unreadAnnouncements, messages: bell.unreadMessages };
   const [overdueTasks, setOverdueTasks] = useState(0);
   const [scoreFeedback, setScoreFeedback] = useState<{ current: number; previous: number; trend: 'up' | 'down' | 'same' } | null>(null);
   const [overdueTasksDismissed, setOverdueTasksDismissed] = useState(false);
@@ -127,15 +131,15 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
   const totalUnread = unreadNotifications + unreadCounts.announcements + unreadCounts.messages + (!overdueTasksDismissed && overdueTasks > 0 ? 1 : 0);
 
   // Dúvidas: question/answer conversation with a short "typing" pause.
-  const [qa, setQa] = useState<{ q: string; a: string | null }[]>([]);
-  const answering = qa.some((x) => x.a === null);
-  const ask = (item: { q: string; a: string }) => {
-    if (answering) return;
-    setQa((l) => [...l, { q: item.q, a: null }]);
-    window.setTimeout(() => setQa((l) => l.map((x) => (x.q === item.q && x.a === null ? { ...x, a: item.a } : x))), 850);
+  // One question at a time, picked from a dropdown; the blob "speaks" the answer.
+  const [faqIdx, setFaqIdx] = useState<number | null>(null);
+  const [answering, setAnswering] = useState(false);
+  const faqTimer = useRef<number>();
+  const ask = (i: number) => {
+    window.clearTimeout(faqTimer.current);
+    setFaqIdx(i); setAnswering(true);
+    faqTimer.current = window.setTimeout(() => setAnswering(false), 700);
   };
-  const qaEnd = useRef<HTMLDivElement>(null);
-  useEffect(() => { qaEnd.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [qa]);
 
   const handleOpen = () => {
     playChatbotClick();
@@ -173,22 +177,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
         setNotifications(notifData || []);
       }
 
-      // Get last seen timestamp from profile
-      const lastSeenStr = (profile as any).last_seen_at;
-      const lastSeen = lastSeenStr ? new Date(lastSeenStr) : new Date(0);
 
-      // Count new announcements since last seen
-      const { count: announcementCount } = await supabase
-        .from('announcements')
-        .select('*', { count: 'exact', head: true })
-        .gt('created_at', lastSeen.toISOString());
-
-      // Count unread direct messages
-      const { count: messageCount } = await supabase
-        .from('direct_messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('receiver_id', profile.id)
-        .eq('is_read', false);
 
       // Count overdue incomplete tasks assigned to the user
       const { count: overdueCount } = await supabase
@@ -242,10 +231,6 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
 
       setTodayTaskCount(todayTasks || 0);
 
-      setUnreadCounts({
-        announcements: announcementCount || 0,
-        messages: messageCount || 0,
-      });
 
       // Update last seen
       await supabase
@@ -314,13 +299,6 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
 
     fetchData();
 
-    // Set up realtime subscription for new announcements
-    const announcementChannel = supabase
-      .channel('new-announcements')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'announcements' }, () => {
-        setUnreadCounts(prev => ({ ...prev, announcements: prev.announcements + 1 }));
-      })
-      .subscribe();
 
     // Set up realtime subscription for new direct messages (refetch to stay accurate)
     const messageChannel = supabase
@@ -349,7 +327,6 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(announcementChannel);
       supabase.removeChannel(messageChannel);
       supabase.removeChannel(notifChannel);
     };
@@ -725,30 +702,32 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                 )}
 
                 {activeTab === 'help' && (
-                  <div className="space-y-3 p-3">
-                    <div className="flex items-end gap-2">
-                      <CosmicBlob size={26} />
-                      <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-muted px-3 py-2 text-sm text-foreground">Oi! Escolha uma dúvida abaixo que eu explico rapidinho.</div>
-                    </div>
-                    {qa.map((x, k) => (
-                      <div key={k} className="space-y-2">
-                        <div className="flex justify-end"><div className="max-w-[85%] rounded-2xl rounded-br-md bg-foreground px-3 py-2 text-sm text-background">{x.q}</div></div>
-                        <div className="flex items-end gap-2">
-                          <CosmicBlob size={26} talk={x.a === null} />
-                          <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-muted px-3 py-2 text-sm text-foreground">
-                            {x.a ?? <span className="inline-flex gap-1 py-1"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:.15s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:.3s]" /></span>}
-                          </div>
+                  <div className="space-y-4 p-4">
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-medium text-muted-foreground">Qual é a sua dúvida?</span>
+                      <Select value={faqIdx === null ? undefined : String(faqIdx)} onValueChange={(v) => ask(Number(v))}>
+                        <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Escolha uma pergunta" /></SelectTrigger>
+                        <SelectContent className="z-[60] max-h-72 rounded-2xl">
+                          {FAQ.map((f, i) => <SelectItem key={i} value={String(i)} className="rounded-xl">{f.q}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </label>
+                    {faqIdx === null ? (
+                      <div className="flex flex-col items-center gap-3 py-8 text-center">
+                        <CosmicBlob size={64} />
+                        <p className="max-w-[260px] text-sm text-muted-foreground">Escolha uma pergunta na lista e eu explico rapidinho.</p>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-3">
+                        <CosmicBlob size={34} talk={answering} className="mt-1" />
+                        <div className="min-w-0 flex-1 rounded-2xl rounded-tl-md bg-muted px-4 py-3">
+                          <p className="text-sm font-semibold text-foreground">{FAQ[faqIdx].q}</p>
+                          {answering
+                            ? <span className="mt-2 inline-flex gap-1 py-1"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:.15s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:.3s]" /></span>
+                            : <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{FAQ[faqIdx].a}</p>}
                         </div>
                       </div>
-                    ))}
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {FAQ.filter((f) => !qa.some((x) => x.q === f.q)).map((f) => (
-                        <button key={f.q} type="button" disabled={answering} onClick={() => ask(f)}
-                          className="rounded-full border border-border bg-background px-3 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50">{f.q}</button>
-                      ))}
-                      {qa.length ? <button type="button" onClick={() => setQa([])} className="rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">Recomeçar</button> : null}
-                    </div>
-                    <div ref={qaEnd} />
+                    )}
                   </div>
                 )}
 

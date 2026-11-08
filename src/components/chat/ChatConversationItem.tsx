@@ -35,7 +35,7 @@ export function ChatConversationItem({ conversationKey, children }: { conversati
       window.dispatchEvent(new Event('nuvexa:unread-changed'));
     } catch { setUnread(value); }
   };
-  return <div className="chat-conversation-item relative" data-manual-unread={unread || undefined} onClick={() => mark(false)}>
+  return <div className="chat-conversation-item relative min-w-0 max-w-full overflow-hidden" data-manual-unread={unread || undefined} onClick={() => mark(false)}>
     {children}
     <div className="absolute right-1 top-1" onClick={event => event.stopPropagation()}>
       <DropdownMenu><DropdownMenuTrigger asChild>

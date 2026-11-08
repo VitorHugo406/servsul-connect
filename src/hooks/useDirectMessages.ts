@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { orderByCreated } from '@/lib/messageOrder';
+import { isSystemSender } from '@/lib/systemSender';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { withCompany } from '@/lib/companyScope';
@@ -256,7 +257,8 @@ export function useConversations() {
     for (const msg of messages) {
       const partnerId = msg.sender_id === profile.id ? msg.receiver_id : msg.sender_id;
       const partner = msg.sender_id === profile.id ? msg.receiver : msg.sender;
-      if (!partner || partner.company_id !== profile.company_id) continue;
+      // "Comunicados" (system sender) lives in the system company but talks to everyone.
+      if (!partner || (partner.company_id !== profile.company_id && !isSystemSender(partnerId))) continue;
       
       if (!conversationMap.has(partnerId)) {
         conversationMap.set(partnerId, {

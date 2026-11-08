@@ -583,3 +583,10 @@
 .ew #room.ewx-sys #msgs { padding-bottom: 136px; }
 .ew #room #msgs { position: relative; z-index: 1; }
 .ew .ewx-ro { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 12px calc(env(safe-area-inset-bottom, 0px) + 12px); padding: 12px 14px; border-radius: 22px; background: var(--card); border: 1px solid var(--bd); color: var(--mu); font-size: 13px; text-align: center; }
+/* Text styles: formatting bar shown while text is selected in the composer */
+.ew .ewx-fmt { align-self: center; display: flex; gap: 2px; margin: 0 auto 6px; padding: 4px; border-radius: 16px; background: var(--card); border: 1px solid var(--bd); box-shadow: 0 8px 22px rgba(0, 0, 0, .25); animation: ew-pgin .15s ease; }
+.ew .ewx-fmt button { min-width: 44px; height: 36px; border-radius: 12px; font-size: 16px; color: var(--tx); }
+.ew .ewx-fmt button:active { background: var(--c2); }
+.ew .ewx-fmt code, .ew .ewx-code { font-family: ui-monospace, Menlo, monospace; font-size: .9em; }
+.ew .ewx-code { padding: 1px 5px; border-radius: 6px; background: rgba(127, 127, 140, .18); }
+.ew .ewx-tx strong { font-weight: 700; }

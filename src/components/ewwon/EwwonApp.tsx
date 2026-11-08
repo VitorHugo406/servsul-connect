@@ -119,6 +119,19 @@ export default function EwwonApp() {
   const [dayFloat, setDayFloat] = useState<string | null>(null);
   // Swipe-to-reply (WhatsApp-like): the message being answered, shown above the composer.
   const [reply, setReply] = useState<Msg | null>(null);
+  // Text styles like the desktop chat: select text in the composer and tap B / I / S / code.
+  const [fmtSel, setFmtSel] = useState(false);
+  const onComposerSelect = (e: React.SyntheticEvent<HTMLTextAreaElement>) => { const t = e.currentTarget; setFmtSel(t.selectionEnd > t.selectionStart); };
+  const applyFmt = (mark: string) => {
+    const t = inpRef.current; if (!t) return;
+    const a = t.selectionStart, b = t.selectionEnd; if (b <= a) return;
+    const v = t.value, sel = v.slice(a, b);
+    // trim spaces out of the markers (WhatsApp rule: "*texto*" not "* texto *")
+    const l = sel.length - sel.trimStart().length, r = sel.length - sel.trimEnd().length;
+    const next = v.slice(0, a + l) + mark + sel.trim() + mark + v.slice(b - r);
+    setDraft(next);
+    window.requestAnimationFrame(() => { t.focus(); t.setSelectionRange(a + l + mark.length, a + l + mark.length + sel.trim().length); });
+  };
   const replyRef = useRef<Msg | null>(null);
   const startReply = (m: Msg) => { replyRef.current = m; setReply(m); N.haptic('light'); window.setTimeout(() => inpRef.current?.focus(), 30); };
   const cancelReply = () => { replyRef.current = null; setReply(null); };
@@ -1256,6 +1269,14 @@ export default function EwwonApp() {
             ) : attOn === 'emoji' ? (
               <div className="ewx-emo">{EMOJIS.map((e) => <button key={e} onClick={() => setDraft((d) => d + e)}>{e}</button>)}</div>
             ) : null}
+            {fmtSel && !curSys ? (
+              <div className="ewx-fmt" onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()}>
+                <button aria-label="Negrito" onClick={() => applyFmt('*')}><b>B</b></button>
+                <button aria-label="Itálico" onClick={() => applyFmt('_')}><i>I</i></button>
+                <button aria-label="Riscado" onClick={() => applyFmt('~')}><s>S</s></button>
+                <button aria-label="Código" onClick={() => applyFmt('`')}><code>{'</>'}</code></button>
+              </div>
+            ) : null}
             {reply && !voiceRec.recording && !recUi ? (
               <div className="ewx-reply">
                 <div className="ewx-reply-q"><b>{reply.me ? 'Você' : (reply.from && P[reply.from]?.n) || 'Alguém'}</b><span>{previewText(reply.t)}</span></div>
@@ -1280,7 +1301,7 @@ export default function EwwonApp() {
                     <button key="plus" className={'plus' + (attOn && attOn !== 'sticker' ? ' on' : '')} aria-label="Anexar" onClick={() => setAttOn(attOn && attOn !== 'sticker' ? false : 'menu')}><I n={attOn && attOn !== 'sticker' ? 'x' : 'plus'} /></button>,
                     <button key="stk" className={'ewx-stkbtn' + (attOn === 'sticker' ? ' on' : '')} aria-label="Figurinhas" onClick={() => setAttOn(attOn === 'sticker' ? false : 'sticker')}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h7l7-7V7a4 4 0 0 0-4-4h-3" /><path d="M14 21v-3a4 4 0 0 1 4-4h3" /><path d="M8.5 10h.01M15.5 10h.01M8.5 14.5c1.8 1.6 5.2 1.6 7 0" /></svg></button>,
                     <textarea key="inp" id="inp" ref={inpRef} rows={1} name="ew-message" placeholder={pending.length ? 'Adicione uma legenda' : 'Escreva uma mensagem'} autoComplete="off" autoCorrect="on" autoCapitalize="sentences" spellCheck enterKeyHint={prefs.enter !== 0 ? 'send' : 'enter'} value={draft} maxLength={4000}
-                      onFocus={() => setAttOn((a) => (a === 'menu' ? false : a))}
+                      onFocus={() => setAttOn((a) => (a === 'menu' ? false : a))} onSelect={onComposerSelect} onBlur={() => setFmtSel(false)}
                       onChange={(e) => { setDraft(e.target.value); fitTextarea(e.target); sendTyping(); }} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); void doSend(); } }} />,
                   ]}
                   {recOn && lockMode
@@ -1604,7 +1625,8 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
     );
   }
   if (spec.kind === 'newchat') {
-    const list = Object.values(P).filter((p) => !p.me && !p.sys && p.n.toLowerCase().includes(qq.toLowerCase()));
+    // You can also talk to yourself (notes to self), listed first as "Nome (você)".
+    const list = Object.values(P).filter((p) => !p.sys && p.n.toLowerCase().includes(qq.toLowerCase())).sort((a, b) => Number(!!b.me) - Number(!!a.me));
     return (
       <>
         <div className="gp" />
@@ -1616,7 +1638,7 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
         <label className="srch" style={{ margin: '0 0 10px' }}><I n="search" /><input placeholder="Buscar pessoa" value={qq} onChange={(e) => setQq(e.target.value)} /></label>
         {list.map((p) => (
           <div key={p.id} className="opt" onClick={() => { close(); api.openDm(p.id); }}>
-            <Av p={p} st={p.st} /><div>{p.n}<small>{ST[p.st][0]} · {p.dept}</small></div><Chev />
+            <Av p={p} st={p.st} /><div>{p.me ? `${p.n} (você)` : p.n}<small>{p.me ? 'Anotações e lembretes para você mesmo' : `${ST[p.st][0]} · ${p.dept}`}</small></div><Chev />
           </div>
         ))}
         {!list.length ? <div className="hint" style={{ padding: 20 }}>Ninguém encontrado</div> : null}
