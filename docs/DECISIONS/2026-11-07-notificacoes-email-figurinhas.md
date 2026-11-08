@@ -62,3 +62,11 @@
 - Início do app: o carregamento inicial rodava 2–3 vezes (dependências recriadas a cada atualização do perfil/setores/permissões) e os números reiniciavam a animação a cada atualização automática. Agora há uma carga por vez, a atualização só redesenha quando os números mudam e os contadores animam do valor atual.
 - "Digitando...": o app usa os mesmos canais de broadcast do PC (`typing-sector-*`, `typing-group-*`, `typing-dm-*`), com texto azul escuro (tema claro) / azul claro (tema escuro) e bolha animada.
 - Relatórios sem faixas/fundos escuros (impressão): cabeçalho branco com linha fina, cartões e tabelas com contorno, etiquetas coloridas só em contorno. O PDF de aniversariantes ficou branco, com a foto do tema num quadro à direita e o rodapé do QR com contorno.
+
+## Chat mobile: áudio, figurinhas, digitando e ajustes (09/11/2026)
+- Áudio como no WhatsApp: segurar o microfone grava, soltar envia, deslizar para a esquerda cancela, deslizar para cima trava (grava sem segurar; lixeira ou enviar finalizam). Toque rápido só mostra a dica.
+- Figurinhas seguidas da mesma pessoa aparecem lado a lado (duas por linha).
+- "Digitando..." também na lista de conversas: o app escuta os canais de digitação das 40 conversas mais recentes (um canal por conversa, reaproveitado pela conversa aberta).
+- Menu ⋮ do chat ficou fora do cabeçalho: com fundo "Pontos"/"Cor" o cabeçalho usa desfoque, que prendia o menu por baixo das mensagens.
+- O painel de figurinhas usava a classe `.stk`, a mesma das fotos empilhadas de "Presentes agora", o que deixava essa linha com 300 px de altura; o painel agora usa `.stkp`.
+- Reações: o seletor e as reações da mensagem ficam sempre numa linha reta (não encolhem para a largura de mensagens curtas).

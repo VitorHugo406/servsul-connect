@@ -120,7 +120,7 @@ export function StickerPicker({ onPick, onSendContent, notify }: { onPick: (s: S
   if (adding && pack) {
     const pool = (mine || []).filter((s) => !pack.items.some((x) => S.stickerKey(x) === S.stickerKey(s)));
     return (
-      <div className="stk" onClick={(e) => e.stopPropagation()}>
+      <div className="stkp" onClick={(e) => e.stopPropagation()}>
         <div className="stk-tabs"><button type="button" className="stk-t" onClick={() => setAdding(null)}>‹ Voltar</button><span className="stk-sp" /><b className="stk-title">Adicionar a “{pack.name}”</b></div>
         <div className="stk-grid">
           {pool.map((s) => { const k = S.stickerKey(s); const on = adding.includes(k); return (
@@ -136,7 +136,7 @@ export function StickerPicker({ onPick, onSendContent, notify }: { onPick: (s: S
   }
 
   return (
-    <div className="stk" onClick={(e) => e.stopPropagation()}>
+    <div className="stkp" onClick={(e) => e.stopPropagation()}>
       <div className="stk-tabs">
         {pack ? <button type="button" className="stk-t" onClick={() => { setOpenPack(null); setEdit(false); }}>‹ Pacotes</button>
           : TABS.map((t) => <button key={t} type="button" className={'stk-t' + (t === tab ? ' on' : '')} onClick={() => { setTab(t); setEdit(false); }}>{t}</button>)}

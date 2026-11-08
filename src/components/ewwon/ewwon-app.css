@@ -518,3 +518,28 @@
 .ew .ewx-typing .bub span:nth-child(2) { animation-delay: .15s; }
 .ew .ewx-typing .bub span:nth-child(3) { animation-delay: .3s; }
 @keyframes ewx-typing { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
+
+/* ⋮ menu lives outside the header so wallpapers (blurred header) never hide it. */
+.ew #room > .ewx-dots { z-index: 60; background: var(--card); }
+/* Reactions: always one straight row (the picker no longer shrinks to a short bubble). */
+.ew .pick { width: max-content; max-width: min(320px, calc(100vw - 32px)); flex-wrap: wrap; align-items: center; }
+.ew .pick > button { flex: 0 0 auto; line-height: 1; white-space: nowrap; }
+.ew .rx { flex-wrap: wrap; width: max-content; max-width: 100%; align-items: center; }
+.ew .m.me .rx { align-self: flex-end; }
+.ew .rx span { display: inline-flex; align-items: center; line-height: 1.25; white-space: nowrap; flex: 0 0 auto; }
+/* Hold-to-record (WhatsApp-like) */
+.ew .ewx-mic { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; position: relative; }
+.ew .ewx-mic.rec { background: #ff4d4f !important; color: #fff !important; transition: transform .08s linear; z-index: 3; }
+.ew .cmp.ewx-rec.hold { overflow: visible; }
+.ew .ewx-rec-slide { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 13px; color: var(--mu); white-space: nowrap; overflow: hidden; }
+.ew .ewx-rec-slide svg.i { width: 16px; height: 16px; animation: ewx-slide 1.2s ease-in-out infinite; }
+@keyframes ewx-slide { 50% { transform: translateX(-4px); } }
+.ew .ewx-rec-lock { position: absolute; left: 50%; bottom: calc(100% + 14px); margin-left: -17px; width: 34px; padding: 8px 0; border-radius: 18px; display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--card); color: var(--tx); border: 1px solid var(--bd); box-shadow: 0 8px 20px rgba(0, 0, 0, .3); pointer-events: none; }
+.ew .ewx-rec-lock svg { width: 14px; height: 14px; }
+.ew .ewx-rec-lock svg.i { color: var(--mu); }
+/* Consecutive stickers side by side */
+.ew .ewx-stkrow { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 6px; max-width: 100%; align-self: flex-start; }
+.ew .ewx-stkrow.me { justify-content: flex-end; align-self: flex-end; }
+.ew .ewx-stkrow > .m { max-width: none; align-self: auto; }
+.ew .ewx-stkrow > .m:not(.gm) { flex: 0 0 auto; }
+.ew .ewx-stkrow .stk-view { width: 132px !important; height: 132px !important; }

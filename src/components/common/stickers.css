@@ -7,40 +7,40 @@
 @keyframes stk-pop { 0% { transform: scale(.4); opacity: 0; } 100% { transform: none; opacity: 1; } }
 @keyframes stk-pulse { 50% { opacity: .45; } }
 
-.stk { --stk-bg: hsl(var(--muted)); --stk-mu: hsl(var(--muted-foreground)); --stk-bd: hsl(var(--border)); display: flex; flex-direction: column; gap: 8px; width: 100%; }
-.ew .stk { --stk-bg: var(--c2); --stk-mu: var(--mu); --stk-bd: var(--bd); }
+.stkp { --stk-bg: hsl(var(--muted)); --stk-mu: hsl(var(--muted-foreground)); --stk-bd: hsl(var(--border)); display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.ew .stkp { --stk-bg: var(--c2); --stk-mu: var(--mu); --stk-bd: var(--bd); }
 .stk-tabs { display: flex; align-items: center; gap: 4px; }
 .stk-sp { flex: 1; }
-.stk button.stk-t { border: 0; background: none !important; background-image: none !important; box-shadow: none !important; backdrop-filter: none; padding: 6px 10px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--stk-mu); cursor: pointer; }
-.stk button.stk-t.on { background: var(--stk-bg) !important; color: inherit; }
-.stk button.stk-t.stk-new { color: inherit; }
+.stkp button.stk-t { border: 0; background: none !important; background-image: none !important; box-shadow: none !important; backdrop-filter: none; padding: 6px 10px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--stk-mu); cursor: pointer; }
+.stkp button.stk-t.on { background: var(--stk-bg) !important; color: inherit; }
+.stkp button.stk-t.stk-new { color: inherit; }
 .stk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; max-height: 260px; overflow-y: auto; padding: 2px; overscroll-behavior: contain; }
-.stk button.stk-b { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1; border: 0; border-radius: 14px; background: none !important; background-image: none !important; box-shadow: none !important; backdrop-filter: none; cursor: pointer; transition: transform .12s, background-color .12s; }
-.stk button.stk-b:hover { background: var(--stk-bg) !important; }
-.stk button.stk-b:active { transform: scale(.92); }
-.stk button.stk-b.edit { animation: stk-wiggle .3s ease-in-out infinite alternate; }
+.stkp button.stk-b { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1; border: 0; border-radius: 14px; background: none !important; background-image: none !important; box-shadow: none !important; backdrop-filter: none; cursor: pointer; transition: transform .12s, background-color .12s; }
+.stkp button.stk-b:hover { background: var(--stk-bg) !important; }
+.stkp button.stk-b:active { transform: scale(.92); }
+.stkp button.stk-b.edit { animation: stk-wiggle .3s ease-in-out infinite alternate; }
 .stk-x { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 50%; background: #ef4444; color: #fff; font-style: normal; font-size: 14px; line-height: 20px; text-align: center; }
 .stk-empty { grid-column: 1 / -1; padding: 18px 8px; text-align: center; font-size: 13px; color: var(--stk-mu); }
 @keyframes stk-wiggle { from { transform: rotate(-2deg); } to { transform: rotate(2deg); } }
 
 /* Sticker messages have no bubble (WhatsApp-like). */
 .stk-msg { display: inline-flex; flex-direction: column; gap: 2px; background: none !important; padding: 0 !important; box-shadow: none !important; border: 0 !important; }
-@media (prefers-reduced-motion: reduce) { .stk-emoji, .stk button.stk-b.edit { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .stk-emoji, .stkp button.stk-b.edit { animation: none; } }
 
 /* Save received sticker, packs */
 .stk-msg { position: relative; }
 .stk-msg > span[role=button] { cursor: pointer; display: inline-flex; }
 button.stk-save { display: block; margin-top: 4px; padding: 6px 12px; border-radius: 999px; border: 0; background: #0b0b0e !important; background-image: none !important; box-shadow: 0 6px 16px -8px rgba(0, 0, 0, .6) !important; color: #fff; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .stk-title { font-size: 13px; }
-.stk button.stk-b.sel { outline: 2px solid currentColor; outline-offset: -2px; }
+.stkp button.stk-b.sel { outline: 2px solid currentColor; outline-offset: -2px; }
 .stk-ok { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 50%; background: #16a34a; color: #fff; font-style: normal; font-size: 12px; line-height: 20px; text-align: center; }
-.stk button.stk-main { width: 100%; padding: 10px 14px; border-radius: 14px; border: 0; background: currentColor !important; background-image: none !important; box-shadow: none !important; cursor: pointer; font-weight: 700; font-size: 14px; }
-.stk button.stk-main { color: inherit; background: var(--stk-bg) !important; }
-.stk button.stk-main:disabled { opacity: .5; }
+.stkp button.stk-main { width: 100%; padding: 10px 14px; border-radius: 14px; border: 0; background: currentColor !important; background-image: none !important; box-shadow: none !important; cursor: pointer; font-weight: 700; font-size: 14px; }
+.stkp button.stk-main { color: inherit; background: var(--stk-bg) !important; }
+.stkp button.stk-main:disabled { opacity: .5; }
 .stk-actions { display: flex; gap: 8px; }
 .stk-pack-list { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
-.stk button.stk-pack-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; border: 0; border-radius: 14px; background: none !important; background-image: none !important; box-shadow: none !important; color: inherit; cursor: pointer; text-align: left; }
-.stk button.stk-pack-row:hover { background: var(--stk-bg) !important; }
+.stkp button.stk-pack-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; border: 0; border-radius: 14px; background: none !important; background-image: none !important; box-shadow: none !important; color: inherit; cursor: pointer; text-align: left; }
+.stkp button.stk-pack-row:hover { background: var(--stk-bg) !important; }
 .stk-pack-thumbs { display: flex; width: 116px; flex-shrink: 0; }
 .stk-pack-tx { flex: 1; min-width: 0; }
 .stk-pack-tx b, .stk-pack-h b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -48,9 +48,9 @@ button.stk-save { display: block; margin-top: 4px; padding: 6px 12px; border-rad
 .stk-chev { color: var(--stk-mu); font-size: 18px; }
 .stk-pack-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .stk-pack-h > b { flex-basis: 100%; }
-.stk button.stk-chip { padding: 5px 10px; border-radius: 999px; border: 1px solid var(--stk-bd); background: none !important; background-image: none !important; box-shadow: none !important; color: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
-.stk button.stk-chip.danger { color: #ef4444; border-color: rgba(239, 68, 68, .4); }
-.stk button.stk-chip:disabled { opacity: .45; }
+.stkp button.stk-chip { padding: 5px 10px; border-radius: 999px; border: 1px solid var(--stk-bd); background: none !important; background-image: none !important; box-shadow: none !important; color: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.stkp button.stk-chip.danger { color: #ef4444; border-color: rgba(239, 68, 68, .4); }
+.stkp button.stk-chip:disabled { opacity: .45; }
 .stk-pack-card { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px; min-width: 220px; max-width: 260px; border-radius: 16px; background: rgba(0, 0, 0, .14); }
 .stk-pack-grid { display: grid; grid-template-columns: repeat(4, 56px); gap: 2px; }
 .stk-pack-card b { font-size: 14px; }
@@ -60,8 +60,8 @@ button.stk-pack-add { margin-top: 4px; width: 100%; padding: 8px 12px; border-ra
 button.stk-pack-add:disabled { opacity: .7; }
 
 /* Fixed-height panel (same feel as the emoji panel) and actions that never overflow. */
-.stk { height: 300px; min-height: 0; }
+.stkp { height: 300px; min-height: 0; }
 .stk-tabs { flex-wrap: wrap; row-gap: 2px; flex-shrink: 0; }
-.stk button.stk-t { white-space: nowrap; padding: 6px 8px; }
+.stkp button.stk-t { white-space: nowrap; padding: 6px 8px; }
 .stk-grid, .stk-pack-list { flex: 1; min-height: 0; max-height: none; align-content: start; }
 .stk-pack-h, .stk-actions { flex-shrink: 0; }

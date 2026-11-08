@@ -106,8 +106,7 @@ export default function EwwonApp() {
   const [bmsg, setBmsg] = useState(WISHES[0]);
   const [bdSent, setBdSent] = useState<Record<string, boolean>>({});
   const [reminders, setReminders] = useState<Record<string, boolean>>(() => safeStore.get('bdayReminders', {}));
-  const [typing, setTyping] = useState<{ key: string; names: string[] } | null>(null);
-  const typingCh = useRef<{ send: (o: unknown) => unknown } | null>(null);
+  const [typingMap, setTypingMap] = useState<Record<string, string[]>>({});
   const typingSent = useRef(0);
   const [perm, setPerm] = useState<string>(N.getPermission());
   const [tourOn, setTourOn] = useState(false);
@@ -386,11 +385,41 @@ export default function EwwonApp() {
   }, [boot, meId, patchChat, toast]);
 
   const voiceRec = useVoiceRecorder(300);
-  const startVoice = async () => {
-    try { N.haptic('light'); await voiceRec.start(); }
-    catch { toast('Permita o microfone para gravar áudio'); }
+  // WhatsApp-like: hold the mic to record, release to send, slide left to cancel, slide up to lock.
+  const [recUi, setRecUi] = useState<{ mode: 'hold' | 'lock'; dx: number; dy: number } | null>(null);
+  const micG = useRef<{ id: number; x: number; y: number; t: number; mode: 'hold' | 'lock' | 'done'; ready: boolean } | null>(null);
+  const micDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0 || micG.current) return;
+    e.preventDefault();
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    const g = { id: e.pointerId, x: e.clientX, y: e.clientY, t: Date.now(), mode: 'hold' as const, ready: false };
+    micG.current = g;
+    setRecUi({ mode: 'hold', dx: 0, dy: 0 });
+    N.haptic('light');
+    voiceRec.start().then(() => {
+      g.ready = true;
+      if (micG.current !== g) voiceRec.cancel(); // released or cancelled while the mic was opening
+    }).catch(() => { if (micG.current === g) micG.current = null; setRecUi(null); toast('Permita o microfone para gravar áudio'); });
+  };
+  const micMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const g = micG.current;
+    if (!g || g.id !== e.pointerId || g.mode !== 'hold') return;
+    const dx = Math.min(0, e.clientX - g.x), dy = Math.min(0, e.clientY - g.y);
+    if (dy < -70 && dy < dx) { g.mode = 'lock'; N.haptic('medium'); setRecUi({ mode: 'lock', dx: 0, dy: 0 }); return; }
+    if (dx < -110) { g.mode = 'done'; micG.current = null; voiceRec.cancel(); setRecUi(null); N.haptic('light'); toast('Áudio cancelado'); return; }
+    setRecUi({ mode: 'hold', dx, dy });
+  };
+  const micUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const g = micG.current;
+    if (!g || g.id !== e.pointerId) return;
+    if (g.mode === 'lock') return; // keeps recording; trash or send finish it
+    micG.current = null;
+    setRecUi(null);
+    if (Date.now() - g.t < 600 || !g.ready) { voiceRec.cancel(); toast('Segure para gravar, solte para enviar'); return; }
+    void sendVoiceNote();
   };
   const sendVoiceNote = async () => {
+    micG.current = null; setRecUi(null);
     const c = stateRef.current.chats.find((x) => x.key === stateRef.current.curKey);
     const r = await voiceRec.stop();
     if (!r || !c) { if (!r) toast('Áudio muito curto'); return; }
@@ -583,31 +612,43 @@ export default function EwwonApp() {
   }, [roomOn, curKey]);
 
   // "Digitando...": same realtime broadcast channels as the desktop chat (useTypingIndicator).
+  // One channel per recent conversation, so the chat list can show "digitando..." too.
+  const typingChs = useRef(new Map<string, { send: (o: unknown) => unknown; close: () => void }>());
+  const typingWho = useRef<Record<string, Record<string, { n: string; t: number }>>>({});
+  const typingSig = chats.slice(0, 40).map((c) => c.key).sort().join(',');
   useEffect(() => {
-    setTyping(null);
-    const c = cur;
-    if (!roomOn || !c || !meId) return;
-    const name = c.kind === 'sector' ? `sector-${c.id}` : c.kind === 'group' ? `group-${c.id}` : `dm-${[meId, c.id].sort().join('-')}`;
-    const timers: Record<string, number> = {};
-    const who: Record<string, string> = {};
-    const sync = () => setTyping(Object.keys(who).length ? { key: c.key, names: Object.values(who) } : null);
-    const ch = D.typingChannel(name, (p) => {
-      if (!p?.profileId || p.profileId === meId) return;
-      who[p.profileId] = p.name || 'Alguém';
-      sync();
-      window.clearTimeout(timers[p.profileId]);
-      timers[p.profileId] = window.setTimeout(() => { delete who[p.profileId]; sync(); }, 3000);
-    });
-    typingCh.current = ch;
-    return () => { Object.values(timers).forEach((t) => window.clearTimeout(t)); ch.close(); typingCh.current = null; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomOn, curKey, meId]);
+    if (!meId) return;
+    const want = new Map(stateRef.current.chats.slice(0, 40).map((c) => [c.key, c] as const));
+    const live = typingChs.current;
+    const sync = () => {
+      const out: Record<string, string[]> = {};
+      for (const [k, who] of Object.entries(typingWho.current)) { const n = Object.values(who).map((x) => x.n); if (n.length) out[k] = n; }
+      setTypingMap(out);
+    };
+    for (const [k, ch] of live) if (!want.has(k)) { ch.close(); live.delete(k); delete typingWho.current[k]; }
+    for (const [k, c] of want) {
+      if (live.has(k)) continue;
+      const name = c.kind === 'sector' ? `sector-${c.id}` : c.kind === 'group' ? `group-${c.id}` : `dm-${[meId, c.id].sort().join('-')}`;
+      live.set(k, D.typingChannel(name, (p) => {
+        if (!p?.profileId || p.profileId === meId) return;
+        const who = (typingWho.current[k] ||= {});
+        const t = Date.now();
+        who[p.profileId] = { n: p.name || 'Alguém', t };
+        sync();
+        window.setTimeout(() => { if (who[p.profileId!]?.t === t) { delete who[p.profileId!]; sync(); } }, 3000);
+      }));
+    }
+    sync();
+  }, [typingSig, meId]);
+  useEffect(() => () => { typingChs.current.forEach((ch) => ch.close()); typingChs.current.clear(); }, []);
+  const typing = roomOn && cur && typingMap[cur.key] ? { key: cur.key, names: typingMap[cur.key] } : null;
   const sendTyping = () => {
     const now = Date.now();
-    if (now - typingSent.current < 2000 || !typingCh.current) return;
+    const ch = cur ? typingChs.current.get(cur.key) : null;
+    if (now - typingSent.current < 2000 || !ch) return;
     typingSent.current = now;
     const me = stateRef.current.people[meId];
-    typingCh.current.send({ profileId: meId, name: me?.n || 'Alguém' });
+    ch.send({ profileId: meId, name: me?.n || 'Alguém' });
   };
 
   // E2E voice: re-seal keys of my voice notes for new devices of conversation members.
@@ -856,7 +897,7 @@ export default function EwwonApp() {
         <Av p={e || { id: '', photo: c.photo, hue: c.hue, i: c.i }} st={e ? e.st : null} onClick={e ? (ev) => { ev.stopPropagation(); pgShow({ kind: 'profile', id: e.id }); } : undefined} />
         <div className="mid">
           <div className="l1"><b>{c.n}</b><span className="tmx">{l ? fmtTime(l.at) : ''}</span></div>
-          <div className="l2"><p>{pre}{l ? previewText(D.plainText(l.t)) : <i style={{ opacity: 0.6 }}>Sem mensagens</i>}</p>{isMuted(c) ? <I n="mute" className="pin" /> : null}{c.u ? <span className="un">{c.u}</span> : c.set.pin ? <I n="pin" className="pin" /> : null}</div>
+          <div className="l2">{typingMap[c.key] ? <p className="ewx-typing-tx">{c.kind === 'dm' ? 'digitando...' : `${typingMap[c.key].map((n) => n.split(' ')[0]).join(', ')} ${typingMap[c.key].length > 1 ? 'estão digitando...' : 'está digitando...'}`}</p> : <p>{pre}{l ? previewText(D.plainText(l.t)) : <i style={{ opacity: 0.6 }}>Sem mensagens</i>}</p>}{isMuted(c) ? <I n="mute" className="pin" /> : null}{c.u ? <span className="un">{c.u}</span> : c.set.pin ? <I n="pin" className="pin" /> : null}</div>
         </div>
       </button>
     );
@@ -1070,13 +1111,13 @@ export default function EwwonApp() {
               {cur ? <div className={'av' + (cur.p ? ' on' : '')} id="rav" style={{ ...avStyle(cur.p ? P[cur.p] : cur), ['--sc' as string]: cur.p ? ST[P[cur.p]?.st || 'disp'][1] : '#46d37b' }} onClick={() => (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}>{(cur.p ? P[cur.p]?.photo : cur.photo) ? '' : cur.i}</div> : <div className="av" id="rav" />}
               <div className="rt" onClick={() => cur && (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}><b id="rn">{cur?.n}</b><small id="rs" className={typing && cur && typing.key === cur.key ? 'ewx-typing-tx' : undefined}>{typing && cur && typing.key === cur.key ? (cur.kind === 'dm' ? 'Digitando...' : `${typing.names.map((n) => n.split(' ')[0]).join(', ')} ${typing.names.length > 1 ? 'estão digitando...' : 'está digitando...'}`) : cur ? stt(cur) : ''}</small></div>
               <button className="lq" id="gear" aria-label="Mais opções" onClick={(e) => { e.stopPropagation(); setDots((v) => !v); }}><I n="dots" /></button>
+            </div>
               {dots ? (
                 <div className="ewx-dots" onClick={(e) => e.stopPropagation()}>
                   <button onClick={() => { setDots(false); setSearch({ q: '', i: 0 }); }}><I n="search" />Pesquisar</button>
                   <button onClick={() => { setDots(false); setSheetOn(true); }}><I n="gear" />Configurações</button>
                 </div>
               ) : null}
-            </div>
             {search ? (
               <div className="ewx-search">
                 <I n="search" />
@@ -1096,7 +1137,22 @@ export default function EwwonApp() {
                 </div>
               ) : null}
               {cur && cur.loaded && !cur.m.length ? <div className="hint" style={{ padding: 20 }}>Nenhuma mensagem ainda. Diga oi! 👋</div> : null}
-              {cur?.m.map((m, idx) => <Fragment key={m.id}>{idx === 0 || dayKey(cur.m[idx - 1].at) !== dayKey(m.at) ? <div className="ewx-dsep" data-day={dayLabel(m.at)}><span>{dayLabel(m.at)}</span></div> : null}<Bubble key={m.id} m={m} read={m.me && (!!m.rd || (cur.kind === 'group' && !!groupWm && new Date(m.at).getTime() <= groupWm))} sender={m.from ? P[m.from] : null} group={cur.g} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} onImage={(src, url, name, caption) => setViewer({ src, url, name, caption })} /></Fragment>)}
+              {cur ? (() => {
+                // Consecutive stickers from the same person sit side by side (WhatsApp-like).
+                const bubble = (m: Msg, cont = false) => <Bubble key={m.id} m={m} read={m.me && (!!m.rd || (cur.kind === 'group' && !!groupWm && new Date(m.at).getTime() <= groupWm))} sender={m.from ? P[m.from] : null} group={cur.g && !cont} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} onImage={(src, url, name, caption) => setViewer({ src, url, name, caption })} />;
+                const out: JSX.Element[] = [];
+                const ms = cur.m;
+                for (let idx = 0; idx < ms.length; idx++) {
+                  const m = ms[idx];
+                  if (idx === 0 || dayKey(ms[idx - 1].at) !== dayKey(m.at)) out.push(<div key={'d' + m.id} className="ewx-dsep" data-day={dayLabel(m.at)}><span>{dayLabel(m.at)}</span></div>);
+                  let end = idx;
+                  if (isSticker(m.t)) while (end + 1 < ms.length && isSticker(ms[end + 1].t) && ms[end + 1].me === m.me && ms[end + 1].from === m.from && dayKey(ms[end + 1].at) === dayKey(m.at)) end++;
+                  if (end === idx) { out.push(bubble(m)); continue; }
+                  out.push(<div key={'s' + m.id} className={'ewx-stkrow' + (m.me ? ' me' : '')}>{ms.slice(idx, end + 1).map((x, k) => bubble(x, k > 0))}</div>);
+                  idx = end;
+                }
+                return out;
+              })() : null}
               {typing && cur && typing.key === cur.key ? <div className="m ewx-typing" aria-label="Digitando"><div className="bub"><span /><span /><span /></div></div> : null}
             </div>
             {pending.length ? (
@@ -1125,27 +1181,40 @@ export default function EwwonApp() {
             ) : attOn === 'emoji' ? (
               <div className="ewx-emo">{EMOJIS.map((e) => <button key={e} onClick={() => setDraft((d) => d + e)}>{e}</button>)}</div>
             ) : null}
-            {voiceRec.recording ? (
-              <div className="cmp ewx-rec">
-                <button className="ewx-rec-x" aria-label="Cancelar áudio" onClick={() => voiceRec.cancel()}><I n="trash" /></button>
-                <span className="ewx-rec-dot" />
-                <span className="ewx-rec-t">{fmtDuration(voiceRec.seconds)}</span>
-                <span className="ewx-rec-hint"><Lock /> Gravando · criptografado</span>
-                <button className="snd" aria-label="Enviar áudio" onClick={() => void sendVoiceNote()}><I n="send" /></button>
-              </div>
-            ) : (
-            <div className="cmp">
-              <button className={'plus' + (attOn && attOn !== 'sticker' ? ' on' : '')} aria-label="Anexar" onClick={() => setAttOn(attOn && attOn !== 'sticker' ? false : 'menu')}><I n={attOn && attOn !== 'sticker' ? 'x' : 'plus'} /></button>
-              <button className={'ewx-stkbtn' + (attOn === 'sticker' ? ' on' : '')} aria-label="Figurinhas" onClick={() => setAttOn(attOn === 'sticker' ? false : 'sticker')}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h7l7-7V7a4 4 0 0 0-4-4h-3" /><path d="M14 21v-3a4 4 0 0 1 4-4h3" /><path d="M8.5 10h.01M15.5 10h.01M8.5 14.5c1.8 1.6 5.2 1.6 7 0" /></svg></button>
-              <input id="inp" ref={inpRef} placeholder={pending.length ? 'Adicione uma legenda' : 'Escreva uma mensagem'} autoComplete="off" value={draft} maxLength={4000}
-                onFocus={() => setAttOn((a) => (a === 'menu' ? false : a))}
-                onChange={(e) => { setDraft(e.target.value); sendTyping(); }} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); void doSend(); } }} />
-              {!draft.trim() && !pending.length && !sending
-                ? <button className="snd ewx-mic" id="snd" aria-label="Gravar áudio" onClick={() => void startVoice()}><I n="mic" /></button>
-                : <button className="snd" id="snd" aria-label="Enviar" disabled={sending} onClick={() => void doSend()}>{sending ? <span className="ewx-spin" /> : <I n="send" />}</button>}
-              <input ref={attRef} type="file" multiple hidden onChange={(e) => addFiles(e.target.files)} />
-            </div>
-            )}
+            {(() => {
+              const recOn = voiceRec.recording || !!recUi;
+              const lockMode = recUi?.mode === 'lock' || (voiceRec.recording && !recUi);
+              const micMode = !draft.trim() && !pending.length && !sending;
+              return (
+                <div className={'cmp' + (recOn ? ' ewx-rec' : '') + (recUi?.mode === 'hold' ? ' hold' : '')}>
+                  {recOn ? [
+                    lockMode ? <button key="rx" className="ewx-rec-x" aria-label="Cancelar áudio" onClick={() => { voiceRec.cancel(); micG.current = null; setRecUi(null); }}><I n="trash" /></button> : null,
+                    <span key="rd" className="ewx-rec-dot" />,
+                    <span key="rt" className="ewx-rec-t">{fmtDuration(voiceRec.seconds)}</span>,
+                    lockMode
+                      ? <span key="rh" className="ewx-rec-hint"><Lock /> Gravando · criptografado</span>
+                      : <span key="rs" className="ewx-rec-slide" style={{ transform: `translateX(${Math.max(-110, recUi?.dx || 0)}px)`, opacity: 1 - Math.min(1, -(recUi?.dx || 0) / 140) }}><I n="chevL" />Deslize para cancelar</span>,
+                  ] : [
+                    <button key="plus" className={'plus' + (attOn && attOn !== 'sticker' ? ' on' : '')} aria-label="Anexar" onClick={() => setAttOn(attOn && attOn !== 'sticker' ? false : 'menu')}><I n={attOn && attOn !== 'sticker' ? 'x' : 'plus'} /></button>,
+                    <button key="stk" className={'ewx-stkbtn' + (attOn === 'sticker' ? ' on' : '')} aria-label="Figurinhas" onClick={() => setAttOn(attOn === 'sticker' ? false : 'sticker')}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h7l7-7V7a4 4 0 0 0-4-4h-3" /><path d="M14 21v-3a4 4 0 0 1 4-4h3" /><path d="M8.5 10h.01M15.5 10h.01M8.5 14.5c1.8 1.6 5.2 1.6 7 0" /></svg></button>,
+                    <input key="inp" id="inp" ref={inpRef} placeholder={pending.length ? 'Adicione uma legenda' : 'Escreva uma mensagem'} autoComplete="off" value={draft} maxLength={4000}
+                      onFocus={() => setAttOn((a) => (a === 'menu' ? false : a))}
+                      onChange={(e) => { setDraft(e.target.value); sendTyping(); }} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); void doSend(); } }} />,
+                  ]}
+                  {recOn && lockMode
+                    ? <button key="sndL" className="snd" id="snd" aria-label="Enviar áudio" onClick={() => void sendVoiceNote()}><I n="send" /></button>
+                    : recOn || micMode
+                      ? <button key="snd" className={'snd ewx-mic' + (recOn ? ' rec' : '')} id="snd" aria-label="Segure para gravar áudio"
+                          style={recUi?.mode === 'hold' ? { transform: `translate(${Math.max(-110, recUi.dx)}px, ${Math.max(-80, recUi.dy)}px) scale(1.35)` } : undefined}
+                          onPointerDown={micDown} onPointerMove={micMove} onPointerUp={micUp} onPointerCancel={micUp} onContextMenu={(e) => e.preventDefault()}>
+                          <I n="mic" />
+                          {recUi?.mode === 'hold' ? <span className="ewx-rec-lock" style={{ transform: `translateY(${Math.max(-40, recUi.dy / 2)}px)` }} aria-hidden="true"><Lock /><I n="chevD" style={{ transform: 'rotate(180deg)' }} /></span> : null}
+                        </button>
+                      : <button key="snd" className="snd" id="snd" aria-label="Enviar" disabled={sending} onClick={() => void doSend()}>{sending ? <span className="ewx-spin" /> : <I n="send" />}</button>}
+                  <input key="att" ref={attRef} type="file" multiple hidden onChange={(e) => addFiles(e.target.files)} />
+                </div>
+              );
+            })()}
             <div className={'shs' + (sheetOn ? ' on' : '')} id="shs" onClick={() => setSheetOn(false)} />
             <div className={'sheet' + (sheetOn ? ' on' : '')} id="sheet">
               {cur && sheetOn ? <ChatSheet c={cur} api={api} P={P} tasks={tasksOn[cur.key]} onTasks={(v) => {
