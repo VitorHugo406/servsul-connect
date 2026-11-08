@@ -15,7 +15,7 @@ import * as D from './data';
 import type { Chat, Msg, Person, Prefs, Boot, Notice } from './data';
 import * as N from './notify';
 import { I, Chev } from './icons';
-import { ST, StatusKey, fmtTime, hm, safeStore } from './util';
+import { ST, StatusKey, fitTextarea, fmtTime, hm, safeStore } from './util';
 import { runTour, type TourController } from './tour';
 import { EwwonPage, type PageSpec } from './pages';
 import { TicketsDesk } from './tickets';
@@ -123,6 +123,8 @@ export default function EwwonApp() {
   const [far, setFar] = useState(false);
   const [newBelow, setNewBelow] = useState(0);
   const farRef = useRef(false);
+  // Stay glued to the bottom while photos, stickers and link previews finish loading.
+  const stickRef = useRef(true);
   const lenRef = useRef<{ key: string | null; n: number }>({ key: null, n: 0 });
   const dayTimer = useRef<number>(0);
   const ctHold = useRef<{ t: number; fired: boolean }>({ t: 0, fired: false });
@@ -144,7 +146,8 @@ export default function EwwonApp() {
   const panelRef = useRef<HTMLElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null);
   const msgsRef = useRef<HTMLDivElement>(null);
-  const inpRef = useRef<HTMLInputElement>(null);
+  const inpRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { fitTextarea(inpRef.current); }, [draft]);
   const fiRef = useRef<HTMLInputElement>(null);
   const hbRef = useRef<HTMLDivElement>(null);
   const openRef = useRef(false);
@@ -166,7 +169,7 @@ export default function EwwonApp() {
     const id = hits[search?.i ?? 0];
     if (!id) return;
     const el = document.querySelector(`[data-mid="${id}"]`);
-    if (el) { el.classList.add('ewx-hit'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    if (el) { stickRef.current = false; el.classList.add('ewx-hit'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
   }, [hits, search?.i]);
   useEffect(() => { setSearch(null); setDots(false); setDayFloat(null); replyRef.current = null; setReply(null); }, [curKey, roomOn]);
   const onMsgsScroll = () => {
@@ -175,6 +178,7 @@ export default function EwwonApp() {
     const dist = box.scrollHeight - box.scrollTop - box.clientHeight;
     const isFar = dist > 320;
     if (isFar !== farRef.current) { farRef.current = isFar; setFar(isFar); }
+    stickRef.current = dist < 60;
     if (dist < 80) setNewBelow(0);
     const top = box.getBoundingClientRect().top + 8;
     let label: string | null = null;
@@ -370,12 +374,26 @@ export default function EwwonApp() {
     lenRef.current = { key: curKey, n };
     if (prev.key === curKey && n > prev.n && farRef.current && !cur?.m[n - 1]?.me) { setNewBelow((x) => x + (n - prev.n)); return; }
     if (prev.key !== curKey) { farRef.current = false; setFar(false); setNewBelow(0); }
+    stickRef.current = true;
     if (b) b.scrollTop = b.scrollHeight;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomOn, cur?.m.length, curKey]);
+  useEffect(() => {
+    const b = msgsRef.current;
+    if (!b || !roomOn) return;
+    const pin = () => { if (stickRef.current) b.scrollTop = b.scrollHeight; };
+    const mo = new MutationObserver(pin);
+    mo.observe(b, { childList: true, subtree: true });
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(pin) : null;
+    ro?.observe(b);
+    b.addEventListener('load', pin, true); // images/stickers (load does not bubble, so capture)
+    const t = window.setTimeout(pin, 650); // after the room slide-in animation
+    return () => { mo.disconnect(); ro?.disconnect(); b.removeEventListener('load', pin, true); window.clearTimeout(t); };
+  }, [roomOn, curKey]);
   const jumpToMsg = (id: string) => {
     const el = msgsRef.current?.querySelector<HTMLElement>(`[data-mid="${id}"]`);
     if (!el) { toast('Mensagem antiga: não está carregada'); return; }
+    stickRef.current = false;
     el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     el.classList.remove('ewx-flash'); void el.offsetWidth; el.classList.add('ewx-flash');
     window.setTimeout(() => el.classList.remove('ewx-flash'), 1600);
@@ -383,6 +401,7 @@ export default function EwwonApp() {
   const jumpToEnd = () => {
     const b = msgsRef.current;
     if (!b) return;
+    stickRef.current = true;
     b.scrollTo({ top: b.scrollHeight, behavior: 'smooth' });
     setNewBelow(0);
   };
@@ -1247,9 +1266,9 @@ export default function EwwonApp() {
                   ] : [
                     <button key="plus" className={'plus' + (attOn && attOn !== 'sticker' ? ' on' : '')} aria-label="Anexar" onClick={() => setAttOn(attOn && attOn !== 'sticker' ? false : 'menu')}><I n={attOn && attOn !== 'sticker' ? 'x' : 'plus'} /></button>,
                     <button key="stk" className={'ewx-stkbtn' + (attOn === 'sticker' ? ' on' : '')} aria-label="Figurinhas" onClick={() => setAttOn(attOn === 'sticker' ? false : 'sticker')}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h7l7-7V7a4 4 0 0 0-4-4h-3" /><path d="M14 21v-3a4 4 0 0 1 4-4h3" /><path d="M8.5 10h.01M15.5 10h.01M8.5 14.5c1.8 1.6 5.2 1.6 7 0" /></svg></button>,
-                    <input key="inp" id="inp" ref={inpRef} placeholder={pending.length ? 'Adicione uma legenda' : 'Escreva uma mensagem'} autoComplete="off" value={draft} maxLength={4000}
+                    <textarea key="inp" id="inp" ref={inpRef} rows={1} name="ew-message" placeholder={pending.length ? 'Adicione uma legenda' : 'Escreva uma mensagem'} autoComplete="off" autoCorrect="on" autoCapitalize="sentences" spellCheck enterKeyHint={prefs.enter !== 0 ? 'send' : 'enter'} value={draft} maxLength={4000}
                       onFocus={() => setAttOn((a) => (a === 'menu' ? false : a))}
-                      onChange={(e) => { setDraft(e.target.value); sendTyping(); }} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); void doSend(); } }} />,
+                      onChange={(e) => { setDraft(e.target.value); fitTextarea(e.target); sendTyping(); }} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); void doSend(); } }} />,
                   ]}
                   {recOn && lockMode
                     ? <button key="sndL" className="snd" id="snd" aria-label="Enviar áudio" onClick={() => void sendVoiceNote()}><I n="send" /></button>

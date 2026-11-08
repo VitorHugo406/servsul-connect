@@ -112,3 +112,10 @@ export function dataUrlToBlob(dataUrl: string): Blob {
   for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
   return new Blob([arr], { type: mime });
 }
+
+/** Chat composers are textareas (browsers never offer saved passwords/logins for them); this grows them up to ~5 lines. */
+export function fitTextarea(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 124) + 'px';
+}

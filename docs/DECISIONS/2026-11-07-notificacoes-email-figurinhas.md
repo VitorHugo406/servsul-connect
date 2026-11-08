@@ -78,3 +78,5 @@
 - Banco: `reply_to_id` em `direct_messages` e `private_group_messages` (migration `20261109010000_message_replies.sql`), igual ao `messages.reply_to_id` que o chat de setores já tinha. Mesma tabela, `ON DELETE SET NULL`; sem mudança de RLS.
 - A citação aparece acima da mensagem; tocar nela leva até a original. Se a original for mais antiga que as mensagens carregadas, o app busca só o autor e o texto dela.
 - No PC, as conversas individuais e de grupo mostram a citação (o setor já mostrava).
+- Caixa de texto do chat (e do chat de chamados) virou `textarea`: o teclado/Chrome deixa de oferecer senhas e logins salvos (eles só aparecem em campos `input`, e `autocomplete="off"` é ignorado pelo Chrome). Cresce até ~5 linhas.
+- Ao abrir uma conversa, ela fica presa no final enquanto fotos, figurinhas e prévias de link terminam de carregar (para de seguir assim que a pessoa rola para cima).

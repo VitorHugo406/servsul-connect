@@ -6,7 +6,7 @@ import * as D from './data';
 import type { Chat, Summary } from './data';
 import * as N from './notify';
 import { I, Chev } from './icons';
-import { ST, StatusKey } from './util';
+import { ST, StatusKey, fitTextarea } from './util';
 import { MyEvaluationsBox, EvaluationPage } from './evals';
 import { InstallAppBox } from './installapp';
 
@@ -378,6 +378,8 @@ function TicketChat({ spec, api }: { spec: Extract<PageSpec, { kind: 'ticket' }>
   const [msgs, setMsgs] = useState<D.TicketMsg[] | null>(null);
   const [info, setInfo] = useState<D.TicketInfo | null>(null);
   const [text, setText] = useState('');
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { fitTextarea(taRef.current); }, [text]);
   const [busy, setBusy] = useState(false);
   const [stars, setStars] = useState(0);
   const [note, setNote] = useState('');
@@ -449,7 +451,7 @@ function TicketChat({ spec, api }: { spec: Extract<PageSpec, { kind: 'ticket' }>
       </div>
       {!closed ? (
         <div className="cmp ewx-tchat-cmp">
-          <input placeholder="Escreva uma mensagem" value={text} maxLength={2000} onFocus={toBottom} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} />
+          <textarea ref={taRef} rows={1} name="ew-ticket-message" placeholder="Escreva uma mensagem" autoComplete="off" autoCorrect="on" autoCapitalize="sentences" spellCheck enterKeyHint="send" value={text} maxLength={2000} onFocus={toBottom} onChange={(e) => { setText(e.target.value); fitTextarea(e.target); }} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} />
           <button className="snd" aria-label="Enviar" disabled={busy || !text.trim()} onClick={() => void send()}><I n="send" /></button>
         </div>
       ) : info?.rating ? (

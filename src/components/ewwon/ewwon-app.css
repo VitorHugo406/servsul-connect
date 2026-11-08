@@ -567,3 +567,10 @@
 .ew .ewx-reply > button svg.i { width: 18px; height: 18px; }
 .ew .m.ewx-flash .bub, .ew .m.ewx-flash .ewx-stkb { animation: ewx-flash 1.5s ease; }
 @keyframes ewx-flash { 0%, 60% { box-shadow: 0 0 0 3px #ffc36b; } 100% { box-shadow: 0 0 0 0 transparent; } }
+/* Composer textareas (no password/login suggestions from the keyboard; grow up to ~5 lines) */
+.ew .cmp textarea { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--tx); font: inherit; font-size: 14.5px; line-height: 20px; padding: 9px 6px; margin: 0; resize: none; overflow-y: auto; max-height: 124px; user-select: text; -webkit-user-select: text; scrollbar-width: none; align-self: center; }
+.ew .cmp textarea::-webkit-scrollbar { display: none; }
+.ew .cmp textarea::placeholder { color: var(--mu); }
+.ew .ewx-tchat-cmp textarea { font-size: 15px; padding: 9px 10px; }
+.ew .cmp:has(textarea) { align-items: flex-end; }
+.ew .cmp:has(textarea) > button { align-self: flex-end; }
