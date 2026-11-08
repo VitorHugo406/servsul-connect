@@ -1,3 +1,4 @@
+import { htmlToText } from '@/lib/safeHtml';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Note, useNotes, useMyNotePermission } from '@/hooks/useNotes';
 import { useAuth } from '@/contexts/AuthContext';
@@ -47,9 +48,7 @@ import { useFloatingNote } from '@/contexts/FloatingNoteContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 function stripHtml(html: string) {
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || '';
+  return htmlToText(html);
 }
 
 export function NotesSection() {

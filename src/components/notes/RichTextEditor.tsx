@@ -1,3 +1,4 @@
+import { sanitizeHtml } from '@/lib/safeHtml';
 import { useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bold, Italic, Underline, List, ListOrdered, Link as LinkIcon, Palette, AtSign } from 'lucide-react';
@@ -53,7 +54,7 @@ export function RichTextEditor({ value, onChange, onImmediateSave, readOnly, cla
 
   useEffect(() => {
     if (!ref.current) return;
-    const incoming = value || '';
+    const incoming = sanitizeHtml(value || '');
     if (document.activeElement === ref.current) return;
     if (ref.current.innerHTML !== incoming) {
       ref.current.innerHTML = incoming;

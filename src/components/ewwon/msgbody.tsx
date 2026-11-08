@@ -4,6 +4,7 @@
 //   📎 [name](url)   file attachment
 //   📋 Card #N — title (+ 📝 ⚡ 📅 📌 lines)   task card
 import { Fragment, useEffect, useState } from 'react';
+import { downloadAppFile, isAppFileRef } from '@/lib/appFiles';
 import { supabase } from '@/integrations/supabase/client';
 import { openMedia, useCachedMedia } from '@/lib/mediaCache';
 import { isSticker, parsePack } from '@/lib/stickers';
@@ -201,7 +202,7 @@ function fmt(t: string, k: string): React.ReactNode[] {
   if (last < t.length) out.push(t.slice(last));
   return out;
 }
-const MDLINK_RE = /\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g;
+const MDLINK_RE = /\[([^\]\n]+)\]\((https?:\/\/[^)\s]+|ewvon:file\/[\w./-]+)\)/g;
 
 export function RichText({ text }: { text: string }) {
   const parts: (string | { url: string; label?: string })[] = [];
@@ -221,14 +222,16 @@ export function RichText({ text }: { text: string }) {
     lastMd = m.index! + m[0].length;
   }
   if (lastMd < text.length) pushUrls(text.slice(lastMd));
-  const first = parts.find((p): p is { url: string } => typeof p !== 'string');
+  const first = parts.find((p): p is { url: string } => typeof p !== 'string' && !isAppFileRef(p.url));
   const href = (u: string) => (u.startsWith('http') ? u : 'https://' + u);
   return (
     <>
       {first ? <LinkCard url={href(first.url)} /> : null}
       <span className="ewx-tx">
         {parts.map((p, i) => typeof p === 'string' ? <Fragment key={i}>{fmt(p, i + ':')}</Fragment>
-          : <a key={i} className="ewx-url" href={href(p.url)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>{p.label || shortUrl(p.url)}</a>)}
+          : isAppFileRef(p.url)
+            ? <button key={i} type="button" className="ewx-url ewx-dl" onClick={(e) => { e.stopPropagation(); void downloadAppFile(p.url).catch((err) => window.dispatchEvent(new CustomEvent('ew:toast', { detail: err.message }))); }}>⬇ {p.label || 'Baixar arquivo'}</button>
+            : <a key={i} className="ewx-url" href={href(p.url)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>{p.label || shortUrl(p.url)}</a>)}
       </span>
     </>
   );

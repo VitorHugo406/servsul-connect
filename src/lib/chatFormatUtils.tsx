@@ -1,5 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { downloadAppFile, isAppFileRef } from '@/lib/appFiles';
 
 /**
  * Format inline text: *bold*, _italic_, ~strikethrough~, [link](url), @mentions, and auto-detect URLs
@@ -26,11 +28,24 @@ export function formatText(text: string, isOwnMsg: boolean): React.ReactNode[] {
     } else if (m.startsWith('[')) {
       const linkMatch = m.match(/^\[(.+?)\]\((.+?)\)$/);
       if (linkMatch) {
-        parts.push(
-          <a key={key++} href={linkMatch[2]} target="_blank" rel="noopener noreferrer"
-            className={cn("underline font-medium", "text-primary hover:text-primary/80")}
-          >{linkMatch[1]}</a>
-        );
+        const href = linkMatch[2].trim();
+        if (isAppFileRef(href)) {
+          // In-app download (e.g. monthly feedback PDF): no public storage link in the message.
+          parts.push(
+            <button key={key++} type="button" onClick={() => void downloadAppFile(href).catch((e) => toast.error(e.message))}
+              className={cn("inline-flex items-center gap-1 underline font-medium", "text-primary hover:text-primary/80")}
+            >⬇ {linkMatch[1]}</button>
+          );
+        } else if (/^(https?:\/\/|mailto:)/i.test(href)) {
+          parts.push(
+            <a key={key++} href={href} target="_blank" rel="noopener noreferrer"
+              className={cn("underline font-medium", "text-primary hover:text-primary/80")}
+            >{linkMatch[1]}</a>
+          );
+        } else {
+          // SECURITY: never render javascript:/data: or other schemes as links.
+          parts.push(linkMatch[1]);
+        }
       }
     } else if (m.startsWith('@')) {
       parts.push(

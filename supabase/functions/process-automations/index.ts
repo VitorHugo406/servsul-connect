@@ -16,6 +16,17 @@ Deno.serve(async (req) => {
       scheduled = body?.time === 'scheduled' || body?.time === 'alerts' || body?.cron === true || body?.scheduled === true;
       alertsOnly = body?.time === 'alerts';
     } catch { /* body optional */ }
+    // SECURITY (2026-11-09): it was callable by anyone for every board. Now: the service role
+    // (scheduler) for everything, or a signed-in member of ONE board, only for that board.
+    const bearer = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+    if (bearer !== Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
+      if (!bearer || !boardId) return json({ error: 'Unauthorized' }, 401);
+      const asUser = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: `Bearer ${bearer}` } } });
+      const { data: member, error: memberError } = await asUser.rpc('is_board_member', { check_board_id: boardId });
+      if (memberError || member !== true) return json({ error: 'Unauthorized' }, 401);
+      scheduled = false;
+      alertsOnly = false;
+    }
     const now = new Date();
 
     let rulesQuery = admin.from('task_automation_rules').select('id, board_id, task_id, trigger_type, trigger_config, action_type, action_config').eq('is_active', true);

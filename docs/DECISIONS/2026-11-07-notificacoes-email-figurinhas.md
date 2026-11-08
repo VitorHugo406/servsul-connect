@@ -125,3 +125,16 @@
 - Tutorial do app: o destaque desliza entre os controles (sem piscar), pulso suave, toque com onda; nunca abre o "Comunicados" (só leitura); textos atualizados (responder deslizando, formatação, áudio, menu ⋮).
 - Data flutuante do chat do app centralizada sem salto.
 - PC: a bolha do "Comunicados" ficava fora da tela (o estilo da bolha anulava o `absolute`); agora fica num contêiner próprio.
+
+## Auditoria de segurança (2026-11-09)
+
+Corrigido:
+- Funções públicas de reconhecimento facial (`get-facial-data`, `facial-login`) permitiam ler rostos/e-mails de todos e entrar na conta de qualquer pessoa → desativadas (410) e botão de login facial escondido.
+- `seed-super-admin`, `apply-schema`, `create-admin` (senha e token fixos no código) → desativadas; `apply-schema/migrations.ts` removido. A senha do super admin que esteve no histórico do Git deve ser trocada.
+- `manage-user`, `update-user-permissions`, `delete-data`: agora só agem dentro da empresa de quem chama; exclusão em massa apenas super admin; super admin e conta "Comunicados" protegidos.
+- `send-feedback-email`: execução agendada exige a service key; o PDF não é mais link público assinado (mostrava o endereço do banco) — a mensagem leva `ewvon:file/attachments/...` e o app baixa o arquivo com a sessão do usuário.
+- `process-automations`: service key ou membro do quadro informado; `duplicate-scheduled-cards`: apenas service key.
+- Chat PC: links markdown só aceitam http(s)/mailto (bloqueia `javascript:`); notas compartilhadas sanitizadas com DOMPurify (XSS armazenado).
+- Migração `security_hardening`: CPF, endereço e matrícula deixam de ser legíveis pelos colegas (grant por coluna em `profiles`), funções de trigger sem EXECUTE público, `search_path` fixo, política de download do próprio relatório de feedback.
+
+Pendente do dono: trocar a senha do super admin; ativar "Leaked password protection" em Auth.

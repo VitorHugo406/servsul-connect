@@ -31,6 +31,8 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { FacialLoginCamera } from '@/components/facial/FacialLoginCamera';
+
+const FACIAL_LOGIN_ENABLED = false;
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { applyBrand, resetBrand, BRAND_PRIMARY, BRAND_SECONDARY } from '@/lib/branding';
@@ -509,7 +511,7 @@ const Auth = () => {
               </AnimatePresence>
 
               {/* Facial Login Mode */}
-              {showFacialLogin ? (
+              {FACIAL_LOGIN_ENABLED && showFacialLogin ? (
                 <FacialLoginCamera
                   onSuccess={handleFacialLoginSuccess}
                   onCancel={() => setShowFacialLogin(false)}
@@ -576,7 +578,8 @@ const Auth = () => {
                     )}
                   </Button>
 
-                  {/* Facial Login Button */}
+                  {/* Facial Login Button — disabled (SECURITY 2026-11-09: the old endpoint allowed account takeover) */}
+                  {FACIAL_LOGIN_ENABLED && (<>
                   <div className="relative my-2">
                     <Separator />
                     <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
@@ -594,6 +597,7 @@ const Auth = () => {
                     <Camera className="h-5 w-5 mr-2" />
                     Entrar com reconhecimento facial
                   </Button>
+                  </>)}
                 </form>
               ) : (
                 /* Signup Form */

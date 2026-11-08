@@ -106,7 +106,7 @@ function buildChatMessage(displayName: string, stats: any, recommendations: stri
     msg += `*Recomendacoes:*\n`
     recommendations.forEach(r => { msg += `_${r}_\n` })
   }
-  if (pdfUrl) msg += `\n[Baixar Relatorio PDF](${pdfUrl})`
+  if (pdfUrl) msg += `\n[Baixar relatorio (PDF)](${pdfUrl})`
   msg += `\n\n_Mensagem automatica do ewvon_`
   return msg
 }
@@ -338,7 +338,9 @@ Deno.serve(async (req) => {
     // and is idempotent (recipients already notified for the reference month are
     // skipped), so it cannot be abused to spam feedback messages.
     const cronDay = getBrazilNow().getDate()
-    const isCron = body?.cron === true && bearer.length > 0 && cronDay === 1
+    // SECURITY (2026-11-09): the scheduled run must present the service role key itself (before, any
+    // bearer string was accepted on the 1st of the month).
+    const isCron = body?.cron === true && bearer.length > 0 && bearer === supabaseKey && cronDay === 1
 
     let userId: string | null = null
     if (!isCron) {
@@ -487,8 +489,10 @@ Deno.serve(async (req) => {
           if (uploadError) {
             console.error(`PDF upload error for ${profile.name}:`, uploadError)
           } else {
-            const { data: signed } = await supabase.storage.from('attachments').createSignedUrl(fileName, 60 * 60 * 24 * 7)
-            pdfUrl = signed?.signedUrl
+            // No public signed link (it exposed the storage address and worked for anyone for 7 days):
+            // the chat carries an in-app reference and only the owner can download it (storage policy
+            // "Owner downloads own feedback report").
+            pdfUrl = `ewvon:file/attachments/${fileName}`
             sentPdfCount++
           }
         } catch (pdfError) {
