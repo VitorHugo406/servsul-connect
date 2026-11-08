@@ -1169,12 +1169,14 @@ export default function EwwonApp() {
           </nav>
 
           {/* ---------------- Sala de conversa ---------------- */}
-          <div id="room" className={(roomOn ? 'on' : '') + (cur && (cur.wp || cur.set.wall) ? ' ewx-wp' : '')} style={roomStyle}>
+          <div id="room" className={(roomOn ? 'on' : '') + (cur && (cur.wp || cur.set.wall) ? ' ewx-wp' : '') + (curSys ? ' ewx-sys' : '')} style={roomStyle}>
             <div className="rh">
               <button id="back" aria-label="Voltar" onClick={closeRoom}><I n="chevL" /></button>
               {cur && curSys ? <div className="av ewx-sysav" id="rav"><CosmicBlob size={38} /></div> : cur ? <div className={'av' + (cur.p ? ' on' : '')} id="rav" style={{ ...avStyle(cur.p ? P[cur.p] : cur), ['--sc' as string]: cur.p ? ST[P[cur.p]?.st || 'disp'][1] : '#46d37b' }} onClick={() => (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}>{(cur.p ? P[cur.p]?.photo : cur.photo) ? '' : cur.i}</div> : <div className="av" id="rav" />}
               <div className="rt" onClick={() => cur && !curSys && (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}><b id="rn">{cur?.n}</b><small id="rs" className={typing && cur && typing.key === cur.key ? 'ewx-typing-tx' : undefined}>{typing && cur && typing.key === cur.key ? (cur.kind === 'dm' ? 'Digitando...' : `${typing.names.map((n) => n.split(' ')[0]).join(', ')} ${typing.names.length > 1 ? 'estão digitando...' : 'está digitando...'}`) : cur ? stt(cur) : ''}</small></div>
-              <button className="lq" id="gear" aria-label="Mais opções" onClick={(e) => { e.stopPropagation(); setDots((v) => !v); }}><I n="dots" /></button>
+              {curSys
+                ? <button className="lq" id="gear" aria-label="Pesquisar nesta conversa" onClick={(e) => { e.stopPropagation(); setDots(false); setSearch((x) => (x ? null : { q: '', i: 0 })); }}><I n="search" /></button>
+                : <button className="lq" id="gear" aria-label="Mais opções" onClick={(e) => { e.stopPropagation(); setDots((v) => !v); }}><I n="dots" /></button>}
             </div>
               {dots ? (
                 <div className="ewx-dots" onClick={(e) => e.stopPropagation()}>

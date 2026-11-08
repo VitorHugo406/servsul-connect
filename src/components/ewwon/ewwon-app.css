@@ -577,6 +577,9 @@
 /* "Comunicados" (system sender) */
 .ew .ewx-sysav { background: none !important; box-shadow: none !important; display: grid; place-items: center; overflow: visible; }
 .ew .ewx-sysav::after { display: none !important; }
-.ew .ewx-sysfoot { display: flex; justify-content: center; padding: 6px 0 10px; flex-shrink: 0; pointer-events: none; }
+.ew .ewx-sysfoot { position: relative; height: 0; flex-shrink: 0; z-index: 3; pointer-events: none; }
+.ew .ewx-sysfoot .cblob { position: absolute; left: 50%; bottom: 12px; margin-left: -48px; }
+/* Empty space at the end of the system chat so the last message scrolls above the floating blob. */
+.ew #room.ewx-sys #msgs { padding-bottom: 136px; }
 .ew #room #msgs { position: relative; z-index: 1; }
 .ew .ewx-ro { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 12px calc(env(safe-area-inset-bottom, 0px) + 12px); padding: 12px 14px; border-radius: 22px; background: var(--card); border: 1px solid var(--bd); color: var(--mu); font-size: 13px; text-align: center; }

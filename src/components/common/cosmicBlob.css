@@ -67,17 +67,22 @@
 @keyframes cblob-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .cblob-b, .cblob-c, .cblob-l { animation: none; } }
 
-/* "Talking": energetic morph + squash, like a voice (system DM header, assistant answering). */
-.cblob.talk .cblob-b { animation: cblob-morph 1.5s ease-in-out infinite, cblob-talk .95s ease-in-out infinite; }
-.cblob.talk .cblob-c { animation-duration: 2.6s; }
-.cblob.talk .cblob-l { animation-duration: 5s; }
+/* "Talking": slow, big stretch-and-squash, like a voice (system DM, assistant answering). */
+.cblob.talk .cblob-b { animation: cblob-morph-talk 3.2s ease-in-out infinite, cblob-talk 2.6s ease-in-out infinite; }
+.cblob.talk .cblob-c { animation-duration: 6s; }
+.cblob.talk .cblob-l { animation-duration: 12s; }
+@keyframes cblob-morph-talk {
+  0%, 100% { border-radius: 48% 52% 46% 54% / 55% 45% 55% 45%; }
+  25% { border-radius: 68% 32% 60% 40% / 38% 62% 36% 64%; }
+  50% { border-radius: 34% 66% 32% 68% / 66% 34% 68% 32%; }
+  75% { border-radius: 60% 40% 70% 30% / 32% 68% 42% 58%; }
+}
 @keyframes cblob-talk {
   0%, 100% { transform: scale(1, 1) rotate(-6deg); }
-  18% { transform: scale(1.1, .9) rotate(5deg); }
-  36% { transform: scale(.92, 1.08) rotate(-12deg); }
-  52% { transform: scale(1.08, .95) rotate(9deg); }
-  70% { transform: scale(.96, 1.05) rotate(-4deg); }
-  86% { transform: scale(1.05, .97) rotate(6deg); }
+  20% { transform: scale(1.24, .8) rotate(6deg); }
+  40% { transform: scale(.82, 1.22) rotate(-12deg); }
+  60% { transform: scale(1.18, .86) rotate(10deg); }
+  80% { transform: scale(.88, 1.14) rotate(-4deg); }
 }
 /* Click feedback (assistant button). */
 .cblob.pop { animation: cblob-pop .6s cubic-bezier(.3, 1.6, .5, 1); }
