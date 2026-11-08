@@ -116,3 +116,12 @@
 - PC: troca de aba sem a pílula animada no topo; enquanto a aba carrega aparece só a logo desenhando no centro da área da página (a tela cheia fica só na abertura do sistema).
 - PC: a conversa com o "Comunicados" aparece na lista para todas as empresas (antes a lista escondia quem era de outra empresa); o item da lista não estoura a largura e reserva espaço para o botão "...".
 - Cards: numeração por mural (migration `20261109070000_task_number_per_board.sql`): cada mural começa no #1; trigger com trava por mural evita números repetidos; card movido para outro mural ganha o próximo número de lá; os cards existentes foram renumerados por mural na ordem de criação. O número só é exibido (ninguém busca card pelo número).
+
+## Figurinhas animadas, painel do chat, modo operação e tutorial (09/11/2026)
+- Figurinhas animadas (como no WhatsApp): GIF, WebP animado ou vídeo curto viram GIF de até 5 s (320 px, 12 quadros/s; diminui até caber em 1,4 MB), com fundo transparente, codificado no navegador (`gifenc`). Ficam na mesma chave das estáticas (`<empresa>/<sha256>.webp`) com o tipo real `image/gif`, então favoritas, pacotes e mensagens não mudaram. Migration `20261109090000_animated_stickers.sql` libera `image/gif` e 1,5 MB no bucket `stickers`. GIF animado no iPhone (sem ImageDecoder) vira figurinha estática; vídeo funciona em todos.
+- Aniversariantes: quem já fez aniversário no mês sai de "próximos" e aparece em "Aniversariantes anteriores" (PC) / "Já fizeram aniversário em …" (app).
+- PC, chat em tela larga (≥ 1280 px): painel à direita com dados da conversa (mensagens por dia na semana, horário de pico, mídias, links, mais ativos) e, no botão de membros ou na aba "Pessoas", a lista de pessoas do setor/grupo (ou o contato no PV).
+- Modo operação: a ordem é calculada uma vez (`lib/operationMode.ts`, com testes): emergências, atrasados, prioridade, prazo. Atrasado sobe para Urgente e prazo em até 48 h para Alta. Coluna de conclusão, modelos, arquivados e cards concluídos não mudam. Mostra prévia antes de aplicar e grava em lote.
+- Tutorial do app: o destaque desliza entre os controles (sem piscar), pulso suave, toque com onda; nunca abre o "Comunicados" (só leitura); textos atualizados (responder deslizando, formatação, áudio, menu ⋮).
+- Data flutuante do chat do app centralizada sem salto.
+- PC: a bolha do "Comunicados" ficava fora da tela (o estilo da bolha anulava o `absolute`); agora fica num contêiner próprio.
