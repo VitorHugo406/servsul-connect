@@ -1,12 +1,13 @@
 import { OfflineScreen } from "@/components/common/OfflineScreen";
 import { isInstalledApp } from "@/lib/appMode";
+import { lazyWithRetry } from "@/lib/lazyRetry";
 import { initE2E } from "@/lib/e2e";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useSearchParams } from "react-router-dom";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { DemoTimer } from "@/components/demo/DemoTimer";
@@ -18,22 +19,6 @@ import { AdminBirthdayPdfGuard } from "@/components/birthday/AdminBirthdayPdfGua
 import { Building2, Check, Loader2, X } from "lucide-react";
 
 // Recarrega uma única vez quando um pedaço antigo do app ficou em cache (deploy novo)
-function lazyWithRetry<T extends { default: React.ComponentType<any> }>(factory: () => Promise<T>) {
-  return lazy(async () => {
-    try {
-      return await factory();
-    } catch (err) {
-      const key = 'nuvexa:chunk-reloaded';
-      if (!sessionStorage.getItem(key)) {
-        sessionStorage.setItem(key, '1');
-        window.location.reload();
-        return await new Promise<T>(() => {});
-      }
-      throw err;
-    }
-  });
-}
-
 const Index = lazyWithRetry(() => import("./pages/Index"));
 const LandingPage = lazyWithRetry(() => import("./pages/LandingPage"));
 const Auth = lazyWithRetry(() => import("./pages/Auth"));
