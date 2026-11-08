@@ -99,3 +99,9 @@
 - Empresas novas nascem "aguardando" plano; as que já existiam ficaram no Empresarial "gratuita" para não perder nada até o super admin definir o plano.
 - Ainda não bloqueia nada: `company_has_feature()` e `company_seat_limit()` (plano + acessos gratuitos) ficam prontos para as telas usarem quando a cobrança começar. O provedor de pagamento ainda não foi escolhido.
 - Tela: PC > Empresas > (empresa) > aba "Plano".
+- Ajuste: no PV do "Comunicados" a bolha não fica mais no fundo; fica centralizada embaixo, logo acima do aviso "Este canal só envia comunicados", mexendo bastante (animação `talk`, como se estivesse falando).
+
+## Assistente do PC (09/11/2026)
+- O botão do assistente no topo virou a bolha cósmica (`AssistantButton`), com um "pop" ao clicar.
+- Abre em qualquer aba (antes só na inicial), como painel lateral à direita.
+- Aba "Dúvidas": perguntas prontas; ao tocar, a pergunta aparece como mensagem e a bolha "fala" a resposta (respostas fixas, sem IA).

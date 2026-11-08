@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { CosmicBlob } from '@/components/common/CosmicBlob';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, X, Bell, HelpCircle, Sparkles, ChevronRight, Check, Building2, MessageSquare, Megaphone, AlertTriangle, CalendarIcon, ListTodo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,8 +27,8 @@ type TabType = 'notifications' | 'help' | 'sectors';
 
 const helpItems = [
   {
-    title: 'Bem-vindo ao Ewvor!',
-    content: 'O Ewvor é a plataforma de comunicação interna do Ewvor. Aqui você pode trocar mensagens com sua equipe, receber avisos importantes, gerenciar tarefas e muito mais.',
+    title: 'Bem-vindo ao ewvon!',
+    content: 'O ewvon é a plataforma de comunicação interna da sua empresa. Aqui você pode trocar mensagens com sua equipe, receber avisos importantes, gerenciar tarefas e muito mais.',
   },
   {
     title: 'Como usar o Chat',
@@ -87,6 +88,22 @@ const helpItems = [
   },
 ];
 
+// Predefined questions of the "Dúvidas" tab (answered by the assistant, no AI involved).
+const FAQ: { q: string; a: string }[] = [
+  { q: 'Como mando mensagem para um colega?', a: 'Abra a aba Chat, escolha "Individual" e toque no nome da pessoa. Quem está online aparece com a bolinha verde.' },
+  { q: 'Como crio um grupo?', a: 'Na aba Chat, vá em "Grupos" e crie um grupo novo. Quem cria vira administrador e pode adicionar ou remover membros.' },
+  { q: 'Como formato o texto no chat?', a: 'Use *texto* para negrito, _texto_ para itálico, ~texto~ para riscado e [texto](link) para criar um link clicável.' },
+  { q: 'Como menciono um card de tarefa?', a: 'Digite # em qualquer chat, escolha o mural e o card. O chat mostra um resumo com título, etiquetas, prioridade e prazo.' },
+  { q: 'O que significam os vistos ✓ e ✓✓?', a: '✓ quer dizer que a mensagem foi enviada; ✓✓ que ela já foi salva e entregue para os outros, como no WhatsApp.' },
+  { q: 'Como organizo minhas tarefas?', a: 'Na aba Tarefas você cria murais no estilo Kanban: arraste os cards entre as colunas e marque uma coluna como "Conclusão" para registrar quando a tarefa terminou e se houve atraso.' },
+  { q: 'Onde vejo os avisos importantes?', a: 'Na aba Avisos. Os comunicados importantes também aparecem numa janela no primeiro acesso e ficam numa aba própria.' },
+  { q: 'O que é o "Comunicados"?', a: 'É o remetente automático do ewvon: ele envia resumos dos grupos e setores, boas-vindas e o seu feedback mensal. Esse canal só envia mensagens, não dá para responder.' },
+  { q: 'Como recebo meu feedback mensal?', a: 'Todo mês o "Comunicados" manda no seu chat individual um resumo da sua atividade, com recomendações e o relatório em PDF. Ele também chega por e-mail.' },
+  { q: 'Como instalo o app no celular?', a: 'No celular, abra o ewvon no Chrome e, no seu perfil, toque em "Baixar aplicativo". O app avisa novas mensagens mesmo fechado.' },
+  { q: 'O que significam as cores de presença?', a: 'Verde: online. Vermelho: inativo (sem atividade recente). Cinza: offline. Atualiza em tempo real.' },
+  { q: 'Quem acessa Gestão de Pessoas?', a: 'Supervisores, gerentes e administradores. Lá ficam colaboradores, permissões e relatórios de desempenho com gráficos.' },
+];
+
 interface ChatbotWidgetProps {
   isHomePage?: boolean;
 }
@@ -109,6 +126,17 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
   
   const totalUnread = unreadNotifications + unreadCounts.announcements + unreadCounts.messages + (!overdueTasksDismissed && overdueTasks > 0 ? 1 : 0);
 
+  // Dúvidas: question/answer conversation with a short "typing" pause.
+  const [qa, setQa] = useState<{ q: string; a: string | null }[]>([]);
+  const answering = qa.some((x) => x.a === null);
+  const ask = (item: { q: string; a: string }) => {
+    if (answering) return;
+    setQa((l) => [...l, { q: item.q, a: null }]);
+    window.setTimeout(() => setQa((l) => l.map((x) => (x.q === item.q && x.a === null ? { ...x, a: item.a } : x))), 850);
+  };
+  const qaEnd = useRef<HTMLDivElement>(null);
+  useEffect(() => { qaEnd.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [qa]);
+
   const handleOpen = () => {
     playChatbotClick();
     setIsOpen(true);
@@ -128,7 +156,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
   }, []);
 
   useEffect(() => {
-    if (!user || !profile || !isHomePage) return;
+    if (!user || !profile || !(isHomePage || isOpen)) return;
 
     const fetchData = async () => {
       setLoading(true);
@@ -327,10 +355,6 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
     };
   }, [user, profile, isHomePage, refreshTick, isOpen]);
 
-  // Only render on home page
-  if (!isHomePage) {
-    return null;
-  }
 
   const markAsRead = async (notificationId: string) => {
     await supabase
@@ -400,33 +424,32 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={handleClose}
-              className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-50 bg-black/15"
             />
 
             {/* Panel */}
             <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.8 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.8 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed bottom-28 left-3 right-3 z-50 w-auto overflow-hidden rounded-[30px] border border-border/70 bg-card shadow-2xl md:bottom-6 md:left-auto md:right-6 md:w-[400px] md:max-w-[400px]"
+              initial={{ opacity: 0, x: 440 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 440 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+              className="fixed bottom-3 right-3 top-3 z-50 flex w-[min(420px,calc(100vw-24px))] flex-col overflow-hidden rounded-[28px] border border-border/70 bg-card shadow-2xl"
+              role="dialog" aria-label="Assistente ewvon"
             >
               {/* Header */}
-              <div className="flex items-center justify-between gradient-primary p-4 text-white">
+              <div className="flex shrink-0 items-center justify-between border-b border-border p-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
-                    <Bot className="h-6 w-6" />
-                  </div>
+                  <CosmicBlob size={46} talk={answering} />
                   <div>
-                    <h3 className="font-display font-semibold">Assistente Ewvor</h3>
-                    <p className="text-xs text-white/70">Olá, {profile?.display_name || profile?.name || 'Usuário'}!</p>
+                    <h3 className="font-display font-semibold text-foreground">Assistente ewvon</h3>
+                    <p className="text-xs text-muted-foreground">{answering ? 'Respondendo…' : `Olá, ${profile?.display_name || profile?.name || 'Usuário'}!`}</p>
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleClose}
-                  className="h-8 w-8 text-white hover:bg-white/20"
+                  className="h-8 w-8 rounded-full"
                 >
                   <X className="h-5 w-5" />
                 </Button>
@@ -481,7 +504,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                   }`}
                 >
                   <HelpCircle className="h-4 w-4" />
-                  <span>Ajuda</span>
+                  <span>Dúvidas</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('sectors')}
@@ -497,7 +520,7 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
               </div>
 
               {/* Content */}
-              <ScrollArea className="h-[300px]">
+              <ScrollArea className="min-h-0 flex-1">
                 {activeTab === 'notifications' && (
                   <div className="p-3">
                     {loading ? (
@@ -702,22 +725,30 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
                 )}
 
                 {activeTab === 'help' && (
-                  <div className="p-3 space-y-3">
-                    {helpItems.map((item, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="rounded-2xl border border-border bg-background p-3"
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <ChevronRight className="h-4 w-4 text-primary" />
-                          <span className="font-medium text-foreground">{item.title}</span>
+                  <div className="space-y-3 p-3">
+                    <div className="flex items-end gap-2">
+                      <CosmicBlob size={26} />
+                      <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-muted px-3 py-2 text-sm text-foreground">Oi! Escolha uma dúvida abaixo que eu explico rapidinho.</div>
+                    </div>
+                    {qa.map((x, k) => (
+                      <div key={k} className="space-y-2">
+                        <div className="flex justify-end"><div className="max-w-[85%] rounded-2xl rounded-br-md bg-foreground px-3 py-2 text-sm text-background">{x.q}</div></div>
+                        <div className="flex items-end gap-2">
+                          <CosmicBlob size={26} talk={x.a === null} />
+                          <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-muted px-3 py-2 text-sm text-foreground">
+                            {x.a ?? <span className="inline-flex gap-1 py-1"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:.15s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:.3s]" /></span>}
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">{item.content}</p>
-                      </motion.div>
+                      </div>
                     ))}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {FAQ.filter((f) => !qa.some((x) => x.q === f.q)).map((f) => (
+                        <button key={f.q} type="button" disabled={answering} onClick={() => ask(f)}
+                          className="rounded-full border border-border bg-background px-3 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50">{f.q}</button>
+                      ))}
+                      {qa.length ? <button type="button" onClick={() => setQa([])} className="rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">Recomeçar</button> : null}
+                    </div>
+                    <div ref={qaEnd} />
                   </div>
                 )}
 

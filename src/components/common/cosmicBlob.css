@@ -66,3 +66,20 @@
 @keyframes cblob-tilt { 0%, 100% { transform: rotate(-8deg) scale(1); } 33% { transform: rotate(14deg) scale(1.03, .97); } 66% { transform: rotate(-18deg) scale(.97, 1.04); } }
 @keyframes cblob-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .cblob-b, .cblob-c, .cblob-l { animation: none; } }
+
+/* "Talking": energetic morph + squash, like a voice (system DM header, assistant answering). */
+.cblob.talk .cblob-b { animation: cblob-morph 1.5s ease-in-out infinite, cblob-talk .95s ease-in-out infinite; }
+.cblob.talk .cblob-c { animation-duration: 2.6s; }
+.cblob.talk .cblob-l { animation-duration: 5s; }
+@keyframes cblob-talk {
+  0%, 100% { transform: scale(1, 1) rotate(-6deg); }
+  18% { transform: scale(1.1, .9) rotate(5deg); }
+  36% { transform: scale(.92, 1.08) rotate(-12deg); }
+  52% { transform: scale(1.08, .95) rotate(9deg); }
+  70% { transform: scale(.96, 1.05) rotate(-4deg); }
+  86% { transform: scale(1.05, .97) rotate(6deg); }
+}
+/* Click feedback (assistant button). */
+.cblob.pop { animation: cblob-pop .6s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes cblob-pop { 0% { transform: scale(1); } 35% { transform: scale(1.35) rotate(25deg); } 100% { transform: scale(1) rotate(0); } }
+@media (prefers-reduced-motion: reduce) { .cblob.talk .cblob-b, .cblob.pop { animation: none; } }

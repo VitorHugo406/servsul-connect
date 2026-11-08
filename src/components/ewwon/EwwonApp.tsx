@@ -1193,7 +1193,6 @@ export default function EwwonApp() {
               </div>
             ) : null}
             {dayFloat ? <div className="ewx-dfloat">{dayFloat}</div> : null}
-            {curSys ? <div className="ewx-sysbg" aria-hidden="true"><CosmicBlob size={200} /></div> : null}
             <div id="msgs" ref={msgsRef} style={msgsVars} onClick={() => { setPickFor(null); setDots(false); }} onScroll={onMsgsScroll}>
               <div className="hint">Segure ou toque 2x numa mensagem para reagir</div>
               {cur && !cur.loaded && !cur.m.length ? (
@@ -1262,7 +1261,7 @@ export default function EwwonApp() {
               </div>
             ) : null}
             {(() => {
-              if (curSys) return <div className="ewx-ro"><CosmicBlob size={22} />Este canal só envia comunicados. Não é possível responder.</div>;
+              if (curSys) return <><div className="ewx-sysfoot" aria-hidden="true"><CosmicBlob size={96} talk /></div><div className="ewx-ro">Este canal só envia comunicados. Não é possível responder.</div></>;
               const recOn = voiceRec.recording || !!recUi;
               const lockMode = recUi?.mode === 'lock' || (voiceRec.recording && !recUi);
               const micMode = !draft.trim() && !pending.length && !sending;
