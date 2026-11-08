@@ -17,7 +17,7 @@ Deno.serve(async(req)=>{
   const body=await req.json(); const type=body.type; const targetUserId=body.userId;
   const [{data:roles},{data:profile},{data:permission}]=await Promise.all([
    client.from('user_roles').select('role').eq('user_id',user.id),
-   client.from('profiles').select('email,autonomy_level').eq('user_id',user.id).maybeSingle(),
+   client.from('profiles').select('email,autonomy_level,company_id').eq('user_id',user.id).maybeSingle(),
    client.from('user_permissions').select('can_access_management,can_access_password_change').eq('user_id',user.id).maybeSingle(),
   ]);
   const isAdmin=profile?.email===ADMIN_EMAIL||(roles||[]).some(r=>r.role==='admin');
@@ -26,8 +26,14 @@ Deno.serve(async(req)=>{
   if(type==='change-password'&&!canChangePassword) throw Object.assign(new Error('Você não tem permissão para alterar senhas'),{status:403});
   if(type==='delete-single-user'&&!canManage) throw Object.assign(new Error('Você não tem permissão para excluir usuários'),{status:403});
   if(!targetUserId) throw Object.assign(new Error('userId é obrigatório'),{status:400});
-  const {data:target}=await client.from('profiles').select('id,user_id,email,name').eq('user_id',targetUserId).maybeSingle();
+  const {data:target}=await client.from('profiles').select('id,user_id,email,name,company_id,profile_type').eq('user_id',targetUserId).maybeSingle();
   if(!target) throw Object.assign(new Error('Usuário não encontrado'),{status:404});
+  // SECURITY (2026-11-09): only people of the caller's own company; never a super admin or the
+  // system sender (unless the caller is the super admin).
+  const callerSuper=(roles||[]).some(r=>r.role==='super_admin');
+  const {data:targetRoles}=await client.from('user_roles').select('role').eq('user_id',targetUserId);
+  if(target.profile_type==='system') throw Object.assign(new Error('Conta do sistema'),{status:403});
+  if(!callerSuper&&(target.company_id!==profile?.company_id||(targetRoles||[]).some(r=>r.role==='super_admin'))) throw Object.assign(new Error('Usuário fora da sua empresa'),{status:403});
   if(target.email===ADMIN_EMAIL) throw Object.assign(new Error('Não é possível alterar ou excluir o administrador principal'),{status:403});
 
   if(type==='change-password'){

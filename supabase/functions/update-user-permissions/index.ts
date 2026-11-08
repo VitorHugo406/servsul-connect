@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
 
     const [{ data: callerRoles }, { data: callerProfile }, { data: callerPermissions }] = await Promise.all([
       supabaseAdmin.from("user_roles").select("role").eq("user_id", user.id),
-      supabaseAdmin.from("profiles").select("autonomy_level").eq("user_id", user.id).maybeSingle(),
+      supabaseAdmin.from("profiles").select("autonomy_level, company_id").eq("user_id", user.id).maybeSingle(),
       supabaseAdmin.from("user_permissions").select("can_access_management").eq("user_id", user.id).maybeSingle(),
     ]);
 
@@ -105,9 +105,18 @@ Deno.serve(async (req) => {
 
     const { data: targetProfile } = await supabaseAdmin
       .from("profiles")
-      .select("name, email")
+      .select("name, email, company_id")
       .eq("user_id", userId)
       .single();
+
+    // SECURITY (2026-11-09): only people of the caller's own company (the super admin can do any).
+    const callerIsSuper = (callerRoles || []).some(r => r.role === "super_admin");
+    if (!targetProfile || (!callerIsSuper && targetProfile.company_id !== callerProfile?.company_id)) {
+      return new Response(JSON.stringify({ error: "Usuário fora da sua empresa" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { data: existingPerm } = await supabaseAdmin
       .from("user_permissions")

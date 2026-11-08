@@ -120,6 +120,28 @@ serve(async (req) => {
 
     const body = await req.json();
     const { type, clientIp } = body;
+
+    // SECURITY (2026-11-09): mass deletions used to run on EVERY company for any company admin.
+    // Bulk actions are now super-admin only; a company admin can only change the password of /
+    // delete a person of their own company, never a super admin or the system sender.
+    const isSuperAdmin = !!userRoles?.some(r => r.role === 'super_admin');
+    if (!isSuperAdmin) {
+      if (type !== 'change-password' && type !== 'delete-single-user') {
+        return new Response(JSON.stringify({ error: 'Apenas o super administrador pode apagar dados em massa' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 });
+      }
+      const targetId = body.userId;
+      const [{ data: me }, { data: target }, { data: targetRoles }] = await Promise.all([
+        adminClient.from('profiles').select('company_id').eq('user_id', user.id).single(),
+        adminClient.from('profiles').select('company_id').eq('user_id', targetId).maybeSingle(),
+        adminClient.from('user_roles').select('role').eq('user_id', targetId),
+      ]);
+      if (!target || !me || target.company_id !== me.company_id || (targetRoles || []).some(r => r.role === 'super_admin')) {
+        return new Response(JSON.stringify({ error: 'Usuário fora da sua empresa' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 });
+      }
+    }
+    if (body.userId === '00000000-0000-0000-0000-00000000c0c0') {
+      return new Response(JSON.stringify({ error: 'Conta do sistema' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 });
+    }
     console.log('Deletion type:', type, 'Client IP:', clientIp);
 
     // Record timestamp before deletion to update audit logs with IP after
