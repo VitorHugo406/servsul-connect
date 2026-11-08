@@ -65,13 +65,115 @@ export async function makeStickerBlob(file: Blob): Promise<Blob> {
   throw new Error('Figurinha grande demais');
 }
 
+// ---------------------------------------------------------------- animated stickers
+// Animated stickers (like WhatsApp, up to 5 s) are encoded as GIF so they play on every phone
+// and browser. They live under the same content-addressed key (<sha>.webp) with the real type
+// (image/gif) stored on the object: favorites, packs and messages need no change.
+export const ANIM_MAX_SECONDS = 5;
+const ANIM_MAX_BYTES = 1_400_000;
+
+/** GIFs, animated WebP and short videos become animated stickers. */
+export async function isAnimatedSource(file: Blob): Promise<boolean> {
+  if (file.type.startsWith('video/') || file.type === 'image/gif') return true;
+  if (file.type !== 'image/webp') return false;
+  const head = new Uint8Array(await file.slice(0, 64).arrayBuffer());
+  return new TextDecoder().decode(head).includes('ANIM') || (head[20] & 0x02) === 0x02; // VP8X animation flag
+}
+
+/** Called once per captured frame, synchronously, while the source shows that frame. `draw` null = extend the previous frame. */
+type FrameSink = (draw: ((ctx: CanvasRenderingContext2D, S: number) => void) | null, delayMs: number) => void;
+
+function fit(ctx: CanvasRenderingContext2D, S: number, src: CanvasImageSource, w: number, h: number) {
+  const pad = Math.round(S * 0.03), r = Math.min((S - pad * 2) / w, (S - pad * 2) / h);
+  ctx.clearRect(0, 0, S, S);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(src, (S - w * r) / 2, (S - h * r) / 2, w * r, h * r);
+}
+
+async function videoFrames(file: Blob, fps: number, sink: FrameSink) {
+  const url = URL.createObjectURL(file);
+  const v = document.createElement('video');
+  v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
+  try {
+    await new Promise<void>((res, rej) => { v.onloadeddata = () => res(); v.onerror = () => rej(new Error('Vídeo inválido')); window.setTimeout(() => rej(new Error('Vídeo demorou para abrir')), 15000); });
+    const dur = Math.min(Number.isFinite(v.duration) && v.duration > 0 ? v.duration : ANIM_MAX_SECONDS, ANIM_MAX_SECONDS);
+    const n = Math.max(1, Math.floor(dur * fps));
+    for (let i = 0; i < n; i++) {
+      v.currentTime = Math.min(i / fps, Math.max(0, dur - 0.05));
+      await new Promise<void>((res) => { const done = () => { v.removeEventListener('seeked', done); res(); }; v.addEventListener('seeked', done); window.setTimeout(done, 1500); });
+      sink((ctx, S) => fit(ctx, S, v, v.videoWidth, v.videoHeight), 1000 / fps);
+    }
+  } finally { URL.revokeObjectURL(url); }
+}
+
+async function imageFrames(file: Blob, fps: number, sink: FrameSink): Promise<boolean> {
+  // ImageDecoder decodes every GIF/WebP frame (Chrome, Edge, Android). Elsewhere: not animated.
+  const ID = (window as unknown as { ImageDecoder?: new (o: { data: ArrayBuffer; type: string }) => { tracks: { ready: Promise<void>; selectedTrack: { frameCount: number } | null }; decode(o: { frameIndex: number }): Promise<{ image: VideoFrame }>; close(): void } }).ImageDecoder;
+  if (!ID) return false;
+  const dec = new ID({ data: await file.arrayBuffer(), type: file.type });
+  try {
+    await dec.tracks.ready;
+    const count = dec.tracks.selectedTrack?.frameCount || 1;
+    if (count < 2) return false;
+    const step = 1000 / fps;
+    let t = 0, nextAt = 0;
+    for (let i = 0; i < count && t < ANIM_MAX_SECONDS * 1000; i++) {
+      const { image } = await dec.decode({ frameIndex: i });
+      const d = Math.max(20, (image.duration ?? 100_000) / 1000);
+      if (t >= nextAt) {
+        // Merged (skipped) frames add their time to the previous one; delay of the current frame is set when the next arrives.
+        sink((ctx, S) => fit(ctx, S, image, image.displayWidth, image.displayHeight), d);
+        nextAt = t + step;
+      } else sink(null, d);
+      image.close();
+      t += d;
+    }
+    return true;
+  } finally { dec.close(); }
+}
+
+/** Encodes an animated sticker (GIF, transparent background, ≤ 5 s), shrinking until it fits. */
+export async function makeAnimatedStickerBlob(file: Blob): Promise<Blob | null> {
+  const { GIFEncoder, quantize, applyPalette } = await import('gifenc');
+  for (const [S, fps] of [[320, 12], [256, 10], [200, 8]] as const) {
+    const c = document.createElement('canvas'); c.width = S; c.height = S;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    if (!ctx) throw new Error('Não foi possível criar a figurinha');
+    // Frames are quantized as they are captured; each one is written once its duration is known.
+    const gif = GIFEncoder();
+    let prev: { index: Uint8Array; palette: number[][]; ti: number; delay: number } | null = null;
+    const flush = () => { if (prev) gif.writeFrame(prev.index, S, S, { palette: prev.palette, delay: Math.round(prev.delay), transparent: prev.ti >= 0, transparentIndex: Math.max(0, prev.ti), dispose: 2 }); };
+    let frames = 0;
+    const sink: FrameSink = (draw, delay) => {
+      if (!draw) { if (prev) prev.delay += delay; return; }
+      draw(ctx, S);
+      const data = ctx.getImageData(0, 0, S, S).data;
+      const palette = quantize(data, 256, { format: 'rgba4444', oneBitAlpha: true });
+      const index = applyPalette(data, palette, 'rgba4444');
+      flush();
+      prev = { index, palette, ti: palette.findIndex((p) => p[3] === 0), delay };
+      frames++;
+    };
+    if (file.type.startsWith('video/')) await videoFrames(file, fps, sink);
+    else if (!(await imageFrames(file, fps, sink))) return null;
+    if (!frames) return null;
+    flush();
+    gif.finish();
+    const blob = new Blob([gif.bytes()], { type: 'image/gif' });
+    if (blob.size <= ANIM_MAX_BYTES) return blob;
+  }
+  throw new Error('Animação grande demais para figurinha. Use um trecho mais curto.');
+}
+
 /** Uploads (only if new) and returns the sticker. Same picture → same hash → same file. */
 export async function createSticker(file: Blob): Promise<Sticker> {
   const companyId = getActiveCompanyId();
   if (!companyId) throw new Error('Empresa não identificada');
-  const blob = await makeStickerBlob(file);
+  const anim = (await isAnimatedSource(file)) ? await makeAnimatedStickerBlob(file) : null;
+  if (!anim && file.type.startsWith('video/')) throw new Error('Não foi possível ler esse vídeo');
+  const blob = anim || (await makeStickerBlob(file));
   const sha = await sha256(blob);
-  const { error } = await sb.storage.from('stickers').upload(`${companyId}/${sha}.webp`, blob, { contentType: 'image/webp', upsert: false, cacheControl: '31536000' });
+  const { error } = await sb.storage.from('stickers').upload(`${companyId}/${sha}.webp`, blob, { contentType: blob.type, upsert: false, cacheControl: '31536000' });
   if (error && !/exist|duplicate|409/i.test(`${error.message} ${error.statusCode ?? ''}`)) throw new Error('Não foi possível salvar a figurinha');
   const s: Sticker = { kind: 'img', companyId, sha };
   await addFavorite(s).catch(() => undefined);
@@ -197,7 +299,7 @@ export async function importPack(file: File, meId: string): Promise<Pack> {
   if (data.format !== 'ewvon-stickers' || !Array.isArray(data.stickers)) throw new Error('Arquivo de pacote inválido');
   const created: Sticker[] = [];
   for (const d of data.stickers.slice(0, 120)) {
-    if (typeof d !== 'string' || !/^data:image\/(webp|png);base64,/.test(d)) continue;
+    if (typeof d !== 'string' || !/^data:image\/(webp|png|gif);base64,/.test(d)) continue;
     const blob = await (await fetch(d)).blob();
     created.push(await createSticker(blob));
   }

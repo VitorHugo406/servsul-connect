@@ -143,7 +143,7 @@ export function StickerPicker({ onPick, onSendContent, notify }: { onPick: (s: S
         <span className="stk-sp" />
         {(tab === 'Favoritas' && (mine || []).length) || (pack && pack.items.length) ? <button type="button" className="stk-t" onClick={() => setEdit(!edit)}>{edit ? 'Concluir' : 'Editar'}</button> : null}
         {tab !== 'Pacotes' || pack ? <button type="button" className="stk-t stk-new" disabled={busy} onClick={() => file.current?.click()}>{busy ? '…' : '+ Criar'}</button> : null}
-        <input ref={file} type="file" accept="image/*" hidden onChange={(e) => create(e.target.files?.[0])} />
+        <input ref={file} type="file" accept="image/*,video/mp4,video/webm,video/quicktime" hidden onChange={(e) => create(e.target.files?.[0])} />
         <input ref={packFile} type="file" accept=".ewvonpack,application/json" hidden onChange={(e) => importFile(e.target.files?.[0])} />
       </div>
 

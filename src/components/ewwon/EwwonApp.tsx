@@ -1161,6 +1161,24 @@ export default function EwwonApp() {
                 })}
                 {!boot.birthdays.upcoming.length ? <div className="hint" style={{ padding: 24 }}>Nenhuma data de aniversário cadastrada</div> : null}
               </div>
+              {boot.birthdays.past.length ? (
+                <>
+                  <div className="lb">Já fizeram aniversário em {boot.birthdays.month.label}</div>
+                  <div className="grp ewx-bpast">
+                    {boot.birthdays.past.map((b) => {
+                      const p = P[b.personId];
+                      if (!p) return null;
+                      return (
+                        <div className="nx" key={b.personId} onClick={() => pgShow({ kind: 'profile', id: p.id })}>
+                          <div className="dt"><b>{b.day}</b><span>{b.mon}</span></div>
+                          <div className="nm"><b>{p.n}</b><small>{p.dept}{b.age ? ` · ${b.age} anos` : ''}</small></div>
+                          <span className="d">há {b.agoDays} {b.agoDays === 1 ? 'dia' : 'dias'}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : null}
             </section>
 
             {boot.supportStaff ? (

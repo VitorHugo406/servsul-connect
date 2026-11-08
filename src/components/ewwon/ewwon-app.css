@@ -492,7 +492,9 @@
 /* Date separators + floating date (WhatsApp-like) */
 .ew .ewx-dsep { display: flex; justify-content: center; margin: 10px 0 6px; }
 .ew .ewx-dsep span, .ew .ewx-dfloat { padding: 5px 12px; border-radius: 10px; background: var(--c2); color: var(--mu); font-size: 12px; font-weight: 600; }
-.ew .ewx-dfloat { position: absolute; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 74px); z-index: 6; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); pointer-events: none; animation: ew-pgin .2s ease; }
+/* Centered with margins (not a transform) so the fade-in animation can't push it sideways. */
+.ew .ewx-dfloat { position: absolute; left: 0; right: 0; width: max-content; margin: 0 auto; top: calc(env(safe-area-inset-top, 0px) + 74px); z-index: 6; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); pointer-events: none; animation: ewx-dfloat-in .2s ease; }
+@keyframes ewx-dfloat-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 /* ⋮ menu */
 .ew .ewx-dots { position: absolute; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 62px); z-index: 30; min-width: 190px; padding: 6px; border-radius: 18px; background: var(--card); border: 1px solid var(--bd); box-shadow: 0 16px 40px rgba(0, 0, 0, .35); animation: ew-pgin .18s ease; }
 .ew .ewx-dots button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 12px; border-radius: 12px; font-size: 14.5px; text-align: left; }
@@ -590,3 +592,4 @@
 .ew .ewx-fmt code, .ew .ewx-code { font-family: ui-monospace, Menlo, monospace; font-size: .9em; }
 .ew .ewx-code { padding: 1px 5px; border-radius: 6px; background: rgba(127, 127, 140, .18); }
 .ew .ewx-tx strong { font-weight: 700; }
+.ew .ewx-bpast { opacity: .62; }

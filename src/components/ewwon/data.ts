@@ -59,6 +59,8 @@ export interface Birthdays {
   today: { personId: string; age: number | null }[];
   month: { label: string; count: number };
   upcoming: { personId: string; day: string; mon: string; inDays: number; age: number | null }[];
+  /** Birthdays of this month that already happened (shown apart, not as "próximos"). */
+  past: { personId: string; day: string; mon: string; agoDays: number; age: number | null }[];
 }
 export type Prefs = Record<string, number>;
 export const DEFAULT_PREFS: Prefs = {
@@ -388,12 +390,16 @@ export function computeBirthdays(people: Record<string, Person>): Birthdays {
   const now = new Date();
   const today0 = startOfDay(now);
   const list: { personId: string; next: Date; age: number | null; month: number }[] = [];
+  const past: Birthdays['past'] = [];
   for (const p of Object.values(people)) {
     if (!p.birth) continue;
     const [y, mo, d] = p.birth.split('-').map((x) => parseInt(x, 10));
     if (!mo || !d) continue;
     let next = new Date(now.getFullYear(), mo - 1, d);
-    if (next < today0) next = new Date(now.getFullYear() + 1, mo - 1, d);
+    if (next < today0) {
+      if (mo - 1 === now.getMonth()) past.push({ personId: p.id, day: String(d).padStart(2, '0'), mon: MONTHS_SHORT[mo - 1], agoDays: Math.round((today0.getTime() - next.getTime()) / 864e5), age: y && y > 1900 ? now.getFullYear() - y : null });
+      next = new Date(now.getFullYear() + 1, mo - 1, d);
+    }
     const age = y && y > 1900 ? next.getFullYear() - y : null;
     list.push({ personId: p.id, next, age, month: mo - 1 });
   }
@@ -402,7 +408,9 @@ export function computeBirthdays(people: Record<string, Person>): Birthdays {
   return {
     today: list.filter((b) => isToday(b.next)).map((b) => ({ personId: b.personId, age: b.age })),
     month: { label: MONTHS_LONG[now.getMonth()], count: list.filter((b) => b.month === now.getMonth()).length },
-    upcoming: list.filter((b) => !isToday(b.next)).slice(0, 12).map((b) => ({
+    past: past.sort((a, b) => a.agoDays - b.agoDays),
+    // Next birthdays, but never someone whose birthday already passed this month (that would be next year).
+    upcoming: list.filter((b) => !isToday(b.next) && !(b.month === now.getMonth() && b.next.getFullYear() > now.getFullYear())).slice(0, 12).map((b) => ({
       personId: b.personId, day: String(b.next.getDate()).padStart(2, '0'), mon: MONTHS_SHORT[b.next.getMonth()],
       inDays: Math.round((b.next.getTime() - today0.getTime()) / 864e5), age: b.age,
     })),
