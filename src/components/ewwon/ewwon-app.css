@@ -593,3 +593,17 @@
 .ew .ewx-code { padding: 1px 5px; border-radius: 6px; background: rgba(127, 127, 140, .18); }
 .ew .ewx-tx strong { font-weight: 700; }
 .ew .ewx-bpast { opacity: .62; }
+
+/* Tour: smoother spotlight (glides between controls), soft pulse, tap ripple and card motion */
+.ew #sp { transition: left .6s cubic-bezier(.22, 1, .36, 1), top .6s cubic-bezier(.22, 1, .36, 1), width .6s cubic-bezier(.22, 1, .36, 1), height .6s cubic-bezier(.22, 1, .36, 1), border-radius .6s cubic-bezier(.22, 1, .36, 1), opacity .35s ease, box-shadow .4s ease; }
+.ew #sp.instant { transition: none; }
+.ew #sp::after { content: ''; position: absolute; inset: -2px; border-radius: inherit; border: 2px solid rgba(255, 255, 255, .55); opacity: 0; pointer-events: none; }
+.ew #sp.pulse:not(.nt)::after { animation: ewx-sp-pulse 1.6s ease-out .2s 2; }
+@keyframes ewx-sp-pulse { 0% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.08); } }
+.ew #fg { transition: transform .75s cubic-bezier(.22, 1, .36, 1), opacity .3s; }
+.ew #fg::after { content: ''; position: absolute; inset: -7px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .8); opacity: 0; }
+.ew #fg.tap::after { animation: ewx-fg-ripple .55s ease-out; }
+@keyframes ewx-fg-ripple { 0% { opacity: .9; transform: scale(.6); } 100% { opacity: 0; transform: scale(1.9); } }
+.ew #tc { transition: opacity .35s ease, transform .5s cubic-bezier(.22, 1, .36, 1), top .55s cubic-bezier(.22, 1, .36, 1); }
+.ew #tc.hide { opacity: 0; transform: translate3d(0, 14px, 0) scale(.98); }
+@media (prefers-reduced-motion: reduce) { .ew #sp, .ew #fg, .ew #tc { transition: opacity .2s; } .ew #sp.pulse::after, .ew #fg.tap::after { animation: none; } }

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { planOperation, type OpColumn, type OpTask } from '@/lib/operationMode';
 import { Zap, Activity, Clock, AlertTriangle, BarChart3, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -14,13 +15,15 @@ interface OperationModeProps {
   onOpenChange: (o: boolean) => void;
   tasks: BoardTask[];
   columns: TaskBoardColumn[];
-  members: any[];
-  onUpdateTask: (id: string, updates: any) => Promise<any>;
-  onMoveTask: (id: string, status: string, position: number) => Promise<any>;
+  members: unknown[];
+  onUpdateTask: (id: string, updates: Record<string, unknown>) => Promise<unknown>;
+  onMoveTask: (id: string, status: string, position: number) => Promise<unknown>;
   onRefetch: () => Promise<void>;
 }
 
-export function OperationModePanel({ open, onOpenChange, tasks, columns, members, onUpdateTask, onMoveTask, onRefetch }: OperationModeProps) {
+const PRIORITY_LABEL: Record<string, string> = { urgent: 'Urgente', high: 'Alta', medium: 'Média', low: 'Baixa' };
+
+export function OperationModePanel({ open, onOpenChange, tasks, columns, onRefetch }: OperationModeProps) {
   const [criteria, setCriteria] = useState({
     priority: true,
     deadline: true,
@@ -34,139 +37,39 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
     setCriteria(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  // What will change, computed live (one pass, see lib/operationMode).
+  const plan = useMemo(() => planOperation(tasks as OpTask[], columns as unknown as OpColumn[], criteria), [tasks, columns, criteria]);
+  const movedCols = plan.columns.filter((c) => c.moved > 0);
+
   const activateOperationMode = async () => {
     setRunning(true);
     const actions: string[] = [];
-
-    // Exclude completion/conclusion columns from any operation mode actions
-    const completionColumnIds = new Set(columns.filter((c: any) => c.is_conclusion).map(c => c.id));
-    const opColumns = columns.filter(c => !completionColumnIds.has(c.id));
-    const opTasks = tasks.filter(t => !completionColumnIds.has(t.status));
-
     try {
-      const priorityOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
-
-      // 1. Priority: reorder all columns by priority (urgent first)
-      if (criteria.priority) {
-        for (const col of opColumns) {
-          const colTasks = [...opTasks.filter(t => t.status === col.id)];
-          colTasks.sort((a, b) => {
-            const pa = priorityOrder[a.priority] ?? 2;
-            const pb = priorityOrder[b.priority] ?? 2;
-            return pa - pb;
-          });
-
-          let reordered = false;
-          for (let i = 0; i < colTasks.length; i++) {
-            if (colTasks[i].position !== i) {
-              await supabase.from('tasks').update({ position: i }).eq('id', colTasks[i].id);
-              reordered = true;
-            }
-          }
-          if (reordered) {
-            actions.push(`Coluna "${col.title}" reorganizada por PRIORIDADE`);
-          }
-        }
+      const updates: Promise<{ error: unknown }>[] = [];
+      const priorityOf = new Map(plan.priorityChanges.map((c) => [c.id, c.to]));
+      const positionOf = new Map(plan.moves.map((m) => [m.id, m.position]));
+      const ids = new Set([...priorityOf.keys(), ...positionOf.keys()]);
+      for (const id of ids) {
+        const patch: { priority?: string; position?: number } = {};
+        if (priorityOf.has(id)) patch.priority = priorityOf.get(id);
+        if (positionOf.has(id)) patch.position = positionOf.get(id);
+        updates.push(Promise.resolve(supabase.from('tasks').update(patch).eq('id', id)) as Promise<{ error: unknown }>);
       }
-
-      // 2. Deadline: bump overdue to urgent, at-risk to high
-      if (criteria.deadline) {
-        const now = new Date();
-        const overdue = opTasks.filter(t => t.due_date && new Date(t.due_date) < now);
-        const atRisk = opTasks.filter(t => {
-          if (!t.due_date) return false;
-          const due = new Date(t.due_date);
-          const hoursLeft = (due.getTime() - now.getTime()) / (1000 * 60 * 60);
-          return hoursLeft > 0 && hoursLeft <= 48;
-        });
-
-        for (const task of overdue) {
-          if (task.priority !== 'urgent') {
-            await supabase.from('tasks').update({ priority: 'urgent' }).eq('id', task.id);
-            actions.push(`Card #${task.task_number} "${task.title}" → URGENTE (atrasado)`);
-          }
-        }
-
-        for (const task of atRisk) {
-          if (task.priority !== 'urgent' && task.priority !== 'high') {
-            await supabase.from('tasks').update({ priority: 'high' }).eq('id', task.id);
-            actions.push(`Card #${task.task_number} "${task.title}" → ALTA (prazo próximo)`);
-          }
-        }
-
-        // After changing priorities, re-sort columns by priority + due date
-        for (const col of opColumns) {
-          // Re-fetch latest data for this column
-          const { data: freshTasks } = await supabase
-            .from('tasks')
-            .select('id, position, priority, due_date, task_number, title')
-            .eq('board_id', col.board_id)
-            .eq('status', col.id)
-            .eq('is_archived', false)
-            .order('position', { ascending: true });
-
-          if (!freshTasks || freshTasks.length === 0) continue;
-
-          const sorted = [...freshTasks].sort((a, b) => {
-            const pa = priorityOrder[a.priority] ?? 2;
-            const pb = priorityOrder[b.priority] ?? 2;
-            if (pa !== pb) return pa - pb;
-            if (a.due_date && b.due_date) return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-            if (a.due_date) return -1;
-            if (b.due_date) return 1;
-            return 0;
-          });
-
-          for (let i = 0; i < sorted.length; i++) {
-            if (sorted[i].position !== i) {
-              await supabase.from('tasks').update({ position: i }).eq('id', sorted[i].id);
-            }
-          }
-          actions.push(`Coluna "${col.title}" reordenada por PRAZO`);
-        }
+      // Small batches: fast, without flooding the connection.
+      let failed = 0;
+      for (let k = 0; k < updates.length; k += 10) {
+        const res = await Promise.all(updates.slice(k, k + 10));
+        failed += res.filter((r) => r.error).length;
       }
-
-      // 3. Urgency: sort by priority then due date within each column
-      if (criteria.urgency && !criteria.deadline && !criteria.priority) {
-        // Only if other criteria didn't already sort
-        for (const col of opColumns) {
-          const colTasks = [...opTasks.filter(t => t.status === col.id)];
-          colTasks.sort((a, b) => {
-            const pa = priorityOrder[a.priority] ?? 2;
-            const pb = priorityOrder[b.priority] ?? 2;
-            if (pa !== pb) return pa - pb;
-            if (a.due_date && b.due_date) return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-            if (a.due_date) return -1;
-            if (b.due_date) return 1;
-            return 0;
-          });
-
-          let reordered = false;
-          for (let i = 0; i < colTasks.length; i++) {
-            if (colTasks[i].position !== i) {
-              await supabase.from('tasks').update({ position: i }).eq('id', colTasks[i].id);
-              reordered = true;
-            }
-          }
-          if (reordered) {
-            actions.push(`Coluna "${col.title}" reorganizada por URGÊNCIA`);
-          }
-        }
-      } else if (criteria.urgency) {
-        actions.push('✅ Urgência já aplicada via critérios de prioridade/prazo');
-      }
-
-      // Always refetch to reflect all changes
+      for (const c of plan.priorityChanges) actions.push(`Card #${c.number} "${c.title}": ${PRIORITY_LABEL[c.from]} → ${PRIORITY_LABEL[c.to]} (${c.reason === 'overdue' ? 'atrasado' : 'prazo em até 48h'})`);
+      for (const c of movedCols) actions.push(`Coluna "${c.title}": ${c.moved} de ${c.total} card(s) mudaram de posição`);
+      if (failed) actions.push(`❌ ${failed} alteração(ões) não foram salvas. Tente de novo.`);
       await onRefetch();
-
-      if (actions.length === 0) {
-        actions.push('✅ Nenhuma ação necessária — o board já está otimizado!');
-      }
+      if (actions.length === 0) actions.push('✅ Nada a mudar: o quadro já está organizado.');
     } catch (error) {
       console.error('Error in operation mode:', error);
       actions.push('❌ Erro ao processar algumas ações');
     }
-
     setResults(actions);
     setShowResults(true);
     setRunning(false);
@@ -220,6 +123,16 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
               </label>
 
             </div>
+            <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+              <p className="font-medium">Prévia</p>
+              {plan.moves.length === 0 && plan.priorityChanges.length === 0
+                ? <p className="text-muted-foreground">O quadro já está organizado com esses critérios.</p>
+                : <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                    {plan.priorityChanges.length ? <li>• {plan.priorityChanges.length} card(s) sobem de prioridade por causa do prazo</li> : null}
+                    {movedCols.map((c) => <li key={c.id}>• "{c.title}": {c.moved} card(s) mudam de posição</li>)}
+                  </ul>}
+              <p className="mt-2 text-xs text-muted-foreground">Ordem: emergências, atrasados, prioridade (urgente → baixa), prazo mais próximo. Colunas de conclusão, modelos e cards arquivados não mudam.</p>
+            </div>
           </div>
         ) : (
           <div className="space-y-3 py-2">
@@ -239,7 +152,7 @@ export function OperationModePanel({ open, onOpenChange, tasks, columns, members
           {!showResults ? (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button onClick={activateOperationMode} disabled={running || !Object.values(criteria).some(Boolean)} className="gap-2">
+              <Button onClick={activateOperationMode} disabled={running || !Object.values(criteria).some(Boolean) || (plan.moves.length === 0 && plan.priorityChanges.length === 0)} className="gap-2">
                 {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
                 Ativar Modo Operação
               </Button>

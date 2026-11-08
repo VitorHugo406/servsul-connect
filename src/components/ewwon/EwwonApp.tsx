@@ -896,7 +896,7 @@ export default function EwwonApp() {
   const tourCtl = useRef<TourController | null>(null);
   tourCtl.current = {
     root: () => rootRef.current, phone: () => phoneRef.current,
-    go, openFirstRoom: () => { const c = stateRef.current.chats[0]; if (c) void openRoom(c.key); }, closeRoom,
+    go, openFirstRoom: () => { const cs = stateRef.current.chats; const c = cs.find((x) => !(x.p && isSystemSender(x.p)) && !(x.p && x.p === meId)) || cs[0]; if (c) void openRoom(c.key); }, closeRoom,
     roomOpen: () => stateRef.current.roomOn, setDrawer: setOpen, drawerOpen: () => openRef.current, tab: () => stateRef.current.tab,
     setDraft, openSheet: () => setSheetOn(true), closeSheet: () => setSheetOn(false), setSeg,
     showPick: () => { const c = stateRef.current.chats.find((x) => x.key === stateRef.current.curKey); const m = c?.m.filter((x) => !x.me).pop(); if (m) setPickFor(m.id); },

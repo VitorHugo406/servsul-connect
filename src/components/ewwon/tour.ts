@@ -30,6 +30,8 @@ export function runTour(ref: MutableRefObject<TourController | null>, onEnd: () 
   const tabEl = (i: number) => $(`#tabs [data-i="${i}"]`);
   const rel = (el: Element) => { const a = el.getBoundingClientRect(), b = phone.getBoundingClientRect(); return { l: a.left - b.left, t: a.top - b.top, w: a.width, h: a.height }; };
   const cl = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+  // First real conversation (never "Comunicados", which is read-only, nor the chat with yourself).
+  const firstChat = () => Array.from(root.querySelectorAll('#list .ct')).find((e) => !/^dm:(00000000-0000-0000-0000-0000000000c1)$/.test((e as HTMLElement).dataset.k || '')) || null;
 
   async function settle(el: Element, w: Wait) {
     let last = '';
@@ -52,16 +54,16 @@ export function runTour(ref: MutableRefObject<TourController | null>, onEnd: () 
   }
 
   const S: Step[] = [
-    { ui: { tab: 0 }, t: 'Bem-vindo ao Ewwon', d: 'Vamos conhecer as 4 áreas do app. Eu aperto os botões por você, é só acompanhar.', next: 'Começar tour', logo: true },
+    { ui: { tab: 0 }, t: 'Bem-vindo ao ewvon', d: 'Vamos conhecer as 4 áreas do app. Eu aperto os botões por você, é só acompanhar.', next: 'Começar tour', logo: true },
     { ui: { tab: 0 }, sel: '#hero .stage', t: 'Seu painel em 3D', d: 'Camadas 3D com seus dados flutuando: mensagens não lidas, tarefas, reuniões e atrasos.', pad: [6, 6, 6, 6] },
     { ui: { tab: 0 }, sel: '#hstats', t: 'Resumo em números', d: 'Tarefas concluídas hoje, próxima reunião e tarefas atrasadas, sempre à mão.', pad: [6, 6, 6, 6] },
     { ui: { tab: 0 }, sel: '#actcard', t: 'Atividade da semana', d: 'O gráfico de linha mostra quantas mensagens você enviou por dia.' },
     { ui: { tab: 0 }, sel: '#chartcard', t: 'Gráficos que reagem', d: 'Alterne entre 7 e 30 dias para comparar seu desempenho.', act: async (w) => { const b = $('#seg [data-k="30"]'); await tap(b, w); C().setSeg('30'); } },
     { ui: { tab: 0 }, sel: () => tabEl(1), t: 'Aba Chat', d: 'Aqui ficam as conversas com pessoas, setores e grupos.', r: 18, act: async (w) => { await tap(tabEl(1), w); C().go(1); } },
-    { ui: { tab: 1 }, sel: '#list .ct', t: 'Abra uma conversa', d: 'Toque na conversa para entrar. As mensagens novas aparecem com um contador.', act: async (w) => { const b = $('#list .ct'); if (!b) return; await tap(b, w); C().openFirstRoom(); } },
-    { ui: { tab: 1, room: true }, sel: () => { const all = root.querySelectorAll('#msgs .m'); return all[all.length - 1] || $('#msgs'); }, pad: [64, 8, 8, 8], t: 'Reaja às mensagens', d: 'Segure ou toque duas vezes numa mensagem para escolher um emoji.', act: async (w) => { const all = root.querySelectorAll('#msgs .m:not(.me) .bub'); const b = all[all.length - 1]; if (!b) return; await tap(b, w); C().showPick(); await w(1600); C().hidePick(); } },
-    { ui: { tab: 1, room: true }, sel: '.cmp', pad: [6, 6, 6, 6], t: 'Envie mensagens', d: 'Digite e toque no botão de enviar. Você vê quando ela foi entregue (✓✓).', r: 34, act: async (w) => { const i = $('#inp'); await tap(i, w); let s = ''; for (const c of Array.from('Combinado! 👍')) { s += c; C().setDraft(s); await w(70); } await w(500); C().setDraft(''); } },
-    { ui: { tab: 1, room: true }, sel: '#gear', t: 'Configurações do chat', d: 'Membros presentes, automações e resumo diário nos grupos; fonte, cor e silenciar em qualquer conversa.', r: 20, act: async (w) => { await tap($('#gear'), w); C().openSheet(); await w(2200); C().closeSheet(); } },
+    { ui: { tab: 1 }, sel: () => firstChat(), t: 'Abra uma conversa', d: 'Toque na conversa para entrar. As mensagens novas aparecem com um contador.', act: async (w) => { const b = firstChat(); if (!b) return; await tap(b, w); C().openFirstRoom(); } },
+    { ui: { tab: 1, room: true }, sel: () => { const all = root.querySelectorAll('#msgs .m'); return all[all.length - 1] || $('#msgs'); }, pad: [64, 8, 8, 8], t: 'Reaja às mensagens', d: 'Segure ou toque duas vezes numa mensagem para escolher um emoji. Deslize uma mensagem para a direita para responder a ela.', act: async (w) => { const all = root.querySelectorAll('#msgs .m:not(.me) .bub'); const b = all[all.length - 1]; if (!b) return; await tap(b, w); C().showPick(); await w(1600); C().hidePick(); } },
+    { ui: { tab: 1, room: true }, sel: '.cmp', pad: [6, 6, 6, 6], t: 'Envie mensagens', d: 'Digite e toque em enviar (✓✓ = entregue, azul = lida). Selecione um trecho para negrito ou itálico, e segure o microfone para gravar áudio.', r: 34, act: async (w) => { const i = $('#inp'); await tap(i, w); let s = ''; for (const c of Array.from('Combinado! 👍')) { s += c; C().setDraft(s); await w(70); } await w(500); C().setDraft(''); } },
+    { ui: { tab: 1, room: true }, sel: '#gear', t: 'Mais opções', d: 'No ⋮ você pesquisa na conversa e abre as configurações: membros, automações e resumo diário nos grupos; fonte, cor e silenciar em qualquer conversa.', r: 20, act: async (w) => { await tap($('#gear'), w); C().openSheet(); await w(2200); C().closeSheet(); } },
     { ui: { tab: 1 }, sel: () => tabEl(2), t: 'Aba Avisos', d: 'Comunicados enviados pela administração da empresa.', r: 18, act: async (w) => { await tap(tabEl(2), w); C().go(2); } },
     { ui: { tab: 2 }, sel: () => $('.av-i') || $('#v2'), t: 'Leia com um toque', d: 'Toque no aviso para expandir. O ponto vermelho some quando você lê. Avisos fixados pedem confirmação “Ciente”.', act: async (w) => { const c = $('.av-i'); if (!c) return; await tap(c, w); C().expandFirstNotice(); } },
     { ui: { tab: 2 }, sel: () => tabEl(3), t: 'Aba Aniversários', d: 'Veja quem faz aniversário e comemore com a equipe.', r: 18, act: async (w) => { await tap(tabEl(3), w); C().go(3); } },
@@ -83,7 +85,7 @@ export function runTour(ref: MutableRefObject<TourController | null>, onEnd: () 
       },
     },
     { ui: { tab: 3, drawer: true }, sel: '#stp', t: 'Seu status', d: 'Avise a equipe se está disponível, em reunião, almoçando ou fora do expediente. Todos veem ao tocar na sua foto.', r: 20 },
-    { ui: { tab: 0 }, t: 'Tudo pronto!', d: 'Você já sabe usar o Ewwon. Para rever este tour, abra o menu e toque em Ver tutorial.', next: 'Começar a usar', logo: true },
+    { ui: { tab: 0 }, t: 'Tudo pronto!', d: 'Você já sabe usar o ewvon. Para rever este tour, abra o menu e toque em Ver tutorial.', next: 'Começar a usar', logo: true },
   ];
 
   let ti = 0, tk = 0, lastSig = '', spT = 0, spv = 0;
@@ -97,19 +99,21 @@ export function runTour(ref: MutableRefObject<TourController | null>, onEnd: () 
     if (!u.room && ro) c.closeRoom();
     if (!!u.drawer !== c.drawerOpen()) c.setDrawer(!!u.drawer);
   }
+  // The spotlight glides (position, size and corners animate) from one control to the next
+  // instead of fading out, jumping and fading in again.
   function place(el: Element | null, pad?: number[], rad?: number) {
     window.clearTimeout(spT);
-    sp.style.opacity = '0';
     if (!el) sg = null;
     else {
       const r = rel(el), p = pad || [8, 8, 8, 8];
       sg = { l: r.l - p[3], t: r.t - p[0], w: r.w + p[1] + p[3], h: r.h + p[0] + p[2], r: rad || parseFloat(getComputedStyle(el).borderRadius) + 8 || 24 };
     }
-    spT = window.setTimeout(() => {
-      if (!sg) { sp.classList.add('nt'); sp.style.cssText = 'left:50%;top:50%;width:0;height:0'; }
-      else { sp.classList.remove('nt'); sp.style.cssText = `left:${sg.l}px;top:${sg.t}px;width:${sg.w}px;height:${sg.h}px;border-radius:${sg.r}px`; }
+    const apply = () => {
+      if (!sg) { sp.classList.add('nt'); Object.assign(sp.style, { left: phone.offsetWidth / 2 + 'px', top: phone.offsetHeight / 2 + 'px', width: '0px', height: '0px', borderRadius: '28px' }); }
+      else { sp.classList.remove('nt'); Object.assign(sp.style, { left: sg.l + 'px', top: sg.t + 'px', width: sg.w + 'px', height: sg.h + 'px', borderRadius: sg.r + 'px' }); }
       sp.style.opacity = '1';
-    }, spv ? 270 : 0);
+    };
+    if (!spv) { sp.classList.add('instant'); apply(); void sp.offsetWidth; sp.classList.remove('instant'); } else apply();
     spv = 1;
   }
   function placeCard(pos?: 'bottom') {
@@ -150,6 +154,7 @@ export function runTour(ref: MutableRefObject<TourController | null>, onEnd: () 
       ($('#tskip') as HTMLElement).style.visibility = i === S.length - 1 ? 'hidden' : 'visible';
       placeCard(s.pos);
       tc.classList.remove('hide');
+      sp.classList.remove('pulse'); void sp.offsetWidth; sp.classList.add('pulse');
       if (fwd && s.act) { await w(800); await s.act(w, (e2, p2, r2) => place(e2, p2, r2)); }
       await w(300);
       fg.style.opacity = '0';
