@@ -80,13 +80,14 @@ export function BirthdaysSection() {
   const prepareHeroPhoto = async (src: string) => {
     const image = await loadImageElement(src);
     if (!image) return null;
-    const canvas = document.createElement('canvas'); canvas.width = 1800; canvas.height = 600;
+    // Rounded photo for the header (no dark overlay: prints clean on white paper).
+    const canvas = document.createElement('canvas'); canvas.width = 900; canvas.height = 600;
     const ctx = canvas.getContext('2d'); if (!ctx) return null;
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const r = 60; ctx.beginPath(); ctx.moveTo(r, 0); ctx.arcTo(900, 0, 900, 600, r); ctx.arcTo(900, 600, 0, 600, r); ctx.arcTo(0, 600, 0, 0, r); ctx.arcTo(0, 0, 900, 0, r); ctx.closePath(); ctx.clip();
     const scale = Math.max(canvas.width / image.width, canvas.height / image.height); const drawW = image.width * scale; const drawH = image.height * scale;
     ctx.drawImage(image, (canvas.width - drawW) / 2, (canvas.height - drawH) / 2, drawW, drawH);
-    const g = ctx.createLinearGradient(0, 0, canvas.width, 0);
-    g.addColorStop(0, 'rgba(10,10,14,0.92)'); g.addColorStop(0.5, 'rgba(10,10,14,0.72)'); g.addColorStop(1, 'rgba(10,10,14,0.35)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height); return canvas.toDataURL('image/jpeg', 0.86);
+    return canvas.toDataURL('image/jpeg', 0.86);
   };
 
   const makeCircularAvatar = async (src: string | null | undefined) => {
@@ -98,32 +99,31 @@ export function BirthdaysSection() {
   };
 
   const drawBackgroundPhoto = async (doc: jsPDF, selected: PdfTheme, imageData?: string | null) => {
-    setFill(doc, [246, 246, 248]); doc.rect(0, 0, PAGE_W, PAGE_H, 'F');
+    // White page (print friendly). The theme photo sits in a rounded frame on the right of the header.
     const source = imageData || (selected.photo ? await loadImage(selected.photo) : null);
-    let painted = false;
-    if (source) { try { const prepared = await prepareHeroPhoto(source); if (prepared) { doc.addImage(prepared, 'JPEG', 0, 0, PAGE_W, HERO_H, undefined, 'FAST'); painted = true; } } catch { /* fallback below */ } }
-    if (!painted) { setFill(doc, [14, 14, 18]); doc.rect(0, 0, PAGE_W, HERO_H, 'F'); setFill(doc, selected.accent); doc.circle(PAGE_W - 18, 8, 42, 'F'); setFill(doc, [14, 14, 18]); doc.circle(PAGE_W - 18, 8, 30, 'F'); }
+    if (source) { try { const prepared = await prepareHeroPhoto(source); if (prepared) doc.addImage(prepared, 'JPEG', PAGE_W - MARGIN - 57, 30, 57, 38, undefined, 'FAST'); } catch { /* no photo */ } }
+    setDraw(doc, selected.accent); doc.setLineWidth(0.8); doc.line(MARGIN, HERO_H + 1, PAGE_W - MARGIN, HERO_H + 1);
   };
 
   const drawLogo = async (doc: jsPDF, selected: PdfTheme) => {
     const logoUrl = company?.logo_url ? await createCompanyLogoUrl(company.logo_url) : null; const logo = logoUrl ? await loadImage(logoUrl) : null;
-    setFill(doc, [255, 255, 255]); doc.roundedRect(MARGIN, 10, 24, 17, 4, 4, 'F');
+    setDraw(doc, [222, 222, 228]); doc.setLineWidth(0.3); doc.roundedRect(MARGIN, 10, 24, 17, 4, 4, 'S');
     if (logo) { try { doc.addImage(logo, 'PNG', MARGIN + 2, 11.5, 20, 14, undefined, 'FAST'); return; } catch { /* initials */ } }
     setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.text(getInitials(company?.name || 'ewvon'), MARGIN + 12, 20.5, { align: 'center' });
   };
 
   const drawHeader = async (doc: jsPDF, monthName: string, count: number, selected: PdfTheme) => {
     await drawLogo(doc, selected);
-    setText(doc, [255, 255, 255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text(truncate(doc, company?.name || 'ewvon', 90), MARGIN + 29, 17.5);
-    setText(doc, [200, 200, 210]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.text('Comunicação interna', MARGIN + 29, 22.5);
+    setText(doc, [17, 17, 19]); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text(truncate(doc, company?.name || 'ewvon', 90), MARGIN + 29, 17.5);
+    setText(doc, [113, 113, 122]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.text('Comunicação interna', MARGIN + 29, 22.5);
     const month = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-    setText(doc, [210, 210, 220]); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.text(month.toUpperCase(), MARGIN, 42, { charSpace: 0.6 });
-    setText(doc, [255, 255, 255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(30); doc.text('Aniversariantes', MARGIN, 55);
-    setText(doc, [200, 200, 210]); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.text('Celebrar a vida é reconhecer as histórias que nos inspiram todos os dias.', MARGIN, 62.5);
+    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.text(month.toUpperCase(), MARGIN, 42, { charSpace: 0.6 });
+    setText(doc, [17, 17, 19]); doc.setFont('helvetica', 'bold'); doc.setFontSize(30); doc.text('Aniversariantes', MARGIN, 55);
+    setText(doc, [82, 82, 91]); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.text('Celebrar a vida é reconhecer as histórias que nos inspiram todos os dias.', MARGIN, 62.5);
     const pill = `${count} ${count === 1 ? 'pessoa' : 'pessoas'} celebrando`;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(7); const pw = doc.getTextWidth(pill) + 10;
-    setFill(doc, selected.accent); doc.roundedRect(PAGE_W - MARGIN - pw, 12, pw, 9, 4.5, 4.5, 'F');
-    setText(doc, [255, 255, 255]); doc.text(pill, PAGE_W - MARGIN - pw / 2, 17.8, { align: 'center' });
+    setDraw(doc, selected.accent); doc.setLineWidth(0.4); doc.roundedRect(PAGE_W - MARGIN - pw, 12, pw, 9, 4.5, 4.5, 'S');
+    setText(doc, selected.accent); doc.text(pill, PAGE_W - MARGIN - pw / 2, 17.8, { align: 'center' });
   };
 
   const drawPerson = async (doc: jsPDF, person: BirthdayPerson, x: number, y: number, w: number, h: number, selected: PdfTheme, compact: boolean) => {
@@ -136,7 +136,7 @@ export function BirthdaysSection() {
     if (avatar) { try { doc.addImage(avatar, 'PNG', avX, avY, av, av, undefined, 'FAST'); } catch { /* initials */ } }
     else { setFill(doc, selected.soft); doc.circle(avX + av / 2, avY + av / 2, av / 2, 'F'); setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(compact ? 5.5 : 6.5); doc.text(getInitials(person.name), avX + av / 2, avY + av / 2 + 1.6, { align: 'center' }); }
     const dW = compact ? 11 : 13; const dH = h - 7; const dX = x + w - dW - 3.5; const dY = y + 3.5;
-    setFill(doc, today ? selected.accent : [244, 244, 246]); doc.roundedRect(dX, dY, dW, dH, 3, 3, 'F');
+    if (today) { setFill(doc, selected.accent); doc.roundedRect(dX, dY, dW, dH, 3, 3, 'F'); } else { setDraw(doc, [212, 212, 216]); doc.setLineWidth(0.3); doc.roundedRect(dX, dY, dW, dH, 3, 3, 'S'); }
     setText(doc, today ? [255, 255, 255] : [20, 20, 26]); doc.setFont('helvetica', 'bold'); doc.setFontSize(compact ? 9 : 11);
     doc.text(String(person.birthDay).padStart(2, '0'), dX + dW / 2, dY + dH / 2 + 0.6, { align: 'center' });
     doc.setFontSize(compact ? 4.2 : 4.8); doc.setFont('helvetica', 'bold');
@@ -149,14 +149,12 @@ export function BirthdaysSection() {
 
   const drawFixedQrFooter = async (doc: jsPDF, url: string, selected: PdfTheme) => {
     const qr = await loadQrImage(url); const footerH = 32; const y = PAGE_H - footerH - 10; const qrSize = 25;
-    setFill(doc, [14, 14, 18]); doc.roundedRect(MARGIN, y, CONTENT_W, footerH, 6, 6, 'F');
-    setFill(doc, [255, 255, 255]); doc.roundedRect(MARGIN + 4, y + 3.5, qrSize, qrSize, 3, 3, 'F');
+    setDraw(doc, [212, 212, 216]); doc.setLineWidth(0.35); doc.roundedRect(MARGIN, y, CONTENT_W, footerH, 6, 6, 'S');
     if (qr) { try { doc.addImage(qr, 'PNG', MARGIN + 5, y + 4.5, qrSize - 2, qrSize - 2, undefined, 'FAST'); } catch { /* no qr */ } }
-    setText(doc, [255, 255, 255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('Consulte no celular', MARGIN + qrSize + 10, y + 10.5);
-    setText(doc, [200, 200, 210]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.4);
+    setText(doc, [17, 17, 19]); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('Consulte no celular', MARGIN + qrSize + 10, y + 10.5);
+    setText(doc, [82, 82, 91]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.4);
     doc.text('Leia o QR Code para ver os aniversariantes e filtrar por setor.', MARGIN + qrSize + 10, y + 16.5);
-    doc.text('O botão de mensagem aparece no período de celebração (é preciso entrar no Ewwon).', MARGIN + qrSize + 10, y + 21.5);
-    setFill(doc, selected.accent); doc.circle(PAGE_W - MARGIN - 9, y + footerH / 2, 4, 'F');
+    doc.text('O botão de mensagem aparece no período de celebração (é preciso entrar no ewvon).', MARGIN + qrSize + 10, y + 21.5);
   };
 
   const generateMonthlyPdf = async () => {

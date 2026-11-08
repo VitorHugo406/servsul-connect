@@ -787,3 +787,14 @@ export function subscribeDmReads(meId: string, onRead: (row: Row) => void): () =
     .subscribe();
   return () => { void sb.removeChannel(ch); };
 }
+
+/** Typing indicator channel (same protocol as the desktop useTypingIndicator hook). */
+export function typingChannel(name: string, onTyping: (p: { profileId?: string; name?: string }) => void) {
+  const ch = sb.channel(`typing-${name}`, { config: { broadcast: { self: false } } })
+    .on('broadcast', { event: 'typing' }, (m: Row) => onTyping(m.payload || {}))
+    .subscribe();
+  return {
+    send: (payload: unknown) => { void ch.send({ type: 'broadcast', event: 'typing', payload }); },
+    close: () => { void sb.removeChannel(ch); },
+  };
+}

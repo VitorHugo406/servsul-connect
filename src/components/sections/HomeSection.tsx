@@ -53,7 +53,17 @@ const statusLabels: Record<string, string> = {
   blocked: 'Bloqueada',
 };
 
-const statusColors = ['#18181b', '#52525b', '#a1a1aa', '#d4d4d8', '#71717a', '#e4e4e7'];
+const statusColors = ['#3b82f6', '#f59e0b', '#22c55e', '#8b5cf6', '#ef4444', '#14b8a6'];
+/** Meaningful color per task column/status name (done = green, doing = blue, to do = amber…). */
+function statusColorFor(name: string, index: number) {
+  const n = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (/conclu|feito|finaliz|done|entreg|complet/.test(n)) return '#22c55e';
+  if (/andamento|fazendo|progress|execu|doing/.test(n)) return '#3b82f6';
+  if (/atras|bloque|impedi|late|blocked/.test(n)) return '#ef4444';
+  if (/revis|valid|aprova|review|teste/.test(n)) return '#8b5cf6';
+  if (/fazer|pendente|backlog|todo|novo|aberto|aguard/.test(n)) return '#f59e0b';
+  return statusColors[index % statusColors.length];
+}
 
 export function HomeSection({ onNavigate }: HomeSectionProps) {
   const { profile, sector } = useAuth();
@@ -134,11 +144,10 @@ export function HomeSection({ onNavigate }: HomeSectionProps) {
       const status = /^[0-9a-f-]{36}$/i.test(task.status || '') ? (task.status as string) : (task.status || 'pending').toLowerCase();
       counts.set(status, (counts.get(status) || 0) + 1);
     });
-    return Array.from(counts.entries()).map(([status, value], index) => ({
-      name: columnNames[status] || statusLabels[status] || (/^[0-9a-f-]{36}$/i.test(status) ? 'Coluna' : status.replace(/_/g, ' ')),
-      value,
-      fill: statusColors[index % statusColors.length],
-    })).sort((a, b) => b.value - a.value).slice(0, 5);
+    return Array.from(counts.entries()).map(([status, value], index) => {
+      const name = columnNames[status] || statusLabels[status] || (/^[0-9a-f-]{36}$/i.test(status) ? 'Coluna' : status.replace(/_/g, ' '));
+      return { name, value, fill: statusColorFor(name, index) };
+    }).sort((a, b) => b.value - a.value).slice(0, 5);
   }, [tasks, columnNames]);
 
   const activityData = useMemo(() => Array.from({ length: 7 }, (_, index) => {

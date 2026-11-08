@@ -56,3 +56,9 @@
 - Segurar uma conversa abre: ver detalhes, fixar/desafixar, marcar como lida. Reações com "+" para todos os emojis. Datas por dia e data flutuante ao rolar. Menu ⋮ com Pesquisar (busca na conversa carregada) e Configurações.
 - Avisos podem ser excluídos por quem publicou ou admins (mesma regra da policy de DELETE).
 - Excluir empresa: `super_admin_delete_company` — só super admin, nunca a empresa do sistema, exige digitar o nome, transação única (falhou = nada apagado). Apaga linhas de todas as tabelas com `company_id`, registros ligados às pessoas, e os logins (`auth.users`). Arquivos já enviados ao Storage (fotos/anexos) não são apagados por essa função.
+
+## Estabilidade e relatórios (08/11/2026)
+- Abas do PC travando no "carregando": após cada deploy, abas abertas apontavam para arquivos da versão anterior (404) e o `lazy()` simples nunca se recuperava. Agora `lazyWithRetry` (nova tentativa + uma recarga controlada) em todas as telas e `SectionBoundary` com "Atualizar página".
+- Início do app: o carregamento inicial rodava 2–3 vezes (dependências recriadas a cada atualização do perfil/setores/permissões) e os números reiniciavam a animação a cada atualização automática. Agora há uma carga por vez, a atualização só redesenha quando os números mudam e os contadores animam do valor atual.
+- "Digitando...": o app usa os mesmos canais de broadcast do PC (`typing-sector-*`, `typing-group-*`, `typing-dm-*`), com texto azul escuro (tema claro) / azul claro (tema escuro) e bolha animada.
+- Relatórios sem faixas/fundos escuros (impressão): cabeçalho branco com linha fina, cartões e tabelas com contorno, etiquetas coloridas só em contorno. O PDF de aniversariantes ficou branco, com a foto do tema num quadro à direita e o rodapé do QR com contorno.

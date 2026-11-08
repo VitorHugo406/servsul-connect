@@ -507,3 +507,14 @@
 .ew .ewx-search button:disabled { opacity: .35; }
 .ew .ewx-search button svg.i { width: 18px; height: 18px; }
 .ew .m.ewx-hit .bub { box-shadow: 0 0 0 2px #ffc36b; }
+
+/* "Digitando..." — dark blue on the light theme, light blue on the dark theme */
+.ew .ewx-typing-tx { color: #7cc6ff !important; font-weight: 600; }
+.ew[data-theme="light"] .ewx-typing-tx { color: #1d4ed8 !important; }
+@media (prefers-color-scheme: light) { .ew:not([data-theme]) .ewx-typing-tx { color: #1d4ed8 !important; } }
+.ew .ewx-typing .bub { display: inline-flex; align-items: center; gap: 4px; padding: 12px 14px; }
+.ew .ewx-typing .bub span { width: 7px; height: 7px; border-radius: 50%; background: #7cc6ff; animation: ewx-typing 1.2s ease-in-out infinite; }
+.ew[data-theme="light"] .ewx-typing .bub span { background: #1d4ed8; }
+.ew .ewx-typing .bub span:nth-child(2) { animation-delay: .15s; }
+.ew .ewx-typing .bub span:nth-child(3) { animation-delay: .3s; }
+@keyframes ewx-typing { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }

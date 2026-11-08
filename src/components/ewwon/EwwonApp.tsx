@@ -106,7 +106,9 @@ export default function EwwonApp() {
   const [bmsg, setBmsg] = useState(WISHES[0]);
   const [bdSent, setBdSent] = useState<Record<string, boolean>>({});
   const [reminders, setReminders] = useState<Record<string, boolean>>(() => safeStore.get('bdayReminders', {}));
-  const [typing, setTyping] = useState<string | null>(null);
+  const [typing, setTyping] = useState<{ key: string; names: string[] } | null>(null);
+  const typingCh = useRef<{ send: (o: unknown) => unknown } | null>(null);
+  const typingSent = useRef(0);
   const [perm, setPerm] = useState<string>(N.getPermission());
   const [tourOn, setTourOn] = useState(false);
   const [ctMenu, setCtMenu] = useState<Chat | null>(null);
@@ -182,13 +184,18 @@ export default function EwwonApp() {
   const patchPerson = useCallback((id: string, fn: (p: Person) => Person) => setPeople((ps) => (ps[id] ? { ...ps, [id]: fn(ps[id]) } : ps)), []);
 
   // ------------------------------------------------------------ boot
+  const sectorsKey = (allAccessibleSectorIds || []).join(',');
+  const canPostPerm = canAccess('can_post_announcements' as never);
+  const loadingRef = useRef<Promise<void> | null>(null);
   const load = useCallback(async () => {
     if (!profile?.id || !profile.company_id) return;
+    if (loadingRef.current) return loadingRef.current; // one boot at a time
+    const run = (async () => {
     try {
       setErr(null);
       const b = await D.bootstrap({
         profileId: profile.id, companyId: profile.company_id, isAdmin, accessibleSectorIds: allAccessibleSectorIds || [],
-        canPostNotices: isAdmin || ['admin', 'gerente'].includes(profile.autonomy_level || '') || canAccess('can_post_announcements' as never),
+        canPostNotices: isAdmin || ['admin', 'gerente'].includes(profile.autonomy_level || '') || canPostPerm,
       });
       for (const c of b.chats) if (c.kind === 'sector') D.primeSectorRead(profile.id, c.id);
       // A reload (resume after the file picker, token refresh…) keeps the messages already
@@ -210,7 +217,11 @@ export default function EwwonApp() {
       console.error('Ewwon bootstrap', e);
       setErr('Não foi possível carregar o Ewwon.');
     }
-  }, [profile?.id, profile?.company_id, isAdmin, allAccessibleSectorIds, canAccess]);
+    })();
+    loadingRef.current = run;
+    try { await run; } finally { loadingRef.current = null; }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id, profile?.company_id, profile?.autonomy_level, isAdmin, sectorsKey, canPostPerm]);
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
@@ -571,6 +582,34 @@ export default function EwwonApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomOn, curKey]);
 
+  // "Digitando...": same realtime broadcast channels as the desktop chat (useTypingIndicator).
+  useEffect(() => {
+    setTyping(null);
+    const c = cur;
+    if (!roomOn || !c || !meId) return;
+    const name = c.kind === 'sector' ? `sector-${c.id}` : c.kind === 'group' ? `group-${c.id}` : `dm-${[meId, c.id].sort().join('-')}`;
+    const timers: Record<string, number> = {};
+    const who: Record<string, string> = {};
+    const sync = () => setTyping(Object.keys(who).length ? { key: c.key, names: Object.values(who) } : null);
+    const ch = D.typingChannel(name, (p) => {
+      if (!p?.profileId || p.profileId === meId) return;
+      who[p.profileId] = p.name || 'Alguém';
+      sync();
+      window.clearTimeout(timers[p.profileId]);
+      timers[p.profileId] = window.setTimeout(() => { delete who[p.profileId]; sync(); }, 3000);
+    });
+    typingCh.current = ch;
+    return () => { Object.values(timers).forEach((t) => window.clearTimeout(t)); ch.close(); typingCh.current = null; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomOn, curKey, meId]);
+  const sendTyping = () => {
+    const now = Date.now();
+    if (now - typingSent.current < 2000 || !typingCh.current) return;
+    typingSent.current = now;
+    const me = stateRef.current.people[meId];
+    typingCh.current.send({ profileId: meId, name: me?.n || 'Alguém' });
+  };
+
   // E2E voice: re-seal keys of my voice notes for new devices of conversation members.
   useEffect(() => {
     if (!boot || !meId) return;
@@ -713,8 +752,8 @@ export default function EwwonApp() {
       if (!companyId) return;
       void D.refreshDashboard(meId, companyId, stateRef.current.chats).then((dashboard) => {
         if (!alive) return;
-        setBoot((b) => (b ? { ...b, dashboard, birthdays: D.computeBirthdays(stateRef.current.people) } : b));
-        setAnim((x) => x + 1);
+        // Only touch the screen when something actually changed (no second "loading" animation).
+        setBoot((b) => (!b || JSON.stringify(b.dashboard) === JSON.stringify(dashboard) ? b : { ...b, dashboard, birthdays: D.computeBirthdays(stateRef.current.people) }));
       }).catch(() => undefined);
     };
     setAnim((x) => x + 1);
@@ -1029,7 +1068,7 @@ export default function EwwonApp() {
             <div className="rh">
               <button id="back" aria-label="Voltar" onClick={closeRoom}><I n="chevL" /></button>
               {cur ? <div className={'av' + (cur.p ? ' on' : '')} id="rav" style={{ ...avStyle(cur.p ? P[cur.p] : cur), ['--sc' as string]: cur.p ? ST[P[cur.p]?.st || 'disp'][1] : '#46d37b' }} onClick={() => (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}>{(cur.p ? P[cur.p]?.photo : cur.photo) ? '' : cur.i}</div> : <div className="av" id="rav" />}
-              <div className="rt" onClick={() => cur && (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}><b id="rn">{cur?.n}</b><small id="rs">{typing && cur && typing === cur.key ? 'digitando…' : cur ? stt(cur) : ''}</small></div>
+              <div className="rt" onClick={() => cur && (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}><b id="rn">{cur?.n}</b><small id="rs" className={typing && cur && typing.key === cur.key ? 'ewx-typing-tx' : undefined}>{typing && cur && typing.key === cur.key ? (cur.kind === 'dm' ? 'Digitando...' : `${typing.names.map((n) => n.split(' ')[0]).join(', ')} ${typing.names.length > 1 ? 'estão digitando...' : 'está digitando...'}`) : cur ? stt(cur) : ''}</small></div>
               <button className="lq" id="gear" aria-label="Mais opções" onClick={(e) => { e.stopPropagation(); setDots((v) => !v); }}><I n="dots" /></button>
               {dots ? (
                 <div className="ewx-dots" onClick={(e) => e.stopPropagation()}>
@@ -1058,6 +1097,7 @@ export default function EwwonApp() {
               ) : null}
               {cur && cur.loaded && !cur.m.length ? <div className="hint" style={{ padding: 20 }}>Nenhuma mensagem ainda. Diga oi! 👋</div> : null}
               {cur?.m.map((m, idx) => <Fragment key={m.id}>{idx === 0 || dayKey(cur.m[idx - 1].at) !== dayKey(m.at) ? <div className="ewx-dsep" data-day={dayLabel(m.at)}><span>{dayLabel(m.at)}</span></div> : null}<Bubble key={m.id} m={m} read={m.me && (!!m.rd || (cur.kind === 'group' && !!groupWm && new Date(m.at).getTime() <= groupWm))} sender={m.from ? P[m.from] : null} group={cur.g} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} onImage={(src, url, name, caption) => setViewer({ src, url, name, caption })} /></Fragment>)}
+              {typing && cur && typing.key === cur.key ? <div className="m ewx-typing" aria-label="Digitando"><div className="bub"><span /><span /><span /></div></div> : null}
             </div>
             {pending.length ? (
               <div className="ewx-tray">
@@ -1099,7 +1139,7 @@ export default function EwwonApp() {
               <button className={'ewx-stkbtn' + (attOn === 'sticker' ? ' on' : '')} aria-label="Figurinhas" onClick={() => setAttOn(attOn === 'sticker' ? false : 'sticker')}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h7l7-7V7a4 4 0 0 0-4-4h-3" /><path d="M14 21v-3a4 4 0 0 1 4-4h3" /><path d="M8.5 10h.01M15.5 10h.01M8.5 14.5c1.8 1.6 5.2 1.6 7 0" /></svg></button>
               <input id="inp" ref={inpRef} placeholder={pending.length ? 'Adicione uma legenda' : 'Escreva uma mensagem'} autoComplete="off" value={draft} maxLength={4000}
                 onFocus={() => setAttOn((a) => (a === 'menu' ? false : a))}
-                onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); void doSend(); } }} />
+                onChange={(e) => { setDraft(e.target.value); sendTyping(); }} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); void doSend(); } }} />
               {!draft.trim() && !pending.length && !sending
                 ? <button className="snd ewx-mic" id="snd" aria-label="Gravar áudio" onClick={() => void startVoice()}><I n="mic" /></button>
                 : <button className="snd" id="snd" aria-label="Enviar" disabled={sending} onClick={() => void doSend()}>{sending ? <span className="ewx-spin" /> : <I n="send" />}</button>}
@@ -1190,9 +1230,15 @@ export function pageTitle(p: PageSpec): string {
 
 function Count({ to, k }: { to: number; k: number | string }) {
   const [v, setV] = useState(0);
+  const shown = useRef(0);
+  const lastK = useRef<number | string | null>(null);
   useEffect(() => {
+    // New visit to the tab: count up from zero. Data refresh: glide from the current value.
+    const from = lastK.current !== k ? 0 : shown.current;
+    lastK.current = k;
+    if (from === to) { setV(to); shown.current = to; return; }
     let s: number | null = null, raf = 0;
-    const f = (t: number) => { s = s ?? t; const p = Math.min(1, (t - s) / 900); setV(Math.round(to * (1 - Math.pow(1 - p, 3)))); if (p < 1) raf = requestAnimationFrame(f); };
+    const f = (t: number) => { s = s ?? t; const p = Math.min(1, (t - s) / 900); const val = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))); shown.current = val; setV(val); if (p < 1) raf = requestAnimationFrame(f); };
     raf = requestAnimationFrame(f);
     return () => cancelAnimationFrame(raf);
   }, [to, k]);
