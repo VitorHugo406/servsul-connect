@@ -1,3 +1,4 @@
+import { PUBLIC_PROFILE_COLUMNS } from '@/lib/profileColumns';
  import { useState, useEffect } from 'react';
  import { Coffee, Briefcase, Clock, Moon, CheckCircle, Building2, Calendar, Mail, Phone } from 'lucide-react';
  import {
@@ -14,6 +15,7 @@
  
  interface UserProfile {
    id: string;
+   user_id?: string;
    name: string;
    display_name: string | null;
    email: string;
@@ -75,11 +77,12 @@ export function UserPreviewDialog({ open, isOpen, onOpenChange, onClose, userId,
        setLoading(true);
        try {
         // Try to fetch by profile id first, then by user_id
-         const { data: profileData, error } = await supabase
+         const { data: rawProfile, error } = await supabase
            .from('profiles')
-           .select('*')
+           .select(PUBLIC_PROFILE_COLUMNS)
           .or(`id.eq.${targetId},user_id.eq.${targetId}`)
            .single();
+         const profileData = rawProfile as unknown as UserProfile | null;
  
          if (error) throw error;
          setUser(profileData);

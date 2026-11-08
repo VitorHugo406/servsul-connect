@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { PUBLIC_PROFILE_COLUMNS } from '@/lib/profileColumns';
 import { orderByCreated } from '@/lib/messageOrder';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -208,7 +209,7 @@ export function useMessages(sectorId: string | null) {
           }
           const cachedAuthor = prev.find(m => m.author_id === newMessage.author_id)?.author;
           if (cachedAuthor) return orderByCreated([...prev, { ...newMessage, author: cachedAuthor, status: 'delivered' as const }]);
-          supabase.from('messages').select(`*, author:profiles!messages_author_id_fkey(*)`).eq('id', newMessage.id).single().then(async ({ data }) => {
+          supabase.from('messages').select(`*, author:profiles!messages_author_id_fkey(${PUBLIC_PROFILE_COLUMNS})`).eq('id', newMessage.id).single().then(async ({ data }) => {
             if (data) {
               const [normalized] = await hydrateMessages([data as any]);
               if (normalized) setMessages(p => p.map(m => m.id === newMessage.id ? normalized : m));
@@ -269,9 +270,9 @@ export function useProfiles() {
   useEffect(() => {
     const fetchProfiles = async () => {
       if (!profile?.company_id) { setProfiles([]); setLoading(false); return; }
-      const { data, error } = await supabase.from('profiles').select('*').eq('company_id', profile.company_id).order('name');
+      const { data, error } = await supabase.from('profiles').select(PUBLIC_PROFILE_COLUMNS).eq('company_id', profile.company_id).order('name');
       if (error) console.error('Error fetching profiles:', error);
-      else setProfiles(data || []);
+      else setProfiles((data || []) as unknown as Profile[]);
       setLoading(false);
     };
     fetchProfiles();
