@@ -24,7 +24,7 @@ export interface Person {
   st: StatusKey; h: [string, string]; days: number[]; mail: string; bio: string; since: string;
   photo: string | null; cover: string | null; birth: string | null; me?: boolean;
 }
-export interface Msg { id: string; t: string; at: string; h: string; me: boolean; from: string | null; r: string[]; mine: string[]; pending?: boolean; rd?: boolean }
+export interface Msg { id: string; t: string; at: string; h: string; me: boolean; from: string | null; r: string[]; mine: string[]; pending?: boolean; rd?: boolean; rp?: string | null; rq?: { from: string | null; t: string } | null }
 export interface ChatSet { pin: boolean; mute: boolean; muteUntil: number; muteDur: number; fs: number; ff: number; col: number; wall: number }
 export interface Summary { id?: string; on: boolean; h: number; d: number; it: Record<string, boolean> }
 export type ChatKind = 'sector' | 'dm' | 'group';
@@ -401,18 +401,18 @@ export function computeBirthdays(people: Record<string, Person>): Birthdays {
 export async function loadMessages(chat: Chat, meId: string): Promise<Msg[]> {
   let rows: Row[] = [];
   if (chat.kind === 'sector') {
-    const r = await sb.from('messages').select('id,author_id,content,created_at').eq('sector_id', chat.id).order('created_at', { ascending: false }).limit(60);
-    rows = (r.data || []).map((m: Row) => ({ id: m.id, from: m.author_id, t: m.content, at: m.created_at }));
+    const r = await sb.from('messages').select('id,author_id,content,created_at,reply_to_id').eq('sector_id', chat.id).order('created_at', { ascending: false }).limit(60);
+    rows = (r.data || []).map((m: Row) => ({ id: m.id, from: m.author_id, t: m.content, at: m.created_at, rp: m.reply_to_id || null }));
   } else if (chat.kind === 'dm') {
     // Both directions of the pair (sender/receiver are always me or the partner).
     const pair = [meId, chat.id];
-    const r = await sb.from('direct_messages').select('id,sender_id,content,created_at,is_read')
+    const r = await sb.from('direct_messages').select('id,sender_id,content,created_at,is_read,reply_to_id')
       .in('sender_id', pair).in('receiver_id', pair)
       .order('created_at', { ascending: false }).limit(60);
-    rows = (r.data || []).map((m: Row) => ({ id: m.id, from: m.sender_id, t: m.content, at: m.created_at, rd: !!m.is_read }));
+    rows = (r.data || []).map((m: Row) => ({ id: m.id, from: m.sender_id, t: m.content, at: m.created_at, rd: !!m.is_read, rp: m.reply_to_id || null }));
   } else {
-    const r = await sb.from('private_group_messages').select('id,sender_id,content,created_at').eq('group_id', chat.id).order('created_at', { ascending: false }).limit(60);
-    rows = (r.data || []).map((m: Row) => ({ id: m.id, from: m.sender_id, t: m.content, at: m.created_at }));
+    const r = await sb.from('private_group_messages').select('id,sender_id,content,created_at,reply_to_id').eq('group_id', chat.id).order('created_at', { ascending: false }).limit(60);
+    rows = (r.data || []).map((m: Row) => ({ id: m.id, from: m.sender_id, t: m.content, at: m.created_at, rp: m.reply_to_id || null }));
   }
   rows.reverse();
   const ids = rows.map((m) => m.id);
@@ -428,7 +428,16 @@ export async function loadMessages(chat: Chat, meId: string): Promise<Msg[]> {
       reactions.set(x.message_id, cur);
     }
   }
-  return rows.map((m) => ({ ...toMsg(m, meId, reactions.get(m.id)), rd: !!m.rd }));
+  // Quoted messages older than the loaded page: fetch just their author and text.
+  const quoted = new Map<string, { from: string | null; t: string }>();
+  const missing = [...new Set(rows.map((m) => m.rp).filter((id): id is string => !!id && !ids.includes(id)))];
+  if (missing.length) {
+    const q = chat.kind === 'sector'
+      ? await sb.from('messages').select('id,author_id,content').in('id', missing)
+      : await sb.from(chat.kind === 'dm' ? 'direct_messages' : 'private_group_messages').select('id,sender_id,content').in('id', missing);
+    for (const x of q.data || []) quoted.set(x.id, { from: x.author_id || x.sender_id || null, t: plainText(x.content) });
+  }
+  return rows.map((m) => ({ ...toMsg(m, meId, reactions.get(m.id)), rd: !!m.rd, rp: m.rp || null, rq: m.rp ? quoted.get(m.rp) || null : null }));
 }
 
 export function toMsg(m: { id: string; from: string; t: string; at: string }, meId: string, rx?: { r: string[]; mine: string[] }): Msg {
@@ -440,18 +449,19 @@ export function plainText(s: string): string {
   return String(s || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
 }
 
-export async function sendMessage(chat: Chat, meId: string, companyId: string, text: string): Promise<{ id: string; at: string }> {
+export async function sendMessage(chat: Chat, meId: string, companyId: string, text: string, replyTo?: string | null): Promise<{ id: string; at: string }> {
+  const rp = replyTo ? { reply_to_id: replyTo } : {};
   if (chat.kind === 'sector') {
-    const r = await sb.from('messages').insert({ content: text, author_id: meId, sector_id: chat.id, company_id: companyId }).select('id,created_at').single();
+    const r = await sb.from('messages').insert({ content: text, author_id: meId, sector_id: chat.id, company_id: companyId, ...rp }).select('id,created_at').single();
     if (r.error) throw r.error;
     return { id: r.data.id, at: r.data.created_at };
   }
   if (chat.kind === 'dm') {
-    const r = await sb.from('direct_messages').insert({ sender_id: meId, receiver_id: chat.id, content: text, company_id: companyId }).select('id,created_at').single();
+    const r = await sb.from('direct_messages').insert({ sender_id: meId, receiver_id: chat.id, content: text, company_id: companyId, ...rp }).select('id,created_at').single();
     if (r.error) throw r.error;
     return { id: r.data.id, at: r.data.created_at };
   }
-  const r = await sb.from('private_group_messages').insert({ group_id: chat.id, sender_id: meId, content: text }).select('id,created_at').single();
+  const r = await sb.from('private_group_messages').insert({ group_id: chat.id, sender_id: meId, content: text, ...rp }).select('id,created_at').single();
   if (r.error) throw r.error;
   // Postgrest builders only run when awaited/then'd.
   void Promise.resolve(sb.from('private_groups').update({ updated_at: new Date().toISOString() }).eq('id', chat.id)).catch(() => undefined);

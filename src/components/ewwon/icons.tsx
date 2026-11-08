@@ -16,6 +16,7 @@ const P: Record<string, string> = {
   chevD: 'M6 9l6 6 6-6',
   chevL: 'M15 18l-6-6 6-6',
   chevR: 'M9 6l6 6-6 6',
+  reply: 'M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
   search: 'M21 21l-4.3-4.3',
   plus: 'M12 5v14M5 12h14',
   send: 'M22 2L11 13M22 2l-7 20-4-9-9-4z',

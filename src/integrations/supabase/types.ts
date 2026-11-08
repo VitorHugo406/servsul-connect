@@ -698,6 +698,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          reply_to_id: string | null
           is_read: boolean
           receiver_id: string
           sender_id: string
@@ -707,6 +708,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          reply_to_id?: string | null
           is_read?: boolean
           receiver_id: string
           sender_id: string
@@ -716,6 +718,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          reply_to_id?: string | null
           is_read?: boolean
           receiver_id?: string
           sender_id?: string
@@ -1683,6 +1686,7 @@ export type Database = {
           created_at: string
           group_id: string
           id: string
+          reply_to_id: string | null
           sender_id: string
         }
         Insert: {
@@ -1690,6 +1694,7 @@ export type Database = {
           created_at?: string
           group_id: string
           id?: string
+          reply_to_id?: string | null
           sender_id: string
         }
         Update: {
@@ -1697,6 +1702,7 @@ export type Database = {
           created_at?: string
           group_id?: string
           id?: string
+          reply_to_id?: string | null
           sender_id?: string
         }
         Relationships: [

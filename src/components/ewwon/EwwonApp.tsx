@@ -114,6 +114,11 @@ export default function EwwonApp() {
   const [dots, setDots] = useState(false);
   const [search, setSearch] = useState<{ q: string; i: number } | null>(null);
   const [dayFloat, setDayFloat] = useState<string | null>(null);
+  // Swipe-to-reply (WhatsApp-like): the message being answered, shown above the composer.
+  const [reply, setReply] = useState<Msg | null>(null);
+  const replyRef = useRef<Msg | null>(null);
+  const startReply = (m: Msg) => { replyRef.current = m; setReply(m); N.haptic('light'); window.setTimeout(() => inpRef.current?.focus(), 30); };
+  const cancelReply = () => { replyRef.current = null; setReply(null); };
   // WhatsApp-like "jump to latest" button: shows after scrolling up; counts new messages meanwhile.
   const [far, setFar] = useState(false);
   const [newBelow, setNewBelow] = useState(0);
@@ -163,7 +168,7 @@ export default function EwwonApp() {
     const el = document.querySelector(`[data-mid="${id}"]`);
     if (el) { el.classList.add('ewx-hit'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
   }, [hits, search?.i]);
-  useEffect(() => { setSearch(null); setDots(false); setDayFloat(null); }, [curKey, roomOn]);
+  useEffect(() => { setSearch(null); setDots(false); setDayFloat(null); replyRef.current = null; setReply(null); }, [curKey, roomOn]);
   const onMsgsScroll = () => {
     const box = msgsRef.current;
     if (!box) return;
@@ -368,6 +373,13 @@ export default function EwwonApp() {
     if (b) b.scrollTop = b.scrollHeight;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomOn, cur?.m.length, curKey]);
+  const jumpToMsg = (id: string) => {
+    const el = msgsRef.current?.querySelector<HTMLElement>(`[data-mid="${id}"]`);
+    if (!el) { toast('Mensagem antiga: não está carregada'); return; }
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.classList.remove('ewx-flash'); void el.offsetWidth; el.classList.add('ewx-flash');
+    window.setTimeout(() => el.classList.remove('ewx-flash'), 1600);
+  };
   const jumpToEnd = () => {
     const b = msgsRef.current;
     if (!b) return;
@@ -391,11 +403,13 @@ export default function EwwonApp() {
     if (!c || !boot) return;
     const tmpId = 'tmp-' + Date.now();
     const at = new Date().toISOString();
-    const m: Msg = { id: tmpId, t: txt, at, h: hm(), me: true, from: null, r: [], mine: [], pending: true };
+    const rp = replyRef.current && !replyRef.current.id.startsWith('tmp-') ? replyRef.current.id : null;
+    replyRef.current = null; setReply(null);
+    const m: Msg = { id: tmpId, t: txt, at, h: hm(), me: true, from: null, r: [], mine: [], pending: true, rp };
     patchChat(c.key, (x) => ({ ...x, m: [...x.m, m], last: { t: txt, at, me: true, from: meId } }));
     setChats((cs) => { const a = [...cs]; D.sortChats(a); return a; });
     try {
-      const r = await D.sendMessage(c, meId, boot.companyId, txt);
+      const r = await D.sendMessage(c, meId, boot.companyId, txt, rp);
       patchChat(c.key, (x) => ({ ...x, m: x.m.map((y) => (y.id === tmpId ? { ...y, id: r.id, at: r.at, pending: false } : y)) }));
     } catch (e) {
       console.warn(e);
@@ -696,7 +710,7 @@ export default function EwwonApp() {
         }
         if (!c) return;
         key = c.key;
-        const m = D.toMsg({ id: row.id, from, t: row.content, at: row.created_at }, meId);
+        const m = { ...D.toMsg({ id: row.id, from, t: row.content, at: row.created_at }, meId), rp: row.reply_to_id || null };
         const isOpen = ro && ck === key && !document.hidden;
         setChats((all) => {
           const a = all.map((x) => (x.key === key ? { ...x, m: x.loaded && !x.m.some((y) => y.id === m.id) ? [...x.m, m] : x.m, u: isOpen ? 0 : Math.min(99, x.u + 1), last: { t: m.t, at: m.at, me: false, from } } : x));
@@ -1160,7 +1174,15 @@ export default function EwwonApp() {
               {cur && cur.loaded && !cur.m.length ? <div className="hint" style={{ padding: 20 }}>Nenhuma mensagem ainda. Diga oi! 👋</div> : null}
               {cur ? (() => {
                 // Consecutive stickers from the same person sit side by side (WhatsApp-like).
-                const bubble = (m: Msg, cont = false) => <Bubble key={m.id} m={m} read={m.me && (!!m.rd || (cur.kind === 'group' && !!groupWm && new Date(m.at).getTime() <= groupWm))} sender={m.from ? P[m.from] : null} group={cur.g && !cont} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} onImage={(src, url, name, caption) => setViewer({ src, url, name, caption })} />;
+                const quoteOf = (m: Msg) => {
+                  if (!m.rp) return null;
+                  const q = cur.m.find((x) => x.id === m.rp);
+                  const from = q ? (q.me ? meId : q.from) : m.rq?.from ?? null;
+                  const t = q ? q.t : m.rq?.t;
+                  if (t === undefined) return { id: m.rp, n: '', t: 'Mensagem original indisponível' };
+                  return { id: m.rp, n: from === meId ? 'Você' : (from && P[from]?.n) || 'Alguém', t };
+                };
+                const bubble = (m: Msg, cont = false) => <Bubble key={m.id} m={m} quote={quoteOf(m)} onQuote={jumpToMsg} onReply={() => startReply(m)} read={m.me && (!!m.rd || (cur.kind === 'group' && !!groupWm && new Date(m.at).getTime() <= groupWm))} sender={m.from ? P[m.from] : null} group={cur.g && !cont} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} onImage={(src, url, name, caption) => setViewer({ src, url, name, caption })} />;
                 const out: JSX.Element[] = [];
                 const ms = cur.m;
                 for (let idx = 0; idx < ms.length; idx++) {
@@ -1202,6 +1224,12 @@ export default function EwwonApp() {
               <div className="ewx-stkp"><StickerPicker notify={toast} onPick={(st) => { setAttOn(false); void send(stickerContent(st)); }} onSendContent={(c) => { setAttOn(false); void send(c); }} /></div>
             ) : attOn === 'emoji' ? (
               <div className="ewx-emo">{EMOJIS.map((e) => <button key={e} onClick={() => setDraft((d) => d + e)}>{e}</button>)}</div>
+            ) : null}
+            {reply && !voiceRec.recording && !recUi ? (
+              <div className="ewx-reply">
+                <div className="ewx-reply-q"><b>{reply.me ? 'Você' : (reply.from && P[reply.from]?.n) || 'Alguém'}</b><span>{previewText(reply.t)}</span></div>
+                <button aria-label="Cancelar resposta" onClick={cancelReply}><I n="x" /></button>
+              </div>
             ) : null}
             {(() => {
               const recOn = voiceRec.recording || !!recUi;
@@ -1358,7 +1386,8 @@ function Ticks({ pending, read, small }: { pending?: boolean; read?: boolean; sm
   );
 }
 
-function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage, read }: {
+function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage, read, quote, onQuote, onReply }: {
+  quote?: { id: string; n: string; t: string } | null; onQuote?: (id: string) => void; onReply?: () => void;
   read?: boolean; m: Msg; sender: Person | null; group: boolean; picking: boolean; onPick: () => void; onReact: (x: string, wrap: HTMLElement | null) => void; onProfile: (id: string) => void; onImage: (src: string, url: string, name: string, caption?: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -1378,19 +1407,36 @@ function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage
   }, [picking, moreRx]);
   const start = () => { tm.current = window.setTimeout(onPick, 450); };
   const stop = () => window.clearTimeout(tm.current);
+  // Swipe right to reply: the message follows the finger (max 72px) and a reply arrow fades in.
+  const sw = useRef<{ x: number; y: number; dx: number; on: boolean; dead: boolean } | null>(null);
+  const [dx, setDx] = useState(0);
+  const swStart = (e: React.TouchEvent) => { const t = e.touches[0]; sw.current = { x: t.clientX, y: t.clientY, dx: 0, on: false, dead: false }; };
+  const swMove = (e: React.TouchEvent) => {
+    const g = sw.current; if (!g || g.dead) return;
+    const t = e.touches[0]; const ddx = t.clientX - g.x, ddy = t.clientY - g.y;
+    if (!g.on) { if (Math.abs(ddy) > 10 && Math.abs(ddy) > Math.abs(ddx)) { g.dead = true; return; } if (ddx > 12 && ddx > Math.abs(ddy) * 1.3) g.on = true; else return; }
+    const v = Math.max(0, Math.min(72, ddx - 12));
+    if (v >= 56 && g.dx < 56) N.haptic('light');
+    g.dx = v; setDx(v);
+  };
+  const swEnd = () => { const g = sw.current; sw.current = null; if (g?.on && g.dx >= 56) onReply?.(); setDx(0); };
   const rx = m.r.length ? <div className="rx" style={{ display: 'flex' }}>{m.r.map((e) => <span key={e} onClick={(ev) => { ev.stopPropagation(); onReact(e, ref.current); }}>{e}</span>)}</div> : <div className="rx" style={{ display: 'none' }} />;
   const tmh = <div className="tm">{m.h}{m.me ? <> · <Ticks pending={m.pending} read={read} /></> : null}</div>;
   const stk = parseSticker(m.t);
   const bub = stk ? <div className="ewx-stkb" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><StickerMessage sticker={stk} mine={m.me} /></div>
     : <div className="bub" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><MsgBody content={m.t} onOpenImage={onImage} /></div>;
+  const qb = quote ? <button type="button" className="ewx-quote" onClick={(e) => { e.stopPropagation(); onQuote?.(quote.id); }}><b>{quote.n}</b><span>{previewText(quote.t)}</span></button> : null;
   return (
-    <div className={'m' + (m.me ? ' me' : '') + (gm ? ' gm' : '')} ref={ref} data-mid={m.id} style={{ animation: 'none' }}>
+    <div className={'m' + (m.me ? ' me' : '') + (gm ? ' gm' : '') + (dx ? ' ewx-sw' : '')} ref={ref} data-mid={m.id}
+      style={{ animation: 'none', transform: dx ? `translateX(${dx}px)` : undefined }}
+      onTouchStart={swStart} onTouchMove={swMove} onTouchEnd={swEnd} onTouchCancel={swEnd}>
+      {dx ? <span className="ewx-sw-ic" style={{ opacity: Math.min(1, dx / 56), transform: `scale(${0.6 + Math.min(1, dx / 56) * 0.4})` }}><I n="reply" /></span> : null}
       {gm && sender ? (
         <>
           <div className="gav" style={avStyle(sender)} onClick={() => onProfile(sender.id)}>{sender.photo ? '' : sender.i}</div>
-          <div className="gb"><div className="sn">{sender.n}</div>{bub}{rx}{tmh}</div>
+          <div className="gb"><div className="sn">{sender.n}</div>{qb}{bub}{rx}{tmh}</div>
         </>
-      ) : <>{!m.me && sender && !group ? null : null}{bub}{rx}{tmh}</>}
+      ) : <>{qb}{bub}{rx}{tmh}</>}
       {picking ? <div className="pick" onClick={(e) => e.stopPropagation()}>{REACTIONS.map((e) => <button key={e} onClick={(ev) => { ev.stopPropagation(); onReact(e, ref.current); }}>{e}</button>)}<button className="ewx-more-rx" aria-label="Mais reações" onClick={(ev) => { ev.stopPropagation(); setMoreRx((v) => !v); }}>{moreRx ? '×' : '+'}</button>{stk && stk.kind === 'img' && !m.me ? <button className="ewx-stk-save" aria-label="Salvar figurinha" onClick={(ev) => { ev.stopPropagation(); void addFavorite(stk).then(() => window.dispatchEvent(new CustomEvent('ew:toast', { detail: 'Figurinha salva em Minhas' }))).catch(() => undefined); }}>⭐</button> : null}{moreRx ? <div className="ewx-rx-all">{EMOJIS.map((e) => <button key={e} onClick={(ev) => { ev.stopPropagation(); setMoreRx(false); onReact(e, ref.current); }}>{e}</button>)}</div> : null}</div> : null}
     </div>
   );

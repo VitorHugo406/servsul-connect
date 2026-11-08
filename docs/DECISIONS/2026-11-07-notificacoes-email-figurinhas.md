@@ -72,3 +72,9 @@
 - Reações: o seletor e as reações da mensagem ficam sempre numa linha reta (não encolhem para a largura de mensagens curtas).
 - Botão "ir para a última mensagem" (como no WhatsApp): aparece ao subir mais de ~320 px; enquanto a pessoa lê mensagens antigas, mensagens novas de outros não puxam a tela para baixo e viram um contador verde no botão.
 - O seletor de reações é empurrado para dentro da tela quando a mensagem (ex.: figurinha lado a lado) fica perto da borda.
+
+## Responder mensagem deslizando (09/11/2026)
+- No app, deslizar uma mensagem para a direita (como no WhatsApp) abre "respondendo a" acima da caixa de texto; o que for enviado em seguida (texto, figurinha, áudio, arquivo) leva a referência.
+- Banco: `reply_to_id` em `direct_messages` e `private_group_messages` (migration `20261109010000_message_replies.sql`), igual ao `messages.reply_to_id` que o chat de setores já tinha. Mesma tabela, `ON DELETE SET NULL`; sem mudança de RLS.
+- A citação aparece acima da mensagem; tocar nela leva até a original. Se a original for mais antiga que as mensagens carregadas, o app busca só o autor e o texto dela.
+- No PC, as conversas individuais e de grupo mostram a citação (o setor já mostrava).
