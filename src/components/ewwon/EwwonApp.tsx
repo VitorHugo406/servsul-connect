@@ -5,7 +5,7 @@ import { fmtDuration, sendVoice, watchKeyRequests } from '@/lib/e2e';
 import { PermissionGate, needsPermissionGate } from './permgate';
 import { StickerPicker, StickerMessage } from '@/components/common/Stickers';
 import { addFavorite, isSticker, parseSticker, stickerContent } from '@/lib/stickers';
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import * as CT from '@/lib/chatTasks';
@@ -114,6 +114,11 @@ export default function EwwonApp() {
   const [dots, setDots] = useState(false);
   const [search, setSearch] = useState<{ q: string; i: number } | null>(null);
   const [dayFloat, setDayFloat] = useState<string | null>(null);
+  // WhatsApp-like "jump to latest" button: shows after scrolling up; counts new messages meanwhile.
+  const [far, setFar] = useState(false);
+  const [newBelow, setNewBelow] = useState(0);
+  const farRef = useRef(false);
+  const lenRef = useRef<{ key: string | null; n: number }>({ key: null, n: 0 });
   const dayTimer = useRef<number>(0);
   const ctHold = useRef<{ t: number; fired: boolean }>({ t: 0, fired: false });
   const [groupWm, setGroupWm] = useState<number | null>(null);
@@ -162,6 +167,10 @@ export default function EwwonApp() {
   const onMsgsScroll = () => {
     const box = msgsRef.current;
     if (!box) return;
+    const dist = box.scrollHeight - box.scrollTop - box.clientHeight;
+    const isFar = dist > 320;
+    if (isFar !== farRef.current) { farRef.current = isFar; setFar(isFar); }
+    if (dist < 80) setNewBelow(0);
     const top = box.getBoundingClientRect().top + 8;
     let label: string | null = null;
     box.querySelectorAll<HTMLElement>('.ewx-dsep').forEach((el) => { if (el.getBoundingClientRect().top <= top) label = el.dataset.day || null; });
@@ -349,10 +358,22 @@ export default function EwwonApp() {
   const closeRoom = useCallback(() => { setSheetOn(false); setRoomOn(false); setPickFor(null); inpRef.current?.blur(); }, []);
 
   useEffect(() => {
-    if (!roomOn) return;
+    if (!roomOn) { lenRef.current = { key: null, n: 0 }; farRef.current = false; setFar(false); setNewBelow(0); return; }
     const b = msgsRef.current;
+    const n = cur?.m.length || 0;
+    const prev = lenRef.current;
+    lenRef.current = { key: curKey, n };
+    if (prev.key === curKey && n > prev.n && farRef.current && !cur?.m[n - 1]?.me) { setNewBelow((x) => x + (n - prev.n)); return; }
+    if (prev.key !== curKey) { farRef.current = false; setFar(false); setNewBelow(0); }
     if (b) b.scrollTop = b.scrollHeight;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomOn, cur?.m.length, curKey]);
+  const jumpToEnd = () => {
+    const b = msgsRef.current;
+    if (!b) return;
+    b.scrollTo({ top: b.scrollHeight, behavior: 'smooth' });
+    setNewBelow(0);
+  };
 
   const openDm = useCallback((personId: string) => {
     const existing = stateRef.current.chats.find((c) => c.key === `dm:${personId}`);
@@ -1154,6 +1175,7 @@ export default function EwwonApp() {
                 return out;
               })() : null}
               {typing && cur && typing.key === cur.key ? <div className="m ewx-typing" aria-label="Digitando"><div className="bub"><span /><span /><span /></div></div> : null}
+              {far ? <div className="ewx-down-w"><button className="ewx-down" aria-label="Ir para a última mensagem" onClick={(e) => { e.stopPropagation(); jumpToEnd(); }}><I n="chevD" />{newBelow ? <span className="ewx-down-n">{newBelow > 99 ? '99+' : newBelow}</span> : null}</button></div> : null}
             </div>
             {pending.length ? (
               <div className="ewx-tray">
@@ -1343,6 +1365,17 @@ function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage
   const tm = useRef<number>();
   const [moreRx, setMoreRx] = useState(false);
   const gm = !m.me && !!sender && group;
+  // Keep the reaction picker inside the screen (stickers side by side sit near the edges).
+  useLayoutEffect(() => {
+    const el = ref.current?.querySelector<HTMLElement>(':scope > .pick');
+    if (!el) return;
+    el.style.translate = '';
+    const r = el.getBoundingClientRect();
+    const box = el.closest('#msgs')?.getBoundingClientRect();
+    const lo = (box?.left ?? 0) + 8, hi = (box?.right ?? window.innerWidth) - 8;
+    const shift = r.left < lo ? lo - r.left : r.right > hi ? hi - r.right : 0;
+    if (shift) el.style.translate = `${Math.round(shift)}px 0`;
+  }, [picking, moreRx]);
   const start = () => { tm.current = window.setTimeout(onPick, 450); };
   const stop = () => window.clearTimeout(tm.current);
   const rx = m.r.length ? <div className="rx" style={{ display: 'flex' }}>{m.r.map((e) => <span key={e} onClick={(ev) => { ev.stopPropagation(); onReact(e, ref.current); }}>{e}</span>)}</div> : <div className="rx" style={{ display: 'none' }} />;

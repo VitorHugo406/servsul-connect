@@ -70,3 +70,5 @@
 - Menu ⋮ do chat ficou fora do cabeçalho: com fundo "Pontos"/"Cor" o cabeçalho usa desfoque, que prendia o menu por baixo das mensagens.
 - O painel de figurinhas usava a classe `.stk`, a mesma das fotos empilhadas de "Presentes agora", o que deixava essa linha com 300 px de altura; o painel agora usa `.stkp`.
 - Reações: o seletor e as reações da mensagem ficam sempre numa linha reta (não encolhem para a largura de mensagens curtas).
+- Botão "ir para a última mensagem" (como no WhatsApp): aparece ao subir mais de ~320 px; enquanto a pessoa lê mensagens antigas, mensagens novas de outros não puxam a tela para baixo e viram um contador verde no botão.
+- O seletor de reações é empurrado para dentro da tela quando a mensagem (ex.: figurinha lado a lado) fica perto da borda.
