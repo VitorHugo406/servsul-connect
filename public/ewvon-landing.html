@@ -226,6 +226,13 @@ footer{flex-direction:column;text-align:center;padding:28px 18px calc(30px + env
 .p2,.p3{display:none}
 .tr{height:auto;min-height:58px;padding-top:9px;padding-bottom:9px}.tr.h,.tr.tg{min-height:0}.tr.h{height:56px}.tr.tg{height:52px}
 }
+.beta{display:inline-flex;align-items:center;gap:10px;margin-top:18px;padding:9px 10px 9px 16px;border-radius:999px;border:1px solid var(--line);background:var(--c1);color:var(--ink);font-size:13.5px;font-weight:600;text-decoration:none;transition:transform .3s,border-color .3s}
+.beta:hover{transform:translateY(-2px);border-color:var(--ink)}.beta[hidden]{display:none}
+.beta em{font-style:normal;font-weight:500;font-size:12px;opacity:.65}
+.beta s{width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--bg,#fff);display:grid;place-items:center;text-decoration:none}.beta s .i{width:12px;height:12px}
+.beta .pulse{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 0 #22c55e88;animation:betaPulse 1.8s infinite}
+@keyframes betaPulse{70%{box-shadow:0 0 0 8px #22c55e00}100%{box-shadow:0 0 0 0 #22c55e00}}
+@media (max-width:520px){.beta{font-size:12.5px;gap:8px}.beta em{display:none}}
 </style>
 </head>
 <body>
@@ -267,6 +274,9 @@ footer{flex-direction:column;text-align:center;padding:28px 18px calc(30px + env
   <h1>Conversa. Tarefas. Reuniões.</h1>
   <p>Tudo que sua equipe precisa para trabalhar junta, em um só lugar. Simples de aprender e leve de usar.</p>
   <div style="display:flex;gap:12px;justify-content:center"><a class="btn" href="#" data-ewvon-action="demo">Testar sistema <s><svg class="i"><use href="#ar"/></svg></s></a><a class="btn o" href="/select-company"><svg class="i" style="width:16px;height:16px"><use href="#user"/></svg>Entrar no sistema</a></div>
+  <!-- Free test sign-up: visible until 15/12/2026 (São Paulo); the page and its endpoint also close on that date. -->
+  <a class="beta" id="betaCta" href="/teste-gratuito.html" target="_top" hidden><span class="pulse"></span>Inscreva-se para testar gratuitamente<em>até 15/12</em><s><svg class="i"><use href="#ar"/></svg></s></a>
+  <script>(function(){var b=document.getElementById('betaCta');if(b&&Date.now()<Date.parse('2026-12-16T03:00:00Z'))b.hidden=false;else if(b)b.remove()})();</script>
 </header>
 
 <div class="row">
