@@ -440,6 +440,19 @@ export async function loadMessages(chat: Chat, meId: string): Promise<Msg[]> {
   return rows.map((m) => ({ ...toMsg(m, meId, reactions.get(m.id)), rd: !!m.rd, rp: m.rp || null, rq: m.rp ? quoted.get(m.rp) || null : null }));
 }
 
+/** Server time order (stable for equal times); messages still being sent stay last, in tap order. */
+export function orderMsgs(list: Msg[]): Msg[] {
+  const t = (m: Msg) => new Date(m.at).getTime() || 0;
+  let ok = true;
+  for (let i = 1; i < list.length && ok; i++) {
+    const a = list[i - 1], b = list[i];
+    if (a.pending ? !b.pending : !b.pending && t(b) < t(a)) ok = false;
+  }
+  if (ok) return list;
+  const done = list.map((m, i) => ({ m, i })).filter((x) => !x.m.pending).sort((a, b) => t(a.m) - t(b.m) || a.i - b.i).map((x) => x.m);
+  return [...done, ...list.filter((m) => m.pending)];
+}
+
 export function toMsg(m: { id: string; from: string; t: string; at: string }, meId: string, rx?: { r: string[]; mine: string[] }): Msg {
   return { id: m.id, t: plainText(m.t), at: m.at, h: fmtTime(m.at), me: m.from === meId, from: m.from === meId ? null : m.from, r: rx?.r || [], mine: rx?.mine || [] };
 }

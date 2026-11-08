@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { orderByCreated } from '@/lib/messageOrder';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { withCompany } from '@/lib/companyScope';
@@ -136,7 +137,7 @@ export function useDirectMessages(partnerId?: string) {
                     sender: prev[existingIndex].sender, 
                     receiver: prev[existingIndex].receiver 
                   };
-                  return updated;
+                  return orderByCreated(updated);
                 }
                 
                 // New message from partner - fetch profile info
@@ -155,7 +156,7 @@ export function useDirectMessages(partnerId?: string) {
                     }
                   });
                 
-                return [...prev, msg];
+                return orderByCreated([...prev, msg]);
               });
               
               // Mark as read if from partner

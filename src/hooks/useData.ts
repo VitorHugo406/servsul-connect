@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { orderByCreated } from '@/lib/messageOrder';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCelebrationDate, isCelebrationToday } from '@/lib/birthdayUtils';
@@ -203,17 +204,17 @@ export function useMessages(sectorId: string | null) {
           if (existingIndex >= 0) {
             const updated = [...prev];
             updated[existingIndex] = { ...newMessage, author: prev[existingIndex].author, reply_to: prev[existingIndex].reply_to, status: 'delivered' };
-            return updated;
+            return orderByCreated(updated);
           }
           const cachedAuthor = prev.find(m => m.author_id === newMessage.author_id)?.author;
-          if (cachedAuthor) return [...prev, { ...newMessage, author: cachedAuthor, status: 'delivered' as const }];
+          if (cachedAuthor) return orderByCreated([...prev, { ...newMessage, author: cachedAuthor, status: 'delivered' as const }]);
           supabase.from('messages').select(`*, author:profiles!messages_author_id_fkey(*)`).eq('id', newMessage.id).single().then(async ({ data }) => {
             if (data) {
               const [normalized] = await hydrateMessages([data as any]);
               if (normalized) setMessages(p => p.map(m => m.id === newMessage.id ? normalized : m));
             }
           });
-          return [...prev, { ...newMessage, status: 'delivered' as const }];
+          return orderByCreated([...prev, { ...newMessage, status: 'delivered' as const }]);
         });
       } else if (payload.eventType === 'DELETE') setMessages(prev => prev.filter(m => m.id !== (payload.old as Message).id));
       else if (payload.eventType === 'UPDATE') {

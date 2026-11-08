@@ -1,4 +1,5 @@
  import { useState, useEffect, useCallback } from 'react';
+import { orderByCreated } from '@/lib/messageOrder';
  import { supabase } from '@/integrations/supabase/client';
  import { useAuth } from '@/contexts/AuthContext';
  
@@ -373,7 +374,7 @@
                   ...newMsg,
                   sender: prev[existingIndex].sender,
                 };
-                return updated;
+                return orderByCreated(updated);
               }
               
               // New message from another user - fetch sender info
@@ -388,7 +389,7 @@
                   }
                 });
               
-              return [...prev, newMsg];
+              return orderByCreated([...prev, newMsg]);
             });
          }
        )

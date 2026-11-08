@@ -417,19 +417,25 @@ export default function EwwonApp() {
     window.setTimeout(() => void openRoom(`dm:${personId}`), 30);
   }, [meId, openRoom]);
 
+  const sendChain = useRef<Promise<unknown>>(Promise.resolve());
+  const tmpSeq = useRef(0);
   const send = useCallback(async (txt: string) => {
     const c = stateRef.current.chats.find((x) => x.key === stateRef.current.curKey);
     if (!c || !boot) return;
-    const tmpId = 'tmp-' + Date.now();
+    const tmpId = `tmp-${Date.now()}-${++tmpSeq.current}`;
     const at = new Date().toISOString();
     const rp = replyRef.current && !replyRef.current.id.startsWith('tmp-') ? replyRef.current.id : null;
     replyRef.current = null; setReply(null);
     const m: Msg = { id: tmpId, t: txt, at, h: hm(), me: true, from: null, r: [], mine: [], pending: true, rp };
     patchChat(c.key, (x) => ({ ...x, m: [...x.m, m], last: { t: txt, at, me: true, from: meId } }));
     setChats((cs) => { const a = [...cs]; D.sortChats(a); return a; });
+    // One insert at a time, in the order the person tapped "send": parallel requests could reach
+    // the server out of order and the conversation would be shuffled after a reload.
+    const job = sendChain.current.catch(() => undefined).then(() => D.sendMessage(c, meId, boot.companyId, txt, rp));
+    sendChain.current = job.then(() => undefined, () => undefined);
     try {
-      const r = await D.sendMessage(c, meId, boot.companyId, txt, rp);
-      patchChat(c.key, (x) => ({ ...x, m: x.m.map((y) => (y.id === tmpId ? { ...y, id: r.id, at: r.at, pending: false } : y)) }));
+      const r = await job;
+      patchChat(c.key, (x) => ({ ...x, m: D.orderMsgs(x.m.map((y) => (y.id === tmpId ? { ...y, id: r.id, at: r.at, pending: false } : y))) }));
     } catch (e) {
       console.warn(e);
       patchChat(c.key, (x) => ({ ...x, m: x.m.filter((y) => y.id !== tmpId) }));
@@ -732,7 +738,7 @@ export default function EwwonApp() {
         const m = { ...D.toMsg({ id: row.id, from, t: row.content, at: row.created_at }, meId), rp: row.reply_to_id || null };
         const isOpen = ro && ck === key && !document.hidden;
         setChats((all) => {
-          const a = all.map((x) => (x.key === key ? { ...x, m: x.loaded && !x.m.some((y) => y.id === m.id) ? [...x.m, m] : x.m, u: isOpen ? 0 : Math.min(99, x.u + 1), last: { t: m.t, at: m.at, me: false, from } } : x));
+          const a = all.map((x) => (x.key === key ? { ...x, m: x.loaded && !x.m.some((y) => y.id === m.id) ? D.orderMsgs([...x.m, m]) : x.m, u: isOpen ? 0 : Math.min(99, x.u + 1), last: { t: m.t, at: m.at, me: false, from } } : x));
           D.sortChats(a);
           return a;
         });
@@ -1350,7 +1356,7 @@ function statusOf(v: string | null | undefined, fallback: StatusKey): StatusKey 
 
 function mergeMsgs(loaded: Msg[], local: Msg[]): Msg[] {
   const ids = new Set(loaded.map((m) => m.id));
-  return [...loaded, ...local.filter((m) => !ids.has(m.id))];
+  return D.orderMsgs([...loaded, ...local.filter((m) => !ids.has(m.id))]);
 }
 
 export function pageTitle(p: PageSpec): string {

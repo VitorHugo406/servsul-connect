@@ -80,3 +80,7 @@
 - No PC, as conversas individuais e de grupo mostram a citação (o setor já mostrava).
 - Caixa de texto do chat (e do chat de chamados) virou `textarea`: o teclado/Chrome deixa de oferecer senhas e logins salvos (eles só aparecem em campos `input`, e `autocomplete="off"` é ignorado pelo Chrome). Cresce até ~5 linhas.
 - Ao abrir uma conversa, ela fica presa no final enquanto fotos, figurinhas e prévias de link terminam de carregar (para de seguir assim que a pessoa rola para cima).
+
+## Ordem das mensagens (09/11/2026)
+- Problema: mensagens fora da ordem de envio. Causas: (1) no app, envios rápidos (texto + figurinha, várias seguidas) saíam em paralelo e podiam chegar ao servidor fora de ordem; (2) mensagens recebidas em tempo real e as que já estavam na tela ao recarregar a conversa eram só "coladas no fim", sem ordenar pelo horário.
+- Decisão: o app envia uma mensagem por vez, na ordem em que a pessoa tocou em enviar; a conversa é sempre ordenada pelo horário do servidor (`orderMsgs`, estável para horários iguais), com as mensagens ainda "enviando" por último. No PC, mensagens que chegam em tempo real também entram na posição certa (`src/lib/messageOrder.ts`).
