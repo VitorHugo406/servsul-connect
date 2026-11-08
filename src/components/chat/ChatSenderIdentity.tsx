@@ -1,6 +1,9 @@
+import { CosmicBlob } from '@/components/common/CosmicBlob';
+import { isSystemAvatar, isSystemSender } from '@/lib/systemSender';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-export function ChatSenderAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
+export function ChatSenderAvatar({ name, avatarUrl, id }: { name: string; avatarUrl?: string | null; id?: string | null }) {
+  if (isSystemSender(id) || isSystemAvatar(avatarUrl)) return <CosmicBlob size={36} className="shrink-0" />;
   return <Avatar className="h-8 w-8 shrink-0 sm:h-9 sm:w-9"><AvatarImage src={avatarUrl || ''} alt={name} /><AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">{name.split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase()}</AvatarFallback></Avatar>;
 }
 

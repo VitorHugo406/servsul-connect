@@ -1,5 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// "Comunicados": the system sender of every automation (migration 20261109030000_system_sender).
+const SYSTEM_SENDER_ID = '00000000-0000-0000-0000-0000000000c1';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -48,7 +51,7 @@ Deno.serve(async (req) => {
         .eq('id', summary.id).or(`last_sent_on.is.null,last_sent_on.lt.${today}`).select('id');
       if (!claimed?.length) continue;
 
-      // Get the admin profile (sender)
+      // The summary is posted by "Comunicados" (system sender); the creator must still exist.
       const { data: adminProfile } = await admin
         .from('profiles')
         .select('id, name, display_name')
@@ -287,14 +290,14 @@ Deno.serve(async (req) => {
       if (summary.target_type === 'group') {
         const { error: insErr } = await admin.from('private_group_messages').insert({
           group_id: summary.target_id,
-          sender_id: adminProfile.id,
+          sender_id: SYSTEM_SENDER_ID,
           content: messageContent,
         });
         if (insErr) console.error('summary group insert error', insErr); else sent++;
       } else if (summary.target_type === 'sector') {
         const { error: insErr } = await admin.from('messages').insert({
           sector_id: summary.target_id,
-          author_id: adminProfile.id,
+          author_id: SYSTEM_SENDER_ID,
           content: messageContent,
           company_id: summary.company_id,
         });

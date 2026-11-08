@@ -84,3 +84,18 @@
 ## Ordem das mensagens (09/11/2026)
 - Problema: mensagens fora da ordem de envio. Causas: (1) no app, envios rápidos (texto + figurinha, várias seguidas) saíam em paralelo e podiam chegar ao servidor fora de ordem; (2) mensagens recebidas em tempo real e as que já estavam na tela ao recarregar a conversa eram só "coladas no fim", sem ordenar pelo horário.
 - Decisão: o app envia uma mensagem por vez, na ordem em que a pessoa tocou em enviar; a conversa é sempre ordenada pelo horário do servidor (`orderMsgs`, estável para horários iguais), com as mensagens ainda "enviando" por último. No PC, mensagens que chegam em tempo real também entram na posição certa (`src/lib/messageOrder.ts`).
+
+## Remetente "Comunicados" (09/11/2026)
+- Automações (resumo diário de grupos/setores, boas-vindas de grupo) e o feedback mensal no chat deixam de sair em nome do admin de cada empresa: saem de um único remetente de sistema, "Comunicados" (perfil fixo `00000000-0000-0000-0000-0000000000c1`, migration `20261109030000_system_sender.sql`).
+- É um perfil real (as mensagens apontam para perfis) com login inutilizável: senha aleatória que ninguém conhece e bloqueado para sempre. Fica na empresa Admin, inativo e com `profile_type = 'system'`, por isso não aparece em listas de pessoas.
+- Todas as empresas veem o nome/foto dele (policy só para esse perfil). Ninguém consegue mandar mensagem para ele (policy restritiva em `direct_messages`); só o super admin pode editá-lo.
+- Boas-vindas agora pela RPC `post_group_welcome` (admin do grupo, mesma empresa, só se a automação estiver ligada).
+- O feedback mensal grava a empresa de quem recebe na mensagem (o remetente é global).
+- Visual: bolha cósmica animada em CSS (`CosmicBlob`), clara (branco/perolado) no tema claro e azul escura no tema escuro. Nos grupos/setores substitui a foto; no PV aparece grande no centro e a caixa de texto vira "Este canal só envia comunicados".
+
+## Assinaturas: base para pagamento (09/11/2026)
+- Migration `20261109050000_subscriptions.sql`: `subscription_plans` (Essencial R$ 89 / 10 usuários / 3 setores / 2 GB; Profissional R$ 219 / 30 / 7 / 10 GB; Empresarial R$ 599 / 100 / 15 / 30 GB, com as funcionalidades da tabela da página inicial), `company_subscriptions` (plano, situação, acessos gratuitos, teste, ids do provedor de pagamento) e `subscription_events` (histórico).
+- Só o super admin cria/altera planos e assinaturas (RLS); cada empresa só lê a própria. A empresa Admin (sistema) é sempre "isenta": um trigger força isso mesmo que alguém tente mudar.
+- Empresas novas nascem "aguardando" plano; as que já existiam ficaram no Empresarial "gratuita" para não perder nada até o super admin definir o plano.
+- Ainda não bloqueia nada: `company_has_feature()` e `company_seat_limit()` (plano + acessos gratuitos) ficam prontos para as telas usarem quando a cobrança começar. O provedor de pagamento ainda não foi escolhido.
+- Tela: PC > Empresas > (empresa) > aba "Plano".

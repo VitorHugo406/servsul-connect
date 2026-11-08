@@ -2,6 +2,7 @@
 // (profiles, sectors, messages, direct_messages, private_groups, announcements,
 // tasks, meeting_bookings) plus the tables added for the mobile app
 // (chat_member_prefs, user_preferences, support_tickets, chat_reactions, push_devices).
+import { SYSTEM_SENDER_ID, SYSTEM_SENDER_NAME } from '@/lib/systemSender';
 import { supabase as typedSupabase } from '@/integrations/supabase/client';
 import { optimizeImageFile } from '@/lib/imageOptimization';
 import {
@@ -23,6 +24,8 @@ export interface Person {
   id: string; userId: string; n: string; i: string; hue: number; role: string; dept: string; sectorId: string | null;
   st: StatusKey; h: [string, string]; days: number[]; mail: string; bio: string; since: string;
   photo: string | null; cover: string | null; birth: string | null; me?: boolean;
+  /** The "Comunicados" system sender: animated avatar, no profile page, read-only DM. */
+  sys?: boolean;
 }
 export interface Msg { id: string; t: string; at: string; h: string; me: boolean; from: string | null; r: string[]; mine: string[]; pending?: boolean; rd?: boolean; rp?: string | null; rq?: { from: string | null; t: string } | null }
 export interface ChatSet { pin: boolean; mute: boolean; muteUntil: number; muteDur: number; fs: number; ff: number; col: number; wall: number }
@@ -201,6 +204,10 @@ export async function bootstrap(opts: {
     });
   }
 
+  // "Comunicados" (system sender) joins the map only now, so it never counts as a colleague
+  // or a sector member; screens that list people skip `sys`.
+  people[SYSTEM_SENDER_ID] = SYSTEM_PERSON;
+
   // direct chats (one per partner that already has messages)
   const dmByPartner = new Map<string, { last: Row; u: number }>();
   for (const m of dmR.data || []) {
@@ -264,6 +271,12 @@ export async function bootstrap(opts: {
     sectorsCount: sectors.length, supportStaff: staffR?.data === true,
   };
 }
+
+export const SYSTEM_PERSON: Person = {
+  id: SYSTEM_SENDER_ID, userId: '', n: SYSTEM_SENDER_NAME, i: 'C', hue: 230, role: 'Comunicados automáticos', dept: 'ewvon', sectorId: null,
+  st: 'disp', h: ['00:00', '23:59'], days: [1, 1, 1, 1, 1, 1, 1], mail: '', bio: 'Resumos, boas-vindas e feedback mensal. Este canal só envia comunicados.',
+  since: '', photo: null, cover: null, birth: null, sys: true,
+};
 
 export function makeDm(p: Person, last: Row | null, u: number, meId: string, prefRow: Row | null): Chat {
   return {
@@ -579,9 +592,9 @@ export async function updateGroup(chat: Chat, patch: { name: string; description
 export async function addGroupMember(chat: Chat, person: Person, meId: string, welcome: boolean) {
   const r = await sb.from('private_group_members').insert({ group_id: chat.id, user_id: person.userId, profile_id: person.id, role: 'member' });
   if (r.error) throw r.error;
-  if (welcome) {
-    await sb.from('private_group_messages').insert({ group_id: chat.id, sender_id: meId, content: `Boas-vindas, ${person.n.split(' ')[0]}! 👋` });
-  }
+  // Welcome message is sent by "Comunicados" (server side checks the group's automation switch).
+  if (welcome) await Promise.resolve(sb.rpc('post_group_welcome', { _group_id: chat.id, _profile_id: person.id })).catch(() => undefined);
+  void meId;
 }
 
 export async function removeGroupMember(chat: Chat, personId: string) {

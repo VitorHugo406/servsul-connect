@@ -7,7 +7,7 @@ import { Seg } from './EwwonApp';
 import { I } from './icons';
 
 export function TasksSheet({ mode: initial, meId, people, toast, post, close }: {
-  mode: 0 | 1; meId: string; people: Record<string, { id: string; n: string }>;
+  mode: 0 | 1; meId: string; people: Record<string, { id: string; n: string; sys?: boolean }>;
   toast: (t: string) => void; post: (text: string) => void; close: () => void;
 }) {
   const [mode, setMode] = useState<number>(initial);
@@ -93,7 +93,7 @@ export function TasksSheet({ mode: initial, meId, people, toast, post, close }: 
               <select className="fld" value={who} onChange={(e) => setWho(e.target.value)}>
                 <option value="">Ninguém</option>
                 <option value={meId}>Eu</option>
-                {Object.values(people).filter((p) => p.id !== meId).map((p) => <option key={p.id} value={p.id}>{p.n}</option>)}
+                {Object.values(people).filter((p) => p.id !== meId && !p.sys).map((p) => <option key={p.id} value={p.id}>{p.n}</option>)}
               </select>
             </label>
           </div>

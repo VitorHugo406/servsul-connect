@@ -2,6 +2,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { sendMail, mailerConfigured, esc } from '../_shared/mailer.ts'
 import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1'
 
+// "Comunicados": system sender of automations (migration 20261109030000_system_sender).
+const SYSTEM_SENDER_ID = '00000000-0000-0000-0000-0000000000c1'
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -382,7 +385,7 @@ Deno.serve(async (req) => {
         .from('profiles')
         .select('id, user_id, name, display_name, email, company_id')
         .eq('is_active', true)
-        .neq('profile_type', 'bot')
+        .not('profile_type', 'in', '(bot,system)')
       if (adminCompanyId) q = q.eq('company_id', adminCompanyId)
       const { data } = await q
       targetProfiles = data || []
@@ -403,26 +406,9 @@ Deno.serve(async (req) => {
     const { startIso: startOfMonth, endIso: endOfMonth, monthLabel: currentMonth } = getPreviousMonthRangeSaoPaulo(brNow)
     const referenceMonthEnd = new Date(endOfMonth)
 
-    // Resolve a sender profile per company (admin of the recipient's company)
-    const senderByCompany = new Map<string, string>()
-    const resolveSender = async (companyId: string | null): Promise<string | null> => {
-      if (defaultSenderProfileId && !isCron) return defaultSenderProfileId
-      if (!companyId) return defaultSenderProfileId
-      if (senderByCompany.has(companyId)) return senderByCompany.get(companyId)!
-      const { data: admins } = await supabase
-        .from('profiles')
-        .select('id, user_id')
-        .eq('company_id', companyId)
-        .eq('is_active', true)
-      let chosen: string | null = null
-      for (const candidate of admins || []) {
-        const { data: role } = await supabase.from('user_roles').select('role').eq('user_id', candidate.user_id).in('role', ['admin', 'super_admin']).maybeSingle()
-        if (role) { chosen = candidate.id; break }
-      }
-      if (!chosen) chosen = admins?.[0]?.id ?? defaultSenderProfileId
-      if (chosen) senderByCompany.set(companyId, chosen)
-      return chosen
-    }
+    // The monthly feedback DM is sent by "Comunicados" (one system sender for every company,
+    // migration 20261109030000_system_sender), never by the company's admin.
+    const resolveSender = async (_companyId: string | null): Promise<string | null> => SYSTEM_SENDER_ID
 
     // Idempotency: on cron runs, skip anyone that already received the feedback
     // message for the reference month.
@@ -516,6 +502,8 @@ Deno.serve(async (req) => {
             sender_id: senderProfileId,
             receiver_id: profile.id,
             content: chatMessage,
+            // The conversation belongs to the recipient's company (the sender is global).
+            ...(profile.company_id ? { company_id: profile.company_id } : {}),
           })
           if (dmError) {
             console.error(`DM error for ${profile.name}:`, dmError)

@@ -316,7 +316,7 @@ function SupportPage({ api }: { api: EwApi }) {
   const contact = (
     <>
       <div className="sl">Contato direto</div>
-      {admin ? null : <div className="opt" onClick={() => { const a = Object.values(api.people).find((p) => p.role === 'Administrador' && !p.me); if (a) api.openDm(a.id); else api.toast('Nenhum administrador disponível'); }}><div>Falar com o administrador<small>Abre uma conversa direta</small></div><Chev /></div>}
+      {admin ? null : <div className="opt" onClick={() => { const a = Object.values(api.people).find((p) => p.role === 'Administrador' && !p.me && !p.sys); if (a) api.openDm(a.id); else api.toast('Nenhum administrador disponível'); }}><div>Falar com o administrador<small>Abre uma conversa direta</small></div><Chev /></div>}
       <div className="opt" onClick={() => api.toast('Abra o menu e toque em Ver tutorial para rever o guia')}><div>Central de ajuda<small>Guias e perguntas frequentes</small></div><Chev /></div>
     </>
   );

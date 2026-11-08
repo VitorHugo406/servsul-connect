@@ -5,6 +5,8 @@ import { fmtDuration, sendVoice, watchKeyRequests } from '@/lib/e2e';
 import { PermissionGate, needsPermissionGate } from './permgate';
 import { StickerPicker, StickerMessage } from '@/components/common/Stickers';
 import { addFavorite, isSticker, parseSticker, stickerContent } from '@/lib/stickers';
+import { isSystemSender } from '@/lib/systemSender';
+import { CosmicBlob } from '@/components/common/CosmicBlob';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -28,7 +30,8 @@ const gr = (h: number) => `hsl(${h} 30% 30%)`;
 export const avStyle = (p: { photo: string | null; hue: number }) => (p.photo ? { background: `url("${p.photo}") center/cover` } : { background: gr(p.hue) });
 export const covStyle = (p: { cover: string | null; hue: number }) => (p.cover ? { background: `url("${p.cover}") center/cover` } : { background: `hsl(${p.hue} 32% 24%)` });
 
-export function Av({ p, cls = '', onClick, st }: { p: { id?: string; photo: string | null; hue: number; i: string }; cls?: string; onClick?: (e: React.MouseEvent) => void; st?: StatusKey | null }) {
+export function Av({ p, cls = '', onClick, st }: { p: { id?: string; photo: string | null; hue: number; i: string; sys?: boolean }; cls?: string; onClick?: (e: React.MouseEvent) => void; st?: StatusKey | null }) {
+  if (p.sys || isSystemSender(p.id)) return <div className={`av ewx-sysav${cls ? ' ' + cls : ''}`} data-p={p.id || ''}><CosmicBlob size={48} /></div>;
   return (
     <div className={`av${st ? ' on' : ''}${cls ? ' ' + cls : ''}`} data-p={p.id || ''} onClick={onClick}
       style={{ ...avStyle(p), ['--sc' as string]: st ? ST[st][1] : '#46d37b' }}>
@@ -942,7 +945,8 @@ export default function EwwonApp() {
   const pinL = filtered.filter((c) => c.set.pin), restL = filtered.filter((c) => !c.set.pin);
   const DDL = { all: 'Todas', un: 'Não lidas', set: 'Setores e grupos', p: 'Pessoas' } as const;
 
-  const stt = (c: Chat) => (c.p ? ST[P[c.p]?.st || 'disp'][0] : `${c.mem.length} membros · ${c.mem.filter((id) => P[id] && P[id].st !== 'fora').length} presentes`);
+  const curSys = !!cur?.p && isSystemSender(cur.p);
+  const stt = (c: Chat) => (c.p && isSystemSender(c.p) ? 'Somente comunicados' : c.p ? ST[P[c.p]?.st || 'disp'][0] : `${c.mem.length} membros · ${c.mem.filter((id) => P[id] && P[id].st !== 'fora').length} presentes`);
 
   const row = (c: Chat) => {
     const l = c.last;
@@ -954,7 +958,7 @@ export default function EwwonApp() {
         onTouchStart={() => { ctHold.current.fired = false; ctHold.current.t = window.setTimeout(() => { ctHold.current.fired = true; N.haptic('light'); setCtMenu(c); }, 480); }}
         onTouchMove={() => window.clearTimeout(ctHold.current.t)} onTouchEnd={() => window.clearTimeout(ctHold.current.t)}
         onContextMenu={(e) => { e.preventDefault(); setCtMenu(c); }}>
-        <Av p={e || { id: '', photo: c.photo, hue: c.hue, i: c.i }} st={e ? e.st : null} onClick={e ? (ev) => { ev.stopPropagation(); pgShow({ kind: 'profile', id: e.id }); } : undefined} />
+        <Av p={e || { id: '', photo: c.photo, hue: c.hue, i: c.i }} st={e ? e.st : null} onClick={e && !e.sys ? (ev) => { ev.stopPropagation(); pgShow({ kind: 'profile', id: e.id }); } : undefined} />
         <div className="mid">
           <div className="l1"><b>{c.n}</b><span className="tmx">{l ? fmtTime(l.at) : ''}</span></div>
           <div className="l2">{typingMap[c.key] ? <p className="ewx-typing-tx">{c.kind === 'dm' ? 'digitando...' : `${typingMap[c.key].map((n) => n.split(' ')[0]).join(', ')} ${typingMap[c.key].length > 1 ? 'estão digitando...' : 'está digitando...'}`}</p> : <p>{pre}{l ? previewText(D.plainText(l.t)) : <i style={{ opacity: 0.6 }}>Sem mensagens</i>}</p>}{isMuted(c) ? <I n="mute" className="pin" /> : null}{c.u ? <span className="un">{c.u}</span> : c.set.pin ? <I n="pin" className="pin" /> : null}</div>
@@ -992,7 +996,7 @@ export default function EwwonApp() {
           <h2 id="pnm">{me.n}</h2>
           <div className="u" id="phd">{me.mail ? me.mail.split('@')[0] : ''} · {me.role}</div>
           <button className="stp lq" id="stp" style={{ ['--sc' as string]: ST[me.st][1] }} onClick={() => gsOpen({ kind: 'status' })}><i /><span id="stl">{ST[me.st][0]}</span><I n="chevD" /></button>
-          <div className="stats"><div><b>{boot.sectorsCount}</b>setores</div><div><b>{Math.max(0, Object.keys(P).length - 1)}</b>colegas</div></div>
+          <div className="stats"><div><b>{boot.sectorsCount}</b>setores</div><div><b>{Math.max(0, Object.values(P).filter((p) => !p.sys).length - 1)}</b>colegas</div></div>
           <button className="mi" id="mp" onClick={() => { setOpen(false); window.setTimeout(() => pgShow({ kind: 'profile', id: meId }), 260); }}><I n="user" />Meu perfil</button>
           <button className="mi" onClick={() => setPrefs({ ...prefs, nm: prefs.nm ? 0 : 1 })}><I n="bell" />Notificações<span className={'sw' + (prefs.nm ? ' on' : '')} /></button>
           <button className="mi" onClick={() => setPrefs({ ...prefs, snd: prefs.snd ? 0 : 1 })}><I n="sound" />Som das mensagens<span className={'sw' + (prefs.snd ? ' on' : '')} /></button>
@@ -1168,8 +1172,8 @@ export default function EwwonApp() {
           <div id="room" className={(roomOn ? 'on' : '') + (cur && (cur.wp || cur.set.wall) ? ' ewx-wp' : '')} style={roomStyle}>
             <div className="rh">
               <button id="back" aria-label="Voltar" onClick={closeRoom}><I n="chevL" /></button>
-              {cur ? <div className={'av' + (cur.p ? ' on' : '')} id="rav" style={{ ...avStyle(cur.p ? P[cur.p] : cur), ['--sc' as string]: cur.p ? ST[P[cur.p]?.st || 'disp'][1] : '#46d37b' }} onClick={() => (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}>{(cur.p ? P[cur.p]?.photo : cur.photo) ? '' : cur.i}</div> : <div className="av" id="rav" />}
-              <div className="rt" onClick={() => cur && (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}><b id="rn">{cur?.n}</b><small id="rs" className={typing && cur && typing.key === cur.key ? 'ewx-typing-tx' : undefined}>{typing && cur && typing.key === cur.key ? (cur.kind === 'dm' ? 'Digitando...' : `${typing.names.map((n) => n.split(' ')[0]).join(', ')} ${typing.names.length > 1 ? 'estão digitando...' : 'está digitando...'}`) : cur ? stt(cur) : ''}</small></div>
+              {cur && curSys ? <div className="av ewx-sysav" id="rav"><CosmicBlob size={38} /></div> : cur ? <div className={'av' + (cur.p ? ' on' : '')} id="rav" style={{ ...avStyle(cur.p ? P[cur.p] : cur), ['--sc' as string]: cur.p ? ST[P[cur.p]?.st || 'disp'][1] : '#46d37b' }} onClick={() => (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}>{(cur.p ? P[cur.p]?.photo : cur.photo) ? '' : cur.i}</div> : <div className="av" id="rav" />}
+              <div className="rt" onClick={() => cur && !curSys && (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}><b id="rn">{cur?.n}</b><small id="rs" className={typing && cur && typing.key === cur.key ? 'ewx-typing-tx' : undefined}>{typing && cur && typing.key === cur.key ? (cur.kind === 'dm' ? 'Digitando...' : `${typing.names.map((n) => n.split(' ')[0]).join(', ')} ${typing.names.length > 1 ? 'estão digitando...' : 'está digitando...'}`) : cur ? stt(cur) : ''}</small></div>
               <button className="lq" id="gear" aria-label="Mais opções" onClick={(e) => { e.stopPropagation(); setDots((v) => !v); }}><I n="dots" /></button>
             </div>
               {dots ? (
@@ -1189,6 +1193,7 @@ export default function EwwonApp() {
               </div>
             ) : null}
             {dayFloat ? <div className="ewx-dfloat">{dayFloat}</div> : null}
+            {curSys ? <div className="ewx-sysbg" aria-hidden="true"><CosmicBlob size={200} /></div> : null}
             <div id="msgs" ref={msgsRef} style={msgsVars} onClick={() => { setPickFor(null); setDots(false); }} onScroll={onMsgsScroll}>
               <div className="hint">Segure ou toque 2x numa mensagem para reagir</div>
               {cur && !cur.loaded && !cur.m.length ? (
@@ -1207,7 +1212,7 @@ export default function EwwonApp() {
                   if (t === undefined) return { id: m.rp, n: '', t: 'Mensagem original indisponível' };
                   return { id: m.rp, n: from === meId ? 'Você' : (from && P[from]?.n) || 'Alguém', t };
                 };
-                const bubble = (m: Msg, cont = false) => <Bubble key={m.id} m={m} quote={quoteOf(m)} onQuote={jumpToMsg} onReply={() => startReply(m)} read={m.me && (!!m.rd || (cur.kind === 'group' && !!groupWm && new Date(m.at).getTime() <= groupWm))} sender={m.from ? P[m.from] : null} group={cur.g && !cont} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} onImage={(src, url, name, caption) => setViewer({ src, url, name, caption })} />;
+                const bubble = (m: Msg, cont = false) => <Bubble key={m.id} m={m} quote={quoteOf(m)} onQuote={jumpToMsg} onReply={curSys ? undefined : () => startReply(m)} read={m.me && (!!m.rd || (cur.kind === 'group' && !!groupWm && new Date(m.at).getTime() <= groupWm))} sender={m.from ? P[m.from] : null} group={cur.g && !cont} picking={pickFor === m.id} onPick={() => setPickFor(m.id)} onReact={(x, wrap) => toggleReaction(m, x, wrap)} onProfile={(id) => pgShow({ kind: 'profile', id })} onImage={(src, url, name, caption) => setViewer({ src, url, name, caption })} />;
                 const out: JSX.Element[] = [];
                 const ms = cur.m;
                 for (let idx = 0; idx < ms.length; idx++) {
@@ -1257,6 +1262,7 @@ export default function EwwonApp() {
               </div>
             ) : null}
             {(() => {
+              if (curSys) return <div className="ewx-ro"><CosmicBlob size={22} />Este canal só envia comunicados. Não é possível responder.</div>;
               const recOn = voiceRec.recording || !!recUi;
               const lockMode = recUi?.mode === 'lock' || (voiceRec.recording && !recUi);
               const micMode = !draft.trim() && !pending.length && !sending;
@@ -1313,7 +1319,7 @@ export default function EwwonApp() {
           <div className="ewx-ctm-bg" onClick={() => setCtMenu(null)}>
             <div className="ewx-ctm" onClick={(e) => e.stopPropagation()}>
               <div className="ewx-ctm-h"><Av p={ctMenu.p ? P[ctMenu.p] : { id: '', photo: ctMenu.photo, hue: ctMenu.hue, i: ctMenu.i }} st={null} /><div><b>{ctMenu.n}</b><small>{ctMenu.kind === 'dm' ? 'Conversa' : ctMenu.kind === 'group' ? 'Grupo' : 'Setor'}</small></div></div>
-              <button onClick={() => { const c = ctMenu; setCtMenu(null); if (c.kind === 'dm' && c.p) pgShow({ kind: 'profile', id: c.p }); else { void openRoom(c.key); window.setTimeout(() => setSheetOn(true), 350); } }}><I n="info" />{ctMenu.kind === 'dm' ? 'Ver detalhes do contato' : ctMenu.kind === 'group' ? 'Ver detalhes do grupo' : 'Ver detalhes do setor'}</button>
+              <button onClick={() => { const c = ctMenu; setCtMenu(null); if (c.kind === 'dm' && c.p) { if (!isSystemSender(c.p)) pgShow({ kind: 'profile', id: c.p }); } else { void openRoom(c.key); window.setTimeout(() => setSheetOn(true), 350); } }}><I n="info" />{ctMenu.kind === 'dm' ? 'Ver detalhes do contato' : ctMenu.kind === 'group' ? 'Ver detalhes do grupo' : 'Ver detalhes do setor'}</button>
               <button onClick={() => { const c = ctMenu; setCtMenu(null); setChatSet(c, { pin: !c.set.pin }); setChats((cs) => { const a2 = [...cs]; D.sortChats(a2); return a2; }); toast(c.set.pin ? 'Conversa desafixada' : 'Conversa fixada no topo'); }}><I n="pin" />{ctMenu.set.pin ? 'Desafixar conversa' : 'Fixar conversa'}</button>
               {ctMenu.u ? <button onClick={() => { const c = ctMenu; setCtMenu(null); patchChat(c.key, (x) => ({ ...x, u: 0 })); void sv(D.markRead(c, meId)); }}><I n="check" />Marcar como lida</button> : null}
               <button className="ewx-ctm-x" onClick={() => setCtMenu(null)}>Cancelar</button>
@@ -1437,7 +1443,7 @@ function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage
   const [dx, setDx] = useState(0);
   const swStart = (e: React.TouchEvent) => { const t = e.touches[0]; sw.current = { x: t.clientX, y: t.clientY, dx: 0, on: false, dead: false }; };
   const swMove = (e: React.TouchEvent) => {
-    const g = sw.current; if (!g || g.dead) return;
+    const g = sw.current; if (!g || g.dead || !onReply) return;
     const t = e.touches[0]; const ddx = t.clientX - g.x, ddy = t.clientY - g.y;
     if (!g.on) { if (Math.abs(ddy) > 10 && Math.abs(ddy) > Math.abs(ddx)) { g.dead = true; return; } if (ddx > 12 && ddx > Math.abs(ddy) * 1.3) g.on = true; else return; }
     const v = Math.max(0, Math.min(72, ddx - 12));
@@ -1458,7 +1464,7 @@ function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage
       {dx ? <span className="ewx-sw-ic" style={{ opacity: Math.min(1, dx / 56), transform: `scale(${0.6 + Math.min(1, dx / 56) * 0.4})` }}><I n="reply" /></span> : null}
       {gm && sender ? (
         <>
-          <div className="gav" style={avStyle(sender)} onClick={() => onProfile(sender.id)}>{sender.photo ? '' : sender.i}</div>
+          {sender.sys ? <div className="gav ewx-sysav"><CosmicBlob size={30} /></div> : <div className="gav" style={avStyle(sender)} onClick={() => onProfile(sender.id)}>{sender.photo ? '' : sender.i}</div>}
           <div className="gb"><div className="sn">{sender.n}</div>{qb}{bub}{rx}{tmh}</div>
         </>
       ) : <>{qb}{bub}{rx}{tmh}</>}
@@ -1577,7 +1583,7 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
   if (spec.kind === 'add') {
     const c = api.cur;
     if (!c) return null;
-    const restP = Object.values(P).filter((p) => !c.mem.includes(p.id) && p.n.toLowerCase().includes(qq.toLowerCase()));
+    const restP = Object.values(P).filter((p) => !p.sys && !c.mem.includes(p.id) && p.n.toLowerCase().includes(qq.toLowerCase()));
     return (
       <>
         <div className="gp" />
@@ -1597,7 +1603,7 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
     );
   }
   if (spec.kind === 'newchat') {
-    const list = Object.values(P).filter((p) => !p.me && p.n.toLowerCase().includes(qq.toLowerCase()));
+    const list = Object.values(P).filter((p) => !p.me && !p.sys && p.n.toLowerCase().includes(qq.toLowerCase()));
     return (
       <>
         <div className="gp" />
@@ -1617,7 +1623,7 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
     );
   }
   if (spec.kind === 'newgroup') {
-    const list = Object.values(P).filter((p) => !p.me && p.n.toLowerCase().includes(qq.toLowerCase()));
+    const list = Object.values(P).filter((p) => !p.me && !p.sys && p.n.toLowerCase().includes(qq.toLowerCase()));
     return (
       <>
         <div className="gp" />

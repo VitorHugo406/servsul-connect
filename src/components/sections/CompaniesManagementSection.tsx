@@ -49,6 +49,8 @@ import { toast } from 'sonner';
 import { getCompanyLogoPath } from '@/lib/companyLogo';
 import { optimizeImageFile } from '@/lib/imageOptimization';
 import { CompanyLogo } from '@/components/common/CompanyLogo';
+import { CompanyPlanPanel } from '@/components/companies/CompanyPlanPanel';
+import { CreditCard } from 'lucide-react';
 
 interface CompanyStats {
   id: string;
@@ -426,10 +428,11 @@ export function CompaniesManagementSection() {
               </DialogHeader>
 
               <Tabs defaultValue="branding" className="mt-2">
-                <TabsList className="grid grid-cols-3 w-full">
+                <TabsList className="grid grid-cols-4 w-full">
                   <TabsTrigger value="branding"><Palette className="w-4 h-4 mr-1.5" /> Marca</TabsTrigger>
                   <TabsTrigger value="modules"><ShieldCheck className="w-4 h-4 mr-1.5" /> Módulos</TabsTrigger>
                   <TabsTrigger value="users"><Users className="w-4 h-4 mr-1.5" /> Usuários</TabsTrigger>
+                  <TabsTrigger value="plan"><CreditCard className="w-4 h-4 mr-1.5" /> Plano</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="branding" className="space-y-4 pt-4">
@@ -538,6 +541,10 @@ export function CompaniesManagementSection() {
                       })}
                     </div>
                   </div>
+                </TabsContent>
+
+                <TabsContent value="plan" className="pt-4">
+                  <CompanyPlanPanel companyId={selected.id} isSystem={selected.is_system} userCount={selected.active_users} />
                 </TabsContent>
 
                 <TabsContent value="users" className="pt-4">
