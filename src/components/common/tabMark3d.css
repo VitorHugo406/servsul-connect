@@ -1,10 +1,16 @@
-.tm3d { width: 48px; height: 48px; flex: none; display: grid; place-items: center; perspective: 420px; }
-.tm3d-s { position: relative; width: 30px; height: 30px; transform: rotateX(56deg) rotateZ(-45deg); transform-style: preserve-3d; transition: transform .45s cubic-bezier(.22,.9,.3,1); }
-.tm3d-p { position: absolute; inset: 0; border-radius: 8px; font-style: normal; }
-.tm3d-p3 { background: hsl(var(--foreground) / .10); transform: translateZ(0); }
-.tm3d-p2 { background: hsl(var(--foreground) / .24); transform: translateZ(6px); }
-.tm3d-p1 { display: grid; place-items: center; background: hsl(var(--foreground)); color: hsl(var(--background)); transform: translateZ(12px); box-shadow: inset 0 1px 0 hsl(var(--background) / .18); }
+/* 3D tab mark: three plates in perspective that stack in on load and then float gently. */
+.tm3d { width: 64px; height: 64px; flex: none; display: grid; place-items: center; perspective: 520px; }
+.tm3d-s { position: relative; width: 40px; height: 40px; transform: rotateX(56deg) rotateZ(-45deg); transform-style: preserve-3d; animation: tm3dFloat 6s ease-in-out 1s infinite; }
+.tm3d-p { position: absolute; inset: 0; border-radius: 10px; font-style: normal; animation: tm3dIn .9s cubic-bezier(.22,.9,.3,1) backwards; }
+.tm3d-p3 { background: hsl(var(--foreground) / .10); --z: 0px; transform: translateZ(var(--z)); animation-delay: 0s; }
+.tm3d-p2 { background: hsl(var(--foreground) / .24); --z: 8px; transform: translateZ(var(--z)); animation-delay: .08s; }
+.tm3d-p1 { display: grid; place-items: center; background: hsl(var(--foreground)); color: hsl(var(--background)); --z: 16px; transform: translateZ(var(--z)); animation-delay: .16s; box-shadow: inset 0 1px 0 hsl(var(--background) / .2); }
 .tm3d-i { display: grid; place-items: center; transform: rotate(45deg); }
-.tm3d-i svg { width: 15px; height: 15px; stroke-width: 2.2; }
-:is(.pro-page-header, .tm3d-host):hover .tm3d-s { transform: rotateX(56deg) rotateZ(-45deg) translateZ(3px); }
-@media (prefers-reduced-motion: reduce) { .tm3d-s { transition: none; } }
+.tm3d-i svg { width: 19px; height: 19px; stroke-width: 2.1; }
+@keyframes tm3dIn { from { transform: translateZ(calc(var(--z) + 26px)); opacity: 0; } to { transform: translateZ(var(--z)); opacity: 1; } }
+@keyframes tm3dFloat {
+  0%, 100% { transform: rotateX(56deg) rotateZ(-45deg) translateZ(0); }
+  50% { transform: rotateX(52deg) rotateZ(-37deg) translateZ(4px); }
+}
+:is(.pro-page-header, .tm3d-host):hover .tm3d-p1 { transform: translateZ(calc(var(--z) + 5px)); transition: transform .35s cubic-bezier(.22,.9,.3,1); }
+@media (prefers-reduced-motion: reduce) { .tm3d-s, .tm3d-p { animation: none; } }
