@@ -67,7 +67,7 @@ function Wizard() {
   const [planId, setPlanId] = useState(() => new URLSearchParams(window.location.search).get('plano') || '');
   const [company, setCompany] = useState({ name: '', primary: '#111827', secondary: '#6366f1' });
   const [logo, setLogo] = useState<{ data: string; type: string; preview: string } | null>(null);
-  const [adm, setAdm] = useState({ name: '', email: '', password: '', confirm: '' });
+  const [adm, setAdm] = useState({ name: '', email: '', password: '', confirm: '', payer: '' });
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -91,6 +91,7 @@ function Wizard() {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(adm.email.trim())) return 'Informe um e-mail válido.';
       const pe = passwordError(adm.password); if (pe) return pe;
       if (adm.password !== adm.confirm) return 'As senhas não coincidem.';
+      if (adm.payer.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(adm.payer.trim())) return 'Informe um e-mail válido para o pagador.';
       return '';
     }
     return accepted ? '' : 'Confirme que leu e concorda com a cobrança mensal.';
@@ -114,6 +115,7 @@ function Wizard() {
         plan_id: planId,
         company: { name: company.name.trim(), primary_color: company.primary, secondary_color: company.secondary, logo: logo ? { data: logo.data, type: logo.type } : null },
         admin: { name: adm.name.trim(), email: adm.email.trim(), password: adm.password },
+        payer_email: (adm.payer.trim() || adm.email.trim()),
       });
       safeSet(PENDING_KEY, JSON.stringify({ id: d.id, token: d.token }));
       setAdm((a) => ({ ...a, password: '', confirm: '' }));
@@ -204,13 +206,14 @@ function Wizard() {
               <div className="space-y-1.5"><Label htmlFor="ae">E-mail de acesso</Label><Input id="ae" type="email" maxLength={160} autoComplete="email" value={adm.email} onChange={(e) => setAdm({ ...adm, email: e.target.value })} /></div>
               <div className="space-y-1.5"><Label htmlFor="ap">Senha</Label><Input id="ap" type="password" maxLength={72} autoComplete="new-password" value={adm.password} onChange={(e) => setAdm({ ...adm, password: e.target.value })} /><PasswordChecklist value={adm.password} className="pt-1" /></div>
               <div className="space-y-1.5"><Label htmlFor="ac">Confirmar senha</Label><Input id="ac" type="password" maxLength={72} autoComplete="new-password" value={adm.confirm} onChange={(e) => setAdm({ ...adm, confirm: e.target.value })} /></div>
+              <div className="space-y-1.5 border-t border-border pt-4"><Label htmlFor="pe">E-mail da conta Mercado Pago que vai pagar</Label><Input id="pe" type="email" maxLength={160} placeholder={adm.email || 'mesmo e-mail do administrador'} value={adm.payer} onChange={(e) => setAdm({ ...adm, payer: e.target.value })} /><p className="text-[12px] text-muted-foreground">A assinatura fica na conta Mercado Pago deste e-mail. Deixe em branco para usar o e-mail do administrador.</p></div>
             </div>
           ) : null}
 
           {step === 3 && plan ? (
             <div className="space-y-4">
               <dl className="divide-y divide-border rounded-[10px] border border-border text-sm">
-                {[['Plano', `${plan.name} · ${brl(plan.price_cents)}/mês`], ['Empresa', company.name], ['Cores', `${company.primary} · ${company.secondary}`], ['Logo', logo ? 'Enviada' : 'Sem logo'], ['Administrador', `${adm.name} (${adm.email})`]].map(([k, v]) => (
+                {[['Plano', `${plan.name} · ${brl(plan.price_cents)}/mês`], ['Empresa', company.name], ['Cores', `${company.primary} · ${company.secondary}`], ['Logo', logo ? 'Enviada' : 'Sem logo'], ['Administrador', `${adm.name} (${adm.email})`], ['Pagador (Mercado Pago)', adm.payer.trim() || adm.email]].map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-4 px-4 py-3"><dt className="text-muted-foreground">{k}</dt><dd className="text-right font-medium">{v}</dd></div>
                 ))}
               </dl>

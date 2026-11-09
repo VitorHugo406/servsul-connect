@@ -229,10 +229,12 @@ Deno.serve(async (req) => {
       const adminName = clean(body.admin?.name, 80);
       const adminEmail = clean(body.admin?.email, 160).toLowerCase();
       const password = body.admin?.password;
+      const payerEmail = clean(body.payer_email || body.admin?.email, 160).toLowerCase();
       if (companyName.length < 2) return reply({ error: 'Informe o nome da empresa.' }, 400);
       if (!isHex(body.company?.primary_color) || !isHex(body.company?.secondary_color)) return reply({ error: 'Cores inválidas.' }, 400);
       if (adminName.length < 3) return reply({ error: 'Informe o nome do administrador.' }, 400);
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(adminEmail)) return reply({ error: 'Informe um e-mail válido.' }, 400);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(payerEmail)) return reply({ error: 'Informe o e-mail da conta Mercado Pago que fará o pagamento.' }, 400);
       const pe = passwordRuleError(password); if (pe) return reply({ error: pe }, 400);
       const { data: emailUsed } = await admin.from('profiles').select('id').ilike('email', adminEmail).limit(1);
       if (emailUsed?.length) return reply({ error: 'Este e-mail já tem uma conta no ewvon. Use outro e-mail para o administrador.' }, 409);
@@ -272,7 +274,7 @@ Deno.serve(async (req) => {
         const pre = await mp('/preapproval', { method: 'POST', body: JSON.stringify({
           reason: `ewvon · Plano ${plan.name} · ${companyName}`.slice(0, 120),
           external_reference: signup.id,
-          payer_email: adminEmail,
+          payer_email: payerEmail,
           back_url: `${SITE_URL}/assinar/retorno?s=${signup.id}&t=${token}`,
           auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: plan.price_cents / 100, currency_id: 'BRL' },
           status: 'pending',
@@ -282,7 +284,8 @@ Deno.serve(async (req) => {
       } catch (e) {
         console.error('preapproval', e, (e as any)?.mp);
         await admin.from('company_signups').update({ status: 'canceled', password_enc: null, error: String((e as Error).message).slice(0, 300) }).eq('id', signup.id);
-        return reply({ error: 'Não foi possível abrir o pagamento agora. Tente novamente em instantes.' }, 502);
+        const payerProblem = /payer|collector|email/i.test(String((e as Error).message));
+        return reply({ error: payerProblem ? 'O Mercado Pago não aceitou o e-mail do pagador. Use o e-mail da conta Mercado Pago que vai pagar a assinatura.' : 'Não foi possível abrir o pagamento agora. Tente novamente em instantes.' }, payerProblem ? 400 : 502);
       }
     }
 
