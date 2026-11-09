@@ -26,7 +26,7 @@ export const FEATURE_LABEL: Record<string, string> = {
   home: 'Início', chat: 'Chat', announcements: 'Avisos gerais', important_notices: 'Comunicados importantes', tasks: 'Tarefas e Kanban',
   notes: 'Anotações', themes: 'Personalização de temas', evaluations: 'Avaliações', birthdays: 'Aniversariantes', calendar: 'Calendário',
   meeting_rooms: 'Salas de reunião', shortcuts: 'Atalhos do sistema', metrics_dashboard: 'Dashboard de métricas', people_management: 'Gestão de Pessoas',
-  war_room: 'War Room', dashboard_3d: 'Dashboard 3D (em breve)', video_calls: 'Videochamadas (2.500 min/mês grátis)',
+  war_room: 'War Room', dashboard_3d: 'Dashboard 3D (em breve)', video_calls: 'Videochamadas (até 6 pessoas)',
 };
 const STATUS: { id: Status; label: string; hint: string }[] = [
   { id: 'pending', label: 'Aguardando', hint: 'Plano ainda não definido' },

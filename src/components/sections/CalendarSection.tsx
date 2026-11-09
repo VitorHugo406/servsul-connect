@@ -289,15 +289,8 @@ export function CalendarSection() {
         await supabase.from('meeting_participants').insert(selectedParticipants.map(pid => ({ event_id: eventId, profile_id: pid })));
       }
       if (meetingType === 'ewvor' && !editingEvent) {
-        // ewvon video call (Daily.co): private room; each person joins with their own token.
-        setSavingConference(true);
-        const { data: room, error: roomErr } = await supabase.functions.invoke('video/room', { body: { event_id: eventId } });
-        setSavingConference(false);
-        if (roomErr || !(room as any)?.ok) {
-          let msg = 'A reunião foi salva, mas a sala de vídeo não foi criada.';
-          try { const b = await (roomErr as any)?.context?.json?.(); if (b?.error) msg = `Reunião salva. ${b.error}`; } catch { /* ignore */ }
-          toast.warning(msg);
-        }
+        // ewvon's own call: the event itself is the call room.
+        await (supabase as any).from('calendar_events').update({ video_room: 'ewvon' }).eq('id', eventId);
       }
       toast.success(editingEvent ? 'Evento atualizado!' : meetingType === 'ewvor' ? 'Videochamada marcada!' : 'Evento criado!');
       resetForm(); setShowCreatePage(null); fetchEvents();
@@ -573,7 +566,7 @@ export function CalendarSection() {
                       <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
                         <MonitorPlay className="h-4 w-4 text-primary flex-shrink-0" />
                         <p className="text-xs text-muted-foreground">
-                          A sala de vídeo é criada ao salvar. Na hora da reunião, você e os participantes entram pelo botão “Entrar na chamada”, sem sair do ewvon.
+                          Na hora da reunião, você e os participantes entram pelo botão “Entrar na chamada”, sem sair do ewvon e sem custo por minuto.
                         </p>
                       </div>
                     </div>
@@ -818,7 +811,7 @@ export function CalendarSection() {
               </div>
             </button>
 
-            {/* Option 2: ewvon video call (Daily.co) — Empresarial plan */}
+            {/* Option 2: ewvon's own video call — Empresarial plan */}
             <button
               onClick={() => (videoAllowed ? openCreateMeeting(selectedDate, 'ewvor') : openVideoInfo())}
               className={`flex items-start gap-4 p-4 rounded-xl border-2 border-border transition-all text-left group ${videoAllowed ? 'hover:border-primary/50 hover:bg-primary/5' : 'opacity-70'}`}
@@ -965,7 +958,7 @@ export function CalendarSection() {
                               )}
                               {event.all_day && <Badge variant="secondary" className="text-[9px] h-4">Dia inteiro</Badge>}
                               {(event as any).video_room ? (
-                                <button type="button" onClick={e => { e.stopPropagation(); openVideoCall(event.id); }}
+                                <button type="button" onClick={e => { e.stopPropagation(); openVideoCall(event.id, event.title); }}
                                   className="inline-flex items-center gap-1 text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded px-2 py-0.5 transition-colors">
                                   <Video className="h-2.5 w-2.5" /> Entrar na chamada
                                 </button>

@@ -10,7 +10,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { FEATURE_LABEL } from '@/lib/planAccess';
 import { toast } from 'sonner';
 import { appConfirm } from '@/lib/appDialog';
-import { VideoBillingCard } from '@/components/video/VideoBillingCard';
 
 type PlanOption = { id: string; name: string; description: string | null; price_cents: number; annual_price_cents: number | null; max_users: number; max_sectors: number; storage_gb: number };
 type Payment = { id: string; kind: string; description: string | null; amount_cents: number; paid_at: string; status: string };
@@ -197,8 +196,6 @@ export function BillingSection() {
         <Meter icon={Building2} label="Setores (fora o Geral)" used={plan.usage.sectors} limit={plan.limits.sectors} />
         <Meter icon={HardDrive} label="Armazenamento" used={plan.usage.storage_bytes} limit={plan.limits.storage_bytes} fmt={fmtBytes} />
       </div>
-
-      {paidPlan ? <VideoBillingCard available={plan.features.includes('video_calls') || plan.features.includes('*')} /> : null}
 
       <Card><CardContent className="p-0">
         <div className="border-b border-border px-4 py-3"><p className="text-[15px] font-semibold">Histórico de pagamentos</p></div>

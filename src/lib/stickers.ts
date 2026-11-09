@@ -213,6 +213,7 @@ export function pushRecent(s: Sticker) {
 /** One-line chat preview shared by every conversation list (desktop and mobile). */
 export function chatPreview(content: string | null | undefined, max = 60): string {
   if (content?.startsWith('📹 ewvon-call:')) return '📹 Chamada de vídeo';
+  if (content?.startsWith('📞 ewvon-call:')) return '📞 Chamada de voz';
   const c = String(content || '').trim();
   if (!c) return '';
   if (isSticker(c)) return '✨ Figurinha';

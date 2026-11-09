@@ -146,7 +146,6 @@ function rpc(s: DemoSession, name: string, args: Row = {}) {
     }
     case 'get_profiles_registration': return { data: profiles.filter(p => (args._ids || []).includes(p.id)).map(p => ({ id: p.id, registration_number: p.registration_number ?? null })), error: null };
     case 'current_company_id': return { data: s.companyId, error: null };
-    case 'my_video_usage': return { data: { month: '', minutes: 0, free_minutes: 2500, price_per_minute: 0.045, overage_allowed: false, pending_cents: 0 }, error: null };
     case 'get_my_company_plan': return { data: { company_id: s.companyId, is_system: true, status: 'exempt', plan_id: null, plan_name: 'Demonstração', billing_cycle: 'monthly', current_period_end: null, has_auto_renewal: false, features: ['*'], price_cents: null, annual_price_cents: null, extra_users: 0, extra_storage_gb: 0, free_seats: 0, limits: { users: null, sectors: null, storage_bytes: null }, usage: { users: profiles.length, sectors: readTable('sectors').length, storage_bytes: 0 }, prices: null }, error: null };
     case 'is_admin': case 'is_super_admin': return { data: true, error: null };
     case 'is_support_staff': case 'can_manage_chat': return { data: true, error: null };

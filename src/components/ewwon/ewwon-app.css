@@ -641,3 +641,12 @@
 .ew .ewx-mirror .ewf-i { font-style: italic; font-synthesis: style; }
 .ew .ewx-mirror .ewf-s { text-decoration: line-through; }
 .ew .ewx-mirror .ewf-c { background: var(--c2); border-radius: 4px; box-shadow: 0 0 0 2px var(--c2); }
+
+/* Voice / video call buttons in the conversation header: one pill, same size as the menu button. */
+.ew .rh .rt { min-width: 0; }
+.ew .rh .rt b, .ew .rh .rt small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ew .ewx-callbtns { display: flex; align-items: center; flex: none; height: 38px; padding: 0 2px; border-radius: 19px; background: var(--c2); border: 1px solid var(--bd); }
+.ew .ewx-callbtns button { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: var(--tx); background: transparent; transition: background-color .2s ease; }
+.ew .ewx-callbtns button:active { background: var(--bd); }
+.ew .ewx-callbtns svg { width: 18px; height: 18px; }
+.ew .ewx-callbtns i { width: 1px; height: 16px; background: var(--bd); }
