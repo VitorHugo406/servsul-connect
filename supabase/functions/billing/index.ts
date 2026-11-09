@@ -146,7 +146,7 @@ async function provision(signupId: string, silent = false): Promise<{ ok: boolea
     const msg = e instanceof Error ? e.message : String(e);
     console.error('provision failed', s.id, msg);
     await admin.from('company_signups').update({ status: 'failed', error: msg.slice(0, 500), updated_at: new Date().toISOString() }).eq('id', s.id);
-    if ((s.attempts || 0) === 0 || (s.attempts || 0) >= 5) await notifySuperAdmin(`*Falha ao criar empresa paga*\n\nEmpresa: ${s.company_name}\nE-mail: ${s.admin_email}\nErro: ${msg}\n\nO sistema tenta de novo a cada hora.`);
+    if ((s.attempts || 0) === 0 || (s.attempts || 0) >= 5) await notifySuperAdmin(`*Falha ao criar empresa paga*\n\nEmpresa: ${s.company_name}\nE-mail: ${s.admin_email}\nErro: ${msg}\n\nO sistema tenta de novo automaticamente.`);
     return { ok: false, error: msg };
   }
 }

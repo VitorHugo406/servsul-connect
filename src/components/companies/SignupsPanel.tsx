@@ -33,7 +33,7 @@ export function SignupsPanel() {
     <Card>
       <CardContent className="p-0">
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-          <div><p className="text-[15px] font-semibold">Assinaturas pelo site</p><p className="text-[13px] text-muted-foreground">Empresas que assinaram em /assinar. A conferência com o Mercado Pago também roda sozinha a cada hora.</p></div>
+          <div><p className="text-[15px] font-semibold">Assinaturas pelo site</p><p className="text-[13px] text-muted-foreground">Empresas que assinaram em /assinar. A conferência com o Mercado Pago também roda sozinha a cada 5 minutos.</p></div>
           <Button variant="outline" size="sm" className="h-9 shrink-0" onClick={() => void reconcile()} disabled={busy}><RefreshCw className={'mr-2 h-4 w-4' + (busy ? ' animate-spin' : '')} />Conferir agora</Button>
         </div>
         {loading ? <p className="px-4 py-6 text-sm text-muted-foreground">Carregando…</p> : !rows.length ? <p className="px-4 py-6 text-sm text-muted-foreground">Nenhuma assinatura pelo site ainda.</p> : (
