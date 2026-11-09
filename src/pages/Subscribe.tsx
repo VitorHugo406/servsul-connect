@@ -47,10 +47,33 @@ const STEPS = [
   { id: 'review', label: 'Revisão', icon: ClipboardCheck },
 ] as const;
 
+// Public subscriptions open on 01/01/2027 (00:00 in São Paulo). Until then the page only works through
+// the hidden test link (?acesso=...), remembered for the browser tab so the checkout flow keeps working.
+const LAUNCH_AT = Date.parse('2027-01-01T03:00:00Z');
+const PRELAUNCH_KEY = 'xwx7g4hx14';
+function prelaunchAccess(): boolean {
+  if (Date.now() >= LAUNCH_AT) return true;
+  try {
+    if (new URLSearchParams(window.location.search).get('acesso') === PRELAUNCH_KEY) sessionStorage.setItem('ewvon:prelaunch', '1');
+    return sessionStorage.getItem('ewvon:prelaunch') === '1';
+  } catch { return new URLSearchParams(window.location.search).get('acesso') === PRELAUNCH_KEY; }
+}
+
 export default function Subscribe() {
   const location = useLocation();
   if (location.pathname.startsWith('/assinar/retorno')) return <Shell><ReturnView /></Shell>;
+  if (!prelaunchAccess()) return <Shell><ComingSoon /></Shell>;
   return <Shell><Wizard /></Shell>;
+}
+
+function ComingSoon() {
+  return (
+    <div className="mx-auto max-w-md py-16 text-center">
+      <h1 className="text-2xl font-semibold">Assinaturas a partir de 01/01/2027</h1>
+      <p className="mt-3 text-sm text-muted-foreground">Os planos do ewvon ficam disponíveis para assinatura a partir de 1º de janeiro de 2027. Até lá, você pode participar da fase de testes pela página inicial.</p>
+      <a href="/" className="mt-6 inline-flex h-10 items-center rounded-full bg-foreground px-5 text-sm font-medium text-background">Voltar ao início</a>
+    </div>
+  );
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
