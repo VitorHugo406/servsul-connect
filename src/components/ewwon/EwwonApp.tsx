@@ -25,7 +25,7 @@ import { runTour, type TourController } from './tour';
 import { EwwonPage, type PageSpec } from './pages';
 import { TicketsDesk } from './tickets';
 import { EwwonLoader } from '@/components/common/EwwonLoader';
-import { MsgBody, ImageViewer, previewText } from './msgbody';
+import { MsgBody, ImageViewer, previewText, ComposerMirror } from './msgbody';
 import { TasksSheet } from './tasksheet';
 import { appConfirm } from '@/lib/appDialog';
 
@@ -171,6 +171,9 @@ export default function EwwonApp() {
   const scrimRef = useRef<HTMLDivElement>(null);
   const msgsRef = useRef<HTMLDivElement>(null);
   const inpRef = useRef<HTMLTextAreaElement>(null);
+  // Live formatting preview: the textarea text is transparent and this mirror shows it styled.
+  const mirRef = useRef<HTMLDivElement>(null);
+  const syncMirror = useCallback(() => { requestAnimationFrame(() => { const t = inpRef.current, m = mirRef.current; if (t && m) m.scrollTop = t.scrollTop; }); }, []);
   useEffect(() => { fitTextarea(inpRef.current); }, [draft]);
   const fiRef = useRef<HTMLInputElement>(null);
   const hbRef = useRef<HTMLDivElement>(null);
@@ -1344,9 +1347,9 @@ export default function EwwonApp() {
                   ] : [
                     <button key="plus" className={'plus' + (attOn && attOn !== 'sticker' ? ' on' : '')} aria-label="Anexar" onClick={() => setAttOn(attOn && attOn !== 'sticker' ? false : 'menu')}><I n={attOn && attOn !== 'sticker' ? 'x' : 'plus'} /></button>,
                     <button key="stk" className={'ewx-stkbtn' + (attOn === 'sticker' ? ' on' : '')} aria-label="Figurinhas" onClick={() => setAttOn(attOn === 'sticker' ? false : 'sticker')}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h7l7-7V7a4 4 0 0 0-4-4h-3" /><path d="M14 21v-3a4 4 0 0 1 4-4h3" /><path d="M8.5 10h.01M15.5 10h.01M8.5 14.5c1.8 1.6 5.2 1.6 7 0" /></svg></button>,
-                    <textarea key="inp" id="inp" ref={inpRef} rows={1} name="ew-message" placeholder={pending.length ? 'Adicione uma legenda' : 'Escreva uma mensagem'} autoComplete="off" autoCorrect="on" autoCapitalize="sentences" spellCheck enterKeyHint={prefs.enter !== 0 ? 'send' : 'enter'} value={draft} maxLength={4000}
+                    <div key="inp" className="ewx-inpw"><div className="ewx-mirror" aria-hidden="true" ref={mirRef}><ComposerMirror text={draft} /></div><textarea id="inp" ref={inpRef} rows={1} name="ew-message" placeholder={pending.length ? 'Adicione uma legenda' : 'Escreva uma mensagem'} autoComplete="off" autoCorrect="on" autoCapitalize="sentences" spellCheck enterKeyHint={prefs.enter !== 0 ? 'send' : 'enter'} value={draft} maxLength={4000}
                       onFocus={() => setAttOn((a) => (a === 'menu' ? false : a))} onSelect={onComposerSelect} onBlur={() => setFmtSel(false)}
-                      onChange={(e) => { setDraft(e.target.value); fitTextarea(e.target); sendTyping(); }} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); void doSend(); } }} />,
+                      onChange={(e) => { setDraft(e.target.value); fitTextarea(e.target); sendTyping(); syncMirror(); }} onScroll={syncMirror} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); void doSend(); } }} /></div>,
                   ]}
                   {recOn && lockMode
                     ? <button key="sndL" className="snd" id="snd" aria-label="Enviar áudio" onClick={() => void sendVoiceNote()}><I n="send" /></button>

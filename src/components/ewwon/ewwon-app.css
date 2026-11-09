@@ -627,3 +627,17 @@
 .ew .ewx-gitem .gf { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
 .ew .ewx-gitem .gf small { font-size: 11px; color: var(--mu); }
 .ew .ewx-gitem .ga { display: flex; gap: 6px; }
+
+/* Composer live formatting (WhatsApp-like): transparent textarea over a styled mirror. Styles keep
+   plain-text glyph widths so the caret stays aligned (see ComposerMirror in msgbody.tsx). */
+.ew .cmp .ewx-inpw { position: relative; flex: 1; min-width: 0; display: flex; align-self: center; }
+.ew .cmp .ewx-inpw textarea { color: transparent; -webkit-text-fill-color: transparent; caret-color: var(--tx); position: relative; z-index: 1; }
+.ew .cmp .ewx-inpw textarea::placeholder { color: var(--mu); -webkit-text-fill-color: var(--mu); }
+.ew .cmp .ewx-inpw textarea::selection { background: rgba(120, 140, 255, .35); }
+.ew .ewx-mirror { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; color: var(--tx); font: inherit; font-size: 14.5px; line-height: 20px; padding: 9px 6px; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; }
+.ew .ewx-tchat-cmp .ewx-mirror { font-size: 15px; padding: 9px 10px; }
+.ew .ewx-mirror .ewf-m { opacity: .42; }
+.ew .ewx-mirror .ewf-b { -webkit-text-stroke: .55px currentColor; paint-order: stroke fill; }
+.ew .ewx-mirror .ewf-i { font-style: italic; font-synthesis: style; }
+.ew .ewx-mirror .ewf-s { text-decoration: line-through; }
+.ew .ewx-mirror .ewf-c { background: var(--c2); border-radius: 4px; box-shadow: 0 0 0 2px var(--c2); }

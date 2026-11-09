@@ -202,6 +202,30 @@ function fmt(t: string, k: string): React.ReactNode[] {
   if (last < t.length) out.push(t.slice(last));
   return out;
 }
+// Live preview for the composer (WhatsApp-like): the same *_~` styles while typing, markers kept
+// but dimmed. Every style keeps the glyph widths of plain text (bold = text stroke, italic = synthetic
+// slant, code = tint only) so the transparent textarea's caret stays aligned with this mirror.
+function fmtLive(t: string, k: string): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  let last = 0, n = 0;
+  for (const m of t.matchAll(FMT_RE)) {
+    const v = m[0], inner = v.slice(1, -1), mk = v[0];
+    const before = t[m.index! - 1], after = t[m.index! + v.length];
+    if (/\w/.test(before || '') || /\w/.test(after || '') || !inner.trim() || inner !== inner.trim()) continue;
+    if (m.index! > last) out.push(t.slice(last, m.index));
+    const cls = mk === '*' ? 'ewf-b' : mk === '_' ? 'ewf-i' : mk === '~' ? 'ewf-s' : 'ewf-c';
+    out.push(<span key={k + n++} className="ewf-m">{mk}</span>);
+    out.push(<span key={k + n++} className={cls}>{mk === '`' ? inner : fmtLive(inner, k + n + 'x')}</span>);
+    out.push(<span key={k + n++} className="ewf-m">{mk}</span>);
+    last = m.index! + v.length;
+  }
+  if (last < t.length) out.push(t.slice(last));
+  return out;
+}
+export function ComposerMirror({ text }: { text: string }) {
+  // A trailing newline needs a character after it to take up its line, like in the textarea.
+  return <>{text.split('\n').map((line, i) => <Fragment key={i}>{i ? '\n' : null}{fmtLive(line, 'l' + i)}</Fragment>)}{text.endsWith('\n') ? '\u200b' : null}</>;
+}
 const MDLINK_RE = /\[([^\]\n]+)\]\((https?:\/\/[^)\s]+|ewvon:file\/[\w./-]+)\)/g;
 
 export function RichText({ text }: { text: string }) {
