@@ -28,6 +28,8 @@ import { EwwonLoader } from '@/components/common/EwwonLoader';
 import { MsgBody, ImageViewer, previewText, ComposerMirror } from './msgbody';
 import { TasksSheet } from './tasksheet';
 import { appConfirm } from '@/lib/appDialog';
+import { useCompanyPlan } from '@/hooks/useCompanyPlan';
+import { planHasFeature } from '@/lib/planAccess';
 
 
 const gr = (h: number) => `hsl(${h} 30% 30%)`;
@@ -295,6 +297,7 @@ export default function EwwonApp() {
 
   // ------------------------------------------------------------ navigation
   const go = useCallback((n: number) => { setTab(n); }, []);
+  const { plan: companyPlan } = useCompanyPlan();
   const pgShow = useCallback((p: PageSpec) => setPages((s) => [...s, p]), []);
   const pgBack = useCallback(() => setPages((s) => s.slice(0, -1)), []);
   const pgClose = useCallback(() => setPages([]), []);
@@ -941,6 +944,9 @@ export default function EwwonApp() {
   if (!boot || !me) {
     return <EwwonLoader />;
   }
+  // Tabs the company's plan includes (index = view id).
+  const mobileTabs = ([['home', 'Início', 0], ['chat', 'Chat', 1], ['bell', 'Avisos', 2], ['gift', 'Aniversários', 3], ...(boot.supportStaff ? [['ticket', 'Tickets', 4]] : [])] as [string, string, number][])
+    .filter(([, , i]) => (i === 1 ? planHasFeature(companyPlan, 'chat') : i === 2 ? planHasFeature(companyPlan, 'announcements') : i === 3 ? planHasFeature(companyPlan, 'birthdays') : true));
 
   const P = people;
   const dash = boot.dashboard;
@@ -1217,8 +1223,8 @@ export default function EwwonApp() {
           </div>
 
           {tab === 0 && !curKey && !pages.length && !gs ? <GlobalBroadcastOrb variant="mobile" /> : null}
-          <nav className="tabs" id="tabs" style={boot.supportStaff ? { gridTemplateColumns: 'repeat(5,1fr)' } : undefined}>
-            {[['home', 'Início'], ['chat', 'Chat'], ['bell', 'Avisos'], ['gift', 'Aniversários'], ...(boot.supportStaff ? [['ticket', 'Tickets']] : [])].map(([icon, label], i) => (
+          <nav className="tabs" id="tabs" style={{ gridTemplateColumns: `repeat(${mobileTabs.length},1fr)` }}>
+            {mobileTabs.map(([icon, label, i]) => (
               <button key={label} className={'tab' + (tab === i ? ' on' : '')} data-i={i} onClick={() => go(i)}>
                 <I n={icon} />{label}
                 {i === 1 && totalUnread ? <span className="bd" id="bg" style={{ display: 'grid' }}>{totalUnread > 99 ? '99+' : totalUnread}</span> : null}

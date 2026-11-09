@@ -37,6 +37,7 @@ import {
 import { useSectorManagement } from '@/hooks/useSectorManagement';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { limitErrorMessage } from '@/lib/planAccess';
 import { SectorIconPicker, SECTOR_ICON_MAP } from '@/components/sectors/SectorIconPicker';
  
  const GERAL_SECTOR_ID = '00000000-0000-0000-0000-000000000001';
@@ -85,7 +86,7 @@ import { SectorIconPicker, SECTOR_ICON_MAP } from '@/components/sectors/SectorIc
       setSubmitting(false);
       
       if (error) {
-        toast.error('Erro ao criar setor');
+        toast.error(limitErrorMessage(error) || 'Erro ao criar setor');
       } else {
         toast.success('Setor criado com sucesso!');
         setShowCreateDialog(false);

@@ -144,7 +144,7 @@ export function useFileUpload() {
       };
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Erro ao fazer upload do arquivo');
+      toast.error(/row-level security|\(403\)/i.test(String((error as any)?.message || '')) ? 'Envio bloqueado: o limite de armazenamento do plano da empresa foi atingido. O administrador pode comprar mais espaço na aba Pagamentos.' : 'Erro ao fazer upload do arquivo');
       return null;
     } finally {
       setUploading(false);
@@ -191,7 +191,7 @@ export function useFileUpload() {
 
       if (error) {
         console.error('Avatar upload error:', error);
-        toast.error('Erro ao fazer upload do avatar');
+        toast.error(/row-level security/i.test(error.message || '') ? 'Envio bloqueado: o limite de armazenamento do plano da empresa foi atingido.' : 'Erro ao fazer upload do avatar');
         return null;
       }
 

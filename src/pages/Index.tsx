@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import { lazyWithRetry } from '@/lib/lazyRetry';
 import { SectionBoundary } from '@/components/common/SectionBoundary';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, LayoutDashboard, MessageSquare, Bell, Cake, Settings, Link as LinkIcon, ScanFace, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, CalendarDays, FileText, HardDrive, BookOpen, Shield, Globe, ClipboardCheck, StickyNote, Megaphone, Plug, LayoutGrid } from 'lucide-react';
+import { Home, LayoutDashboard, MessageSquare, Bell, Cake, Settings, Link as LinkIcon, ScanFace, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, CalendarDays, FileText, HardDrive, BookOpen, Shield, Globe, ClipboardCheck, StickyNote, Megaphone, Plug, LayoutGrid, CreditCard, Lock } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { usePresence } from '@/hooks/usePresence';
 import { useMeetingStatus } from '@/hooks/useMeetingStatus';
@@ -11,6 +11,8 @@ import { useOnboarding } from '@/hooks/useOnboarding';
 import { useBirthdayCelebration } from '@/hooks/useBirthdayCelebration';
 import { useImportantAnnouncements } from '@/hooks/useImportantAnnouncements';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompanyPlan } from '@/hooks/useCompanyPlan';
+import { sectionLock, FEATURE_LABEL, SECTION_FEATURE } from '@/lib/planAccess';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { EwwonLoader, EwwonLogo } from '@/components/common/EwwonLoader';
@@ -40,6 +42,7 @@ const EvaluationsSection = lazyWithRetry(() => import('@/components/sections/Eva
 const NotesSection = lazyWithRetry(() => import('@/components/sections/NotesSection').then((module) => ({ default: module.NotesSection })));
 const CompaniesManagementSection = lazyWithRetry(() => import('@/components/sections/CompaniesManagementSection').then((module) => ({ default: module.CompaniesManagementSection })));
 const SystemBroadcastsSection = lazyWithRetry(() => import('@/components/sections/SystemBroadcastsSection').then((module) => ({ default: module.SystemBroadcastsSection })));
+const BillingSection = lazyWithRetry(() => import('@/components/sections/BillingSection').then((module) => ({ default: module.BillingSection })));
 const ShortcutsManagementSection = lazyWithRetry(() => import('@/components/sections/ShortcutsManagementSection').then((module) => ({ default: module.ShortcutsManagementSection })));
 import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
 import { GlobalBroadcastOrb } from '@/components/common/GlobalBroadcastOrb';
@@ -81,6 +84,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   notes: { title: 'Anotações', subtitle: 'Suas notas pessoais e compartilhadas' },
   companies: { title: 'Empresas', subtitle: 'Gestão de tenants do sistema' },
   'system-broadcasts': { title: 'Comunicados Globais', subtitle: 'Avisos para todas as empresas' },
+  billing: { title: 'Pagamentos', subtitle: 'Plano, cobranças e extras da empresa' },
 };
 
 const sectionPaths: Record<string, string> = {
@@ -93,6 +97,7 @@ const sectionPaths: Record<string, string> = {
   'event-history': '/eventos-mensais', documentation: '/documentacao', 'war-room': '/war-room',
   'api-management': '/integracoes-api', evaluations: '/avaliacoes', notes: '/anotacoes',
   companies: '/empresas', 'system-broadcasts': '/comunicados-globais', 'meeting-rooms': '/salas-de-reuniao',
+  billing: '/pagamentos',
 };
 const pathSections = Object.fromEntries(Object.entries(sectionPaths).map(([key, path]) => [path, key])) as Record<string, string>;
 
@@ -105,8 +110,24 @@ const sectionIntroIcons = {
   'feedback-email': Mail, calendar: CalendarDays, 'system-logs': FileText,
   storage: HardDrive, documentation: BookOpen, 'war-room': Shield,
   'api-management': Plug, evaluations: ClipboardCheck, notes: StickyNote,
-  companies: Building2, 'system-broadcasts': Megaphone, 'event-history': Sparkles,
+  companies: Building2, 'system-broadcasts': Megaphone, 'event-history': Sparkles, billing: CreditCard,
 } as const;
+
+function LockedSection({ reason, feature, onBilling, onHome }: { reason: 'system' | 'plan'; feature: string; onBilling?: () => void; onHome: () => void }) {
+  return (
+    <div className="flex h-full min-h-[60vh] items-center justify-center p-6">
+      <div className="max-w-md text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground"><Lock className="h-5 w-5" /></div>
+        <h2 className="text-lg font-semibold text-foreground">{reason === 'system' ? 'Área exclusiva da administração do ewvon' : 'Recurso não incluído no seu plano'}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{reason === 'system' ? 'Esta aba gerencia a plataforma inteira e não está disponível para empresas clientes.' : `${feature || 'Este recurso'} está disponível em planos superiores. ${onBilling ? 'Para liberar, fale com a equipe ewvon e mude de plano.' : 'Fale com o administrador da sua empresa para mudar de plano.'}`}</p>
+        <div className="mt-5 flex justify-center gap-2">
+          <button type="button" onClick={onHome} className="rounded-md border border-border px-4 py-2 text-sm text-foreground hover:bg-muted">Voltar ao início</button>
+          {reason === 'plan' && onBilling && <button type="button" onClick={onBilling} className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90">Ver meu plano</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function SectionTransitionIndicator({ section }: { section: string }) {
   const [visible, setVisible] = useState(false);
@@ -223,7 +244,8 @@ const Index = () => {
   };
   const handleCloseJoinDialog = () => { searchParams.delete('join'); setSearchParams(searchParams, { replace: true }); };
   const handleNavigateToTasks = () => handleSectionChange('tasks');
-  const isMobile = useIsMobile(); const [isReady, setIsReady] = useState(false); const { profile, isAdmin } = useAuth();
+  const isMobile = useIsMobile(); const [isReady, setIsReady] = useState(false); const { profile, isAdmin, roles } = useAuth();
+  const { plan: companyPlan, loading: planLoading } = useCompanyPlan(); const isSuperAdminUser = roles.some((r: any) => (r.role as string) === 'super_admin');
   const { showOnboarding, completeOnboarding } = useOnboarding(); const { showCelebration, closeCelebration, userName } = useBirthdayCelebration(); const { pendingAnnouncement, dismissAnnouncement } = useImportantAnnouncements(); const { isAlarming, pendingWarRoomId, dismissAlarm } = useWarRoomAlarm();
   const handleOpenWarRoom = () => { handleSectionChange('war-room'); dismissAlarm(); };
   usePresence(); useMeetingStatus();
@@ -235,6 +257,9 @@ const Index = () => {
   if (!isReady) return <EwwonLoader />;
 
   const renderSection = () => {
+    const lock = sectionLock(activeSection, companyPlan, isSuperAdminUser);
+    if (lock === 'system' && planLoading) return null;
+    if (lock) return <LockedSection reason={lock} feature={FEATURE_LABEL[SECTION_FEATURE[activeSection]] || ''} onBilling={isAdmin ? () => handleSectionChange('billing') : undefined} onHome={() => handleSectionChange('home')} />;
     switch (activeSection) {
       case 'home': return <HomeSection onNavigate={handleSectionChange} />;
       case 'my-dashboard': return <MyDashboardSection />;
@@ -262,6 +287,7 @@ const Index = () => {
       case 'notes': return <NotesSection />;
       case 'companies': return <CompaniesManagementSection />;
       case 'system-broadcasts': return <SystemBroadcastsSection />;
+      case 'billing': return isAdmin ? <BillingSection /> : <HomeSection onNavigate={handleSectionChange} />;
       default: return <HomeSection onNavigate={setActiveSection} />;
     }
   };

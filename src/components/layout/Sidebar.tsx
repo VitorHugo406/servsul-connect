@@ -3,12 +3,14 @@ const DEMO_HIDDEN_SECTIONS = new Set(['data-management', 'api-management', 'even
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLayoutEffect } from 'react';
 import { motion } from 'framer-motion';
-import { UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, Globe, ClipboardCheck, Megaphone, Link, MessageSquare, Bell, Home, Cake, Settings, Trash2, Building2, Sparkles, DoorOpen } from 'lucide-react';
+import { CreditCard, UsersRound, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, Globe, ClipboardCheck, Megaphone, Link, MessageSquare, Bell, Home, Cake, Settings, Trash2, Building2, Sparkles, DoorOpen } from 'lucide-react';
 import { SeasonalEffectsButton } from '@/components/seasonal/SeasonalEffectsButton';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useCompanyPlan } from '@/hooks/useCompanyPlan';
+import { sectionLock } from '@/lib/planAccess';
 
 interface SidebarProps { activeSection: string; onSectionChange: (section: string) => void; }
 const menuItems = [
@@ -33,6 +35,7 @@ const menuItems = [
   { id: 'api-management', icon: Globe, label: 'API Integração', adminOnly: true },
   { id: 'storage', icon: HardDrive, label: 'Armazenamento', superAdminOnly: true },
   { id: 'documentation', icon: BookOpen, label: 'Documentação', mainAdminOnly: true },
+  { id: 'billing', icon: CreditCard, label: 'Pagamentos', billingOnly: true },
 ];
 export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   useLayoutEffect(() => {
@@ -49,8 +52,12 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const { profile, isAdmin, canAccess, roles } = useAuth();
   const { counts } = useNotifications();
   const isSuperAdmin = roles.some((r: any) => (r.role as string) === 'super_admin');
+  const { plan } = useCompanyPlan();
   const visibleMenuItems = menuItems.filter(item => {
     if (IS_DEMO && DEMO_HIDDEN_SECTIONS.has(item.id)) return false;
+    // Plan: system tabs only for the platform owner; features the plan does not include stay hidden.
+    if (sectionLock(item.id, plan, isSuperAdmin)) return false;
+    if ('billingOnly' in item && item.billingOnly) return isAdmin && !!plan && !plan.is_system && plan.status !== 'exempt';
     if ('superAdminOnly' in item && item.superAdminOnly) return isSuperAdmin;
     if ('mainAdminOnly' in item && item.mainAdminOnly) return isAdmin && profile?.email === 'adminservchat@servsul.com.br';
     if ('adminOnly' in item && item.adminOnly) return isAdmin;

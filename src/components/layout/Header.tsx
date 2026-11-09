@@ -1,4 +1,6 @@
 import { AssistantButton } from '@/components/chatbot/AssistantButton';
+import { useCompanyPlan } from '@/hooks/useCompanyPlan';
+import { sectionLock } from '@/lib/planAccess';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, Bell, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction, Plus, Palette, LayoutDashboard, StickyNote, ListTodo, UsersRound, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -36,7 +38,8 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
   const [showNotifications, setShowNotifications] = useState(false); const [showProfile, setShowProfile] = useState(false); const [showSectionSearch, setShowSectionSearch] = useState(false); const [showComingSoon, setShowComingSoon] = useState<string | null>(null); const [showAppearance, setShowAppearance] = useState(false);
   useEffect(() => { document.title = company?.name ? `${company.name} | ewvon` : 'ewvon - Gestão de operações'; void createCompanyLogoUrl(company?.logo_url).then(faviconUrl => { if (!faviconUrl) return; document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach(link => { link.href = faviconUrl; }); }); }, [company?.name, company?.logo_url]);
   const isMainAdmin = profile?.email === ADMIN_EMAIL; const autonomy = profile?.autonomy_level;
-  const visibleSections = useMemo(() => ALL_SECTIONS.filter(s => { if (s.mainAdminOnly) return isAdmin && isMainAdmin; if (s.adminOnly) return isAdmin; if (s.supervisorOnly) return isAdmin || ['supervisor','gerente','gestor','diretoria'].includes(autonomy || ''); if (s.permission) return isAdmin || autonomy === 'diretoria' || canAccess(s.permission); return true; }), [isAdmin, isMainAdmin, autonomy, canAccess]);
+  const { plan: companyPlan } = useCompanyPlan(); const isSuperAdminUser = (useAuth().roles || []).some((r: any) => (r.role as string) === 'super_admin');
+  const visibleSections = useMemo(() => ALL_SECTIONS.filter(s => { if (sectionLock(s.id, companyPlan, isSuperAdminUser)) return false; if (s.mainAdminOnly) return isAdmin && isMainAdmin; if (s.adminOnly) return isAdmin; if (s.supervisorOnly) return isAdmin || ['supervisor','gerente','gestor','diretoria'].includes(autonomy || ''); if (s.permission) return isAdmin || autonomy === 'diretoria' || canAccess(s.permission); return true; }), [isAdmin, isMainAdmin, autonomy, canAccess, companyPlan, isSuperAdminUser]);
   const filteredSections = useMemo(() => { if (!searchQuery) return []; const q = searchQuery.toLowerCase(); return visibleSections.filter(s => s.label.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)); }, [searchQuery, visibleSections]);
   const selectSection = (id: string) => { onNavigateToSection?.(id); onSearchChange?.(''); setShowSectionSearch(false); };
   const showBiButton = hasModule('bi'); const showBhButton = hasModule('bh') && (isAdmin || canAccess('can_access_bh' as any)); const showFechamentoButton = hasModule('fechamento') && (isAdmin || canAccess('can_access_fechamento' as any)); const showOrbsButton = hasModule('orbs') && (isAdmin || canAccess('can_access_orbs' as any)); const canCreateAnnouncement = isAdmin || canAccess('can_post_announcements');

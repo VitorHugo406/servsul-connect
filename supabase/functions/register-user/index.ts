@@ -84,6 +84,18 @@ Deno.serve(async (req) => {
     if (!callerIsSuper) companyId = callerCompanyId;
 
     if (!companyId) return json({ error: "Empresa não identificada" }, 400);
+    // Plan user limit (the database trigger also enforces it).
+    if (isActive !== false) {
+      const { data: lim } = await supabaseAdmin.rpc("company_limits", { _company_id: companyId });
+      const maxUsers = Array.isArray(lim) ? lim[0]?.max_users : (lim as any)?.max_users;
+      if (maxUsers != null) {
+        const { count } = await supabaseAdmin.from("profiles").select("id", { count: "exact", head: true })
+          .eq("company_id", companyId).eq("is_active", true).not("profile_type", "in", "(system,bot)");
+        if ((count ?? 0) >= maxUsers) {
+          return json({ error: `O plano permite ${maxUsers} usuários ativos. Compre usuários extras na aba Pagamentos ou desative alguém.` }, 400);
+        }
+      }
+    }
     // Create the user with admin API
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -147,6 +159,10 @@ Deno.serve(async (req) => {
 
     if (profileError) {
       console.error("Error updating profile:", profileError);
+      // Never leave a half-created login behind (e.g. plan user limit reached).
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      const msg = String(profileError.message || "");
+      return json({ error: msg.includes("LIMITE_USUARIOS") ? msg.replace(/^.*LIMITE_USUARIOS:\s*/, "") : "Erro ao salvar o perfil do usuário" }, 400);
     }
 
     // Add role based on profile type
