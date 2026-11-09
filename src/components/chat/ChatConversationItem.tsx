@@ -37,7 +37,7 @@ export function ChatConversationItem({ conversationKey, children }: { conversati
   };
   return <div className="chat-conversation-item relative min-w-0 max-w-full overflow-hidden" data-manual-unread={unread || undefined} onClick={() => mark(false)}>
     {children}
-    <div className="absolute right-1 top-1" onClick={event => event.stopPropagation()}>
+    <div className="absolute right-3 top-1.5 z-10" onClick={event => event.stopPropagation()}>
       <DropdownMenu><DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Opções da conversa" title="Opções da conversa"><MoreHorizontal className="h-4 w-4" /></Button>
       </DropdownMenuTrigger><DropdownMenuContent align="end">

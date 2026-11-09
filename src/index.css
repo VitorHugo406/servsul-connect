@@ -973,7 +973,7 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
   justify-content: flex-start;
 }
 .chat-workspace .chat-conversation-selected { background: hsl(var(--chat-selected)); box-shadow: inset 3px 0 hsl(var(--chat-unread)); }
-.chat-conversation-item > button:first-child { padding-right: 34px; }
+.chat-conversation-item > button:first-child { padding-right: 46px; }  /* room for the ⋯ button and the list scrollbar */
 .chat-conversation-item[data-manual-unread] > button:first-child { background: hsl(var(--chat-selected)); box-shadow: inset 4px 0 hsl(var(--chat-unread)); }
 .chat-conversation-item[data-manual-unread] > button:first-child::after { content: ""; width: 8px; height: 8px; flex: none; border-radius: 50%; background: hsl(var(--chat-unread)); }
 .chat-thread { background: hsl(var(--chat-canvas)); }

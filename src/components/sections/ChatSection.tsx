@@ -259,7 +259,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     };
   }, [accessibleSectorIdsKey, groupIdsKey]);
 
-  const previewText = (content?: string | null) => chatPreview(content, 40) || 'Sem mensagens';
+  const previewText = (content?: string | null) => chatPreview(content, 34) || 'Sem mensagens';
   const previewTime = (date?: string) => date
     ? new Date(date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     : '';
@@ -323,7 +323,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     </>}
 
     <div className="flex min-h-0 flex-1 overflow-hidden">
-      <aside className="chat-conversation-sidebar hidden w-[min(32%,320px)] min-w-[260px] shrink-0 flex-col md:flex">
+      <aside className="chat-conversation-sidebar hidden w-[min(34%,360px)] min-w-[290px] shrink-0 flex-col md:flex">
         <div className="space-y-3 border-b border-border p-4">
           <div className="flex items-center justify-between"><h3 className="text-xl font-semibold text-foreground">Conversas</h3>
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" title="Filtrar conversas"><UsersRound className="h-4 w-4"/></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Mostrar</DropdownMenuLabel><DropdownMenuSeparator/>
