@@ -1,3 +1,4 @@
+import { PdfPreview, isPdfName } from '@/components/common/PdfPreview';
 // Message content for the Ewwon chat: text, photos, files and task cards.
 // Uses the same text format as the desktop chat:
 //   📷 [name](url)   image attachment
@@ -103,7 +104,7 @@ export function MsgBody({ content, onOpenImage }: { content: string; onOpenImage
           {p.images.slice(0, 4).map((im, i) => <Photo key={i} url={im.url} name={im.name} onOpen={openWithCaption} single={p.images.length === 1} />)}
         </div>
       ) : null}
-      {p.files.map((f, i) => <FileCard key={i} url={f.url} name={f.name} />)}
+      {p.files.map((f, i) => isPdfName(f.name) ? <PdfPreview key={i} compact url={f.url} name={f.name} fallback={<FileCard url={f.url} name={f.name} />} /> : <FileCard key={i} url={f.url} name={f.name} />)}
       {p.cards.map((c, i) => (
         <div className="ewx-card" key={i}>
           <div className="ewx-card-h"><span>#{c.number}</span>{c.priority ? <em>{c.priority}</em> : null}</div>

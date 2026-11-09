@@ -90,7 +90,7 @@ export interface EwApi {
 }
 
 export default function EwwonApp() {
-  const { profile, isAdmin, allAccessibleSectorIds, canAccess, signOut, roles } = useAuth();
+  const { profile, isAdmin, allAccessibleSectorIds, signOut, roles } = useAuth();
   // Global notices ("Comunicados globais"): published by the super admin of the Admin company to every company.
   const isSuperAdmin = roles.some((r) => (r.role as string) === 'super_admin');
   const { broadcasts: gBroadcasts, setActive: setBroadcastActive, removeBroadcast } = useSystemBroadcasts(!isSuperAdmin, 60_000);
@@ -233,7 +233,6 @@ export default function EwwonApp() {
 
   // ------------------------------------------------------------ boot
   const sectorsKey = (allAccessibleSectorIds || []).join(',');
-  const canPostPerm = canAccess('can_post_announcements' as never);
   const loadingRef = useRef<Promise<void> | null>(null);
   const load = useCallback(async () => {
     if (!profile?.id || !profile.company_id) return;
@@ -243,7 +242,7 @@ export default function EwwonApp() {
       setErr(null);
       const b = await D.bootstrap({
         profileId: profile.id, companyId: profile.company_id, isAdmin, accessibleSectorIds: allAccessibleSectorIds || [],
-        canPostNotices: isAdmin || ['admin', 'gerente'].includes(profile.autonomy_level || '') || canPostPerm,
+        canPostNotices: isAdmin,
       });
       for (const c of b.chats) if (c.kind === 'sector') D.primeSectorRead(profile.id, c.id);
       // A reload (resume after the file picker, token refresh…) keeps the messages already
@@ -269,7 +268,7 @@ export default function EwwonApp() {
     loadingRef.current = run;
     try { await run; } finally { loadingRef.current = null; }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.id, profile?.company_id, profile?.autonomy_level, isAdmin, sectorsKey, canPostPerm]);
+  }, [profile?.id, profile?.company_id, profile?.autonomy_level, isAdmin, sectorsKey]);
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
