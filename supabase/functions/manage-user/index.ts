@@ -1,5 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
+// Password rule (2026-11-09): at least 6 characters with a letter, an uppercase letter, a number and a
+// special character, no spaces, at most 72 (Supabase limit). Same rule as src/lib/passwordPolicy.ts.
+const passwordRuleError = (pw: unknown): string | null =>
+  typeof pw !== 'string' || pw.length < 6 || pw.length > 72 || /\s/.test(pw) || !/\p{L}/u.test(pw) || !/\p{Lu}/u.test(pw) || !/\d/.test(pw) || !/[^\p{L}\d\s]/u.test(pw)
+    ? 'A senha deve ter pelo menos 6 caracteres, com letra maiúscula, número e caractere especial, sem espaços.'
+    : null;
+
 const corsHeaders={
   'Access-Control-Allow-Origin':'*',
   'Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type',
@@ -38,7 +45,7 @@ Deno.serve(async(req)=>{
 
   if(type==='change-password'){
    const newPassword=String(body.newPassword||'');
-   if(!/^\d{6}$/.test(newPassword)) throw Object.assign(new Error('A senha deve conter exatamente 6 dígitos numéricos'),{status:400});
+   {const pe=passwordRuleError(newPassword); if(pe) throw Object.assign(new Error(pe),{status:400});}
    const {error}=await client.auth.admin.updateUserById(targetUserId,{password:newPassword}); if(error) throw error;
    return new Response(JSON.stringify({success:true,message:'Senha alterada com sucesso'}),{headers:{...corsHeaders,'Content-Type':'application/json'}});
   }

@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { passwordError as passwordRuleError } from '@/lib/passwordPolicy';
+import { PasswordChecklist } from '@/components/common/PasswordChecklist';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -67,7 +69,7 @@ const step1Schema = z.object({
   registrationPassword: z.string().min(1, 'Senha de autorização é obrigatória'),
   name: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres'),
   email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres'),
+  password: z.string().superRefine((v, ctx) => { const e = passwordRuleError(v); if (e) ctx.addIssue({ code: z.ZodIssueCode.custom, message: e }); }),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'As senhas não coincidem',
@@ -694,6 +696,7 @@ const Auth = () => {
                           {fieldErrors.password && (
                             <p className="text-xs text-destructive">{fieldErrors.password}</p>
                           )}
+                          {password ? <PasswordChecklist value={password} /> : null}
                         </div>
 
                         <div className="space-y-2">

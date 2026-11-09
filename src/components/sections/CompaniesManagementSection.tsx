@@ -1,4 +1,6 @@
 import { PageHeader } from '@/components/common/PageHeader';
+import { passwordError as passwordRuleError } from '@/lib/passwordPolicy';
+import { PasswordChecklist } from '@/components/common/PasswordChecklist';
 import { useEffect, useState } from 'react';
 import {
   Building2,
@@ -277,10 +279,11 @@ export function CompaniesManagementSection() {
 
   const handleCreateAdmin = async () => {
     if (!selected) return;
-    if (!adminName.trim() || !adminEmail.trim() || adminPassword.length < 6) {
-      toast.error('Preencha todos os campos (senha ≥ 6 caracteres)');
+    if (!adminName.trim() || !adminEmail.trim()) {
+      toast.error('Preencha nome e e-mail do administrador');
       return;
     }
+    { const pe = passwordRuleError(adminPassword); if (pe) { toast.error(pe); return; } }
     setCreatingAdmin(true);
     const { data, error } = await supabase.functions.invoke('create-company-admin', {
       body: {
@@ -663,7 +666,7 @@ export function CompaniesManagementSection() {
             </div>
             <div>
               <Label>Senha</Label>
-              <Input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} />
+              <Input type="password" autoComplete="new-password" maxLength={72} value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} /><PasswordChecklist value={adminPassword} className="mt-2" />
             </div>
             <Button className="w-full" onClick={handleCreateAdmin} disabled={creatingAdmin}>
               {creatingAdmin && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

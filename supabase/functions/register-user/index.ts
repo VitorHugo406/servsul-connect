@@ -1,5 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Password rule (2026-11-09): at least 6 characters with a letter, an uppercase letter, a number and a
+// special character, no spaces, at most 72 (Supabase limit). Same rule as src/lib/passwordPolicy.ts.
+const passwordRuleError = (pw: unknown): string | null =>
+  typeof pw !== 'string' || pw.length < 6 || pw.length > 72 || /\s/.test(pw) || !/\p{L}/u.test(pw) || !/\p{Lu}/u.test(pw) || !/\d/.test(pw) || !/[^\p{L}\d\s]/u.test(pw)
+    ? 'A senha deve ter pelo menos 6 caracteres, com letra maiúscula, número e caractere especial, sem espaços.'
+    : null;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -64,6 +71,8 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    { const pe = passwordRuleError(password); if (pe) return json({ error: pe }, 400); }
 
     if (!callerAllowed) {
       return new Response(

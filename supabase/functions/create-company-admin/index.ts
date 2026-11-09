@@ -1,6 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
+// Password rule (2026-11-09): at least 6 characters with a letter, an uppercase letter, a number and a
+// special character, no spaces, at most 72 (Supabase limit). Same rule as src/lib/passwordPolicy.ts.
+const passwordRuleError = (pw: unknown): string | null =>
+  typeof pw !== 'string' || pw.length < 6 || pw.length > 72 || /\s/.test(pw) || !/\p{L}/u.test(pw) || !/\p{Lu}/u.test(pw) || !/\d/.test(pw) || !/[^\p{L}\d\s]/u.test(pw)
+    ? 'A senha deve ter pelo menos 6 caracteres, com letra maiúscula, número e caractere especial, sem espaços.'
+    : null;
+
 const responseHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
 interface Payload {
@@ -61,6 +68,8 @@ Deno.serve(async (req) => {
         headers: responseHeaders,
       });
     }
+
+    { const pe = passwordRuleError(body.password); if (pe) return new Response(JSON.stringify({ error: pe }), { status: 400, headers: responseHeaders }); }
 
     // Ensure company exists and is not the system company
     const { data: company, error: cErr } = await admin

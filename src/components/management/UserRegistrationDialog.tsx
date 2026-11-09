@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { passwordError as passwordRuleError } from '@/lib/passwordPolicy';
+import { PasswordChecklist } from '@/components/common/PasswordChecklist';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -61,7 +63,7 @@ const step1Schema = z.object({
   company: z.string().optional(),
   profileType: z.enum(['admin', 'user', 'supervisor', 'diretoria']),
   registrationNumber: z.string().optional(),
-  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+  password: z.string().superRefine((v, ctx) => { const e = passwordRuleError(v); if (e) ctx.addIssue({ code: z.ZodIssueCode.custom, message: e }); }),
 });
 
 const step2Schema = z.object({
@@ -404,12 +406,15 @@ export function UserRegistrationDialog({
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Ex.: Equipe@2026"
+                    autoComplete="new-password"
+                    maxLength={72}
                     className={errors.password ? 'border-destructive' : ''}
                   />
                   {errors.password && (
                     <p className="text-xs text-destructive">{errors.password}</p>
                   )}
+                  <PasswordChecklist value={password} />
                 </div>
               </div>
 
