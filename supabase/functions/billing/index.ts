@@ -89,7 +89,7 @@ async function notifySuperAdmin(text: string) {
 }
 
 // ---------- provisioning (idempotent) ----------
-async function provision(signupId: string): Promise<{ ok: boolean; error?: string }> {
+async function provision(signupId: string, silent = false): Promise<{ ok: boolean; error?: string }> {
   // Claim the row so concurrent notifications never provision twice.
   const { data: claimed } = await admin.from('company_signups')
     .update({ status: 'provisioning', updated_at: new Date().toISOString() })
@@ -138,7 +138,7 @@ async function provision(signupId: string): Promise<{ ok: boolean; error?: strin
     await admin.from('user_permissions').upsert({ user_id: userId, can_post_announcements: true, can_delete_messages: true, can_access_management: true, can_access_password_change: true, can_create_war_room: true, can_access_bh: true, can_access_fechamento: true, can_access_orbs: true, can_access_meeting_rooms: true }, { onConflict: 'user_id' });
     // 5. Done: wipe the encrypted password.
     await admin.from('company_signups').update({ status: 'active', activated_at: new Date().toISOString(), password_enc: null, error: null, updated_at: new Date().toISOString() }).eq('id', s.id);
-    await notifySuperAdmin(`*Nova empresa assinante*\n\nEmpresa: ${s.company_name}\nPlano: ${s.plan_id}\nAdministrador: ${s.admin_name} (${s.admin_email})\nAssinatura Mercado Pago: ${s.preapproval_id}`);
+    if (!silent) await notifySuperAdmin(`*Nova empresa assinante*\n\nEmpresa: ${s.company_name}\nPlano: ${s.plan_id}\nAdministrador: ${s.admin_name} (${s.admin_email})\nAssinatura Mercado Pago: ${s.preapproval_id}`);
     return { ok: true };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -333,6 +333,47 @@ Deno.serve(async (req) => {
       }
       await admin.from('payment_events').insert({ provider: 'mercadopago', topic, resource_id: dataId, signature_ok: sigOk, result: result.slice(0, 200) });
       return reply({ ok: true });
+    }
+
+    // ---- self-test (Vault secret only): provisions a throwaway company like a confirmed payment,
+    //      checks every piece (including the admin login) and removes everything. ----
+    if (route === 'selftest') {
+      const { data: secretOk } = await admin.rpc('billing_cron_secret_ok', { _secret: req.headers.get('x-billing-cron') || '' });
+      if (secretOk !== true) return reply({ error: 'Unauthorized' }, 401);
+      const tag = crypto.randomUUID().slice(0, 8);
+      const email = `selftest-${tag}@ewvon.invalid`;
+      const password = `Teste@${tag}A1`;
+      const report: Record<string, unknown> = {};
+      let userId: string | null = null, companyId: string | null = null, signupId: string | null = null;
+      try {
+        const { data: plan } = await admin.from('subscription_plans').select('id, price_cents').eq('is_active', true).order('sort_order').limit(1).single();
+        const { data: sg, error: e1 } = await admin.from('company_signups').insert({ plan_id: plan!.id, amount_cents: plan!.price_cents, company_name: `Teste automático ${tag}`, slug: `selftest-${tag}`, primary_color: '#111111', secondary_color: '#6366f1', admin_name: 'Teste Automatico', admin_email: email, password_enc: await encryptSecret(password), status_token_hash: await sha256(tag), preapproval_id: `selftest-${tag}`, paid_at: new Date().toISOString() }).select('id').single();
+        if (e1) throw e1;
+        signupId = sg.id;
+        report.provision = await provision(sg.id, true);
+        report.second_call_idempotent = await provision(sg.id, true);
+        const { data: after } = await admin.from('company_signups').select('status, password_enc, company_id').eq('id', sg.id).single();
+        companyId = after?.company_id ?? null;
+        report.signup_active = after?.status === 'active';
+        report.password_wiped = after?.password_enc === null;
+        const { data: sub } = await admin.from('company_subscriptions').select('status, plan_id, provider').eq('company_id', companyId).maybeSingle();
+        report.subscription_active = sub?.status === 'active' && sub?.provider === 'mercadopago';
+        const { data: prof } = await admin.from('profiles').select('user_id, company_id, autonomy_level, is_active').ilike('email', email).maybeSingle();
+        userId = prof?.user_id ?? null;
+        report.admin_profile_ok = prof?.company_id === companyId && prof?.autonomy_level === 'admin' && prof?.is_active === true;
+        const { data: role } = await admin.from('user_roles').select('role').eq('user_id', userId).eq('role', 'admin').maybeSingle();
+        report.admin_role_ok = !!role;
+        const anon = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { auth: { persistSession: false } });
+        const { data: login, error: le } = await anon.auth.signInWithPassword({ email, password });
+        report.admin_login_ok = !!login?.session && !le;
+      } catch (e) { report.error = e instanceof Error ? e.message : String(e); }
+      finally {
+        if (userId) { await admin.from('user_permissions').delete().eq('user_id', userId); await admin.from('user_roles').delete().eq('user_id', userId); await admin.from('profiles').delete().eq('user_id', userId); await admin.auth.admin.deleteUser(userId); }
+        if (signupId) await admin.from('company_signups').delete().eq('id', signupId);
+        if (companyId) await admin.from('companies').delete().eq('id', companyId);
+        report.cleaned = true;
+      }
+      return reply(report);
     }
 
     // ---- reconciliation: hourly cron or super admin ----

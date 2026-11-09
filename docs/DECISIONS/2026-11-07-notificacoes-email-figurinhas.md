@@ -138,3 +138,13 @@ Corrigido:
 - Migração `security_hardening`: CPF, endereço e matrícula deixam de ser legíveis pelos colegas (grant por coluna em `profiles`), funções de trigger sem EXECUTE público, `search_path` fixo, política de download do próprio relatório de feedback.
 
 Pendente do dono: trocar a senha do super admin; ativar "Leaked password protection" em Auth.
+
+## Assinatura com Mercado Pago (2026-11-09)
+
+- Página pública `/assinar` (plano → empresa: nome, logo, cores → administrador → revisão) e `/assinar/retorno`.
+- Função `billing` (verify_jwt off; cada rota se autentica): `plans`, `signup`, `status` (token privado), `webhook`, `reconcile` (cron de hora em hora com segredo do Vault ou super admin) e `selftest` (só segredo do Vault).
+- Nada é criado antes do pagamento. A senha do administrador fica criptografada (AES-GCM, chave derivada da service role) e é apagada ao criar a empresa ou ao expirar (3 dias).
+- O webhook nunca confia no corpo da notificação: consulta a assinatura/pagamento na API do Mercado Pago, confere `external_reference` e valor do plano. Assinatura `x-signature` validada quando `MP_WEBHOOK_SECRET` existe.
+- Criação idempotente (empresa, logo, assinatura ativa, admin com papel e permissões); falhas ficam como `failed`, o super admin recebe aviso em Comunicados e a conciliação tenta de novo.
+- Cobranças mensais aprovadas renovam `current_period_end`; recusadas marcam `past_due`; cancelamento marca `canceled`.
+- Segredos a cadastrar no Supabase: `MP_ACCESS_TOKEN` (obrigatório), `MP_WEBHOOK_SECRET` (recomendado).
