@@ -177,13 +177,14 @@ import { SectorIconPicker, SECTOR_ICON_MAP } from '@/components/sectors/SectorIc
                       })()}
                       {sector.name}
                     </CardTitle>
-                    {sector.id === GERAL_SECTOR_ID && (
+                    {(sector.id === GERAL_SECTOR_ID || (sector as any).is_general) && (
                       <Badge variant="secondary">Padrão</Badge>
                     )}
                   </div>
                 </CardHeader>
                <CardContent>
-                 {sector.id !== GERAL_SECTOR_ID && (
+                 {(sector as any).is_general && <p className="text-[12px] text-muted-foreground">Todos os funcionários da empresa. Não conta no limite de setores do plano.</p>}
+                 {sector.id !== GERAL_SECTOR_ID && !(sector as any).is_general && (
                    <div className="flex gap-2">
                      <Button 
                        variant="outline" 

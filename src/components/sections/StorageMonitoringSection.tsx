@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
+import { SystemCapacityCard } from '@/components/storage/SystemCapacityCard';
 
 
 // Free tier limits
@@ -157,6 +158,8 @@ export function StorageMonitoringSection() {
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           Atualizar
         </Button>} />
+
+      <SystemCapacityCard />
 
       {/* Usage Cards */}
       <div className="grid gap-4 md:grid-cols-2">

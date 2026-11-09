@@ -94,9 +94,6 @@ const MODULES: { id: string; label: string; icon: any; group: 'core' | 'shortcut
   { id: 'war_room', label: 'War Room', icon: Siren, group: 'core' },
   { id: 'teams', label: 'Equipes', icon: Users2, group: 'core' },
   { id: 'my_dashboard', label: 'Meu Painel', icon: LayoutDashboard, group: 'core' },
-  { id: 'bi', label: 'Dash BI', icon: BarChart3, group: 'shortcut' },
-  { id: 'bh', label: 'Banco de Horas', icon: Briefcase, group: 'shortcut' },
-  { id: 'fechamento', label: 'Fechamento', icon: FileSpreadsheet, group: 'shortcut' },
   { id: 'orbs', label: 'Orbs', icon: ExternalLink, group: 'shortcut' },
 ];
 

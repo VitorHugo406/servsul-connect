@@ -148,8 +148,6 @@ Deno.serve(async (req) => {
         can_access_management: true,
         can_access_password_change: true,
         can_create_war_room: true,
-        can_access_bh: true,
-        can_access_fechamento: true,
         can_access_orbs: true,
       } as any,
       { onConflict: 'user_id' },

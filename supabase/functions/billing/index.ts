@@ -14,6 +14,7 @@
 // Secrets (Supabase > Edge Functions > Secrets): MP_ACCESS_TOKEN (required), MP_WEBHOOK_SECRET
 // (recommended, validates x-signature), SITE_URL (default https://ewvon.vercel.app).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { esc, layout, mailerConfigured, sendMail } from '../_shared/mailer.ts';
 
 const SITE_URL = (Deno.env.get('SITE_URL') || 'https://ewvon.vercel.app').replace(/\/+$/, '');
 const MP_API = 'https://api.mercadopago.com';
@@ -93,6 +94,92 @@ async function notifySuperAdmin(text: string) {
   } catch (e) { console.error('notifySuperAdmin', e); }
 }
 
+// Message in the "Comunicados" chat of a company's base admin (the one created with the subscription).
+async function notifyCompanyAdmin(companyId: string, text: string) {
+  try {
+    const { data: signup } = await admin.from('company_signups').select('admin_email').eq('company_id', companyId).eq('status', 'active').order('created_at').limit(1).maybeSingle();
+    let target: any = null;
+    if (signup?.admin_email) ({ data: target } = await admin.from('profiles').select('id, email, name').eq('company_id', companyId).ilike('email', signup.admin_email).maybeSingle());
+    if (!target) ({ data: target } = await admin.from('profiles').select('id, email, name').eq('company_id', companyId).eq('autonomy_level', 'admin').eq('is_active', true).order('created_at').limit(1).maybeSingle());
+    if (target) await admin.from('direct_messages').insert({ sender_id: SYSTEM_SENDER_ID, receiver_id: target.id, content: text, company_id: companyId });
+    return target as { id: string; email: string; name: string } | null;
+  } catch (e) { console.error('notifyCompanyAdmin', e); return null; }
+}
+
+const gb = (b: number) => (b / 1024 ** 3).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' GB';
+const brl = (c: number) => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+// Sold storage vs what the Supabase plan allows: alerts the super admin whenever the situation changes.
+async function checkSystemCapacity(): Promise<string> {
+  try {
+    const { data: o } = await admin.rpc('system_storage_overview');
+    if (!o) return 'sem dados';
+    const cap = Number(o.capacity_bytes), committed = Number(o.committed_bytes), files = Number(o.files_bytes), db = Number(o.db_bytes), dbCap = Number(o.db_capacity_bytes);
+    const issues: string[] = [];
+    if (committed > cap) issues.push(`Vendido às empresas: ${gb(committed)} · o plano do Supabase libera ${gb(cap)} de arquivos`);
+    if (files >= cap * 0.8) issues.push(`Arquivos já usam ${gb(files)} de ${gb(cap)} (${Math.round((files / cap) * 100)}%)`);
+    if (db >= dbCap * 0.8) issues.push(`Banco de dados usa ${Math.round(db / 1024 ** 2)} MB de ${Math.round(dbCap / 1024 ** 2)} MB`);
+    const state = issues.length ? issues.map((i) => i.split(':')[0].split(' ')[0]).join('|') + ':' + Math.floor(committed / 1024 ** 3) : 'ok';
+    const { data: cfg } = await admin.from('billing_settings').select('capacity_alert_state').limit(1).maybeSingle();
+    if ((cfg?.capacity_alert_state || 'ok') === state) return 'capacidade: sem mudança';
+    await admin.from('billing_settings').update({ capacity_alert_state: state }).not('extra_user_cents', 'is', null);
+    if (issues.length) await notifySuperAdmin(`*Atenção: armazenamento do sistema*\n\n${issues.map((i) => '• ' + i).join('\n')}\n\nPara não travar os uploads das empresas, aumente o plano do Supabase (Settings > Billing; o plano Pro inclui 100 GB de arquivos e 8 GB de banco) e depois atualize a capacidade na aba Armazenamento.`);
+    else await notifySuperAdmin('*Armazenamento do sistema normalizado*\n\nO espaço vendido às empresas cabe no plano atual do Supabase.');
+    return 'capacidade: alerta ' + state;
+  } catch (e) { return 'capacidade: ' + (e as Error).message; }
+}
+
+// Expiry / next-charge e-mails (5 days before) and near-full storage notices for each company.
+async function sendReminders(out: Record<string, string>) {
+  const { data: subs } = await admin.from('company_subscriptions').select('company_id, plan_id, status, billing_cycle, current_period_end, provider_subscription_id, reminder_sent_for, storage_alert_level, extra_users, extra_storage_gb').in('status', ['active', 'past_due']).not('plan_id', 'is', null);
+  if (!subs?.length) return;
+  const cfg = await billingSettings();
+  const { data: comps } = await admin.from('companies').select('id, name, is_system').in('id', subs.map((x: any) => x.company_id));
+  const byId = new Map((comps ?? []).map((c: any) => [c.id, c]));
+  for (const sub of subs as any[]) {
+    const comp: any = byId.get(sub.company_id);
+    if (!comp || comp.is_system) continue;
+    try {
+      // 1. Expiry / charge reminder.
+      const due = new Date(sub.current_period_end || 0).getTime() - PERIOD_GRACE_DAYS * 864e5;
+      const daysLeft = Math.ceil((due - Date.now()) / 864e5);
+      if (sub.current_period_end && daysLeft <= 5 && daysLeft >= -PERIOD_GRACE_DAYS && sub.reminder_sent_for !== sub.current_period_end) {
+        const { data: plan } = await admin.from('subscription_plans').select('name, price_cents, annual_price_cents').eq('id', sub.plan_id).maybeSingle();
+        const base = sub.billing_cycle === 'annual' ? (plan?.annual_price_cents ?? (plan?.price_cents ?? 0) * 12) : (plan?.price_cents ?? 0);
+        const total = base + extrasMonthlyCents(sub, cfg) * (sub.billing_cycle === 'annual' ? 12 : 1);
+        const date = new Date(due).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+        const auto = sub.billing_cycle !== 'once' && !!sub.provider_subscription_id;
+        const when = daysLeft > 1 ? `em ${daysLeft} dias (${date})` : daysLeft === 1 ? `amanhã (${date})` : daysLeft === 0 ? `hoje (${date})` : `desde ${date}`;
+        const title = auto ? `A próxima cobrança do ewvon é ${when}` : `O plano ${daysLeft < 0 ? 'venceu' : 'vence'} ${when}`;
+        const body = auto
+          ? `A cobrança automática de <b>${brl(total)}</b> do plano <b>${esc(plan?.name)}</b> da empresa <b>${esc(comp.name)}</b> acontece ${when}, no cartão ou conta cadastrada no Mercado Pago. Confira se o meio de pagamento está válido para não interromper o acesso.`
+          : `O plano <b>${esc(plan?.name)}</b> da empresa <b>${esc(comp.name)}</b> ${daysLeft < 0 ? 'venceu' : 'vence'} ${when}. Para continuar usando o sistema, renove por <b>${brl(total)}</b> em <b>Pagamentos</b> > <b>Renovar por mais 1 mês</b>.`;
+        const target = await notifyCompanyAdmin(sub.company_id, `*${title.replace(/<[^>]+>/g, '')}*\n\n${body.replace(/<[^>]+>/g, '')}`);
+        if (target?.email && mailerConfigured()) {
+          await sendMail({ to: target.email, subject: `ewvon · ${title}`, fromName: undefined, html: layout(`<div style="background:#fff;border-radius:18px;padding:28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#18181b"><h1 style="font-size:20px;margin:0 0 12px">${esc(title)}</h1><p style="font-size:14px;line-height:1.6;margin:0 0 18px">Olá, ${esc((target.name || '').split(' ')[0])}! ${body}</p><a href="${SITE_URL}/pagamentos" style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600">Abrir Pagamentos</a></div>`, title) });
+        }
+        await admin.from('company_subscriptions').update({ reminder_sent_for: sub.current_period_end }).eq('company_id', sub.company_id);
+        out['lembrete:' + comp.name] = target ? 'enviado' : 'sem administrador';
+      }
+      // 2. Storage almost full (90% and 100%), only to the base admin in the Comunicados chat.
+      const { data: lim } = await admin.rpc('company_limits', { _company_id: sub.company_id });
+      const limit = Number((Array.isArray(lim) ? lim[0] : lim)?.storage_bytes || 0);
+      if (limit > 0) {
+        const { data: used } = await admin.rpc('company_storage_used', { _company_id: sub.company_id });
+        const pct = (Number(used) / limit) * 100;
+        const level = pct >= 100 ? 100 : pct >= 90 ? 90 : pct < 80 ? 0 : sub.storage_alert_level;
+        if (level > (sub.storage_alert_level || 0)) {
+          await notifyCompanyAdmin(sub.company_id, level >= 100
+            ? `*Armazenamento cheio*\n\nA empresa usou ${gb(Number(used))} de ${gb(limit)} e novos arquivos estão bloqueados. Compre mais espaço em Pagamentos > Comprar extras (${brl(cfg.storage_pack_cents)} a cada ${cfg.storage_pack_gb} GB/mês) ou apague arquivos antigos.`
+            : `*Armazenamento quase cheio*\n\nA empresa já usou ${Math.floor(pct)}% (${gb(Number(used))} de ${gb(limit)}). Quando chegar a 100%, novos arquivos serão bloqueados. Você pode comprar mais espaço em Pagamentos > Comprar extras.`);
+          out['armazenamento:' + comp.name] = level + '%';
+        }
+        if (level !== (sub.storage_alert_level || 0)) await admin.from('company_subscriptions').update({ storage_alert_level: level }).eq('company_id', sub.company_id);
+      }
+    } catch (e) { out['lembrete:' + comp.name] = 'erro: ' + (e as Error).message; }
+  }
+}
+
 // ---------- provisioning (idempotent) ----------
 async function provision(signupId: string, silent = false): Promise<{ ok: boolean; error?: string }> {
   // Claim the row so concurrent notifications never provision twice.
@@ -142,9 +229,10 @@ async function provision(signupId: string, silent = false): Promise<{ ok: boolea
     const { error: pErr } = await admin.from('profiles').update({ company_id: companyId, name: s.admin_name, display_name: s.admin_name.split(' ')[0], autonomy_level: 'admin', is_active: true }).eq('user_id', userId);
     if (pErr) throw new Error('Perfil: ' + pErr.message);
     await admin.from('user_roles').upsert({ user_id: userId, role: 'admin' }, { onConflict: 'user_id,role' });
-    await admin.from('user_permissions').upsert({ user_id: userId, can_post_announcements: true, can_delete_messages: true, can_access_management: true, can_access_password_change: true, can_create_war_room: true, can_access_bh: true, can_access_fechamento: true, can_access_orbs: true, can_access_meeting_rooms: true }, { onConflict: 'user_id' });
+    await admin.from('user_permissions').upsert({ user_id: userId, can_post_announcements: true, can_delete_messages: true, can_access_management: true, can_access_password_change: true, can_create_war_room: true, can_access_orbs: true, can_access_meeting_rooms: true }, { onConflict: 'user_id' });
     // 5. Done: wipe the encrypted password.
     await admin.from('company_signups').update({ status: 'active', activated_at: new Date().toISOString(), password_enc: null, error: null, updated_at: new Date().toISOString() }).eq('id', s.id);
+    await checkSystemCapacity();
     if (!silent) await notifySuperAdmin(`*Nova empresa assinante*\n\nEmpresa: ${s.company_name}\nPlano: ${s.plan_id} (${s.billing_cycle === 'annual' ? 'anual' : s.billing_cycle === 'once' ? 'mensal avulso' : 'mensal'})\nAdministrador: ${s.admin_name} (${s.admin_email})\nMercado Pago: ${s.preapproval_id || 'pagamento ' + s.last_payment_id}`);
     return { ok: true };
   } catch (e) {
@@ -248,6 +336,19 @@ async function syncRecurringAmount(companyId: string): Promise<string> {
   }
 }
 
+// Proportional difference to move to another plan until the next charge.
+async function planChangeQuote(sub: any, target: any) {
+  const { data: cur } = await admin.from('subscription_plans').select('price_cents, annual_price_cents').eq('id', sub.plan_id).maybeSingle();
+  const annual = sub.billing_cycle === 'annual';
+  const price = (p: any) => (annual ? (p?.annual_price_cents ?? (p?.price_cents ?? 0) * 12) : (p?.price_cents ?? 0));
+  const totalDays = annual ? 365 : 30;
+  const endMs = new Date(sub.current_period_end || Date.now()).getTime() - PERIOD_GRACE_DAYS * 864e5;
+  const daysLeft = Math.max(0, Math.min(totalDays, Math.ceil((endMs - Date.now()) / 864e5)));
+  const diff = price(target) - price(cur);
+  const amount = diff > 0 ? Math.round((diff * daysLeft) / totalDays) : 0;
+  return { amount_cents: amount, days_left: daysLeft, upgrade: diff > 0, new_recurring_cents: price(target) };
+}
+
 async function applyOrder(orderId: string, payment: any): Promise<string> {
   if (payment?.status !== 'approved') return `pedido: pagamento ${payment?.status}`;
   const { data: order } = await admin.from('billing_orders').select('*').eq('id', orderId).maybeSingle();
@@ -264,6 +365,10 @@ async function applyOrder(orderId: string, payment: any): Promise<string> {
   } else if (order.kind === 'extra_storage') {
     await admin.from('company_subscriptions').update({ extra_storage_gb: (sub?.extra_storage_gb || 0) + order.quantity * cfg.storage_pack_gb }).eq('company_id', order.company_id);
     label = `${order.quantity * cfg.storage_pack_gb} GB extras`;
+  } else if (order.kind === 'plan_change') {
+    const { data: np } = await admin.from('subscription_plans').select('name').eq('id', order.target_plan_id).maybeSingle();
+    await admin.from('company_subscriptions').update({ plan_id: order.target_plan_id }).eq('company_id', order.company_id);
+    label = `mudança para o plano ${np?.name || order.target_plan_id} (diferença até a próxima cobrança)`;
   } else {
     const base = Math.max(Date.now(), new Date(sub?.current_period_end || 0).getTime() - PERIOD_GRACE_DAYS * 864e5);
     await admin.from('company_subscriptions').update({ status: 'active', current_period_end: new Date(base + (31 + PERIOD_GRACE_DAYS) * 864e5).toISOString() }).eq('company_id', order.company_id);
@@ -271,8 +376,9 @@ async function applyOrder(orderId: string, payment: any): Promise<string> {
   }
   await admin.from('company_payments').upsert({ company_id: order.company_id, provider_payment_id: String(payment.id), kind: order.kind, description: label.charAt(0).toUpperCase() + label.slice(1), amount_cents: order.amount_cents }, { onConflict: 'provider,provider_payment_id', ignoreDuplicates: true });
   const sync = order.kind === 'once_renewal' ? '' : ' · ' + await syncRecurringAmount(order.company_id);
+  if (order.kind === 'extra_storage' || order.kind === 'plan_change') await checkSystemCapacity();
   const { data: comp } = await admin.from('companies').select('name').eq('id', order.company_id).maybeSingle();
-  await notifySuperAdmin(`*Pagamento de extra confirmado*\n\nEmpresa: ${comp?.name}\nItem: ${label}\nValor: R$ ${(order.amount_cents / 100).toFixed(2)}${sync}`);
+  await notifySuperAdmin(`*Pagamento confirmado*\n\nEmpresa: ${comp?.name}\nItem: ${label}\nValor: R$ ${(order.amount_cents / 100).toFixed(2)}${sync}`);
   return 'pedido aplicado' + sync;
 }
 
@@ -411,9 +517,40 @@ Deno.serve(async (req) => {
       if (!prof?.company_id || !isCompanyAdmin) return reply({ error: 'Somente o administrador da empresa pode fazer compras.' }, 403);
       const { data: comp } = await admin.from('companies').select('id, name, is_system').eq('id', prof.company_id).maybeSingle();
       const { data: sub } = await admin.from('company_subscriptions').select('*').eq('company_id', prof.company_id).maybeSingle();
-      if (!comp || comp.is_system || !sub?.plan_id || sub.status === 'exempt') return reply({ error: 'Esta empresa não tem plano pago para comprar extras.' }, 400);
+      if (!comp || comp.is_system || !sub?.plan_id || sub.status === 'exempt') return reply({ error: 'Esta empresa não tem plano pago para fazer compras.' }, 400);
       const body = await req.json().catch(() => ({}));
-      const kind = ['extra_users', 'extra_storage', 'once_renewal'].includes(body?.kind) ? body.kind : null;
+      const kind = ['extra_users', 'extra_storage', 'once_renewal', 'plan_change'].includes(body?.kind) ? body.kind : null;
+      if (kind === 'plan_change') {
+        const targetId = clean(body?.plan_id, 40);
+        const { data: target } = await admin.from('subscription_plans').select('id, name, price_cents, annual_price_cents, is_active').eq('id', targetId).maybeSingle();
+        if (!target?.is_active) return reply({ error: 'Plano indisponível.' }, 400);
+        if (target.id === sub.plan_id) return reply({ error: 'A empresa já está neste plano.' }, 400);
+        const { data: blocker } = await admin.rpc('plan_change_blocker', { _company_id: comp.id, _plan_id: target.id });
+        if (blocker) return reply({ error: blocker }, 400);
+        const q = await planChangeQuote(sub, target);
+        if (body?.preview) return reply({ ...q, plan_name: target.name });
+        if (q.amount_cents < 100) {
+          // Downgrade (or almost no time left): change now, the next charge already uses the new price.
+          await admin.from('company_subscriptions').update({ plan_id: target.id }).eq('company_id', comp.id);
+          const sync = await syncRecurringAmount(comp.id);
+          await notifySuperAdmin(`*Mudança de plano*\n\nEmpresa: ${comp.name}\nNovo plano: ${target.name}\nSem cobrança agora · ${sync}`);
+          return reply({ applied: true });
+        }
+        const { data: order, error: oErr } = await admin.from('billing_orders').insert({ company_id: comp.id, kind, quantity: 1, amount_cents: q.amount_cents, target_plan_id: target.id, created_by: u.user.id }).select('id').single();
+        if (oErr) return reply({ error: 'Não foi possível criar o pedido.' }, 500);
+        const back = `${SITE_URL}/pagamentos?pedido=${order.id}`;
+        const pref = await mp('/checkout/preferences', { method: 'POST', body: JSON.stringify({
+          items: [{ id: kind, title: `ewvon · Mudança para o plano ${target.name}`.slice(0, 120), description: `${comp.name} · diferença de ${q.days_left} dia(s)`.slice(0, 120), quantity: 1, unit_price: q.amount_cents / 100, currency_id: 'BRL' }],
+          external_reference: `order:${order.id}`,
+          back_urls: { success: back, pending: back, failure: back },
+          auto_return: 'approved',
+          notification_url: WEBHOOK_URL,
+          statement_descriptor: 'EWVON',
+          date_of_expiration: new Date(Date.now() + 6 * 864e5).toISOString(),
+        }) });
+        await admin.from('billing_orders').update({ mp_preference_id: pref.id, checkout_url: pref.init_point }).eq('id', order.id);
+        return reply({ id: order.id, checkout_url: pref.init_point, amount_cents: q.amount_cents });
+      }
       const qty = Math.max(1, Math.min(500, Math.floor(Number(body?.quantity) || 1)));
       if (!kind) return reply({ error: 'Pedido inválido.' }, 400);
       if (kind === 'once_renewal' && sub.billing_cycle !== 'once') return reply({ error: 'Sua assinatura renova automaticamente.' }, 400);
@@ -583,6 +720,8 @@ Deno.serve(async (req) => {
       // Provisioning stuck for more than 15 minutes (function crashed mid-way) -> retry.
       const { data: stuck } = await admin.from('company_signups').select('id').eq('status', 'provisioning').lt('updated_at', new Date(Date.now() - 15 * 60e3).toISOString());
       for (const s of stuck ?? []) { await admin.from('company_signups').update({ status: 'failed' }).eq('id', s.id).eq('status', 'provisioning'); out[s.id] = ((await provision(s.id)).ok ? 'retomada' : 'falhou'); }
+      try { await sendReminders(out); } catch (e) { out.lembretes = 'erro: ' + (e as Error).message; }
+      out.capacidade = await checkSystemCapacity();
       return reply({ ok: true, checked: out });
     }
 

@@ -9,11 +9,17 @@ import { useCompanyPlan, COMPANY_PLAN_CHANGED } from '@/hooks/useCompanyPlan';
 import { useAuth } from '@/contexts/AuthContext';
 import { FEATURE_LABEL } from '@/lib/planAccess';
 import { toast } from 'sonner';
+import { appConfirm } from '@/lib/appDialog';
 
+type PlanOption = { id: string; name: string; description: string | null; price_cents: number; annual_price_cents: number | null; max_users: number; max_sectors: number; storage_gb: number };
 type Payment = { id: string; kind: string; description: string | null; amount_cents: number; paid_at: string; status: string };
 const brl = (c: number) => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fmtDate = (d: string | null) => (d ? new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—');
 const fmtBytes = (b: number) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB` : b >= 1024 ** 2 ? `${(b / 1024 ** 2).toFixed(1).replace('.', ',')} MB` : `${Math.round(b / 1024)} KB`);
+// Error body of a non-2xx edge function response.
+async function readError(error: unknown): Promise<string | null> {
+  try { const b = await (error as any)?.context?.json?.(); return b?.error || null; } catch { return null; }
+}
 const STATUS: Record<string, { label: string; tone: string }> = {
   active: { label: 'Ativa', tone: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' },
   trialing: { label: 'Em teste', tone: 'bg-sky-500/10 text-sky-700 dark:text-sky-300' },
@@ -45,6 +51,31 @@ export function BillingSection() {
   const [users, setUsers] = useState(1);
   const [packs, setPacks] = useState(1);
 
+  const [plans, setPlans] = useState<PlanOption[]>([]);
+  useEffect(() => { void supabase.functions.invoke('billing/plans', { body: {} }).then(({ data }) => setPlans(((data as any)?.plans || []).filter((p: PlanOption) => p.id !== 'teste'))); }, []);
+
+  const changePlan = async (target: PlanOption) => {
+    setBusy('plan:' + target.id);
+    const { data: q, error } = await supabase.functions.invoke('billing/order', { body: { kind: 'plan_change', plan_id: target.id, preview: true } });
+    setBusy(null);
+    if (error || (q as any)?.error || !q) { toast.error((q as any)?.error || await readError(error) || 'Não foi possível calcular a mudança.'); return; }
+    const pay = (q as any).amount_cents >= 100;
+    const ok = await appConfirm({
+      title: `Mudar para o plano ${target.name}?`,
+      message: pay
+        ? `Você paga agora ${brl((q as any).amount_cents)}, a diferença proporcional dos ${(q as any).days_left} dia(s) que faltam até a próxima cobrança. Depois, a cobrança passa a ser ${brl((q as any).new_recurring_cents)}${plan?.billing_cycle === 'annual' ? '/ano' : '/mês'} (mais os extras).`
+        : `A mudança vale agora, sem cobrança. A próxima cobrança já vem com o valor do novo plano: ${brl((q as any).new_recurring_cents)}${plan?.billing_cycle === 'annual' ? '/ano' : '/mês'} (mais os extras).`,
+      confirmText: pay ? 'Pagar diferença' : 'Mudar plano',
+    });
+    if (!ok) return;
+    setBusy('plan:' + target.id);
+    const { data, error: err2 } = await supabase.functions.invoke('billing/order', { body: { kind: 'plan_change', plan_id: target.id } });
+    setBusy(null);
+    if ((data as any)?.applied) { toast.success(`Plano alterado para ${target.name}.`); window.dispatchEvent(new Event(COMPANY_PLAN_CHANGED)); void reload(); return; }
+    if (err2 || !(data as any)?.checkout_url) { toast.error((data as any)?.error || await readError(err2) || 'Não foi possível abrir o pagamento agora.'); return; }
+    window.location.assign((data as any).checkout_url);
+  };
+
   const loadPayments = async () => {
     const { data } = await (supabase as any).from('company_payments').select('id, kind, description, amount_cents, paid_at, status').order('paid_at', { ascending: false }).limit(50);
     setPayments((data || []) as Payment[]);
@@ -62,7 +93,7 @@ export function BillingSection() {
     setBusy(kind);
     const { data, error } = await supabase.functions.invoke('billing/order', { body: { kind, quantity } });
     setBusy(null);
-    if (error || !data?.checkout_url) { toast.error((data as any)?.error || 'Não foi possível abrir o pagamento agora.'); return; }
+    if (error || !data?.checkout_url) { toast.error((data as any)?.error || await readError(error) || 'Não foi possível abrir o pagamento agora.'); return; }
     window.location.assign(data.checkout_url);
   };
 
@@ -136,9 +167,33 @@ export function BillingSection() {
         </CardContent></Card>
       </div>
 
+      {paidPlan && plans.length > 1 ? (
+        <Card><CardContent className="p-5">
+          <p className="text-[15px] font-semibold">Mudar de plano</p>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">Ao subir de plano você paga só a diferença proporcional até a próxima cobrança. Ao descer, a mudança vale na hora e o novo valor entra na próxima cobrança.</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {plans.map((p) => {
+              const current = p.id === plan.plan_id;
+              const price = plan.billing_cycle === 'annual' ? (p.annual_price_cents ?? p.price_cents * 12) : p.price_cents;
+              return (
+                <div key={p.id} className={`flex flex-col rounded-xl border p-4 ${current ? 'border-foreground' : 'border-border'}`}>
+                  <p className="font-semibold">{p.name}</p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums">{brl(price)}<span className="text-[12px] font-normal text-muted-foreground">{plan.billing_cycle === 'annual' ? '/ano' : '/mês'}</span></p>
+                  <p className="mt-1 text-[12px] text-muted-foreground">{p.max_users} usuários · {p.max_sectors} setores · {p.storage_gb} GB</p>
+                  <div className="mt-auto pt-3">
+                    {current ? <span className="inline-flex h-9 items-center text-[13px] font-medium text-muted-foreground">Plano atual</span>
+                      : <Button size="sm" variant="outline" className="h-9 w-full" disabled={busy !== null} onClick={() => void changePlan(p)}>{busy === 'plan:' + p.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{(p.price_cents > (plan.price_cents ?? 0)) ? 'Subir para este' : 'Mudar para este'}</Button>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent></Card>
+      ) : null}
+
       <div className="grid gap-3 sm:grid-cols-3">
         <Meter icon={Users} label="Usuários ativos" used={plan.usage.users} limit={plan.limits.users} />
-        <Meter icon={Building2} label="Setores" used={plan.usage.sectors} limit={plan.limits.sectors} />
+        <Meter icon={Building2} label="Setores (fora o Geral)" used={plan.usage.sectors} limit={plan.limits.sectors} />
         <Meter icon={HardDrive} label="Armazenamento" used={plan.usage.storage_bytes} limit={plan.limits.storage_bytes} fmt={fmtBytes} />
       </div>
 

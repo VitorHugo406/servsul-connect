@@ -2,7 +2,7 @@ import { AssistantButton } from '@/components/chatbot/AssistantButton';
 import { useCompanyPlan } from '@/hooks/useCompanyPlan';
 import { sectionLock } from '@/lib/planAccess';
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Bell, ExternalLink, BarChart3, Briefcase, FileSpreadsheet, Construction, Plus, Palette, LayoutDashboard, StickyNote, ListTodo, UsersRound, LogOut } from 'lucide-react';
+import { Search, Bell, ExternalLink, Construction, Plus, Palette, LayoutDashboard, StickyNote, ListTodo, UsersRound, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,7 +42,7 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
   const visibleSections = useMemo(() => ALL_SECTIONS.filter(s => { if (sectionLock(s.id, companyPlan, isSuperAdminUser)) return false; if (s.mainAdminOnly) return isAdmin && isMainAdmin; if (s.adminOnly) return isAdmin; if (s.supervisorOnly) return isAdmin || ['supervisor','gerente','gestor','diretoria'].includes(autonomy || ''); if (s.permission) return isAdmin || autonomy === 'diretoria' || canAccess(s.permission); return true; }), [isAdmin, isMainAdmin, autonomy, canAccess, companyPlan, isSuperAdminUser]);
   const filteredSections = useMemo(() => { if (!searchQuery) return []; const q = searchQuery.toLowerCase(); return visibleSections.filter(s => s.label.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)); }, [searchQuery, visibleSections]);
   const selectSection = (id: string) => { onNavigateToSection?.(id); onSearchChange?.(''); setShowSectionSearch(false); };
-  const showBiButton = hasModule('bi'); const showBhButton = hasModule('bh') && (isAdmin || canAccess('can_access_bh' as any)); const showFechamentoButton = hasModule('fechamento') && (isAdmin || canAccess('can_access_fechamento' as any)); const showOrbsButton = hasModule('orbs') && (isAdmin || canAccess('can_access_orbs' as any)); const canCreateAnnouncement = isAdmin || canAccess('can_post_announcements');
+  const showOrbsButton = hasModule('orbs') && (isAdmin || canAccess('can_access_orbs' as any)); const canCreateAnnouncement = isAdmin || canAccess('can_post_announcements');
   const openNewAnnouncement = () => window.dispatchEvent(new CustomEvent('ewvor:open-new-announcement'));
   return (<>
     <motion.header initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
@@ -105,9 +105,6 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
           </div>
           {title === 'Avisos Gerais' && canCreateAnnouncement && <Button onClick={openNewAnnouncement} size="sm" className="h-9 gap-1.5 rounded-full px-3"><Plus className="h-4 w-4" /><span className="hidden sm:inline">Novo Aviso</span></Button>}
           {title === 'Início' && <SystemShortcutBar onManage={() => onNavigateToSection?.('shortcuts')} />}
-          {showBiButton && <Button variant="outline" size="sm" className="hidden gap-1.5 rounded-full lg:flex" asChild><a href="https://drive-data-ace.vercel.app/login" target="_blank" rel="noopener noreferrer"><BarChart3 className="h-4 w-4" />Dash BI</a></Button>}
-          {showBhButton && <Button variant="outline" size="sm" className="hidden gap-1.5 rounded-full lg:flex" asChild><a href="https://banco-de-horas-servchat.vercel.app/" target="_blank" rel="noopener noreferrer"><Briefcase className="h-4 w-4" />BH</a></Button>}
-          {showFechamentoButton && <Button variant="outline" size="sm" className="hidden gap-1.5 rounded-full lg:flex" onClick={() => setShowComingSoon('Fechamento')}><FileSpreadsheet className="h-4 w-4" />Fechamento</Button>}
           {showOrbsButton && <Button variant="outline" size="sm" className="hidden gap-1.5 rounded-full md:flex" asChild><a href="https://sync-synergy-flow.vercel.app/" target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />Orbs</a></Button>}
           <TeamHeaderButton />
           <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-slate-500 hover:bg-slate-100" onClick={() => setShowAppearance(true)} title="Personalizar visual"><Palette className="h-[18px] w-[18px]" /></Button>
