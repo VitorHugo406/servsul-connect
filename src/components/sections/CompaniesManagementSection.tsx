@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/common/PageHeader';
+import { SignupsPanel } from '@/components/companies/SignupsPanel';
 import { passwordError as passwordRuleError } from '@/lib/passwordPolicy';
 import { PasswordChecklist } from '@/components/common/PasswordChecklist';
 import { useEffect, useState } from 'react';
@@ -356,6 +357,7 @@ export function CompaniesManagementSection() {
             </div>
           </DialogContent>
         </Dialog>} />
+      <SignupsPanel />
 
       {loading ? (
         <div className="py-12 flex justify-center">
