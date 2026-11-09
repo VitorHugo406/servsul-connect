@@ -11,24 +11,22 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
 import { appConfirm, appPrompt } from '@/lib/appDialog';
 import { toast } from 'sonner';
+import { GuideDropdown, SlackGuide, TeamsGuide, WhatsAppGuide } from '@/components/integrations/IntegrationGuides';
 
 type Provider = 'slack' | 'teams' | 'whatsapp';
 type Row = { provider: Provider; enabled: boolean; events: string[]; config: any; last_status: string | null; last_error: string | null; last_used_at: string | null };
 type Delivery = { id: number; provider: string; event: string; ok: boolean; detail: string | null; created_at: string };
 
 const EVENT_LABEL: Record<string, string> = { announcement: 'Avisos', task_assigned: 'Card atribuído', meeting: 'Reuniões marcadas' };
-const META: Record<Provider, { name: string; color: string; letter: string; secretLabel: string; placeholder: string; defaults: string[]; steps: string[] }> = {
+const META: Record<Provider, { name: string; color: string; letter: string; secretLabel: string; placeholder: string; defaults: string[] }> = {
   slack: {
     name: 'Slack', color: '#4A154B', letter: 'S', secretLabel: 'Link do Incoming Webhook', placeholder: 'https://hooks.slack.com/services/…', defaults: ['announcement', 'task_assigned', 'meeting'],
-    steps: ['No Slack, abra api.slack.com/apps e crie um app (From scratch).', 'Em "Incoming Webhooks", ative e clique em "Add New Webhook to Workspace".', 'Escolha o canal que vai receber as mensagens e copie o link gerado.'],
   },
   teams: {
     name: 'Microsoft Teams', color: '#5059C9', letter: 'T', secretLabel: 'Link do fluxo (Workflows)', placeholder: 'https://…logic.azure.com/… ou …powerplatform.com/…', defaults: ['announcement', 'task_assigned', 'meeting'],
-    steps: ['No canal do Teams, clique em ⋯ > Workflows.', 'Escolha o modelo "Postar em um canal quando uma solicitação de webhook for recebida".', 'Conclua o assistente e copie o link do fluxo.'],
   },
   whatsapp: {
     name: 'WhatsApp Business', color: '#25D366', letter: 'W', secretLabel: 'Token de acesso permanente', placeholder: 'EAAG…', defaults: ['task_assigned'],
-    steps: ['Em developers.facebook.com, crie um app do tipo Empresa e adicione o produto WhatsApp.', 'Cadastre o número da empresa e copie o "Phone number ID".', 'Crie e aprove um modelo de mensagem com uma variável no corpo, por exemplo: "Aviso do ewvon: {{1}}".', 'Gere um token permanente (usuário do sistema com permissão whatsapp_business_messaging).'],
   },
 };
 
@@ -46,7 +44,6 @@ function ProviderCard({ provider, row, onChanged }: { provider: Provider; row?: 
   const [enabled, setEnabled] = useState(row?.enabled ?? true);
   const [cfg, setCfg] = useState({ phone_number_id: row?.config?.phone_number_id ?? '', template_name: row?.config?.template_name ?? '', language: row?.config?.language ?? 'pt_BR' });
   const [busy, setBusy] = useState<string | null>(null);
-  const [showHelp, setShowHelp] = useState(!row);
   useEffect(() => { setEvents(row?.events ?? meta.defaults); setEnabled(row?.enabled ?? true); }, [row, meta.defaults]);
 
   const save = async () => {
@@ -86,8 +83,9 @@ function ProviderCard({ provider, row, onChanged }: { provider: Provider; row?: 
       </div>
       {row?.last_status === 'erro' && row.last_error ? <p className="rounded-lg bg-destructive/10 px-3 py-2 text-[12px] text-destructive">{row.last_error}</p> : null}
 
-      <button type="button" className="text-[12px] font-medium text-muted-foreground underline-offset-2 hover:underline" onClick={() => setShowHelp((v) => !v)}>{showHelp ? 'Ocultar passo a passo' : 'Como conseguir os dados'}</button>
-      {showHelp ? <ol className="list-decimal space-y-1 pl-5 text-[12px] text-muted-foreground">{meta.steps.map((s) => <li key={s}>{s}</li>)}</ol> : null}
+      <GuideDropdown title={row ? 'Passo a passo detalhado' : 'Como conseguir os dados (passo a passo detalhado)'}>
+        {provider === 'slack' ? <SlackGuide /> : provider === 'teams' ? <TeamsGuide /> : <WhatsAppGuide />}
+      </GuideDropdown>
 
       {provider === 'whatsapp' ? (
         <div className="grid gap-2 sm:grid-cols-3">
