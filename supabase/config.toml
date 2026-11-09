@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.beta-signup]
 verify_jwt = false
+
+[functions.billing]
+verify_jwt = false

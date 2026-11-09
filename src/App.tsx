@@ -25,6 +25,7 @@ const LandingPage = lazyWithRetry(() => import("./pages/LandingPage"));
 const Auth = lazyWithRetry(() => import("./pages/Auth"));
 const SelectCompany = lazyWithRetry(() => import("./pages/SelectCompany"));
 const BirthdayShare = lazyWithRetry(() => import("./pages/BirthdayShare"));
+const Subscribe = lazyWithRetry(() => import("./pages/Subscribe"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const EwwonLogin = lazyWithRetry(() => import("./components/ewwon/EwwonLogin"));
 
@@ -93,7 +94,7 @@ function AppRoutes() {
   // The new login (company + user) is used on every screen size; ?full=1 opens the complete form.
   const mobileLogin = !full;
   const authContent = mobileLogin ? <PublicRoute><EwwonLogin /></PublicRoute> : <PublicRoute><Auth /></PublicRoute>;
-  return <>{mobileLogin ? null : <PersistentAccessNavigation />}<Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><E2EBoot /><Routes><Route path="/" element={<RootRoute />} /><Route path="/auth" element={!mobileLogin && location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={mobileLogin ? authContent : <PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="*" element={<RootRoute />} /></Routes></Suspense></>;
+  return <>{mobileLogin ? null : <PersistentAccessNavigation />}<Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><E2EBoot /><Routes><Route path="/" element={<RootRoute />} /><Route path="/auth" element={!mobileLogin && location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={mobileLogin ? authContent : <PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="/assinar" element={<Subscribe />} /><Route path="/assinar/retorno" element={<Subscribe />} /><Route path="*" element={<RootRoute />} /></Routes></Suspense></>;
 }
 function E2EBoot() { const { profile } = useAuth(); useEffect(() => { if (profile?.id) initE2E(profile.id); }, [profile?.id]); return null; }
 function AppShell() { return <><DemoTimer /><AuthProvider><CompanyProvider><FloatingNoteProvider><AppRoutes /></FloatingNoteProvider></CompanyProvider></AuthProvider></>; }
