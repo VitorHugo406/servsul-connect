@@ -127,6 +127,7 @@ async function provision(signupId: string, silent = false): Promise<{ ok: boolea
     const periodEnd = new Date(Date.now() + (periodDays(cycle) + PERIOD_GRACE_DAYS) * 864e5).toISOString();
     const { error: subErr } = await admin.from('company_subscriptions').upsert({ company_id: companyId, plan_id: s.plan_id, status: 'active', billing_cycle: cycle, provider: 'mercadopago', provider_subscription_id: cycle === 'once' ? null : s.preapproval_id, provider_customer_id: cycle === 'once' ? s.last_payment_id : null, current_period_end: periodEnd }, { onConflict: 'company_id' });
     if (subErr) throw new Error('Assinatura: ' + subErr.message);
+    if (s.last_payment_id) await admin.from('company_payments').upsert({ company_id: companyId, provider_payment_id: String(s.last_payment_id), kind: 'signup', description: `Assinatura ${cycle === 'annual' ? 'anual' : cycle === 'once' ? 'mensal avulsa' : 'mensal'} · plano ${s.plan_id}`, amount_cents: s.amount_cents, paid_at: s.paid_at || new Date().toISOString() }, { onConflict: 'provider,provider_payment_id', ignoreDuplicates: true });
     // 4. Admin user.
     const { data: existingProfile } = await admin.from('profiles').select('user_id, company_id').ilike('email', s.admin_email).maybeSingle();
     let userId: string | null = existingProfile?.company_id === companyId ? existingProfile.user_id : null;
@@ -203,7 +204,7 @@ async function checkSignupPaid(signup: any): Promise<string> {
 }
 
 // Recurring charges for an active company.
-async function applyRecurring(preapprovalId: string, paymentStatus: string, amount: number) {
+async function applyRecurring(preapprovalId: string, paymentStatus: string, amount: number, paymentId = '') {
   const { data: sub } = await admin.from('company_subscriptions').select('company_id, plan_id, current_period_end, billing_cycle').eq('provider', 'mercadopago').eq('provider_subscription_id', preapprovalId).maybeSingle();
   if (!sub) return 'assinatura não vinculada';
   if (paymentStatus === 'approved') {
@@ -212,6 +213,7 @@ async function applyRecurring(preapprovalId: string, paymentStatus: string, amou
     if (expected && Math.round(amount * 100) < expected) return 'valor abaixo do plano';
     const base = Math.max(Date.now(), new Date(sub.current_period_end || 0).getTime() - PERIOD_GRACE_DAYS * 864e5);
     await admin.from('company_subscriptions').update({ status: 'active', current_period_end: new Date(base + (periodDays(sub.billing_cycle) + PERIOD_GRACE_DAYS) * 864e5).toISOString() }).eq('company_id', sub.company_id);
+    if (paymentId) await admin.from('company_payments').upsert({ company_id: sub.company_id, provider_payment_id: paymentId, kind: 'renewal', description: `Renovação ${sub.billing_cycle === 'annual' ? 'anual' : 'mensal'}`, amount_cents: Math.round(amount * 100) }, { onConflict: 'provider,provider_payment_id', ignoreDuplicates: true });
     return 'renovada';
   }
   if (['rejected', 'cancelled', 'refunded', 'charged_back'].includes(paymentStatus)) {
@@ -221,7 +223,60 @@ async function applyRecurring(preapprovalId: string, paymentStatus: string, amou
   return 'ignorado';
 }
 
-// x-signature: "ts=...,v1=..." ; manifest "id:<data.id>;request-id:<x-request-id>;ts:<ts>;"
+// ---------- add-ons and one-time renewals (billing_orders) ----------
+async function billingSettings() {
+  const { data } = await admin.from('billing_settings').select('extra_user_cents, storage_pack_gb, storage_pack_cents').limit(1).maybeSingle();
+  return data ?? { extra_user_cents: 990, storage_pack_gb: 5, storage_pack_cents: 990 };
+}
+// Monthly value of the company's add-ons.
+const extrasMonthlyCents = (sub: any, cfg: any) => (sub.extra_users || 0) * cfg.extra_user_cents + Math.ceil((sub.extra_storage_gb || 0) / cfg.storage_pack_gb) * cfg.storage_pack_cents;
+
+// Keeps the automatic charge (monthly or annual) equal to plan + add-ons.
+async function syncRecurringAmount(companyId: string): Promise<string> {
+  const { data: sub } = await admin.from('company_subscriptions').select('*').eq('company_id', companyId).maybeSingle();
+  if (!sub?.provider_subscription_id || sub.billing_cycle === 'once') return 'sem cobrança automática';
+  const { data: plan } = await admin.from('subscription_plans').select('price_cents, annual_price_cents').eq('id', sub.plan_id).maybeSingle();
+  const cfg = await billingSettings();
+  const base = sub.billing_cycle === 'annual' ? (plan?.annual_price_cents ?? (plan?.price_cents ?? 0) * 12) : (plan?.price_cents ?? 0);
+  const total = base + extrasMonthlyCents(sub, cfg) * (sub.billing_cycle === 'annual' ? 12 : 1);
+  try {
+    await mp(`/preapproval/${encodeURIComponent(sub.provider_subscription_id)}`, { method: 'PUT', body: JSON.stringify({ auto_recurring: { transaction_amount: total / 100, currency_id: 'BRL' } }) });
+    return 'cobrança automática ajustada';
+  } catch (e) {
+    await notifySuperAdmin(`*Ajuste manual necessário*\n\nNão consegui atualizar o valor da assinatura ${sub.provider_subscription_id} para ${(total / 100).toFixed(2)}. Ajuste no Mercado Pago. Erro: ${(e as Error).message}`);
+    return 'ajuste manual necessário';
+  }
+}
+
+async function applyOrder(orderId: string, payment: any): Promise<string> {
+  if (payment?.status !== 'approved') return `pedido: pagamento ${payment?.status}`;
+  const { data: order } = await admin.from('billing_orders').select('*').eq('id', orderId).maybeSingle();
+  if (!order) return 'pedido não encontrado';
+  if (Math.round(Number(payment.transaction_amount) * 100) < order.amount_cents) return 'pedido: valor divergente';
+  const { data: claimed } = await admin.from('billing_orders').update({ status: 'paid', payment_id: String(payment.id), paid_at: new Date().toISOString() }).eq('id', orderId).eq('status', 'pending').select('*').maybeSingle();
+  if (!claimed) return 'pedido já aplicado';
+  const cfg = await billingSettings();
+  const { data: sub } = await admin.from('company_subscriptions').select('*').eq('company_id', order.company_id).maybeSingle();
+  let label = '';
+  if (order.kind === 'extra_users') {
+    await admin.from('company_subscriptions').update({ extra_users: (sub?.extra_users || 0) + order.quantity }).eq('company_id', order.company_id);
+    label = `${order.quantity} usuário(s) extra(s)`;
+  } else if (order.kind === 'extra_storage') {
+    await admin.from('company_subscriptions').update({ extra_storage_gb: (sub?.extra_storage_gb || 0) + order.quantity * cfg.storage_pack_gb }).eq('company_id', order.company_id);
+    label = `${order.quantity * cfg.storage_pack_gb} GB extras`;
+  } else {
+    const base = Math.max(Date.now(), new Date(sub?.current_period_end || 0).getTime() - PERIOD_GRACE_DAYS * 864e5);
+    await admin.from('company_subscriptions').update({ status: 'active', current_period_end: new Date(base + (31 + PERIOD_GRACE_DAYS) * 864e5).toISOString() }).eq('company_id', order.company_id);
+    label = 'renovação de 1 mês';
+  }
+  await admin.from('company_payments').upsert({ company_id: order.company_id, provider_payment_id: String(payment.id), kind: order.kind, description: label.charAt(0).toUpperCase() + label.slice(1), amount_cents: order.amount_cents }, { onConflict: 'provider,provider_payment_id', ignoreDuplicates: true });
+  const sync = order.kind === 'once_renewal' ? '' : ' · ' + await syncRecurringAmount(order.company_id);
+  const { data: comp } = await admin.from('companies').select('name').eq('id', order.company_id).maybeSingle();
+  await notifySuperAdmin(`*Pagamento de extra confirmado*\n\nEmpresa: ${comp?.name}\nItem: ${label}\nValor: R$ ${(order.amount_cents / 100).toFixed(2)}${sync}`);
+  return 'pedido aplicado' + sync;
+}
+
+// x-signature: "ts=...,v1=..."  ; manifest "id:<data.id>;request-id:<x-request-id>;ts:<ts>;"
 async function signatureOk(req: Request, dataId: string): Promise<boolean | null> {
   const secret = Deno.env.get('MP_WEBHOOK_SECRET');
   if (!secret) return null;
@@ -342,6 +397,50 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ---- company admin: buy add-ons or renew a one-time month ----
+    if (route === 'order' && req.method === 'POST') {
+      const jwt = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+      const { data: u } = jwt ? await admin.auth.getUser(jwt) : { data: { user: null } } as any;
+      if (!u?.user) return reply({ error: 'Faça login novamente.' }, 401);
+      if (limited(ip + ':o', 20)) return reply({ error: 'Muitas tentativas. Tente em alguns minutos.' }, 429);
+      const [{ data: prof }, { data: roles }] = await Promise.all([
+        admin.from('profiles').select('company_id, autonomy_level').eq('user_id', u.user.id).maybeSingle(),
+        admin.from('user_roles').select('role').eq('user_id', u.user.id),
+      ]);
+      const isCompanyAdmin = (roles || []).some((r: any) => r.role === 'admin' || r.role === 'super_admin') || prof?.autonomy_level === 'admin';
+      if (!prof?.company_id || !isCompanyAdmin) return reply({ error: 'Somente o administrador da empresa pode fazer compras.' }, 403);
+      const { data: comp } = await admin.from('companies').select('id, name, is_system').eq('id', prof.company_id).maybeSingle();
+      const { data: sub } = await admin.from('company_subscriptions').select('*').eq('company_id', prof.company_id).maybeSingle();
+      if (!comp || comp.is_system || !sub?.plan_id || sub.status === 'exempt') return reply({ error: 'Esta empresa não tem plano pago para comprar extras.' }, 400);
+      const body = await req.json().catch(() => ({}));
+      const kind = ['extra_users', 'extra_storage', 'once_renewal'].includes(body?.kind) ? body.kind : null;
+      const qty = Math.max(1, Math.min(500, Math.floor(Number(body?.quantity) || 1)));
+      if (!kind) return reply({ error: 'Pedido inválido.' }, 400);
+      if (kind === 'once_renewal' && sub.billing_cycle !== 'once') return reply({ error: 'Sua assinatura renova automaticamente.' }, 400);
+      const cfg = await billingSettings();
+      const { data: plan } = await admin.from('subscription_plans').select('name, price_cents').eq('id', sub.plan_id).maybeSingle();
+      // Add-ons are charged now until the next renewal (whole months), then join the automatic charge.
+      const monthsLeft = sub.billing_cycle === 'annual' ? Math.max(1, Math.ceil((new Date(sub.current_period_end || Date.now()).getTime() - Date.now()) / (30 * 864e5))) : 1;
+      const unit = kind === 'extra_users' ? cfg.extra_user_cents : kind === 'extra_storage' ? cfg.storage_pack_cents : 0;
+      const amount = kind === 'once_renewal' ? (plan?.price_cents ?? 0) + extrasMonthlyCents(sub, cfg) : unit * qty * monthsLeft;
+      if (!amount) return reply({ error: 'Valor inválido.' }, 400);
+      const title = kind === 'extra_users' ? `${qty} usuário(s) extra(s)` : kind === 'extra_storage' ? `${qty * cfg.storage_pack_gb} GB de armazenamento extra` : `Renovação de 1 mês · plano ${plan?.name}`;
+      const { data: order, error: oErr } = await admin.from('billing_orders').insert({ company_id: comp.id, kind, quantity: kind === 'once_renewal' ? 1 : qty, amount_cents: amount, created_by: u.user.id }).select('id').single();
+      if (oErr) return reply({ error: 'Não foi possível criar o pedido.' }, 500);
+      const back = `${SITE_URL}/pagamentos?pedido=${order.id}`;
+      const pref = await mp('/checkout/preferences', { method: 'POST', body: JSON.stringify({
+        items: [{ id: kind, title: `ewvon · ${title}`.slice(0, 120), description: comp.name.slice(0, 120), quantity: 1, unit_price: amount / 100, currency_id: 'BRL' }],
+        external_reference: `order:${order.id}`,
+        back_urls: { success: back, pending: back, failure: back },
+        auto_return: 'approved',
+        notification_url: WEBHOOK_URL,
+        statement_descriptor: 'EWVON',
+        date_of_expiration: new Date(Date.now() + 6 * 864e5).toISOString(),
+      }) });
+      await admin.from('billing_orders').update({ mp_preference_id: pref.id, checkout_url: pref.init_point }).eq('id', order.id);
+      return reply({ id: order.id, checkout_url: pref.init_point, amount_cents: amount, months: monthsLeft });
+    }
+
     // ---- public: status (needs the private token) ----
     if (route === 'status' && req.method === 'POST') {
       if (limited(ip + ':s', 120)) return reply({ error: 'Muitas consultas.' }, 429);
@@ -378,9 +477,15 @@ Deno.serve(async (req) => {
         if (s && s.status !== 'active') result = status === 'approved' ? await checkSignupPaid(s) : `primeiro pagamento: ${status}`;
         else if (s && String(ap?.payment?.id || '') === String(s.last_payment_id || '')) result = 'primeiro pagamento já aplicado';
         else if (seen?.length) result = 'já processado';
-        else result = await applyRecurring(preId, status, Number(ap.transaction_amount || 0));
+        else result = await applyRecurring(preId, status, Number(ap.transaction_amount || 0), String(ap?.payment?.id || ''));
       } else if (topic === 'payment') {
         const pay = await mp(`/v1/payments/${encodeURIComponent(dataId)}`);
+        const orderRef = typeof pay?.external_reference === 'string' && /^order:[0-9a-f-]{36}$/.test(pay.external_reference) ? pay.external_reference.slice(6) : null;
+        if (orderRef) {
+          result = await applyOrder(orderRef, pay);
+          await admin.from('payment_events').insert({ provider: 'mercadopago', topic, resource_id: dataId, signature_ok: sigOk, result: result.slice(0, 200) });
+          return reply({ ok: true });
+        }
         const ref = typeof pay?.external_reference === 'string' && /^[0-9a-f-]{36}$/.test(pay.external_reference) ? pay.external_reference : null;
         const { data: s } = ref ? await admin.from('company_signups').select('*').eq('id', ref).maybeSingle() : { data: null };
         if (s && s.billing_cycle === 'once' && s.status !== 'active') result = await checkOncePaid(s);
@@ -464,6 +569,16 @@ Deno.serve(async (req) => {
       for (const s of open ?? []) {
         try { out[s.id] = s.status === 'failed' && s.paid_at ? ((await provision(s.id)).ok ? 'provisionada' : 'falhou de novo') : await checkSignupPaid(s); }
         catch (e) { out[s.id] = 'erro: ' + (e as Error).message; }
+      }
+      // Add-on orders and one-time renewals waiting for payment (up to 12 days, boleto included).
+      await admin.from('billing_orders').update({ status: 'canceled' }).eq('status', 'pending').lt('created_at', new Date(Date.now() - 12 * 864e5).toISOString());
+      const { data: orders } = await admin.from('billing_orders').select('id').eq('status', 'pending').not('mp_preference_id', 'is', null).limit(40);
+      for (const o of orders ?? []) {
+        try {
+          const found = await mp(`/v1/payments/search?external_reference=${encodeURIComponent('order:' + o.id)}&sort=date_created&criteria=desc`);
+          const pay = (found?.results || []).find((p: any) => p?.status === 'approved');
+          out['order:' + o.id] = pay ? await applyOrder(o.id, pay) : 'pedido aguardando';
+        } catch (e) { out['order:' + o.id] = 'erro: ' + (e as Error).message; }
       }
       // Provisioning stuck for more than 15 minutes (function crashed mid-way) -> retry.
       const { data: stuck } = await admin.from('company_signups').select('id').eq('status', 'provisioning').lt('updated_at', new Date(Date.now() - 15 * 60e3).toISOString());
