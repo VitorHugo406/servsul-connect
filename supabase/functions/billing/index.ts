@@ -69,6 +69,8 @@ const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/[
 const isHex = (v: unknown) => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v);
 const slugify = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'empresa';
 
+const tokenMode = () => { const t = Deno.env.get('MP_ACCESS_TOKEN') || ''; return !t ? 'missing' : t.startsWith('TEST-') ? 'test' : 'production'; };
+
 async function mp(path: string, init: RequestInit = {}) {
   const token = Deno.env.get('MP_ACCESS_TOKEN');
   if (!token) throw Object.assign(new Error('Pagamento ainda não configurado'), { status: 503 });
@@ -150,10 +152,25 @@ async function provision(signupId: string, silent = false): Promise<{ ok: boolea
 }
 
 // Confirms a payment for a signup straight from Mercado Pago and provisions when approved.
-async function checkSignupPaid(s: any): Promise<string> {
+async function checkSignupPaid(signup: any): Promise<string> {
+  let s = signup;
+  if (!s.preapproval_id && s.mp_plan_id) {
+    const found = await mp(`/preapproval/search?preapproval_plan_id=${encodeURIComponent(s.mp_plan_id)}`);
+    const subs = (found?.results || []).filter((p: any) => p?.preapproval_plan_id === s.mp_plan_id);
+    const pick = subs.find((p: any) => p.status === 'authorized') || subs[0];
+    if (!pick) return 'aguardando assinatura';
+    await admin.from('company_signups').update({ preapproval_id: pick.id }).eq('id', s.id);
+    s = { ...s, preapproval_id: pick.id };
+  }
   if (!s.preapproval_id) return 'sem assinatura';
   const pre = await mp(`/preapproval/${encodeURIComponent(s.preapproval_id)}`);
-  if (pre.external_reference !== s.id) return 'referência divergente';
+  if (pre.preapproval_plan_id !== s.mp_plan_id && pre.external_reference !== s.id) return 'referência divergente';
+  if (['expired', 'canceled'].includes(s.status) && ['authorized', 'pending'].includes(pre.status)) {
+    // Paid through an old link after the signup was closed: stop the subscription and warn the super admin.
+    try { await mp(`/preapproval/${encodeURIComponent(s.preapproval_id)}`, { method: 'PUT', body: JSON.stringify({ status: 'cancelled' }) }); } catch (e) { console.error('cancel late', e); }
+    await notifySuperAdmin(`*Assinatura cancelada automaticamente*\n\nAlguém assinou pelo link de um cadastro já encerrado (${s.company_name}, ${s.admin_email}). A assinatura ${s.preapproval_id} foi cancelada. Se houve cobrança, devolva pelo Mercado Pago.`);
+    return 'cadastro encerrado: assinatura cancelada';
+  }
   if (pre.status === 'cancelled') { await admin.from('company_signups').update({ status: 'canceled', password_enc: null }).eq('id', s.id).eq('status', 'pending_payment'); return 'cancelada'; }
   const search = await mp(`/authorized_payments/search?preapproval_id=${encodeURIComponent(s.preapproval_id)}`);
   const approved = (search?.results || []).find((p: any) => p?.payment?.status === 'approved' && Math.round(Number(p?.transaction_amount) * 100) >= s.amount_cents);
@@ -212,7 +229,7 @@ Deno.serve(async (req) => {
     // ---- public: active plans ----
     if (route === 'plans') {
       const { data } = await admin.from('subscription_plans').select('id, name, description, price_cents, max_users, max_sectors, storage_gb, features').eq('is_active', true).order('sort_order');
-      return reply({ plans: data ?? [], payments_ready: !!Deno.env.get('MP_ACCESS_TOKEN') });
+      return reply({ plans: data ?? [], payments_ready: !!Deno.env.get('MP_ACCESS_TOKEN'), mode: tokenMode() });
     }
 
     // ---- public: start a signup ----
@@ -229,12 +246,10 @@ Deno.serve(async (req) => {
       const adminName = clean(body.admin?.name, 80);
       const adminEmail = clean(body.admin?.email, 160).toLowerCase();
       const password = body.admin?.password;
-      const payerEmail = clean(body.payer_email || body.admin?.email, 160).toLowerCase();
       if (companyName.length < 2) return reply({ error: 'Informe o nome da empresa.' }, 400);
       if (!isHex(body.company?.primary_color) || !isHex(body.company?.secondary_color)) return reply({ error: 'Cores inválidas.' }, 400);
       if (adminName.length < 3) return reply({ error: 'Informe o nome do administrador.' }, 400);
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(adminEmail)) return reply({ error: 'Informe um e-mail válido.' }, 400);
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(payerEmail)) return reply({ error: 'Informe o e-mail da conta Mercado Pago que fará o pagamento.' }, 400);
       const pe = passwordRuleError(password); if (pe) return reply({ error: pe }, 400);
       const { data: emailUsed } = await admin.from('profiles').select('id').ilike('email', adminEmail).limit(1);
       if (emailUsed?.length) return reply({ error: 'Este e-mail já tem uma conta no ewvon. Use outro e-mail para o administrador.' }, 409);
@@ -269,23 +284,20 @@ Deno.serve(async (req) => {
           if (!upErr) await admin.from('company_signups').update({ logo_path: path }).eq('id', signup.id);
         }
       }
-      // Mercado Pago subscription (first charge happens on checkout).
+      // Mercado Pago subscription plan exclusive to this signup: any Mercado Pago account (or card) can
+      // subscribe through its checkout; the resulting subscription is matched back by the plan id.
       try {
-        const pre = await mp('/preapproval', { method: 'POST', body: JSON.stringify({
+        const plan_ = await mp('/preapproval_plan', { method: 'POST', body: JSON.stringify({
           reason: `ewvon · Plano ${plan.name} · ${companyName}`.slice(0, 120),
-          external_reference: signup.id,
-          payer_email: payerEmail,
           back_url: `${SITE_URL}/assinar/retorno?s=${signup.id}&t=${token}`,
           auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: plan.price_cents / 100, currency_id: 'BRL' },
-          status: 'pending',
         }) });
-        await admin.from('company_signups').update({ preapproval_id: pre.id, checkout_url: pre.init_point }).eq('id', signup.id);
-        return reply({ id: signup.id, token, checkout_url: pre.init_point });
+        await admin.from('company_signups').update({ mp_plan_id: plan_.id, checkout_url: plan_.init_point }).eq('id', signup.id);
+        return reply({ id: signup.id, token, checkout_url: plan_.init_point });
       } catch (e) {
-        console.error('preapproval', e, (e as any)?.mp);
+        console.error('preapproval_plan', e, (e as any)?.mp);
         await admin.from('company_signups').update({ status: 'canceled', password_enc: null, error: String((e as Error).message).slice(0, 300) }).eq('id', signup.id);
-        const payerProblem = /payer|collector|email/i.test(String((e as Error).message));
-        return reply({ error: payerProblem ? 'O Mercado Pago não aceitou o e-mail do pagador. Use o e-mail da conta Mercado Pago que vai pagar a assinatura.' : 'Não foi possível abrir o pagamento agora. Tente novamente em instantes.' }, payerProblem ? 400 : 502);
+        return reply({ error: 'Não foi possível abrir o pagamento agora. Tente novamente em instantes.' }, 502);
       }
     }
 
@@ -297,7 +309,7 @@ Deno.serve(async (req) => {
       const { data: s } = await admin.from('company_signups').select('*').eq('id', id).maybeSingle();
       if (!s || !timingSafeEqual(s.status_token_hash, await sha256(token))) return reply({ error: 'Cadastro não encontrado' }, 404);
       // When the visitor comes back from the checkout, confirm right away instead of waiting the webhook.
-      if (s.status === 'pending_payment' && s.preapproval_id && Date.now() - new Date(s.updated_at).getTime() > 4000) {
+      if (s.status === 'pending_payment' && (s.preapproval_id || s.mp_plan_id) && Date.now() - new Date(s.updated_at).getTime() > 4000) {
         await admin.from('company_signups').update({ updated_at: new Date().toISOString() }).eq('id', s.id);
         try { await checkSignupPaid(s); } catch (e) { console.error('status check', e); }
       }
@@ -319,7 +331,8 @@ Deno.serve(async (req) => {
         const ap = await mp(`/authorized_payments/${encodeURIComponent(dataId)}`);
         const preId = String(ap.preapproval_id || '');
         const status = String(ap?.payment?.status || '');
-        const { data: s } = await admin.from('company_signups').select('*').eq('preapproval_id', preId).maybeSingle();
+        let { data: s } = await admin.from('company_signups').select('*').eq('preapproval_id', preId).maybeSingle();
+        if (!s && preId) { const pre = await mp(`/preapproval/${encodeURIComponent(preId)}`); if (pre?.preapproval_plan_id) ({ data: s } = await admin.from('company_signups').select('*').eq('mp_plan_id', pre.preapproval_plan_id).maybeSingle()); }
         const { data: seen } = await admin.from('payment_events').select('id').eq('provider', 'mercadopago').eq('resource_id', dataId).eq('result', 'renovada').limit(1);
         if (s && s.status !== 'active') result = status === 'approved' ? await checkSignupPaid(s) : `primeiro pagamento: ${status}`;
         else if (s && String(ap?.payment?.id || '') === String(s.last_payment_id || '')) result = 'primeiro pagamento já aplicado';
@@ -327,9 +340,15 @@ Deno.serve(async (req) => {
         else result = await applyRecurring(preId, status, Number(ap.transaction_amount || 0));
       } else if (topic === 'subscription_preapproval' || topic === 'preapproval') {
         const pre = await mp(`/preapproval/${encodeURIComponent(dataId)}`);
-        const { data: s } = await admin.from('company_signups').select('*').eq('preapproval_id', dataId).maybeSingle();
+        let { data: s } = await admin.from('company_signups').select('*').eq('preapproval_id', dataId).maybeSingle();
+        if (!s && pre?.preapproval_plan_id) ({ data: s } = await admin.from('company_signups').select('*').eq('mp_plan_id', pre.preapproval_plan_id).maybeSingle());
         if (s && s.status !== 'active') result = await checkSignupPaid(s);
-        else if (pre.status === 'cancelled' || pre.status === 'paused') {
+        else if (s && s.preapproval_id && s.preapproval_id !== dataId && ['authorized', 'pending'].includes(pre.status)) {
+          // Same signup link used again after the company was created: cancel only this duplicate.
+          try { await mp(`/preapproval/${encodeURIComponent(dataId)}`, { method: 'PUT', body: JSON.stringify({ status: 'cancelled' }) }); } catch (e) { console.error('cancel duplicate', e); }
+          await notifySuperAdmin(`*Assinatura duplicada cancelada*\n\nO link de assinatura de ${s.company_name} foi usado de novo. A assinatura extra ${dataId} foi cancelada. Se houve cobrança, devolva pelo Mercado Pago.`);
+          result = 'duplicada cancelada';
+        } else if (pre.status === 'cancelled' || pre.status === 'paused') {
           await admin.from('company_subscriptions').update({ status: pre.status === 'cancelled' ? 'canceled' : 'past_due' }).eq('provider', 'mercadopago').eq('provider_subscription_id', dataId);
           result = 'assinatura ' + pre.status;
         }
