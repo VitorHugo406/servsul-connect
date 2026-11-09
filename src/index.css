@@ -1294,3 +1294,8 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 .pdfprev-tx { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 .pdfprev-tx b { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pdfprev-tx small { font-size: 11px; opacity: .65; }
+
+/* Desktop chat: collapse/expand the info panel */
+.chat-insights-railbtn { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 12px; color: hsl(var(--muted-foreground)); background: transparent; transition: background .15s ease, color .15s ease; }
+.chat-insights-railbtn:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+.chat-insights-railbtn:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 1px; }

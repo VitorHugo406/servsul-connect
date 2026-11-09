@@ -8,7 +8,10 @@ import { SectorUsersList } from '@/components/sector/SectorUsersList';
 import { CosmicBlob } from '@/components/common/CosmicBlob';
 import { isSystemSender } from '@/lib/systemSender';
 import { cn } from '@/lib/utils';
-import { BarChart3, Clock, Paperclip, Link2, Users, Loader2 } from 'lucide-react';
+import { BarChart3, Clock, Paperclip, Link2, Users, Loader2, PanelRightClose, PanelRightOpen } from 'lucide-react';
+
+const COLLAPSE_KEY = 'ewvon:chat-panel-collapsed';
+const readCollapsed = () => { try { return localStorage.getItem(COLLAPSE_KEY) === '1'; } catch { return false; } };
 
 export type InsightsKind = 'sector' | 'group' | 'dm';
 export type InsightsMode = 'stats' | 'people';
@@ -35,6 +38,8 @@ async function loadRows(kind: InsightsKind, id: string, meId: string): Promise<R
 }
 
 export function ChatInsightsPanel({ kind, id, meId, mode, onModeChange }: { kind: InsightsKind; id: string | null; meId: string; mode: InsightsMode; onModeChange: (m: InsightsMode) => void }) {
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const setCollapsedPersist = (v: boolean) => { setCollapsed(v); try { localStorage.setItem(COLLAPSE_KEY, v ? '1' : '0'); } catch { /* storage blocked */ } };
   const [rows, setRows] = useState<Row[] | null>(null);
   const [people, setPeople] = useState<Record<string, Person>>({});
   const [members, setMembers] = useState<Person[] | null>(null);
@@ -93,9 +98,20 @@ export function ChatInsightsPanel({ kind, id, meId, mode, onModeChange }: { kind
   const partner = kind === 'dm' ? people[id] : null;
   const name = (p?: Person | null) => (p ? p.display_name || p.name : 'Alguém');
 
+  if (collapsed) return (
+    <aside className="chat-insights-rail hidden w-[52px] shrink-0 flex-col items-center gap-1.5 border-l border-border/60 bg-card py-3 xl:flex" aria-label="Detalhes da conversa (recolhido)">
+      <button type="button" onClick={() => setCollapsedPersist(false)} title="Expandir painel" aria-label="Expandir painel de informações" className="chat-insights-railbtn"><PanelRightOpen className="h-[18px] w-[18px]" /></button>
+      <span className="my-1 h-px w-6 bg-border" />
+      <button type="button" onClick={() => { onModeChange('stats'); setCollapsedPersist(false); }} title="Dados" aria-label="Abrir dados da conversa" className="chat-insights-railbtn"><BarChart3 className="h-[18px] w-[18px]" /></button>
+      <button type="button" onClick={() => { onModeChange('people'); setCollapsedPersist(false); }} title={kind === 'dm' ? 'Contato' : 'Pessoas'} aria-label={kind === 'dm' ? 'Abrir contato' : 'Abrir pessoas'} className="chat-insights-railbtn"><Users className="h-[18px] w-[18px]" /></button>
+    </aside>
+  );
+
   return (
     <aside className="hidden w-[300px] shrink-0 flex-col border-l border-border/60 bg-card xl:flex" aria-label="Detalhes da conversa">
-      <div className="m-3 flex gap-1 rounded-2xl bg-muted/70 p-1">
+      <div className="m-3 flex items-center gap-1.5">
+      <button type="button" onClick={() => setCollapsedPersist(true)} title="Ocultar painel" aria-label="Ocultar painel de informações" className="chat-insights-railbtn shrink-0"><PanelRightClose className="h-[18px] w-[18px]" /></button>
+      <div className="flex flex-1 gap-1 rounded-2xl bg-muted/70 p-1">
         {(['stats', 'people'] as const).map((m) => (
           <button key={m} type="button" onClick={() => onModeChange(m)}
             className={cn('flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors', mode === m ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
@@ -103,6 +119,7 @@ export function ChatInsightsPanel({ kind, id, meId, mode, onModeChange }: { kind
             {m === 'stats' ? 'Dados' : kind === 'dm' ? 'Contato' : 'Pessoas'}
           </button>
         ))}
+      </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
