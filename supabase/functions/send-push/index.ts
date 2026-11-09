@@ -113,28 +113,43 @@ Deno.serve(async (req) => {
   }
 
   const author = r.sender_id || r.author_id
+  // ewvon call card ("📞 ewvon-call:<id>" voice / "📹 ewvon-call:<id>" video): ring like a phone call.
+  const call = payload.kind === 'message' ? /^(📞|📹) ewvon-call:([0-9a-f-]{36})$/.exec(String(r.content || '').trim()) : null
+  if (call) {
+    const audio = call[1] === '📞', id = call[2], who = String(payload.sender || payload.title || 'Alguém')
+    payload = { ...payload, kind: 'call', audio, callId: id, tag: `call:${id}`, url: `/?call=${id}&a=${audio ? 1 : 0}`,
+      title: `${audio ? '📞' : '📹'} ${who}`,
+      body: table === 'direct_messages' ? `Chamada de ${audio ? 'voz' : 'vídeo'} · toque para atender` : `Chamada de ${audio ? 'voz' : 'vídeo'} em ${payload.title} · toque para atender` }
+  }
   recipients = [...new Set(recipients)].filter((id) => id && id !== author)
   if (!recipients.length) return json({ sent: 0 })
 
   // Respect muted conversations (chat_member_prefs).
-  if (payload.kind === 'message') {
+  if (payload.kind === 'message' || payload.kind === 'call') {
     const { data: prefs } = await admin.from('chat_member_prefs').select('profile_id, chat_key, muted, muted_until').in('profile_id', recipients).eq('muted', true)
     const muted = new Set((prefs || []).filter((p: Row) => !p.muted_until || new Date(p.muted_until).getTime() > Date.now()).filter((p: Row) => p.chat_key === chatKey(p.profile_id)).map((p: Row) => p.profile_id))
     recipients = recipients.filter((id) => !muted.has(id))
   }
 
   const { data: subs } = await admin.from('web_push_subscriptions').select('endpoint, p256dh, auth, profile_id').in('profile_id', recipients)
-  const body = JSON.stringify({ ...payload, badge: BADGE, at: Date.now() })
   let sent = 0
-  await Promise.all((subs || []).map(async (s: Row) => {
+  const sendAll = (ring: number) => Promise.all((subs || []).map(async (s: Row) => {
     try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body, { TTL: 60 * 60 * 24, urgency: payload.kind === 'notice' || payload.kind === 'message' ? 'high' : 'normal', topic: undefined })
-      sent++
+      const body = JSON.stringify({ ...payload, ring, badge: BADGE, at: Date.now() })
+      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body, { TTL: payload.kind === 'call' ? 40 : 60 * 60 * 24, urgency: payload.kind === 'birthday' ? 'normal' : 'high', topic: undefined })
+      if (ring === 0) sent++
     } catch (e) {
       const code = (e as { statusCode?: number }).statusCode
       if (code === 404 || code === 410) await admin.from('web_push_subscriptions').delete().eq('endpoint', s.endpoint)
       else console.error('push error', code, (e as Error).message)
     }
   }))
+  await sendAll(0)
+  // Calls ring three times (the notification re-alerts with sound and vibration each time).
+  if (payload.kind === 'call') {
+    const more = (async () => { for (const ring of [1, 2]) { await new Promise((ok) => setTimeout(ok, 7000)); await sendAll(ring) } })()
+    const rt = (globalThis as Row).EdgeRuntime
+    if (rt?.waitUntil) rt.waitUntil(more); else await more   // keep ringing after the response is sent
+  }
   return json({ sent, devices: subs?.length || 0 })
 })

@@ -137,6 +137,24 @@ export function VideoCallHost() {
     return () => { window.removeEventListener(OPEN_EVENT, onOpen); window.removeEventListener(INFO_EVENT, onInfo); };
   }, [me?.id, me?.name, me?.company]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Opened from a call notification ("Atender" / tap): /?call=<id>&a=1|0, or the service worker's message.
+  useEffect(() => {
+    if (!me?.id) return;
+    const openFrom = (url: string) => {
+      const q = new URL(url, location.origin).searchParams;
+      const id = q.get('call');
+      if (!id || !/^[0-9a-f-]{36}$/.test(id)) return false;
+      const audio = q.get('a') === '1';
+      setIncoming(null);
+      setCall({ id, title: audio ? 'Chamada de voz' : 'Chamada de vídeo', audio });
+      return true;
+    };
+    if (openFrom(location.href)) { const u = new URL(location.href); u.searchParams.delete('call'); u.searchParams.delete('a'); history.replaceState(null, '', u.toString()); }
+    const onMsg = (e: MessageEvent) => { const m = e.data || {}; if (m.type === 'ewvon-open' && m.url) openFrom(m.url); };
+    navigator.serviceWorker?.addEventListener?.('message', onMsg);
+    return () => navigator.serviceWorker?.removeEventListener?.('message', onMsg);
+  }, [me?.id]);
+
   // Incoming calls ring here.
   useEffect(() => {
     if (!me?.id) return;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ewvor-runtime-v7';
+const CACHE_NAME = 'ewvor-runtime-v8';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/icons/logo-192.png',
@@ -127,6 +127,20 @@ self.addEventListener('push', (event) => {
       wins.forEach((c) => c.postMessage({ type: 'ewvon-push', data: d }));
       return;
     }
+    // Incoming ewvon call: rings (sound + long vibration), stays on screen, Atender / Recusar, gone after ~35 s.
+    if (d.kind === 'call') {
+      if (wins.some((c) => c.visibilityState === 'visible' && c.focused)) return;   // the open app shows its own ringing banner
+      await self.registration.showNotification(d.title || 'Chamada do ewvon', {
+        body: d.body || 'Toque para atender', icon: d.icon || '/icons/notify-person.png?v=3', badge: d.badge || '/icons/badge-96.png',
+        tag: d.tag || 'call', renotify: true, requireInteraction: true, timestamp: d.at || Date.now(),
+        vibrate: [900, 400, 900, 400, 900, 400, 900],
+        data: { url: d.url || '/', kind: 'call', callId: d.callId },
+        actions: [{ action: 'answer', title: 'Atender' }, { action: 'decline', title: 'Recusar' }],
+      });
+      await new Promise((ok) => setTimeout(ok, Math.max(5000, 35000 - (d.ring || 0) * 7000)));
+      if ((d.ring || 0) === 2) (await self.registration.getNotifications({ tag: d.tag })).forEach((n) => n.close());
+      return;
+    }
     const tag = d.tag || 'ewvon';
     const prev = (await self.registration.getNotifications({ tag }))[0];
     const count = (prev && prev.data && prev.data.count ? prev.data.count : 0) + 1;
@@ -150,6 +164,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  if (event.action === 'decline') return;
   const url = (event.notification.data && event.notification.data.url) || '/';
   const targetUrl = new URL(url, self.location.origin).href;
   event.waitUntil(
