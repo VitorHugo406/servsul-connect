@@ -7,6 +7,9 @@ import { StickerPicker, StickerMessage } from '@/components/common/Stickers';
 import { addFavorite, isSticker, parseSticker, stickerContent } from '@/lib/stickers';
 import { isSystemSender } from '@/lib/systemSender';
 import { CosmicBlob } from '@/components/common/CosmicBlob';
+import { GlobalBroadcastOrb } from '@/components/common/GlobalBroadcastOrb';
+import { isBroadcastLive, notifyBroadcastsChanged, useSystemBroadcasts, type SystemBroadcast } from '@/hooks/useSystemBroadcasts';
+import { supabase } from '@/integrations/supabase/client';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -69,7 +72,7 @@ function dayLabel(iso: string) {
 const REACTIONS = ['👍', '❤️', '😂', '🎉', '🙏'];
 const EMOJIS = '😀 😃 😄 😁 😆 😅 😂 🙂 😉 😊 😍 🥰 😘 😎 🤩 🥳 🤔 🤗 🙄 😴 😮 😢 😭 😡 🤯 😱 👍 👎 👏 🙌 🙏 💪 👋 🤝 ✌️ 👌 ❤️ 🧡 💛 💚 💙 💜 🔥 ✨ ⭐ 🎉 🎂 🎁 ✅ ❌ ⚠️ 📌 📎 📷 💬 📅 ⏰ 🚀 💡 ☕'.split(' ');
 const WISHES = ['Parabéns! 🎉', 'Felicidades 🎂', 'Feliz niver! 🥳'];
-type GsSpec = { kind: 'status' } | { kind: 'member'; id: string } | { kind: 'add' } | { kind: 'notice' } | { kind: 'newchat' } | { kind: 'newgroup' } | { kind: 'tasks'; mode: 0 | 1 };
+type GsSpec = { kind: 'status' } | { kind: 'member'; id: string } | { kind: 'add' } | { kind: 'notice' } | { kind: 'gnotice' } | { kind: 'newchat' } | { kind: 'newgroup' } | { kind: 'tasks'; mode: 0 | 1 };
 
 export interface EwApi {
   boot: Boot; people: Record<string, Person>; chats: Chat[]; prefs: Prefs; cur: Chat | null; me: Person;
@@ -82,7 +85,11 @@ export interface EwApi {
 }
 
 export default function EwwonApp() {
-  const { profile, isAdmin, allAccessibleSectorIds, canAccess, signOut } = useAuth();
+  const { profile, isAdmin, allAccessibleSectorIds, canAccess, signOut, roles } = useAuth();
+  // Global notices ("Comunicados globais"): published by the super admin of the Admin company to every company.
+  const isSuperAdmin = roles.some((r) => (r.role as string) === 'super_admin');
+  const { broadcasts: gBroadcasts, setActive: setBroadcastActive, removeBroadcast } = useSystemBroadcasts(!isSuperAdmin, 60_000);
+  const gList = isSuperAdmin ? gBroadcasts : gBroadcasts.filter((b) => isBroadcastLive(b));
   const [boot, setBoot] = useState<Boot | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [people, setPeople] = useState<Record<string, Person>>({});
@@ -1090,7 +1097,24 @@ export default function EwwonApp() {
 
             {/* ---------------- Avisos ---------------- */}
             <section className={'view' + (tab === 2 ? ' on' : '')} id="v2">
-              {boot.canPostNotices ? <div className="ewx-notice-head"><button className="btn full" onClick={() => gsOpen({ kind: 'notice' })}><I n="plus" />Novo aviso</button></div> : null}
+              {boot.canPostNotices || isSuperAdmin ? <div className={'ewx-notice-head' + (isSuperAdmin ? ' split' : '')}>
+                {boot.canPostNotices ? <button className="btn full" onClick={() => gsOpen({ kind: 'notice' })}><I n="plus" />Novo aviso</button> : null}
+                {isSuperAdmin ? <button className="btn full ewx-gbtn" onClick={() => gsOpen({ kind: 'gnotice' })}><I n="globe" />Aviso global</button> : null}
+              </div> : null}
+              {gList.length ? <div className="ewx-glist"><div className="lb">Avisos globais</div>{gList.map((b: SystemBroadcast) => {
+                const live = isBroadcastLive(b);
+                return (
+                  <div key={b.id} className={'ewx-gitem sev-' + b.severity + (live ? '' : ' off')}>
+                    <div className="gh"><I n="globe" /><b>{b.title}</b>{isSuperAdmin ? <span className="gs">{live ? 'Ativo' : b.is_active ? 'Fora do prazo' : 'Desativado'}</span> : null}</div>
+                    <p>{b.content}</p>
+                    <div className="gf"><small>{new Date(b.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}{b.ends_at ? ` · até ${new Date(b.ends_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : ''}</small>
+                      {isSuperAdmin ? <span className="ga">
+                        <button className="btn sm sec" onClick={async () => { const { error } = await setBroadcastActive(b.id, !b.is_active); toast(error ? 'Não foi possível alterar' : b.is_active ? 'Aviso global desativado' : 'Aviso global ativado'); }}>{b.is_active ? 'Desativar' : 'Ativar'}</button>
+                        <button className="btn sm sec ewx-del" aria-label="Excluir aviso global" onClick={async () => { if (!window.confirm(`Excluir o aviso global “${b.title}”?`)) return; const { error } = await removeBroadcast(b.id); toast(error ? 'Não foi possível excluir' : 'Aviso global excluído'); }}><I n="trash" /></button>
+                      </span> : null}</div>
+                  </div>
+                );
+              })}</div> : null}
               <div className={'feat' + (pinned ? '' : ' hid')} id="feat" data-t="Importante" style={{ ['--c' as string]: '#ff8f80' }}>
                 <I n="mega" className="bgi" />
                 <div className="fh"><span className="pn"><I n="pin" />Fixado</span></div>
@@ -1188,6 +1212,7 @@ export default function EwwonApp() {
             ) : null}
           </div>
 
+          {tab === 0 && !curKey && !pages.length && !gs ? <GlobalBroadcastOrb variant="mobile" /> : null}
           <nav className="tabs" id="tabs" style={boot.supportStaff ? { gridTemplateColumns: 'repeat(5,1fr)' } : undefined}>
             {[['home', 'Início'], ['chat', 'Chat'], ['bell', 'Avisos'], ['gift', 'Aniversários'], ...(boot.supportStaff ? [['ticket', 'Tickets']] : [])].map(([icon, label], i) => (
               <button key={label} className={'tab' + (tab === i ? ' on' : '')} data-i={i} onClick={() => go(i)}>
@@ -1569,6 +1594,7 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
   const [body, setBody] = useState('');
   const [pinned, setPinned] = useState(false);
   const [exp, setExp] = useState(0);
+  const [sev, setSev] = useState(0);
   const [busy, setBusy] = useState(false);
   const [qq, setQq] = useState('');
   const [sel, setSel] = useState<string[]>([]);
@@ -1694,6 +1720,36 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
           }
           setBusy(false);
         }}>{busy ? 'Criando…' : 'Criar grupo'}</button>
+      </>
+    );
+  }
+  if (spec.kind === 'gnotice') {
+    // Global notice: every user of every company sees it (orb on the home screen) while active.
+    return (
+      <>
+        <div className="gp" />
+        <div className="shh"><div><b>Aviso global</b><small>Para todos os usuários de todas as empresas</small></div></div>
+        <div className="sl">Título</div>
+        <input className="fld" value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Manutenção do sistema" />
+        <div className="sl">Mensagem</div>
+        <textarea className="fld" rows={5} value={body} maxLength={2000} onChange={(e) => setBody(e.target.value)} placeholder="Escreva o comunicado" />
+        <div className="sl">Nível</div>
+        <Seg id="gsev" items={['Informativo', 'Atenção', 'Crítico']} value={sev} onChange={setSev} />
+        <div className="sl">Duração</div>
+        <Seg id="gexp" items={['Sem prazo', '24 h', '3 dias', '7 dias', '30 dias']} value={exp} onChange={setExp} />
+        <small className="ewx-nexp">{exp ? `Sai do ar sozinho em ${['', '24 horas', '3 dias', '7 dias', '30 dias'][exp]}.` : 'Fica ativo até ser desativado.'}</small>
+        <button className="btn full" disabled={busy || title.trim().length < 3 || body.trim().length < 3} onClick={async () => {
+          setBusy(true);
+          const { error } = await (supabase as any).from('system_broadcasts').insert({
+            title: title.trim(), content: body.trim(), severity: ['info', 'warning', 'critical'][sev],
+            ends_at: exp ? new Date(Date.now() + [0, 1, 3, 7, 30][exp] * 864e5).toISOString() : null,
+          });
+          setBusy(false);
+          if (error) { api.toast('Não foi possível publicar o aviso global'); return; }
+          notifyBroadcastsChanged();
+          api.toast('Aviso global publicado');
+          close();
+        }}>{busy ? 'Publicando…' : 'Publicar para todos'}</button>
       </>
     );
   }

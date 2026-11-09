@@ -608,3 +608,22 @@
 .ew #tc.hide { opacity: 0; transform: translate3d(0, 14px, 0) scale(.98); }
 @media (prefers-reduced-motion: reduce) { .ew #sp, .ew #fg, .ew #tc { transition: opacity .2s; } .ew #sp.pulse::after, .ew #fg.tap::after { animation: none; } }
 .ew button.ewx-dl { background: none !important; border: 0; padding: 0; font: inherit; color: inherit; text-decoration: underline; font-weight: 600; cursor: pointer; }
+
+/* Avisos: split "Novo aviso | Aviso global" + global notices list (super admin manages). */
+.ew .ewx-notice-head.split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ew .ewx-notice-head.split .btn.full { padding: 13px 10px; white-space: nowrap; }
+.ew .ewx-notice-head .ewx-gbtn { background: var(--c2); color: var(--tx); }
+.ew .ewx-glist { margin-bottom: 14px; }
+.ew .ewx-glist .lb { margin-top: 2px; }
+.ew .ewx-gitem { background: var(--card); border: 1px solid var(--bd); border-left: 3px solid #6b7cff; border-radius: 18px; padding: 12px 14px; margin-bottom: 8px; }
+.ew .ewx-gitem.sev-warning { border-left-color: #f59e0b; }
+.ew .ewx-gitem.sev-critical { border-left-color: #ef4444; }
+.ew .ewx-gitem.off { opacity: .55; }
+.ew .ewx-gitem .gh { display: flex; align-items: center; gap: 8px; }
+.ew .ewx-gitem .gh svg.i { width: 16px; height: 16px; flex: none; color: var(--mu); }
+.ew .ewx-gitem .gh b { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ew .ewx-gitem .gs { font-size: 11px; font-weight: 600; color: var(--mu); }
+.ew .ewx-gitem p { margin: 6px 0 0; font-size: 13px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.ew .ewx-gitem .gf { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.ew .ewx-gitem .gf small { font-size: 11px; color: var(--mu); }
+.ew .ewx-gitem .ga { display: flex; gap: 6px; }
