@@ -21,6 +21,9 @@ const SYSTEM_SENDER_ID = '00000000-0000-0000-0000-0000000000c1';
 const ADMIN_COMPANY_ID = '00000000-0000-0000-0000-0000000000a1';
 const LOGO_BUCKET = 'company-logos';
 const PERIOD_GRACE_DAYS = 3;
+const CYCLES = ['monthly', 'annual', 'once'] as const;
+const periodDays = (cycle: string) => (cycle === 'annual' ? 366 : 31);
+const WEBHOOK_URL = `${Deno.env.get('SUPABASE_URL')}/functions/v1/billing/webhook`;
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false, autoRefreshToken: false } });
 
@@ -120,8 +123,9 @@ async function provision(signupId: string, silent = false): Promise<{ ok: boolea
       } else console.error('logo copy', cpErr);
     }
     // 3. Subscription.
-    const periodEnd = new Date(Date.now() + (31 + PERIOD_GRACE_DAYS) * 864e5).toISOString();
-    const { error: subErr } = await admin.from('company_subscriptions').upsert({ company_id: companyId, plan_id: s.plan_id, status: 'active', provider: 'mercadopago', provider_subscription_id: s.preapproval_id, current_period_end: periodEnd }, { onConflict: 'company_id' });
+    const cycle = s.billing_cycle || 'monthly';
+    const periodEnd = new Date(Date.now() + (periodDays(cycle) + PERIOD_GRACE_DAYS) * 864e5).toISOString();
+    const { error: subErr } = await admin.from('company_subscriptions').upsert({ company_id: companyId, plan_id: s.plan_id, status: 'active', billing_cycle: cycle, provider: 'mercadopago', provider_subscription_id: cycle === 'once' ? null : s.preapproval_id, provider_customer_id: cycle === 'once' ? s.last_payment_id : null, current_period_end: periodEnd }, { onConflict: 'company_id' });
     if (subErr) throw new Error('Assinatura: ' + subErr.message);
     // 4. Admin user.
     const { data: existingProfile } = await admin.from('profiles').select('user_id, company_id').ilike('email', s.admin_email).maybeSingle();
@@ -140,7 +144,7 @@ async function provision(signupId: string, silent = false): Promise<{ ok: boolea
     await admin.from('user_permissions').upsert({ user_id: userId, can_post_announcements: true, can_delete_messages: true, can_access_management: true, can_access_password_change: true, can_create_war_room: true, can_access_bh: true, can_access_fechamento: true, can_access_orbs: true, can_access_meeting_rooms: true }, { onConflict: 'user_id' });
     // 5. Done: wipe the encrypted password.
     await admin.from('company_signups').update({ status: 'active', activated_at: new Date().toISOString(), password_enc: null, error: null, updated_at: new Date().toISOString() }).eq('id', s.id);
-    if (!silent) await notifySuperAdmin(`*Nova empresa assinante*\n\nEmpresa: ${s.company_name}\nPlano: ${s.plan_id}\nAdministrador: ${s.admin_name} (${s.admin_email})\nAssinatura Mercado Pago: ${s.preapproval_id}`);
+    if (!silent) await notifySuperAdmin(`*Nova empresa assinante*\n\nEmpresa: ${s.company_name}\nPlano: ${s.plan_id} (${s.billing_cycle === 'annual' ? 'anual' : s.billing_cycle === 'once' ? 'mensal avulso' : 'mensal'})\nAdministrador: ${s.admin_name} (${s.admin_email})\nMercado Pago: ${s.preapproval_id || 'pagamento ' + s.last_payment_id}`);
     return { ok: true };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -152,8 +156,26 @@ async function provision(signupId: string, silent = false): Promise<{ ok: boolea
 }
 
 // Confirms a payment for a signup straight from Mercado Pago and provisions when approved.
+async function checkOncePaid(s: any): Promise<string> {
+  const found = await mp(`/v1/payments/search?external_reference=${encodeURIComponent(s.id)}&sort=date_created&criteria=desc`);
+  const approved = (found?.results || []).find((p: any) => p?.status === 'approved' && p?.external_reference === s.id && Math.round(Number(p?.transaction_amount) * 100) >= s.amount_cents);
+  if (!approved) { const last = (found?.results || [])[0]; return `aguardando pagamento${last ? ' (' + last.status + ')' : ''}`; }
+  if (['expired', 'canceled'].includes(s.status)) {
+    // Paid late (e.g. a boleto): create the company anyway while the encrypted password still exists.
+    if (!s.password_enc) {
+      await notifySuperAdmin(`*Pagamento recebido de cadastro encerrado*\n\n${s.company_name} (${s.admin_email}) pagou depois do prazo (pagamento ${approved.id}). Devolva pelo Mercado Pago ou crie a empresa manualmente.`);
+      return 'pago após encerrar: aviso enviado';
+    }
+    await admin.from('company_signups').update({ status: 'pending_payment' }).eq('id', s.id).in('status', ['expired', 'canceled']);
+  }
+  await admin.from('company_signups').update({ last_payment_id: String(approved.id), paid_at: s.paid_at || new Date().toISOString() }).eq('id', s.id);
+  const r = await provision(s.id);
+  return r.ok ? 'provisionada' : 'falha: ' + r.error;
+}
+
 async function checkSignupPaid(signup: any): Promise<string> {
   let s = signup;
+  if (s.billing_cycle === 'once') return checkOncePaid(s);
   if (!s.preapproval_id && s.mp_plan_id) {
     const found = await mp(`/preapproval/search?preapproval_plan_id=${encodeURIComponent(s.mp_plan_id)}`);
     const subs = (found?.results || []).filter((p: any) => p?.preapproval_plan_id === s.mp_plan_id);
@@ -182,13 +204,14 @@ async function checkSignupPaid(signup: any): Promise<string> {
 
 // Recurring charges for an active company.
 async function applyRecurring(preapprovalId: string, paymentStatus: string, amount: number) {
-  const { data: sub } = await admin.from('company_subscriptions').select('company_id, plan_id, current_period_end').eq('provider', 'mercadopago').eq('provider_subscription_id', preapprovalId).maybeSingle();
+  const { data: sub } = await admin.from('company_subscriptions').select('company_id, plan_id, current_period_end, billing_cycle').eq('provider', 'mercadopago').eq('provider_subscription_id', preapprovalId).maybeSingle();
   if (!sub) return 'assinatura não vinculada';
   if (paymentStatus === 'approved') {
-    const { data: plan } = await admin.from('subscription_plans').select('price_cents').eq('id', sub.plan_id).maybeSingle();
-    if (plan && Math.round(amount * 100) < plan.price_cents) return 'valor abaixo do plano';
+    const { data: plan } = await admin.from('subscription_plans').select('price_cents, annual_price_cents').eq('id', sub.plan_id).maybeSingle();
+    const expected = sub.billing_cycle === 'annual' ? (plan?.annual_price_cents ?? (plan?.price_cents ?? 0) * 10) : plan?.price_cents;
+    if (expected && Math.round(amount * 100) < expected) return 'valor abaixo do plano';
     const base = Math.max(Date.now(), new Date(sub.current_period_end || 0).getTime() - PERIOD_GRACE_DAYS * 864e5);
-    await admin.from('company_subscriptions').update({ status: 'active', current_period_end: new Date(base + (31 + PERIOD_GRACE_DAYS) * 864e5).toISOString() }).eq('company_id', sub.company_id);
+    await admin.from('company_subscriptions').update({ status: 'active', current_period_end: new Date(base + (periodDays(sub.billing_cycle) + PERIOD_GRACE_DAYS) * 864e5).toISOString() }).eq('company_id', sub.company_id);
     return 'renovada';
   }
   if (['rejected', 'cancelled', 'refunded', 'charged_back'].includes(paymentStatus)) {
@@ -228,7 +251,7 @@ Deno.serve(async (req) => {
   try {
     // ---- public: active plans ----
     if (route === 'plans') {
-      const { data } = await admin.from('subscription_plans').select('id, name, description, price_cents, max_users, max_sectors, storage_gb, features').eq('is_active', true).order('sort_order');
+      const { data } = await admin.from('subscription_plans').select('id, name, description, price_cents, annual_price_cents, max_users, max_sectors, storage_gb, features').eq('is_active', true).order('sort_order');
       return reply({ plans: data ?? [], payments_ready: !!Deno.env.get('MP_ACCESS_TOKEN'), mode: tokenMode() });
     }
 
@@ -240,8 +263,11 @@ Deno.serve(async (req) => {
       if (raw.length > 2_000_000) return reply({ error: 'Dados muito grandes (logo até 1MB).' }, 413);
       const body = JSON.parse(raw || '{}');
       const planId = clean(body.plan_id, 40);
-      const { data: plan } = await admin.from('subscription_plans').select('id, name, price_cents, is_active').eq('id', planId).maybeSingle();
+      const { data: plan } = await admin.from('subscription_plans').select('id, name, price_cents, annual_price_cents, is_active').eq('id', planId).maybeSingle();
       if (!plan || !plan.is_active) return reply({ error: 'Plano inválido.' }, 400);
+      const cycle = (CYCLES as readonly string[]).includes(body.billing_cycle) ? body.billing_cycle as string : 'monthly';
+      const amountCents = cycle === 'annual' ? (plan.annual_price_cents ?? plan.price_cents * 10) : plan.price_cents;
+      const cycleLabel = cycle === 'annual' ? 'anual' : cycle === 'once' ? 'mensal avulso' : 'mensal';
       const companyName = clean(body.company?.name, 80);
       const adminName = clean(body.admin?.name, 80);
       const adminEmail = clean(body.admin?.email, 160).toLowerCase();
@@ -268,7 +294,7 @@ Deno.serve(async (req) => {
       }
       const token = b64(crypto.getRandomValues(new Uint8Array(24))).replace(/[+/=]/g, '');
       const { data: signup, error: insErr } = await admin.from('company_signups').insert({
-        plan_id: plan.id, amount_cents: plan.price_cents, company_name: companyName, slug,
+        plan_id: plan.id, amount_cents: amountCents, billing_cycle: cycle, company_name: companyName, slug,
         primary_color: body.company.primary_color.toLowerCase(), secondary_color: body.company.secondary_color.toLowerCase(),
         admin_name: adminName, admin_email: adminEmail, password_enc: await encryptSecret(password), status_token_hash: await sha256(token),
       }).select('id').single();
@@ -284,18 +310,33 @@ Deno.serve(async (req) => {
           if (!upErr) await admin.from('company_signups').update({ logo_path: path }).eq('id', signup.id);
         }
       }
-      // Mercado Pago subscription plan exclusive to this signup: any Mercado Pago account (or card) can
-      // subscribe through its checkout; the resulting subscription is matched back by the plan id.
+      const backUrl = `${SITE_URL}/assinar/retorno?s=${signup.id}&t=${token}`;
       try {
+        if (cycle === 'once') {
+          // One month paid once (Pix, boleto or card) through Checkout Pro; notifications come to our webhook.
+          const pref = await mp('/checkout/preferences', { method: 'POST', body: JSON.stringify({
+            items: [{ id: plan.id, title: `ewvon · Plano ${plan.name} · 1 mês`.slice(0, 120), description: companyName.slice(0, 120), quantity: 1, unit_price: amountCents / 100, currency_id: 'BRL' }],
+            external_reference: signup.id,
+            back_urls: { success: backUrl, pending: backUrl, failure: backUrl },
+            auto_return: 'approved',
+            notification_url: WEBHOOK_URL,
+            statement_descriptor: 'EWVON',
+            date_of_expiration: new Date(Date.now() + 6 * 864e5).toISOString(),
+          }) });
+          await admin.from('company_signups').update({ mp_preference_id: pref.id, checkout_url: pref.init_point }).eq('id', signup.id);
+          return reply({ id: signup.id, token, checkout_url: pref.init_point });
+        }
+        // Subscription plan exclusive to this signup: any Mercado Pago account can subscribe; the
+        // resulting subscription is matched back by the plan id.
         const plan_ = await mp('/preapproval_plan', { method: 'POST', body: JSON.stringify({
-          reason: `ewvon · Plano ${plan.name} · ${companyName}`.slice(0, 120),
-          back_url: `${SITE_URL}/assinar/retorno?s=${signup.id}&t=${token}`,
-          auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: plan.price_cents / 100, currency_id: 'BRL' },
+          reason: `ewvon · Plano ${plan.name} · ${cycleLabel} · ${companyName}`.slice(0, 120),
+          back_url: backUrl,
+          auto_recurring: { frequency: cycle === 'annual' ? 12 : 1, frequency_type: 'months', transaction_amount: amountCents / 100, currency_id: 'BRL' },
         }) });
         await admin.from('company_signups').update({ mp_plan_id: plan_.id, checkout_url: plan_.init_point }).eq('id', signup.id);
         return reply({ id: signup.id, token, checkout_url: plan_.init_point });
       } catch (e) {
-        console.error('preapproval_plan', e, (e as any)?.mp);
+        console.error('checkout', e, (e as any)?.mp);
         await admin.from('company_signups').update({ status: 'canceled', password_enc: null, error: String((e as Error).message).slice(0, 300) }).eq('id', signup.id);
         return reply({ error: 'Não foi possível abrir o pagamento agora. Tente novamente em instantes.' }, 502);
       }
@@ -309,7 +350,7 @@ Deno.serve(async (req) => {
       const { data: s } = await admin.from('company_signups').select('*').eq('id', id).maybeSingle();
       if (!s || !timingSafeEqual(s.status_token_hash, await sha256(token))) return reply({ error: 'Cadastro não encontrado' }, 404);
       // When the visitor comes back from the checkout, confirm right away instead of waiting the webhook.
-      if (s.status === 'pending_payment' && (s.preapproval_id || s.mp_plan_id) && Date.now() - new Date(s.updated_at).getTime() > 4000) {
+      if (s.status === 'pending_payment' && (s.preapproval_id || s.mp_plan_id || s.mp_preference_id) && Date.now() - new Date(s.updated_at).getTime() > 4000) {
         await admin.from('company_signups').update({ updated_at: new Date().toISOString() }).eq('id', s.id);
         try { await checkSignupPaid(s); } catch (e) { console.error('status check', e); }
       }
@@ -325,7 +366,7 @@ Deno.serve(async (req) => {
       const dataId = String(body?.data?.id || url.searchParams.get('data.id') || url.searchParams.get('id') || '');
       if (!topic || !dataId || !/^[\w-]{1,64}$/.test(dataId)) return reply({ ok: true });
       const sigOk = await signatureOk(req, dataId);
-      if (sigOk === false) { await admin.from('payment_events').insert({ provider: 'mercadopago', topic, resource_id: dataId, signature_ok: false, result: 'assinatura inválida' }); return reply({ error: 'invalid signature' }, 401); }
+      // A bad signature is only recorded: nothing in the body is trusted, every resource is re-fetched.
       let result = 'ignorado';
       if (topic === 'subscription_authorized_payment' || topic === 'authorized_payment') {
         const ap = await mp(`/authorized_payments/${encodeURIComponent(dataId)}`);
@@ -338,6 +379,12 @@ Deno.serve(async (req) => {
         else if (s && String(ap?.payment?.id || '') === String(s.last_payment_id || '')) result = 'primeiro pagamento já aplicado';
         else if (seen?.length) result = 'já processado';
         else result = await applyRecurring(preId, status, Number(ap.transaction_amount || 0));
+      } else if (topic === 'payment') {
+        const pay = await mp(`/v1/payments/${encodeURIComponent(dataId)}`);
+        const ref = typeof pay?.external_reference === 'string' && /^[0-9a-f-]{36}$/.test(pay.external_reference) ? pay.external_reference : null;
+        const { data: s } = ref ? await admin.from('company_signups').select('*').eq('id', ref).maybeSingle() : { data: null };
+        if (s && s.billing_cycle === 'once' && s.status !== 'active') result = await checkOncePaid(s);
+        else if (s) result = 'pagamento de cadastro já ativo';
       } else if (topic === 'subscription_preapproval' || topic === 'preapproval') {
         const pre = await mp(`/preapproval/${encodeURIComponent(dataId)}`);
         let { data: s } = await admin.from('company_signups').select('*').eq('preapproval_id', dataId).maybeSingle();
@@ -411,7 +458,8 @@ Deno.serve(async (req) => {
       if (!allowed) return reply({ error: 'Unauthorized' }, 401);
       const out: Record<string, string> = {};
       // Expire unpaid signups after 3 days (wipes the encrypted password).
-      await admin.from('company_signups').update({ status: 'expired', password_enc: null }).eq('status', 'pending_payment').lt('created_at', new Date(Date.now() - 3 * 864e5).toISOString());
+      await admin.from('company_signups').update({ status: 'expired', password_enc: null }).eq('status', 'pending_payment').neq('billing_cycle', 'once').lt('created_at', new Date(Date.now() - 3 * 864e5).toISOString());
+      await admin.from('company_signups').update({ status: 'expired', password_enc: null }).eq('status', 'pending_payment').eq('billing_cycle', 'once').lt('created_at', new Date(Date.now() - 12 * 864e5).toISOString());
       const { data: open } = await admin.from('company_signups').select('*').in('status', ['pending_payment', 'failed']).lt('attempts', 8).order('created_at').limit(40);
       for (const s of open ?? []) {
         try { out[s.id] = s.status === 'failed' && s.paid_at ? ((await provision(s.id)).ok ? 'provisionada' : 'falhou de novo') : await checkSignupPaid(s); }

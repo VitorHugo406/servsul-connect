@@ -15,13 +15,22 @@ import { cn } from '@/lib/utils';
 
 const FN = 'https://scslfueixmuolkmgdslk.supabase.co/functions/v1/billing';
 const PENDING_KEY = 'ewvon:signup:pending';
-type Plan = { id: string; name: string; description: string; price_cents: number; max_users: number; max_sectors: number; storage_gb: number; features: string[] };
+type Plan = { id: string; name: string; description: string; price_cents: number; annual_price_cents: number | null; max_users: number; max_sectors: number; storage_gb: number; features: string[] };
 const FEATURE_LABEL: Record<string, string> = {
   chat: 'Chat por setores e conversas', announcements: 'Avisos', important_notices: 'Comunicados importantes', tasks: 'Quadros de tarefas', notes: 'Anotações',
   birthdays: 'Aniversariantes', calendar: 'Calendário e reuniões', meeting_rooms: 'Salas de reunião', shortcuts: 'Atalhos do sistema', metrics_dashboard: 'Painel de métricas',
   evaluations: 'Avaliações', people_management: 'Gestão de pessoas', war_room: 'War Room', dashboard_3d: 'Dashboard 3D',
 };
 const brl = (c: number) => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+type Cycle = 'monthly' | 'annual' | 'once';
+const CYCLE_OPTIONS: { id: Cycle; label: string; hint: string }[] = [
+  { id: 'monthly', label: 'Mensal', hint: 'Renova sozinho todo mês · cartão de crédito' },
+  { id: 'annual', label: 'Anual', hint: 'Renova sozinho todo ano · cartão de crédito' },
+  { id: 'once', label: 'Mensal avulso', hint: 'Paga uma vez, vale 1 mês · Pix, boleto ou cartão' },
+];
+const annualOf = (p: Plan) => p.annual_price_cents ?? p.price_cents * 10;
+const priceOf = (p: Plan, c: Cycle) => (c === 'annual' ? annualOf(p) : p.price_cents);
+const periodOf = (c: Cycle) => (c === 'annual' ? '/ano' : c === 'once' ? ' por 1 mês' : '/mês');
 const call = async (route: string, body: unknown) => {
   const r = await fetch(`${FN}/${route}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) });
   const data = await r.json().catch(() => ({}));
@@ -65,6 +74,7 @@ function Wizard() {
   const [loadErr, setLoadErr] = useState('');
   const [step, setStep] = useState(0);
   const [planId, setPlanId] = useState(() => new URLSearchParams(window.location.search).get('plano') || '');
+  const [cycle, setCycle] = useState<Cycle>(() => { const c = new URLSearchParams(window.location.search).get('ciclo'); return c === 'anual' ? 'annual' : c === 'avulso' ? 'once' : 'monthly'; });
   const [company, setCompany] = useState({ name: '', primary: '#111827', secondary: '#6366f1' });
   const [logo, setLogo] = useState<{ data: string; type: string; preview: string } | null>(null);
   const [adm, setAdm] = useState({ name: '', email: '', password: '', confirm: '' });
@@ -114,6 +124,7 @@ function Wizard() {
     try {
       const d = await call('signup', {
         plan_id: planId,
+        billing_cycle: cycle,
         company: { name: company.name.trim(), primary_color: company.primary, secondary_color: company.secondary, logo: logo ? { data: logo.data, type: logo.type } : null },
         admin: { name: adm.name.trim(), email: adm.email.trim(), password: adm.password },
       });
@@ -146,17 +157,27 @@ function Wizard() {
           {!ready ? <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">Os pagamentos estão sendo configurados. Você pode preencher os dados, mas o envio só funciona depois da configuração.</p> : null}
 
           {step === 0 ? (
+            <div className="space-y-4">
+            <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Forma de pagamento">
+              {CYCLE_OPTIONS.map((c) => (
+                <button key={c.id} type="button" role="radio" aria-checked={cycle === c.id} onClick={() => setCycle(c.id)} className={cn('rounded-lg border px-3 py-2.5 text-left transition-colors', cycle === c.id ? 'border-foreground bg-foreground text-background' : 'border-border hover:border-foreground/40')}>
+                  <span className="flex items-center justify-between text-sm font-semibold">{c.label}{c.id === 'annual' ? <span className={cn('rounded px-1.5 py-0.5 text-[11px] font-medium', cycle === c.id ? 'bg-background/15' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300')}>2 meses grátis</span> : null}</span>
+                  <span className={cn('mt-0.5 block text-[12px]', cycle === c.id ? 'text-background/75' : 'text-muted-foreground')}>{c.hint}</span>
+                </button>
+              ))}
+            </div>
             <div className="grid gap-3 md:grid-cols-3">
               {plans.map((p) => (
                 <button key={p.id} type="button" onClick={() => setPlanId(p.id)} className={cn('rounded-[10px] border p-4 text-left transition-colors', planId === p.id ? 'border-foreground ring-1 ring-foreground' : 'border-border hover:border-foreground/40')}>
                   <div className="flex items-center justify-between"><span className="font-semibold">{p.name}</span>{planId === p.id ? <Check className="h-4 w-4" /> : null}</div>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums">{brl(p.price_cents)}<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
+                  <p className="mt-2 text-xl font-semibold tabular-nums">{brl(priceOf(p, cycle))}<span className="text-sm font-normal text-muted-foreground">{periodOf(cycle)}</span></p>{cycle === 'annual' ? <p className="text-[12px] text-muted-foreground">equivale a {brl(Math.round(annualOf(p) / 12))}/mês</p> : null}
                   <p className="mt-1 text-[13px] text-muted-foreground">{p.description}</p>
                   <ul className="mt-3 space-y-1 text-[13px]">
                     <li>Até {p.max_users} usuários</li><li>{p.max_sectors} setores · {p.storage_gb} GB</li>
                   </ul>
                 </button>
               ))}
+            </div>
             </div>
           ) : null}
 
@@ -212,15 +233,15 @@ function Wizard() {
           {step === 3 && plan ? (
             <div className="space-y-4">
               <dl className="divide-y divide-border rounded-[10px] border border-border text-sm">
-                {[['Plano', `${plan.name} · ${brl(plan.price_cents)}/mês`], ['Empresa', company.name], ['Cores', `${company.primary} · ${company.secondary}`], ['Logo', logo ? 'Enviada' : 'Sem logo'], ['Administrador', `${adm.name} (${adm.email})`]].map(([k, v]) => (
+                {[['Plano', `${plan.name} · ${brl(priceOf(plan, cycle))}${periodOf(cycle)}`], ['Forma de pagamento', CYCLE_OPTIONS.find((c) => c.id === cycle)!.label], ['Empresa', company.name], ['Cores', `${company.primary} · ${company.secondary}`], ['Logo', logo ? 'Enviada' : 'Sem logo'], ['Administrador', `${adm.name} (${adm.email})`]].map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-4 px-4 py-3"><dt className="text-muted-foreground">{k}</dt><dd className="text-right font-medium">{v}</dd></div>
                 ))}
               </dl>
               <label className="flex items-start gap-2 text-[13px]">
                 <input type="checkbox" className="mt-0.5" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
-                <span>Concordo com a cobrança mensal de {brl(plan.price_cents)} pelo Mercado Pago (qualquer conta ou cartão), que pode ser cancelada a qualquer momento. A empresa só é criada depois da confirmação do pagamento.</span>
+                <span>{cycle === 'once' ? <>Concordo em pagar {brl(priceOf(plan, cycle))} uma única vez pelo Mercado Pago (Pix, boleto ou cartão), válido por 1 mês, sem renovação automática.</> : <>Concordo com a cobrança {cycle === 'annual' ? 'anual' : 'mensal'} de {brl(priceOf(plan, cycle))} no cartão de crédito pelo Mercado Pago, que pode ser cancelada a qualquer momento.</>} A empresa só é criada depois da confirmação do pagamento.</span>
               </label>
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4" />Seus dados de cartão são digitados no Mercado Pago e nunca passam pelo ewvon.</p>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4" />Os dados de pagamento são digitados no Mercado Pago e nunca passam pelo ewvon.</p>
             </div>
           ) : null}
 
@@ -239,7 +260,8 @@ function Wizard() {
         <p className="text-[13px] text-muted-foreground">Resumo</p>
         {plan ? <>
           <p className="mt-1 text-lg font-semibold">Plano {plan.name}</p>
-          <p className="text-2xl font-semibold tabular-nums">{brl(plan.price_cents)}<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
+          <p className="text-2xl font-semibold tabular-nums">{brl(priceOf(plan, cycle))}<span className="text-sm font-normal text-muted-foreground">{periodOf(cycle)}</span></p>
+          <p className="text-[12px] text-muted-foreground">{CYCLE_OPTIONS.find((c) => c.id === cycle)!.hint}</p>
           <ul className="mt-4 space-y-1.5 text-[13px]">{plan.features.filter((f) => FEATURE_LABEL[f]).map((f) => <li key={f} className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-muted-foreground" />{FEATURE_LABEL[f]}</li>)}</ul>
         </> : null}
         <button type="button" onClick={() => navigate('/select-company')} className="mt-5 text-[13px] text-muted-foreground underline-offset-2 hover:underline">Já tenho uma conta</button>
