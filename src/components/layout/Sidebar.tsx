@@ -34,7 +34,7 @@ const menuItems = [
   { id: 'api-management', icon: Globe, label: 'API Integração', adminOnly: true },
   { id: 'storage', icon: HardDrive, label: 'Armazenamento', superAdminOnly: true },
   { id: 'documentation', icon: BookOpen, label: 'Documentação', mainAdminOnly: true },
-  { id: 'integrations', icon: Plug, label: 'Integrações' },
+  { id: 'integrations', icon: Plug, label: 'Integrações', adminOnly: true },
   { id: 'billing', icon: CreditCard, label: 'Pagamentos', billingOnly: true },
 ];
 export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {

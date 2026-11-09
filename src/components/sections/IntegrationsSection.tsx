@@ -1,7 +1,7 @@
-// Company admin: connect Slack, Microsoft Teams and WhatsApp (Google Agenda/Drive come next).
+// Company admin: connect Slack, Microsoft Teams and WhatsApp.
 // Secrets go straight to the `integrations` edge function, which encrypts them; this screen never reads them back.
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Plug, Loader2, Send, Trash2, CheckCircle2, AlertCircle, CalendarDays, HardDrive, Copy, LogOut } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Plug, Loader2, Send, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -119,142 +119,6 @@ function ProviderCard({ provider, row, onChanged }: { provider: Provider; row?: 
   );
 }
 
-const FN_BASE = 'https://scslfueixmuolkmgdslk.supabase.co/functions/v1/integrations';
-const GOOGLE_REDIRECT = `${FN_BASE}/google-callback`;
-const copy = (t: string) => { void navigator.clipboard?.writeText(t); toast.success('Copiado.'); };
-function CopyLine({ value }: { value: string }) {
-  return <span className="mt-1 flex items-center gap-2 rounded-lg bg-muted px-2.5 py-1.5 font-mono text-[11px] text-foreground"><span className="min-w-0 flex-1 truncate">{value}</span><button type="button" onClick={() => copy(value)} className="shrink-0 text-muted-foreground hover:text-foreground" aria-label="Copiar"><Copy className="h-3.5 w-3.5" /></button></span>;
-}
-
-const L = ({ href, children }: { href: string; children: ReactNode }) => <a href={href} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground underline underline-offset-2">{children}</a>;
-function Step({ n, title, children }: { n: number; title: string; children: ReactNode }) {
-  return (
-    <div className="flex gap-3">
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground text-[11px] font-semibold text-background">{n}</span>
-      <div className="min-w-0 flex-1 space-y-1 pb-1"><p className="text-[13px] font-semibold text-foreground">{title}</p><div className="space-y-1 text-[12px] leading-relaxed text-muted-foreground">{children}</div></div>
-    </div>
-  );
-}
-// Step-by-step for the Google Cloud console (2025+ layout: "Google Auth Platform"), with direct links.
-function GoogleGuide({ origin }: { origin: string }) {
-  return (
-    <div className="space-y-3 rounded-xl border border-border p-4">
-      <p className="text-[12px] text-muted-foreground">Leva uns 10 minutos. Abra cada link em outra aba, faça o passo e volte aqui.</p>
-      <Step n={1} title="Criar o projeto">
-        Abra <L href="https://console.cloud.google.com/projectcreate">criar projeto</L>, dê um nome (ex.: “ewvon”) e clique em <b>Criar</b>. Depois, na <L href="https://console.cloud.google.com/home/dashboard">página inicial do projeto</L>, copie o <b>Número do projeto</b> e cole no campo abaixo.
-      </Step>
-      <Step n={2} title="Ativar as 3 APIs (um clique em “Ativar” em cada)">
-        <L href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com">Google Calendar API</L> · <L href="https://console.cloud.google.com/apis/library/drive.googleapis.com">Google Drive API</L> · <L href="https://console.cloud.google.com/apis/library/picker.googleapis.com">Google Picker API</L>
-      </Step>
-      <Step n={3} title="Configurar a tela de login do Google">
-        Abra o <L href="https://console.cloud.google.com/auth/overview">Google Auth Platform</L> e clique em <b>Primeiros passos</b>. Nome do app: <b>ewvon</b>; e-mail de suporte: o seu; Público: <b>Externo</b> (ou <b>Interno</b> se a empresa usa Google Workspace — aí pule o passo 4); contato: seu e-mail. Aceite e clique em <b>Criar</b>.
-      </Step>
-      <Step n={4} title="Liberar quem vai conectar (obrigatório no modo de teste)">
-        Abra <L href="https://console.cloud.google.com/auth/audience">Público-alvo</L>, desça até <b>Usuários de teste</b>, clique em <b>Adicionar usuários</b> e coloque o e-mail Google de cada pessoa que vai conectar (até 100). Sem isso o Google mostra “Acesso bloqueado”.
-      </Step>
-      <Step n={5} title="Criar o cliente (ID e chave secreta)">
-        Abra <L href="https://console.cloud.google.com/auth/clients/create">criar cliente</L>. Tipo: <b>Aplicativo da Web</b>. Em <b>Origens JavaScript autorizadas</b> clique em “Adicionar URI” e cole:
-        <CopyLine value={origin} />
-        Em <b>URIs de redirecionamento autorizados</b> clique em “Adicionar URI” e cole exatamente:
-        <CopyLine value={GOOGLE_REDIRECT} />
-        Clique em <b>Criar</b> e copie o <b>ID do cliente</b> e a <b>Chave secreta do cliente</b> para os campos abaixo.
-      </Step>
-      <Step n={6} title="Criar a chave de API (para o Drive)">
-        Abra <L href="https://console.cloud.google.com/apis/credentials">Credenciais</L> › <b>Criar credenciais</b> › <b>Chave de API</b>, copie a chave (começa com AIza) e cole abaixo.
-      </Step>
-      <details className="rounded-lg bg-muted/60 px-3 py-2 text-[12px] text-muted-foreground">
-        <summary className="cursor-pointer font-medium text-foreground">Deu erro ao conectar a conta?</summary>
-        <div className="mt-2 space-y-2">
-          <p><b>“Acesso bloqueado” / “o app não concluiu o processo de verificação” / erro 403 access_denied:</b> o e-mail que tentou conectar não está em <L href="https://console.cloud.google.com/auth/audience">Público-alvo › Usuários de teste</L> (passo 4). Adicione e tente de novo.</p>
-          <p><b>Erro 400 redirect_uri_mismatch:</b> o endereço do passo 5 não foi cadastrado exatamente igual. Abra <L href="https://console.cloud.google.com/auth/clients">Clientes</L>, entre no cliente e confira o URI de redirecionamento (sem espaço e sem barra no final). A mudança pode levar alguns minutos para valer.</p>
-          <p><b>Erro 401 invalid_client / deleted_client:</b> o ID do cliente ou a chave secreta colados aqui estão errados. Copie de novo do passo 5 e salve.</p>
-          <p><b>“O Google não verificou este app”:</b> é normal no modo de teste. Clique em <b>Continuar</b>.</p>
-        </div>
-      </details>
-    </div>
-  );
-}
-
-// Company admin: the company's own Google Cloud OAuth client (client secret is encrypted on the server).
-function GoogleCompanyCard({ row, onChanged }: { row?: Row; onChanged: () => void }) {
-  const [cfg, setCfg] = useState({ client_id: row?.config?.client_id ?? '', project_number: row?.config?.project_number ?? '', api_key: row?.config?.api_key ?? '' });
-  const [secret, setSecret] = useState('');
-  const [busy, setBusy] = useState<string | null>(null);
-  const [showHelp, setShowHelp] = useState(!row);
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ewvon.vercel.app';
-  const save = async () => {
-    setBusy('save');
-    try { await call('save', { provider: 'google', enabled: true, config: cfg, secret: secret || undefined }); setSecret(''); toast.success('Google configurado. Agora cada pessoa conecta a própria conta.'); onChanged(); }
-    catch (e) { toast.error((e as Error).message); } finally { setBusy(null); }
-  };
-  const remove = async () => {
-    if (!(await appConfirm({ title: 'Remover o Google da empresa?', message: 'Ninguém mais consegue conectar a conta, e a sincronização da agenda e o Drive param.', confirmText: 'Remover', danger: true }))) return;
-    setBusy('remove');
-    try { await call('remove', { provider: 'google' }); toast.success('Google removido.'); onChanged(); } catch (e) { toast.error((e as Error).message); } finally { setBusy(null); }
-  };
-  return (
-    <Card><CardContent className="space-y-4 p-5">
-      <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#4285F4] text-white"><CalendarDays className="h-5 w-5" /></span>
-        <div><p className="text-[15px] font-semibold">Google Agenda e Google Drive</p><p className="flex items-center gap-1 text-[12px] text-muted-foreground">{row ? <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />Configurado para a empresa</> : 'Credenciais da empresa · feito uma vez pelo administrador'}</p></div>
-      </div>
-      <p className="text-[13px] text-muted-foreground">Depois de configurado, cada funcionário conecta a própria conta Google no cartão “Minha conta Google”: as reuniões do calendário do ewvon vão para a agenda dele, e os cards ganham o botão <HardDrive className="inline h-3.5 w-3.5" /> “Anexar do Drive”.</p>
-      <button type="button" className="text-[12px] font-medium text-muted-foreground underline-offset-2 hover:underline" onClick={() => setShowHelp((v) => !v)}>{showHelp ? 'Ocultar passo a passo' : 'Como conseguir os dados'}</button>
-      {showHelp ? <GoogleGuide origin={origin} /> : null}
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Input placeholder="ID do cliente (…apps.googleusercontent.com)" value={cfg.client_id} onChange={(e) => setCfg({ ...cfg, client_id: e.target.value.trim() })} />
-        <Input placeholder="Número do projeto" value={cfg.project_number} onChange={(e) => setCfg({ ...cfg, project_number: e.target.value.replace(/\D/g, '') })} />
-        <Input placeholder="Chave de API (AIza…)" value={cfg.api_key} onChange={(e) => setCfg({ ...cfg, api_key: e.target.value.trim() })} />
-        <Input type="password" autoComplete="off" placeholder={row ? 'Chave secreta · já salva' : 'Chave secreta do cliente'} value={secret} onChange={(e) => setSecret(e.target.value)} />
-      </div>
-      <p className="text-[11px] text-muted-foreground">A chave secreta é guardada criptografada no servidor e nunca volta para a tela.</p>
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" className="h-9" onClick={() => void save()} disabled={busy !== null}>{busy === 'save' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{row ? 'Salvar alterações' : 'Salvar credenciais'}</Button>
-        {row ? <Button size="sm" variant="ghost" className="h-9 text-destructive" onClick={() => void remove()} disabled={busy !== null}><Trash2 className="mr-2 h-4 w-4" />Remover</Button> : null}
-      </div>
-    </CardContent></Card>
-  );
-}
-
-// Every person: connect their own Google account.
-function MyGoogleCard() {
-  const [st, setSt] = useState<{ company_configured: boolean; email: string | null; connected_at: string | null; last_error: string | null } | null>(null);
-  const [busy, setBusy] = useState(false);
-  const load = useCallback(async () => { const { data } = await (supabase as any).rpc('my_google_status'); setSt(data); }, []);
-  useEffect(() => {
-    void load();
-    const r = new URLSearchParams(window.location.search).get('google');
-    if (r) {
-      if (r === 'ok') toast.success('Conta Google conectada.'); else if (r === 'cancelado') toast.message('Conexão com o Google cancelada.'); else toast.error('Não foi possível conectar ao Google. Confira as credenciais com o administrador.');
-      const u = new URL(window.location.href); u.searchParams.delete('google'); window.history.replaceState(null, '', u.toString());
-    }
-  }, [load]);
-  const connect = async () => { setBusy(true); try { const r = await call('google-start', {}); window.location.assign(r.url); } catch (e) { toast.error((e as Error).message); setBusy(false); } };
-  const disconnect = async () => {
-    if (!(await appConfirm({ title: 'Desconectar sua conta Google?', message: 'Suas reuniões param de ir para a Google Agenda e o Drive deixa de aparecer nos cards.', confirmText: 'Desconectar', danger: true }))) return;
-    setBusy(true); try { await call('google-disconnect', {}); toast.success('Conta Google desconectada.'); await load(); } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
-  };
-  return (
-    <Card><CardContent className="space-y-3 p-5">
-      <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white text-[17px] font-bold" style={{ color: '#4285F4' }}>G</span>
-        <div className="min-w-0"><p className="text-[15px] font-semibold">Minha conta Google</p><p className="truncate text-[12px] text-muted-foreground">{st?.email ? `Conectada: ${st.email}` : 'Agenda e Drive pessoais'}</p></div>
-      </div>
-      {!st ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : !st.company_configured ? (
-        <p className="text-[13px] text-muted-foreground">O administrador da empresa ainda não configurou o Google. Assim que configurar, você conecta sua conta aqui.</p>
-      ) : (
-        <>
-          <p className="text-[13px] text-muted-foreground">{st.email ? 'Suas reuniões do ewvon aparecem na sua Google Agenda, e você pode anexar arquivos do seu Drive nos cards.' : 'Conecte para levar suas reuniões do ewvon para a Google Agenda e anexar arquivos do Drive nos cards.'}</p>
-          {st.last_error ? <p className="rounded-lg bg-destructive/10 px-3 py-2 text-[12px] text-destructive">{st.last_error}</p> : null}
-          {st.email
-            ? <Button size="sm" variant="outline" className="h-9" onClick={() => void disconnect()} disabled={busy}><LogOut className="mr-2 h-4 w-4" />Desconectar</Button>
-            : <Button size="sm" className="h-9" onClick={() => void connect()} disabled={busy}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Conectar conta Google</Button>}
-        </>
-      )}
-    </CardContent></Card>
-  );
-}
-
 export function IntegrationsSection() {
   const { isAdmin } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
@@ -269,21 +133,14 @@ export function IntegrationsSection() {
   }, []);
   useEffect(() => { if (isAdmin) void load(); }, [load, isAdmin]);
 
-  if (!isAdmin) return (
-    <div className="space-y-5 p-4 md:p-6">
-      <PageHeader icon={<Plug />} title="Integrações" subtitle="Conecte suas contas pessoais ao ewvon." />
-      <div className="grid gap-3 xl:grid-cols-2"><MyGoogleCard /></div>
-    </div>
-  );
+  if (!isAdmin) return <div className="p-8 text-center text-sm text-muted-foreground">Somente o administrador da empresa configura integrações.</div>;
   return (
     <div className="space-y-5 p-4 md:p-6">
       <PageHeader icon={<Plug />} title="Integrações" subtitle="Leve avisos, comunicados, cards e reuniões do ewvon para as ferramentas que a equipe já usa." />
-      <div className="grid gap-3 xl:grid-cols-2"><MyGoogleCard /></div>
       {loading ? <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div> : (
         <>
           <div className="grid gap-3 xl:grid-cols-2">
             {(['slack', 'teams', 'whatsapp'] as Provider[]).map((p) => <ProviderCard key={p} provider={p} row={rows.find((r) => r.provider === p)} onChanged={() => void load()} />)}
-            <GoogleCompanyCard row={rows.find((r) => (r.provider as string) === 'google')} onChanged={() => void load()} />
           </div>
           <Card><CardContent className="p-0">
             <div className="border-b border-border px-4 py-3"><p className="text-[15px] font-semibold">Últimos envios</p></div>

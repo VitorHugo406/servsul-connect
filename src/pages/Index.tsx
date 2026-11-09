@@ -84,7 +84,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   'system-broadcasts': { title: 'Comunicados Globais', subtitle: 'Avisos para todas as empresas' },
   billing: { title: 'Pagamentos', subtitle: 'Plano, cobranças e extras da empresa' },
   'dashboard-3d': { title: 'Dash', subtitle: 'Exclusivo do plano Empresarial' },
-  integrations: { title: 'Integrações', subtitle: 'Slack, Teams, WhatsApp e Google' },
+  integrations: { title: 'Integrações', subtitle: 'Slack, Teams e WhatsApp' },
 };
 
 const sectionPaths: Record<string, string> = {
@@ -289,7 +289,7 @@ const Index = () => {
       case 'companies': return <CompaniesManagementSection />;
       case 'system-broadcasts': return <SystemBroadcastsSection />;
       case 'dashboard-3d': return <Dashboard3DSection />;
-      case 'integrations': return <IntegrationsSection />;
+      case 'integrations': return isAdmin ? <IntegrationsSection /> : <HomeSection onNavigate={handleSectionChange} />;
       case 'billing': return isAdmin ? <BillingSection /> : <HomeSection onNavigate={handleSectionChange} />;
       default: return <HomeSection onNavigate={setActiveSection} />;
     }
