@@ -9,7 +9,6 @@ import { useMeetingStatus } from '@/hooks/useMeetingStatus';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useBirthdayCelebration } from '@/hooks/useBirthdayCelebration';
-import { useImportantAnnouncements } from '@/hooks/useImportantAnnouncements';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompanyPlan } from '@/hooks/useCompanyPlan';
 import { sectionLock, FEATURE_LABEL, SECTION_FEATURE } from '@/lib/planAccess';
@@ -26,7 +25,6 @@ const ManagementSection = lazyWithRetry(() => import('@/components/sections/Mana
 const FacialRegistrationSection = lazyWithRetry(() => import('@/components/sections/FacialRegistrationSection').then((module) => ({ default: module.FacialRegistrationSection })));
 const DataManagementSection = lazyWithRetry(() => import('@/components/sections/DataManagementSection').then((module) => ({ default: module.DataManagementSection })));
 const SectorManagementSection = lazyWithRetry(() => import('@/components/sections/SectorManagementSection').then((module) => ({ default: module.SectorManagementSection })));
-const ImportantAnnouncementsSection = lazyWithRetry(() => import('@/components/sections/ImportantAnnouncementsSection').then((module) => ({ default: module.ImportantAnnouncementsSection })));
 const TaskBoardSection = lazyWithRetry(() => import('@/components/sections/TaskBoardSection').then((module) => ({ default: module.TaskBoardSection })));
 const PeopleManagementSection = lazyWithRetry(() => import('@/components/sections/PeopleManagementSection').then((module) => ({ default: module.PeopleManagementSection })));
 const FeedbackEmailSection = lazyWithRetry(() => import('@/components/sections/FeedbackEmailSection').then((module) => ({ default: module.FeedbackEmailSection })));
@@ -54,7 +52,6 @@ import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { BirthdayCelebrationModal } from '@/components/birthday/BirthdayCelebrationModal';
-import { ImportantAnnouncementModal } from '@/components/announcements/ImportantAnnouncementModal';
 import { BoardJoinDialog } from '@/components/tasks/BoardJoinDialog';
 import { useWarRoomAlarm } from '@/hooks/useWarRoomAlarm';
 import { WarRoomAlarmOverlay } from '@/components/warroom/WarRoomAlarmOverlay';
@@ -70,7 +67,6 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   facial: { title: 'Cadastro Facial', subtitle: 'Reconhecimento biométrico' },
   'data-management': { title: 'Exclusão de Dados', subtitle: 'Gerenciamento de dados do sistema' },
   sectors: { title: 'Gestão de Setores', subtitle: 'Departamentos da empresa' },
-  'important-announcements': { title: 'Comunicados Importantes', subtitle: 'Avisos em destaque' },
   tasks: { title: 'Gestão de Tarefas', subtitle: 'Quadro de atividades' },
   'people-management': { title: 'Gestão de Pessoas', subtitle: 'Equipe e relatórios' },
   'feedback-email': { title: 'Disparo de Feedback', subtitle: 'E-mails de feedback mensal' },
@@ -95,7 +91,7 @@ const sectionPaths: Record<string, string> = {
   home: '/', 'my-dashboard': '/meu-painel', chat: '/chat', announcements: '/avisos',
   birthdays: '/aniversariantes', management: '/gerenciamento', shortcuts: '/atalhos',
   facial: '/cadastro-facial', 'data-management': '/gestao-de-dados', sectors: '/setores',
-  'important-announcements': '/comunicados-importantes', tasks: '/tarefas',
+  tasks: '/tarefas',
   'people-management': '/gestao-de-pessoas', 'feedback-email': '/disparo-de-feedback',
   calendar: '/calendario', 'system-logs': '/logs-do-sistema', storage: '/armazenamento',
   'event-history': '/eventos-mensais', documentation: '/documentacao', 'war-room': '/war-room',
@@ -112,7 +108,7 @@ const sectionIntroIcons = {
   home: Home, 'my-dashboard': LayoutDashboard, chat: MessageSquare,
   announcements: Bell, birthdays: Cake, management: Settings, shortcuts: LinkIcon,
   facial: ScanFace, 'data-management': Trash2, sectors: Building2,
-  'important-announcements': Sparkles, tasks: ListTodo, 'people-management': UsersRound,
+  tasks: ListTodo, 'people-management': UsersRound,
   'feedback-email': Mail, calendar: CalendarDays, 'system-logs': FileText,
   storage: HardDrive, documentation: BookOpen, 'war-room': Shield,
   'api-management': Plug, evaluations: ClipboardCheck, notes: StickyNote,
@@ -252,7 +248,7 @@ const Index = () => {
   const handleNavigateToTasks = () => handleSectionChange('tasks');
   const isMobile = useIsMobile(); const [isReady, setIsReady] = useState(false); const { profile, isAdmin, roles } = useAuth();
   const { plan: companyPlan, loading: planLoading } = useCompanyPlan(); const isSuperAdminUser = roles.some((r: any) => (r.role as string) === 'super_admin');
-  const { showOnboarding, completeOnboarding } = useOnboarding(); const { showCelebration, closeCelebration, userName } = useBirthdayCelebration(); const { pendingAnnouncement, dismissAnnouncement } = useImportantAnnouncements(); const { isAlarming, pendingWarRoomId, dismissAlarm } = useWarRoomAlarm();
+  const { showOnboarding, completeOnboarding } = useOnboarding(); const { showCelebration, closeCelebration, userName } = useBirthdayCelebration(); const { isAlarming, pendingWarRoomId, dismissAlarm } = useWarRoomAlarm();
   const handleOpenWarRoom = () => { handleSectionChange('war-room'); dismissAlarm(); };
   usePresence(); useMeetingStatus();
   useEffect(() => { const timer = requestAnimationFrame(() => setIsReady(true)); return () => cancelAnimationFrame(timer); }, []);
@@ -277,7 +273,6 @@ const Index = () => {
       case 'facial': return <FacialRegistrationSection />;
       case 'data-management': return <DataManagementSection />;
       case 'sectors': return <SectorManagementSection />;
-      case 'important-announcements': return <ImportantAnnouncementsSection />;
       case 'tasks': return <TaskBoardSection />;
       case 'people-management': return <PeopleManagementSection />;
       case 'feedback-email': return <FeedbackEmailSection />;
@@ -294,7 +289,7 @@ const Index = () => {
       case 'companies': return <CompaniesManagementSection />;
       case 'system-broadcasts': return <SystemBroadcastsSection />;
       case 'dashboard-3d': return <Dashboard3DSection />;
-      case 'integrations': return isAdmin ? <IntegrationsSection /> : <HomeSection onNavigate={handleSectionChange} />;
+      case 'integrations': return <IntegrationsSection />;
       case 'billing': return isAdmin ? <BillingSection /> : <HomeSection onNavigate={handleSectionChange} />;
       default: return <HomeSection onNavigate={setActiveSection} />;
     }
@@ -305,8 +300,8 @@ const Index = () => {
   const currentSection = sectionTitles[activeSection] || sectionTitles.home; const isHomePage = activeSection === 'home';
   if (isMobile) {
     // Phones get the Ewwon mobile app (src/components/ewwon); desktop keeps the full workspace below.
-    return <><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><Suspense fallback={<EwwonLoader />}><EwwonApp /></Suspense><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /></>;
+    return <><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><Suspense fallback={<EwwonLoader />}><EwwonApp /></Suspense><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} /><BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /></>;
   }
-  return <div className="flex h-screen overflow-hidden bg-background"><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} /><div className="flex flex-1 flex-col overflow-hidden"><Header title={currentSection.title} subtitle={currentSection.subtitle} activeSection={activeSection} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} /><main data-section={activeSection} className={`ewvon-main min-w-0 flex-1 overflow-auto bg-card ${['chat', 'calendar', 'tasks', 'war-room'].includes(activeSection) ? '' : 'clean-section'} ${['home', 'chat'].includes(activeSection) || boardOpen ? '' : 'pro-section'}`}><SectionBoundary resetKey={activeSection}><Suspense fallback={<div className="ewvon-section-loading flex h-full min-h-[60vh] items-center justify-center text-foreground" role="status" aria-label="Carregando seção"><EwwonLogo size={76} /></div>}>{renderSection()}</Suspense></SectionBoundary></main></div><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} />{isHomePage && <GlobalBroadcastOrb />}<BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && !showOnboarding && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></div>;
+  return <div className="flex h-screen overflow-hidden bg-background"><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} /><div className="flex flex-1 flex-col overflow-hidden"><Header title={currentSection.title} subtitle={currentSection.subtitle} activeSection={activeSection} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} /><main data-section={activeSection} className={`ewvon-main min-w-0 flex-1 overflow-auto bg-card ${['chat', 'calendar', 'tasks', 'war-room'].includes(activeSection) ? '' : 'clean-section'} ${['home', 'chat'].includes(activeSection) || boardOpen ? '' : 'pro-section'}`}><SectionBoundary resetKey={activeSection}><Suspense fallback={<div className="ewvon-section-loading flex h-full min-h-[60vh] items-center justify-center text-foreground" role="status" aria-label="Carregando seção"><EwwonLogo size={76} /></div>}>{renderSection()}</Suspense></SectionBoundary></main></div><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} />{isHomePage && <GlobalBroadcastOrb />}<BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} /><BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></div>;
 };
 export default Index;

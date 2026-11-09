@@ -25,7 +25,6 @@ const menuItems = [
   { id: 'companies', icon: Building2, label: 'Empresas', superAdminOnly: true },
   { id: 'system-broadcasts', icon: Megaphone, label: 'Comunicados Globais', superAdminOnly: true },
   { id: 'sectors', icon: Building2, label: 'Gestão de Setores', adminOnly: true },
-  { id: 'important-announcements', icon: Sparkles, label: 'Comunicados Importantes', adminOnly: true },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
   { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
   { id: 'evaluations', icon: ClipboardCheck, label: 'Avaliações' },
@@ -35,7 +34,7 @@ const menuItems = [
   { id: 'api-management', icon: Globe, label: 'API Integração', adminOnly: true },
   { id: 'storage', icon: HardDrive, label: 'Armazenamento', superAdminOnly: true },
   { id: 'documentation', icon: BookOpen, label: 'Documentação', mainAdminOnly: true },
-  { id: 'integrations', icon: Plug, label: 'Integrações', adminOnly: true },
+  { id: 'integrations', icon: Plug, label: 'Integrações' },
   { id: 'billing', icon: CreditCard, label: 'Pagamentos', billingOnly: true },
 ];
 export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {

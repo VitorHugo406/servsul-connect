@@ -30,6 +30,7 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
 import { TaskCompletionReport } from './TaskCompletionReport';
 import { SubtaskList } from './SubtaskList';
+import { TaskDriveAttachments } from './TaskDriveAttachments';
 import { SignedStorageImage } from '@/components/common/SignedStorageMedia';
 import { cn } from '@/lib/utils';
 
@@ -1239,6 +1240,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
             <div className="h-px bg-border mx-4" />
             {renderProgress()}
             {renderSubtasks()}
+            {!task.is_template && <TaskDriveAttachments taskId={task.id} />}
             <div className="h-px bg-border mx-4 my-2" />
             {commentsHeader}
             {renderTimeline()}
@@ -1270,6 +1272,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
               {renderDecisions()}
               {renderProgress()}
               {renderSubtasks()}
+              {!task.is_template && <TaskDriveAttachments taskId={task.id} />}
             </div>
           </ScrollArea>
 

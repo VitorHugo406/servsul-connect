@@ -1,7 +1,7 @@
 // Company admin: connect Slack, Microsoft Teams and WhatsApp (Google Agenda/Drive come next).
 // Secrets go straight to the `integrations` edge function, which encrypts them; this screen never reads them back.
 import { useCallback, useEffect, useState } from 'react';
-import { Plug, Loader2, Send, Trash2, CheckCircle2, AlertCircle, CalendarDays, HardDrive } from 'lucide-react';
+import { Plug, Loader2, Send, Trash2, CheckCircle2, AlertCircle, CalendarDays, HardDrive, Copy, LogOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -16,18 +16,18 @@ type Provider = 'slack' | 'teams' | 'whatsapp';
 type Row = { provider: Provider; enabled: boolean; events: string[]; config: any; last_status: string | null; last_error: string | null; last_used_at: string | null };
 type Delivery = { id: number; provider: string; event: string; ok: boolean; detail: string | null; created_at: string };
 
-const EVENT_LABEL: Record<string, string> = { announcement: 'Avisos', important: 'Comunicados importantes', task_assigned: 'Card atribuído', meeting: 'Reuniões marcadas' };
+const EVENT_LABEL: Record<string, string> = { announcement: 'Avisos', task_assigned: 'Card atribuído', meeting: 'Reuniões marcadas' };
 const META: Record<Provider, { name: string; color: string; letter: string; secretLabel: string; placeholder: string; defaults: string[]; steps: string[] }> = {
   slack: {
-    name: 'Slack', color: '#4A154B', letter: 'S', secretLabel: 'Link do Incoming Webhook', placeholder: 'https://hooks.slack.com/services/…', defaults: ['announcement', 'important', 'task_assigned', 'meeting'],
+    name: 'Slack', color: '#4A154B', letter: 'S', secretLabel: 'Link do Incoming Webhook', placeholder: 'https://hooks.slack.com/services/…', defaults: ['announcement', 'task_assigned', 'meeting'],
     steps: ['No Slack, abra api.slack.com/apps e crie um app (From scratch).', 'Em "Incoming Webhooks", ative e clique em "Add New Webhook to Workspace".', 'Escolha o canal que vai receber as mensagens e copie o link gerado.'],
   },
   teams: {
-    name: 'Microsoft Teams', color: '#5059C9', letter: 'T', secretLabel: 'Link do fluxo (Workflows)', placeholder: 'https://…logic.azure.com/… ou …powerplatform.com/…', defaults: ['announcement', 'important', 'task_assigned', 'meeting'],
+    name: 'Microsoft Teams', color: '#5059C9', letter: 'T', secretLabel: 'Link do fluxo (Workflows)', placeholder: 'https://…logic.azure.com/… ou …powerplatform.com/…', defaults: ['announcement', 'task_assigned', 'meeting'],
     steps: ['No canal do Teams, clique em ⋯ > Workflows.', 'Escolha o modelo "Postar em um canal quando uma solicitação de webhook for recebida".', 'Conclua o assistente e copie o link do fluxo.'],
   },
   whatsapp: {
-    name: 'WhatsApp Business', color: '#25D366', letter: 'W', secretLabel: 'Token de acesso permanente', placeholder: 'EAAG…', defaults: ['important', 'task_assigned'],
+    name: 'WhatsApp Business', color: '#25D366', letter: 'W', secretLabel: 'Token de acesso permanente', placeholder: 'EAAG…', defaults: ['task_assigned'],
     steps: ['Em developers.facebook.com, crie um app do tipo Empresa e adicione o produto WhatsApp.', 'Cadastre o número da empresa e copie o "Phone number ID".', 'Crie e aprove um modelo de mensagem com uma variável no corpo, por exemplo: "Aviso do ewvon: {{1}}".', 'Gere um token permanente (usuário do sistema com permissão whatsapp_business_messaging).'],
   },
 };
@@ -103,18 +103,116 @@ function ProviderCard({ provider, row, onChanged }: { provider: Provider; row?: 
       <div>
         <p className="mb-1.5 text-[12px] text-muted-foreground">Enviar quando houver</p>
         <div className="flex flex-wrap gap-1.5">
-          {Object.entries(EVENT_LABEL).filter(([k]) => provider !== 'whatsapp' || k === 'important' || k === 'task_assigned').map(([k, label]) => {
+          {Object.entries(EVENT_LABEL).filter(([k]) => provider !== 'whatsapp' || k === 'announcement' || k === 'task_assigned').map(([k, label]) => {
             const on = events.includes(k);
             return <button key={k} type="button" onClick={() => setEvents(on ? events.filter((e) => e !== k) : [...events, k])} className={`rounded-full border px-3 py-1 text-[12px] font-medium ${on ? 'border-foreground bg-foreground text-background' : 'border-border text-muted-foreground'}`} aria-pressed={on}>{label}</button>;
           })}
         </div>
-        {provider === 'whatsapp' ? <p className="mt-1.5 text-[11px] text-muted-foreground">Comunicados vão para todos os funcionários com celular no cadastro; cards vão só para o responsável.</p> : null}
+        {provider === 'whatsapp' ? <p className="mt-1.5 text-[11px] text-muted-foreground">Avisos vão para todos os funcionários com celular no cadastro (cada mensagem é cobrada pela Meta); cards vão só para o responsável.</p> : null}
       </div>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" className="h-9" onClick={() => void save()} disabled={busy !== null}>{busy === 'save' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{row ? 'Salvar alterações' : 'Conectar'}</Button>
         {row ? <Button size="sm" variant="outline" className="h-9" onClick={() => void test()} disabled={busy !== null}>{busy === 'test' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Enviar teste</Button> : null}
         {row ? <Button size="sm" variant="ghost" className="h-9 text-destructive" onClick={() => void remove()} disabled={busy !== null}><Trash2 className="mr-2 h-4 w-4" />Desconectar</Button> : null}
       </div>
+    </CardContent></Card>
+  );
+}
+
+const FN_BASE = 'https://scslfueixmuolkmgdslk.supabase.co/functions/v1/integrations';
+const GOOGLE_REDIRECT = `${FN_BASE}/google-callback`;
+const copy = (t: string) => { void navigator.clipboard?.writeText(t); toast.success('Copiado.'); };
+function CopyLine({ value }: { value: string }) {
+  return <span className="mt-1 flex items-center gap-2 rounded-lg bg-muted px-2.5 py-1.5 font-mono text-[11px] text-foreground"><span className="min-w-0 flex-1 truncate">{value}</span><button type="button" onClick={() => copy(value)} className="shrink-0 text-muted-foreground hover:text-foreground" aria-label="Copiar"><Copy className="h-3.5 w-3.5" /></button></span>;
+}
+
+// Company admin: the company's own Google Cloud OAuth client (client secret is encrypted on the server).
+function GoogleCompanyCard({ row, onChanged }: { row?: Row; onChanged: () => void }) {
+  const [cfg, setCfg] = useState({ client_id: row?.config?.client_id ?? '', project_number: row?.config?.project_number ?? '', api_key: row?.config?.api_key ?? '' });
+  const [secret, setSecret] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(!row);
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ewvon.vercel.app';
+  const save = async () => {
+    setBusy('save');
+    try { await call('save', { provider: 'google', enabled: true, config: cfg, secret: secret || undefined }); setSecret(''); toast.success('Google configurado. Agora cada pessoa conecta a própria conta.'); onChanged(); }
+    catch (e) { toast.error((e as Error).message); } finally { setBusy(null); }
+  };
+  const remove = async () => {
+    if (!(await appConfirm({ title: 'Remover o Google da empresa?', message: 'Ninguém mais consegue conectar a conta, e a sincronização da agenda e o Drive param.', confirmText: 'Remover', danger: true }))) return;
+    setBusy('remove');
+    try { await call('remove', { provider: 'google' }); toast.success('Google removido.'); onChanged(); } catch (e) { toast.error((e as Error).message); } finally { setBusy(null); }
+  };
+  return (
+    <Card><CardContent className="space-y-4 p-5">
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#4285F4] text-white"><CalendarDays className="h-5 w-5" /></span>
+        <div><p className="text-[15px] font-semibold">Google Agenda e Google Drive</p><p className="flex items-center gap-1 text-[12px] text-muted-foreground">{row ? <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />Configurado para a empresa</> : 'Credenciais da empresa · feito uma vez pelo administrador'}</p></div>
+      </div>
+      <p className="text-[13px] text-muted-foreground">Depois de configurado, cada funcionário conecta a própria conta Google no cartão “Minha conta Google”: as reuniões do calendário do ewvon vão para a agenda dele, e os cards ganham o botão <HardDrive className="inline h-3.5 w-3.5" /> “Anexar do Drive”.</p>
+      <button type="button" className="text-[12px] font-medium text-muted-foreground underline-offset-2 hover:underline" onClick={() => setShowHelp((v) => !v)}>{showHelp ? 'Ocultar passo a passo' : 'Como conseguir os dados'}</button>
+      {showHelp ? (
+        <ol className="list-decimal space-y-1.5 pl-5 text-[12px] text-muted-foreground">
+          <li>Acesse console.cloud.google.com e crie um projeto (ex.: “ewvon da empresa”). Copie o <b>Número do projeto</b> no painel inicial.</li>
+          <li>Em <b>APIs e serviços › Biblioteca</b>, ative: Google Calendar API, Google Drive API e Google Picker API.</li>
+          <li>Em <b>Tela de permissão OAuth</b>, escolha “Externo” (ou “Interno”, se a empresa usa Google Workspace) e preencha nome e e-mail de suporte.</li>
+          <li>Em <b>Credenciais › Criar credenciais › ID do cliente OAuth</b>, escolha “Aplicativo da Web” e cadastre:
+            <div className="mt-1">Origem JavaScript autorizada:</div><CopyLine value={origin} />
+            <div className="mt-1">URI de redirecionamento autorizado:</div><CopyLine value={GOOGLE_REDIRECT} />
+            Copie o <b>ID do cliente</b> e a <b>Chave secreta do cliente</b>.</li>
+          <li>Em <b>Credenciais › Criar credenciais › Chave de API</b>, copie a chave (recomendado: restrinja ao site {origin}).</li>
+        </ol>
+      ) : null}
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Input placeholder="ID do cliente (…apps.googleusercontent.com)" value={cfg.client_id} onChange={(e) => setCfg({ ...cfg, client_id: e.target.value.trim() })} />
+        <Input placeholder="Número do projeto" value={cfg.project_number} onChange={(e) => setCfg({ ...cfg, project_number: e.target.value.replace(/\D/g, '') })} />
+        <Input placeholder="Chave de API (AIza…)" value={cfg.api_key} onChange={(e) => setCfg({ ...cfg, api_key: e.target.value.trim() })} />
+        <Input type="password" autoComplete="off" placeholder={row ? 'Chave secreta · já salva' : 'Chave secreta do cliente'} value={secret} onChange={(e) => setSecret(e.target.value)} />
+      </div>
+      <p className="text-[11px] text-muted-foreground">A chave secreta é guardada criptografada no servidor e nunca volta para a tela.</p>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" className="h-9" onClick={() => void save()} disabled={busy !== null}>{busy === 'save' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{row ? 'Salvar alterações' : 'Salvar credenciais'}</Button>
+        {row ? <Button size="sm" variant="ghost" className="h-9 text-destructive" onClick={() => void remove()} disabled={busy !== null}><Trash2 className="mr-2 h-4 w-4" />Remover</Button> : null}
+      </div>
+    </CardContent></Card>
+  );
+}
+
+// Every person: connect their own Google account.
+function MyGoogleCard() {
+  const [st, setSt] = useState<{ company_configured: boolean; email: string | null; connected_at: string | null; last_error: string | null } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => { const { data } = await (supabase as any).rpc('my_google_status'); setSt(data); }, []);
+  useEffect(() => {
+    void load();
+    const r = new URLSearchParams(window.location.search).get('google');
+    if (r) {
+      if (r === 'ok') toast.success('Conta Google conectada.'); else if (r === 'cancelado') toast.message('Conexão com o Google cancelada.'); else toast.error('Não foi possível conectar ao Google. Confira as credenciais com o administrador.');
+      const u = new URL(window.location.href); u.searchParams.delete('google'); window.history.replaceState(null, '', u.toString());
+    }
+  }, [load]);
+  const connect = async () => { setBusy(true); try { const r = await call('google-start', {}); window.location.assign(r.url); } catch (e) { toast.error((e as Error).message); setBusy(false); } };
+  const disconnect = async () => {
+    if (!(await appConfirm({ title: 'Desconectar sua conta Google?', message: 'Suas reuniões param de ir para a Google Agenda e o Drive deixa de aparecer nos cards.', confirmText: 'Desconectar', danger: true }))) return;
+    setBusy(true); try { await call('google-disconnect', {}); toast.success('Conta Google desconectada.'); await load(); } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+  };
+  return (
+    <Card><CardContent className="space-y-3 p-5">
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white text-[17px] font-bold" style={{ color: '#4285F4' }}>G</span>
+        <div className="min-w-0"><p className="text-[15px] font-semibold">Minha conta Google</p><p className="truncate text-[12px] text-muted-foreground">{st?.email ? `Conectada: ${st.email}` : 'Agenda e Drive pessoais'}</p></div>
+      </div>
+      {!st ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : !st.company_configured ? (
+        <p className="text-[13px] text-muted-foreground">O administrador da empresa ainda não configurou o Google. Assim que configurar, você conecta sua conta aqui.</p>
+      ) : (
+        <>
+          <p className="text-[13px] text-muted-foreground">{st.email ? 'Suas reuniões do ewvon aparecem na sua Google Agenda, e você pode anexar arquivos do seu Drive nos cards.' : 'Conecte para levar suas reuniões do ewvon para a Google Agenda e anexar arquivos do Drive nos cards.'}</p>
+          {st.last_error ? <p className="rounded-lg bg-destructive/10 px-3 py-2 text-[12px] text-destructive">{st.last_error}</p> : null}
+          {st.email
+            ? <Button size="sm" variant="outline" className="h-9" onClick={() => void disconnect()} disabled={busy}><LogOut className="mr-2 h-4 w-4" />Desconectar</Button>
+            : <Button size="sm" className="h-9" onClick={() => void connect()} disabled={busy}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Conectar conta Google</Button>}
+        </>
+      )}
     </CardContent></Card>
   );
 }
@@ -131,23 +229,23 @@ export function IntegrationsSection() {
     ]);
     setRows((r || []) as Row[]); setLog((d || []) as Delivery[]); setLoading(false);
   }, []);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (isAdmin) void load(); }, [load, isAdmin]);
 
-  if (!isAdmin) return <div className="p-8 text-center text-sm text-muted-foreground">Somente o administrador da empresa configura integrações.</div>;
+  if (!isAdmin) return (
+    <div className="space-y-5 p-4 md:p-6">
+      <PageHeader icon={<Plug />} title="Integrações" subtitle="Conecte suas contas pessoais ao ewvon." />
+      <div className="grid gap-3 xl:grid-cols-2"><MyGoogleCard /></div>
+    </div>
+  );
   return (
     <div className="space-y-5 p-4 md:p-6">
       <PageHeader icon={<Plug />} title="Integrações" subtitle="Leve avisos, comunicados, cards e reuniões do ewvon para as ferramentas que a equipe já usa." />
+      <div className="grid gap-3 xl:grid-cols-2"><MyGoogleCard /></div>
       {loading ? <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div> : (
         <>
           <div className="grid gap-3 xl:grid-cols-2">
             {(['slack', 'teams', 'whatsapp'] as Provider[]).map((p) => <ProviderCard key={p} provider={p} row={rows.find((r) => r.provider === p)} onChanged={() => void load()} />)}
-            <Card><CardContent className="space-y-3 p-5">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#4285F4] text-white"><CalendarDays className="h-5 w-5" /></span>
-                <div><p className="text-[15px] font-semibold">Google Agenda e Google Drive</p><p className="text-[12px] text-muted-foreground">Em preparação</p></div>
-              </div>
-              <p className="text-[13px] text-muted-foreground">Cada pessoa vai poder ligar a própria conta Google: as reuniões do calendário do ewvon aparecem na Agenda Google, e os cards ganham o botão <HardDrive className="inline h-3.5 w-3.5" /> “Anexar do Drive”, sem gastar o armazenamento do plano.</p>
-            </CardContent></Card>
+            <GoogleCompanyCard row={rows.find((r) => (r.provider as string) === 'google')} onChanged={() => void load()} />
           </div>
           <Card><CardContent className="p-0">
             <div className="border-b border-border px-4 py-3"><p className="text-[15px] font-semibold">Últimos envios</p></div>

@@ -17,7 +17,6 @@ export const SYSTEM_SECTIONS = new Set(['companies', 'system-broadcasts', 'stora
 export const SECTION_FEATURE: Record<string, string> = {
   chat: 'chat',
   announcements: 'announcements',
-  'important-announcements': 'important_notices',
   tasks: 'tasks',
   notes: 'notes',
   birthdays: 'birthdays',
