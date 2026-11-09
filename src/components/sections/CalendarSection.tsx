@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
+import { openVideoCall } from '@/components/video/VideoCallHost';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
@@ -260,53 +261,6 @@ export function CalendarSection() {
 
     let finalMeetingLink = meetingLink.trim() || null;
 
-    // If Ewvor Conference, call the API to create the meeting first
-    if (meetingType === 'ewvor' && !editingEvent) {
-      setSavingConference(true);
-      try {
-        const startDt = new Date(startDateTime);
-        const endDt = endDateTime ? new Date(endDateTime) : new Date(startDt.getTime() + 60 * 60 * 1000);
-        const durationMinutes = Math.round((endDt.getTime() - startDt.getTime()) / 60000);
-
-        const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData?.session?.access_token;
-        if (!accessToken) { toast.error('Sessão expirada'); setSavingConference(false); return; }
-
-        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/servchat-conference?path=/meetings`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              title: title.trim(),
-              scheduled_at: startDateTime,
-              duration_minutes: durationMinutes,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}));
-          throw new Error(err.error || 'Erro ao criar reunião Ewvor');
-        }
-
-        const result = await response.json();
-        finalMeetingLink = result.join_url || null;
-        if (!finalMeetingLink) {
-          toast.warning('Reunião criada mas link não retornado');
-        }
-      } catch (e: any) {
-        console.error('Ewvor Conference error:', e);
-        toast.error(e.message || 'Erro ao criar reunião Ewvor Conference');
-        setSavingConference(false);
-        return;
-      }
-      setSavingConference(false);
-    }
 
     const eventData: any = {
       title: title.trim(), description: description.trim() || null,
@@ -330,7 +284,18 @@ export function CalendarSection() {
       if (selectedParticipants.length > 0) {
         await supabase.from('meeting_participants').insert(selectedParticipants.map(pid => ({ event_id: eventId, profile_id: pid })));
       }
-      toast.success(editingEvent ? 'Evento atualizado!' : meetingType === 'ewvor' ? 'Reunião Ewvor criada!' : 'Evento criado!');
+      if (meetingType === 'ewvor' && !editingEvent) {
+        // ewvon video call (Daily.co): private room; each person joins with their own token.
+        setSavingConference(true);
+        const { data: room, error: roomErr } = await supabase.functions.invoke('video/room', { body: { event_id: eventId } });
+        setSavingConference(false);
+        if (roomErr || !(room as any)?.ok) {
+          let msg = 'A reunião foi salva, mas a sala de vídeo não foi criada.';
+          try { const b = await (roomErr as any)?.context?.json?.(); if (b?.error) msg = `Reunião salva. ${b.error}`; } catch { /* ignore */ }
+          toast.warning(msg);
+        }
+      }
+      toast.success(editingEvent ? 'Evento atualizado!' : meetingType === 'ewvor' ? 'Videochamada marcada!' : 'Evento criado!');
       resetForm(); setShowCreatePage(null); fetchEvents();
     } catch (e) { toast.error('Erro ao salvar evento'); console.error(e); }
   };
@@ -516,7 +481,7 @@ export function CalendarSection() {
             <h2 className="font-semibold text-foreground">
               {editingEvent ? 'Editar' : 'Nova'} {isMeeting ? 'Reunião' : 'Evento'}
               {isMeeting && meetingType === 'ewvor' && !editingEvent && (
-                <Badge variant="secondary" className="ml-2 text-[10px]">Ewvor Conference</Badge>
+                <Badge variant="secondary" className="ml-2 text-[10px]">Videochamada ewvon</Badge>
               )}
               {isMeeting && meetingType === 'external' && !editingEvent && (
                 <Badge variant="outline" className="ml-2 text-[10px]">Link Externo</Badge>
@@ -604,7 +569,7 @@ export function CalendarSection() {
                       <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
                         <MonitorPlay className="h-4 w-4 text-primary flex-shrink-0" />
                         <p className="text-xs text-muted-foreground">
-                          O link da reunião será gerado automaticamente pelo Ewvor Conference ao agendar.
+                          A sala de vídeo é criada ao salvar. Na hora da reunião, você e os participantes entram pelo botão “Entrar na chamada”, sem sair do ewvon.
                         </p>
                       </div>
                     </div>
@@ -849,7 +814,7 @@ export function CalendarSection() {
               </div>
             </button>
 
-            {/* Option 2: Ewvor Conference */}
+            {/* Option 2: ewvon video call (Daily.co) */}
             <button
               onClick={() => openCreateMeeting(selectedDate, 'ewvor')}
               className="flex items-start gap-4 p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
@@ -858,9 +823,9 @@ export function CalendarSection() {
                 <MonitorPlay className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">Ewvor Conference</p>
+                <p className="font-semibold text-foreground">Videochamada ewvon</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Crie uma sala de reunião interna com link gerado automaticamente
+                  Sala de vídeo privada dentro do ewvon, com câmera, áudio e compartilhamento de tela
                 </p>
               </div>
             </button>
@@ -994,7 +959,12 @@ export function CalendarSection() {
                                 </span>
                               )}
                               {event.all_day && <Badge variant="secondary" className="text-[9px] h-4">Dia inteiro</Badge>}
-                              {event.meeting_link && (
+                              {(event as any).video_room ? (
+                                <button type="button" onClick={e => { e.stopPropagation(); openVideoCall(event.id); }}
+                                  className="inline-flex items-center gap-1 text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded px-2 py-0.5 transition-colors">
+                                  <Video className="h-2.5 w-2.5" /> Entrar na chamada
+                                </button>
+                              ) : event.meeting_link && (
                                 <a href={event.meeting_link} target="_blank" rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 text-[10px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded px-2 py-0.5 transition-colors"
                                   onClick={e => e.stopPropagation()}>
