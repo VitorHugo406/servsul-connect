@@ -28,7 +28,7 @@ const CYCLE_OPTIONS: { id: Cycle; label: string; hint: string }[] = [
   { id: 'annual', label: 'Anual', hint: 'Renova sozinho todo ano · cartão de crédito' },
   { id: 'once', label: 'Mensal avulso', hint: 'Paga uma vez, vale 1 mês · Pix, boleto ou cartão' },
 ];
-const annualOf = (p: Plan) => p.annual_price_cents ?? p.price_cents * 10;
+const annualOf = (p: Plan) => p.annual_price_cents ?? Math.round(p.price_cents * 12 * 0.92);
 const priceOf = (p: Plan, c: Cycle) => (c === 'annual' ? annualOf(p) : p.price_cents);
 const periodOf = (c: Cycle) => (c === 'annual' ? '/ano' : c === 'once' ? ' por 1 mês' : '/mês');
 const call = async (route: string, body: unknown) => {
@@ -161,7 +161,7 @@ function Wizard() {
             <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Forma de pagamento">
               {CYCLE_OPTIONS.map((c) => (
                 <button key={c.id} type="button" role="radio" aria-checked={cycle === c.id} onClick={() => setCycle(c.id)} className={cn('rounded-lg border px-3 py-2.5 text-left transition-colors', cycle === c.id ? 'border-foreground bg-foreground text-background' : 'border-border hover:border-foreground/40')}>
-                  <span className="flex items-center justify-between text-sm font-semibold">{c.label}{c.id === 'annual' ? <span className={cn('rounded px-1.5 py-0.5 text-[11px] font-medium', cycle === c.id ? 'bg-background/15' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300')}>2 meses grátis</span> : null}</span>
+                  <span className="flex items-center justify-between text-sm font-semibold">{c.label}{c.id === 'annual' ? <span className={cn('rounded px-1.5 py-0.5 text-[11px] font-medium', cycle === c.id ? 'bg-background/15' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300')}>8% de desconto</span> : null}</span>
                   <span className={cn('mt-0.5 block text-[12px]', cycle === c.id ? 'text-background/75' : 'text-muted-foreground')}>{c.hint}</span>
                 </button>
               ))}
