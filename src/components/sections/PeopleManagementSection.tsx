@@ -1,4 +1,5 @@
 import { Switch } from "@/components/ui/switch";
+import { TabMark3D } from '@/components/common/TabMark3D';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search, CalendarDays, AlertTriangle, Bell, X, Trophy, CheckCheck, Filter, Edit2, Save, Clock, Plus, BellRing, BellOff } from 'lucide-react';
@@ -149,10 +150,10 @@ export function PeopleManagementSection() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-6 space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h3 className="font-display text-2xl font-bold text-foreground">Gestão de Pessoas</h3>
+            <TabMark3D icon={<Users />} /><h1 className="text-[22px] font-semibold leading-7 text-foreground">Gestão de Pessoas</h1>
             {editingTeamName ? (
               <div className="flex items-center gap-2">
                 <Input
@@ -187,7 +188,7 @@ export function PeopleManagementSection() {
               <select
                 value={selectedTeamId || ''}
                 onChange={e => setSelectedTeamId(e.target.value)}
-                className="h-8 rounded-full border border-input bg-background px-3 text-sm text-foreground"
+                className="h-8 rounded-lg border border-input bg-background px-3 text-sm text-foreground"
               >
                 {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
@@ -197,7 +198,7 @@ export function PeopleManagementSection() {
               if (name?.trim()) { const t = await createTeam(name.trim()); if (t) setSelectedTeamId(t.id); }
             }}>+ Nova equipe</Button>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 border rounded-full px-3 py-1 bg-background">
+              <div className="flex h-8 items-center gap-2 rounded-lg border border-border bg-background px-3">
                 {alertsEnabled ? <BellRing className="h-3.5 w-3.5 text-primary" /> : <BellOff className="h-3.5 w-3.5 text-muted-foreground" />}
                 <span className="text-xs font-medium">{alertsEnabled ? "Alertas Ativos" : "Alertas Inativos"}</span>
                 <Switch checked={alertsEnabled} onCheckedChange={toggleAlerts} className="scale-75" />

@@ -903,7 +903,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const handleToggleEmergency = async (taskId: string, currentState: boolean) => {
     const { error } = await updateTask(taskId, { is_emergency: !currentState } as any);
     if (error) { toast.error('Erro ao alterar modo emergente'); return; }
-    toast.success(!currentState ? '🚨 Modo Emergente ativado!' : 'Modo Emergente desativado');
+    toast.success(!currentState ? 'Modo Emergente ativado' : 'Modo Emergente desativado');
   };
 
   const handleMakeTemplate = async (taskId: string) => {
@@ -1458,7 +1458,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 return todayTasks.length === 0 ? (
                   <div className="flex flex-col items-center py-6 text-center px-4">
                     <img src={plannerEmptyIllustration} alt="Planejador" className="w-36 h-auto mb-4 opacity-80 rounded-lg" />
-                    <h4 className="text-sm font-semibold text-foreground mb-2">📋 Seu Planejador Diário</h4>
+                    <h4 className="text-sm font-semibold text-foreground mb-2">Seu planejador diário</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed mb-3">
                       Aqui você visualiza todas as tarefas programadas para o dia de hoje, organizadas por horário.
                     </p>
@@ -3303,7 +3303,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                           <p className="text-sm font-medium text-foreground line-clamp-1" title={rec.taskTitle}>{rec.taskTitle}</p>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed bg-muted/50 rounded-md p-2 break-words">
-                          💡 {rec.reason}
+                          {rec.reason}
                         </p>
                         <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                           <span className="truncate max-w-[80px]" title={rec.fromName}>{rec.fromName}</span>

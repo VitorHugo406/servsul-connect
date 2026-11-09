@@ -1,0 +1,10 @@
+.tm3d { width: 48px; height: 48px; flex: none; display: grid; place-items: center; perspective: 420px; }
+.tm3d-s { position: relative; width: 30px; height: 30px; transform: rotateX(56deg) rotateZ(-45deg); transform-style: preserve-3d; transition: transform .45s cubic-bezier(.22,.9,.3,1); }
+.tm3d-p { position: absolute; inset: 0; border-radius: 8px; font-style: normal; }
+.tm3d-p3 { background: hsl(var(--foreground) / .10); transform: translateZ(0); }
+.tm3d-p2 { background: hsl(var(--foreground) / .24); transform: translateZ(6px); }
+.tm3d-p1 { display: grid; place-items: center; background: hsl(var(--foreground)); color: hsl(var(--background)); transform: translateZ(12px); box-shadow: inset 0 1px 0 hsl(var(--background) / .18); }
+.tm3d-i { display: grid; place-items: center; transform: rotate(45deg); }
+.tm3d-i svg { width: 15px; height: 15px; stroke-width: 2.2; }
+:is(.pro-page-header, .tm3d-host):hover .tm3d-s { transform: rotateX(56deg) rotateZ(-45deg) translateZ(3px); }
+@media (prefers-reduced-motion: reduce) { .tm3d-s { transition: none; } }

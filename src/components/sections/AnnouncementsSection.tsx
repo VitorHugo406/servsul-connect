@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/common/PageHeader';
+import { TabMark3D } from '@/components/common/TabMark3D';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pin, AlertTriangle, Clock, Trash2, Plus, X, Send, CalendarClock, Calendar, Sparkles , Megaphone} from 'lucide-react';
@@ -383,7 +384,7 @@ export function AnnouncementsSection() {
             <TabsContent value="active" className="mt-0">
               {announcements.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="mb-4 rounded-full bg-muted p-4"><span className="text-4xl">📢</span></div>
+                  <div className="mb-4"><TabMark3D icon={<Megaphone />} /></div>
                   <h4 className="font-display text-lg font-semibold text-foreground">Nenhum aviso ativo</h4>
                   <p className="text-sm text-muted-foreground">Clique em "+ Novo Aviso" no cabeçalho para criar um comunicado</p>
                 </div>
@@ -454,7 +455,7 @@ export function AnnouncementsSection() {
 
             {announcements.length === 0 && importantAnnouncements.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="mb-4 rounded-full bg-muted p-4"><span className="text-4xl">📢</span></div>
+                <div className="mb-4"><TabMark3D icon={<Megaphone />} /></div>
                 <h4 className="font-display text-lg font-semibold text-foreground">Nenhum aviso</h4>
                 <p className="text-sm text-muted-foreground">Não há avisos publicados ainda</p>
               </div>

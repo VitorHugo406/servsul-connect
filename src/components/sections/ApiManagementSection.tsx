@@ -459,7 +459,7 @@ export function ApiManagementSection() {
               Integração Criada
             </DialogTitle>
             <DialogDescription>
-              <span className="text-destructive font-semibold">⚠️ ATENÇÃO:</span> Estas credenciais serão exibidas <strong>apenas agora</strong>. Copie e armazene em local seguro.
+              <span className="font-semibold text-destructive">Atenção:</span> Estas credenciais serão exibidas <strong>apenas agora</strong>. Copie e armazene em local seguro.
             </DialogDescription>
           </DialogHeader>
           {newCredentials && (

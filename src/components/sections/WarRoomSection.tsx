@@ -47,7 +47,7 @@ function TaskPreviewDialog({ taskId, open, onClose }: { taskId: string; open: bo
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <span className="text-xs text-destructive font-normal">🚨 Card Emergencial</span>
+                <span className="text-xs text-destructive font-normal">Card emergencial</span>
                 <span>#{task.task_number} · {task.title}</span>
               </DialogTitle>
             </DialogHeader>
@@ -59,7 +59,7 @@ function TaskPreviewDialog({ taskId, open, onClose }: { taskId: string; open: bo
                 </Badge>
                 <Badge variant="outline">{task.status}</Badge>
                 {task.due_date && (
-                  <Badge variant="outline">📅 {format(new Date(task.due_date), 'dd/MM/yyyy HH:mm')}</Badge>
+                  <Badge variant="outline">Prazo {format(new Date(task.due_date), 'dd/MM/yyyy HH:mm')}</Badge>
                 )}
               </div>
             </div>

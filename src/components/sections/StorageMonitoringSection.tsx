@@ -175,7 +175,7 @@ export function StorageMonitoringSection() {
             </div>
             <Progress value={dbPercent} className="h-3" />
             <p className="text-xs text-muted-foreground">
-              {dbPercent < 50 ? '✅ Uso normal' : dbPercent < 80 ? '⚠️ Atenção - uso moderado' : '🔴 Uso alto - considere limpar dados'}
+              {dbPercent < 50 ? 'Uso normal' : dbPercent < 80 ? 'Atenção - uso moderado' : 'Uso alto - considere limpar dados'}
             </p>
           </CardContent>
         </Card>
@@ -195,7 +195,7 @@ export function StorageMonitoringSection() {
             </div>
             <Progress value={storagePercent} className="h-3" />
             <p className="text-xs text-muted-foreground">
-              {storagePercent < 50 ? '✅ Uso normal' : storagePercent < 80 ? '⚠️ Atenção - uso moderado' : '🔴 Uso alto - considere limpar arquivos'}
+              {storagePercent < 50 ? 'Uso normal' : storagePercent < 80 ? 'Atenção - uso moderado' : 'Uso alto - considere limpar arquivos'}
             </p>
           </CardContent>
         </Card>
