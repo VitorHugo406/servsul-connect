@@ -42,6 +42,7 @@ const EvaluationsSection = lazyWithRetry(() => import('@/components/sections/Eva
 const NotesSection = lazyWithRetry(() => import('@/components/sections/NotesSection').then((module) => ({ default: module.NotesSection })));
 const CompaniesManagementSection = lazyWithRetry(() => import('@/components/sections/CompaniesManagementSection').then((module) => ({ default: module.CompaniesManagementSection })));
 const SystemBroadcastsSection = lazyWithRetry(() => import('@/components/sections/SystemBroadcastsSection').then((module) => ({ default: module.SystemBroadcastsSection })));
+const Dashboard3DSection = lazyWithRetry(() => import('@/components/sections/Dashboard3DSection').then((module) => ({ default: module.Dashboard3DSection })));
 const BillingSection = lazyWithRetry(() => import('@/components/sections/BillingSection').then((module) => ({ default: module.BillingSection })));
 const ShortcutsManagementSection = lazyWithRetry(() => import('@/components/sections/ShortcutsManagementSection').then((module) => ({ default: module.ShortcutsManagementSection })));
 import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
@@ -85,6 +86,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   companies: { title: 'Empresas', subtitle: 'Gestão de tenants do sistema' },
   'system-broadcasts': { title: 'Comunicados Globais', subtitle: 'Avisos para todas as empresas' },
   billing: { title: 'Pagamentos', subtitle: 'Plano, cobranças e extras da empresa' },
+  'dashboard-3d': { title: 'Dash', subtitle: 'Exclusivo do plano Empresarial' },
 };
 
 const sectionPaths: Record<string, string> = {
@@ -98,6 +100,7 @@ const sectionPaths: Record<string, string> = {
   'api-management': '/integracoes-api', evaluations: '/avaliacoes', notes: '/anotacoes',
   companies: '/empresas', 'system-broadcasts': '/comunicados-globais', 'meeting-rooms': '/salas-de-reuniao',
   billing: '/pagamentos',
+  'dashboard-3d': '/dash',
 };
 const pathSections = Object.fromEntries(Object.entries(sectionPaths).map(([key, path]) => [path, key])) as Record<string, string>;
 
@@ -110,7 +113,7 @@ const sectionIntroIcons = {
   'feedback-email': Mail, calendar: CalendarDays, 'system-logs': FileText,
   storage: HardDrive, documentation: BookOpen, 'war-room': Shield,
   'api-management': Plug, evaluations: ClipboardCheck, notes: StickyNote,
-  companies: Building2, 'system-broadcasts': Megaphone, 'event-history': Sparkles, billing: CreditCard,
+  companies: Building2, 'system-broadcasts': Megaphone, 'event-history': Sparkles, billing: CreditCard, 'dashboard-3d': LayoutDashboard,
 } as const;
 
 function LockedSection({ reason, feature, onBilling, onHome }: { reason: 'system' | 'plan'; feature: string; onBilling?: () => void; onHome: () => void }) {
@@ -287,16 +290,19 @@ const Index = () => {
       case 'notes': return <NotesSection />;
       case 'companies': return <CompaniesManagementSection />;
       case 'system-broadcasts': return <SystemBroadcastsSection />;
+      case 'dashboard-3d': return <Dashboard3DSection />;
       case 'billing': return isAdmin ? <BillingSection /> : <HomeSection onNavigate={handleSectionChange} />;
       default: return <HomeSection onNavigate={setActiveSection} />;
     }
   };
 
+  // An open task board keeps its own presentation (no professional flattening or page padding).
+  const boardOpen = activeSection === 'tasks' && /^\/tarefas\/.+/.test(location.pathname);
   const currentSection = sectionTitles[activeSection] || sectionTitles.home; const isHomePage = activeSection === 'home';
   if (isMobile) {
     // Phones get the Ewwon mobile app (src/components/ewwon); desktop keeps the full workspace below.
     return <><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><Suspense fallback={<EwwonLoader />}><EwwonApp /></Suspense><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /></>;
   }
-  return <div className="flex h-screen overflow-hidden bg-background"><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} /><div className="flex flex-1 flex-col overflow-hidden"><Header title={currentSection.title} subtitle={currentSection.subtitle} activeSection={activeSection} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} /><main data-section={activeSection} className={`ewvon-main min-w-0 flex-1 overflow-auto bg-card ${['chat', 'calendar', 'tasks', 'war-room'].includes(activeSection) ? '' : 'clean-section'} ${['home', 'chat'].includes(activeSection) ? '' : 'pro-section'}`}><SectionBoundary resetKey={activeSection}><Suspense fallback={<div className="ewvon-section-loading flex h-full min-h-[60vh] items-center justify-center text-foreground" role="status" aria-label="Carregando seção"><EwwonLogo size={76} /></div>}>{renderSection()}</Suspense></SectionBoundary></main></div><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} />{isHomePage && <GlobalBroadcastOrb />}<BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && !showOnboarding && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></div>;
+  return <div className="flex h-screen overflow-hidden bg-background"><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} /><div className="flex flex-1 flex-col overflow-hidden"><Header title={currentSection.title} subtitle={currentSection.subtitle} activeSection={activeSection} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} /><main data-section={activeSection} className={`ewvon-main min-w-0 flex-1 overflow-auto bg-card ${['chat', 'calendar', 'tasks', 'war-room'].includes(activeSection) ? '' : 'clean-section'} ${['home', 'chat'].includes(activeSection) || boardOpen ? '' : 'pro-section'}`}><SectionBoundary resetKey={activeSection}><Suspense fallback={<div className="ewvon-section-loading flex h-full min-h-[60vh] items-center justify-center text-foreground" role="status" aria-label="Carregando seção"><EwwonLogo size={76} /></div>}>{renderSection()}</Suspense></SectionBoundary></main></div><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} />{isHomePage && <GlobalBroadcastOrb />}<BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} />{pendingAnnouncement && !showCelebration && !showOnboarding && <ImportantAnnouncementModal isOpen={true} onClose={dismissAnnouncement} title={pendingAnnouncement.title} content={pendingAnnouncement.content} borderStyle={pendingAnnouncement.border_style} />}<BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></div>;
 };
 export default Index;

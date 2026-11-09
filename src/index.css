@@ -1256,3 +1256,24 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 .pro-section [data-ui="card"] :is(h3, div).text-2xl.font-semibold { font-size: 1.0625rem !important; line-height: 1.5rem !important; }
 .pro-section .shadow-glow { box-shadow: none !important; }
 .pro-section :is(.hover\:-translate-y-0\.5, .hover\:-translate-y-1):hover { transform: none !important; }
+
+/* Dash flag (plan Empresarial): sits between the company name and the quick navigation. */
+.ewvon-dash-flag { background: #fff !important; color: #0f172a; border: 1px solid rgba(241,245,249,.9); box-shadow: 0 10px 28px -18px rgba(15,23,42,.35); }
+.ewvon-dash-flag:hover { background: #f8fafc !important; }
+.ewvon-dash-flag.is-active { background: #0a0a0b !important; color: #fff; border-color: #0a0a0b; }
+.dark .ewvon-dash-flag:not(.is-active) { background: hsl(var(--card)) !important; color: hsl(var(--foreground)); border-color: hsl(var(--border)); }
+.ewvon-dash-flag-mark { background: linear-gradient(135deg, #6366f1, #a855f7 55%, #f59e0b); box-shadow: inset 0 1px 0 rgba(255,255,255,.35); }
+
+/* Floating segmented bar (task board views), same language as the header pills and the mobile tab bar.
+   Item selectors are repeated to outrank the global glass-button rules (incl. their :hover sheen). */
+.ewvon-segbar { display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,.92); border: 1px solid rgba(226,232,240,.9); box-shadow: 0 14px 34px -20px rgba(15,23,42,.45); backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%); }
+.ewvon-segbar .ewvon-segbar-item.ewvon-segbar-item { border: 0 !important; box-shadow: none !important; background-image: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; filter: none !important; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 15px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #64748b; background-color: transparent !important; transition: background-color .25s ease, color .25s ease; white-space: nowrap; }
+.ewvon-segbar .ewvon-segbar-item.ewvon-segbar-item:hover { color: #0f172a; background-color: #f1f5f9 !important; background-image: none !important; }
+.ewvon-segbar .ewvon-segbar-item.ewvon-segbar-item[data-on="true"] { color: #fff; background-color: #0a0a0b !important; background-image: none !important; }
+.ewvon-segbar .ewvon-segbar-item::before, .ewvon-segbar .ewvon-segbar-item::after { content: none !important; display: none !important; }
+.ewvon-segbar-sep { width: 1px; height: 20px; margin: 0 4px; background: #e2e8f0; }
+.dark .ewvon-segbar { background: hsl(var(--card) / .92); border-color: hsl(var(--border)); }
+.dark .ewvon-segbar .ewvon-segbar-item.ewvon-segbar-item { color: hsl(var(--muted-foreground)); }
+.dark .ewvon-segbar .ewvon-segbar-item.ewvon-segbar-item:hover { color: hsl(var(--foreground)); background-color: hsl(var(--muted)) !important; }
+.dark .ewvon-segbar .ewvon-segbar-item.ewvon-segbar-item[data-on="true"] { color: #0a0a0b; background-color: #fff !important; }
+.dark .ewvon-segbar-sep { background: hsl(var(--border)); }

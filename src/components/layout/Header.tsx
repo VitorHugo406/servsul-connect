@@ -2,7 +2,7 @@ import { AssistantButton } from '@/components/chatbot/AssistantButton';
 import { useCompanyPlan } from '@/hooks/useCompanyPlan';
 import { sectionLock } from '@/lib/planAccess';
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Bell, ExternalLink, Construction, Plus, Palette, LayoutDashboard, StickyNote, ListTodo, UsersRound, LogOut } from 'lucide-react';
+import { Box, Search, Bell, ExternalLink, Construction, Plus, Palette, LayoutDashboard, StickyNote, ListTodo, UsersRound, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +54,15 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
           </span>
           <span className="max-w-36 truncate text-[14px] font-semibold tracking-tight text-slate-900">{company?.name || 'ewvon'}</span>
         </button>
+
+        {companyPlan && !sectionLock('dashboard-3d', companyPlan, isSuperAdminUser) && (
+          <button type="button" onClick={() => onNavigateToSection?.('dashboard-3d')} aria-current={activeSection === 'dashboard-3d' ? 'page' : undefined}
+            title="Dash · exclusivo do plano Empresarial"
+            className={`ewvon-dash-flag flex h-10 shrink-0 items-center gap-2 rounded-full pl-1.5 pr-3.5 text-[13px] font-semibold transition-colors ${activeSection === 'dashboard-3d' ? 'is-active' : ''}`}>
+            <span className="ewvon-dash-flag-mark flex h-7 w-7 items-center justify-center rounded-full text-white"><Box className="h-[15px] w-[15px]" strokeWidth={2} /></span>
+            Dash
+          </button>
+        )}
 
         <nav className="ewvon-quick-nav flex min-w-0 items-center justify-start gap-1 overflow-x-auto px-2" aria-label="Atalhos principais">
           {([

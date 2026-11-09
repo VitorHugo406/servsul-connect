@@ -53,7 +53,7 @@ import {
 } from '@/components/tasks/taskConstants';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { CheckSquare, CheckCircle2 } from 'lucide-react';
+import { CheckSquare, CheckCircle2, CalendarRange, Columns3, ArrowLeftRight, ChevronUp } from 'lucide-react';
 import { appConfirm } from '@/lib/appDialog';
 
 const slugifyBoardName = (name: string) => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -2321,33 +2321,21 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         )}
       </div>
 
-      {/* Bottom bar: Planner / Board / Switch - Trello style */}
+      {/* Bottom bar: Planner / Board / Switch board, same look as the header pills and the mobile app tab bar */}
       {!isMobile && (
-        <div className="flex items-center justify-center py-1 relative z-10">
-          <div className="flex items-center bg-sidebar rounded-lg p-1">
-            <button
-              onClick={togglePlanner}
-              className={cn(
-                "flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors",
-                showPlanner ? "bg-sidebar-accent text-sidebar-foreground" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-              )}
-            >
-              Planejador
+        <div className="relative z-10 flex items-center justify-center pb-3 pt-1">
+          <div className="ewvon-segbar" role="toolbar" aria-label="Visualização do mural">
+            <button type="button" onClick={togglePlanner} className="ewvon-segbar-item" data-on={showPlanner ? 'true' : undefined} aria-pressed={showPlanner}>
+              <CalendarRange className="h-4 w-4" strokeWidth={1.9} />Planejador
             </button>
-            <button
-              onClick={toggleBoard}
-              className={cn(
-                "flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors",
-                showBoard && !showPlanner ? "bg-sidebar-accent text-sidebar-foreground" : showBoard ? "bg-sidebar-accent/50 text-sidebar-foreground" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-              )}
-            >
-              Quadro
+            <button type="button" onClick={toggleBoard} className="ewvon-segbar-item" data-on={showBoard ? 'true' : undefined} aria-pressed={showBoard}>
+              <Columns3 className="h-4 w-4" strokeWidth={1.9} />Quadro
             </button>
-            <div className="w-px h-6 bg-sidebar-border mx-1" />
+            <span className="ewvon-segbar-sep" aria-hidden="true" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors">
-                  Mudar de quadro
+                <button type="button" className="ewvon-segbar-item">
+                  <ArrowLeftRight className="h-4 w-4" strokeWidth={1.9} />Mudar de quadro<ChevronUp className="h-3.5 w-3.5 opacity-60" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-64">
