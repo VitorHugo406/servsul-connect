@@ -74,7 +74,9 @@ function Wizard() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    call('plans', {}).then((d) => { setPlans(d.plans || []); setReady(!!d.payments_ready); if (!planId && d.plans?.[1]) setPlanId(d.plans[1].id); }).catch((e) => setLoadErr(e.message));
+    // The internal test plan only shows up through its own link (?plano=teste).
+    const wantsTest = new URLSearchParams(window.location.search).get('plano') === 'teste';
+    call('plans', {}).then((d) => { setPlans((d.plans || []).filter((p: Plan) => p.id !== 'teste' || wantsTest)); setReady(!!d.payments_ready); if (!planId && d.plans?.[1]) setPlanId(d.plans[1].id); }).catch((e) => setLoadErr(e.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const plan = plans.find((p) => p.id === planId);
