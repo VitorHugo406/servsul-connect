@@ -1,6 +1,7 @@
 // Public self-service subscription (/assinar): plan -> company -> administrator -> review -> Mercado
 // Pago checkout. /assinar/retorno polls the signup until the payment is confirmed by the server and the
 // company is created, then shows the login link. Nothing is created before the payment is confirmed.
+import { readableOn } from '@/lib/branding';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Check, ChevronLeft, Loader2, Lock, ShieldCheck, Upload, X, CreditCard, Building2, UserRound, ClipboardCheck } from 'lucide-react';
@@ -230,13 +231,13 @@ function Wizard() {
               <div>
                 <p className="mb-2 text-[13px] text-muted-foreground">Pré-visualização</p>
                 <div className="overflow-hidden rounded-[10px] border border-border">
-                  <div className="flex items-center gap-3 px-4 py-3 text-white" style={{ background: company.primary }}>
+                  <div className="flex items-center gap-3 px-4 py-3" style={{ background: company.primary, color: readableOn(company.primary) }}>
                     <div className="grid h-9 w-9 place-items-center overflow-hidden rounded-md bg-white/15">{logo ? <img src={logo.preview} alt="" className="h-full w-full object-contain" /> : <Building2 className="h-4 w-4" />}</div>
                     <span className="truncate font-semibold">{company.name || 'Sua empresa'}</span>
                   </div>
                   <div className="space-y-2 bg-background p-4">
                     <div className="h-2.5 w-2/3 rounded bg-muted" /><div className="h-2.5 w-1/2 rounded bg-muted" />
-                    <span className="mt-2 inline-block rounded-md px-3 py-1.5 text-xs font-medium text-white" style={{ background: company.secondary }}>Botão de destaque</span>
+                    <span className="mt-2 inline-block rounded-md px-3 py-1.5 text-xs font-medium" style={{ background: company.secondary, color: readableOn(company.secondary) }}>Botão de destaque</span>
                   </div>
                 </div>
               </div>

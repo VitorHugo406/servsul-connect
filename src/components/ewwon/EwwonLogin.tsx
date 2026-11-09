@@ -7,7 +7,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { applyBrand, resetBrand } from '@/lib/branding';
+import { applyBrand, readableOn, resetBrand } from '@/lib/branding';
 import { useCompanyLogoUrl } from '@/lib/companyLogo';
 import './ewwon.css';
 import './ewwon-app.css';
@@ -168,7 +168,7 @@ export default function EwwonLogin() {
         <div className="ewx-lg-fields">
           {locked && company ? (
             <div className="ewx-lg-co">
-              <span className="ewx-login-logo" style={{ background: company.primary_color || 'var(--c2)' }}>{logo ? <img src={logo} alt="" /> : company.name.charAt(0)}</span>
+              <span className="ewx-login-logo" style={{ background: company.primary_color || 'var(--c2)', color: company.primary_color ? readableOn(company.primary_color) : undefined }}>{logo ? <img src={logo} alt="" /> : company.name.charAt(0)}</span>
               <span className="ewx-lg-co-n">{company.name}</span>
               <button type="button" onClick={changeCompany}>Trocar</button>
             </div>

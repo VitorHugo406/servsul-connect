@@ -1355,7 +1355,7 @@
 .ewvon-auth-card form button[type="submit"], .ewvon-auth-card button.gradient-primary {
   border:1px solid rgba(255,255,255,.15) !important;
   border-radius:12px !important;
-  color:#fff !important;
+  color:var(--company-accent-fg,#fff) !important;
   background:linear-gradient(115deg,var(--company-accent,#e5e7eb),var(--company-secondary,#8c98aa)) !important;
   box-shadow:0 8px 24px color-mix(in srgb,var(--company-accent,#8c98aa) 18%,transparent) !important;
   transition:transform .2s ease,filter .2s ease,box-shadow .2s ease !important;
