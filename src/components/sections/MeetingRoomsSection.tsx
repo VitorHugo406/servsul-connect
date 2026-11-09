@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import { appConfirm } from '@/lib/appDialog';
 
 type Room = { id: string; name: string; capacity: number; opens_at: string; closes_at: string; image_url?: string | null };
 type Person = { id: string; user_id: string; name: string; display_name: string | null };
@@ -141,7 +142,7 @@ export function MeetingRoomsSection() {
   };
 
   const deleteRoom = async () => {
-    if (!editing || !window.confirm(`Excluir a sala "${editing.name}"? As reuniões futuras dela serão canceladas.`)) return;
+    if (!editing || !(await appConfirm({ title: `Excluir a sala "${editing.name}"?`, message: 'As reuniões futuras dela serão canceladas.', confirmText: 'Excluir sala', danger: true }))) return;
     setSaving(true);
     const db = supabase as any;
     await db.from('meeting_bookings').delete().eq('room_id', editing.id).gte('starts_at', new Date().toISOString());
@@ -152,7 +153,7 @@ export function MeetingRoomsSection() {
   };
   const canManageBooking = (b: Booking) => isAdmin || b.booked_by === profile?.id;
   const deleteBooking = async (b: Booking) => {
-    if (!window.confirm(`Cancelar a reunião "${b.title}"?`)) return;
+    if (!(await appConfirm({ title: `Cancelar a reunião "${b.title}"?`, confirmText: 'Cancelar reunião', cancelText: 'Voltar', danger: true }))) return;
     const { error } = await (supabase as any).from('meeting_bookings').delete().eq('id', b.id);
     if (error) { toast.error('Não foi possível cancelar a reunião.'); return; }
     toast.success('Reunião cancelada.'); setBookingDialog(false); void load();

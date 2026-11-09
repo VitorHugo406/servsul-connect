@@ -54,6 +54,7 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CheckSquare, CheckCircle2 } from 'lucide-react';
+import { appConfirm } from '@/lib/appDialog';
 
 const slugifyBoardName = (name: string) => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -156,7 +157,7 @@ export function TaskBoardSection() {
   };
 
   const handleDeleteBoard = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este mural e todas as suas tarefas?')) return;
+    if (!(await appConfirm({ title: 'Excluir este mural?', message: 'O mural e todas as suas tarefas serão apagados. Esta ação não pode ser desfeita.', confirmText: 'Excluir mural', danger: true }))) return;
     const { error } = await deleteBoard(id);
     if (error) { toast.error('Erro ao excluir mural'); return; }
     toast.success('Mural excluído com sucesso!');
@@ -869,7 +870,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    if (!confirm('Excluir esta tarefa?')) return;
+    if (!(await appConfirm({ title: 'Excluir esta tarefa?', message: 'Esta ação não pode ser desfeita.', confirmText: 'Excluir', danger: true }))) return;
     const { error } = await deleteTask(taskId);
     if (error) { toast.error('Erro ao excluir tarefa'); return; }
     toast.success('Tarefa excluída');
@@ -886,7 +887,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const handleDeleteColumn = async (colId: string) => {
     const colTasks = tasks.filter(t => t.status === colId);
     if (colTasks.length > 0) { toast.error('Remova as tarefas antes de excluir a coluna'); return; }
-    if (!confirm('Excluir esta coluna?')) return;
+    if (!(await appConfirm({ title: 'Excluir esta coluna?', confirmText: 'Excluir', danger: true }))) return;
     const { error } = await deleteColumn(colId);
     if (error) { toast.error('Erro ao excluir coluna'); return; }
     toast.success('Coluna excluída');
@@ -906,7 +907,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   };
 
   const handleMakeTemplate = async (taskId: string) => {
-    if (!confirm('Tornar este card um template?')) return;
+    if (!(await appConfirm({ title: 'Tornar este card um template?', message: 'Ele passará a servir de modelo para novos cards.', confirmText: 'Tornar template' }))) return;
     const { error } = await updateTask(taskId, { is_template: true } as any);
     if (error) { toast.error('Erro ao converter'); return; }
     toast.success('Card convertido em template!');
@@ -916,7 +917,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const handleArchiveColumn = async (colId: string) => {
     const colTasks = tasks.filter(t => t.status === colId);
     if (colTasks.length === 0) { toast.info('Nenhum card para arquivar'); return; }
-    if (!confirm(`Arquivar ${colTasks.length} card(s) desta coluna?`)) return;
+    if (!(await appConfirm({ title: `Arquivar ${colTasks.length} card(s) desta coluna?`, message: 'Os cards podem ser recuperados depois em Arquivados.', confirmText: 'Arquivar' }))) return;
     const { error } = await archiveColumnTasks(colId);
     if (error) { toast.error('Erro ao arquivar'); return; }
     toast.success(`${colTasks.length} card(s) arquivado(s)`);
@@ -3091,7 +3092,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 size="sm"
                 className="w-full gap-2"
                 onClick={async () => {
-                  if (!confirm(`Excluir permanentemente ${archivedTasks.length} card(s) arquivado(s)?`)) return;
+                  if (!(await appConfirm({ title: `Excluir permanentemente ${archivedTasks.length} card(s) arquivado(s)?`, message: 'Esta ação não pode ser desfeita.', confirmText: 'Excluir todos', danger: true }))) return;
                   for (const task of archivedTasks) {
                     await deleteTask(task.id);
                   }
@@ -3106,7 +3107,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 size="sm"
                 className="w-full gap-2"
                 onClick={async () => {
-                  if (!confirm(`Recuperar ${archivedTasks.length} card(s) arquivado(s)?`)) return;
+                  if (!(await appConfirm({ title: `Recuperar ${archivedTasks.length} card(s) arquivado(s)?`, message: 'Eles voltam para as colunas de origem.', confirmText: 'Recuperar' }))) return;
                   for (const task of archivedTasks) {
                     await unarchiveTask(task.id);
                   }

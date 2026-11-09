@@ -11,6 +11,7 @@ import {
 import { cn } from '@/lib/utils';
 import { NoteMentionPicker, MentionFormat, MentionResult, buildMentionHtml } from './NoteMentionPicker';
 import { UserPreviewDialog } from '@/components/user/UserPreviewDialog';
+import { appPrompt } from '@/lib/appDialog';
 
 interface RichTextEditorProps {
   value: string;
@@ -124,9 +125,16 @@ export function RichTextEditor({ value, onChange, onImmediateSave, readOnly, cla
     }
   };
 
-  const insertLink = () => {
-    const url = prompt('Cole o link (ex: https://...)');
-    if (url) exec('createLink', url);
+  const insertLink = async () => {
+    const sel = window.getSelection();
+    const range = sel && sel.rangeCount && ref.current?.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+    const raw = await appPrompt({ title: 'Inserir link', label: 'Endereço do link', placeholder: 'https://...', inputType: 'url', maxLength: 2000, confirmText: 'Inserir',
+      validate: (v) => /^(https?:\/\/|mailto:)/i.test(v) || /^[\w-]+(\.[\w-]+)+/.test(v) ? null : 'Informe um link válido (ex.: https://site.com).' });
+    if (!raw) return;
+    const url = /^(https?:\/\/|mailto:)/i.test(raw) ? raw : `https://${raw}`;
+    ref.current?.focus();
+    if (range) { const s2 = window.getSelection(); s2?.removeAllRanges(); s2?.addRange(range); }
+    exec('createLink', url);
   };
 
   const triggerMention = (t: '#' | '@' | '!') => {

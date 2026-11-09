@@ -27,6 +27,7 @@ import { TicketsDesk } from './tickets';
 import { EwwonLoader } from '@/components/common/EwwonLoader';
 import { MsgBody, ImageViewer, previewText } from './msgbody';
 import { TasksSheet } from './tasksheet';
+import { appConfirm } from '@/lib/appDialog';
 
 
 const gr = (h: number) => `hsl(${h} 30% 30%)`;
@@ -622,8 +623,8 @@ export default function EwwonApp() {
 
   // ------------------------------------------------------------ notices
   const canDeleteNotice = (n: Notice) => n.authorId === meId || boot?.isAdmin || boot?.canPostNotices;
-  const removeNotice = (n: Notice) => {
-    if (!window.confirm(`Excluir o aviso “${n.title}” para todos?`)) return;
+  const removeNotice = async (n: Notice) => {
+    if (!(await appConfirm({ title: `Excluir o aviso “${n.title}”?`, message: 'Ele será removido para todos.', confirmText: 'Excluir', danger: true }))) return;
     const before = notices;
     setNotices((ns) => ns.filter((x) => x.id !== n.id));
     void D.deleteNotice(n.id).then(() => toast('Aviso excluído')).catch(() => { setNotices(before); toast('Não foi possível excluir o aviso'); });
@@ -1025,7 +1026,7 @@ export default function EwwonApp() {
           <button className="mi" id="rt" onClick={() => { setOpen(false); window.setTimeout(() => setTourOn(true), 450); }}><I n="play" />Ver tutorial</button>
           <button className="mi" id="cfg" onClick={() => { setOpen(false); window.setTimeout(() => pgShow({ kind: 'settings' }), 260); }}><I n="sliders" />Configurações</button>
           <button className="mi" id="sup" onClick={() => { setOpen(false); window.setTimeout(() => pgShow({ kind: 'support' }), 260); }}><I n="help" />Suporte</button>
-          <div className="pb"><button className="mi out" onClick={() => { if (window.confirm('Sair da conta?')) void signOut(); }}><I n="logout" />Sair da conta</button></div>
+          <div className="pb"><button className="mi out" onClick={async () => { if (await appConfirm({ title: 'Sair da conta?', confirmText: 'Sair' })) void signOut(); }}><I n="logout" />Sair da conta</button></div>
         </aside>
 
         <div id="main" ref={mainRef}>
@@ -1110,7 +1111,7 @@ export default function EwwonApp() {
                     <div className="gf"><small>{new Date(b.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}{b.ends_at ? ` · até ${new Date(b.ends_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : ''}</small>
                       {isSuperAdmin ? <span className="ga">
                         <button className="btn sm sec" onClick={async () => { const { error } = await setBroadcastActive(b.id, !b.is_active); toast(error ? 'Não foi possível alterar' : b.is_active ? 'Aviso global desativado' : 'Aviso global ativado'); }}>{b.is_active ? 'Desativar' : 'Ativar'}</button>
-                        <button className="btn sm sec ewx-del" aria-label="Excluir aviso global" onClick={async () => { if (!window.confirm(`Excluir o aviso global “${b.title}”?`)) return; const { error } = await removeBroadcast(b.id); toast(error ? 'Não foi possível excluir' : 'Aviso global excluído'); }}><I n="trash" /></button>
+                        <button className="btn sm sec ewx-del" aria-label="Excluir aviso global" onClick={async () => { if (!(await appConfirm({ title: `Excluir o aviso global “${b.title}”?`, message: 'Ele sairá do ar para todas as empresas.', confirmText: 'Excluir', danger: true }))) return; const { error } = await removeBroadcast(b.id); toast(error ? 'Não foi possível excluir' : 'Aviso global excluído'); }}><I n="trash" /></button>
                       </span> : null}</div>
                   </div>
                 );

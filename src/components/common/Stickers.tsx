@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import * as S from '@/lib/stickers';
 import type { Pack, Sticker } from '@/lib/stickers';
 import './stickers.css';
+import { appConfirm, appPrompt } from '@/lib/appDialog';
 
 export function StickerView({ sticker, size = 150 }: { sticker: Sticker; size?: number }) {
   const url = sticker.kind === 'img' ? S.stickerUrl(sticker.companyId, sticker.sha) : null;
@@ -95,8 +96,8 @@ export function StickerPicker({ onPick, onSendContent, notify }: { onPick: (s: S
     }, 'Figurinha criada');
     if (file.current) file.current.value = '';
   };
-  const newPack = () => {
-    const name = window.prompt('Nome do pacote de figurinhas');
+  const newPack = async () => {
+    const name = await appPrompt({ title: 'Novo pacote de figurinhas', label: 'Nome do pacote', placeholder: 'Ex.: Equipe', maxLength: 40, confirmText: 'Criar pacote' });
     if (!name?.trim()) return;
     void run(async () => { const p = await S.createPack(name, meId); await reloadPacks(); setOpenPack(p.id); }, 'Pacote criado');
   };
@@ -155,7 +156,7 @@ export function StickerPicker({ onPick, onSendContent, notify }: { onPick: (s: S
             <button type="button" className="stk-chip" onClick={() => setAdding([])}>+ Adicionar</button>
             {onSendContent ? <button type="button" className="stk-chip" disabled={!pack.items.length} onClick={() => onSendContent(S.packContent(pack.id))}>Compartilhar no chat</button> : null}
             <button type="button" className="stk-chip" disabled={busy || !pack.items.length} onClick={() => void run(async () => { const r = await S.shareOrDownload(await S.exportPack(pack)); notify?.(r === 'shared' ? 'Pacote compartilhado' : 'Pacote exportado'); })}>Exportar</button>
-            <button type="button" className="stk-chip danger" disabled={busy} onClick={() => { if (window.confirm(`Excluir o pacote “${pack.name}”?`)) void run(async () => { await S.deletePack(pack.id); setOpenPack(null); await reloadPacks(); }, 'Pacote excluído'); }}>Excluir</button>
+            <button type="button" className="stk-chip danger" disabled={busy} onClick={async () => { if (await appConfirm({ title: `Excluir o pacote “${pack.name}”?`, confirmText: 'Excluir', danger: true })) void run(async () => { await S.deletePack(pack.id); setOpenPack(null); await reloadPacks(); }, 'Pacote excluído'); }}>Excluir</button>
           </div>
           {grid(pack.items, pick, (s) => s.kind === 'img' && void run(async () => { await S.removeFromPack(pack.id, s.sha); await reloadPacks(); }))}
           {!pack.items.length ? <p className="stk-empty">Pacote vazio. Use “+ Adicionar” para trazer favoritas ou “+ Criar” para fazer uma figurinha nova aqui.</p> : null}

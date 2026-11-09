@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Timer, LogOut } from 'lucide-react';
 import { IS_DEMO } from '@/lib/demo/bootDemo';
 import { endDemoSession, formatRemaining, readDemoSession } from '@/lib/demo/demoSession';
+import { appConfirm } from '@/lib/appDialog';
 
 export function DemoTimer() {
   const [left, setLeft] = useState(() => { const s = readDemoSession(); return s ? s.expiresAt - Date.now() : 0; });
@@ -16,7 +17,7 @@ export function DemoTimer() {
       <Timer className="h-3.5 w-3.5 text-primary" />
       <span>Modo teste</span>
       <span className="tabular-nums text-primary">{formatRemaining(left)}</span>
-      <button onClick={() => { if (confirm('Encerrar o teste? Tudo que você criou será apagado.')) endDemoSession('ended'); }} className="ml-1 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Encerrar teste" title="Encerrar teste">
+      <button onClick={async () => { if (await appConfirm({ title: 'Encerrar o teste?', message: 'Tudo que você criou será apagado.', confirmText: 'Encerrar', danger: true })) endDemoSession('ended'); }} className="ml-1 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Encerrar teste" title="Encerrar teste">
         <LogOut className="h-3.5 w-3.5" />
       </button>
     </div>

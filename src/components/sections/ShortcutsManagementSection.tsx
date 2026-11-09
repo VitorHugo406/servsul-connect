@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { getShortcutIcon } from '@/components/layout/SystemShortcutBar';
+import { appConfirm } from '@/lib/appDialog';
 
 const ICON_OPTIONS = [
   { id: 'Link', label: 'Link' }, { id: 'ExternalLink', label: 'Externo' }, { id: 'Plus', label: 'Adicionar' }, { id: 'Pencil', label: 'Editar' },
@@ -90,7 +91,7 @@ export function ShortcutsManagementSection() {
   };
 
   const deleteShortcut = async (id: string) => {
-    if (!confirm('Excluir este atalho?')) return;
+    if (!(await appConfirm({ title: 'Excluir este atalho?', confirmText: 'Excluir', danger: true }))) return;
     const { error } = await (supabase as any).from('system_shortcuts').delete().eq('id', id);
     if (error) return toast.error('Não foi possível excluir o atalho.');
     toast.success('Atalho excluído.'); await load(); window.dispatchEvent(new CustomEvent('nuvexa:shortcuts-changed'));

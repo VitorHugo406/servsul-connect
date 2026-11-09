@@ -26,6 +26,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
+import { appConfirm, appPrompt } from '@/lib/appDialog';
 
 const CHART_COLORS = [
   'hsl(var(--primary))',
@@ -175,7 +176,7 @@ export function PeopleManagementSection() {
               </Button>
             ) : null}
             {selectedTeam && !editingTeamName && (
-              <Button size="sm" variant="ghost" className="gap-1.5 text-xs text-destructive" onClick={async () => { if (confirm(`Excluir a equipe "${selectedTeam.name}"? Os membros serão desvinculados.`)) await deleteTeam(selectedTeam.id); }}>
+              <Button size="sm" variant="ghost" className="gap-1.5 text-xs text-destructive" onClick={async () => { if (await appConfirm({ title: `Excluir a equipe "${selectedTeam.name}"?`, message: 'Os membros serão desvinculados da equipe.', confirmText: 'Excluir equipe', danger: true })) await deleteTeam(selectedTeam.id); }}>
                 <Trash2 className="h-3 w-3" />
                 Excluir
               </Button>
@@ -192,7 +193,7 @@ export function PeopleManagementSection() {
               </select>
             )}
             <Button size="sm" variant="outline" className="h-8 text-xs" onClick={async () => {
-              const name = prompt('Nome da nova equipe:');
+              const name = await appPrompt({ title: 'Nova equipe', message: 'Dê um nome para a equipe. Depois você adiciona os membros.', label: 'Nome da equipe', placeholder: 'Ex.: Equipe Comercial', maxLength: 60, confirmText: 'Criar equipe', validate: (v) => v.length < 2 ? 'Use pelo menos 2 caracteres.' : teams.some((t) => t.name.trim().toLowerCase() === v.toLowerCase()) ? 'Já existe uma equipe com esse nome.' : null });
               if (name?.trim()) { const t = await createTeam(name.trim()); if (t) setSelectedTeamId(t.id); }
             }}>+ Nova equipe</Button>
             <div className="flex items-center gap-4">
@@ -375,8 +376,8 @@ export function PeopleManagementSection() {
                       <CheckCheck className="h-3.5 w-3.5" /> Ler tudo
                     </Button>
                   )}
-                  <Button variant="outline" size="sm" className="gap-1.5 text-xs text-destructive hover:text-destructive" onClick={() => {
-                    if (confirm(`Excluir todos os ${alerts.length} alertas?`)) {
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs text-destructive hover:text-destructive" onClick={async () => {
+                    if (await appConfirm({ title: `Excluir todos os ${alerts.length} alertas?`, confirmText: 'Excluir tudo', danger: true })) {
                       alerts.forEach(a => dismissAlert(a.id));
                     }
                   }}>

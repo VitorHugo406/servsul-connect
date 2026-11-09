@@ -21,6 +21,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { appConfirm } from '@/lib/appDialog';
 
 const priorityStyles = {
   normal: {
@@ -120,7 +121,7 @@ export function AnnouncementsSection() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este aviso?')) {
+    if (await appConfirm({ title: 'Excluir este aviso?', message: 'Ele deixará de aparecer para todos.', confirmText: 'Excluir', danger: true })) {
       const { error } = await deleteAnnouncement(id);
       if (error) {
         toast.error('Erro ao excluir aviso');

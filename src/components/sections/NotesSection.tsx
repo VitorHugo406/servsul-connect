@@ -46,6 +46,7 @@ import { NOTE_BACKGROUND_IMAGES, NOTE_COLORS, NOTE_TEXTURES, getImageCss, getTex
 import { NoteShareDialog } from '@/components/notes/NoteShareDialog';
 import { useFloatingNote } from '@/contexts/FloatingNoteContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { appConfirm } from '@/lib/appDialog';
 
 function stripHtml(html: string) {
   return htmlToText(html);
@@ -425,8 +426,8 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => {
-                  if (confirm('Excluir esta anotação?')) onDelete();
+                onClick={async () => {
+                  if (await appConfirm({ title: 'Excluir esta anotação?', message: 'Esta ação não pode ser desfeita.', confirmText: 'Excluir', danger: true })) onDelete();
                 }}
               >
                 <Trash2 className="h-4 w-4 text-destructive" />

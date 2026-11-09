@@ -20,6 +20,7 @@ import { openReport } from '@/lib/reports';
 import { cn } from '@/lib/utils';
 import * as E from '@/lib/evaluations';
 import type { Criterion, EvalItem, EvalRow, EvalStatus } from '@/lib/evaluations';
+import { appConfirm } from '@/lib/appDialog';
 
 const MANAGER_LEVELS = ['admin', 'gerente', 'supervisor', 'diretoria'];
 const FILTERS: { id: 'all' | EvalStatus; label: string }[] = [
@@ -343,7 +344,7 @@ function EvaluationDialog({ ev, meId, canManage, isAdmin, onClose, onChanged }: 
         <DialogFooter className="flex-wrap gap-2 sm:justify-between">
           <div className="flex gap-2">
             {items?.length ? <Button variant="outline" className="rounded-xl" onClick={report}><FileText className="mr-2 h-4 w-4" />PDF</Button> : null}
-            {(isAdmin || (ev.evaluatorId === meId && ev.status === 'draft')) ? <Button variant="ghost" className="rounded-xl text-rose-600" disabled={busy} onClick={() => { if (window.confirm('Excluir esta avaliação?')) void run(() => E.deleteEvaluation(ev.id), 'Avaliação excluída'); }}><Trash2 className="mr-2 h-4 w-4" />Excluir</Button> : null}
+            {(isAdmin || (ev.evaluatorId === meId && ev.status === 'draft')) ? <Button variant="ghost" className="rounded-xl text-rose-600" disabled={busy} onClick={async () => { if (await appConfirm({ title: 'Excluir esta avaliação?', message: 'Esta ação não pode ser desfeita.', confirmText: 'Excluir', danger: true })) void run(() => E.deleteEvaluation(ev.id), 'Avaliação excluída'); }}><Trash2 className="mr-2 h-4 w-4" />Excluir</Button> : null}
           </div>
           <div className="flex flex-wrap gap-2">
             {editable ? <>

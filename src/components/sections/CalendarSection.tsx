@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { format, startOfMonth, endOfMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, addDays, isSameMonth, addWeeks, subWeeks, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { appConfirm } from '@/lib/appDialog';
 
 interface CalendarEvent {
   id: string;
@@ -247,8 +248,8 @@ export function CalendarSection() {
     setShowCreatePage(event.event_type === 'meeting' ? 'meeting' : 'event');
   };
 
-  const handleBack = () => {
-    if (hasUnsavedChanges) { if (!confirm('Descartar alterações?')) return; }
+  const handleBack = async () => {
+    if (hasUnsavedChanges) { if (!(await appConfirm({ title: 'Descartar alterações?', message: 'O que você preencheu será perdido.', confirmText: 'Descartar', cancelText: 'Continuar editando', danger: true }))) return; }
     resetForm(); setShowCreatePage(null);
   };
 
@@ -335,7 +336,7 @@ export function CalendarSection() {
   };
 
   const handleDelete = async (eventId: string) => {
-    if (!confirm('Excluir este evento?')) return;
+    if (!(await appConfirm({ title: 'Excluir este evento?', confirmText: 'Excluir', danger: true }))) return;
     try {
       await supabase.from('calendar_events').delete().eq('id', eventId);
       toast.success('Evento excluído'); fetchEvents();

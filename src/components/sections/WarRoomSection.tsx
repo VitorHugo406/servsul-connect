@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WarRoomTaskDialog } from '@/components/warroom/WarRoomTaskDialog';
+import { appConfirm } from '@/lib/appDialog';
 
 function TaskPreviewDialog({ taskId, open, onClose }: { taskId: string; open: boolean; onClose: () => void }) {
   const [task, setTask] = useState<any>(null);
@@ -266,7 +267,7 @@ function WarRoomDetail({ room, onBack }: { room: WarRoom; onBack: () => void }) 
 
   const handleDeleteHistory = useCallback(async () => {
     if (!isRoomCreator) return;
-    const ok = confirm('Excluir TODO o histórico desta War Room? (mensagens + timeline)');
+    const ok = await appConfirm({ title: 'Excluir todo o histórico desta War Room?', message: 'Mensagens e linha do tempo serão apagadas.', confirmText: 'Excluir histórico', danger: true });
     if (!ok) return;
 
     await Promise.all([
@@ -491,7 +492,7 @@ export function WarRoomSection() {
 
   const handleDeleteRoom = async (e: React.MouseEvent, roomId: string) => {
     e.stopPropagation();
-    if (!confirm('Tem certeza que deseja excluir esta War Room? Esta ação não pode ser desfeita.')) return;
+    if (!(await appConfirm({ title: 'Excluir esta War Room?', message: 'Esta ação não pode ser desfeita.', confirmText: 'Excluir', danger: true }))) return;
     setDeletingId(roomId);
     await deleteWarRoom(roomId);
     setDeletingId(null);

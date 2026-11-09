@@ -1,4 +1,5 @@
 import { OfflineScreen } from "@/components/common/OfflineScreen";
+import { AppDialogHost } from '@/components/common/AppDialogHost';
 import { isInstalledApp } from "@/lib/appMode";
 import { lazyWithRetry } from "@/lib/lazyRetry";
 import { initE2E } from "@/lib/e2e";
@@ -96,5 +97,5 @@ function AppRoutes() {
 }
 function E2EBoot() { const { profile } = useAuth(); useEffect(() => { if (profile?.id) initE2E(profile.id); }, [profile?.id]); return null; }
 function AppShell() { return <><DemoTimer /><AuthProvider><CompanyProvider><FloatingNoteProvider><AppRoutes /></FloatingNoteProvider></CompanyProvider></AuthProvider></>; }
-const App = () => (<QueryClientProvider client={queryClient}><TooltipProvider><Toaster /><Sonner /><BrowserRouter><AppShell /></BrowserRouter><OfflineScreen /></TooltipProvider></QueryClientProvider>);
+const App = () => (<QueryClientProvider client={queryClient}><TooltipProvider><Toaster /><Sonner /><AppDialogHost /><BrowserRouter><AppShell /></BrowserRouter><OfflineScreen /></TooltipProvider></QueryClientProvider>);
 export default App;
