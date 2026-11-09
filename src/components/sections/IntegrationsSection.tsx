@@ -1,6 +1,6 @@
 // Company admin: connect Slack, Microsoft Teams and WhatsApp (Google Agenda/Drive come next).
 // Secrets go straight to the `integrations` edge function, which encrypts them; this screen never reads them back.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Plug, Loader2, Send, Trash2, CheckCircle2, AlertCircle, CalendarDays, HardDrive, Copy, LogOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -126,6 +126,55 @@ function CopyLine({ value }: { value: string }) {
   return <span className="mt-1 flex items-center gap-2 rounded-lg bg-muted px-2.5 py-1.5 font-mono text-[11px] text-foreground"><span className="min-w-0 flex-1 truncate">{value}</span><button type="button" onClick={() => copy(value)} className="shrink-0 text-muted-foreground hover:text-foreground" aria-label="Copiar"><Copy className="h-3.5 w-3.5" /></button></span>;
 }
 
+const L = ({ href, children }: { href: string; children: ReactNode }) => <a href={href} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground underline underline-offset-2">{children}</a>;
+function Step({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+  return (
+    <div className="flex gap-3">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground text-[11px] font-semibold text-background">{n}</span>
+      <div className="min-w-0 flex-1 space-y-1 pb-1"><p className="text-[13px] font-semibold text-foreground">{title}</p><div className="space-y-1 text-[12px] leading-relaxed text-muted-foreground">{children}</div></div>
+    </div>
+  );
+}
+// Step-by-step for the Google Cloud console (2025+ layout: "Google Auth Platform"), with direct links.
+function GoogleGuide({ origin }: { origin: string }) {
+  return (
+    <div className="space-y-3 rounded-xl border border-border p-4">
+      <p className="text-[12px] text-muted-foreground">Leva uns 10 minutos. Abra cada link em outra aba, faça o passo e volte aqui.</p>
+      <Step n={1} title="Criar o projeto">
+        Abra <L href="https://console.cloud.google.com/projectcreate">criar projeto</L>, dê um nome (ex.: “ewvon”) e clique em <b>Criar</b>. Depois, na <L href="https://console.cloud.google.com/home/dashboard">página inicial do projeto</L>, copie o <b>Número do projeto</b> e cole no campo abaixo.
+      </Step>
+      <Step n={2} title="Ativar as 3 APIs (um clique em “Ativar” em cada)">
+        <L href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com">Google Calendar API</L> · <L href="https://console.cloud.google.com/apis/library/drive.googleapis.com">Google Drive API</L> · <L href="https://console.cloud.google.com/apis/library/picker.googleapis.com">Google Picker API</L>
+      </Step>
+      <Step n={3} title="Configurar a tela de login do Google">
+        Abra o <L href="https://console.cloud.google.com/auth/overview">Google Auth Platform</L> e clique em <b>Primeiros passos</b>. Nome do app: <b>ewvon</b>; e-mail de suporte: o seu; Público: <b>Externo</b> (ou <b>Interno</b> se a empresa usa Google Workspace — aí pule o passo 4); contato: seu e-mail. Aceite e clique em <b>Criar</b>.
+      </Step>
+      <Step n={4} title="Liberar quem vai conectar (obrigatório no modo de teste)">
+        Abra <L href="https://console.cloud.google.com/auth/audience">Público-alvo</L>, desça até <b>Usuários de teste</b>, clique em <b>Adicionar usuários</b> e coloque o e-mail Google de cada pessoa que vai conectar (até 100). Sem isso o Google mostra “Acesso bloqueado”.
+      </Step>
+      <Step n={5} title="Criar o cliente (ID e chave secreta)">
+        Abra <L href="https://console.cloud.google.com/auth/clients/create">criar cliente</L>. Tipo: <b>Aplicativo da Web</b>. Em <b>Origens JavaScript autorizadas</b> clique em “Adicionar URI” e cole:
+        <CopyLine value={origin} />
+        Em <b>URIs de redirecionamento autorizados</b> clique em “Adicionar URI” e cole exatamente:
+        <CopyLine value={GOOGLE_REDIRECT} />
+        Clique em <b>Criar</b> e copie o <b>ID do cliente</b> e a <b>Chave secreta do cliente</b> para os campos abaixo.
+      </Step>
+      <Step n={6} title="Criar a chave de API (para o Drive)">
+        Abra <L href="https://console.cloud.google.com/apis/credentials">Credenciais</L> › <b>Criar credenciais</b> › <b>Chave de API</b>, copie a chave (começa com AIza) e cole abaixo.
+      </Step>
+      <details className="rounded-lg bg-muted/60 px-3 py-2 text-[12px] text-muted-foreground">
+        <summary className="cursor-pointer font-medium text-foreground">Deu erro ao conectar a conta?</summary>
+        <div className="mt-2 space-y-2">
+          <p><b>“Acesso bloqueado” / “o app não concluiu o processo de verificação” / erro 403 access_denied:</b> o e-mail que tentou conectar não está em <L href="https://console.cloud.google.com/auth/audience">Público-alvo › Usuários de teste</L> (passo 4). Adicione e tente de novo.</p>
+          <p><b>Erro 400 redirect_uri_mismatch:</b> o endereço do passo 5 não foi cadastrado exatamente igual. Abra <L href="https://console.cloud.google.com/auth/clients">Clientes</L>, entre no cliente e confira o URI de redirecionamento (sem espaço e sem barra no final). A mudança pode levar alguns minutos para valer.</p>
+          <p><b>Erro 401 invalid_client / deleted_client:</b> o ID do cliente ou a chave secreta colados aqui estão errados. Copie de novo do passo 5 e salve.</p>
+          <p><b>“O Google não verificou este app”:</b> é normal no modo de teste. Clique em <b>Continuar</b>.</p>
+        </div>
+      </details>
+    </div>
+  );
+}
+
 // Company admin: the company's own Google Cloud OAuth client (client secret is encrypted on the server).
 function GoogleCompanyCard({ row, onChanged }: { row?: Row; onChanged: () => void }) {
   const [cfg, setCfg] = useState({ client_id: row?.config?.client_id ?? '', project_number: row?.config?.project_number ?? '', api_key: row?.config?.api_key ?? '' });
@@ -151,18 +200,7 @@ function GoogleCompanyCard({ row, onChanged }: { row?: Row; onChanged: () => voi
       </div>
       <p className="text-[13px] text-muted-foreground">Depois de configurado, cada funcionário conecta a própria conta Google no cartão “Minha conta Google”: as reuniões do calendário do ewvon vão para a agenda dele, e os cards ganham o botão <HardDrive className="inline h-3.5 w-3.5" /> “Anexar do Drive”.</p>
       <button type="button" className="text-[12px] font-medium text-muted-foreground underline-offset-2 hover:underline" onClick={() => setShowHelp((v) => !v)}>{showHelp ? 'Ocultar passo a passo' : 'Como conseguir os dados'}</button>
-      {showHelp ? (
-        <ol className="list-decimal space-y-1.5 pl-5 text-[12px] text-muted-foreground">
-          <li>Acesse console.cloud.google.com e crie um projeto (ex.: “ewvon da empresa”). Copie o <b>Número do projeto</b> no painel inicial.</li>
-          <li>Em <b>APIs e serviços › Biblioteca</b>, ative: Google Calendar API, Google Drive API e Google Picker API.</li>
-          <li>Em <b>Tela de permissão OAuth</b>, escolha “Externo” (ou “Interno”, se a empresa usa Google Workspace) e preencha nome e e-mail de suporte.</li>
-          <li>Em <b>Credenciais › Criar credenciais › ID do cliente OAuth</b>, escolha “Aplicativo da Web” e cadastre:
-            <div className="mt-1">Origem JavaScript autorizada:</div><CopyLine value={origin} />
-            <div className="mt-1">URI de redirecionamento autorizado:</div><CopyLine value={GOOGLE_REDIRECT} />
-            Copie o <b>ID do cliente</b> e a <b>Chave secreta do cliente</b>.</li>
-          <li>Em <b>Credenciais › Criar credenciais › Chave de API</b>, copie a chave (recomendado: restrinja ao site {origin}).</li>
-        </ol>
-      ) : null}
+      {showHelp ? <GoogleGuide origin={origin} /> : null}
       <div className="grid gap-2 sm:grid-cols-2">
         <Input placeholder="ID do cliente (…apps.googleusercontent.com)" value={cfg.client_id} onChange={(e) => setCfg({ ...cfg, client_id: e.target.value.trim() })} />
         <Input placeholder="Número do projeto" value={cfg.project_number} onChange={(e) => setCfg({ ...cfg, project_number: e.target.value.replace(/\D/g, '') })} />
