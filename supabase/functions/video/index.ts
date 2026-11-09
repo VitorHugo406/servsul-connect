@@ -4,6 +4,9 @@
 //   POST /video/room  { event_id }  creator (or company admin): creates the private room for the meeting
 //   POST /video/join  { event_id }  creator, invited participants or company admins: returns { url, token }
 // Rooms are private: the link alone does not open the call, only a per-person token does.
+// Monthly cap: new joins are refused once the month's participant-minutes (as reported by Daily) reach
+// billing_settings.video_minutes_limit (default 9,500, under Daily's free allowance). The super admin is
+// warned in the Comunicados chat at 80% and 100%.
 // Secret: DAILY_API_KEY (Supabase > Edge Functions > Secrets).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -26,6 +29,69 @@ async function daily(path: string, body: unknown) {
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw Object.assign(new Error(`Daily ${r.status}: ${j?.info || j?.error || 'erro'}`), { status: 502 });
   return j;
+}
+
+async function dailyGet(path: string) {
+  const r = await fetch(`https://api.daily.co/v1${path}`, { headers: { Authorization: `Bearer ${Deno.env.get('DAILY_API_KEY')}` } });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(`Daily ${r.status}: ${j?.info || j?.error || 'erro'}`);
+  return j;
+}
+
+const SYSTEM_SENDER_ID = '00000000-0000-0000-0000-0000000000c1';
+const ADMIN_COMPANY_ID = '00000000-0000-0000-0000-0000000000a1';
+async function notifySuperAdmin(text: string) {
+  try {
+    const { data: supers } = await admin.from('user_roles').select('user_id').eq('role', 'super_admin');
+    const ids = (supers ?? []).map((r: any) => r.user_id);
+    if (!ids.length) return;
+    const { data: target } = await admin.from('profiles').select('id').in('user_id', ids).eq('company_id', ADMIN_COMPANY_ID).order('created_at').limit(1).maybeSingle();
+    if (target) await admin.from('direct_messages').insert({ sender_id: SYSTEM_SENDER_ID, receiver_id: target.id, content: text, company_id: ADMIN_COMPANY_ID });
+  } catch (e) { console.error('notifySuperAdmin', e); }
+}
+
+// Participant-minutes used this month (UTC), from Daily's meetings API; cached for 5 minutes.
+async function monthlyUsage(): Promise<{ month: string; minutes: number; limit: number; row: any }> {
+  const now = new Date();
+  const month = now.toISOString().slice(0, 7);
+  const [{ data: cfg }, { data: row }] = await Promise.all([
+    admin.from('billing_settings').select('video_minutes_limit').limit(1).maybeSingle(),
+    admin.from('video_usage').select('*').eq('month', month).maybeSingle(),
+  ]);
+  const limit = cfg?.video_minutes_limit ?? 9500;
+  if (row && Date.now() - new Date(row.updated_at).getTime() < 5 * 60e3) return { month, minutes: row.minutes, limit, row };
+  try {
+    const startUnix = Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1) / 1000);
+    let seconds = 0, after = '';
+    for (let page = 0; page < 50; page++) {
+      const j = await dailyGet(`/meetings?timeframe_start=${startUnix}&limit=100${after ? `&starting_after=${encodeURIComponent(after)}` : ''}`);
+      const list = (j?.data ?? []) as any[];
+      for (const m of list) {
+        const parts = (m.participants ?? []) as any[];
+        seconds += parts.length ? parts.reduce((t, p) => t + (Number(p.duration) || 0), 0) : (Number(m.duration) || 0) * Math.max(1, Number(m.max_participants) || 1);
+      }
+      if (list.length < 100) break;
+      after = list[list.length - 1].id;
+    }
+    const minutes = Math.ceil(seconds / 60);
+    const next = { month, minutes, alerted_80: row?.alerted_80 ?? false, alerted_100: row?.alerted_100 ?? false, updated_at: new Date().toISOString() };
+    await admin.from('video_usage').upsert(next);
+    return { month, minutes, limit, row: next };
+  } catch (e) {
+    console.error('usage', (e as Error).message);   // Daily unreachable: keep the last known value
+    return { month, minutes: row?.minutes ?? 0, limit, row: row ?? { month, alerted_80: false, alerted_100: false } };
+  }
+}
+
+async function usageAlerts(u: { month: string; minutes: number; limit: number; row: any }) {
+  const pct = u.limit ? (u.minutes / u.limit) * 100 : 0;
+  if (pct >= 100 && !u.row.alerted_100) {
+    await admin.from('video_usage').update({ alerted_100: true, alerted_80: true }).eq('month', u.month);
+    await notifySuperAdmin(`*Videochamadas bloqueadas até o fim do mês*\n\nO uso chegou a ${u.minutes.toLocaleString('pt-BR')} de ${u.limit.toLocaleString('pt-BR')} minutos-participante. Novas entradas em chamadas estão bloqueadas até o dia 1º para não gerar cobrança no Daily. Para liberar, cadastre um cartão no Daily e aumente o teto (billing_settings.video_minutes_limit).`);
+  } else if (pct >= 80 && !u.row.alerted_80) {
+    await admin.from('video_usage').update({ alerted_80: true }).eq('month', u.month);
+    await notifySuperAdmin(`*Videochamadas: 80% do limite do mês*\n\nJá foram usados ${u.minutes.toLocaleString('pt-BR')} de ${u.limit.toLocaleString('pt-BR')} minutos-participante. Ao chegar no limite, novas chamadas ficam bloqueadas até o dia 1º.`);
+  }
 }
 
 const times = (ev: any) => {
@@ -88,6 +154,9 @@ Deno.serve(async (req) => {
       const now = Date.now();
       if (now < start - EARLY_MIN * 60e3) return reply({ error: `A sala abre ${EARLY_MIN} minutos antes do início da reunião.` }, 400);
       if (now > end + AFTER_END_MIN * 60e3) return reply({ error: 'Esta reunião já terminou.' }, 400);
+      const usage = await monthlyUsage();
+      await usageAlerts(usage);
+      if (usage.minutes >= usage.limit) return reply({ error: 'O limite mensal de videochamadas do ewvon foi atingido. As chamadas voltam no dia 1º do próximo mês.' }, 429);
       const room = await ensureRoom(ev);
       const token = await daily('/meeting-tokens', { properties: {
         room_name: room.name, user_name: (prof.display_name || prof.name || 'Participante').slice(0, 60), user_id: prof.id,
