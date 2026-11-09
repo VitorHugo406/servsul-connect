@@ -168,15 +168,19 @@ nav{width:min(1400px,calc(100% - 24px))}.hero,.row,section,.cta,footer,.mic{max-
 .gb{display:grid;grid-template-rows:1fr;transition:grid-template-rows .5s cubic-bezier(.2,.8,.2,1)}.gb>div{overflow:hidden;min-height:0;transition:opacity .4s}.gb.cl{grid-template-rows:0fr}.gb.cl>div{opacity:0}
 .btn{background:var(--ink);color:var(--bg);border-color:var(--ink)}.btn s{background:var(--bg);color:var(--ink)}.btn.o{background:transparent;color:var(--ink);border-color:var(--line)}.btn.w{background:#fff;color:#0a0a0b;border-color:transparent}
 
-nav{transition:width .8s cubic-bezier(.2,.8,.2,1),padding .7s cubic-bezier(.2,.8,.2,1),top .7s cubic-bezier(.2,.8,.2,1),gap .7s cubic-bezier(.2,.8,.2,1),box-shadow .7s,background .5s}
-nav .l{gap:14px;transition:gap .7s cubic-bezier(.2,.8,.2,1)}
-nav .l a{display:flex;align-items:center;position:relative;padding:8px 12px;border-radius:99px;transition:background .3s,color .3s,padding .7s cubic-bezier(.2,.8,.2,1)}
+nav{--nve:cubic-bezier(.32,.72,0,1);--nvd:.48s;transition:width var(--nvd) var(--nve),padding var(--nvd) var(--nve),gap var(--nvd) var(--nve),background .3s;contain:layout style;backdrop-filter:blur(14px) saturate(170%);-webkit-backdrop-filter:blur(14px) saturate(170%)}
+nav::before{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:0 18px 40px -20px var(--sh);opacity:0;transition:opacity var(--nvd) var(--nve);pointer-events:none}nav.sm::before{opacity:1}
+nav .l{gap:14px;transition:gap var(--nvd) var(--nve)}
+nav .l a{display:flex;align-items:center;position:relative;padding:8px 12px;border-radius:99px;transition:background .3s,color .3s,padding var(--nvd) var(--nve)}
 nav .l a:hover{background:var(--c2);color:var(--ink)}
-nav .l a .i{width:0;opacity:0;transition:width .7s cubic-bezier(.2,.8,.2,1),opacity .4s .1s}
-nav .t{display:inline-block;max-width:140px;white-space:nowrap;overflow:hidden;vertical-align:middle;transition:max-width .7s cubic-bezier(.2,.8,.2,1),opacity .35s}
-nav .btn{transition:transform .3s,padding .7s cubic-bezier(.2,.8,.2,1),gap .7s cubic-bezier(.2,.8,.2,1)}
-.lg img:last-child{max-width:140px;transition:max-width .7s cubic-bezier(.2,.8,.2,1),opacity .4s}.lg,.lg u{transition:gap .7s cubic-bezier(.2,.8,.2,1),width .7s,opacity .4s}
-nav.sm{width:min(600px,calc(100% - 24px));padding:6px 6px 6px 14px;gap:6px;top:calc(8px + env(safe-area-inset-top,0px));box-shadow:0 18px 40px -20px var(--sh)}
+nav .l a .i{width:0;opacity:0;transition:width var(--nvd) var(--nve),opacity .2s}
+nav.sm .l a .i{transition:width var(--nvd) var(--nve),opacity .25s .18s}
+nav .t{display:inline-block;max-width:140px;white-space:nowrap;overflow:hidden;vertical-align:middle;transition:max-width var(--nvd) var(--nve),opacity .25s .15s}
+nav.sm .t{transition:max-width var(--nvd) var(--nve),opacity .14s}
+nav .btn{transition:transform .3s,padding var(--nvd) var(--nve),gap var(--nvd) var(--nve),font-size var(--nvd) var(--nve)}
+.lg img:last-child{max-width:140px;transition:max-width var(--nvd) var(--nve),opacity .25s .12s}.lg,.lg u{transition:gap var(--nvd) var(--nve),width var(--nvd) var(--nve),opacity .25s}
+nav.sm .lg img:last-child,nav.sm .lg u{transition:max-width var(--nvd) var(--nve),width var(--nvd) var(--nve),opacity .14s}
+nav.sm{width:min(600px,calc(100% - 24px));padding:6px 6px 6px 14px;gap:6px}
 nav.sm .l{gap:2px}nav.sm .l a{padding:9px 11px}nav.sm .l a .i{width:19px;opacity:1}nav.sm .l a .t{max-width:0;opacity:0}
 nav.sm .lg{gap:0}nav.sm .lg u{width:0;opacity:0}nav.sm .lg img:last-child{max-width:0;opacity:0}
 nav.sm .btn.o{padding:11px;gap:0}nav.sm .btn.o .t{max-width:0;opacity:0}nav.sm .btn:not(.o){padding:9px 8px 9px 16px;font-size:13px}
@@ -234,6 +238,7 @@ footer{flex-direction:column;text-align:center;padding:28px 18px calc(30px + env
 @keyframes betaPulse{70%{box-shadow:0 0 0 8px #22c55e00}100%{box-shadow:0 0 0 0 #22c55e00}}
 @media (max-width:520px){.beta{font-size:12.5px;gap:8px}.beta em{display:none}}
 [data-launch]{display:none!important}
+.offscr,.offscr *{animation-play-state:paused!important}
 </style>
 </head>
 <body>
@@ -430,9 +435,12 @@ stg.onmouseleave=function(){scn.style.setProperty('--ry','0deg');scn.style.setPr
 var io=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target)}})},{threshold:.12});
 document.querySelectorAll('.rv').forEach(function(c,i){c.style.transitionDelay=(i%3)*100+'ms';io.observe(c)});
 var P=[].slice.call(document.querySelectorAll('.px')),m=matchMedia('(prefers-reduced-motion:reduce)').matches;
-function t(){if(m||innerWidth<860)return;var y=Math.min(scrollY,500);P.forEach(function(e){e.style.transform='translateY('+(y*e.dataset.s*-1)+'px)'})}
-addEventListener('scroll',t,{passive:true});
-var nv=document.querySelector('nav');function ns(){var y=scrollY;if(y>90)nv.classList.add('sm');else if(y<30)nv.classList.remove('sm')}addEventListener('scroll',ns,{passive:true});ns();
+function t(){if(m||innerWidth<860)return;var y=Math.min(scrollY,500);P.forEach(function(e){e.style.transform='translate3d(0,'+(y*e.dataset.s*-1)+'px,0)'})}
+var tq=0;addEventListener('scroll',function(){if(!tq){tq=requestAnimationFrame(function(){tq=0;t()})}},{passive:true});
+var nv=document.querySelector('nav');function ns(){var y=scrollY;if(y>90)nv.classList.add('sm');else if(y<30)nv.classList.remove('sm')}// Infinite decorative animations only run while their block is on screen.
+var vo=new IntersectionObserver(function(e){e.forEach(function(x){x.target.classList.toggle('offscr',!x.isIntersecting)})},{rootMargin:'120px 0px'});
+document.querySelectorAll('body > header, body > div, body > section, body > footer').forEach(function(el){if(el.tagName!=='NAV')vo.observe(el)});
+var nq=0;addEventListener('scroll',function(){if(!nq){nq=requestAnimationFrame(function(){nq=0;ns()})}},{passive:true});ns();
 })();
 </script>
 
