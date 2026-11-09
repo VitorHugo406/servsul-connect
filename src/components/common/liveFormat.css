@@ -1,0 +1,9 @@
+/* PC chat composer live formatting (same idea as the mobile composer, see ComposerMirror). */
+.ewf-pc textarea { color: transparent; -webkit-text-fill-color: transparent; caret-color: hsl(var(--foreground)); }
+.ewf-pc textarea::placeholder { -webkit-text-fill-color: hsl(var(--muted-foreground) / .7); }
+.ewf-pc textarea::selection { background: hsl(var(--primary) / .25); }
+.ewf-mirror .ewf-m { opacity: .42; }
+.ewf-mirror .ewf-b { -webkit-text-stroke: .5px currentColor; paint-order: stroke fill; }
+.ewf-mirror .ewf-i { font-style: italic; font-synthesis: style; }
+.ewf-mirror .ewf-s { text-decoration: line-through; }
+.ewf-mirror .ewf-c { background: hsl(var(--muted)); border-radius: 4px; box-shadow: 0 0 0 2px hsl(var(--muted)); }
