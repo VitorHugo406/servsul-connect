@@ -53,7 +53,7 @@ import {
 } from '@/components/tasks/taskConstants';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { CheckSquare, CheckCircle2, CalendarRange, Columns3, ArrowLeftRight, ChevronUp } from 'lucide-react';
+import { CheckSquare, CheckCircle2, CalendarRange, Columns3, ArrowLeftRight, ChevronUp, Maximize2, Minimize2 } from 'lucide-react';
 import { appConfirm } from '@/lib/appDialog';
 
 const slugifyBoardName = (name: string) => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -370,6 +370,26 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const { profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const restrictedTaskId = searchParams.get('task');
+  // Full screen: the board covers the whole window (sidebar and top bar hidden) and the browser goes
+  // full screen when allowed. Dialogs and menus (z-50) still open above it.
+  const [fullscreen, setFullscreen] = useState(false);
+  const toggleFullscreen = () => {
+    const next = !fullscreen;
+    setFullscreen(next);
+    try {
+      if (next && !document.fullscreenElement) void document.documentElement.requestFullscreen?.().catch(() => {});
+      if (!next && document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+    } catch { /* not supported: the in-page full screen still works */ }
+  };
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onChange = () => { if (!document.fullscreenElement) setFullscreen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.fullscreenElement && !document.querySelector('[role="dialog"], [role="menu"]')) setFullscreen(false); };
+    document.addEventListener('fullscreenchange', onChange);
+    window.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('fullscreenchange', onChange); window.removeEventListener('keydown', onKey); };
+  }, [fullscreen]);
+  useEffect(() => () => { try { if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {}); } catch { /* ignore */ } }, []);
 
   const { columns, addColumn, updateColumn, deleteColumn, refetch: refetchColumns } = useBoardColumns(board.id);
   const { tasks, archivedTasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: refetchTasks } = useBoardTasks(board.id, restrictedTaskId);
@@ -1213,7 +1233,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   };
 
   return (
-    <div className={cn('flex flex-col h-full relative', boardBg)} style={boardBgStyle}>
+    <div className={cn('flex flex-col h-full relative', fullscreen && 'fixed inset-0 z-[45] h-[100dvh] w-screen bg-background', boardBg)} style={boardBgStyle} data-board-fullscreen={fullscreen ? 'true' : undefined}>
       {/* Dark overlay for image backgrounds to improve readability */}
       {isDarkBg && <div className="absolute inset-0 bg-black/40 pointer-events-none z-0" />}
       {/* Search is now inline in header */}
@@ -1412,6 +1432,11 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             </>
           )}
         </div>
+        {!isMobile && (
+          <Button variant="ghost" size="icon" onClick={toggleFullscreen} title={fullscreen ? 'Sair da tela cheia (Esc)' : 'Tela cheia'} aria-pressed={fullscreen} className={isDarkBg ? 'text-white hover:bg-white/20' : ''}>
+            {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
+        )}
       </div>
 
       {/* Board area with optional planner */}
