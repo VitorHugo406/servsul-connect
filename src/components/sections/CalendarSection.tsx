@@ -15,7 +15,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { openVideoCall } from '@/components/video/VideoCallHost';
+import { openVideoCall, openVideoInfo } from '@/components/video/VideoCallHost';
+import { useCompanyPlan } from '@/hooks/useCompanyPlan';
+import { planHasFeature } from '@/lib/planAccess';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
@@ -83,6 +85,8 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const WORK_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 
 export function CalendarSection() {
+  const { plan: companyPlan } = useCompanyPlan();
+  const videoAllowed = !!companyPlan && planHasFeature(companyPlan, 'video_calls');
   const { user, profile, isAdmin } = useAuth();
   const isMobile = useIsMobile();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -814,10 +818,10 @@ export function CalendarSection() {
               </div>
             </button>
 
-            {/* Option 2: ewvon video call (Daily.co) */}
+            {/* Option 2: ewvon video call (Daily.co) — Empresarial plan */}
             <button
-              onClick={() => openCreateMeeting(selectedDate, 'ewvor')}
-              className="flex items-start gap-4 p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
+              onClick={() => (videoAllowed ? openCreateMeeting(selectedDate, 'ewvor') : openVideoInfo())}
+              className={`flex items-start gap-4 p-4 rounded-xl border-2 border-border transition-all text-left group ${videoAllowed ? 'hover:border-primary/50 hover:bg-primary/5' : 'opacity-70'}`}
             >
               <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10">
                 <MonitorPlay className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
@@ -825,8 +829,9 @@ export function CalendarSection() {
               <div>
                 <p className="font-semibold text-foreground">Videochamada ewvon</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Sala de vídeo privada dentro do ewvon, com câmera, áudio e compartilhamento de tela
+                  {videoAllowed ? 'Sala de vídeo privada dentro do ewvon, com câmera, áudio e compartilhamento de tela' : 'Disponível no plano Empresarial'}
                 </p>
+                <span role="link" tabIndex={0} onClick={(e) => { e.stopPropagation(); openVideoInfo(); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); openVideoInfo(); } }} className="mt-1 inline-block text-xs font-medium text-primary underline-offset-2 hover:underline">Saiba mais</span>
               </div>
             </button>
           </div>

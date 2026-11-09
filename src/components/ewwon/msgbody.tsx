@@ -47,6 +47,7 @@ export function parseMsg(content: string): ParsedMsg {
 
 /** One-line preview for the conversation list. */
 export function previewText(content: string): string {
+  if (content.startsWith('📹 ewvon-call:')) return '📹 Chamada de vídeo';
   if (isSticker(content)) return '✨ Figurinha';
   const v = parseVoice(content); if (v) return `🎤 Áudio (${v.duration})`;
   const p = parseMsg(content);

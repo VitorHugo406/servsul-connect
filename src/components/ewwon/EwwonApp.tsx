@@ -29,6 +29,8 @@ import { MsgBody, ImageViewer, previewText, ComposerMirror } from './msgbody';
 import { TasksSheet } from './tasksheet';
 import { appConfirm } from '@/lib/appDialog';
 import { useCompanyPlan } from '@/hooks/useCompanyPlan';
+import { startChatCall, parseCall, CallMessageCard } from '@/components/video/VideoCallHost';
+import { Video as VideoIcon } from 'lucide-react';
 import { planHasFeature } from '@/lib/planAccess';
 
 
@@ -1240,6 +1242,9 @@ export default function EwwonApp() {
               <button id="back" aria-label="Voltar" onClick={closeRoom}><I n="chevL" /></button>
               {cur && curSys ? <div className="av ewx-sysav" id="rav"><CosmicBlob size={38} /></div> : cur ? <div className={'av' + (cur.p ? ' on' : '')} id="rav" style={{ ...avStyle(cur.p ? P[cur.p] : cur), ['--sc' as string]: cur.p ? ST[P[cur.p]?.st || 'disp'][1] : '#46d37b' }} onClick={() => (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}>{(cur.p ? P[cur.p]?.photo : cur.photo) ? '' : cur.i}</div> : <div className="av" id="rav" />}
               <div className="rt" onClick={() => cur && !curSys && (cur.p ? pgShow({ kind: 'profile', id: cur.p }) : setSheetOn(true))}><b id="rn">{cur?.n}</b><small id="rs" className={typing && cur && typing.key === cur.key ? 'ewx-typing-tx' : undefined}>{typing && cur && typing.key === cur.key ? (cur.kind === 'dm' ? 'Digitando...' : `${typing.names.map((n) => n.split(' ')[0]).join(', ')} ${typing.names.length > 1 ? 'estão digitando...' : 'está digitando...'}`) : cur ? stt(cur) : ''}</small></div>
+              {cur && !curSys && cur.p !== meId && planHasFeature(companyPlan, 'video_calls')
+                ? <button className="lq ewx-vidbtn" aria-label="Chamada de vídeo" onClick={async (e) => { e.stopPropagation(); if (await appConfirm({ title: 'Iniciar chamada de vídeo?', message: 'Todos desta conversa recebem um aviso para entrar.', confirmText: 'Iniciar' })) startChatCall(cur.kind, cur.id); }}><VideoIcon size={20} strokeWidth={1.9} /></button>
+                : null}
               {curSys
                 ? <button className="lq" id="gear" aria-label="Pesquisar nesta conversa" onClick={(e) => { e.stopPropagation(); setDots(false); setSearch((x) => (x ? null : { q: '', i: 0 })); }}><I n="search" /></button>
                 : <button className="lq" id="gear" aria-label="Mais opções" onClick={(e) => { e.stopPropagation(); setDots((v) => !v); }}><I n="dots" /></button>}
@@ -1529,7 +1534,8 @@ function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage
   const rx = m.r.length ? <div className="rx" style={{ display: 'flex' }}>{m.r.map((e) => <span key={e} onClick={(ev) => { ev.stopPropagation(); onReact(e, ref.current); }}>{e}</span>)}</div> : <div className="rx" style={{ display: 'none' }} />;
   const tmh = <div className="tm">{m.h}{m.me ? <> · <Ticks pending={m.pending} read={read} /></> : null}</div>;
   const stk = parseSticker(m.t);
-  const bub = stk ? <div className="ewx-stkb" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><StickerMessage sticker={stk} mine={m.me} /></div>
+  const callRoom = parseCall(m.t);
+  const bub = callRoom ? <div className="ewx-callb"><CallMessageCard room={callRoom} own={m.me} /></div> : stk ? <div className="ewx-stkb" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><StickerMessage sticker={stk} mine={m.me} /></div>
     : <div className="bub" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><MsgBody content={m.t} onOpenImage={onImage} /></div>;
   const qb = quote ? <button type="button" className="ewx-quote" onClick={(e) => { e.stopPropagation(); onQuote?.(quote.id); }}><b>{quote.n}</b><span>{previewText(quote.t)}</span></button> : null;
   return (

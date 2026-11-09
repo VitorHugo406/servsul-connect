@@ -301,7 +301,9 @@ async function applyRecurring(preapprovalId: string, paymentStatus: string, amou
     if (expected && Math.round(amount * 100) < expected) return 'valor abaixo do plano';
     const base = Math.max(Date.now(), new Date(sub.current_period_end || 0).getTime() - PERIOD_GRACE_DAYS * 864e5);
     await admin.from('company_subscriptions').update({ status: 'active', current_period_end: new Date(base + (periodDays(sub.billing_cycle) + PERIOD_GRACE_DAYS) * 864e5).toISOString() }).eq('company_id', sub.company_id);
-    if (paymentId) await admin.from('company_payments').upsert({ company_id: sub.company_id, provider_payment_id: paymentId, kind: 'renewal', description: `Renovação ${sub.billing_cycle === 'annual' ? 'anual' : 'mensal'}`, amount_cents: Math.round(amount * 100) }, { onConflict: 'provider,provider_payment_id', ignoreDuplicates: true });
+    const videoCents = await markVideoBilled(sub.company_id, paymentId || 'renovacao');
+    if (paymentId) await admin.from('company_payments').upsert({ company_id: sub.company_id, provider_payment_id: paymentId, kind: 'renewal', description: `Renovação ${sub.billing_cycle === 'annual' ? 'anual' : 'mensal'}${videoCents ? ` + videochamadas extras (${brl(videoCents)})` : ''}`, amount_cents: Math.round(amount * 100) }, { onConflict: 'provider,provider_payment_id', ignoreDuplicates: true });
+    if (videoCents) await syncRecurringAmount(sub.company_id);   // next charges go back to plan + add-ons
     return 'renovada';
   }
   if (['rejected', 'cancelled', 'refunded', 'charged_back'].includes(paymentStatus)) {
@@ -319,16 +321,31 @@ async function billingSettings() {
 // Monthly value of the company's add-ons.
 const extrasMonthlyCents = (sub: any, cfg: any) => (sub.extra_users || 0) * cfg.extra_user_cents + Math.ceil((sub.extra_storage_gb || 0) / cfg.storage_pack_gb) * cfg.storage_pack_cents;
 
-// Keeps the automatic charge (monthly or annual) equal to plan + add-ons.
+// Video minutes beyond the free allowance in past months, not billed yet (added to the next charge).
+const thisMonth = () => new Date().toISOString().slice(0, 7);
+async function pendingVideo(companyId: string) {
+  const { data } = await admin.from('company_video_usage').select('month, overage_cents').eq('company_id', companyId).is('billed_at', null).gt('overage_cents', 0).lt('month', thisMonth());
+  return { cents: (data ?? []).reduce((t: number, r: any) => t + (r.overage_cents || 0), 0), months: (data ?? []).map((r: any) => r.month as string) };
+}
+async function markVideoBilled(companyId: string, paymentId: string) {
+  const p = await pendingVideo(companyId);
+  if (!p.months.length) return 0;
+  await admin.from('company_video_usage').update({ billed_at: new Date().toISOString(), billed_payment_id: paymentId }).eq('company_id', companyId).in('month', p.months);
+  return p.cents;
+}
+
+// Keeps the automatic charge (monthly or annual) equal to plan + add-ons (+ pending video minutes).
 async function syncRecurringAmount(companyId: string): Promise<string> {
   const { data: sub } = await admin.from('company_subscriptions').select('*').eq('company_id', companyId).maybeSingle();
   if (!sub?.provider_subscription_id || sub.billing_cycle === 'once') return 'sem cobrança automática';
   const { data: plan } = await admin.from('subscription_plans').select('price_cents, annual_price_cents').eq('id', sub.plan_id).maybeSingle();
   const cfg = await billingSettings();
   const base = sub.billing_cycle === 'annual' ? (plan?.annual_price_cents ?? (plan?.price_cents ?? 0) * 12) : (plan?.price_cents ?? 0);
-  const total = base + extrasMonthlyCents(sub, cfg) * (sub.billing_cycle === 'annual' ? 12 : 1);
+  const video = await pendingVideo(companyId);
+  const total = base + extrasMonthlyCents(sub, cfg) * (sub.billing_cycle === 'annual' ? 12 : 1) + video.cents;
   try {
     await mp(`/preapproval/${encodeURIComponent(sub.provider_subscription_id)}`, { method: 'PUT', body: JSON.stringify({ auto_recurring: { transaction_amount: total / 100, currency_id: 'BRL' } }) });
+    if (video.months.length) await admin.from('company_video_usage').update({ synced_at: new Date().toISOString() }).eq('company_id', companyId).in('month', video.months);
     return 'cobrança automática ajustada';
   } catch (e) {
     await notifySuperAdmin(`*Ajuste manual necessário*\n\nNão consegui atualizar o valor da assinatura ${sub.provider_subscription_id} para ${(total / 100).toFixed(2)}. Ajuste no Mercado Pago. Erro: ${(e as Error).message}`);
@@ -372,7 +389,8 @@ async function applyOrder(orderId: string, payment: any): Promise<string> {
   } else {
     const base = Math.max(Date.now(), new Date(sub?.current_period_end || 0).getTime() - PERIOD_GRACE_DAYS * 864e5);
     await admin.from('company_subscriptions').update({ status: 'active', current_period_end: new Date(base + (31 + PERIOD_GRACE_DAYS) * 864e5).toISOString() }).eq('company_id', order.company_id);
-    label = 'renovação de 1 mês';
+    const videoCents = await markVideoBilled(order.company_id, String(payment.id));
+    label = `renovação de 1 mês${videoCents ? ` + videochamadas extras (${brl(videoCents)})` : ''}`;
   }
   await admin.from('company_payments').upsert({ company_id: order.company_id, provider_payment_id: String(payment.id), kind: order.kind, description: label.charAt(0).toUpperCase() + label.slice(1), amount_cents: order.amount_cents }, { onConflict: 'provider,provider_payment_id', ignoreDuplicates: true });
   const sync = order.kind === 'once_renewal' ? '' : ' · ' + await syncRecurringAmount(order.company_id);
@@ -559,7 +577,7 @@ Deno.serve(async (req) => {
       // Add-ons are charged now until the next renewal (whole months), then join the automatic charge.
       const monthsLeft = sub.billing_cycle === 'annual' ? Math.max(1, Math.ceil((new Date(sub.current_period_end || Date.now()).getTime() - Date.now()) / (30 * 864e5))) : 1;
       const unit = kind === 'extra_users' ? cfg.extra_user_cents : kind === 'extra_storage' ? cfg.storage_pack_cents : 0;
-      const amount = kind === 'once_renewal' ? (plan?.price_cents ?? 0) + extrasMonthlyCents(sub, cfg) : unit * qty * monthsLeft;
+      const amount = kind === 'once_renewal' ? (plan?.price_cents ?? 0) + extrasMonthlyCents(sub, cfg) + (await pendingVideo(comp.id)).cents : unit * qty * monthsLeft;
       if (!amount) return reply({ error: 'Valor inválido.' }, 400);
       const title = kind === 'extra_users' ? `${qty} usuário(s) extra(s)` : kind === 'extra_storage' ? `${qty * cfg.storage_pack_gb} GB de armazenamento extra` : `Renovação de 1 mês · plano ${plan?.name}`;
       const { data: order, error: oErr } = await admin.from('billing_orders').insert({ company_id: comp.id, kind, quantity: kind === 'once_renewal' ? 1 : qty, amount_cents: amount, created_by: u.user.id }).select('id').single();
@@ -721,6 +739,16 @@ Deno.serve(async (req) => {
       const { data: stuck } = await admin.from('company_signups').select('id').eq('status', 'provisioning').lt('updated_at', new Date(Date.now() - 15 * 60e3).toISOString());
       for (const s of stuck ?? []) { await admin.from('company_signups').update({ status: 'failed' }).eq('id', s.id).eq('status', 'provisioning'); out[s.id] = ((await provision(s.id)).ok ? 'retomada' : 'falhou'); }
       try { await sendReminders(out); } catch (e) { out.lembretes = 'erro: ' + (e as Error).message; }
+      // Video minutes beyond the free allowance last month -> next charge (once per month and company).
+      try {
+        const { data: pend } = await admin.from('company_video_usage').select('company_id, month, overage_minutes, overage_cents').is('billed_at', null).is('synced_at', null).gt('overage_cents', 0).lt('month', thisMonth()).limit(50);
+        for (const r of pend ?? []) {
+          const res = await syncRecurringAmount(r.company_id);
+          await admin.from('company_video_usage').update({ synced_at: new Date().toISOString() }).eq('company_id', r.company_id).eq('month', r.month);
+          await notifyCompanyAdmin(r.company_id, `*Videochamadas extras de ${r.month.split('-').reverse().join('/')}*\n\nA empresa usou ${r.overage_minutes.toLocaleString('pt-BR')} minutos além da franquia grátis. O valor de ${brl(r.overage_cents)} entra na próxima fatura${res === 'sem cobrança automática' ? ' (na próxima renovação em Pagamentos)' : ''}.`);
+          out['video:' + r.company_id] = res;
+        }
+      } catch (e) { out.video = 'erro: ' + (e as Error).message; }
       out.capacidade = await checkSystemCapacity();
       return reply({ ok: true, checked: out });
     }

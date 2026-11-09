@@ -19,7 +19,7 @@ type Plan = { id: string; name: string; description: string; price_cents: number
 const FEATURE_LABEL: Record<string, string> = {
   chat: 'Chat por setores e conversas', announcements: 'Avisos', important_notices: 'Comunicados importantes', tasks: 'Quadros de tarefas', notes: 'Anotações',
   birthdays: 'Aniversariantes', calendar: 'Calendário e reuniões', meeting_rooms: 'Salas de reunião', shortcuts: 'Atalhos do sistema', metrics_dashboard: 'Painel de métricas',
-  evaluations: 'Avaliações', people_management: 'Gestão de pessoas', war_room: 'War Room', dashboard_3d: 'Dashboard 3D',
+  evaluations: 'Avaliações', people_management: 'Gestão de pessoas', war_room: 'War Room', dashboard_3d: 'Dashboard 3D', video_calls: 'Videochamadas (2.500 min/mês grátis)',
 };
 const brl = (c: number) => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 type Cycle = 'monthly' | 'annual' | 'once';

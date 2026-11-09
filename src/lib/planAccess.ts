@@ -35,7 +35,7 @@ export const FEATURE_LABEL: Record<string, string> = {
   chat: 'Chat', announcements: 'Avisos', important_notices: 'Comunicados importantes', tasks: 'Quadros de tarefas', notes: 'Anotações',
   birthdays: 'Aniversariantes', calendar: 'Calendário e reuniões', meeting_rooms: 'Salas de reunião', shortcuts: 'Atalhos do sistema',
   metrics_dashboard: 'Painel de métricas', evaluations: 'Avaliações', people_management: 'Gestão de pessoas', war_room: 'War Room',
-  dashboard_3d: 'Dash', themes: 'Eventos e temas',
+  dashboard_3d: 'Dash', video_calls: 'Videochamadas', themes: 'Eventos e temas',
 };
 
 export function planHasFeature(plan: CompanyPlan | null | undefined, feature: string): boolean {

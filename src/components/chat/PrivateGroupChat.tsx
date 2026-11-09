@@ -1,3 +1,5 @@
+import { ChatVideoButton } from '@/components/video/ChatVideoButton';
+import { parseCall, CallMessageCard } from '@/components/video/VideoCallHost';
 import { VoicePlayer } from '@/components/common/Voice';
 import { parseVoice } from '@/lib/e2e';
 import { StickerMessage, PackCard } from '@/components/common/Stickers';
@@ -82,7 +84,7 @@ export function PrivateGroupChat({ group }: PrivateGroupChatProps) {
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   const formatTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const renderMessageContent = (content: string, isOwn: boolean) => {
-    const __stk = parseSticker(content); if (__stk) return <StickerMessage sticker={__stk} mine={isOwn} />; const __pk = parsePack(content); if (__pk) return <PackCard id={__pk} mine={isOwn} />; const __vc = parseVoice(content); if (__vc) return <VoicePlayer voice={__vc} />;
+    const __call = parseCall(content); if (__call) return <CallMessageCard room={__call} own={isOwn} />; const __stk = parseSticker(content); if (__stk) return <StickerMessage sticker={__stk} mine={isOwn} />; const __pk = parsePack(content); if (__pk) return <PackCard id={__pk} mine={isOwn} />; const __vc = parseVoice(content); if (__vc) return <VoicePlayer voice={__vc} />;
     const lines = content.split('\n'); const textLines: string[] = []; const atts: { type: 'image' | 'file'; name: string; url: string }[] = [];
     for (const line of lines) { const imageMatch = line.match(/^📷 \[(.+?)\]\((.+?)\)$/); const fileMatch = line.match(/^📎 \[(.+?)\]\((.+?)\)$/); if (imageMatch) atts.push({ type: 'image', name: imageMatch[1], url: imageMatch[2] }); else if (fileMatch) atts.push({ type: 'file', name: fileMatch[1], url: fileMatch[2] }); else textLines.push(line); }
     const textContent = textLines.join('\n').trim();
@@ -110,6 +112,7 @@ export function PrivateGroupChat({ group }: PrivateGroupChatProps) {
     <div className="chat-thread-header flex shrink-0 items-center justify-between gap-3 px-3 py-3 sm:px-5">
       <div className="flex items-center gap-3 min-w-0"><Avatar className="h-10 w-10 shrink-0"><AvatarImage src={group.avatar_url || ''} /><AvatarFallback className="bg-primary text-primary-foreground">{getInitials(group.name)}</AvatarFallback></Avatar><div className="min-w-0"><h3 className="font-display font-semibold text-foreground truncate">{group.name}</h3><p className="text-xs text-muted-foreground">{members.length} membros</p></div></div>
       <div className="flex items-center gap-1 shrink-0">
+        <ChatVideoButton conv="group" target={group.id} />
         <ChatTasksControl kind="group" chatId={group.id} onPost={(t) => sendMessage(t)} />
         <Button variant="ghost" size="icon" title="Personalizar chat" onClick={() => setShowPersonalization(true)}><Palette className="h-5 w-5" /></Button>
         <Sheet><SheetTrigger asChild><Button variant="ghost" size="icon"><Settings className="h-5 w-5" /></Button></SheetTrigger><SheetContent className="w-full sm:max-w-md flex flex-col"><SheetHeader className="border-b border-border pb-4"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10"><Settings className="h-5 w-5 text-primary" /></div><div><SheetTitle>Configurações do Grupo</SheetTitle><SheetDescription className="text-xs">Gerencie membros, mídia e automações</SheetDescription></div></div></SheetHeader><ScrollArea className="flex-1 -mx-6 px-6"><div className="mt-4 space-y-5 pb-6">
