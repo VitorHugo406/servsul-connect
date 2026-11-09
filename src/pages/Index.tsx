@@ -43,6 +43,7 @@ const NotesSection = lazyWithRetry(() => import('@/components/sections/NotesSect
 const CompaniesManagementSection = lazyWithRetry(() => import('@/components/sections/CompaniesManagementSection').then((module) => ({ default: module.CompaniesManagementSection })));
 const SystemBroadcastsSection = lazyWithRetry(() => import('@/components/sections/SystemBroadcastsSection').then((module) => ({ default: module.SystemBroadcastsSection })));
 const Dashboard3DSection = lazyWithRetry(() => import('@/components/sections/Dashboard3DSection').then((module) => ({ default: module.Dashboard3DSection })));
+const IntegrationsSection = lazyWithRetry(() => import('@/components/sections/IntegrationsSection').then((module) => ({ default: module.IntegrationsSection })));
 const BillingSection = lazyWithRetry(() => import('@/components/sections/BillingSection').then((module) => ({ default: module.BillingSection })));
 const ShortcutsManagementSection = lazyWithRetry(() => import('@/components/sections/ShortcutsManagementSection').then((module) => ({ default: module.ShortcutsManagementSection })));
 import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
@@ -87,6 +88,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   'system-broadcasts': { title: 'Comunicados Globais', subtitle: 'Avisos para todas as empresas' },
   billing: { title: 'Pagamentos', subtitle: 'Plano, cobranças e extras da empresa' },
   'dashboard-3d': { title: 'Dash', subtitle: 'Exclusivo do plano Empresarial' },
+  integrations: { title: 'Integrações', subtitle: 'Slack, Teams, WhatsApp e Google' },
 };
 
 const sectionPaths: Record<string, string> = {
@@ -101,6 +103,7 @@ const sectionPaths: Record<string, string> = {
   companies: '/empresas', 'system-broadcasts': '/comunicados-globais', 'meeting-rooms': '/salas-de-reuniao',
   billing: '/pagamentos',
   'dashboard-3d': '/dash',
+  integrations: '/integracoes',
 };
 const pathSections = Object.fromEntries(Object.entries(sectionPaths).map(([key, path]) => [path, key])) as Record<string, string>;
 
@@ -113,7 +116,7 @@ const sectionIntroIcons = {
   'feedback-email': Mail, calendar: CalendarDays, 'system-logs': FileText,
   storage: HardDrive, documentation: BookOpen, 'war-room': Shield,
   'api-management': Plug, evaluations: ClipboardCheck, notes: StickyNote,
-  companies: Building2, 'system-broadcasts': Megaphone, 'event-history': Sparkles, billing: CreditCard, 'dashboard-3d': LayoutDashboard,
+  companies: Building2, 'system-broadcasts': Megaphone, 'event-history': Sparkles, billing: CreditCard, 'dashboard-3d': LayoutDashboard, integrations: Plug,
 } as const;
 
 function LockedSection({ reason, feature, onBilling, onHome }: { reason: 'system' | 'plan'; feature: string; onBilling?: () => void; onHome: () => void }) {
@@ -291,6 +294,7 @@ const Index = () => {
       case 'companies': return <CompaniesManagementSection />;
       case 'system-broadcasts': return <SystemBroadcastsSection />;
       case 'dashboard-3d': return <Dashboard3DSection />;
+      case 'integrations': return isAdmin ? <IntegrationsSection /> : <HomeSection onNavigate={handleSectionChange} />;
       case 'billing': return isAdmin ? <BillingSection /> : <HomeSection onNavigate={handleSectionChange} />;
       default: return <HomeSection onNavigate={setActiveSection} />;
     }
