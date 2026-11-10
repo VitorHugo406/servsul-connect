@@ -30,10 +30,10 @@ export function useAnnouncements() {
   const [scheduledAnnouncements, setScheduledAnnouncements] = useState<Announcement[]>([]);
   const [expiredAnnouncements, setExpiredAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
-  const { profile, isAdmin } = useAuth();
+  const { profile, isAdmin, canAccess } = useAuth();
 
-  // Only company admins create announcements (enforced by RLS too).
-  const canManageAnnouncements = isAdmin;
+  // Admins, or collaborators with the "Postar avisos" flag from Gestão (enforced by RLS too).
+  const canManageAnnouncements = isAdmin || canAccess('can_post_announcements');
 
   const fetchAnnouncements = useCallback(async () => {
     setLoading(true);

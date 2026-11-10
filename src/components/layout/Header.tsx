@@ -42,7 +42,7 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
   const visibleSections = useMemo(() => ALL_SECTIONS.filter(s => { if (sectionLock(s.id, companyPlan, isSuperAdminUser)) return false; if (s.mainAdminOnly) return isAdmin && isMainAdmin; if (s.adminOnly) return isAdmin; if (s.supervisorOnly) return isAdmin || ['supervisor','gerente','gestor','diretoria'].includes(autonomy || ''); if (s.permission) return isAdmin || autonomy === 'diretoria' || canAccess(s.permission); return true; }), [isAdmin, isMainAdmin, autonomy, canAccess, companyPlan, isSuperAdminUser]);
   const filteredSections = useMemo(() => { if (!searchQuery) return []; const q = searchQuery.toLowerCase(); return visibleSections.filter(s => s.label.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)); }, [searchQuery, visibleSections]);
   const selectSection = (id: string) => { onNavigateToSection?.(id); onSearchChange?.(''); setShowSectionSearch(false); };
-  const showOrbsButton = hasModule('orbs') && (isAdmin || canAccess('can_access_orbs' as any)); const canCreateAnnouncement = isAdmin;
+  const showOrbsButton = hasModule('orbs') && (isAdmin || canAccess('can_access_orbs' as any)); const canCreateAnnouncement = isAdmin || canAccess('can_post_announcements');
   const openNewAnnouncement = () => window.dispatchEvent(new CustomEvent('ewvor:open-new-announcement'));
   return (<>
     <motion.header initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}

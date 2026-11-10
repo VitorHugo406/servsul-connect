@@ -90,7 +90,7 @@ export interface EwApi {
 }
 
 export default function EwwonApp() {
-  const { profile, isAdmin, allAccessibleSectorIds, signOut, roles } = useAuth();
+  const { profile, isAdmin, allAccessibleSectorIds, canAccess, signOut, roles } = useAuth();
   // Global notices ("Comunicados globais"): published by the super admin of the Admin company to every company.
   const isSuperAdmin = roles.some((r) => (r.role as string) === 'super_admin');
   const { broadcasts: gBroadcasts, setActive: setBroadcastActive, removeBroadcast } = useSystemBroadcasts(!isSuperAdmin, 60_000);
@@ -226,6 +226,7 @@ export default function EwwonApp() {
     window.clearTimeout((toast as unknown as { _t?: number })._t);
     (toast as unknown as { _t?: number })._t = window.setTimeout(() => setToastOn(false), 2200);
   }, []);
+  const canPostPerm = canAccess('can_post_announcements' as never);
   useEffect(() => { const f = (e: Event) => toast(String((e as CustomEvent).detail || '')); window.addEventListener('ew:toast', f); return () => window.removeEventListener('ew:toast', f); }, [toast]);
   const sv = useCallback(<T,>(p: Promise<T>) => p.catch((e) => { console.warn('Ewwon:', e); toast('Não foi possível salvar. Tente novamente.'); return undefined; }), [toast]);
   const patchChat = useCallback((key: string, fn: (c: Chat) => Chat) => setChats((cs) => cs.map((c) => (c.key === key ? fn(c) : c))), []);
@@ -242,7 +243,7 @@ export default function EwwonApp() {
       setErr(null);
       const b = await D.bootstrap({
         profileId: profile.id, companyId: profile.company_id, isAdmin, accessibleSectorIds: allAccessibleSectorIds || [],
-        canPostNotices: isAdmin,
+        canPostNotices: isAdmin || canPostPerm,
       });
       for (const c of b.chats) if (c.kind === 'sector') D.primeSectorRead(profile.id, c.id);
       // A reload (resume after the file picker, token refresh…) keeps the messages already
@@ -268,7 +269,7 @@ export default function EwwonApp() {
     loadingRef.current = run;
     try { await run; } finally { loadingRef.current = null; }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.id, profile?.company_id, profile?.autonomy_level, isAdmin, sectorsKey]);
+  }, [profile?.id, profile?.company_id, profile?.autonomy_level, isAdmin, sectorsKey, canPostPerm]);
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
@@ -629,7 +630,7 @@ export default function EwwonApp() {
   };
 
   // ------------------------------------------------------------ notices
-  const canDeleteNotice = (n: Notice) => n.authorId === meId || boot?.isAdmin || boot?.canPostNotices;
+  const canDeleteNotice = (n: Notice) => n.authorId === meId || !!boot?.isAdmin;
   const removeNotice = async (n: Notice) => {
     if (!(await appConfirm({ title: `Excluir o aviso “${n.title}”?`, message: 'Ele será removido para todos.', confirmText: 'Excluir', danger: true }))) return;
     const before = notices;

@@ -514,6 +514,17 @@ export function UserRegistrationDialog({
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center justify-between">
+                      <Label htmlFor="canPost" className="font-normal">
+                        Pode postar avisos
+                      </Label>
+                      <Switch
+                        id="canPost"
+                        checked={canPostAnnouncements}
+                        onCheckedChange={setCanPostAnnouncements}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
                       <Label htmlFor="canDelete" className="font-normal">
                         Pode excluir mensagens
                       </Label>
