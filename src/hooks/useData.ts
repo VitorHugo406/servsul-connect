@@ -270,7 +270,7 @@ export function useProfiles() {
   useEffect(() => {
     const fetchProfiles = async () => {
       if (!profile?.company_id) { setProfiles([]); setLoading(false); return; }
-      const { data, error } = await supabase.from('profiles').select(PUBLIC_PROFILE_COLUMNS).eq('company_id', profile.company_id).order('name');
+      const { data, error } = await supabase.from('profiles').select(PUBLIC_PROFILE_COLUMNS).eq('company_id', profile.company_id).neq('profile_type', 'system').order('name');
       if (error) console.error('Error fetching profiles:', error);
       else setProfiles((data || []) as unknown as Profile[]);
       setLoading(false);

@@ -43,7 +43,7 @@ export function ShortcutsManagementSection() {
     if (!profile?.id || !company?.id || !isAdmin) return;
     const [{ data: shortcutData }, { data: profileData }, { data: sectorData }] = await Promise.all([
       (supabase as any).from('system_shortcuts').select('id,name,url,icon,is_active').eq('company_id', company.id).order('created_at', { ascending: true }),
-      (supabase as any).from('profiles').select('id,name,display_name,email,sector_id').eq('company_id', company.id).order('name'),
+      (supabase as any).from('profiles').select('id,name,display_name,email,sector_id').eq('company_id', company.id).neq('profile_type', 'system').order('name'),
       (supabase as any).from('sectors').select('id,name,color').eq('company_id', company.id).order('name'),
     ]);
     setShortcuts(shortcutData || []); setProfiles(profileData || []); setSectors(sectorData || []);
