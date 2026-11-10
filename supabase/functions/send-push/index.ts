@@ -144,6 +144,14 @@ Deno.serve(async (req) => {
       else console.error('push error', code, (e as Error).message)
     }
   }))
+  // Native Android app (no Chrome / Firebase): the same notification goes to its event queue, which the app long-polls.
+  const nativeTargets = async (kind: Row) => {
+    const { data: devs } = await admin.from('native_devices').select('profile_id').in('profile_id', recipients)
+    const ids = [...new Set((devs || []).map((d: Row) => d.profile_id))]
+    if (ids.length) await admin.from('native_events').insert(ids.map((pid) => ({ profile_id: pid, payload: { ...kind, at: Date.now() } })))
+    return ids
+  }
+  const nativeIds = await nativeTargets(payload)
   await sendAll(0)
   // Calls ring non-stop: the push is repeated every 5 s (the notification re-alerts with sound and vibration each time)
   // for up to 60 s, and stops as soon as the call is answered, refused or ended.
@@ -155,6 +163,8 @@ Deno.serve(async (req) => {
         if (c && c.status !== 'ringing') break
         await sendAll(ring)
       }
+      // The call is over for whoever did not answer: the native app stops ringing.
+      if (nativeIds.length) await admin.from('native_events').insert(nativeIds.map((pid: string) => ({ profile_id: pid, payload: { kind: 'call-end', callId: payload.callId, at: Date.now() } })))
     })()
     const rt = (globalThis as Row).EdgeRuntime
     if (rt?.waitUntil) rt.waitUntil(more); else await more   // keep ringing after the response is sent

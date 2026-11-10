@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.trial-lifecycle]
 verify_jwt = false
+
+[functions.native-poll]
+verify_jwt = false

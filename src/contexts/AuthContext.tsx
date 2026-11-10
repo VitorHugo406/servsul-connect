@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { ensureNativeDevice, clearNativeDevice } from '@/lib/nativeBridge';
 import { setActiveCompanyId } from '@/lib/companyScope';
 import { applyBrand } from '@/lib/branding';
 
@@ -42,9 +43,10 @@ export function AuthProvider({children}:{children:ReactNode}){
   /* Another tab of this same browser may be renewing the shared login right now: before treating a sign-out we did not ask for as real, look at the stored session again. */
   if(event==='SIGNED_OUT'&&!manualOut.current){window.setTimeout(async()=>{const{data:{session:s2}}=await supabase.auth.getSession();apply(s2??null);},800);return;}
   manualOut.current=false;apply(session0);});supabase.auth.getSession().then(async({data:{session}})=>{setSession(session);setUser(session?.user??null);if(session?.user){await hydrateCachedProfile(session.user.id);await fetchProfile(session.user.id);setLoading(false);}else setLoading(false);});return()=>subscription.unsubscribe();},[]);
+ useEffect(()=>{if(profile?.id)void ensureNativeDevice(profile.id);},[profile?.id]);
  useEffect(()=>{if(!user)return;const channel=supabase.channel(`auth-sync-${user.id}`).on('postgres_changes',{event:'*',schema:'public',table:'user_permissions',filter:`user_id=eq.${user.id}`},()=>fetchPermissions(user.id)).on('postgres_changes',{event:'*',schema:'public',table:'user_roles',filter:`user_id=eq.${user.id}`},()=>fetchProfile(user.id)).subscribe();return()=>{supabase.removeChannel(channel);};},[user]);
  const signIn=async(email:string,password:string)=>{const{data,error}=await supabase.auth.signInWithPassword({email,password});if(error)return{error:error as Error|null};if(data.user){const{data:profileData,error:profileError}=await supabase.from('profiles').select('is_active').eq('user_id',data.user.id).maybeSingle();if(profileError){console.error('Error checking user status:',profileError);await supabase.auth.signOut({ scope: 'local' });return{error:new Error('Erro ao verificar status do usuário')};}if(profileData&&!profileData.is_active){await supabase.auth.signOut({ scope: 'local' });return{error:new Error('Usuário inativo. Entre em contato com o administrador.')}}}return{error:null};};
- const signOut=async()=>{manualOut.current=true;setProfile(null);setActiveCompanyId(null);setSector(null);setAdditionalSectors([]);setRoles([]);setPermissions(null);await supabase.auth.signOut({ scope: 'local' });};
+ const signOut=async()=>{manualOut.current=true;void clearNativeDevice();setProfile(null);setActiveCompanyId(null);setSector(null);setAdditionalSectors([]);setRoles([]);setPermissions(null);await supabase.auth.signOut({ scope: 'local' });};
  return <AuthContext.Provider value={{user,session,profile,sector,additionalSectors,allAccessibleSectorIds,roles,permissions,isAdmin,geralSectorId:GERAL_SECTOR_ID,loading,verifying,setVerifying,signIn,signOut,refreshProfile,refreshPermissions,canAccess,hasSectorAccess}}>{children}</AuthContext.Provider>;
 }
 export function useAuth(){const context=useContext(AuthContext);if(context===undefined)throw new Error('useAuth must be used within AuthProvider');return context;}
