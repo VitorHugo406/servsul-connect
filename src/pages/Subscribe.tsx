@@ -263,7 +263,7 @@ function Wizard() {
               </dl>
               <label className="flex items-start gap-2 text-[13px]">
                 <input type="checkbox" className="mt-0.5" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
-                <span>{cycle === 'once' ? <>Concordo em pagar {brl(priceOf(plan, cycle))} uma única vez pelo Mercado Pago (Pix, boleto ou cartão), válido por 1 mês, sem renovação automática.</> : <>Concordo com a cobrança {cycle === 'annual' ? 'anual' : 'mensal'} de {brl(priceOf(plan, cycle))} no cartão de crédito pelo Mercado Pago, que pode ser cancelada a qualquer momento.</>} A empresa só é criada depois da confirmação do pagamento.</span>
+                <span>{cycle === 'once' ? <>Concordo em pagar {brl(priceOf(plan, cycle))} uma única vez pelo Mercado Pago (Pix, boleto ou cartão), válido por 1 mês, sem renovação automática.</> : <>Concordo com a cobrança {cycle === 'annual' ? 'anual' : 'mensal'} de {brl(priceOf(plan, cycle))} no cartão de crédito pelo Mercado Pago, que pode ser cancelada a qualquer momento.</>} A empresa só é criada depois da confirmação do pagamento. Li e aceito os <a href="/termos" target="_blank" className="underline">Termos de Uso</a>, a <a href="/privacidade" target="_blank" className="underline">Política de Privacidade</a> e o <a href="/dpa" target="_blank" className="underline">Acordo de Tratamento de Dados (DPA)</a>.</span>
               </label>
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4" />Os dados de pagamento são digitados no Mercado Pago e nunca passam pelo ewvon.</p>
             </div>

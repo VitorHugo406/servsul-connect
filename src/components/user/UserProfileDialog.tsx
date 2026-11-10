@@ -11,6 +11,7 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserStatusSelector } from './UserStatusSelector';
+import { PrivacyPanel } from '@/components/legal/PrivacyPanel';
 
 interface UserProfileDialogProps { open:boolean; onOpenChange:(open:boolean)=>void; }
 const OPTIONAL_PROFILE_KEY=(userId:string)=>`nuvexa:profile-extra:${userId}`;
@@ -37,6 +38,7 @@ export function UserProfileDialog({open,onOpenChange}:UserProfileDialogProps){
  {uploading&&<p className="text-center text-xs text-muted-foreground">Enviando imagem...</p>}
  <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3"><Label>Status</Label><UserStatusSelector currentStatus={profile.user_status||'available'}/></div>
  <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2 sm:col-span-2"><Label>Nome completo</Label><Input value={name} onChange={e=>setName(e.target.value)} placeholder="Seu nome"/></div><div className="space-y-2"><Label>Nome de exibição</Label><Input value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="Como você quer ser chamado"/></div><div className="space-y-2"><Label>Período/Turno</Label><Input value={workPeriod} onChange={e=>setWorkPeriod(e.target.value)} placeholder="Ex.: 08h-17h"/></div><div className="space-y-2"><Label>Telefone</Label><Input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="(00) 00000-0000"/></div><div className="space-y-2"><Label>Data de nascimento</Label><Input type="date" value={birthDate} onChange={e=>setBirthDate(e.target.value)}/></div><div className="space-y-2 sm:col-span-2"><Label>Endereço</Label><Input value={address} onChange={e=>setAddress(e.target.value)} placeholder="Seu endereço"/></div><div className="space-y-2 sm:col-span-2"><Label>Descrição / Sobre mim</Label><Textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Conte um pouco sobre você..." rows={4} maxLength={500}/><p className="text-right text-xs text-muted-foreground">{description.length}/500</p></div><div className="space-y-2 sm:col-span-2"><Label>Email</Label><Input value={profile.email} disabled className="bg-muted"/></div></div>
+ <details className="rounded-xl border p-3"><summary className="cursor-pointer text-sm font-medium">Meus dados e privacidade</summary><div className="mt-3"><PrivacyPanel/></div></details>
  <div className="flex justify-end gap-2"><Button variant="outline" onClick={()=>onOpenChange(false)}><X className="mr-2 h-4 w-4"/>Cancelar</Button><Button onClick={handleSave} disabled={saving||uploading}><Save className="mr-2 h-4 w-4"/>{saving?'Salvando...':'Salvar'}</Button></div>
  </div></DialogContent></Dialog>;
 }

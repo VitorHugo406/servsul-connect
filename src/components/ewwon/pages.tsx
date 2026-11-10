@@ -9,6 +9,8 @@ import { I, Chev } from './icons';
 import { ST, StatusKey, fitTextarea } from './util';
 import { MyEvaluationsBox, EvaluationPage } from './evals';
 import { InstallAppBox } from './installapp';
+import { supabase } from '@/integrations/supabase/client';
+import { appConfirm } from '@/lib/appDialog';
 
 export type PageSpec =
   | { kind: 'profile'; id: string }
@@ -270,6 +272,22 @@ function SettingsPage({ api }: { api: EwApi }) {
       <div className="note"><I n="lock" /><span>Suas reuniões, tarefas e métricas pessoais ficam visíveis apenas para você e para a administração.</span></div>
       <div className="sl">Conversas</div>
       {tg('enter', 'Enviar com Enter', 'Desligado: use Ctrl + Enter')}
+      <div className="sl">Privacidade e termos</div>
+      <div className="opt" onClick={() => window.open('/termos', '_blank')}><div>Termos de Uso<small>Regras de uso da plataforma</small></div><Chev /></div>
+      <div className="opt" onClick={() => window.open('/privacidade', '_blank')}><div>Política de Privacidade<small>Como tratamos seus dados (LGPD)</small></div><Chev /></div>
+      <div className="opt" onClick={() => window.open('/cookies', '_blank')}><div>Cookies e armazenamento<small>Apenas o essencial</small></div><Chev /></div>
+      <div className="opt" onClick={async () => {
+        const { data, error } = await (supabase as any).rpc('export_my_data');
+        if (error || !data) { api.toast('Não foi possível gerar seus dados agora'); return; }
+        const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+        const a = document.createElement('a'); a.href = url; a.download = 'meus-dados-ewvon.json'; a.click(); URL.revokeObjectURL(url);
+        api.toast('Cópia dos seus dados baixada');
+      }}><div>Baixar meus dados<small>Cópia em arquivo (LGPD)</small></div><Chev /></div>
+      <div className="opt" onClick={async () => {
+        if (!(await appConfirm({ title: 'Pedir exclusão dos meus dados?', message: 'Seu pedido será enviado à administração da empresa e ao ewvon, que responderão em até 15 dias.', confirmText: 'Enviar pedido' }))) return;
+        const { error } = await (supabase as any).rpc('request_privacy_action', { _kind: 'deletion', _note: null });
+        api.toast(error ? 'Não foi possível registrar o pedido' : 'Pedido registrado. Respondemos em até 15 dias');
+      }}><div>Pedir exclusão dos meus dados<small>Direito previsto na LGPD</small></div><Chev /></div>
       <div className="sl">Sobre</div>
       <div className="opt"><div>Versão do app<small>ewvon 1.0.0</small></div></div>
     </>

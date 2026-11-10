@@ -1284,3 +1284,23 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 .ewvon-delcard-done { font-weight: 600; }
 .chat-bubble:has(.ewvon-delcard) { background: #e4e6ea !important; border-color: transparent !important; padding: 4px 6px 2px !important; }
 .dark .chat-bubble:has(.ewvon-delcard) { background: #2c3038 !important; }
+
+/* Legal pages + cookie notice */
+.legal-page { min-height: 100vh; background: hsl(var(--background)); color: hsl(var(--foreground)); }
+.legal-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px 20px; border-bottom: 1px solid hsl(var(--border)); }
+.legal-brand { font-weight: 800; font-size: 20px; text-decoration: none; color: hsl(var(--primary)); }
+.legal-top nav { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; }
+.legal-top nav a { color: hsl(var(--muted-foreground)); text-decoration: none; }
+.legal-top nav a.on { color: hsl(var(--foreground)); font-weight: 600; }
+.legal-page main { max-width: 820px; margin: 0 auto; padding: 28px 20px 60px; }
+.legal-doc h1 { font-size: 28px; font-weight: 800; margin: 0 0 4px; }
+.legal-doc h2 { font-size: 17px; font-weight: 700; margin: 26px 0 8px; }
+.legal-doc p, .legal-doc li { font-size: 14.5px; line-height: 1.65; color: hsl(var(--foreground) / .88); margin: 0 0 10px; }
+.legal-doc ul { padding-left: 20px; list-style: disc; margin: 0 0 10px; }
+.legal-meta { font-size: 12.5px; color: hsl(var(--muted-foreground)); margin-bottom: 18px !important; }
+.legal-foot { text-align: center; font-size: 12px; color: hsl(var(--muted-foreground)); padding: 18px; border-top: 1px solid hsl(var(--border)); }
+.ewvon-cookie { position: fixed; z-index: 80; left: 12px; right: 12px; bottom: 12px; margin: 0 auto; max-width: 720px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #1f2329; color: #f1f3f5; box-shadow: 0 8px 30px rgba(0,0,0,.3); font-size: 12.5px; line-height: 1.45; }
+.ewvon-cookie p { margin: 0; flex: 1; }
+.ewvon-cookie a { color: #fff; text-decoration: underline; }
+.ewvon-cookie button { flex: none; border-radius: 999px; padding: 7px 14px; font-weight: 600; background: #fff; color: #1f2329; }
+@media print { .ewvon-cookie, .legal-top { display: none; } }
