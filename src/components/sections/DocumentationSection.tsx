@@ -314,7 +314,7 @@ function generateDocumentationPDF() {
     [55, contentW - 55]
   );
 
-  subTitle('Backend (Lovable Cloud)');
+  subTitle('Backend (Supabase)');
   addTable(
     [['Tecnologia', 'Descrição']],
     [
@@ -711,7 +711,7 @@ function generateDocumentationPDF() {
   doc.setTextColor(...GRAY);
   doc.text('Plataforma de Comunicação Interna — Ewvor', pageW / 2, y, { align: 'center' });
   y += 5;
-  doc.text('Desenvolvido com React, TypeScript, Tailwind CSS e Lovable Cloud', pageW / 2, y, { align: 'center' });
+  doc.text('Desenvolvido com React, TypeScript, Tailwind CSS e Supabase', pageW / 2, y, { align: 'center' });
   y += 5;
   doc.setTextColor(180, 180, 180);
   doc.text(`Documento gerado em ${new Date().toLocaleString('pt-BR')}`, pageW / 2, y, { align: 'center' });
@@ -864,7 +864,7 @@ export function DocumentationSection() {
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2">Backend (Lovable Cloud):</h4>
+                  <h4 className="font-semibold mb-2">Backend (Supabase):</h4>
                   <div className="border border-border rounded-md overflow-hidden">
                     <TableRow label="Banco de Dados" value="PostgreSQL (Supabase)" />
                     <TableRow label="Autenticação" value="Supabase Auth (JWT)" />
@@ -1343,7 +1343,7 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
               <img src={appLogo} alt="ewvon" className="h-6 w-6 object-contain rounded" />
             </div>
             <p><strong>Ewvor</strong> — Plataforma de Comunicação Interna • Ewvor</p>
-            <p>Desenvolvido com React, TypeScript, Tailwind CSS e Lovable Cloud</p>
+            <p>Desenvolvido com React, TypeScript, Tailwind CSS e Supabase</p>
           </div>
         </div>
       </ScrollArea>

@@ -2,7 +2,7 @@
 
 ## 1. Resumo simples
 
-Hoje o projeto usa **Lovable Cloud** como backend. Na prática, o app conversa com um backend compatível com **Supabase**, que por baixo usa **PostgreSQL** para o banco, além de autenticação, storage de arquivos, realtime e funções de backend.
+Hoje o projeto usa **Supabase** como backend. Na prática, o app conversa com um backend compatível com **Supabase**, que por baixo usa **PostgreSQL** para o banco, além de autenticação, storage de arquivos, realtime e funções de backend.
 
 O projeto **não usa Firebase** e **não usa SQLite**. O banco de dados principal é **PostgreSQL**, acessado pelo cliente `@supabase/supabase-js`.
 
@@ -10,7 +10,7 @@ O projeto **não usa Firebase** e **não usa SQLite**. O banco de dados principa
 
 ## 2. O que foi encontrado no diagnóstico
 
-- **Banco atual:** PostgreSQL gerenciado pelo Lovable Cloud.
+- **Banco atual:** PostgreSQL gerenciado pelo Supabase.
 - **Cliente usado no frontend:** `@supabase/supabase-js`.
 - **Arquivo central da conexão:** `src/integrations/supabase/client.ts`.
 - **Variáveis lidas pelo frontend:** `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`.
@@ -40,7 +40,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
 });
 ```
 
-**Não edite esse arquivo dentro do Lovable**, porque ele é gerado automaticamente. Em um ambiente externo, o caminho correto é alterar as variáveis de ambiente do deploy.
+**Não edite esse arquivo manualmente**, porque ele é gerado automaticamente. Em um ambiente externo, o caminho correto é alterar as variáveis de ambiente do deploy.
 
 ### `supabase/config.toml`
 
@@ -63,7 +63,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=sua_chave_publica_anon
 TARGET_DATABASE_URL=postgresql://usuario:senha@host:5432/banco
 ```
 
-No Lovable, o `.env` interno é gerenciado automaticamente. Fora do Lovable, use `.env.local`, variáveis do Vercel, Docker, CI/CD ou painel de hospedagem.
+Use `.env.local`, variáveis do Vercel, Docker, CI/CD ou painel de hospedagem.
 
 ## 4. Arquivos que controlam conexão com banco
 
@@ -93,7 +93,7 @@ Usa buckets de arquivos para:
 - `avatars` — fotos de perfil.
 - `face-images` — imagens/dados faciais privados.
 
-## 5. Existe dependência do Lovable Cloud além do banco?
+## 5. Existe dependência do Supabase além do banco?
 
 Sim. Não é só banco.
 
@@ -200,7 +200,7 @@ Essa opção é maior e mais arriscada.
 Use o script criado:
 
 ```bash
-./scripts/migration/export_lovable_cloud.sh ./database-export
+./scripts/migration/export_database.sh ./database-export
 ```
 
 Ele gera:
@@ -285,7 +285,7 @@ Normalmente você altera só ambiente/deploy:
 
 Arquivos de referência:
 
-- `src/integrations/supabase/client.ts` — referência da conexão, não editar no Lovable.
+- `src/integrations/supabase/client.ts` — referência da conexão, não editar manualmente.
 - `supabase/config.toml` — lista funções.
 - `supabase/functions/**/index.ts` — funções backend.
 

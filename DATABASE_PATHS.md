@@ -132,7 +132,7 @@ Cada edge function cria seu próprio cliente usando `Deno.env.get('SUPABASE_URL'
    - `VITE_SUPABASE_URL` → URL do novo banco
    - `VITE_SUPABASE_PUBLISHABLE_KEY` → Chave pública do novo banco
 
-2. **Edge Functions**: As variáveis são gerenciadas automaticamente pelo Lovable Cloud:
+2. **Edge Functions**: As variáveis são gerenciadas pelo Supabase:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY` 
    - `SUPABASE_SERVICE_ROLE_KEY`
