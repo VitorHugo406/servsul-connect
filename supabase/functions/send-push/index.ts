@@ -145,9 +145,17 @@ Deno.serve(async (req) => {
     }
   }))
   await sendAll(0)
-  // Calls ring three times (the notification re-alerts with sound and vibration each time).
+  // Calls ring non-stop: the push is repeated every 5 s (the notification re-alerts with sound and vibration each time)
+  // for up to 60 s, and stops as soon as the call is answered, refused or ended.
   if (payload.kind === 'call') {
-    const more = (async () => { for (const ring of [1, 2]) { await new Promise((ok) => setTimeout(ok, 7000)); await sendAll(ring) } })()
+    const more = (async () => {
+      for (let ring = 1; ring <= 12; ring++) {
+        await new Promise((ok) => setTimeout(ok, 5000))
+        const { data: c } = await admin.from('chat_calls').select('status').eq('id', payload.callId).maybeSingle()
+        if (c && c.status !== 'ringing') break
+        await sendAll(ring)
+      }
+    })()
     const rt = (globalThis as Row).EdgeRuntime
     if (rt?.waitUntil) rt.waitUntil(more); else await more   // keep ringing after the response is sent
   }

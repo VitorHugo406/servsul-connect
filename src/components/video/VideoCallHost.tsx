@@ -192,6 +192,12 @@ export function VideoCallHost() {
       return true;
     };
     if (openFrom(location.href)) { const u = new URL(location.href); u.searchParams.delete('call'); u.searchParams.delete('a'); history.replaceState(null, '', u.toString()); }
+    // A call notification opened the app while signed out: after logging in, take the call (if it is still recent).
+    try {
+      const raw = localStorage.getItem('ewvon:pending-call'); localStorage.removeItem('ewvon:pending-call');
+      const pend = raw ? JSON.parse(raw) as { id: string; a: string; at: number } : null;
+      if (pend && Date.now() - pend.at < 90_000) openFrom(`/?call=${pend.id}&a=${pend.a}`);
+    } catch { /* ignore */ }
     const onMsg = (e: MessageEvent) => { const m = e.data || {}; if (m.type === 'ewvon-open' && m.url) openFrom(m.url); };
     navigator.serviceWorker?.addEventListener?.('message', onMsg);
     return () => navigator.serviceWorker?.removeEventListener?.('message', onMsg);
@@ -205,7 +211,7 @@ export function VideoCallHost() {
       const r = payload as Ring;
       if (!r?.callId || callRef.current) return;   // already in a call
       setIncoming(r);
-      window.setTimeout(() => setIncoming((cur) => (cur?.callId === r.callId ? null : cur)), 35000);
+      window.setTimeout(() => setIncoming((cur) => (cur?.callId === r.callId ? null : cur)), 60000);
     });
     ch.on('broadcast', { event: 'declined' }, ({ payload }) => {
       const p = payload as { name: string; callId: string };

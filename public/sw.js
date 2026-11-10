@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ewvor-runtime-v8';
+const CACHE_NAME = 'ewvor-runtime-v9';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/icons/logo-192.png',
@@ -132,13 +132,16 @@ self.addEventListener('push', (event) => {
       if (wins.some((c) => c.visibilityState === 'visible' && c.focused)) return;   // the open app shows its own ringing banner
       await self.registration.showNotification(d.title || 'Chamada do ewvon', {
         body: d.body || 'Toque para atender', icon: d.icon || '/icons/notify-person.png?v=3', badge: d.badge || '/icons/badge-96.png',
-        tag: d.tag || 'call', renotify: true, requireInteraction: true, timestamp: d.at || Date.now(),
+        tag: d.tag || 'call', renotify: true, requireInteraction: true, silent: false, timestamp: d.at || Date.now(),
         vibrate: [900, 400, 900, 400, 900, 400, 900],
         data: { url: d.url || '/', kind: 'call', callId: d.callId },
         actions: [{ action: 'answer', title: 'Atender' }, { action: 'decline', title: 'Recusar' }],
       });
-      await new Promise((ok) => setTimeout(ok, Math.max(5000, 35000 - (d.ring || 0) * 7000)));
-      if ((d.ring || 0) === 2) (await self.registration.getNotifications({ tag: d.tag })).forEach((n) => n.close());
+      // The server repeats this push every few seconds while the call is still ringing, so it rings non-stop.
+      // When the pushes stop (answered, refused, hung up or ~60 s) the last one clears itself.
+      await new Promise((ok) => setTimeout(ok, 7500));
+      const stillMine = (await self.registration.getNotifications({ tag: d.tag })).filter((n) => n.timestamp === (d.at || 0));
+      stillMine.forEach((n) => n.close());
       return;
     }
     const tag = d.tag || 'ewvon';
@@ -159,6 +162,25 @@ self.addEventListener('push', (event) => {
       data: { url: d.url || '/', lines, count, kind: d.kind || 'message' },
       actions: d.kind === 'birthday' ? [{ action: 'open', title: 'Dar parabéns' }] : isNotice ? [{ action: 'open', title: 'Ver aviso' }] : [{ action: 'open', title: 'Abrir conversa' }],
     });
+  })());
+});
+
+// The browser sometimes replaces the push subscription by itself: renew it and tell the server, so notifications keep arriving
+// even if the app is not opened for days.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil((async () => {
+    try {
+      const old = event.oldSubscription || null;
+      const key = old && old.options && old.options.applicationServerKey;
+      const sub = event.newSubscription || (key ? await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }) : null);
+      if (!sub || !old) return;
+      const j = sub.toJSON();
+      await fetch('https://scslfueixmuolkmgdslk.supabase.co/rest/v1/rpc/push_resubscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: 'sb_publishable_BliZc1EBDW4h3U3eL-4qYQ_b9ivGYkV' },
+        body: JSON.stringify({ _old: old.endpoint, _new: j.endpoint, _p256dh: j.keys && j.keys.p256dh, _auth: j.keys && j.keys.auth }),
+      });
+    } catch (e) { /* the app renews it the next time it opens */ }
   })());
 });
 
