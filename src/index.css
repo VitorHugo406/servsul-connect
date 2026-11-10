@@ -1279,11 +1279,11 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 .dark .ewvon-segbar-sep { background: hsl(var(--border)); }
 
 /* PDF attachment preview (chat, desktop + mobile) */
-.pdfprev { display: flex; flex-direction: column; width: min(100%, 300px); overflow: hidden; border-radius: 14px; border: 1px solid rgba(127, 127, 140, .22); background: rgba(127, 127, 140, .1); cursor: pointer; text-align: left; color: inherit; transition: transform .15s ease, box-shadow .15s ease; }
+.pdfprev { display: flex; flex-direction: column; width: 300px; max-width: 100%; overflow: hidden; border-radius: 14px; border: 1px solid rgba(127, 127, 140, .22); background: rgba(127, 127, 140, .1); cursor: pointer; text-align: left; color: inherit; transition: transform .15s ease, box-shadow .15s ease; }
 .pdfprev:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, .12); }
 .pdfprev:active { transform: scale(.99); }
 .pdfprev:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
-.pdfprev-compact { width: min(68vw, 260px); }
+.pdfprev-compact { width: min(68vw, 260px); max-width: 100%; }
 .pdfprev-page { position: relative; height: 168px; background: #fff; overflow: hidden; border-bottom: 1px solid rgba(127, 127, 140, .18); }
 .pdfprev-compact .pdfprev-page { height: 150px; }
 .pdfprev-page img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
@@ -1291,7 +1291,7 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 @keyframes pdfprev-sh { to { background-position: -200% 0; } }
 .pdfprev-meta { display: flex; align-items: center; gap: 9px; padding: 8px 10px; min-width: 0; }
 .pdfprev-ic { flex: none; width: 32px; height: 36px; border-radius: 7px; display: grid; place-items: center; background: #e5484d; color: #fff; font-size: 9.5px; font-weight: 800; letter-spacing: .03em; }
-.pdfprev-tx { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.pdfprev-tx { display: flex; flex-direction: column; min-width: 0; flex: 1; overflow: hidden; line-height: 1.25; }
 .pdfprev-tx b { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pdfprev-tx small { font-size: 11px; opacity: .65; }
 
