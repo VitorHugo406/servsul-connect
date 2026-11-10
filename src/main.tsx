@@ -7,6 +7,7 @@ import "./brand-bootstrap.css";
 import "./warroom-fixes.css";
 import "./chat-runtime-fixes.css";
 import "./chat-ewwon.css";
+import "./chat-pro.css";
 
 if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
 const registerServiceWorker = async () => {

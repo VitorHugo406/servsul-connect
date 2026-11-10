@@ -1,0 +1,93 @@
+/* Professional look, loaded last.
+   1) Buttons everywhere are solid: no glass blur, no sheen gradients.
+   2) Desktop chat (sectors, direct messages, groups): flat surfaces, quiet bubbles,
+      grouped consecutive messages, square-ish icon buttons — Slack/Teams-like. */
+
+/* ---------- 1. Solid buttons ---------- */
+:is(button, [role="button"], .btn, .apple-glass-button) {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+:is(button, [role="button"], .apple-glass-button):not(.ew *):not([class*="bg-gradient"]):not([class*="bg-["]):not([style*="background"]):not(.gradient-primary):not(.gradient-secondary) {
+  background-image: none !important;
+}
+.gradient-primary { background: hsl(var(--primary)) !important; color: hsl(var(--primary-foreground)); }
+.gradient-secondary { background: hsl(var(--secondary)) !important; color: hsl(var(--secondary-foreground)); }
+
+/* ---------- 2. Chat ---------- */
+:root {
+  --chat-canvas: 220 14% 97%;
+  --chat-incoming: 0 0% 100%;
+  --chat-meta: 220 9% 46%;
+  --chat-selected: 220 14% 94%;
+  --chat-own-bg: color-mix(in srgb, hsl(var(--primary)) 11%, hsl(var(--card)));
+  --chat-own-border: color-mix(in srgb, hsl(var(--primary)) 22%, hsl(var(--card)));
+}
+.dark {
+  --chat-canvas: 222 14% 9%;
+  --chat-incoming: 222 12% 14%;
+  --chat-meta: 220 8% 62%;
+  --chat-selected: 222 12% 17%;
+  --chat-own-bg: color-mix(in srgb, hsl(var(--primary)) 30%, hsl(222 12% 18%));
+  --chat-own-border: color-mix(in srgb, hsl(var(--primary)) 42%, hsl(222 12% 22%));
+}
+
+.chat-workspace, .chat-thread { font-family: inherit; }
+.chat-thread, .chat-history { background-color: hsl(var(--chat-canvas)); }
+
+/* Header: flat bar, ghost icon buttons */
+.chat-thread-header { min-height: 60px; background: hsl(var(--card)) !important; border-bottom: 1px solid hsl(var(--border)) !important; }
+.chat-thread-header :is(button, a[role="button"]):not(.chat-msg *) {
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  background-color: transparent;
+  border: 0;
+  color: hsl(var(--muted-foreground));
+}
+.chat-thread-header :is(button, a[role="button"]):hover { background-color: hsl(var(--muted)) !important; color: hsl(var(--foreground)); }
+
+/* Bubbles: no tails, small radius, own = soft brand tint with dark text */
+.chat-bubble {
+  border-radius: 10px !important;
+  padding: 8px 12px 6px !important;
+  box-shadow: none !important;
+}
+.chat-bubble::before { display: none !important; }
+.chat-bubble-incoming {
+  background: hsl(var(--chat-incoming)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border));
+}
+.chat-bubble-outgoing {
+  background: var(--chat-own-bg) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid var(--chat-own-border);
+}
+.chat-bubble-outgoing .chat-message-meta, .chat-bubble-incoming .chat-message-meta { color: hsl(var(--chat-meta)) !important; }
+.chat-bubble-outgoing a { color: hsl(var(--primary)); }
+.chat-message-text { font-size: 14px; line-height: 1.5; }
+.chat-message-meta { font-size: 10.5px; }
+
+/* Grouping: one name/photo per run of messages; your own messages never show your photo */
+.chat-msg.is-own .chat-msg-avatar { display: none; }
+.chat-msg.is-grouped .chat-msg-avatar { visibility: hidden; height: 0; }
+.chat-msg.is-grouped { margin-top: -4px; }
+.chat-msg-author > span:first-child { font-weight: 600; }
+
+/* Date label */
+.chat-date-label { border-radius: 6px !important; box-shadow: none !important; border: 1px solid hsl(var(--border)); background: hsl(var(--card)) !important; font-weight: 500; font-size: 11px; }
+
+/* Composer: flat bar, rectangular input, ghost icons */
+.chat-composer { background: hsl(var(--card)) !important; border-top: 1px solid hsl(var(--border)) !important; }
+.chat-composer > div, .chat-composer form { border-radius: 10px !important; }
+.chat-composer :is(button):not([title="Enviar mensagem"]) { border-radius: 8px !important; box-shadow: none !important; }
+.chat-composer button[title="Enviar mensagem"] { border-radius: 8px !important; box-shadow: none !important; }
+
+/* Conversation list: flat rows, selected row = quiet fill */
+.chat-conversation-sidebar { background: hsl(var(--card)) !important; }
+.chat-workspace .chat-conversation-row { min-height: 64px; border-bottom: 1px solid hsl(var(--border) / .6); box-shadow: none !important; }
+.chat-workspace .chat-conversation-row:hover { background: hsl(var(--muted) / .6); }
+.chat-workspace .chat-conversation-selected { background: hsl(var(--chat-selected)) !important; box-shadow: inset 2px 0 hsl(var(--primary)) !important; }
+
+/* Reactions sit on the canvas color */
+.chat-reaction, .chat-reaction-add { border-color: hsl(var(--chat-canvas)) !important; }

@@ -6,7 +6,8 @@
 - Meeting API resources are read-only, filtered by integration companies and active rooms, with profile identities for organizers/participants; availability subtracts persisted bookings from São Paulo room hours using half-open intervals.
 - Integration management uses the canonical Supabase client URL and publishable key, never separate environment-derived endpoints, to prevent preview-host requests.
 - The integration base URL provides an authenticated connection confirmation; resource paths accept trailing slashes so external connector checks do not fail on URL formatting.
-- Apple-inspired glass uses shared semantic CSS optics and the Button base class on the web; do not install native Expo modules in the Vite application.
+- No glass: bars and buttons use solid colors (src/chat-pro.css, loaded last, removes blur/sheen from every button); do not install native Expo modules in the Vite application.
+- Desktop chat look lives in src/chat-pro.css: flat header/composer, own bubble = soft tint of the company color, consecutive messages from the same author are grouped (ChatMessage `grouped`), your own photo is never shown.
 - Chat presentation uses shared semantic CSS classes and light/dark tokens across sectors, direct messages and groups, so visual changes stay consistent without changing message or permission logic.
 - Chat emoji menus share a compact scrollable grid; desktop and composer menus use collision-aware portals to avoid clipping by conversation containers.
 - Manual unread reminders use a shared conversation wrapper and browser storage scoped by company and profile; they never rewrite delivery receipts or other participants' read status.

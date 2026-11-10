@@ -35,9 +35,11 @@ interface ChatMessageProps {
   message: Message; index: number; onReply?: (message: Message) => void;
   reactions?: Reaction[]; onToggleReaction?: (messageId: string, emoji: string) => void;
   onScrollToMessage?: (messageId: string) => void;
+  /** Same author as the previous message, a few minutes apart: no repeated name/photo (Slack/Teams style). */
+  grouped?: boolean;
 }
 
-function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScrollToMessage }: ChatMessageProps) {
+function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScrollToMessage, grouped = false }: ChatMessageProps) {
   const { profile, sector } = useAuth();
   const [isHovered, setIsHovered] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
@@ -179,18 +181,18 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
   };
 
   return <>
-    <div className={cn('mobile-chat-message group relative flex w-full min-w-0 max-w-full items-start gap-3 sm:gap-4', isOwn && 'flex-row-reverse', isFocused && 'mobile-chat-message-focused z-[101]')} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => { setIsHovered(false); }}>
-      <div className="relative z-10 shrink-0"><ChatSenderAvatar name={displayName} avatarUrl={author?.avatar_url} /></div>
+    <div className={cn('mobile-chat-message chat-msg group relative flex w-full min-w-0 max-w-full items-start gap-3 sm:gap-4', isOwn && 'flex-row-reverse is-own', grouped && 'is-grouped', isFocused && 'mobile-chat-message-focused z-[101]')} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => { setIsHovered(false); }}>
+      <div className="chat-msg-avatar relative z-10 shrink-0"><ChatSenderAvatar name={displayName} avatarUrl={author?.avatar_url} /></div>
 
       <div className={cn('flex w-0 min-w-0 flex-1 flex-col', isOwn && 'items-end')}>
         {isFocused && <div className="mobile-reaction-picker relative z-[320] mb-2 w-fit max-w-full self-center rounded-lg border border-border bg-card p-2 shadow-lg sm:hidden" onClick={event => event.stopPropagation()} onTouchMove={event => event.stopPropagation()}>
           <ChatEmojiGrid emojis={QUICK_REACTIONS} onSelect={selectReaction} label="Escolher reação" />
         </div>}
 
-        <div className={cn('relative z-10 mb-1 flex w-fit max-w-full flex-wrap items-center gap-1.5', isOwn && 'justify-end')}>
+        {!grouped && !isOwn && <div className="chat-msg-author relative z-10 mb-1 flex w-fit max-w-full flex-wrap items-center gap-1.5">
           <span className="min-w-0 max-w-full truncate text-xs font-medium text-foreground sm:text-sm">{displayName}</span>
           {authorSectorName && <span className="max-w-full break-words text-[10px] text-muted-foreground sm:text-xs">{authorSectorName}</span>}
-        </div>
+        </div>}
 
         <div className={cn('flex w-full min-w-0 max-w-full items-end gap-1.5', isOwn && 'flex-row-reverse')}>
           <div className="relative w-fit min-w-0 max-w-[90%] sm:max-w-[min(82%,620px)]" style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 160ms ease-out' : 'none' }}>
