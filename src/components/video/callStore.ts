@@ -57,7 +57,15 @@ export function useCallInfo(id: string): CallInfo | null | undefined {
     const retry = store.get(id) === null ? window.setTimeout(() => refreshCall(id), 1500) : null;
     return () => { listeners.delete(f); if (retry != null) window.clearTimeout(retry); };
   }, [id]);
-  return store.has(id) ? store.get(id) : undefined;
+  // Safety net next to Realtime: while a call is live, re-read it every few seconds so the card flips to "encerrada" without reloading.
+  const cur = store.has(id) ? store.get(id) : undefined;
+  const live = !!cur && (cur.status === 'ringing' || cur.status === 'ongoing');
+  useEffect(() => {
+    if (!id || !live) return;
+    const t = window.setInterval(() => refreshCall(id), 3000);
+    return () => window.clearInterval(t);
+  }, [id, live]);
+  return cur;
 }
 
 /** Status as people should see it, accounting for calls whose last participant vanished without hanging up. */

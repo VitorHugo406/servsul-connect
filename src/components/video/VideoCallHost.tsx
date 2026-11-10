@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { CallRoom, type LeaveInfo } from './CallRoom';
-import { useCallInfo, effectiveStatus, formatCallDuration, callCreate, callAnswered, callEnd } from './callStore';
+import { useCallInfo, effectiveStatus, formatCallDuration, callCreate, callAnswered, callEnd, refreshCall } from './callStore';
 import { toast } from 'sonner';
 
 const OPEN_EVENT = 'ewvon:open-video-call';
@@ -228,6 +228,7 @@ export function VideoCallHost() {
   const leave = useCallback((info: LeaveInfo) => {
     const cur = callRef.current;
     setCall(null);
+    if (cur?.chat) { refreshCall(cur.id); window.setTimeout(() => refreshCall(cur.id), 1200); }
     const localSec = answeredAtRef.current ? Math.round((Date.now() - answeredAtRef.current) / 1000) : null;
     answeredAtRef.current = null;
     if (!cur?.chat || !me) return;
