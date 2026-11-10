@@ -140,6 +140,16 @@ export function VideoCallHost() {
   const callRef = useRef(call); callRef.current = call;
   const me = profile ? { id: (profile as any).id as string, name: ((profile as any).display_name || (profile as any).name || 'Você') as string, company: (profile as any).company_id as string } : null;
   useRingtone(!!incoming);
+  // The call was ended (by the other side, or the server): close it here too and show how long it lasted.
+  const liveInfo = useCallInfo(call?.chat ? call.id : '');
+  useEffect(() => {
+    if (!call?.chat || !liveInfo) return;
+    const st = effectiveStatus(liveInfo);
+    if (st === 'ended' || st === 'missed' || st === 'declined') {
+      setCall(null);
+      toast.message(st === 'ended' ? `Chamada encerrada${liveInfo.duration_sec != null ? ` · ${formatCallDuration(liveInfo.duration_sec)}` : ''}` : st === 'declined' ? 'Chamada recusada.' : 'Ninguém atendeu.');
+    }
+  }, [liveInfo, call?.id, call?.chat]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Open / start calls.
   useEffect(() => {

@@ -36,7 +36,7 @@ export function CallRoom({ callId, title, me, onLeave, audioOnly = false, ring =
   const countRef = useRef(onPeerCount); countRef.current = onPeerCount;
   const hadPeersRef = useRef(false);
   const leftRef = useRef(false);
-  const leave = (why: LeaveInfo['why']) => { if (leftRef.current) return; leftRef.current = true; leaveRef.current({ why, alone: peersRef.current.size === 0 }); };
+  const leave = (why: LeaveInfo['why']) => { if (leftRef.current) return; leftRef.current = true; leaveRef.current({ why, alone: peersRef.current.size <= 1 }); };
   const [local, setLocal] = useState<MediaStream | null>(null);
   const [peers, setPeers] = useState<Record<string, { stream: MediaStream | null; name: string }>>({});
   const [mic, setMic] = useState(true);

@@ -37,7 +37,7 @@ function flush() {
       const { data, error } = await (supabase as any).from('chat_calls').select(COLS).in('id', ids);
       if (error) throw error;
       const got = new Map<string, CallInfo>(((data || []) as CallInfo[]).map((r) => [r.id, r]));
-      ids.forEach((id) => store.set(id, got.get(id) ?? null));
+      ids.forEach((id) => { if (got.has(id) || !store.get(id)) store.set(id, got.get(id) ?? null); });
     } catch { ids.forEach((id) => store.set(id, null)); }
     emit();
   })();
@@ -51,8 +51,11 @@ export function useCallInfo(id: string): CallInfo | null | undefined {
   useEffect(() => {
     const f = () => force((x) => x + 1);
     listeners.add(f); listen();
+    if (!id) return () => { listeners.delete(f); };
     if (!store.has(id)) refreshCall(id);
-    return () => { listeners.delete(f); };
+    // A card can render a moment before its history row is readable: look once more instead of caching "no row".
+    const retry = store.get(id) === null ? window.setTimeout(() => refreshCall(id), 1500) : null;
+    return () => { listeners.delete(f); if (retry != null) window.clearTimeout(retry); };
   }, [id]);
   return store.has(id) ? store.get(id) : undefined;
 }
