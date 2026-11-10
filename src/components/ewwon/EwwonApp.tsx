@@ -29,6 +29,7 @@ import { MsgBody, ImageViewer, previewText, ComposerMirror } from './msgbody';
 import { TasksSheet } from './tasksheet';
 import { appConfirm } from '@/lib/appDialog';
 import { useCompanyPlan } from '@/hooks/useCompanyPlan';
+import { parseDeletion, DeletionRequestCard } from '@/components/common/DeletionRequestCard';
 import { startChatCall, parseCall, CallMessageCard } from '@/components/video/VideoCallHost';
 import { Video as VideoIcon, Phone as PhoneIcon } from 'lucide-react';
 import { planHasFeature } from '@/lib/planAccess';
@@ -1539,7 +1540,8 @@ function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage
   const tmh = <div className="tm">{m.h}{m.me ? <> · <Ticks pending={m.pending} read={read} /></> : null}</div>;
   const stk = parseSticker(m.t);
   const callRoom = parseCall(m.t);
-  const bub = callRoom ? <div className="ewx-callb"><CallMessageCard room={callRoom} own={m.me} /></div> : stk ? <div className="ewx-stkb" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><StickerMessage sticker={stk} mine={m.me} /></div>
+  const delId = parseDeletion(m.t);
+  const bub = delId ? <div className="ewx-callb"><DeletionRequestCard id={delId} /></div> : callRoom ? <div className="ewx-callb"><CallMessageCard room={callRoom} own={m.me} /></div> : stk ? <div className="ewx-stkb" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><StickerMessage sticker={stk} mine={m.me} /></div>
     : <div className="bub" onTouchStart={start} onTouchEnd={stop} onTouchMove={stop} onMouseDown={start} onMouseUp={stop} onMouseLeave={stop} onDoubleClick={onPick} onContextMenu={(e) => { e.preventDefault(); onPick(); }}><MsgBody content={m.t} onOpenImage={onImage} /></div>;
   const qb = quote ? <button type="button" className="ewx-quote" onClick={(e) => { e.stopPropagation(); onQuote?.(quote.id); }}><b>{quote.n}</b><span>{previewText(quote.t)}</span></button> : null;
   return (

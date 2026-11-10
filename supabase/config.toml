@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.video]
 verify_jwt = false
+
+[functions.trial-lifecycle]
+verify_jwt = false

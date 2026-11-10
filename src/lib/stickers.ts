@@ -216,6 +216,7 @@ export function chatPreview(content: string | null | undefined, max = 60): strin
   if (content?.startsWith('📞 ewvon-call:')) return '📞 Chamada de voz';
   const c = String(content || '').trim();
   if (!c) return '';
+  if (/ewvon-delete:[0-9a-f-]{36}/.test(c)) return '🗑️ Excluir dados da empresa?';
   if (isSticker(c)) return '✨ Figurinha';
   if (PACK_RE.test(c)) return '✨ Pacote de figurinhas';
   const voice = c.match(/^🎤 \[(\d{1,2}:\d{2})\]\(voice:/);

@@ -1270,3 +1270,17 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 .ewvon-callcard-btn:hover { filter: brightness(.95); }
 .ewvon-callcard-redial { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; color: #10b981; background: rgba(16, 185, 129, .1); }
 .ewvon-callcard-redial:hover { background: rgba(16, 185, 129, .18); }
+
+/* Super admin: "excluir dados da empresa?" message card (Comunicados) */
+.ewvon-delcard { display: flex; flex-direction: column; gap: 8px; min-width: 240px; max-width: 320px; padding: 12px; border-radius: 12px; background: #e4e6ea; color: #1f2329; font-size: 13px; line-height: 1.4; }
+.dark .ewvon-delcard, .ew .ewvon-delcard { background: #2c3038; color: #f1f3f5; }
+.ewvon-delcard p { margin: 0; }
+.ewvon-delcard-hd { display: flex; align-items: center; gap: 8px; }
+.ewvon-delcard-ic { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; background: rgba(220, 38, 38, .14); color: #dc2626; flex: none; }
+.ewvon-delcard-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.ewvon-delcard-btns button { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 7px 12px; font-size: 12px; font-weight: 600; background: rgba(120, 126, 138, .3); color: inherit; }
+.ewvon-delcard-btns button.is-danger { background: #dc2626; color: #fff; }
+.ewvon-delcard-btns button:disabled { opacity: .6; }
+.ewvon-delcard-done { font-weight: 600; }
+.chat-bubble:has(.ewvon-delcard) { background: #e4e6ea !important; border-color: transparent !important; padding: 4px 6px 2px !important; }
+.dark .chat-bubble:has(.ewvon-delcard) { background: #2c3038 !important; }

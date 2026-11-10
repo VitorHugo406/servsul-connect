@@ -115,6 +115,9 @@ export function CompaniesManagementSection() {
   const [slug, setSlug] = useState('');
   const [primary, setPrimary] = useState('#2E5AAC');
   const [secondary, setSecondary] = useState('#FF6B00');
+  const [trialOn, setTrialOn] = useState(false);
+  const [trialUntil, setTrialUntil] = useState('');
+  const [trialPlan, setTrialPlan] = useState('empresarial');
 
   // New admin modal
   const [openNewAdmin, setOpenNewAdmin] = useState(false);
@@ -179,22 +182,34 @@ export function CompaniesManagementSection() {
       toast.error('Nome e slug são obrigatórios');
       return;
     }
+    if (trialOn && (!trialUntil || new Date(trialUntil + 'T23:59:59').getTime() <= Date.now())) {
+      toast.error('Informe uma data futura para o fim da avaliação');
+      return;
+    }
     setCreating(true);
-    const { error } = await (supabase as any).from('companies').insert({
+    const { data: created, error } = await (supabase as any).from('companies').insert({
       name: name.trim(),
       slug: slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-'),
       primary_color: primary,
       secondary_color: secondary,
       is_active: true,
       is_system: false,
-    });
+    }).select('id').single();
+    if (!error && trialOn && created?.id) {
+      // The subscription row is created by a trigger ("pending"): turn it into a trial that ends on the chosen date.
+      const { error: subErr } = await (supabase as any).from('company_subscriptions').update({
+        status: 'trialing', plan_id: trialPlan, trial_ends_at: new Date(trialUntil + 'T23:59:59').toISOString(),
+        notes: 'Período de avaliação até ' + new Date(trialUntil + 'T12:00:00').toLocaleDateString('pt-BR'),
+      }).eq('company_id', created.id);
+      if (subErr) toast.error('Empresa criada, mas não foi possível definir a avaliação: ' + subErr.message);
+    }
     setCreating(false);
     if (error) {
       toast.error('Erro ao criar empresa: ' + error.message);
       return;
     }
     toast.success('Empresa criada');
-    setName(''); setSlug(''); setPrimary('#2E5AAC'); setSecondary('#FF6B00');
+    setName(''); setSlug(''); setPrimary('#2E5AAC'); setSecondary('#FF6B00'); setTrialOn(false); setTrialUntil(''); setTrialPlan('empresarial');
     setOpenNew(false);
     load();
   };
@@ -346,6 +361,26 @@ export function CompaniesManagementSection() {
                     <Input value={secondary} onChange={(e) => setSecondary(e.target.value)} />
                   </div>
                 </div>
+              </div>
+              <div className="space-y-3 rounded-xl border p-3">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input type="checkbox" checked={trialOn} onChange={(e) => setTrialOn(e.target.checked)} /> Período de avaliação
+                </label>
+                {trialOn ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Avaliação até</Label>
+                      <Input type="date" value={trialUntil} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setTrialUntil(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label>Plano em teste</Label>
+                      <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={trialPlan} onChange={(e) => setTrialPlan(e.target.value)}>
+                        <option value="essencial">Essencial</option><option value="profissional">Profissional</option><option value="empresarial">Empresarial</option>
+                      </select>
+                    </div>
+                    <p className="col-span-2 text-xs text-muted-foreground">A empresa fica ativa até essa data. O administrador é avisado 7 dias antes e no vencimento (com 30 dias para assinar); depois disso, você decide no chat Comunicados se os dados serão excluídos.</p>
+                  </div>
+                ) : null}
               </div>
               <Button className="w-full" onClick={handleCreate} disabled={creating}>
                 {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
