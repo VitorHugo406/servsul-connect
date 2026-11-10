@@ -4,6 +4,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
+import { useCompanyLogoUrl } from '@/lib/companyLogo';
 import { readableOn } from '@/lib/branding';
 import { switchMode } from '@/lib/modeSwitch';
 
@@ -13,7 +15,7 @@ const day = (v?: string | null) => (v ? String(v).slice(0, 10) : null);
 const minutes = (d: Date) => d.getHours() * 60 + d.getMinutes();
 
 /** The same company data the rest of ewvon uses: people, sectors, meeting rooms and today's bookings. */
-async function loadCompanyData(companyId: string) {
+async function loadCompanyData(companyId: string, company: { name: string; logo: string }) {
   const [pr, sc, rm, bk, pt] = await Promise.all([
     db.from('profiles').select('id,name,display_name,sector_id,created_at,updated_at,birth_date,autonomy_level,is_active,profile_type').eq('company_id', companyId).neq('profile_type', 'system'),
     db.from('sectors').select('id,name').eq('company_id', companyId),
@@ -38,13 +40,15 @@ async function loadCompanyData(companyId: string) {
       return { ini: minutes(a), fim: minutes(z), assunto: b.title || 'Reunião', resp: nameOf(byId.get(b.booked_by)).split(' ')[0], n: parts.get(b.id) || 0 };
     }),
   }));
-  return { emps, rooms };
+  return { emps, rooms, company };
 }
 
 export function Dashboard3DSection({ onExit }: { onExit: () => void }) {
   const { profile } = useAuth();
   const frame = useRef<HTMLIFrameElement>(null);
   const last = useRef('');
+  const { company } = useCompany();
+  const logoUrl = useCompanyLogoUrl(company?.logo_url);
   const companyId = (profile as any)?.company_id as string | undefined;
   const src = useMemo(() => {
     const css = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();   // "h s% l%"
@@ -59,7 +63,7 @@ export function Dashboard3DSection({ onExit }: { onExit: () => void }) {
     const send = async (force = false) => {
       if (!companyId) return;
       try {
-        const data = await loadCompanyData(companyId);
+        const data = await loadCompanyData(companyId, { name: company?.name || '', logo: logoUrl || '' });
         const sig = JSON.stringify(data);
         if (!alive || (!force && sig === last.current)) return;
         last.current = sig;
@@ -74,6 +78,6 @@ export function Dashboard3DSection({ onExit }: { onExit: () => void }) {
     window.addEventListener('message', on);
     const t = window.setInterval(() => void send(), 60000);   // picks up new people, sectors and bookings without reloading
     return () => { alive = false; window.removeEventListener('message', on); window.clearInterval(t); };
-  }, [onExit, companyId]);
+  }, [onExit, companyId, company?.name, logoUrl]);
   return <iframe ref={frame} title="Dash" src={src} className="fixed inset-0 z-40 h-full w-full border-0 bg-[#E8EDF2]" allow="fullscreen" data-company={profile?.company_id || ''} />;
 }
