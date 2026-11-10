@@ -1,0 +1,34 @@
+plugins { id 'com.android.application' }
+
+def ksFile = System.getenv('EWVON_KEYSTORE')
+android {
+    namespace 'br.com.ewvon.app'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'br.com.ewvon.app'
+        minSdk 23
+        targetSdk 34
+        versionCode 1
+        versionName '1.0.0'
+    }
+    signingConfigs {
+        release {
+            if (ksFile) {
+                storeFile file(ksFile)
+                storePassword System.getenv('EWVON_KS_PASS')
+                keyAlias 'ewvon'
+                keyPassword System.getenv('EWVON_KS_PASS')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (ksFile) signingConfig signingConfigs.release
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}
