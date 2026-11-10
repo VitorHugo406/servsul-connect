@@ -2824,7 +2824,7 @@ function frame(now){
   for(const R of RM){if(!R)continue;for(const b of R.bars){b.scale.y+=(b.userData.tgt-b.scale.y)*.12;b.position.y=1.28+b.scale.y/2}}
   if(hoverRing.visible)hoverRing.material.opacity=.7+Math.sin(t*5)*.25;
   {const dt=Math.min(.1,Math.max(0,(now-(frame.l||now))/1000));frame.l=now;walkTick(dt,t);cupTick(t);leavesTick(t);partTick(t);elevTick();ambTick(dt,t)}
-  {const n=frame.n=(frame.n||0)+1;if(n<4||n%2===0)renderer.shadowMap.needsUpdate=true;
+  {const n=frame.n=(frame.n||0)+1;if(n<4||n%6===0)renderer.shadowMap.needsUpdate=true;
     const ft=(now-(frame.t0||now));frame.t0=now;frame.ema=(frame.ema||16)*.95+Math.min(ft,200)*.05;
     if(n%90===0&&frame.ema>38&&renderer.getPixelRatio()>1){renderer.setPixelRatio(Math.max(1,renderer.getPixelRatio()-.25));resize();frame.ema=16}}
   renderer.render(scene,camera);
@@ -2961,7 +2961,7 @@ function pPerson(id){
   }
   const active=isActive(e);
   const h='<div style="display:flex;gap:12px;align-items:center"><span class="av lg" style="background:'+avc(e.nome)+'">'+esc(ini(e.nome))+'</span><div><div style="font-weight:800;font-size:16px">'+esc(e.cargo||'Cargo não informado')+'</div><div class="note">'+esc(e.depto)+'</div></div></div>'+
-    '<div class="sp">'+(active?'<span class="tg ok">Ativo</span>':'<span class="tg mut">Desligado em '+fmtDate(e.dem)+'</span>')+(HAS.faltas?faltaTag(e.faltas||0):'')+((HAS.he&&(e.he||0)>=12)?'<span class="tg warn">'+e.he+' h extras</span>':'')+(leadLv(e)?'<span class="tg" style="background:#FFF3C4;color:#7A5200">'+LEADN[leadLv(e)]+'</span>':'')+'</div>'+
+    '<div class="sp">'+(active?'<span class="tg ok">Ativo</span>'+(e.st?'<span class="tg">'+esc(e.st)+'</span>':''):'<span class="tg mut">Desligado em '+fmtDate(e.dem)+'</span>')+(HAS.faltas?faltaTag(e.faltas||0):'')+((HAS.he&&(e.he||0)>=12)?'<span class="tg warn">'+e.he+' h extras</span>':'')+(leadLv(e)?'<span class="tg" style="background:#FFF3C4;color:#7A5200">'+LEADN[leadLv(e)]+'</span>':'')+'</div>'+
     '<div class="kgrid">'+
     '<div class="k"><small>Admissão</small><b>'+(e.afk?'—':fmtDate(e.adm))+'</b></div>'+
     '<div class="k"><small>Tempo de casa</small><b>'+(e.afk?'—':esc(tenureFrom(e)))+'</b></div>'+
@@ -2984,16 +2984,16 @@ function pRoom(i){
     (st.busy?esc(st.cur.assunto||'Reunião')+' · até '+hhmm(st.cur.fim)+(st.cur.resp?' · '+esc(st.cur.resp):''):(st.next?'Próxima reunião às '+hhmm(st.next.ini):'Sem mais reuniões hoje'))+'</span></div></div>';
   if(st.busy&&st.cur.ppl&&st.cur.ppl.length){const ix=pplMatch(st.cur.ppl);if(ix.length)h+='<div class="sec"><h3>Na sala agora</h3><div class="rows">'+ix.map(i=>{const e=EMPS[i];return '<button type="button" class="row" data-person="'+i+'"><span class="av" style="background:'+avc(e.nome)+'">'+esc(ini(e.nome))+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(e.nome||'Sem nome')+'</span><span class="s" style="display:block">'+esc(e.cargo||e.depto)+'</span></span><span></span></button>'}).join('')+'</div></div>'}
   h+='<div class="sec"><h3>Dia de hoje</h3><div class="tl">'+room.meets.map(m=>'<i style="left:'+left(Math.max(DAY0,m.ini))+';width:'+wd(Math.max(DAY0,m.ini),Math.min(DAY1,m.fim))+'" title="'+hhmm(m.ini)+' às '+hhmm(m.fim)+'"></i>').join('')+'<em style="left:'+left(clamp(CLOCK.min,DAY0,DAY1))+'"></em></div><div class="tlt"><span>08h</span><span>10h</span><span>12h</span><span>14h</span><span>16h</span><span>18h</span></div></div>';
-  h+='<div class="sec"><h3>Reuniões</h3>'+(room.meets.length?'<div class="rows">'+room.meets.map(m=>'<div class="row" style="cursor:default"><span class="tg '+(CLOCK.min>=m.ini&&CLOCK.min<m.fim?'bad':CLOCK.min>=m.fim?'mut':'warn')+'">'+hhmm(m.ini)+'–'+hhmm(m.fim)+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(m.assunto||'Reunião')+'</span><span class="s" style="display:block">'+esc(m.resp||'')+(m.n?' · '+m.n+' pessoas':'')+'</span></span><span></span></div>').join('')+'</div>':'<p class="note">Nenhuma reunião marcada.</p>')+'</div>';
+  h+='<div class="sec"><h3>Reuniões</h3>'+(room.meets.length?'<div class="rows">'+room.meets.map(m=>'<div class="row" style="cursor:default"><span class="tg '+(CLOCK.min>=m.ini&&CLOCK.min<m.fim?'bad':CLOCK.min>=m.fim?'mut':'warn')+'">'+hhmm(m.ini)+'–'+hhmm(m.fim)+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(m.assunto||'Reunião')+'</span><span class="s" style="display:block">'+esc(m.resp||'')+(m.n?' · '+m.n+' pessoas':'')+'</span>'+(m.desc?'<span class="s" style="display:block;white-space:normal">'+esc(m.desc)+'</span>':'')+'</span><span></span></div>').join('')+'</div>':'<p class="note">Nenhuma reunião marcada.</p>')+'</div>';
   h+='<div class="sec"><h3>Horários livres</h3>'+(fw.length?'<div class="sp">'+fw.map(w=>'<span class="tg ok">'+hhmm(w[0])+'–'+hhmm(w[1])+'</span>').join('')+'</div>':'<p class="note">Sem horários livres entre 08h e 18h.</p>')+'</div>';
   h+='<p class="note">Use o controle de hora no rodapé do palco para ver a sala em outro horário. As barras sobre a mesa mostram cada hora: laranja reservada, verde livre, azul a hora escolhida.</p>';
   const rc=roomCfg(room);
-  return {title:room.name,sub:floorLabel(rc.floor)+' · '+(rc.seats||6)+' cadeiras (capacidade '+fmtInt(room.cap||0)+')',html:h,back:{kind:'rooms'}};
+  return {title:room.name,sub:floorLabel(rc.floor)+' · comporta até '+fmtInt(room.cap||rc.seats||6)+' pessoas',html:h,back:{kind:'rooms'}};
 }
 function pRooms(){
   if(!ROOMS.length)return {title:'Salas de reunião',sub:'—',html:'<p class="note">A fonte conectada não informa salas de reunião, por isso nenhuma sala aparece.</p>',back:null};
   const h='<div class="rows">'+ROOMS.map((r,i)=>{const st=roomStatus(r,CLOCK.min);
-    return '<button type="button" class="row" data-room="'+i+'"><span class="tg '+(st.busy?'bad':'ok')+'">'+(st.busy?'Ocupada':'Livre')+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(r.name)+'</span><span class="s" style="display:block">'+esc(floorLabel(roomCfg(r).floor))+' · '+(st.busy?esc(st.cur.assunto||'Reunião')+' · até '+hhmm(st.cur.fim):(st.next?'próxima às '+hhmm(st.next.ini):'livre o resto do dia'))+'</span></span><span class="s">'+(roomCfg(r).seats||6)+' cad.</span></button>'}).join('')+'</div><p class="note">Situação às '+hhmm(CLOCK.min)+(CLOCK.sim?' (hora simulada)':'')+'. '+(ROOMSRC==='exemplo'?'Agenda de exemplo. Importe uma planilha com a aba Salas.':'')+'</p>';
+    return '<button type="button" class="row" data-room="'+i+'"><span class="tg '+(st.busy?'bad':'ok')+'">'+(st.busy?'Ocupada':'Livre')+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(r.name)+'</span><span class="s" style="display:block">'+esc(floorLabel(roomCfg(r).floor))+' · '+(st.busy?esc(st.cur.assunto||'Reunião')+' · até '+hhmm(st.cur.fim):(st.next?'próxima às '+hhmm(st.next.ini):'livre o resto do dia'))+'</span></span><span class="s">'+(r.cap?'até '+r.cap+' pessoas':(roomCfg(r).seats||6)+' cad.')+'</span></button>'}).join('')+'</div><p class="note">Situação às '+hhmm(CLOCK.min)+(CLOCK.sim?' (hora simulada)':'')+'. '+(ROOMSRC==='exemplo'?'Agenda de exemplo. Importe uma planilha com a aba Salas.':'')+'</p>';
   return {title:'Salas de reunião',sub:ROOMS.length+' ambientes',html:h,back:null};
 }
 function pDepts(){
@@ -5658,46 +5658,57 @@ async function convStart(src){
 /* =================== INÍCIO =================== */
 function fail(msg){const m=$('#msg3d');m.hidden=false;m.textContent=msg}
 function boot(){
-  if(!load()){EMPS=makeSample();ROOMS=sampleRooms();SOURCE='exemplo';ROOMSRC='exemplo';HAS=SAMPLE_HAS}
-  loadCfg();applyTheme(false);initClock();recalc();ensureCfg();clockUI();railUI();loadSrcs();
-  if(typeof THREE==='undefined'){fail('Não foi possível carregar o 3D. Os painéis continuam disponíveis pelo menu.');greet();ewvReady();return}
+  if(!EWVX&&!load()){EMPS=makeSample();ROOMS=sampleRooms();SOURCE='exemplo';ROOMSRC='exemplo';HAS=SAMPLE_HAS}
+  loadCfg();applyTheme(false);initClock();recalc();if(EWVX)ewvCfg();ensureCfg();clockUI();railUI();loadSrcs();
+  if(typeof THREE==='undefined'){fail('Não foi possível carregar o 3D. Os painéis continuam disponíveis pelo menu.');greet();return}
   try{
     renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
     renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.shadowMap.autoUpdate=false;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.25));renderer.shadowMap.autoUpdate=false;
     scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(35,1,.5,400);
     OK=true;buildStatic();applyTheme(true);
-  }catch(e){OK=false;fail('Este navegador não conseguiu iniciar o 3D. Os painéis continuam disponíveis pelo menu.');greet();ewvReady();return}
+  }catch(e){OK=false;fail('Este navegador não conseguiu iniciar o 3D. Os painéis continuam disponíveis pelo menu.');greet();return}
   new ResizeObserver(resize).observe(stageEl);resize();
   Object.assign(cam,overviewCam());cam.sx=0;cam.sy=0;
   buildWorld();greet();chipsUI();
-  requestAnimationFrame(frame);srcUI();apiSchedule();bootRefresh();ewvReady();
+  requestAnimationFrame(frame);srcUI();apiSchedule();bootRefresh();
   window.__dp={THEME,focusOn,cam,PERS,fadeSwitch,setEdit,addExtra,EG,apiRun,ingest,get SRCS(){return SRCS},scr:(x,z)=>{const v=new THREE.Vector3(x,0,z).project(camera),r=cv.getBoundingClientRect();return {x:r.left+(v.x+1)/2*r.width,y:r.top+(1-v.y)/2*r.height}},get CFG(){return CFG},get CUR(){return CUR},get fail(){return !OK},get EMPS(){return EMPS},THEME,applyTheme,applyWallTex,buildWorld,elevTrip,elevOpen,saveCfg,applyTheme,lunchSync,apiSchedule,refreshSrc,autoTick};
 }
-/* ===== ewvon: dados reais do banco (colaboradores, setores e salas) ===== */
-let EWV_READY=false,EWV_PENDING=null;
-function ewvReady(){EWV_READY=true;try{parent.postMessage({type:'ewvon:dash-ready'},location.origin)}catch(e){}if(EWV_PENDING)ewvApply(EWV_PENDING)}
+/* ===== ewvon: dados reais do banco (colaboradores, status, setores, salas e reuniões) ===== */
+let EWV_BOOTED=false,EWV_FONTS=false,EWV_PENDING=null;
 function ewvDone(){const l=document.getElementById('ewvLoad');if(l)l.remove()}
 function ewvMsg(t,sub){const l=document.getElementById('ewvLoad');if(l)l.innerHTML='<div style="text-align:center;max-width:420px;padding:0 20px"><div style="font-size:18px;color:#12151C;margin-bottom:6px">'+t+'</div><div style="font-weight:500;font-size:13px">'+sub+'</div></div>'}
+/* converte o que veio do banco para o formato do painel; devolve false se não há pessoas */
+function ewvMake(p){
+  EWV_CO=(p.company&&p.company.name)||'';EWV_LOGO=(p.company&&p.company.logo)||'';
+  const list=(p.emps||[]).map(a=>({xid:String(a.id||''),nome:a.nome,depto:a.depto||'Sem setor',cargo:a.cargo||'',st:a.st||'',sal:NaN,adm:toDate(a.adm),dem:toDate(a.dem),faltas:0,he:0,sexo:'',cc:'',alm:null,almIni:null,almFim:null,bat:null,atr:null,bh:null,nasc:toDate(a.nasc),ctr:'',fv:null})).filter(e=>e.adm);
+  if(!list.length)return false;
+  EMPS=list;
+  ROOMS=(p.rooms||[]).map(r=>({name:r.name,cap:r.cap||6,type:r.cap>8?'long':r.cap>5?'round':'small',meets:(r.meets||[]).map(m=>({ini:m.ini,fim:m.fim,assunto:m.assunto||'',desc:m.desc||'',resp:m.resp||'',n:m.n||0,ppl:(m.ppl||[]).map(id=>({x:String(id)}))}))}));
+  SOURCE='ewvon';ROOMSRC='ewvon';NOTES=[];MAPE={nome:0,depto:1,cargo:2,adm:4,dem:5};HAS=hasFrom(MAPE,EMPS);
+  return true;
+}
+function ewvCfg(){
+  const sig=DEPT.map(d=>d.name).sort().join('|');let prev='';try{prev=localStorage.getItem('ewv.sig')||''}catch(e){}
+  if(sig!==prev){defaultCfg(true,true);try{localStorage.setItem('ewv.sig',sig)}catch(e){}}
+}
+function ewvTryBoot(){
+  if(EWV_BOOTED||!EWV_FONTS||!EWV_PENDING)return;
+  if(!ewvMake(EWV_PENDING)){ewvMsg('Ainda não há pessoas cadastradas','Cadastre colaboradores e setores no ewvon para ver os dados da sua empresa aqui.');return}
+  EWV_BOOTED=true;boot();ewvDone();
+}
 function ewvApply(p){
   try{
-    const list=(p.emps||[]).map(a=>({nome:a.nome,depto:a.depto||'Sem setor',cargo:a.cargo||'',sal:NaN,adm:toDate(a.adm),dem:toDate(a.dem),faltas:0,he:0,sexo:'',cc:'',alm:null,almIni:null,almFim:null,bat:null,atr:null,bh:null,nasc:toDate(a.nasc),ctr:'',fv:null})).filter(e=>e.adm);
-    EWV_CO=(p.company&&p.company.name)||'';EWV_LOGO=(p.company&&p.company.logo)||'';
-    if(!list.length){ewvMsg('Ainda não há pessoas cadastradas','Cadastre colaboradores e setores no ewvon para ver os dados da sua empresa aqui.');return}
-    EMPS=list;ROOMS=(p.rooms||[]).map(r=>({name:r.name,cap:r.cap||6,type:r.cap>8?'long':r.cap>5?'round':'small',meets:(r.meets||[]).map(m=>({ini:m.ini,fim:m.fim,assunto:m.assunto||'',resp:m.resp||'',n:m.n||0,ppl:m.ppl||[]}))}));
-    SOURCE='ewvon';ROOMSRC='ewvon';NOTES=[];MAPE={nome:0,depto:1,cargo:2,adm:4,dem:5};HAS=hasFrom(MAPE,EMPS);
-    recalc();
-    const sig=DEPT.map(d=>d.name).sort().join('|');let prev='';try{prev=localStorage.getItem('ewv.sig')||''}catch(e){}
-    if(sig!==prev){defaultCfg(true,true);try{localStorage.setItem('ewv.sig',sig)}catch(e){}}
-    CUR=null;ensureCfg();saveCfg();applyTheme(true);rebuildAll();
+    if(!ewvMake(p))return;
+    recalc();ewvCfg();CUR=null;ensureCfg();saveCfg();applyTheme(true);rebuildAll();
   }catch(err){console.error('ewvon dash',err)}
-  ewvDone();
 }
-window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='ewvon:dash-data')return;EWV_PENDING=e.data;if(EWV_READY)ewvApply(e.data)});
-setTimeout(()=>{if(document.getElementById('ewvLoad'))ewvMsg('Não foi possível carregar os dados','Volte ao sistema e abra o Dash novamente.')},12000);
+window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='ewvon:dash-data')return;EWV_PENDING=e.data;if(EWV_BOOTED)ewvApply(e.data);else ewvTryBoot()});
+setTimeout(()=>{if(!EWV_BOOTED&&document.getElementById('ewvLoad')&&!EWV_PENDING)ewvMsg('Não foi possível carregar os dados','Volte ao sistema e abra o Dash novamente.')},15000);
+try{parent.postMessage({type:'ewvon:dash-ready'},location.origin)}catch(e){}
 
 const fontP=(document.fonts&&document.fonts.load)?Promise.race([document.fonts.load('800 40px "Plus Jakarta Sans"'),new Promise(r=>setTimeout(r,1500))]):Promise.resolve();
-fontP.catch(()=>{}).then(boot);
+fontP.catch(()=>{}).then(()=>{EWV_FONTS=true;ewvTryBoot()});
 })();
 </script>
 
