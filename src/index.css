@@ -1299,3 +1299,19 @@ body:has(.ewvon-profile-drawer) [data-state="open"].fixed.inset-0.z-50 {
 .chat-insights-railbtn { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 12px; color: hsl(var(--muted-foreground)); background: transparent; transition: background .15s ease, color .15s ease; }
 .chat-insights-railbtn:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
 .chat-insights-railbtn:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 1px; }
+
+/* Call card in chat (WhatsApp-like history) — desktop and mobile */
+.ewvon-callcard { display: flex; align-items: center; gap: 10px; min-width: 230px; max-width: 300px; padding: 10px 12px; border-radius: 14px; background: hsl(var(--card)); color: hsl(var(--foreground)); border: 1px solid hsl(var(--border)); }
+.ewvon-callcard[role="button"] { cursor: pointer; }
+.ewvon-callcard-ic { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 999px; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+.ewvon-callcard.is-live .ewvon-callcard-ic { background: #10b981; color: #fff; }
+.ewvon-callcard.is-missed .ewvon-callcard-ic { background: rgba(220, 38, 38, .12); color: #dc2626; }
+.ewvon-callcard-tx { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.ewvon-callcard-tx b { font-size: 13px; font-weight: 600; }
+.ewvon-callcard.is-missed .ewvon-callcard-tx b { color: #dc2626; }
+.ewvon-callcard-tx small { font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+.ewvon-callcard-btn { flex: none; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+.ewvon-callcard.is-live .ewvon-callcard-btn { background: #10b981; color: #fff; }
+.ewvon-callcard-btn:hover { filter: brightness(.95); }
+.ewvon-callcard-redial { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; color: #10b981; background: rgba(16, 185, 129, .1); }
+.ewvon-callcard-redial:hover { background: rgba(16, 185, 129, .18); }

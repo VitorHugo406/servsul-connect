@@ -3,23 +3,24 @@
 // joinChatCall(id, audio) joins from that card; openVideoCall(eventId, title) joins a calendar meeting.
 // Ringing: each signed-in person listens on the Realtime broadcast channel "ewvon-ring-<profileId>".
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Phone, PhoneOff, Video } from 'lucide-react';
+import { Phone, PhoneOff, PhoneMissed, PhoneIncoming, PhoneOutgoing, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { appConfirm } from '@/lib/appDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { CallRoom } from './CallRoom';
+import { CallRoom, type LeaveInfo } from './CallRoom';
+import { useCallInfo, effectiveStatus, formatCallDuration, callCreate, callAnswered, callEnd } from './callStore';
 import { toast } from 'sonner';
 
 const OPEN_EVENT = 'ewvon:open-video-call';
 const INFO_EVENT = 'ewvon:video-info';
 type Conv = 'dm' | 'group' | 'sector';
-type Req = { kind: 'join'; callId: string; title: string; audio: boolean } | { kind: 'chat-start'; conv: Conv; target: string; audio: boolean };
-type Ring = { callId: string; audio: boolean; from: string; fromName: string; title: string };
+type Req = { kind: 'join'; callId: string; title: string; audio: boolean; chat?: boolean } | { kind: 'chat-start'; conv: Conv; target: string; audio: boolean };
+type Ring = { callId: string; audio: boolean; from: string; fromName: string; title: string; conv?: Conv };
+type Active = { id: string; title: string; audio: boolean; chat: boolean; conv?: Conv; caller?: boolean };
 const fire = (r: Req) => window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: r }));
 export const openVideoCall = (eventId: string, title = 'Reunião') => fire({ kind: 'join', callId: eventId, title, audio: false });
 export const startChatCall = (conv: Conv, target: string, audio = false) => fire({ kind: 'chat-start', conv, target, audio });
-export const joinChatCall = (callId: string, audio = false) => fire({ kind: 'join', callId, title: audio ? 'Chamada de voz' : 'Chamada de vídeo', audio });
+export const joinChatCall = (callId: string, audio = false) => fire({ kind: 'join', callId, title: audio ? 'Chamada de voz' : 'Chamada de vídeo', audio, chat: true });
 export const openVideoInfo = () => window.dispatchEvent(new Event(INFO_EVENT));
 
 // Chat messages that announce a call: "📹 ewvon-call:<uuid>" (video) or "📞 ewvon-call:<uuid>" (voice).
@@ -34,12 +35,36 @@ export const parseCall = (content?: string | null): { id: string; audio: boolean
 };
 
 export function CallMessageCard({ room, own }: { room: { id: string; audio: boolean }; own?: boolean }) {
-  const Icon = room.audio ? Phone : Video;
+  const info = useCallInfo(room.id);
+  const [, tick] = useState(0);
+  // A "ringing" card turns into "missed" on its own after a minute, even without a server update.
+  useEffect(() => { if (info?.status !== 'ringing') return; const t = window.setInterval(() => tick((x) => x + 1), 5000); return () => window.clearInterval(t); }, [info?.status]);
+  const kind = room.audio ? 'voz' : 'vídeo';
+  const status = info ? effectiveStatus(info) : null;
+  const callBack = () => { if (!info) return; const tgt = info.conv === 'dm' ? (own ? info.target : info.caller_id) : info.target; startChatCall(info.conv, tgt, room.audio); };
+
+  let title = room.audio ? 'Chamada de voz' : 'Chamada de vídeo';
+  let sub = own ? 'Você ligou' : 'Chamada recebida';
+  let tone: 'live' | 'missed' | 'done' = 'done';
+  let action: { label: string; run: () => void; icon?: boolean } | null = null;
+  const Base = room.audio ? Phone : Video;
+  let Icon = own ? PhoneOutgoing : PhoneIncoming;
+  if (info === undefined) { sub = 'Carregando…'; Icon = Base; }
+  else if (info === null) { sub = 'Chamada encerrada'; Icon = Base; }   // calls made before the history existed
+  else if (status === 'ringing') { tone = 'live'; Icon = Base; sub = own ? 'Chamando…' : 'Tocando agora'; action = { label: own ? 'Voltar' : 'Atender', run: () => joinChatCall(room.id, room.audio) }; }
+  else if (status === 'ongoing') { tone = 'live'; Icon = Base; title = `Chamada de ${kind} em andamento`; sub = 'Toque para entrar'; action = { label: 'Entrar', run: () => joinChatCall(room.id, room.audio) }; }
+  else if (status === 'ended') { sub = formatCallDuration(info.duration_sec) || 'Encerrada'; }
+  else if (status === 'declined') { tone = own ? 'done' : 'missed'; title = own ? 'Chamada recusada' : `Chamada de ${kind} recusada`; sub = own ? 'Não atendeu' : 'Você recusou'; Icon = PhoneMissed; }
+  else if (status === 'missed') { tone = own ? 'done' : 'missed'; title = own ? 'Chamada não atendida' : `Chamada de ${kind} perdida`; sub = own ? 'Ninguém atendeu' : 'Ligue de volta'; Icon = PhoneMissed; }
+  if (info && (status === 'ended' || status === 'missed' || status === 'declined')) action = { label: 'Ligar de novo', run: callBack, icon: true };
+
   return (
-    <div className="flex min-w-[220px] items-center gap-3 rounded-xl border border-border bg-card p-3 text-foreground">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white"><Icon className="h-4 w-4" /></span>
-      <div className="min-w-0 flex-1"><p className="text-[13px] font-semibold">{room.audio ? 'Chamada de voz' : 'Chamada de vídeo'}</p><p className="text-[11px] text-muted-foreground">{own ? 'Você iniciou uma chamada' : 'Toque para participar'}</p></div>
-      <button type="button" onClick={(e) => { e.stopPropagation(); joinChatCall(room.id, room.audio); }} className="shrink-0 rounded-full bg-emerald-500 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-emerald-600">Entrar</button>
+    <div className={`ewvon-callcard is-${tone}`} onClick={action ? (e) => { e.stopPropagation(); action!.run(); } : undefined} role={action ? 'button' : undefined}>
+      <span className="ewvon-callcard-ic"><Icon className="h-[18px] w-[18px]" /></span>
+      <span className="ewvon-callcard-tx"><b>{title}</b><small>{sub}</small></span>
+      {action ? (action.icon
+        ? <button type="button" className="ewvon-callcard-redial" aria-label={action.label} title={action.label} onClick={(e) => { e.stopPropagation(); action!.run(); }}><Base className="h-4 w-4" /></button>
+        : <button type="button" className="ewvon-callcard-btn" onClick={(e) => { e.stopPropagation(); action!.run(); }}>{action.label}</button>) : null}
     </div>
   );
 }
@@ -105,7 +130,11 @@ async function broadcast(profileId: string, event: string, payload: unknown) {
 
 export function VideoCallHost() {
   const { profile } = useAuth();
-  const [call, setCall] = useState<{ id: string; title: string; audio: boolean } | null>(null);
+  const [call, setCall] = useState<Active | null>(null);
+  const ringedRef = useRef<{ callId: string; ids: string[] } | null>(null);   // who I rang for my outgoing call
+  const peerCountRef = useRef(0);
+  const answeredRef = useRef(false);
+  const answeredAtRef = useRef<number | null>(null);
   const [incoming, setIncoming] = useState<Ring | null>(null);
   const [info, setInfo] = useState(false);
   const callRef = useRef(call); callRef.current = call;
@@ -117,8 +146,9 @@ export function VideoCallHost() {
     const onOpen = async (e: Event) => {
       const r = (e as CustomEvent<Req>).detail;
       if (!me) return;
-      if (r.kind === 'join') { setCall({ id: r.callId, title: r.title, audio: r.audio }); return; }
+      if (r.kind === 'join') { peerCountRef.current = 0; answeredRef.current = false; setCall({ id: r.callId, title: r.title, audio: r.audio, chat: r.chat ?? false }); return; }
       const id = crypto.randomUUID();
+      await callCreate(id, r.conv, r.target, r.audio);   // history row first, so the card shows the right state at once
       const content = `${r.audio ? VOICE_PREFIX : VIDEO_PREFIX}${id}`;
       const { error } = r.conv === 'dm'
         ? await (supabase as any).from('direct_messages').insert({ sender_id: me.id, receiver_id: r.target, content, company_id: me.company })
@@ -127,9 +157,10 @@ export function VideoCallHost() {
           : await (supabase as any).from('messages').insert({ content, author_id: me.id, sector_id: r.target, company_id: me.company });
       if (error) { toast.error('Não foi possível iniciar a chamada nesta conversa.'); return; }
       const title = r.audio ? 'Chamada de voz' : 'Chamada de vídeo';
-      setCall({ id, title, audio: r.audio });
-      const ring: Ring = { callId: id, audio: r.audio, from: me.id, fromName: me.name, title };
-      void ringTargets(r.conv, r.target, me.id, me.company).then((ids) => Promise.all(ids.map((pid) => broadcast(pid, 'ring', ring))));
+      peerCountRef.current = 0; answeredRef.current = false;
+      setCall({ id, title, audio: r.audio, chat: true, conv: r.conv, caller: true });
+      const ring: Ring = { callId: id, audio: r.audio, from: me.id, fromName: me.name, title, conv: r.conv };
+      void ringTargets(r.conv, r.target, me.id, me.company).then((ids) => { ringedRef.current = { callId: id, ids }; return Promise.all(ids.map((pid) => broadcast(pid, 'ring', ring))); });
     };
     const onInfo = () => setInfo(true);
     window.addEventListener(OPEN_EVENT, onOpen);
@@ -146,7 +177,8 @@ export function VideoCallHost() {
       if (!id || !/^[0-9a-f-]{36}$/.test(id)) return false;
       const audio = q.get('a') === '1';
       setIncoming(null);
-      setCall({ id, title: audio ? 'Chamada de voz' : 'Chamada de vídeo', audio });
+      peerCountRef.current = 0; answeredRef.current = false;
+      setCall({ id, title: audio ? 'Chamada de voz' : 'Chamada de vídeo', audio, chat: true });
       return true;
     };
     if (openFrom(location.href)) { const u = new URL(location.href); u.searchParams.delete('call'); u.searchParams.delete('a'); history.replaceState(null, '', u.toString()); }
@@ -165,15 +197,49 @@ export function VideoCallHost() {
       setIncoming(r);
       window.setTimeout(() => setIncoming((cur) => (cur?.callId === r.callId ? null : cur)), 35000);
     });
-    ch.on('broadcast', { event: 'declined' }, ({ payload }) => { const p = payload as { name: string; callId: string }; if (callRef.current?.id === p.callId) toast.message(`${p.name} recusou a chamada.`); });
+    ch.on('broadcast', { event: 'declined' }, ({ payload }) => {
+      const p = payload as { name: string; callId: string };
+      const cur = callRef.current;
+      if (cur?.id !== p.callId) return;
+      // One-to-one call declined while still ringing: it ends for the caller too (WhatsApp).
+      if (cur.conv === 'dm' && peerCountRef.current === 0) { void callEnd(cur.id, 'declined'); setCall(null); toast.message(`${p.name} recusou a chamada.`); }
+      else toast.message(`${p.name} recusou a chamada.`);
+    });
+    // The caller gave up before anyone answered: stop ringing here.
+    ch.on('broadcast', { event: 'cancel' }, ({ payload }) => {
+      const p = payload as { callId: string; fromName: string; audio: boolean };
+      setIncoming((cur) => { if (cur?.callId !== p.callId) return cur; toast.message(`Chamada de ${p.audio ? 'voz' : 'vídeo'} perdida de ${p.fromName}`); return null; });
+    });
     ch.subscribe();
     return () => { void supabase.removeChannel(ch); };
   }, [me?.id]);
 
-  const leave = useCallback(() => setCall(null), []);
-  const askLeave = async () => { if (await appConfirm({ title: 'Encerrar chamada?', message: 'Você pode voltar pelo botão Entrar no chat enquanto houver gente na chamada.', confirmText: 'Sair', danger: true })) leave(); };
-  const accept = () => { if (!incoming) return; setCall({ id: incoming.callId, title: incoming.title, audio: incoming.audio }); setIncoming(null); };
-  const decline = () => { if (!incoming || !me) return; void broadcast(incoming.from, 'declined', { name: me.name, callId: incoming.callId }); setIncoming(null); };
+  // Leaving: when nobody else is left, the call is over for everyone (history gets status + duration).
+  const leave = useCallback((info: LeaveInfo) => {
+    const cur = callRef.current;
+    setCall(null);
+    const localSec = answeredAtRef.current ? Math.round((Date.now() - answeredAtRef.current) / 1000) : null;
+    answeredAtRef.current = null;
+    if (!cur?.chat || !me) return;
+    if (!info.alone) { if (localSec != null && info.why === 'hangup') toast.message(`Chamada encerrada · ${formatCallDuration(localSec)}`); return; }
+    const ringed = ringedRef.current;
+    void callEnd(cur.id).then((r) => {
+      const answered = answeredRef.current || r?.status === 'ended';
+      if (!answered && ringed?.callId === cur.id) void Promise.all(ringed.ids.map((pid) => broadcast(pid, 'cancel', { callId: cur.id, fromName: me.name, audio: cur.audio })));
+      if (info.why === 'error') return;
+      if (answered) { const sec = r?.duration_sec ?? localSec; toast.message(`Chamada encerrada${sec != null ? ` · ${formatCallDuration(sec)}` : ''}`); }
+      else toast.message(info.why === 'timeout' ? 'Ninguém atendeu.' : 'Chamada cancelada.');
+    });
+  }, [me?.id, me?.name]); // eslint-disable-line react-hooks/exhaustive-deps
+  const onConnected = useCallback(() => { const cur = callRef.current; answeredRef.current = true; answeredAtRef.current ??= Date.now(); if (cur?.chat) void callAnswered(cur.id); }, []);
+  const onPeerCount = useCallback((n: number) => { peerCountRef.current = n; }, []);
+  const accept = () => { if (!incoming) return; peerCountRef.current = 0; answeredRef.current = false; setCall({ id: incoming.callId, title: incoming.title, audio: incoming.audio, chat: true, conv: incoming.conv }); setIncoming(null); };
+  const decline = () => {
+    if (!incoming || !me) return;
+    void broadcast(incoming.from, 'declined', { name: me.name, callId: incoming.callId });
+    if (incoming.conv === 'dm') void callEnd(incoming.callId, 'declined');
+    setIncoming(null);
+  };
 
   return (
     <>
@@ -190,9 +256,8 @@ export function VideoCallHost() {
         <div className="fixed inset-0 z-[70] flex flex-col bg-[#0b0b0e]" role="dialog" aria-label={call.title}>
           <div className="flex h-12 shrink-0 items-center justify-between gap-3 px-4 text-white" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
             <p className="truncate text-sm font-semibold">{call.title}</p>
-            <button type="button" onClick={() => void askLeave()} className="rounded-full bg-white/10 px-3 py-1 text-[12px] hover:bg-white/20">Sair</button>
           </div>
-          <CallRoom callId={call.id} title={call.title} me={me} onLeave={leave} audioOnly={call.audio} />
+          <CallRoom callId={call.id} title={call.title} me={me} onLeave={leave} audioOnly={call.audio} ring={call.chat} onConnected={onConnected} onPeerCount={onPeerCount} />
         </div>
       ) : null}
     </>

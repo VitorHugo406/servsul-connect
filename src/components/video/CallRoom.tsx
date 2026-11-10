@@ -7,6 +7,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const MAX_PEOPLE = 6;
+const RING_TIMEOUT_MS = 45_000;   // chat calls: nobody answered
+const ALONE_GRACE_MS = 1_500;     // chat calls: the others left, end like WhatsApp
+export type LeaveInfo = { why: 'hangup' | 'alone' | 'timeout' | 'error'; alone: boolean };
 const ICE: RTCIceServer[] = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
 type Signal = { to: string; from: string; name: string; type: 'offer' | 'answer' | 'ice'; sdp?: RTCSessionDescriptionInit; candidate?: RTCIceCandidateInit };
 type Peer = { pc: RTCPeerConnection; stream: MediaStream | null; name: string; pending: RTCIceCandidateInit[] };
@@ -23,7 +26,17 @@ function Tile({ stream, name, muted, mirror, off }: { stream: MediaStream | null
   );
 }
 
-export function CallRoom({ callId, title, me, onLeave, audioOnly = false }: { callId: string; title: string; me: { id: string; name: string }; onLeave: () => void; audioOnly?: boolean }) {
+export function CallRoom({ callId, title, me, onLeave, audioOnly = false, ring = false, onConnected, onPeerCount }: {
+  callId: string; title: string; me: { id: string; name: string }; onLeave: (info: LeaveInfo) => void; audioOnly?: boolean;
+  /** Chat call: stops ringing after RING_TIMEOUT_MS and ends when everybody else left. Calendar meetings pass false. */
+  ring?: boolean; onConnected?: () => void; onPeerCount?: (n: number) => void;
+}) {
+  const leaveRef = useRef(onLeave); leaveRef.current = onLeave;
+  const connectedRef = useRef(onConnected); connectedRef.current = onConnected;
+  const countRef = useRef(onPeerCount); countRef.current = onPeerCount;
+  const hadPeersRef = useRef(false);
+  const leftRef = useRef(false);
+  const leave = (why: LeaveInfo['why']) => { if (leftRef.current) return; leftRef.current = true; leaveRef.current({ why, alone: peersRef.current.size === 0 }); };
   const [local, setLocal] = useState<MediaStream | null>(null);
   const [peers, setPeers] = useState<Record<string, { stream: MediaStream | null; name: string }>>({});
   const [mic, setMic] = useState(true);
@@ -40,16 +53,23 @@ export function CallRoom({ callId, title, me, onLeave, audioOnly = false }: { ca
 
   useEffect(() => {
     let alive = true;
-    const sync = () => setPeers(Object.fromEntries([...peersRef.current].map(([k, p]) => [k, { stream: p.stream, name: p.name }])));
+    const sync = () => { setPeers(Object.fromEntries([...peersRef.current].map(([k, p]) => [k, { stream: p.stream, name: p.name }]))); countRef.current?.(peersRef.current.size); };
+    let aloneTimer: number | null = null;
+    const checkAlone = () => {
+      if (!ring || !hadPeersRef.current || peersRef.current.size) return;
+      if (aloneTimer != null) window.clearTimeout(aloneTimer);
+      aloneTimer = window.setTimeout(() => { if (alive && !peersRef.current.size) leave('alone'); }, ALONE_GRACE_MS);
+    };
+    const ringTimer = ring ? window.setTimeout(() => { if (alive && !hadPeersRef.current) leave('timeout'); }, RING_TIMEOUT_MS) : null;
     const send = (s: Omit<Signal, 'from' | 'name'>) => void chanRef.current?.send({ type: 'broadcast', event: 'signal', payload: { ...s, from: me.id, name: me.name } });
-    const drop = (id: string) => { const p = peersRef.current.get(id); if (p) { p.pc.close(); peersRef.current.delete(id); sync(); } };
+    const drop = (id: string) => { const p = peersRef.current.get(id); if (p) { p.pc.close(); peersRef.current.delete(id); sync(); checkAlone(); } };
     const peer = (id: string, name: string) => {
       const found = peersRef.current.get(id); if (found) return found;
       const pc = new RTCPeerConnection({ iceServers: ICE });
       const p: Peer = { pc, stream: null, name, pending: [] };
       localRef.current?.getTracks().forEach((t) => pc.addTrack(t, localRef.current!));
       if (screenRef.current) { const s = pc.getSenders().find((x) => x.track?.kind === 'video'); void s?.replaceTrack(screenRef.current); }
-      pc.ontrack = (e) => { p.stream = e.streams[0] || new MediaStream([e.track]); setStartedAt((t) => t ?? Date.now()); sync(); };
+      pc.ontrack = (e) => { p.stream = e.streams[0] || new MediaStream([e.track]); setStartedAt((t) => t ?? Date.now()); if (!hadPeersRef.current) { hadPeersRef.current = true; connectedRef.current?.(); } sync(); };
       pc.onicecandidate = (e) => { if (e.candidate) send({ to: id, type: 'ice', candidate: e.candidate.toJSON() }); };
       pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') { toast.error(`Não foi possível conectar com ${name}. A rede de um dos lados pode estar bloqueando chamadas.`); drop(id); } };
       peersRef.current.set(id, p); sync();
@@ -62,7 +82,7 @@ export function CallRoom({ callId, title, me, onLeave, audioOnly = false }: { ca
       try { stream = await navigator.mediaDevices.getUserMedia(audioOnly ? { audio: { echoCancellation: true, noiseSuppression: true } } : { audio: { echoCancellation: true, noiseSuppression: true }, video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 24 } } }); }
       catch {
         try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); setCam(false); toast.message('Câmera indisponível: você entrou só com áudio.'); }
-        catch { toast.error('Permita o acesso ao microfone e à câmera para entrar na chamada.'); onLeave(); return; }
+        catch { toast.error('Permita o acesso ao microfone e à câmera para entrar na chamada.'); leave('error'); return; }
       }
       if (!alive) { stream.getTracks().forEach((t) => t.stop()); return; }
       localRef.current = stream; setLocal(stream);
@@ -81,6 +101,8 @@ export function CallRoom({ callId, title, me, onLeave, audioOnly = false }: { ca
           else if (s.type === 'ice' && s.candidate) { if (p.pc.remoteDescription) await p.pc.addIceCandidate(s.candidate).catch(() => {}); else p.pending.push(s.candidate); }
         } catch (e) { console.error('call signal', e); }
       });
+      // The other side hung up: drop them right away instead of waiting for presence to time out.
+      ch.on('broadcast', { event: 'bye' }, ({ payload }) => { const id = (payload as { from?: string })?.from; if (id && id !== me.id) drop(id); });
       ch.on('presence', { event: 'sync' }, async () => {
         const state = ch.presenceState() as Record<string, { name: string }[]>;
         const ids = Object.keys(state);
@@ -98,13 +120,16 @@ export function CallRoom({ callId, title, me, onLeave, audioOnly = false }: { ca
 
     return () => {
       alive = false;
+      if (ringTimer != null) window.clearTimeout(ringTimer);
+      if (aloneTimer != null) window.clearTimeout(aloneTimer);
       peersRef.current.forEach((p) => p.pc.close()); peersRef.current.clear();
       screenRef.current?.stop();
       localRef.current?.getTracks().forEach((t) => t.stop());
       if (chanRef.current) { void chanRef.current.untrack(); void supabase.removeChannel(chanRef.current); }
     };
-  }, [callId, me.id, me.name, onLeave, audioOnly]);
+  }, [callId, me.id, me.name, audioOnly, ring]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const hangup = () => { void chanRef.current?.send({ type: 'broadcast', event: 'bye', payload: { from: me.id } }); leave('hangup'); };
   const toggleMic = () => { localRef.current?.getAudioTracks().forEach((t) => { t.enabled = !mic; }); setMic(!mic); };
   const toggleCam = () => { localRef.current?.getVideoTracks().forEach((t) => { t.enabled = !cam; }); setCam(!cam); };
   const toggleShare = async () => {
@@ -124,7 +149,7 @@ export function CallRoom({ callId, title, me, onLeave, audioOnly = false }: { ca
   const cols = count <= 1 ? 'grid-cols-1' : count <= 4 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3';
   const btn = (on: boolean) => `flex h-12 w-12 items-center justify-center rounded-full transition-colors ${on ? 'bg-white/12 text-white hover:bg-white/20' : 'bg-white text-[#0b0b0e]'}`;
 
-  if (status === 'full') return <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-white"><p className="text-lg font-semibold">Chamada cheia</p><p className="text-sm text-white/70">Esta chamada já tem {MAX_PEOPLE} pessoas.</p><button type="button" onClick={onLeave} className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black">Voltar</button></div>;
+  if (status === 'full') return <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-white"><p className="text-lg font-semibold">Chamada cheia</p><p className="text-sm text-white/70">Esta chamada já tem {MAX_PEOPLE} pessoas.</p><button type="button" onClick={() => leave('error')} className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black">Voltar</button></div>;
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className={`grid min-h-0 flex-1 auto-rows-fr gap-2 p-2 sm:p-3 ${cols}`}>
@@ -136,7 +161,7 @@ export function CallRoom({ callId, title, me, onLeave, audioOnly = false }: { ca
         <button type="button" className={btn(mic)} onClick={toggleMic} aria-label={mic ? 'Desligar microfone' : 'Ligar microfone'}>{mic ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}</button>
         {audioOnly ? null : <button type="button" className={btn(cam)} onClick={toggleCam} aria-label={cam ? 'Desligar câmera' : 'Ligar câmera'}>{cam ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}</button>}
         {!audioOnly && typeof navigator !== 'undefined' && 'getDisplayMedia' in (navigator.mediaDevices || {}) ? <button type="button" className={btn(!sharing)} onClick={() => void toggleShare()} aria-label={sharing ? 'Parar de compartilhar' : 'Compartilhar tela'}><MonitorUp className="h-5 w-5" /></button> : null}
-        <button type="button" className="flex h-12 w-14 items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-700" onClick={onLeave} aria-label="Sair da chamada"><PhoneOff className="h-5 w-5" /></button>
+        <button type="button" className="flex h-12 w-14 items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-700" onClick={hangup} aria-label="Encerrar chamada"><PhoneOff className="h-5 w-5" /></button>
       </div>
     </div>
   );
