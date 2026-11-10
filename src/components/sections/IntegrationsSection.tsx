@@ -103,7 +103,7 @@ function ProviderCard({ provider, row, onChanged }: { provider: Provider; row?: 
         <div className="flex flex-wrap gap-1.5">
           {Object.entries(EVENT_LABEL).filter(([k]) => provider !== 'whatsapp' || k === 'announcement' || k === 'task_assigned').map(([k, label]) => {
             const on = events.includes(k);
-            return <button key={k} type="button" onClick={() => setEvents(on ? events.filter((e) => e !== k) : [...events, k])} className={`rounded-full border px-3 py-1 text-[12px] font-medium ${on ? 'border-foreground bg-foreground text-background' : 'border-border text-muted-foreground'}`} aria-pressed={on}>{label}</button>;
+            return <button key={k} type="button" onClick={() => setEvents(on ? events.filter((e) => e !== k) : [...events, k])} className="ui-chip" aria-pressed={on}>{label}</button>;
           })}
         </div>
         {provider === 'whatsapp' ? <p className="mt-1.5 text-[11px] text-muted-foreground">Avisos vão para todos os funcionários com celular no cadastro (cada mensagem é cobrada pela Meta); cards vão só para o responsável.</p> : null}

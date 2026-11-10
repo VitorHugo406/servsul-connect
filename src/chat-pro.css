@@ -91,3 +91,30 @@
 
 /* Reactions sit on the canvas color */
 .chat-reaction, .chat-reaction-add { border-color: hsl(var(--chat-canvas)) !important; }
+
+/* ---------- 3. Button system: one look on every desktop screen ----------
+   Shape 8px, no shadow, no press "scale"; sizes from <Button size>: sm 32px, default 36px, lg 40px, icon 36px.
+   Primary = company color (text color picked by contrast), outline = card + hairline, ghost = text only. */
+.ui-btn:not(.ew *) { border-radius: 8px !important; box-shadow: none !important; }
+.ui-btn:not(.ew *):active { transform: none !important; }
+.ui-btn:not(.ew *).rounded-full:has(> img:only-child), .ui-btn:not(.ew *).rounded-full:has(> span.rounded-full:only-child) { border-radius: 9999px !important; } /* avatar-only buttons stay round */
+
+/* Shell: top bar groups and side menu share the same shape and the same active state */
+:is(.ewvon-brand, .ewvon-quick-nav, .ewvon-actions):not(.ew *) { border-radius: 12px !important; }
+.ewvon-quick-nav button, .ewvon-actions button:not(.ewvon-profile-button), .ewvon-actions [data-radix-popover-trigger], .ewvon-dash-flag { border-radius: 8px !important; box-shadow: none !important; }
+.ewvon-actions .ewvon-profile-button { border-radius: 10px !important; box-shadow: none !important; }
+.ewvon-sidebar { border-radius: 14px !important; }
+.ewvon-sidebar nav button { border-radius: 8px !important; box-shadow: none !important; }
+.ewvon-sidebar nav button[aria-current="page"], .ewvon-quick-nav button[aria-current="page"] {
+  background: hsl(var(--primary)) !important; color: hsl(var(--primary-foreground)) !important; box-shadow: none !important;
+}
+.ewvon-sidebar nav button[aria-current="page"] svg, .ewvon-quick-nav button[aria-current="page"] svg { color: hsl(var(--primary-foreground)) !important; }
+
+/* Toggle chips (filters, "send when…"): same 8px shape; selected = company color */
+.ui-chip { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--muted-foreground)); font-size: 12px; font-weight: 500; transition: background-color .15s, color .15s, border-color .15s; }
+.ui-chip:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+.ui-chip[aria-pressed="true"] { background: hsl(var(--primary)); border-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+/* Leftovers forced round by older rules: chat info panel and Início icon buttons */
+aside[aria-label^="Detalhes da conversa"] button { border-radius: 8px !important; box-shadow: none !important; }
+aside[aria-label^="Detalhes da conversa"] > div:first-child > div { border-radius: 10px !important; }
+.ewvon-home button.rounded-full:not(:has(> img)) { border-radius: 8px !important; }
