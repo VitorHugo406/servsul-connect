@@ -245,6 +245,7 @@ label.ibtn input{width:18px;height:18px;border:0;padding:0;background:none;curso
 .msg3d.toast[hidden]{display:none}
 
 /* ewvon: flag Sistema | Dash (same switch as the system header) */
+#btnImport,#sampleTag:not(:empty){}#btnImport{display:none!important}
 .modeflag{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;align-items:center;height:40px;padding:3px;margin-right:2px;flex:none}
 .modeflag .mfth{position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:999px;background:var(--ewv,#FF6A1A);transition:transform .35s cubic-bezier(.5,0,.2,1)}
 .modeflag[data-m="dash"] .mfth{transform:translateX(100%)}
@@ -253,6 +254,7 @@ label.ibtn input{width:18px;height:18px;border:0;padding:0;background:none;curso
 @media (max-width:760px){.modeflag button{padding:0 10px;font-size:12px}}
 </style>
 
+<div id="ewvLoad" style="position:fixed;inset:0;z-index:80;background:#E8EDF2;display:grid;place-items:center;font:600 14px 'Plus Jakarta Sans',system-ui,sans-serif;color:#667085">Carregando os dados da empresa…</div>
 <div class="app">
   <header class="bar">
     <div class="modeflag pillbox" id="modeflag" data-m="dash" role="group" aria-label="Alternar entre Sistema e Dash"><span class="mfth"></span><button type="button" id="mfSys" aria-pressed="false">Sistema</button><button type="button" id="mfDash" aria-pressed="true">Dash</button></div>
@@ -890,6 +892,7 @@ const today=new Date();today.setHours(0,0,0,0);
 const ACC='#FF6A1A';
 
 /* =================== DADOS =================== */
+const EWVX=true; /* ewvon: dados vêm do banco do sistema, sem importação */
 let EMPS=[],ROOMS=[],HAS={},SOURCE='exemplo',ROOMSRC='exemplo',NOTES=[],MAPE=null;
 let MEETM=new Map(),EMIX=null,MEETP=new Map();
 let CFG={floors:[],deptFloor:{},rooms:{},looks:{},layout:{},custom:[]},CUR=null;
@@ -1073,10 +1076,12 @@ const SAMPLE_HAS={sal:true,faltas:true,he:true,sexo:true,cargo:true,nome:true,de
 const KEY='dp3d.v2';
 const iso=d=>d?d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'):'';
 function save(){
+  if(EWVX)return;
   try{localStorage.setItem(KEY,JSON.stringify({source:SOURCE,roomsrc:ROOMSRC,map:MAPE,notes:NOTES,rooms:ROOMS,
     emps:EMPS.map(e=>[e.nome,e.depto,e.cargo,isFinite(e.sal)?e.sal:null,iso(e.adm),iso(e.dem),e.faltas,e.he,e.sexo,e.cc||'',e.alm==null?null:e.alm,e.almIni==null?null:e.almIni,e.almFim==null?null:e.almFim].concat(serX(e)))}))}catch(e){}
 }
 function load(){
+  if(EWVX)return false;
   try{
     const j=JSON.parse(localStorage.getItem(KEY)||'null');if(!j||!j.emps||!j.emps.length)return false;
     EMPS=j.emps.map(a=>Object.assign({nome:a[0],depto:a[1],cargo:a[2],sal:a[3]==null?NaN:a[3],adm:toDate(a[4]),dem:toDate(a[5]),faltas:a[6],he:a[7],sexo:a[8],cc:a[9]||'',alm:a[10]==null?null:a[10],almIni:a[11]==null?null:a[11],almFim:a[12]==null?null:a[12]},deX(a))).filter(e=>e.adm);
@@ -3121,9 +3126,9 @@ function useSample(){
   recalc();defaultCfg(true,true);CUR=null;ensureCfg();saveCfg();rebuildAll();chipsUI();srcUI();apiSchedule();
 }
 const openModal=()=>{$('#modal').hidden=false;chipsUI();srcUI();if(!$('#status').textContent)setStatus('ok',SOURCE==='exemplo'?'Usando dados de exemplo.':fmtInt(EMPS.length)+' colaboradores carregados de '+SOURCE+'.')};
-$('#btnImport').addEventListener('click',openModal);
+if(!EWVX){$('#btnImport').addEventListener('click',openModal);
 $('#sampleTag').addEventListener('click',openModal);
-$('#sampleTag').style.cursor='pointer';
+$('#sampleTag').style.cursor='pointer';}
 $('#mclose').addEventListener('click',()=>{$('#modal').hidden=true});
 $('#modal').addEventListener('click',e=>{if(e.target===$('#modal'))$('#modal').hidden=true});
 const fileIn=$('#file');
@@ -5062,8 +5067,8 @@ const SKEY='dp3d.src.v1';let SRCS=[];
 const serE=e=>[e.nome,e.depto,e.cargo,isFinite(e.sal)?e.sal:null,iso(e.adm),iso(e.dem),e.faltas,e.he,e.sexo,e.cc||'',e.alm==null?null:e.alm,e.almIni==null?null:e.almIni,e.almFim==null?null:e.almFim].concat(serX(e));
 const sigE=e=>serE(e).slice(0,10).join('|');
 const deE=a=>Object.assign({nome:a[0],depto:a[1],cargo:a[2],sal:a[3]==null?NaN:a[3],adm:toDate(a[4]),dem:toDate(a[5]),faltas:a[6],he:a[7],sexo:a[8],cc:a[9]||'',alm:a[10]==null?null:a[10],almIni:a[11]==null?null:a[11],almFim:a[12]==null?null:a[12]},deX(a));
-function saveSrcs(){try{localStorage.setItem(SKEY,JSON.stringify(SRCS.map(s=>Object.assign({},s,{emps:s.emps.map(serE)}))))}catch(e){}}
-function loadSrcs(){
+function saveSrcs(){if(EWVX)return;try{localStorage.setItem(SKEY,JSON.stringify(SRCS.map(s=>Object.assign({},s,{emps:s.emps.map(serE)}))))}catch(e){}}
+function loadSrcs(){if(EWVX){SRCS=[];return}
   try{const j=JSON.parse(localStorage.getItem(SKEY)||'null');SRCS=Array.isArray(j)?j.map(s=>Object.assign(s,{emps:(s.emps||[]).map(deE).filter(e=>e.adm)})):[]}catch(e){SRCS=[]}
   {const last=new Map(),ky=s=>s.cfg.preset+'|'+s.cfg.url+'|'+(s.cfg.urlR||'');SRCS.forEach(s=>{if(s.kind==='api'&&s.cfg){const o=last.get(ky(s));if(!o||(s.at||0)>=(o.at||0))last.set(ky(s),s)}});SRCS=SRCS.filter(s=>!(s.kind==='api'&&s.cfg)||last.get(ky(s))===s)}
   if(!SRCS.length&&SOURCE!=='exemplo'&&EMPS.length)SRCS=[{id:'file:anterior',label:SOURCE,kind:'file',cfg:null,emps:EMPS.slice(),rooms:ROOMSRC!=='exemplo'?ROOMS.slice():[],map:MAPE||{},at:Date.now(),msgs:[],err:''}];
@@ -5654,20 +5659,40 @@ function fail(msg){const m=$('#msg3d');m.hidden=false;m.textContent=msg}
 function boot(){
   if(!load()){EMPS=makeSample();ROOMS=sampleRooms();SOURCE='exemplo';ROOMSRC='exemplo';HAS=SAMPLE_HAS}
   loadCfg();applyTheme(false);initClock();recalc();ensureCfg();clockUI();railUI();loadSrcs();
-  if(typeof THREE==='undefined'){fail('Não foi possível carregar o 3D. Os painéis continuam disponíveis pelo menu.');greet();return}
+  if(typeof THREE==='undefined'){fail('Não foi possível carregar o 3D. Os painéis continuam disponíveis pelo menu.');greet();ewvReady();return}
   try{
     renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
     renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.shadowMap.autoUpdate=false;
     scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(35,1,.5,400);
     OK=true;buildStatic();applyTheme(true);
-  }catch(e){OK=false;fail('Este navegador não conseguiu iniciar o 3D. Os painéis continuam disponíveis pelo menu.');greet();return}
+  }catch(e){OK=false;fail('Este navegador não conseguiu iniciar o 3D. Os painéis continuam disponíveis pelo menu.');greet();ewvReady();return}
   new ResizeObserver(resize).observe(stageEl);resize();
   Object.assign(cam,overviewCam());cam.sx=0;cam.sy=0;
   buildWorld();greet();chipsUI();
-  requestAnimationFrame(frame);srcUI();apiSchedule();bootRefresh();
+  requestAnimationFrame(frame);srcUI();apiSchedule();bootRefresh();ewvReady();
   window.__dp={THEME,focusOn,cam,PERS,fadeSwitch,setEdit,addExtra,EG,apiRun,ingest,get SRCS(){return SRCS},scr:(x,z)=>{const v=new THREE.Vector3(x,0,z).project(camera),r=cv.getBoundingClientRect();return {x:r.left+(v.x+1)/2*r.width,y:r.top+(1-v.y)/2*r.height}},get CFG(){return CFG},get CUR(){return CUR},get fail(){return !OK},get EMPS(){return EMPS},THEME,applyTheme,applyWallTex,buildWorld,elevTrip,elevOpen,saveCfg,applyTheme,lunchSync,apiSchedule,refreshSrc,autoTick};
 }
+/* ===== ewvon: dados reais do banco (colaboradores, setores e salas) ===== */
+let EWV_READY=false,EWV_PENDING=null;
+function ewvReady(){EWV_READY=true;try{parent.postMessage({type:'ewvon:dash-ready'},location.origin)}catch(e){}if(EWV_PENDING)ewvApply(EWV_PENDING)}
+function ewvDone(){const l=document.getElementById('ewvLoad');if(l)l.remove()}
+function ewvApply(p){
+  try{
+    const list=(p.emps||[]).map(a=>({nome:a.nome,depto:a.depto||'Sem setor',cargo:a.cargo||'',sal:NaN,adm:toDate(a.adm),dem:toDate(a.dem),faltas:0,he:0,sexo:'',cc:'',alm:null,almIni:null,almFim:null,bat:null,atr:null,bh:null,nasc:toDate(a.nasc),ctr:'',fv:null})).filter(e=>e.adm);
+    if(!list.length){const t=$('#sampleTag');t.textContent='Exemplo · cadastre pessoas no ewvon para ver os dados reais';t.hidden=false;ewvDone();return}
+    EMPS=list;ROOMS=(p.rooms||[]).map(r=>({name:r.name,cap:r.cap||6,type:r.cap>8?'long':r.cap>5?'round':'small',meets:(r.meets||[]).map(m=>({ini:m.ini,fim:m.fim,assunto:m.assunto||'',resp:m.resp||'',n:m.n||0,ppl:m.ppl||[]}))}));
+    SOURCE='ewvon';ROOMSRC='ewvon';NOTES=[];MAPE={nome:0,depto:1,cargo:2,adm:4,dem:5};HAS=hasFrom(MAPE,EMPS);
+    recalc();
+    const sig=DEPT.map(d=>d.name).sort().join('|');let prev='';try{prev=localStorage.getItem('ewv.sig')||''}catch(e){}
+    if(sig!==prev){defaultCfg(true,true);try{localStorage.setItem('ewv.sig',sig)}catch(e){}}
+    CUR=null;ensureCfg();saveCfg();rebuildAll();
+  }catch(err){console.error('ewvon dash',err)}
+  ewvDone();
+}
+window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='ewvon:dash-data')return;EWV_PENDING=e.data;if(EWV_READY)ewvApply(e.data)});
+setTimeout(ewvDone,12000);
+
 const fontP=(document.fonts&&document.fonts.load)?Promise.race([document.fonts.load('800 40px "Plus Jakarta Sans"'),new Promise(r=>setTimeout(r,1500))]):Promise.resolve();
 fontP.catch(()=>{}).then(boot);
 })();
