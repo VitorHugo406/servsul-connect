@@ -56,7 +56,7 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
           <span className="max-w-36 truncate text-[14px] font-semibold tracking-tight text-slate-900">{company?.name || 'ewvon'}</span>
         </button>
 
-        {companyPlan && !sectionLock('dashboard-3d', companyPlan, isSuperAdminUser) && (
+        {companyPlan && !sectionLock('dashboard-3d', companyPlan, isSuperAdminUser) && (isAdmin || canAccess('can_access_dash')) && (
           <ModeFlag mode="system" onSwitch={(to) => { if (to === 'dash') onNavigateToSection?.('dashboard-3d'); }} />
         )}
 

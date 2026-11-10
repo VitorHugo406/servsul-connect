@@ -246,7 +246,7 @@ const Index = () => {
   };
   const handleCloseJoinDialog = () => { searchParams.delete('join'); setSearchParams(searchParams, { replace: true }); };
   const handleNavigateToTasks = () => handleSectionChange('tasks');
-  const isMobile = useIsMobile(); const [isReady, setIsReady] = useState(false); const { profile, isAdmin, roles } = useAuth();
+  const isMobile = useIsMobile(); const [isReady, setIsReady] = useState(false); const { profile, isAdmin, roles, canAccess } = useAuth();
   const { plan: companyPlan, loading: planLoading } = useCompanyPlan(); const isSuperAdminUser = roles.some((r: any) => (r.role as string) === 'super_admin');
   const { showOnboarding, completeOnboarding } = useOnboarding(); const { showCelebration, closeCelebration, userName } = useBirthdayCelebration(); const { isAlarming, pendingWarRoomId, dismissAlarm } = useWarRoomAlarm();
   const handleOpenWarRoom = () => { handleSectionChange('war-room'); dismissAlarm(); };
@@ -301,7 +301,7 @@ const Index = () => {
     return <><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><VideoCallHost /><Suspense fallback={<EwwonLoader />}><EwwonApp /></Suspense><BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} /><BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /></>;
   }
   // Dash is a separate "system": full screen, its own navigation (and the same Sistema | Dash flag).
-  if (activeSection === 'dashboard-3d' && !sectionLock('dashboard-3d', companyPlan, isSuperAdminUser)) {
+  if (activeSection === 'dashboard-3d' && !sectionLock('dashboard-3d', companyPlan, isSuperAdminUser) && (isAdmin || canAccess('can_access_dash'))) {
     return <><ModeTransitionHost /><Dashboard3DSection onExit={() => handleSectionChange('home')} /></>;
   }
   return <><ModeTransitionHost /><div className="flex h-screen overflow-hidden bg-background"><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><VideoCallHost /><Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} /><div className="flex flex-1 flex-col overflow-hidden"><Header title={currentSection.title} subtitle={currentSection.subtitle} activeSection={activeSection} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} /><main data-section={activeSection} className={`ewvon-main min-w-0 flex-1 overflow-auto bg-card ${['chat', 'calendar', 'tasks', 'war-room'].includes(activeSection) ? '' : 'clean-section'} ${['home', 'chat'].includes(activeSection) || boardOpen ? '' : 'pro-section'}`}><SectionBoundary resetKey={activeSection}><Suspense fallback={<div className="ewvon-section-loading flex h-full min-h-[60vh] items-center justify-center text-foreground" role="status" aria-label="Carregando seção"><EwwonLogo size={76} /></div>}>{renderSection()}</Suspense></SectionBoundary></main></div><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} />{isHomePage && <GlobalBroadcastOrb />}<BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} /><BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></div></>;

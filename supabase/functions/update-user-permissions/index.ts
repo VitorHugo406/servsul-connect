@@ -15,6 +15,7 @@ interface PermissionUpdate {
     canCreateWarRoom?: boolean;
     canAccessOrbs?: boolean;
     canAccessMeetingRooms?: boolean;
+    canAccessDash?: boolean;
   };
 }
 
@@ -130,6 +131,7 @@ Deno.serve(async (req) => {
       can_create_war_room: permissions.canCreateWarRoom ?? existingPerm?.can_create_war_room ?? false,
       can_access_orbs: permissions.canAccessOrbs ?? existingPerm?.can_access_orbs ?? false,
       can_access_meeting_rooms: permissions.canAccessMeetingRooms ?? existingPerm?.can_access_meeting_rooms ?? false,
+      can_access_dash: permissions.canAccessDash ?? existingPerm?.can_access_dash ?? false,
       updated_at: new Date().toISOString(),
     };
 

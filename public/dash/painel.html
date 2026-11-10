@@ -3457,7 +3457,7 @@ function applyTheme(rebuild){
   const t=THEME(),co=(t.company||'').trim(),bn=document.querySelector('.brand b'),lg=document.querySelector('.logo');
   if(bn)bn.textContent='Dash 3D';
   const lgu=EWV_LOGO||t.logo;
-  if(lg){if(lgu){lg.style.background='#fff url('+lgu+') center/72% no-repeat';lg.classList.add('img')}else{lg.style.background='';lg.classList.remove('img')}}
+  if(lg){if(lgu){lg.style.background='#fff url('+lgu+') center/cover no-repeat';lg.style.borderRadius='50%';lg.style.overflow='hidden';lg.classList.add('img')}else{lg.style.background='';lg.classList.remove('img')}}
   if(!OK||!floorMatG)return;
   applySize();
   if(CUR&&floorObj(CUR))wallMat.color.set(wallColor(CUR));
@@ -5688,6 +5688,8 @@ function ewvMake(p){
   SOURCE='ewvon';ROOMSRC='ewvon';NOTES=[];MAPE={nome:0,depto:1,cargo:2,adm:4,dem:5};HAS=hasFrom(MAPE,EMPS);
   return true;
 }
+function ewvKeepFloor(){try{const f=sessionStorage.getItem('ewv.cur');if(f&&floorObj(f))CUR=f}catch(e){}}
+setInterval(()=>{try{if(CUR)sessionStorage.setItem('ewv.cur',CUR)}catch(e){}},1000);
 function ewvCfg(){
   const sig=DEPT.map(d=>d.name).sort().join('|');let prev='';try{prev=localStorage.getItem('ewv.sig')||''}catch(e){}
   if(sig!==prev){defaultCfg(true,true);try{localStorage.setItem('ewv.sig',sig)}catch(e){}}
@@ -5695,12 +5697,12 @@ function ewvCfg(){
 function ewvTryBoot(){
   if(EWV_BOOTED||!EWV_FONTS||!EWV_PENDING)return;
   if(!ewvMake(EWV_PENDING)){ewvMsg('Ainda não há pessoas cadastradas','Cadastre colaboradores e setores no ewvon para ver os dados da sua empresa aqui.');return}
-  EWV_BOOTED=true;boot();ewvDone();
+  EWV_BOOTED=true;boot();ewvKeepFloor();if(CUR){try{rebuildAll()}catch(e){}}ewvDone();
 }
 function ewvApply(p){
   try{
     if(!ewvMake(p))return;
-    recalc();ewvCfg();CUR=null;ensureCfg();saveCfg();applyTheme(true);rebuildAll();
+    const keepFloor=CUR;recalc();ewvCfg();CUR=keepFloor;ensureCfg();saveCfg();applyTheme(true);rebuildAll();
   }catch(err){console.error('ewvon dash',err)}
 }
 window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='ewvon:dash-data')return;EWV_PENDING=e.data;if(EWV_BOOTED)ewvApply(e.data);else ewvTryBoot()});

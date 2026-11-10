@@ -64,7 +64,7 @@ export function Dashboard3DSection({ onExit }: { onExit: () => void }) {
     let hex = '#FF6A1A';
     if (m) { const h = +m[1], s = +m[2] / 100, l = +m[3] / 100; const a = s * Math.min(l, 1 - l); const f = (n: number) => { const k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, '0'); }; hex = `#${f(0)}${f(8)}${f(4)}`; }
     const fg = readableOn(hex);
-    return `/dash/painel.html?v=20261111b&c=${encodeURIComponent(hex)}&fg=${encodeURIComponent(fg)}`;
+    return `/dash/painel.html?v=20261111c&c=${encodeURIComponent(hex)}&fg=${encodeURIComponent(fg)}`;
   }, []);
   useEffect(() => {
     let alive = true;
@@ -85,8 +85,15 @@ export function Dashboard3DSection({ onExit }: { onExit: () => void }) {
       if (e.data?.type === 'ewvon:dash-ready') void send(true);
     };
     window.addEventListener('message', on);
-    const t = window.setInterval(() => void send(), 60000);   // picks up new people, sectors and bookings without reloading
-    return () => { alive = false; window.removeEventListener('message', on); window.clearInterval(t); };
+    // Real time: any change to people, sectors, rooms, bookings or presence refreshes the Dash (grouped, so a burst is one update).
+    let timer = 0;
+    const soon = () => { window.clearTimeout(timer); timer = window.setTimeout(() => void send(), 900); };
+    const tables = ['profiles', 'sectors', 'meeting_rooms', 'meeting_bookings', 'meeting_booking_participants', 'user_presence'];
+    let ch = supabase.channel('dash-live-' + companyId);
+    tables.forEach((table) => { ch = ch.on('postgres_changes' as never, { event: '*', schema: 'public', table }, soon); });
+    ch.subscribe();
+    const t = window.setInterval(() => void send(), 20000);   // safety net next to Realtime
+    return () => { alive = false; window.clearTimeout(timer); window.removeEventListener('message', on); window.clearInterval(t); void supabase.removeChannel(ch); };
   }, [onExit, companyId, company?.name, logoUrl]);
   return <iframe ref={frame} onLoad={() => window.setTimeout(() => void sendRef.current(true), 50)} title="Dash" src={src} className="fixed inset-0 z-40 h-full w-full border-0 bg-[#E8EDF2]" allow="fullscreen" data-company={profile?.company_id || ''} />;
 }
