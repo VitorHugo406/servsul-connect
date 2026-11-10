@@ -1,18 +1,25 @@
-// Dash: exclusive area of the top plan (plan feature `dashboard_3d`). Placeholder until the dashboard ships.
-import { Box, Sparkles } from 'lucide-react';
-import { PageHeader } from '@/components/common/PageHeader';
-import { Card, CardContent } from '@/components/ui/card';
+// Dash: a separate "system" (Painel DP 3D) shown full screen, with its own navigation. It lives in
+// public/dash/painel.html and is embedded as a same-origin iframe; its flag (Sistema | Dash) sends
+// `ewvon:dash-exit` to go back to the ewvon system through the shared transition.
+import { useEffect, useMemo } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { readableOn } from '@/lib/branding';
+import { switchMode } from '@/lib/modeSwitch';
 
-export function Dashboard3DSection() {
-  return (
-    <div className="space-y-5 p-4 md:p-6">
-      <PageHeader icon={<Box />} title="Dash" subtitle="Painel exclusivo do plano Empresarial." />
-      <Card><CardContent className="flex flex-col items-center px-6 py-16 text-center">
-        <span className="ewvon-dash-flag-mark mb-4 flex h-14 w-14 items-center justify-center rounded-2xl text-white"><Box className="h-6 w-6" strokeWidth={1.8} /></span>
-        <p className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground"><Sparkles className="h-3.5 w-3.5" />Em breve</p>
-        <h2 className="mt-1 text-xl font-semibold">Uma nova forma de ver a operação da sua empresa</h2>
-        <p className="mt-2 max-w-md text-sm text-muted-foreground">Estamos preparando o Dash para os assinantes do plano Empresarial. Assim que estiver pronto, ele aparece aqui.</p>
-      </CardContent></Card>
-    </div>
-  );
+export function Dashboard3DSection({ onExit }: { onExit: () => void }) {
+  const { profile } = useAuth();
+  const src = useMemo(() => {
+    const css = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();   // "h s% l%"
+    const m = css.match(/^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%/);
+    let hex = '#FF6A1A';
+    if (m) { const h = +m[1], s = +m[2] / 100, l = +m[3] / 100; const a = s * Math.min(l, 1 - l); const f = (n: number) => { const k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, '0'); }; hex = `#${f(0)}${f(8)}${f(4)}`; }
+    const fg = readableOn(hex);
+    return `/dash/painel.html?c=${encodeURIComponent(hex)}&fg=${encodeURIComponent(fg)}`;
+  }, []);
+  useEffect(() => {
+    const on = (e: MessageEvent) => { if (e.origin === location.origin && e.data?.type === 'ewvon:dash-exit') switchMode('system', onExit); };
+    window.addEventListener('message', on);
+    return () => window.removeEventListener('message', on);
+  }, [onExit]);
+  return <iframe title="Dash" src={src} className="fixed inset-0 z-40 h-full w-full border-0 bg-[#E8EDF2]" allow="fullscreen" data-company={profile?.company_id || ''} />;
 }

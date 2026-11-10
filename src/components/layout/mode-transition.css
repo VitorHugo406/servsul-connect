@@ -1,0 +1,20 @@
+.emt { position: fixed; inset: 0; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; color: #fff; background: radial-gradient(circle at 50% 42%, #181820 0%, #07070a 64%); animation: emt-in .45s ease both; font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif; overflow: hidden; }
+.emt.to-dash { background: radial-gradient(circle at 50% 42%, #2a1608 0%, #09070a 64%); }
+.emt.is-leaving { animation: emt-out .55s ease forwards; }
+.emt-grid { position: absolute; inset: 0; opacity: .07; background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 46px 46px; mask-image: radial-gradient(circle at 50% 45%, #000, transparent 70%); -webkit-mask-image: radial-gradient(circle at 50% 45%, #000, transparent 70%); }
+.emt-stage { position: relative; display: grid; place-items: center; }
+.emt-glow { position: absolute; inset: -45%; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, .14), transparent 62%); animation: emt-glow 1.8s ease-in-out .4s infinite; pointer-events: none; }
+.emt.to-dash .emt-glow { background: radial-gradient(circle, rgba(255, 106, 26, .3), transparent 62%); }
+.emt .ewl-logo { color: #fff; }
+.emt-dash text { fill: #fff; fill-opacity: 0; stroke: #fff; stroke-width: 1.6; stroke-dasharray: 190; stroke-dashoffset: 190; animation: emt-trace 1.15s cubic-bezier(.6, 0, .3, 1) .85s forwards, emt-fill .6s ease 1.75s forwards; }
+.emt.to-dash .emt-dash text { stroke: #FF6A1A; }
+.emt-line { display: block; width: 140px; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .12); position: relative; overflow: hidden; }
+.emt-line::after { content: ""; position: absolute; inset: 0; width: 100%; background: #fff; transform-origin: left; transform: scaleX(0); animation: emt-bar 2.3s cubic-bezier(.5, 0, .2, 1) .3s forwards; }
+.emt.to-dash .emt-line::after { background: #FF6A1A; }
+@keyframes emt-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes emt-out { to { opacity: 0; transform: scale(1.03); } }
+@keyframes emt-glow { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+@keyframes emt-trace { to { stroke-dashoffset: 0; } }
+@keyframes emt-fill { to { fill-opacity: 1; stroke-width: 0; } }
+@keyframes emt-bar { to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) { .emt, .emt-glow, .emt-line::after { animation: none; } .emt-line::after { transform: none; } .emt-dash text { animation: none; fill-opacity: 1; stroke-dashoffset: 0; } }

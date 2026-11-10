@@ -23,19 +23,12 @@ export function EwwonLogo({ size = 96, animate = true, className, t = 0 }: { siz
   );
 }
 
-// "ewvon" wordmark traced from public/ewwon/img/logo-full.png: a monoline rounded
-// font (the w and v share an arm), so each letter is a stroke that can be drawn.
-const WORD_PATHS = [
-  'M24 22 H50 A21.5 17 0 1 0 29 39 H47',
-  'M60 5 L79 39 L97 8 L113.5 39 L125.5 5 L148.5 39 L174 5',
-  'M201.5 5 A18.5 17 0 1 1 201.4 5',
-  'M235.5 39 V5 H255 A18.5 17 0 0 1 273.5 22 V39',
-];
+// "ewvon" wordmark: the real lettering (public/ewwon/img/wordmark.png, from the official logo) revealed left to
+// right like a pen writing it. It is used as a mask so it follows the current text color.
 export function EwvonWordmark({ height = 30, animate = true, t = 0, className }: { height?: number; animate?: boolean; t?: number; className?: string }) {
   return (
-    <svg className={'ewl-wordmark' + (animate ? ' ewl-anim' : '') + (className ? ' ' + className : '')} viewBox="-1 -1 286 46" height={height} width={(height * 286) / 46} role="img" aria-label="ewvon">
-      {WORD_PATHS.map((d, i) => <path key={i} d={d} pathLength={1} style={{ animationDelay: `${0.9 + [0, 0.32, 0.86, 1.12][i] - t}s` }} />)}
-    </svg>
+    <span className={'ewl-wordmark' + (animate ? ' ewl-anim' : '') + (className ? ' ' + className : '')} role="img" aria-label="ewvon"
+      style={{ height, width: (height * 652) / 116, animationDelay: `${0.9 - t}s` }} />
   );
 }
 

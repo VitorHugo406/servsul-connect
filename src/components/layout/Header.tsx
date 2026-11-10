@@ -13,6 +13,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCompanyLogoUrl } from '@/lib/companyLogo';
 import { createCompanyLogoUrl } from '@/lib/companyLogo';
+import { ModeFlag } from './ModeFlag';
 import { UserProfileDialog } from '@/components/user/UserProfileDialog';
 import { AppearancePersonalizationDialog } from '@/components/layout/AppearancePersonalizationDialog';
 import { TeamHeaderButton } from '@/components/teams/TeamHeaderButton';
@@ -56,12 +57,7 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
         </button>
 
         {companyPlan && !sectionLock('dashboard-3d', companyPlan, isSuperAdminUser) && (
-          <button type="button" onClick={() => onNavigateToSection?.('dashboard-3d')} aria-current={activeSection === 'dashboard-3d' ? 'page' : undefined}
-            title="Dash · exclusivo do plano Empresarial"
-            className={`ewvon-dash-flag flex h-10 shrink-0 items-center gap-2 rounded-full pl-1.5 pr-3.5 text-[13px] font-semibold transition-colors ${activeSection === 'dashboard-3d' ? 'is-active' : ''}`}>
-            <span className="ewvon-dash-flag-mark flex h-7 w-7 items-center justify-center rounded-full text-white"><Box className="h-[15px] w-[15px]" strokeWidth={2} /></span>
-            Dash
-          </button>
+          <ModeFlag mode="system" onSwitch={(to) => { if (to === 'dash') onNavigateToSection?.('dashboard-3d'); }} />
         )}
 
         <nav className="ewvon-quick-nav flex min-w-0 items-center justify-start gap-1 overflow-x-auto px-2" aria-label="Atalhos principais">

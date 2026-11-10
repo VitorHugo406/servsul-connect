@@ -12,10 +12,8 @@
 .ewl-screen .ewl-logo { color: #fff; }
 .ewl-logo.ewl-anim path { stroke-dasharray: 1; stroke-dashoffset: 1; fill-opacity: 0; animation: ewl-draw 1.05s cubic-bezier(.65, 0, .35, 1) forwards, ewl-fill .55s ease-out forwards; }
 .ewl-logo.ewl-anim { animation: ewl-breathe 2.4s ease-in-out 1.6s infinite; transform-origin: center; }
-.ewl-wordmark { display: block; overflow: visible; color: #fff; }
-.ewl-wordmark path { fill: none; stroke: currentColor; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; }
-.ewl-wordmark.ewl-anim path { stroke-dasharray: 1 2; stroke-dashoffset: 1; opacity: 0; animation: ewl-pen .5s cubic-bezier(.55, 0, .3, 1) forwards; }
-.ewl-wordmark.ewl-anim path:nth-child(2) { animation-duration: .6s; }
+.ewl-wordmark { display: block; background: currentColor; color: #fff; -webkit-mask: url(/ewwon/img/wordmark.png) center / contain no-repeat; mask: url(/ewwon/img/wordmark.png) center / contain no-repeat; }
+.ewl-wordmark.ewl-anim { clip-path: inset(0 100% 0 0); animation: ewl-write 1.25s cubic-bezier(.55, 0, .25, 1) forwards; }
 .ewl-msg { margin: 0; font-size: 13px; color: rgba(245, 245, 247, .55); opacity: 0; animation: ewl-fade .5s ease 1.5s forwards; }
 .ewl-screen.inline .ewl-msg { color: hsl(var(--muted-foreground)); }
 .ewl-screen.inline .ewl-wordmark { display: none; }
@@ -26,12 +24,12 @@
 @keyframes ewl-fill { to { fill-opacity: 1; stroke-width: 0; } }
 @keyframes ewl-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
 @keyframes ewl-glow { 0%, 100% { opacity: .2; } 50% { opacity: .9; } }
-@keyframes ewl-pen { 0% { opacity: 0; stroke-dashoffset: .97; } 10% { opacity: 1; } 100% { opacity: 1; stroke-dashoffset: 0; } }
+@keyframes ewl-write { 0% { clip-path: inset(0 100% 0 0); } 100% { clip-path: inset(0 0 0 0); } }
 @keyframes ewl-fade { to { opacity: 1; } }
 @keyframes ewl-slide { 0% { transform: translateX(-110%); } 100% { transform: translateX(260%); } }
 @media (prefers-reduced-motion: reduce) {
   .ewl-logo.ewl-anim path { animation: none; stroke-dashoffset: 0; fill-opacity: 1; }
   .ewl-logo.ewl-anim, .ewl-glow, .ewl-bar i { animation: none; }
-  .ewl-wordmark.ewl-anim path { animation: none; opacity: 1; stroke-dashoffset: 0; }
+  .ewl-wordmark.ewl-anim { animation: none; clip-path: none; }
   .ewl-msg, .ewl-bar { animation: none; opacity: 1; transform: none; }
 }
