@@ -199,7 +199,7 @@ async function handleAdminListIntegrations(companyId: string, isSuperAdmin: bool
     .from("api_integrations")
     .select("id, name, is_active, created_by, created_at, updated_at, last_used_at, company_id, scope_all_companies")
     .order("created_at", { ascending: false });
-  if (!isSuperAdmin) query = query.eq("company_id", companyId);
+  query = query.eq("company_id", companyId);   // every company, super admin included, manages only its own keys
   const { data, error } = await query;
 
   if (error) return jsonResponse({ status: "error", message: error.message }, 500);
@@ -220,7 +220,7 @@ async function handleAdminListIntegrations(companyId: string, isSuperAdmin: bool
 async function handleAdminToggle(integrationId: string, activate: boolean, userId: string, companyId: string, isSuperAdmin: boolean) {
   const admin = getAdminClient();
   let query = admin.from("api_integrations").update({ is_active: activate, updated_at: new Date().toISOString() }).eq("id", integrationId);
-  if (!isSuperAdmin) query = query.eq("company_id", companyId);
+  query = query.eq("company_id", companyId);   // every company, super admin included, manages only its own keys
   const { data, error } = await query.select().maybeSingle();
   if (error) return jsonResponse({ status: "error", message: error.message }, 500);
   if (!data) return jsonResponse({ status: "error", message: "Integração não encontrada." }, 404);
@@ -247,7 +247,7 @@ async function handleAdminRegenerate(integrationId: string, userId: string, comp
     api_token_hash: tokenHash,
     updated_at: new Date().toISOString(),
   }).eq("id", integrationId);
-  if (!isSuperAdmin) updateQuery = updateQuery.eq("company_id", companyId);
+  updateQuery = updateQuery.eq("company_id", companyId);   // every company, super admin included, manages only its own keys
   const { data: updated, error } = await updateQuery.select().maybeSingle();
 
   if (error) {
@@ -277,12 +277,12 @@ async function handleAdminDelete(integrationId: string, userId: string, companyI
 
   // Get name before delete (scoped to company)
   let integQuery = admin.from("api_integrations").select("id, name").eq("id", integrationId);
-  if (!isSuperAdmin) integQuery = integQuery.eq("company_id", companyId);
+  integQuery = integQuery.eq("company_id", companyId);   // every company, super admin included, manages only its own keys
   const { data: integ } = await integQuery.maybeSingle();
   if (!integ) return jsonResponse({ status: "error", message: "Integração não encontrada." }, 404);
 
   let delQuery = admin.from("api_integrations").delete().eq("id", integrationId);
-  if (!isSuperAdmin) delQuery = delQuery.eq("company_id", companyId);
+  delQuery = delQuery.eq("company_id", companyId);   // every company, super admin included, manages only its own keys
   const { error } = await delQuery;
   if (error) return jsonResponse({ status: "error", message: error.message }, 500);
 
@@ -302,7 +302,7 @@ async function handleAdminHistory(integrationId: string, companyId: string, isSu
   const admin = getAdminClient();
 
   let integQuery = admin.from("api_integrations").select("id").eq("id", integrationId);
-  if (!isSuperAdmin) integQuery = integQuery.eq("company_id", companyId);
+  integQuery = integQuery.eq("company_id", companyId);   // every company, super admin included, manages only its own keys
   const { data: integ } = await integQuery.maybeSingle();
   if (!integ) return jsonResponse({ status: "error", message: "Integração não encontrada." }, 404);
 
