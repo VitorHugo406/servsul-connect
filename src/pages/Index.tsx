@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import { lazyWithRetry } from '@/lib/lazyRetry';
 import { SectionBoundary } from '@/components/common/SectionBoundary';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, LayoutDashboard, MessageSquare, Bell, Cake, Settings, Link as LinkIcon, ScanFace, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, CalendarDays, FileText, HardDrive, BookOpen, Shield, Globe, ClipboardCheck, StickyNote, Megaphone, Plug, LayoutGrid, CreditCard, Lock } from 'lucide-react';
+import { Home, LayoutDashboard, MessageSquare, Bell, Cake, Settings, Link as LinkIcon, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, CalendarDays, FileText, HardDrive, BookOpen, Shield, Globe, ClipboardCheck, StickyNote, Megaphone, Plug, LayoutGrid, CreditCard, Lock } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { usePresence } from '@/hooks/usePresence';
 import { useMeetingStatus } from '@/hooks/useMeetingStatus';
@@ -22,7 +22,6 @@ const AnnouncementsSection = lazyWithRetry(() => import('@/components/sections/A
 const BirthdaysSection = lazyWithRetry(() => import('@/components/sections/BirthdaysSection').then((module) => ({ default: module.BirthdaysSection })));
 const MyDashboardSection = lazyWithRetry(() => import('@/components/sections/MyDashboardSection').then((module) => ({ default: module.MyDashboardSection })));
 const ManagementSection = lazyWithRetry(() => import('@/components/sections/ManagementSection').then((module) => ({ default: module.ManagementSection })));
-const FacialRegistrationSection = lazyWithRetry(() => import('@/components/sections/FacialRegistrationSection').then((module) => ({ default: module.FacialRegistrationSection })));
 const DataManagementSection = lazyWithRetry(() => import('@/components/sections/DataManagementSection').then((module) => ({ default: module.DataManagementSection })));
 const SectorManagementSection = lazyWithRetry(() => import('@/components/sections/SectorManagementSection').then((module) => ({ default: module.SectorManagementSection })));
 const TaskBoardSection = lazyWithRetry(() => import('@/components/sections/TaskBoardSection').then((module) => ({ default: module.TaskBoardSection })));
@@ -65,7 +64,6 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   birthdays: { title: 'Aniversariantes', subtitle: 'Mural de celebrações' },
   management: { title: 'Gerenciamento', subtitle: 'Administração do sistema' },
   shortcuts: { title: 'Atalhos do Sistema', subtitle: 'Links personalizados do cabeçalho do PC' },
-  facial: { title: 'Cadastro Facial', subtitle: 'Reconhecimento biométrico' },
   'data-management': { title: 'Exclusão de Dados', subtitle: 'Gerenciamento de dados do sistema' },
   sectors: { title: 'Gestão de Setores', subtitle: 'Departamentos da empresa' },
   tasks: { title: 'Gestão de Tarefas', subtitle: 'Quadro de atividades' },
@@ -91,7 +89,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
 const sectionPaths: Record<string, string> = {
   home: '/', 'my-dashboard': '/meu-painel', chat: '/chat', announcements: '/avisos',
   birthdays: '/aniversariantes', management: '/gerenciamento', shortcuts: '/atalhos',
-  facial: '/cadastro-facial', 'data-management': '/gestao-de-dados', sectors: '/setores',
+  'data-management': '/gestao-de-dados', sectors: '/setores',
   tasks: '/tarefas',
   'people-management': '/gestao-de-pessoas', 'feedback-email': '/disparo-de-feedback',
   calendar: '/calendario', 'system-logs': '/logs-do-sistema', storage: '/armazenamento',
@@ -108,7 +106,7 @@ const pathSections = Object.fromEntries(Object.entries(sectionPaths).map(([key, 
 const sectionIntroIcons = {
   home: Home, 'my-dashboard': LayoutDashboard, chat: MessageSquare,
   announcements: Bell, birthdays: Cake, management: Settings, shortcuts: LinkIcon,
-  facial: ScanFace, 'data-management': Trash2, sectors: Building2,
+  'data-management': Trash2, sectors: Building2,
   tasks: ListTodo, 'people-management': UsersRound,
   'feedback-email': Mail, calendar: CalendarDays, 'system-logs': FileText,
   storage: HardDrive, documentation: BookOpen, 'war-room': Shield,
@@ -254,9 +252,8 @@ const Index = () => {
   usePresence(); useMeetingStatus();
   useEffect(() => { const timer = requestAnimationFrame(() => setIsReady(true)); return () => cancelAnimationFrame(timer); }, []);
   const handleNavigateToChat = () => handleSectionChange('chat'); const handleNavigateToAnnouncements = () => handleSectionChange('announcements');
-  const handleRegisterFacial = () => { completeOnboarding(); handleSectionChange('facial'); };
 
-  if (showOnboarding && profile && !isMobile) return <OnboardingScreen userName={profile.display_name || profile.name} onComplete={completeOnboarding} onRegisterFacial={handleRegisterFacial} />;
+  if (showOnboarding && profile && !isMobile) return <OnboardingScreen userName={profile.display_name || profile.name} onComplete={completeOnboarding} />;
   if (!isReady) return <EwwonLoader />;
 
   const renderSection = () => {
@@ -271,7 +268,6 @@ const Index = () => {
       case 'birthdays': return <BirthdaysSection />;
       case 'management': return <ManagementSection />;
       case 'shortcuts': return isAdmin ? <ShortcutsManagementSection /> : <HomeSection onNavigate={handleSectionChange} />;
-      case 'facial': return <FacialRegistrationSection />;
       case 'data-management': return <DataManagementSection />;
       case 'sectors': return <SectorManagementSection />;
       case 'tasks': return <TaskBoardSection />;

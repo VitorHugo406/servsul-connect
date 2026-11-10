@@ -46,7 +46,7 @@ export function StorageMonitoringSection() {
       const tables = [
         'profiles', 'messages', 'direct_messages', 'private_group_messages',
         'announcements', 'attachments', 'tasks', 'audit_logs',
-        'user_facial_data', 'task_boards', 'private_groups', 'sectors',
+        'task_boards', 'private_groups', 'sectors',
       ];
 
       const tableStats: { name: string; rows: number }[] = [];
@@ -60,7 +60,7 @@ export function StorageMonitoringSection() {
       tableStats.sort((a, b) => b.rows - a.rows);
 
       // Get bucket file counts and real sizes
-      const bucketNames = ['attachments', 'avatars', 'company-logos', 'face-images'];
+      const bucketNames = ['attachments', 'avatars', 'company-logos'];
       const bucketStats: { name: string; count: number; sizeMb: number }[] = [];
 
       for (const bucket of bucketNames) {
@@ -139,7 +139,6 @@ export function StorageMonitoringSection() {
     attachments: 'Anexos',
     tasks: 'Tarefas',
     audit_logs: 'Logs de Auditoria',
-    user_facial_data: 'Dados Faciais',
     task_boards: 'Quadros de Tarefas',
     private_groups: 'Grupos Privados',
     sectors: 'Setores',

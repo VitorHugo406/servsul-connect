@@ -32,9 +32,6 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { FacialLoginCamera } from '@/components/facial/FacialLoginCamera';
-
-const FACIAL_LOGIN_ENABLED = false;
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { applyBrand, resetBrand, BRAND_PRIMARY, BRAND_SECONDARY } from '@/lib/branding';
@@ -90,7 +87,6 @@ const Auth = () => {
   const [step, setStep] = useState(1);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [showFacialLogin, setShowFacialLogin] = useState(false);
   
   // Login fields
   const [loginEmail, setLoginEmail] = useState('');
@@ -144,58 +140,6 @@ const Auth = () => {
       link.href = logoUrl ?? '';
     });
   }, [companyBrand, companyLogoUrl]);
-
-  // Handle facial login success
-  const handleFacialLoginSuccess = async (userId: string, email: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Call edge function to generate magic link
-      const { data, error: funcError } = await supabase.functions.invoke('facial-login', {
-        body: { userId, email },
-      });
-
-      if (funcError || data?.error) {
-        throw new Error(data?.error || funcError?.message || 'Erro no login facial');
-      }
-
-      if (!data?.actionLink) {
-        throw new Error('Link de acesso não gerado');
-      }
-
-      toast.success('Login facial bem-sucedido! Redirecionando...');
-      
-      // Extract the token from the action link URL
-      // The action link format is: https://xxx.supabase.co/auth/v1/verify?token=xxx&type=magiclink&redirect_to=xxx
-      const actionUrl = new URL(data.actionLink);
-      const token = actionUrl.searchParams.get('token');
-      const type = actionUrl.searchParams.get('type');
-      
-      if (token && type === 'magiclink') {
-        // Use verifyOtp to authenticate directly without redirect
-        const { error: verifyError } = await supabase.auth.verifyOtp({
-          token_hash: token,
-          type: 'magiclink',
-        });
-        
-        if (verifyError) {
-          console.error('OTP verification error:', verifyError);
-          throw new Error('Erro ao verificar autenticação');
-        }
-        
-        // Authentication successful, navigate to home
-        navigate('/');
-      } else {
-        // Fallback: redirect to the magic link URL
-        window.location.href = data.actionLink;
-      }
-    } catch (err) {
-      console.error('Facial login error:', err);
-      setError('Erro no login facial. Tente novamente.');
-      setShowFacialLogin(false);
-      setLoading(false);
-    }
-  };
 
   // Fetch sectors using edge function (bypasses RLS)
   useEffect(() => {
@@ -512,13 +456,7 @@ const Auth = () => {
                 )}
               </AnimatePresence>
 
-              {/* Facial Login Mode */}
-              {FACIAL_LOGIN_ENABLED && showFacialLogin ? (
-                <FacialLoginCamera
-                  onSuccess={handleFacialLoginSuccess}
-                  onCancel={() => setShowFacialLogin(false)}
-                />
-              ) : isLogin ? (
+              {isLogin ? (
                 /* Login Form */
                 <form onSubmit={handleLoginSubmit} className="space-y-3">
                   <div className="space-y-1">
@@ -580,26 +518,6 @@ const Auth = () => {
                     )}
                   </Button>
 
-                  {/* Facial Login Button — disabled (SECURITY 2026-11-09: the old endpoint allowed account takeover) */}
-                  {FACIAL_LOGIN_ENABLED && (<>
-                  <div className="relative my-2">
-                    <Separator />
-                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-                      ou
-                    </span>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 w-full text-base font-medium touch-manipulation"
-                    onClick={() => setShowFacialLogin(true)}
-                    disabled={loading}
-                  >
-                    <Camera className="h-5 w-5 mr-2" />
-                    Entrar com reconhecimento facial
-                  </Button>
-                  </>)}
                 </form>
               ) : (
                 /* Signup Form */

@@ -94,7 +94,7 @@ function PersistentAccessNavigation() {
 function AppRoutes() {
   const location = useLocation();
   const full = new URLSearchParams(location.search).get('full') === '1';
-  // Phones get the Ewwon login (company + e-mail/password); "full=1" keeps the complete form (sign-up, facial login).
+  // Phones get the Ewwon login (company + e-mail/password); "full=1" keeps the complete form (sign-up).
   // The new login (company + user) is used on every screen size; ?full=1 opens the complete form.
   const mobileLogin = !full;
   const authContent = mobileLogin ? <PublicRoute><EwwonLogin /></PublicRoute> : <PublicRoute><Auth /></PublicRoute>;

@@ -10,7 +10,6 @@ import { PageHeader } from '@/components/common/PageHeader';
     Database,
     Shield,
     Loader2,
-    ScanFace,
     UserX,
     ListTodo,
     CalendarIcon,
@@ -138,15 +137,6 @@ interface DeletionOption {
        dangerLevel: 'high',
        type: 'announcements',
      },
-     {
-       id: 'facial',
-       title: 'Excluir Dados Faciais',
-       description: 'Remove todos os dados de reconhecimento facial cadastrados, exceto do administrador principal.',
-       icon: ScanFace,
-       confirmText: 'EXCLUIR FACIAIS',
-       dangerLevel: 'high',
-       type: 'facial',
-      },
       {
         id: 'attachments',
         title: 'Excluir Arquivos Enviados',

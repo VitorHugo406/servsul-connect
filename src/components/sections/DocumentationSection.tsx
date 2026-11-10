@@ -286,7 +286,6 @@ function generateDocumentationPDF() {
     'Publicar avisos e comunicados oficiais com controle de leitura',
     'Mural de aniversariantes e eventos sazonais',
     'Controle de acesso por níveis de autonomia (admin, gerente, gestor, diretoria, supervisor, colaborador)',
-    'Reconhecimento facial para autenticação biométrica',
     'Calendário integrado com reuniões e lembretes',
     'Disparo de e-mails de feedback via Resend API',
   ]);
@@ -311,7 +310,6 @@ function generateDocumentationPDF() {
       ['Lucide React', 'Biblioteca de ícones SVG tree-shakable'],
       ['jsPDF + autotable', 'Geração de relatórios PDF no client-side'],
       ['xlsx', 'Leitura e escrita de planilhas Excel'],
-      ['face-api.js', 'Reconhecimento facial em browser (TensorFlow.js)'],
     ],
     [55, contentW - 55]
   );
@@ -321,7 +319,7 @@ function generateDocumentationPDF() {
     [['Tecnologia', 'Descrição']],
     [
       ['PostgreSQL', 'Banco relacional com suporte a JSON, arrays e full-text search'],
-      ['Supabase Auth', 'Autenticação via JWT com email/senha e login facial'],
+      ['Supabase Auth', 'Autenticação via JWT com email/senha'],
       ['PostgREST', 'API REST gerada automaticamente a partir do schema'],
       ['Supabase Realtime', 'Sincronização via WebSockets (postgres_changes)'],
       ['Edge Functions (Deno)', '12 funções serverless para lógica de backend'],
@@ -387,7 +385,6 @@ function generateDocumentationPDF() {
     ['user_additional_sectors', 'Setores extras vinculados ao usuário (além do primário)'],
     ['user_presence', 'Status online/offline com heartbeat periódico (30s)'],
     ['user_notifications', 'Notificações: menções, avisos, tarefas, convites'],
-    ['user_facial_data', 'Descritores faciais 128-dim para login biométrico'],
     ['supervisor_team_members', 'Vínculo supervisor ↔ membros da equipe'],
   ], [42, contentW - 42]);
 
@@ -409,7 +406,6 @@ function generateDocumentationPDF() {
   subTitle('Métodos de Login');
   bulletList([
     'E-mail e Senha — Cadastro via formulário com verificação de e-mail obrigatória antes do primeiro acesso',
-    'Reconhecimento Facial — Login biométrico usando face-api.js com descritores 128-dimensionais armazenados no banco e comparados via Edge Function (threshold de distância euclidiana)',
   ]);
 
   subTitle('Hierarquia de Autonomia (Enum app_role)');
@@ -435,7 +431,7 @@ function generateDocumentationPDF() {
     ['🎂 Aniversariantes', 'BirthdaysSection.tsx', 'Mural mensal, celebração com confetti, modal no dia do aniversário'],
     ['📋 Gestão de Tarefas', 'TaskBoardSection.tsx', 'Kanban: quadros, colunas, cards, subtarefas, etiquetas, automações, templates, workflow, drag-and-drop, relatórios, alertas de sobrecarga, duplicação automática'],
     ['👥 Gestão de Pessoas', 'PeopleManagementSection.tsx', 'Equipe do supervisor, analytics de produtividade, vinculação de membros'],
-    ['⚙️ Gerenciamento', 'ManagementSection.tsx', 'CRUD usuários, roles, permissões, cadastro facial, dados do perfil'],
+    ['⚙️ Gerenciamento', 'ManagementSection.tsx', 'CRUD usuários, roles, permissões, dados do perfil'],
     ['🏢 Gestão de Setores', 'SectorManagementSection.tsx', 'CRUD setores com ícones e cores, membros por setor, setores adicionais'],
     ['⭐ Comunicados', 'ImportantAnnouncementsSection.tsx', 'Modal obrigatório, estilos de borda, agendamento, controle de leitura'],
     ['📅 Calendário', 'CalendarSection.tsx', 'Eventos, reuniões com confirmação, links de reunião, participantes'],
@@ -474,7 +470,6 @@ function generateDocumentationPDF() {
     ['components/birthday/', 'Diretório', 'BirthdayCelebrationModal com animação de confetti'],
     ['components/announcements/', 'Diretório', 'ImportantAnnouncementModal com estilos de borda'],
     ['components/chatbot/', 'Diretório', 'ChatbotWidget para assistente inteligente'],
-    ['components/facial/', 'Diretório', 'FacialCamera e FacialLoginCamera para biometria'],
     ['components/onboarding/', 'Diretório', 'OnboardingScreen para novos usuários'],
     ['contexts/', 'Diretório', 'AuthContext.tsx — contexto global de autenticação'],
     ['hooks/', 'Diretório', '30+ hooks customizados para lógica de negócio'],
@@ -488,9 +483,6 @@ function generateDocumentationPDF() {
     ['config.toml', 'Config', 'Configuração do projeto Supabase (auto-gerenciado)'],
     ['functions/create-admin/', 'Edge Fn', 'Bootstrap: cria primeiro admin do sistema'],
     ['functions/register-user/', 'Edge Fn', 'Cadastro de usuário + profile + permissions'],
-    ['functions/register-facial-data/', 'Edge Fn', 'Salva descritores faciais 128-dim no banco'],
-    ['functions/facial-login/', 'Edge Fn', 'Compara descritores para login biométrico'],
-    ['functions/get-facial-data/', 'Edge Fn', 'Consulta dados faciais de um usuário'],
     ['functions/get-public-sectors/', 'Edge Fn', 'Retorna setores para tela pública de login'],
     ['functions/update-user-permissions/', 'Edge Fn', 'Atualiza permissões granulares do usuário'],
     ['functions/delete-data/', 'Edge Fn', 'Exclusão controlada com registro em audit_logs'],
@@ -546,7 +538,6 @@ function generateDocumentationPDF() {
   addTable([['Hook', 'Descrição']], [
     ['useData', 'Hook principal: carrega profiles, sectors e users ativos'],
     ['usePresence', 'Status online/offline com heartbeat a cada 30s'],
-    ['useFaceRecognition', 'Captura e comparação de descritores faciais via face-api.js'],
     ['useFileUpload', 'Upload para Storage com progresso e validação de tipo/tamanho'],
     ['useSound', 'Reprodução de sons de notificação (new_message, mention)'],
     ['usePWA', 'Detecção de instalação PWA e prompt de install'],
@@ -567,9 +558,6 @@ function generateDocumentationPDF() {
     ['create-admin', 'POST', 'Cria o primeiro admin do sistema (bootstrap inicial)'],
     ['register-user', 'POST', 'Registra usuário via auth.admin.createUser() + profile + permissions'],
     ['update-user-permissions', 'POST', 'Atualiza flags de permissão na tabela user_permissions'],
-    ['register-facial-data', 'POST', 'Salva descritores faciais (Float32Array 128-dim) + imagem'],
-    ['facial-login', 'POST', 'Compara descritores enviados com cadastrados (distância < 0.6)'],
-    ['get-facial-data', 'POST', 'Retorna descritores e imagem facial de um usuário'],
     ['get-public-sectors', 'GET', 'Retorna lista de setores para exibição na tela de login'],
     ['delete-data', 'POST', 'Exclusão controlada de registros com log em audit_logs'],
     ['send-announcement-email', 'POST', 'Envia e-mail de aviso para os usuários ativos da empresa via Gmail SMTP'],
@@ -633,7 +621,7 @@ function generateDocumentationPDF() {
     'DMs: apenas remetente e destinatário podem visualizar e enviar',
     'Quadros Kanban: apenas membros do quadro acessam tasks, colunas e configurações',
     'Grupos privados: apenas membros do grupo visualizam e enviam mensagens',
-    'Dados administrativos: audit_logs, user_facial_data, system_settings acessíveis apenas por admins',
+    'Dados administrativos: audit_logs, system_settings acessíveis apenas por admins',
   ]);
 
   // =============================================
@@ -845,7 +833,7 @@ export function DocumentationSection() {
                 <InfoCard icon={MessageSquare} title="Comunicação" value="Chat por setores, DMs, grupos privados, menções" />
                 <InfoCard icon={ListTodo} title="Gestão de Tarefas" value="Kanban com automações, subtarefas, etiquetas" />
                 <InfoCard icon={Bell} title="Avisos" value="Comunicados oficiais com controle de leitura" />
-                <InfoCard icon={Shield} title="Segurança" value="RLS, roles, reconhecimento facial" />
+                <InfoCard icon={Shield} title="Segurança" value="RLS, roles" />
                 <InfoCard icon={CalendarDays} title="Calendário" value="Reuniões, lembretes, prazos integrados" />
                 <InfoCard icon={Mail} title="E-mails" value="Feedback mensal via Resend API" />
                 <InfoCard icon={Cake} title="Aniversariantes" value="Mural com celebração animada" />
@@ -959,7 +947,6 @@ export function DocumentationSection() {
                     <TableRow label="user_additional_sectors" value="Setores adicionais" />
                     <TableRow label="user_presence" value="Online/offline (heartbeat)" />
                     <TableRow label="user_notifications" value="Notificações" />
-                    <TableRow label="user_facial_data" value="Dados biométricos" />
                     <TableRow label="supervisor_team_members" value="Supervisor ↔ membros" />
                   </div>
                 </div>
@@ -986,7 +973,6 @@ export function DocumentationSection() {
                   <h4 className="font-semibold mb-2">Métodos de Autenticação:</h4>
                   <ul className="list-disc pl-5 space-y-1">
                     <li><strong>E-mail e Senha:</strong> Verificação de e-mail obrigatória</li>
-                    <li><strong>Reconhecimento Facial:</strong> face-api.js (128-dim descriptors)</li>
                   </ul>
                   <h4 className="font-semibold mt-3 mb-1">Admin Principal:</h4>
                   <p className="text-xs text-muted-foreground">E-mail: <code className="bg-muted px-1 py-0.5 rounded text-xs">adminservchat@servsul.com.br</code></p>
@@ -1020,7 +1006,7 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                 <InfoCard icon={Cake} title="Aniversariantes" value="Mural mensal com celebração animada (confetti)" />
                 <InfoCard icon={ListTodo} title="Gestão de Tarefas" value="Kanban: múltiplos quadros, automações, templates, workflow, relatórios" />
                 <InfoCard icon={Users} title="Gestão de Pessoas" value="Equipe do supervisor, analytics de produtividade" />
-                <InfoCard icon={Settings} title="Gerenciamento" value="CRUD de usuários, roles, permissões, cadastro facial" />
+                <InfoCard icon={Settings} title="Gerenciamento" value="CRUD de usuários, roles, permissões" />
                 <InfoCard icon={Building2} title="Gestão de Setores" value="CRUD setores com ícones, cores e membros" />
                 <InfoCard icon={Sparkles} title="Comunicados Importantes" value="Modal obrigatório, estilos customizáveis, agendamento" />
                 <InfoCard icon={CalendarDays} title="Calendário" value="Eventos, reuniões com confirmação, links de reunião" />
@@ -1066,9 +1052,6 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
 └── functions/            # 12 Edge Functions
     ├── create-admin/
     ├── register-user/
-    ├── register-facial-data/
-    ├── facial-login/
-    ├── get-facial-data/
     ├── get-public-sectors/
     ├── update-user-permissions/
     ├── delete-data/
@@ -1139,9 +1122,6 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                   <TableRow label="create-admin" value="Bootstrap do primeiro admin" />
                   <TableRow label="register-user" value="Cadastro + profile + permissions" />
                   <TableRow label="update-user-permissions" value="Permissões granulares" />
-                  <TableRow label="register-facial-data" value="Salva descritores 128-dim" />
-                  <TableRow label="facial-login" value="Compara descritores faciais" />
-                  <TableRow label="get-facial-data" value="Consulta dados faciais" />
                 </div>
                 <div className="border border-border rounded-md overflow-hidden">
                   <TableRow label="get-public-sectors" value="Setores para tela pública" />
@@ -1211,7 +1191,7 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                     <li><strong>DMs:</strong> Remetente e destinatário</li>
                     <li><strong>Quadros:</strong> Apenas membros</li>
                     <li><strong>Grupos:</strong> Apenas membros do grupo</li>
-                    <li><strong>Admin:</strong> audit_logs, facial_data, settings restritos</li>
+                    <li><strong>Admin:</strong> audit_logs, settings restritos</li>
                   </ul>
                 </div>
               </div>

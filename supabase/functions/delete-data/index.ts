@@ -222,13 +222,6 @@ serve(async (req) => {
         break;
       }
 
-      case 'facial': {
-        console.log('Deleting facial data (except main admin)...');
-        await safeDelete('user_facial_data', { column: 'user_id', op: 'neq', value: adminUserId });
-        result.message = 'Todos os dados faciais foram excluídos (exceto admin principal)';
-        break;
-      }
-
       case 'attachments-files': {
         console.log('Deleting all attachment files from storage and DB...');
         
@@ -297,7 +290,6 @@ serve(async (req) => {
         await safeDelete('user_permissions', { column: 'user_id', op: 'neq', value: adminUserId });
         await safeDelete('user_roles', { column: 'user_id', op: 'neq', value: adminUserId });
         await safeDelete('user_presence', { column: 'user_id', op: 'neq', value: adminUserId });
-        await safeDelete('user_facial_data', { column: 'user_id', op: 'neq', value: adminUserId });
         await safeDelete('user_additional_sectors', { column: 'user_id', op: 'neq', value: adminUserId });
         // Inactivate profiles
         const { error } = await adminClient.from('profiles').update({ is_active: false }).neq('email', ADMIN_EMAIL);
@@ -327,7 +319,6 @@ serve(async (req) => {
             await adminClient.from('user_permissions').delete().eq('user_id', uid);
             await adminClient.from('user_roles').delete().eq('user_id', uid);
             await adminClient.from('user_presence').delete().eq('user_id', uid);
-            await adminClient.from('user_facial_data').delete().eq('user_id', uid);
             await adminClient.from('user_additional_sectors').delete().eq('user_id', uid);
             await adminClient.from('user_notifications').delete().eq('user_id', uid);
           }
@@ -394,7 +385,6 @@ serve(async (req) => {
         await safeDelete('user_permissions', { column: 'user_id', op: 'neq', value: adminUserId });
         await safeDelete('user_roles', { column: 'user_id', op: 'neq', value: adminUserId });
         await safeDelete('user_presence', { column: 'user_id', op: 'neq', value: adminUserId });
-        await safeDelete('user_facial_data', { column: 'user_id', op: 'neq', value: adminUserId });
         await safeDelete('user_additional_sectors', { column: 'user_id', op: 'neq', value: adminUserId });
         // Inactivate remaining profiles
         await adminClient.from('profiles').update({ is_active: false }).neq('email', ADMIN_EMAIL);
@@ -484,7 +474,6 @@ serve(async (req) => {
           await adminClient.from('user_permissions').delete().eq('user_id', targetUserId2);
           await adminClient.from('user_roles').delete().eq('user_id', targetUserId2);
           try { await adminClient.from('user_presence').delete().eq('user_id', targetUserId2); } catch (e) {}
-          try { await adminClient.from('user_facial_data').delete().eq('user_id', targetUserId2); } catch (e) {}
           await adminClient.from('user_additional_sectors').delete().eq('user_id', targetUserId2);
           try { await adminClient.from('user_notifications').delete().eq('user_id', targetUserId2); } catch (e) {}
           // Delete attachments uploaded by this user
