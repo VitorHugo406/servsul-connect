@@ -99,12 +99,12 @@
 .ui-btn:not(.ew *):active { transform: none !important; }
 .ui-btn:not(.ew *).rounded-full:has(> img:only-child), .ui-btn:not(.ew *).rounded-full:has(> span.rounded-full:only-child) { border-radius: 9999px !important; } /* avatar-only buttons stay round */
 
-/* Shell: top bar groups and side menu share the same shape and the same active state */
-:is(.ewvon-brand, .ewvon-quick-nav, .ewvon-actions):not(.ew *) { border-radius: 12px !important; }
-.ewvon-quick-nav button, .ewvon-actions button:not(.ewvon-profile-button), .ewvon-actions [data-radix-popover-trigger], .ewvon-dash-flag { border-radius: 8px !important; box-shadow: none !important; }
-.ewvon-actions .ewvon-profile-button { border-radius: 10px !important; box-shadow: none !important; }
-.ewvon-sidebar { border-radius: 14px !important; }
-.ewvon-sidebar nav button { border-radius: 8px !important; box-shadow: none !important; }
+/* Shell: navigation is ROUND (pill bars, circular tabs); only the active tab takes the company color */
+:is(.ewvon-brand, .ewvon-quick-nav, .ewvon-actions):not(.ew *) { border-radius: 9999px !important; }
+.ewvon-quick-nav button, .ewvon-actions button, .ewvon-actions [data-radix-popover-trigger], .ewvon-dash-flag, .ewvon-actions .ewvon-profile-button { border-radius: 9999px !important; box-shadow: none !important; }
+.ewvon-sidebar { border-radius: 9999px !important; }
+.ewvon-actions :is(button, a).ui-btn:not(.ew *), .ewvon-quick-nav .ui-btn:not(.ew *), .ewvon-sidebar .ui-btn:not(.ew *), .ewvon-dash-flag.ui-btn:not(.ew *) { border-radius: 9999px !important; }
+.ewvon-sidebar nav button, .ewvon-sidebar nav button.ui-btn { border-radius: 9999px !important; box-shadow: none !important; }
 .ewvon-sidebar nav button[aria-current="page"], .ewvon-quick-nav button[aria-current="page"] {
   background: hsl(var(--primary)) !important; color: hsl(var(--primary-foreground)) !important; box-shadow: none !important;
 }
