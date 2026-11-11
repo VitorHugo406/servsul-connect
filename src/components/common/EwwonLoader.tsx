@@ -35,7 +35,8 @@ export function EwvonWordmark({ height = 30, animate = true, t = 0, className }:
 export function EwwonLoader({ message, inline = false }: { message?: string; inline?: boolean }) {
   const t = inline ? 0 : elapsed();
   return (
-    <div className={'ewl-screen' + (inline ? ' inline' : '')} role="status" aria-live="polite" aria-label={message || 'Carregando'}>
+    <div className={'ewl-screen' + (inline ? ' inline' : '')} role="status" aria-live="polite" aria-label={message || 'Carregando'}
+      style={{ ['--ewl-t' as string]: `${t}s` }}>
       <div className="ewl-stage">
         <EwwonLogo size={inline ? 64 : 104} t={t} />
         <span className="ewl-glow" />

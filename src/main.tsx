@@ -1,5 +1,5 @@
 // A call notification can open the app before the person is signed in: remember the call for after the login.
-try { const q = new URLSearchParams(location.search); const id = q.get('call'); if (id && /^[0-9a-f-]{36}$/.test(id)) localStorage.setItem('ewvon:pending-call', JSON.stringify({ id, a: q.get('a') || '0', at: Date.now() })); } catch { /* ignore */ }
+try { const q = new URLSearchParams(location.search); const id = q.get('call'); if (id && q.get('pre') !== '1' && /^[0-9a-f-]{36}$/.test(id)) localStorage.setItem('ewvon:pending-call', JSON.stringify({ id, a: q.get('a') || '0', at: Date.now() })); } catch { /* ignore */ }
 import "./lib/appMode";
 import "./lib/demo/bootDemo";
 import { createRoot } from "react-dom/client";

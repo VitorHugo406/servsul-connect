@@ -6,20 +6,20 @@
 }
 .ewl-screen.inline { position: relative; inset: auto; z-index: auto; min-height: 220px; background: transparent; color: hsl(var(--foreground)); }
 .ewl-stage { position: relative; display: grid; place-items: center; }
-.ewl-glow { position: absolute; inset: -40%; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, .12), transparent 62%); opacity: 0; animation: ewl-glow 2.4s ease-in-out 1.2s infinite; pointer-events: none; }
+.ewl-glow { position: absolute; inset: -40%; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, .12), transparent 62%); opacity: 0; animation: ewl-glow 2.4s ease-in-out calc(1.2s - var(--ewl-t, 0s)) infinite; will-change: opacity; pointer-events: none; }
 .ewl-logo { overflow: visible; display: block; }
 .ewl-logo path { fill: currentColor; stroke: currentColor; stroke-width: 3; stroke-linejoin: round; fill-opacity: 1; }
 .ewl-screen .ewl-logo { color: #fff; }
 .ewl-logo.ewl-anim path { stroke-dasharray: 1; stroke-dashoffset: 1; fill-opacity: 0; animation: ewl-draw 1.05s cubic-bezier(.65, 0, .35, 1) forwards, ewl-fill .55s ease-out forwards; }
-.ewl-logo.ewl-anim { animation: ewl-breathe 2.4s ease-in-out 1.6s infinite; transform-origin: center; }
+.ewl-logo.ewl-anim { animation: ewl-breathe 2.4s ease-in-out calc(1.6s - var(--ewl-t, 0s)) infinite; transform-origin: center; will-change: transform; }
 .ewl-wordmark { display: block; background: currentColor; color: #fff; -webkit-mask: url(/ewwon/img/wordmark.png) center / contain no-repeat; mask: url(/ewwon/img/wordmark.png) center / contain no-repeat; }
-.ewl-wordmark.ewl-anim { clip-path: inset(0 100% 0 0); animation: ewl-write 1.25s cubic-bezier(.55, 0, .25, 1) forwards; }
-.ewl-msg { margin: 0; font-size: 13px; color: rgba(245, 245, 247, .55); opacity: 0; animation: ewl-fade .5s ease 1.5s forwards; }
+.ewl-wordmark.ewl-anim { clip-path: inset(0 100% 0 0); animation: ewl-write 1.25s cubic-bezier(.55, 0, .25, 1) forwards; will-change: clip-path; }
+.ewl-msg { margin: 0; font-size: 13px; color: rgba(245, 245, 247, .55); opacity: 0; animation: ewl-fade .5s ease calc(1.5s - var(--ewl-t, 0s)) forwards; }
 .ewl-screen.inline .ewl-msg { color: hsl(var(--muted-foreground)); }
 .ewl-screen.inline .ewl-wordmark { display: none; }
-.ewl-bar { width: 120px; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; opacity: 0; animation: ewl-fade .4s ease 1.3s forwards; }
+.ewl-bar { width: 120px; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; opacity: 0; animation: ewl-fade .4s ease calc(1.3s - var(--ewl-t, 0s)) forwards; }
 .ewl-screen.inline .ewl-bar { background: hsl(var(--muted)); }
-.ewl-bar i { display: block; width: 40%; height: 100%; border-radius: 3px; background: currentColor; animation: ewl-slide 1.1s ease-in-out infinite; }
+.ewl-bar i { display: block; width: 40%; height: 100%; border-radius: 3px; background: currentColor; animation: ewl-slide 1.1s ease-in-out calc(0s - var(--ewl-t, 0s)) infinite; will-change: transform; }
 @keyframes ewl-draw { to { stroke-dashoffset: 0; } }
 @keyframes ewl-fill { to { fill-opacity: 1; stroke-width: 0; } }
 @keyframes ewl-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }

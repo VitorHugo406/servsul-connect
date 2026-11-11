@@ -65,11 +65,13 @@ final class Notifier {
         channels(c);
         Intent decline = new Intent(c, CallRinger.Receiver.class).setAction("br.com.ewvon.app.DECLINE").putExtra("callId", callId);
         PendingIntent dp = PendingIntent.getBroadcast(c, callId.hashCode(), decline, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        PendingIntent answer = open(c, url, callId.hashCode() + 1);
+        PendingIntent answer = open(c, url, callId.hashCode() + 1);   // "Atender": joins the call
+        String pre = url + (url.contains("?") ? "&" : "?") + "pre=1";
+        PendingIntent ring = open(c, pre, callId.hashCode() + 2);     // lock-screen / tap: opens the incoming-call screen, never answers by itself
         NotificationCompat.Builder b = new NotificationCompat.Builder(c, CH_CALL)
                 .setSmallIcon(R.drawable.ic_stat).setContentTitle(title).setContentText(body).setCategory(NotificationCompat.CATEGORY_CALL)
                 .setPriority(NotificationCompat.PRIORITY_MAX).setOngoing(true).setAutoCancel(false).setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setFullScreenIntent(answer, true).setContentIntent(answer).setColor(0xFF16A34A)
+                .setFullScreenIntent(ring, true).setContentIntent(ring).setColor(0xFF16A34A)
                 .addAction(0, "Atender", answer).addAction(0, "Recusar", dp);
         Bitmap bm = fetch(icon); if (bm != null) b.setLargeIcon(bm);
         ((NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE)).notify(callId.hashCode(), b.build());

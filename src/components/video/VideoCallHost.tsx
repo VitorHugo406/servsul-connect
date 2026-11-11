@@ -186,12 +186,22 @@ export function VideoCallHost() {
       const id = q.get('call');
       if (!id || !/^[0-9a-f-]{36}$/.test(id)) return false;
       const audio = q.get('a') === '1';
+      if (q.get('pre') === '1') {   // full-screen call screen: show Atender/Recusar, never answer by itself
+        void (async () => {
+          const { data: row } = await (supabase as any).from('chat_calls').select('id, caller_id, conv, status').eq('id', id).maybeSingle();
+          if (!row || row.status !== 'ringing' || callRef.current) return;
+          const { data: who } = await supabase.from('profiles').select('name').eq('id', row.caller_id).maybeSingle();
+          const nm = who?.name || 'Chamada';
+          setIncoming({ callId: id, audio, from: row.caller_id, fromName: nm, title: nm, conv: row.conv as Conv });
+        })();
+        return true;
+      }
       setIncoming(null);
       peerCountRef.current = 0; answeredRef.current = false;
       setCall({ id, title: audio ? 'Chamada de voz' : 'Chamada de vídeo', audio, chat: true });
       return true;
     };
-    if (openFrom(location.href)) { const u = new URL(location.href); u.searchParams.delete('call'); u.searchParams.delete('a'); history.replaceState(null, '', u.toString()); }
+    if (openFrom(location.href)) { const u = new URL(location.href); u.searchParams.delete('call'); u.searchParams.delete('a'); u.searchParams.delete('pre'); history.replaceState(null, '', u.toString()); }
     // A call notification opened the app while signed out: after logging in, take the call (if it is still recent).
     try {
       const raw = localStorage.getItem('ewvon:pending-call'); localStorage.removeItem('ewvon:pending-call');
