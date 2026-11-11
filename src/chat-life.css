@@ -138,13 +138,14 @@
 /* typing indicator */
 .chat-thread .px-4.py-1\.5.text-xs { padding-left: 24px; color: hsl(var(--muted-foreground)); background: hsl(var(--chat-canvas)); }
 
-/* ---------- Composer: one line box, tools inside on the right, vertical rule, then send ---------- */
+/* ---------- Composer: [imagem][anexo] | text | [emoji][figurinha][+] | rule | send ---------- */
 .chat-workspace .chat-composer { background: transparent !important; border-top: 0 !important; padding: 6px 20px 18px !important; }
-.chat-workspace .chat-composer-box { display: flex !important; align-items: flex-end; gap: 6px; border-radius: 6px !important; border: 1px solid hsl(var(--chat-field-line)) !important; background: transparent !important; padding: 5px 6px 5px 14px; min-height: 50px; transition: border-color .15s, box-shadow .15s; }
+.chat-workspace .chat-composer-box { display: flex !important; align-items: flex-end; gap: 6px; border-radius: 6px !important; border: 1px solid hsl(var(--chat-field-line)) !important; background: transparent !important; padding: 5px 6px 5px 6px; min-height: 50px; transition: border-color .15s, box-shadow .15s; }
 .chat-workspace .chat-composer-box:focus-within { border-color: hsl(var(--primary)) !important; box-shadow: 0 0 0 1px hsl(var(--primary)); }
 .chat-composer-box > .ewf-pc { order: 1; flex: 1; min-width: 0; align-self: center; min-height: 28px; display: flex; align-items: center; }
-.chat-composer-box > .ewf-pc textarea, .chat-composer-box > .ewf-pc .ewf-mirror { font-size: 14px; padding-left: 0 !important; padding-right: 8px !important; }
+.chat-composer-box > .ewf-pc textarea, .chat-composer-box > .ewf-pc .ewf-mirror { font-size: 14px; padding-left: 6px !important; padding-right: 8px !important; }
 .chat-composer-box > .ewf-pc textarea::placeholder { color: hsl(var(--muted-foreground)); opacity: 1; }
+.chat-composer-attach { order: 0; align-self: flex-end; gap: 2px !important; }
 .chat-composer-tools { order: 2; align-self: flex-end; gap: 2px !important; }
 .chat-composer-box > button[title="Enviar mensagem"] { order: 3; }
 .chat-composer button:not([title="Enviar mensagem"]) { width: 34px; height: 36px; border-radius: 6px !important; background: transparent !important; color: hsl(var(--foreground) / .85) !important; transition: background-color .15s, color .15s; }
@@ -190,21 +191,18 @@ aside[aria-label^="Detalhes da conversa"] .bg-background.shadow-sm { background:
 .chat-rail-label { font-size: 11px; font-weight: 500; line-height: 1.15; margin-top: -2px; letter-spacing: .005em; }
 .chat-rail-item[aria-pressed="true"] .chat-rail-label { font-weight: 700; }
 .chat-rail-mark { position: relative; display: grid; place-items: center; }
-/* the shared 3D mark, shrunk and recolored for the dark rail; it floats only on hover / when active */
-.chat-rail .tm3d { width: 46px; height: 40px; }
-.chat-rail .tm3d-s { width: 25px; height: 25px; animation: none; }
-.chat-rail .tm3d-p { border-radius: 6px; animation: none; }
-.chat-rail .tm3d-p3 { background: rgba(255, 255, 255, .14); --z: 0px; }
-.chat-rail .tm3d-p2 { background: rgba(255, 255, 255, .32); --z: 5px; }
-.chat-rail .tm3d-p1 { background: #cfcdf5; color: #25235f; --z: 10px; box-shadow: none; }
-.chat-rail .tm3d-i svg { width: 13px; height: 13px; stroke-width: 2.3; }
-.chat-rail-item:hover .tm3d-s { animation: tm3dFloat 3s ease-in-out infinite; }
-.chat-rail-item[aria-pressed="true"] .tm3d-p1 { background: #fff; color: #25235f; }
-.chat-rail-item[aria-pressed="true"] .tm3d-p2 { background: color-mix(in srgb, hsl(var(--primary)) 40%, #b9b6f2); }
-.chat-rail-item[aria-pressed="true"] .tm3d-p3 { background: color-mix(in srgb, hsl(var(--primary)) 55%, #5a57b8); }
-.chat-rail-item[aria-pressed="true"] .tm3d-s { animation: tm3dFloat 6s ease-in-out infinite; }
+/* 3D illustrations (Fluent Emoji 3D): soft shadow under the art; the active one levitates over a solid light plate */
+.chat-rail-mark { width: 40px; height: 36px; }
+.chat-rail-img { width: 30px; height: 30px; object-fit: contain; display: block; user-select: none; -webkit-user-drag: none; filter: drop-shadow(0 3px 3px rgba(8, 6, 40, .45)); transition: transform .16s ease, filter .16s ease; }
+/* the person/people art is dark navy: a solid light disc keeps it readable on the dark rail */
+.chat-rail-mark.has-plate::before { content: ""; position: absolute; width: 34px; height: 34px; border-radius: 999px; background: #e3e1fb; }
+.chat-rail-mark.has-plate .chat-rail-img { position: relative; width: 26px; height: 26px; filter: drop-shadow(0 2px 2px rgba(20, 18, 70, .35)); }
+.chat-rail-item[aria-pressed="true"] .chat-rail-mark.has-plate .chat-rail-img { filter: drop-shadow(0 3px 3px rgba(20, 18, 70, .4)); }
+.chat-rail-item:hover .chat-rail-img { transform: translateY(-1px) scale(1.04); }
+.chat-rail-item[aria-pressed="true"] { background: rgba(255, 255, 255, .18) !important; }
+.chat-rail-item[aria-pressed="true"] .chat-rail-img { transform: translateY(-2px) scale(1.08); filter: drop-shadow(0 5px 4px rgba(8, 6, 40, .55)); }
 .chat-rail-badge { position: absolute; top: -1px; right: 1px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: #e5484d; color: #fff; font-size: 10.5px; font-weight: 700; line-height: 17px; text-align: center; border: 2px solid #2b2970; box-sizing: content-box; }
-@media (prefers-reduced-motion: reduce) { .chat-rail .tm3d-s { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .chat-rail-img { transition: none !important; } }
 
 /* list column a bit narrower now that the rail takes the left edge; list moves right with the rail */
 .chat-workspace .chat-conversation-sidebar { width: 316px !important; min-width: 296px; }
@@ -260,3 +258,31 @@ aside[aria-label^="Detalhes da conversa"] .bg-background.shadow-sm { background:
 .chat-rail-item.is-footer .chat-rail-label { font-size: 10.5px; }
 /* Radix wraps scroll content in display:table, which grows to the widest nowrap line; keep call rows inside the column */
 .chat-calls-scroll [data-radix-scroll-area-viewport] > div { display: block !important; min-width: 0 !important; }
+
+/* ================= Reaction animations (same keyframes/easing as the Ewwon mobile app, copied to the desktop chat) ================= */
+@keyframes chat-rx-pop { from { opacity: 0; transform: scale(.6) translate3d(0, 12px, 0); } to { opacity: 1; transform: none; } }
+@keyframes chat-rx-pickpop { from { opacity: 0; transform: translateX(-50%) scale(.6) translate3d(0, 12px, 0); } to { opacity: 1; transform: translateX(-50%); } }
+@keyframes chat-rx-bp { 0% { opacity: 0; transform: translate3d(0, 0, 0) scale(.2) rotate(0); } 18% { opacity: 1; } 100% { opacity: 0; transform: translate3d(var(--dx), var(--dy), 0) scale(1) rotate(var(--r)); } }
+@keyframes chat-rx-boom { 0% { transform: scale(.6); } 45% { transform: scale(1.55); } 100% { transform: scale(1); } }
+@keyframes chat-rx-out { to { opacity: 0; transform: scale(.5); } }
+.chat-reaction { animation: chat-rx-pop .45s cubic-bezier(.3, 1.8, .5, 1) backwards; }
+.chat-reaction.boom { animation: chat-rx-boom .6s cubic-bezier(.3, 1.6, .5, 1); }
+.chat-reaction.is-leaving { animation: chat-rx-out .18s ease-in forwards; pointer-events: none; }
+.chat-reaction-picker { animation: chat-rx-pickpop .3s cubic-bezier(.3, 1.5, .5, 1) both; }
+.chat-reaction-picker button { transition: transform .2s cubic-bezier(.3, 1.6, .5, 1); }
+.chat-reaction-picker button:hover, .chat-reaction-picker button:active { transform: scale(1.4) translateY(-4px); }
+.chat-rx-popover { animation: chat-rx-pop .3s cubic-bezier(.3, 1.5, .5, 1) both; }
+.chat-rx-popover button { transition: transform .2s cubic-bezier(.3, 1.6, .5, 1), background-color .15s; }
+.chat-rx-popover button:hover, .chat-rx-popover button:active { transform: scale(1.4) translateY(-4px); }
+.chat-rx-bp { position: fixed; pointer-events: none; z-index: 900; font-size: var(--s, 14px); line-height: 1; opacity: 0; animation: chat-rx-bp 1.15s cubic-bezier(.2, .7, .3, 1) forwards; animation-delay: var(--d, 0s); will-change: transform, opacity; }
+@media (prefers-reduced-motion: reduce) {
+  .chat-reaction, .chat-reaction.boom, .chat-reaction-picker, .chat-rx-popover { animation: none !important; }
+  .chat-reaction.is-leaving { display: none; }
+  .chat-rx-bp { display: none; }
+}
+
+/* 3D art in the call history */
+.chat-call-badge-block.is-3d { background: hsl(var(--chat-hover)); }
+.chat-call-badge-block.is-3d img { width: 28px; height: 28px; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(20, 18, 70, .35)); }
+.chat-call-kind.is-3d { width: 22px; height: 22px; right: -6px; bottom: -5px; background: #4a46b8; }
+.chat-call-kind.is-3d img { width: 15px; height: 15px; object-fit: contain; }

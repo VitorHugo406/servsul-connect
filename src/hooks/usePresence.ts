@@ -116,66 +116,76 @@ export function useUserPresence(userId?: string) {
   return { isOnline, lastSeen };
 }
 
+type PresenceEntry = { isOnline: boolean; lastHeartbeat: Date | null };
+type PresenceMap = Record<string, PresenceEntry>;
+
+// One shared subscription for every consumer of useAllUsersPresence. supabase.channel('all-presence') returns the SAME
+// channel object for the same name, so a second component calling .on() after .subscribe() throws
+// ("cannot add `postgres_changes` callbacks ... after `subscribe()`"), which crashed the chat when the chat list and an
+// open direct conversation (including "Comunicados") used the hook at the same time.
+const shared: { map: PresenceMap; listeners: Set<(m: PresenceMap) => void>; channel: ReturnType<typeof supabase.channel> | null; timer: ReturnType<typeof setInterval> | null } = { map: {}, listeners: new Set(), channel: null, timer: null };
+const publish = (next: PresenceMap) => { shared.map = next; shared.listeners.forEach((l) => l(next)); };
+
+async function fetchSharedPresence() {
+  try {
+    const { data } = await supabase.from('user_presence').select('user_id, is_online, last_heartbeat');
+    if (!data) return;
+    const map: PresenceMap = {};
+    data.forEach((p) => {
+      const lastHeartbeat = new Date(p.last_heartbeat);
+      map[p.user_id] = { isOnline: p.is_online && Date.now() - lastHeartbeat.getTime() < OFFLINE_THRESHOLD, lastHeartbeat };
+    });
+    publish(map);
+  } catch { /* offline: keep the last known map */ }
+}
+
+function startSharedPresence() {
+  void fetchSharedPresence();
+  try {
+    shared.channel = supabase
+      .channel('all-presence')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_presence' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const next = { ...shared.map };
+          const oldId = (payload.old as Partial<UserPresence> | null)?.user_id;
+          if (oldId) delete next[oldId];
+          publish(next);
+          return;
+        }
+        const presence = payload.new as UserPresence;
+        if (!presence?.user_id) return;
+        const lastHeartbeat = new Date(presence.last_heartbeat);
+        publish({ ...shared.map, [presence.user_id]: { isOnline: presence.is_online && Date.now() - lastHeartbeat.getTime() < OFFLINE_THRESHOLD, lastHeartbeat } });
+      })
+      .subscribe();
+  } catch { shared.channel = null; }
+  // Recompute expiry locally instead of querying the database on every heartbeat.
+  shared.timer = setInterval(() => {
+    publish(Object.fromEntries(Object.entries(shared.map).map(([id, value]) => [id, { ...value, isOnline: Boolean(value.lastHeartbeat && Date.now() - value.lastHeartbeat.getTime() < OFFLINE_THRESHOLD && value.isOnline) }])));
+  }, 15000);
+}
+
+function stopSharedPresence() {
+  if (shared.timer) clearInterval(shared.timer);
+  shared.timer = null;
+  if (shared.channel) { try { void supabase.removeChannel(shared.channel); } catch { /* already closed */ } }
+  shared.channel = null;
+}
+
 export function useAllUsersPresence() {
-  const [presenceMap, setPresenceMap] = useState<Record<string, { isOnline: boolean; lastHeartbeat: Date | null }>>({});
+  const [presenceMap, setPresenceMap] = useState<PresenceMap>(shared.map);
 
-  const fetchAllPresence = useCallback(async () => {
-    const { data } = await supabase
-      .from('user_presence')
-      .select('user_id, is_online, last_heartbeat');
-
-    if (data) {
-      const map: Record<string, { isOnline: boolean; lastHeartbeat: Date | null }> = {};
-      data.forEach((p) => {
-        const lastHeartbeat = new Date(p.last_heartbeat);
-        map[p.user_id] = { isOnline: p.is_online && Date.now() - lastHeartbeat.getTime() < OFFLINE_THRESHOLD, lastHeartbeat };
-      });
-      setPresenceMap(map);
-    }
-  }, []);
+  const fetchAllPresence = useCallback(() => fetchSharedPresence(), []);
 
   useEffect(() => {
-    fetchAllPresence();
-
-    // Subscribe to realtime changes
-    const channel = supabase
-      .channel('all-presence')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_presence',
-        },
-        (payload) => {
-          if (payload.eventType === 'DELETE') {
-            setPresenceMap((current) => {
-              const next = { ...current };
-              delete next[(payload.old as UserPresence).user_id];
-              return next;
-            });
-            return;
-          }
-          const presence = payload.new as UserPresence;
-          const lastHeartbeat = new Date(presence.last_heartbeat);
-          setPresenceMap((current) => ({
-            ...current,
-            [presence.user_id]: { isOnline: presence.is_online && Date.now() - lastHeartbeat.getTime() < OFFLINE_THRESHOLD, lastHeartbeat },
-          }));
-        }
-      )
-      .subscribe();
-
-    // Recalcula expiração localmente sem consultar o banco a cada heartbeat.
-    const refreshInterval = setInterval(() => {
-      setPresenceMap((current) => Object.fromEntries(Object.entries(current).map(([id, value]) => [id, { ...value, isOnline: Boolean(value.lastHeartbeat && Date.now() - value.lastHeartbeat.getTime() < OFFLINE_THRESHOLD && value.isOnline) }])));
-    }, 15000);
-
+    shared.listeners.add(setPresenceMap);
+    if (shared.listeners.size === 1) startSharedPresence();
+    else setPresenceMap(shared.map);
     return () => {
-      supabase.removeChannel(channel);
-      clearInterval(refreshInterval);
+      shared.listeners.delete(setPresenceMap);
+      if (shared.listeners.size === 0) stopSharedPresence();
     };
-  }, [fetchAllPresence]);
+  }, []);
 
   const isUserOnline = useCallback((userId: string) => {
     return presenceMap[userId]?.isOnline ?? false;

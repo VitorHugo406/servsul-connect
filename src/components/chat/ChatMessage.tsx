@@ -1,4 +1,6 @@
 import { PdfPreview, isPdfName } from '@/components/common/PdfPreview';
+import { reactionBurst } from '@/lib/reactionFx';
+import { useReactionBoom } from './ChatReactionBar';
 import { parseCall, CallMessageCard } from '@/components/video/VideoCallHost';
 import { parseDeletion, DeletionRequestCard } from '@/components/common/DeletionRequestCard';
 import { VoicePlayer } from '@/components/common/Voice';
@@ -109,11 +111,13 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
     setSwipeX(0);
   };
 
-  const selectReaction = (emoji: string) => {
+  const selectReaction = (emoji: string, origin?: HTMLElement) => {
+    if (!reactions?.some(r => r.emoji === emoji && r.reactedByMe)) reactionBurst(origin, emoji);
     onToggleReaction?.(message.id, emoji);
     closeFocus();
   };
 
+  const boom = useReactionBoom((reactions || []).map(r => r.emoji));
   const isOwn = message.author_id === profile?.id;
   const author = isOwn ? { ...message.author, ...profile } : message.author;
   const getInitials = (name: string) => name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
@@ -215,7 +219,7 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
             <button onClick={() => onReply?.(message)} className="p-1.5 rounded-2xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Responder"><Reply className="h-3.5 w-3.5" /></button>
             <Popover open={showReactionPicker} onOpenChange={setShowReactionPicker}>
               <PopoverTrigger asChild><Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground" title="Reagir" aria-label="Reagir à mensagem"><SmilePlus className="h-4 w-4" /></Button></PopoverTrigger>
-              <PopoverContent side="top" align={isOwn ? 'end' : 'start'} collisionPadding={12} className="chat-emoji-popover z-[500] w-auto p-2">
+              <PopoverContent side="top" align={isOwn ? 'end' : 'start'} collisionPadding={12} className="chat-emoji-popover chat-rx-popover z-[500] w-auto p-2">
                 <ChatEmojiGrid emojis={QUICK_REACTIONS} onSelect={selectReaction} label="Escolher reação" />
               </PopoverContent>
             </Popover>
@@ -223,7 +227,7 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
         </div>
 
         {reactions && reactions.length > 0 && <div className={cn('chat-reactions relative z-10 flex max-w-full flex-wrap gap-1 mt-1', isOwn && 'is-own justify-end')}>
-          {reactions.map(r => <Popover key={r.emoji}><PopoverTrigger asChild><button type="button" className={cn('chat-reaction', r.reactedByMe && 'is-mine')}><span>{r.emoji}</span>{r.count > 1 ? <b>{r.count}</b> : null}</button></PopoverTrigger>
+          {reactions.map(r => <Popover key={r.emoji}><PopoverTrigger asChild><button type="button" className={cn('chat-reaction', r.reactedByMe && 'is-mine', boom.includes(r.emoji) && 'boom')}><span>{r.emoji}</span>{r.count > 1 ? <b>{r.count}</b> : null}</button></PopoverTrigger>
             <PopoverContent align={isOwn ? 'end' : 'start'} sideOffset={6} className="z-[500] w-64 p-2" onOpenAutoFocus={(e) => e.preventDefault()}><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-foreground">{r.emoji} · {r.count}</span><button type="button" onClick={() => onToggleReaction?.(message.id, r.emoji)} className="text-xs text-primary hover:text-primary/80">{r.reactedByMe ? 'Remover' : 'Reagir'}</button></div><div className="mt-2 max-h-44 space-y-1 overflow-auto">{(r.reactors || []).length === 0 ? <p className="text-xs text-muted-foreground">Sem detalhes.</p> : (r.reactors || []).map(u => { const name = u.display_name || u.name || 'Usuário'; return <div key={u.id} className="flex items-center gap-2"><Avatar className="h-5 w-5"><AvatarImage src={u.avatar_url || ''} alt={name} /><AvatarFallback className="text-[10px]">{name[0]}</AvatarFallback></Avatar><span className="truncate text-xs text-foreground">{name}</span></div>; })}</div></PopoverContent>
           </Popover>)}
         </div>}

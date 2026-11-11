@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, UsersRound, Video } from 'lucide-react';
+import { Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { effectiveStatus, formatCallDuration, onCallsChange, type CallInfo } from '@/components/video/callStore';
 import { ChatSenderAvatar } from '@/components/chat/ChatSenderIdentity';
@@ -97,9 +97,11 @@ export function ChatCallsList({ meId, companyId, people, sectors, groups, canCal
             {c.conv === 'dm'
               ? <ChatSenderAvatar name={name} avatarUrl={person?.avatar_url} id={otherId} />
               : c.conv === 'group'
-                ? <span className="chat-call-badge-block bg-secondary/10 text-secondary"><UsersRound className="h-4 w-4" /></span>
-                : <span className="chat-call-badge-block text-white" style={{ backgroundColor: sector?.color || '#64748b' }}>{name.charAt(0).toUpperCase()}</span>}
-            <span className="chat-call-kind" title={`Chamada de ${kind}`}>{c.audio ? <Phone className="h-2.5 w-2.5" /> : <Video className="h-2.5 w-2.5" />}</span>
+                ? <span className="chat-call-badge-block is-3d"><img src="/ewwon/img/chat3d/group.png" alt="" loading="eager" draggable={false} /></span>
+                : <span className="chat-call-badge-block is-3d"><img src="/ewwon/img/chat3d/sector.png" alt="" loading="eager" draggable={false} /></span>}
+            {c.audio
+              ? <span className="chat-call-kind is-3d" title={`Chamada de ${kind}`}><img src="/ewwon/img/chat3d/calls.png" alt="" loading="eager" draggable={false} /></span>
+              : <span className="chat-call-kind" title={`Chamada de ${kind}`}><Video className="h-2.5 w-2.5" /></span>}
           </span>
           <span className="min-w-0 flex-1">
             <span className="chat-conv-name block truncate">{c.conv === 'sector' ? <span className="chat-conv-hash" aria-hidden="true">#</span> : null}{name}</span>
