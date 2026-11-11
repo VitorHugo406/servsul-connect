@@ -1189,7 +1189,7 @@ function recalc(){
 /* salas */
 const DAY0=480,DAY1=1080;
 let CLOCK={sim:false,min:630};
-function initClock(){const n=new Date(),m=n.getHours()*60+n.getMinutes();CLOCK=(m>=DAY0&&m<=DAY1)?{sim:false,min:m}:{sim:true,min:555}}
+function initClock(){const n=new Date(),m=n.getHours()*60+n.getMinutes();CLOCK={sim:false,min:m}}
 function roomStatus(r,min){
   let cur=null,next=null;
   for(const mt of r.meets){if(min>=mt.ini&&min<mt.fim)cur=mt;else if(mt.ini>min&&!next)next=mt}
@@ -3086,8 +3086,8 @@ function clockUI(){
   $('#clk').value=CLOCK.min;$('#clkOut').textContent=hhmm(CLOCK.min);$('#clkSim').textContent=CLOCK.sim?'simulado':'';
 }
 $('#clk').addEventListener('input',e=>{CLOCK={sim:true,min:+e.target.value};clockUI();applyClock();greet();if(FOCUS.kind==='room'||FOCUS.kind==='rooms')renderPanel(true)});
-$('#clkNow').addEventListener('click',()=>{const n=new Date(),m=n.getHours()*60+n.getMinutes();CLOCK={sim:m<420||m>1140,min:clamp(m,420,1140)};if(CLOCK.sim)CLOCK.min=(m>=DAY0&&m<=DAY1)?m:555;clockUI();applyClock();greet();if(FOCUS.kind==='room'||FOCUS.kind==='rooms')renderPanel(true)});
-setInterval(()=>{if(!CLOCK.sim){const n=new Date(),m=n.getHours()*60+n.getMinutes();if(m!==CLOCK.min&&m>=420&&m<=1140){CLOCK.min=m;clockUI();applyClock();greet()}}},30000);
+$('#clkNow').addEventListener('click',()=>{const n=new Date(),m=n.getHours()*60+n.getMinutes();CLOCK={sim:false,min:m};clockUI();applyClock();greet();if(FOCUS.kind==='room'||FOCUS.kind==='rooms')renderPanel(true)});
+setInterval(()=>{if(!CLOCK.sim){const n=new Date(),m=n.getHours()*60+n.getMinutes();if(m!==CLOCK.min){CLOCK.min=m;clockUI();applyClock();greet()}}},30000);
 
 function greet(){
   let upd='';try{const ua=SRCS.filter(x=>x.kind==='api'&&x.at).map(x=>x.at);if(ua.length){const t=new Date(Math.max(...ua));upd='<p style="font-size:12px;opacity:.75">Dados da API atualizados às '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+'</p>'}}catch(e){}
@@ -5659,7 +5659,7 @@ async function convStart(src){
 function fail(msg){const m=$('#msg3d');m.hidden=false;m.textContent=msg}
 function boot(){
   if(!EWVX&&!load()){EMPS=makeSample();ROOMS=sampleRooms();SOURCE='exemplo';ROOMSRC='exemplo';HAS=SAMPLE_HAS}
-  loadCfg();applyTheme(false);initClock();recalc();if(EWVX)ewvCfg();ensureCfg();clockUI();railUI();loadSrcs();
+  loadCfg();applyTheme(false);initClock();recalc();if(EWVX)ewvCfg();ensureCfg();if(EWVX)ewvSeats();clockUI();railUI();loadSrcs();
   if(typeof THREE==='undefined'){fail('Não foi possível carregar o 3D. Os painéis continuam disponíveis pelo menu.');greet();return}
   try{
     renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
@@ -5693,6 +5693,7 @@ function ewvMake(p){
 }
 function ewvKeepFloor(){try{const f=sessionStorage.getItem('ewv.cur');if(f&&floorObj(f))CUR=f}catch(e){}}
 setInterval(()=>{try{if(CUR)sessionStorage.setItem('ewv.cur',CUR)}catch(e){}},1000);
+function ewvSeats(){ROOMS.forEach(r=>{const c=CFG.rooms&&CFG.rooms[r.name];if(c&&r.cap)c.seats=clamp(Math.round(r.cap),2,12)})}
 function ewvCfg(){
   const sig=DEPT.map(d=>d.name).sort().join('|');let prev='';try{prev=localStorage.getItem('ewv.sig')||''}catch(e){}
   if(sig!==prev){defaultCfg(true,true);try{localStorage.setItem('ewv.sig',sig)}catch(e){}}
@@ -5722,7 +5723,7 @@ function ewvApply(p){
       return;
     }
     if(!ewvMake(p))return;
-    const keepFloor=CUR;recalc();ewvCfg();CUR=keepFloor;ensureCfg();saveCfg();applyTheme(true);rebuildAll();
+    const keepFloor=CUR;recalc();ewvCfg();CUR=keepFloor;ensureCfg();ewvSeats();saveCfg();applyTheme(true);rebuildAll();
   }catch(err){console.error('ewvon dash',err)}
 }
 window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='ewvon:dash-data')return;EWV_PENDING=e.data;if(EWV_BOOTED)ewvApply(e.data);else ewvTryBoot()});

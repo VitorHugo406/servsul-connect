@@ -65,7 +65,7 @@ export function Dashboard3DSection({ onExit }: { onExit: () => void }) {
     let hex = '#FF6A1A';
     if (m) { const h = +m[1], s = +m[2] / 100, l = +m[3] / 100; const a = s * Math.min(l, 1 - l); const f = (n: number) => { const k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, '0'); }; hex = `#${f(0)}${f(8)}${f(4)}`; }
     const fg = readableOn(hex);
-    return `/dash/painel.html?v=20261111d&c=${encodeURIComponent(hex)}&fg=${encodeURIComponent(fg)}`;
+    return `/dash/painel.html?v=20261111e&c=${encodeURIComponent(hex)}&fg=${encodeURIComponent(fg)}`;
   }, []);
   useEffect(() => {
     let alive = true;
