@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { orderByCreated } from '@/lib/messageOrder';
-import { isSystemSender } from '@/lib/systemSender';
+import { isSystemSender, isAiSender, AI_SENDER_ID } from '@/lib/systemSender';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { withCompany } from '@/lib/companyScope';
@@ -56,7 +56,7 @@ export function useDirectMessages(partnerId?: string) {
         sender:profiles!direct_messages_sender_id_fkey(id, name, display_name, avatar_url, sector_id, is_active, company_id),
         receiver:profiles!direct_messages_receiver_id_fkey(id, name, display_name, avatar_url, sector_id, is_active, company_id)
       `)
-      .or(`and(sender_id.eq.${profile.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${profile.id})`)
+      .or(`and(sender_id.eq.${profile.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${profile.id}),and(sender_id.eq.${AI_SENDER_ID},receiver_id.eq.${profile.id},ai_partner_id.eq.${partnerId})`)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -119,7 +119,8 @@ export function useDirectMessages(partnerId?: string) {
             // Only handle if the message involves this conversation
             if (
               (msg.sender_id === profile.id && msg.receiver_id === partnerId) ||
-              (msg.sender_id === partnerId && msg.receiver_id === profile.id)
+              (msg.sender_id === partnerId && msg.receiver_id === profile.id) ||
+              (msg.sender_id === AI_SENDER_ID && msg.receiver_id === profile.id && (msg as { ai_partner_id?: string }).ai_partner_id === partnerId)
             ) {
               setMessages(prev => {
                 // Check if we already have this message (from optimistic update)
@@ -255,6 +256,7 @@ export function useConversations() {
     const conversationMap = new Map<string, Conversation>();
     
     for (const msg of messages) {
+      if (isAiSender(msg.sender_id)) continue;   // ewvon AI replies live inside an existing conversation
       const partnerId = msg.sender_id === profile.id ? msg.receiver_id : msg.sender_id;
       const partner = msg.sender_id === profile.id ? msg.receiver : msg.sender;
       // "Comunicados" (system sender) lives in the system company but talks to everyone.

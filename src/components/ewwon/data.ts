@@ -2,7 +2,7 @@
 // (profiles, sectors, messages, direct_messages, private_groups, announcements,
 // tasks, meeting_bookings) plus the tables added for the mobile app
 // (chat_member_prefs, user_preferences, support_tickets, chat_reactions, push_devices).
-import { SYSTEM_SENDER_ID, SYSTEM_SENDER_NAME } from '@/lib/systemSender';
+import { SYSTEM_SENDER_ID, SYSTEM_SENDER_NAME, AI_SENDER_ID, AI_SENDER_NAME } from '@/lib/systemSender';
 import { supabase as typedSupabase } from '@/integrations/supabase/client';
 import { optimizeImageFile } from '@/lib/imageOptimization';
 import {
@@ -171,7 +171,7 @@ export async function bootstrap(opts: {
 
   const [sectorMsgsR, dmR, groupMsgsR, groupReadsR, summariesR, membersR] = await Promise.all([
     sectorIds.length ? sb.from('messages').select('id,sector_id,author_id,content,created_at').in('sector_id', sectorIds).eq('company_id', companyId).order('created_at', { ascending: false }).limit(400) : Promise.resolve({ data: [] }),
-    sb.from('direct_messages').select('id,sender_id,receiver_id,content,is_read,created_at').eq('company_id', companyId).or(`sender_id.eq.${profileId},receiver_id.eq.${profileId}`).order('created_at', { ascending: false }).limit(800),
+    sb.from('direct_messages').select('id,sender_id,receiver_id,content,is_read,created_at,ai_partner_id').eq('company_id', companyId).or(`sender_id.eq.${profileId},receiver_id.eq.${profileId}`).order('created_at', { ascending: false }).limit(800),
     groupIds.length ? sb.from('private_group_messages').select('id,group_id,sender_id,content,created_at').in('group_id', groupIds).order('created_at', { ascending: false }).limit(600) : Promise.resolve({ data: [] }),
     groupIds.length && authUserId ? sb.from('private_group_message_reads').select('group_id,last_read_at').eq('user_id', authUserId) : Promise.resolve({ data: [] }),
     sb.from('scheduled_summaries').select('*').eq('company_id', companyId).eq('frequency', 'daily'),
@@ -209,10 +209,12 @@ export async function bootstrap(opts: {
   // "Comunicados" (system sender) joins the map only now, so it never counts as a colleague
   // or a sector member; screens that list people skip `sys`.
   people[SYSTEM_SENDER_ID] = SYSTEM_PERSON;
+  people[AI_SENDER_ID] = AI_PERSON;
 
   // direct chats (one per partner that already has messages)
   const dmByPartner = new Map<string, { last: Row; u: number }>();
   for (const m of dmR.data || []) {
+    if (m.sender_id === AI_SENDER_ID) continue;   // ewvon AI replies live inside an existing conversation
     const partner = m.sender_id === profileId ? m.receiver_id : m.sender_id;
     if (!people[partner]) continue;
     const cur = dmByPartner.get(partner) || { last: m, u: 0 };
@@ -278,6 +280,13 @@ export const SYSTEM_PERSON: Person = {
   id: SYSTEM_SENDER_ID, userId: '', n: SYSTEM_SENDER_NAME, i: 'C', hue: 230, role: 'Comunicados automáticos', dept: 'ewvon', sectorId: null,
   st: 'disp', h: ['00:00', '23:59'], days: [1, 1, 1, 1, 1, 1, 1], mail: '', bio: 'Resumos, boas-vindas e feedback mensal. Este canal só envia comunicados.',
   since: '', photo: null, cover: null, birth: null, sys: true,
+};
+
+/** "ewvon AI" as the author of replies inside chats (never listed as a colleague). */
+export const AI_PERSON: Person = {
+  id: AI_SENDER_ID, userId: '', n: AI_SENDER_NAME, i: 'AI', hue: 18, role: 'Assistente de IA', dept: 'ewvon', sectorId: null,
+  st: 'disp', h: ['00:00', '23:59'], days: [1, 1, 1, 1, 1, 1, 1], mail: '', bio: 'Assistente de IA da empresa. Escreva @ewvonai em um chat para perguntar ou pedir uma ação.',
+  since: '', photo: null, cover: null, birth: null, sys: false,
 };
 
 export function makeDm(p: Person, last: Row | null, u: number, meId: string, prefRow: Row | null): Chat {
@@ -427,9 +436,15 @@ export async function loadMessages(chat: Chat, meId: string): Promise<Msg[]> {
   } else if (chat.kind === 'dm') {
     // Both directions of the pair (sender/receiver are always me or the partner).
     const pair = [meId, chat.id];
-    const r = await sb.from('direct_messages').select('id,sender_id,content,created_at,is_read,reply_to_id')
-      .in('sender_id', pair).in('receiver_id', pair)
-      .order('created_at', { ascending: false }).limit(60);
+    const [r0, ai] = await Promise.all([
+      sb.from('direct_messages').select('id,sender_id,content,created_at,is_read,reply_to_id')
+        .in('sender_id', pair).in('receiver_id', pair)
+        .order('created_at', { ascending: false }).limit(60),
+      sb.from('direct_messages').select('id,sender_id,content,created_at,is_read,reply_to_id')
+        .eq('sender_id', AI_SENDER_ID).eq('receiver_id', meId).eq('ai_partner_id', chat.id)
+        .order('created_at', { ascending: false }).limit(30),
+    ]);
+    const r = { data: [...(r0.data || []), ...(ai.data || [])].sort((a: Row, b: Row) => (a.created_at < b.created_at ? 1 : -1)).slice(0, 60) };
     rows = (r.data || []).map((m: Row) => ({ id: m.id, from: m.sender_id, t: m.content, at: m.created_at, rd: !!m.is_read, rp: m.reply_to_id || null }));
   } else {
     const r = await sb.from('private_group_messages').select('id,sender_id,content,created_at,reply_to_id').eq('group_id', chat.id).order('created_at', { ascending: false }).limit(60);

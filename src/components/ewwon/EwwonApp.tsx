@@ -5,7 +5,7 @@ import { fmtDuration, sendVoice, watchKeyRequests } from '@/lib/e2e';
 import { PermissionGate, needsPermissionGate } from './permgate';
 import { StickerPicker, StickerMessage } from '@/components/common/Stickers';
 import { addFavorite, isSticker, parseSticker, stickerContent } from '@/lib/stickers';
-import { isSystemSender } from '@/lib/systemSender';
+import { isSystemSender, AI_SENDER_ID } from '@/lib/systemSender';
 import { CosmicBlob } from '@/components/common/CosmicBlob';
 import { GlobalBroadcastOrb } from '@/components/common/GlobalBroadcastOrb';
 import { isBroadcastLive, notifyBroadcastsChanged, useSystemBroadcasts, type SystemBroadcast } from '@/hooks/useSystemBroadcasts';
@@ -760,10 +760,11 @@ export default function EwwonApp() {
         const { chats: cs, people: ps, roomOn: ro, curKey: ck } = stateRef.current;
         const from: string = kind === 'sector' ? row.author_id : row.sender_id;
         if (from === meId) return;
-        let key = kind === 'sector' ? `sector:${row.sector_id}` : kind === 'dm' ? `dm:${row.sender_id}` : `group:${row.group_id}`;
+        const dmPartner: string = row.sender_id === AI_SENDER_ID && row.ai_partner_id ? row.ai_partner_id : row.sender_id;   // ewvon AI replies belong to the chat they were asked in
+        let key = kind === 'sector' ? `sector:${row.sector_id}` : kind === 'dm' ? `dm:${dmPartner}` : `group:${row.group_id}`;
         let c = cs.find((x) => x.key === key);
-        if (!c && kind === 'dm' && ps[row.sender_id]) {
-          c = D.makeDm(ps[row.sender_id], null, 0, meId, null);
+        if (!c && kind === 'dm' && ps[dmPartner]) {
+          c = D.makeDm(ps[dmPartner], null, 0, meId, null);
           setChats((all) => [c as Chat, ...all]);
         }
         if (!c) return;

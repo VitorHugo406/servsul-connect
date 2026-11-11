@@ -1,7 +1,7 @@
 // ewvon AI: each company uses its own Claude API key.
 //   POST /ewvon-ai/save    company admin: { key?, model?, enabled?, daily_limit? }  (the key is validated and encrypted)
 //   POST /ewvon-ai/remove  company admin
-//   POST /ewvon-ai/ask     database trigger (Vault secret header): { table, id } -> a chat message that mentions @ewvonai
+//   POST /ewvon-ai/ask     database trigger (Vault secret header): { table, id } -> a sector, group or direct message that mentions @ewvonai
 // The answer is posted in the same chat by the "ewvon AI" sender. The model can create cards with the author's own
 // access: only boards the author owns or belongs to.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -102,6 +102,19 @@ async function handleAsk(table: string, id: string) {
     cid = g?.company_id ?? null; convLabel = `grupo ${g?.name ?? ''}`;
     convFilter = (q) => q.eq('group_id', data.group_id);
     insertReply = async (text) => { await admin.from('private_group_messages').insert({ content: text, sender_id: AI_SENDER, group_id: data.group_id, reply_to_id: data.id }); };
+  } else if (table === 'direct_messages') {
+    const { data } = await admin.from('direct_messages').select('id, content, sender_id, receiver_id, company_id, created_at').eq('id', id).maybeSingle();
+    if (!data) return; msg = data; cid = data.company_id; authorId = data.sender_id; ctxTable = 'direct_messages';
+    const a = data.sender_id, b = data.receiver_id;
+    const { data: other } = await admin.from('profiles').select('name, display_name').eq('id', b).maybeSingle();
+    convLabel = a === b ? 'conversa da pessoa consigo mesma' : `conversa direta com ${other?.display_name || other?.name || 'outra pessoa'}`;
+    convFilter = (q) => q.or(`and(sender_id.eq.${a},receiver_id.eq.${b}),and(sender_id.eq.${b},receiver_id.eq.${a})`);
+    // one reply row per person of the chat, each inside the same conversation (ai_partner_id = the other person)
+    insertReply = async (text) => {
+      const rows: Record<string, unknown>[] = [{ content: text, sender_id: AI_SENDER, receiver_id: a, ai_partner_id: b, company_id: cid, reply_to_id: data.id, is_read: true }];
+      if (b !== a) rows.push({ content: text, sender_id: AI_SENDER, receiver_id: b, ai_partner_id: a, company_id: cid, reply_to_id: data.id, is_read: false });
+      await admin.from('direct_messages').insert(rows);
+    };
   } else return;
   if (!cid) return;
 
