@@ -10,6 +10,7 @@ import { ChatReactionBar, useChatReactions } from './ChatReactionBar';
 import { useChatTypography } from '@/hooks/useChatTypography';
 import { ChatSenderAvatar, ChatSenderLabel } from './ChatSenderIdentity';
 import { DateSeparator } from './ChatMessage';
+import { ChatFavoriteStar } from './ChatFavoriteStar';
 import { ReplyQuote } from './ReplyQuote';
 import { ChatEmptyState, focusConversationSearch } from './ChatEmptyState';
 import { scrollChatToBottom, isNearBottom } from '@/lib/chatScroll';
@@ -112,7 +113,7 @@ export function PrivateGroupChat({ group }: PrivateGroupChatProps) {
 
   return <div className={cn("chat-thread flex h-full w-full min-w-0 flex-1 flex-col min-h-0", typographyClass)}>
     <div className="chat-thread-header flex shrink-0 items-center justify-between gap-3 px-3 py-3 sm:px-5">
-      <div className="chat-head-avatar flex items-center gap-3 min-w-0"><Avatar className="h-10 w-10 shrink-0"><AvatarImage src={group.avatar_url || ''} /><AvatarFallback className="bg-primary text-primary-foreground">{getInitials(group.name)}</AvatarFallback></Avatar><div className="min-w-0"><h3 className="font-display font-semibold text-foreground truncate">{group.name}</h3><p className="chat-head-status text-xs text-muted-foreground">{members.length} membros</p></div></div>
+      <div className="chat-head-avatar flex items-center gap-3 min-w-0"><Avatar className="h-10 w-10 shrink-0"><AvatarImage src={group.avatar_url || ''} /><AvatarFallback className="bg-primary text-primary-foreground">{getInitials(group.name)}</AvatarFallback></Avatar><div className="min-w-0"><h3 className="font-display font-semibold text-foreground truncate">{group.name}</h3><ChatFavoriteStar conversationKey={'group:' + group.id} /><p className="chat-head-status text-xs text-muted-foreground">{members.length} membros</p></div></div>
       <div className="chat-head-actions flex items-center gap-1 shrink-0">
         <ChatVideoButton conv="group" target={group.id} />
         <ChatTasksControl kind="group" chatId={group.id} onPost={(t) => sendMessage(t)} />

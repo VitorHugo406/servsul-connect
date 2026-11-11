@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { chatUnreadStorageKey, parseUnreadMarks, updateUnreadMarks } from '@/lib/chatUnread';
 import { useChatListMarks } from '@/hooks/useChatListMarks';
+import { justFavorited, setChatFavorite } from '@/lib/chatFavorite';
 
 export function ChatConversationItem({ conversationKey, children }: { conversationKey: string; children: ReactNode }) {
   const { profile } = useAuth();
@@ -12,10 +13,7 @@ export function ChatConversationItem({ conversationKey, children }: { conversati
   const [unread, setUnread] = useState(false);
   const { favorites, favoriteKey } = useChatListMarks();
   const isFavorite = favorites.includes(conversationKey);
-  const toggleFavorite = () => {
-    if (!favoriteKey) return;
-    try { localStorage.setItem(favoriteKey, JSON.stringify(updateUnreadMarks(parseUnreadMarks(localStorage.getItem(favoriteKey)), conversationKey, !isFavorite))); window.dispatchEvent(new Event('nuvexa:favorites-changed')); } catch { return; }
-  };
+  const toggleFavorite = () => setChatFavorite(favoriteKey, conversationKey, !isFavorite);
   useEffect(() => {
     const load = () => {
       try { setUnread(storageKey ? parseUnreadMarks(localStorage.getItem(storageKey)).includes(conversationKey) : false); }
@@ -35,7 +33,7 @@ export function ChatConversationItem({ conversationKey, children }: { conversati
       window.dispatchEvent(new Event('nuvexa:unread-changed'));
     } catch { setUnread(value); }
   };
-  return <div className="chat-conversation-item relative min-w-0 max-w-full overflow-hidden" data-manual-unread={unread || undefined} onClick={() => mark(false)}>
+  return <div className="chat-conversation-item relative min-w-0 max-w-full overflow-hidden" data-favorite={isFavorite || undefined} data-fav-pop={(isFavorite && justFavorited(conversationKey)) || undefined} data-manual-unread={unread || undefined} onClick={() => mark(false)}>
     {children}
     <div className="absolute right-3 top-1.5 z-10" onClick={event => event.stopPropagation()}>
       <DropdownMenu><DropdownMenuTrigger asChild>

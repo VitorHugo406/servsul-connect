@@ -236,3 +236,27 @@ aside[aria-label^="Detalhes da conversa"] .bg-background.shadow-sm { background:
 .chat-calls-state strong { color: hsl(var(--foreground)); font-size: 15px; }
 .chat-calls-spinner { width: 20px; height: 20px; border-radius: 50%; border: 2px solid hsl(var(--primary)); border-top-color: transparent; animation: chat-spin .8s linear infinite; }
 @keyframes chat-spin { to { transform: rotate(360deg); } }
+
+/* ================= Favorites: gold star, soft highlight, pop ================= */
+:root { --chat-gold: #c98f00; }
+.dark { --chat-gold: #f2b705; }
+@keyframes chat-fav-pop { 0% { transform: scale(1); } 50% { transform: scale(1.25); } 100% { transform: scale(1); } }
+.chat-thread-header > div:has(> h3) { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; }
+.chat-thread-header > div:has(> h3) > :not(h3):not(.chat-fav-star) { flex-basis: 100%; }
+.chat-thread-header > div:has(> h3) > h3 { min-width: 0; }
+.chat-thread .chat-thread-header .chat-fav-star { flex: none; width: 28px; height: 28px; padding: 0; display: inline-grid; place-items: center; border-radius: 6px !important; color: hsl(var(--muted-foreground)); background: transparent !important; border: 0 !important; cursor: pointer; transition: background-color .15s, color .15s; }
+.chat-thread .chat-thread-header .chat-fav-star svg { width: 17px; height: 17px; stroke-width: 1.8; }
+.chat-thread .chat-thread-header .chat-fav-star:hover { background: hsl(var(--chat-hover)) !important; color: var(--chat-gold) !important; }
+.chat-thread .chat-thread-header .chat-fav-star.is-fav { color: var(--chat-gold) !important; }
+.chat-thread .chat-thread-header .chat-fav-star.is-fav svg { fill: var(--chat-gold); }
+.chat-fav-star.is-pop svg { animation: chat-fav-pop .25s ease-out; }
+.chat-fav-star:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 1px; }
+.chat-conversation-item[data-favorite] .chat-conv-name::after { content: "\2605"; display: inline-block; margin-left: 6px; font-size: 13px; line-height: 1; color: var(--chat-gold); }
+.chat-conversation-item[data-favorite] .chat-conversation-row:not(.chat-conversation-selected) { background: color-mix(in srgb, var(--chat-gold) 9%, transparent); }
+.chat-conversation-item[data-fav-pop] .chat-conv-name::after { animation: chat-fav-pop .25s ease-out; }
+@media (prefers-reduced-motion: reduce) { .chat-fav-star.is-pop svg, .chat-conversation-item[data-fav-pop] .chat-conv-name::after { animation: none !important; } }
+/* rail footer item (Favoritos), pinned to the bottom like the Teams rail */
+.chat-rail-item.is-footer { margin-top: auto; }
+.chat-rail-item.is-footer .chat-rail-label { font-size: 10.5px; }
+/* Radix wraps scroll content in display:table, which grows to the widest nowrap line; keep call rows inside the column */
+.chat-calls-scroll [data-radix-scroll-area-viewport] > div { display: block !important; min-width: 0 !important; }
