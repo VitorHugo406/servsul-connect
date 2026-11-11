@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { CardMentionCard } from './CardMentionCard';
 import { formatText } from '@/lib/chatFormatUtils';
-import { ChatSenderAvatar } from './ChatSenderIdentity';
+import { ChatSenderAvatar, authorColorClass } from './ChatSenderIdentity';
 import { SignedStorageImage, SignedStorageLink } from '@/components/common/SignedStorageMedia';
 import { Button } from '@/components/ui/button';
 import { ChatEmojiGrid } from './ChatEmojiGrid';
@@ -190,7 +190,7 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
           <ChatEmojiGrid emojis={QUICK_REACTIONS} onSelect={selectReaction} label="Escolher reação" />
         </div>}
 
-        {!grouped && !isOwn && <div className="chat-msg-author relative z-10 mb-1 flex w-fit max-w-full flex-wrap items-center gap-1.5">
+        {!grouped && !isOwn && <div className={cn('chat-msg-author relative z-10 mb-1 flex w-fit max-w-full flex-wrap items-center gap-1.5', authorColorClass(message.author_id))}>
           <span className="min-w-0 max-w-full truncate text-xs font-medium text-foreground sm:text-sm">{displayName}</span>
           {authorSectorName && <span className="max-w-full break-words text-[10px] text-muted-foreground sm:text-xs">{authorSectorName}</span>}
         </div>}

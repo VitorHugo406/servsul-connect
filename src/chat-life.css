@@ -1,0 +1,153 @@
+/* Chat "life" layer for the desktop chat — loaded right after chat-pro.css.
+   Uses the company color (--primary) as the accent with SOLID derived tints (color-mix); no blur, no glass.
+   Text that carries the accent goes through --chat-accent-text so it stays readable (AA) for any company color,
+   light or dark, in both themes. Visual only: no message / permission logic. */
+
+:root {
+  /* Accent for small text/icons: company color pulled toward the foreground so even yellow or navy stay readable. */
+  --chat-accent-text: color-mix(in srgb, hsl(var(--primary)) 46%, hsl(var(--foreground)));
+  --chat-tint-1: color-mix(in srgb, hsl(var(--primary)) 5%, hsl(var(--card)));
+  --chat-tint-2: color-mix(in srgb, hsl(var(--primary)) 10%, hsl(var(--card)));
+  --chat-tint-3: color-mix(in srgb, hsl(var(--primary)) 18%, hsl(var(--card)));
+  --chat-line: color-mix(in srgb, hsl(var(--primary)) 22%, hsl(var(--border)));
+  --chat-focus: color-mix(in srgb, hsl(var(--primary)) 24%, transparent);
+  --chat-stripe-a: hsl(var(--primary));
+  --chat-stripe-b: color-mix(in oklab, hsl(var(--primary)) 62%, white);
+  --chat-canvas-tint: color-mix(in srgb, hsl(var(--primary)) 4%, hsl(var(--chat-canvas)));
+  --chat-dot: color-mix(in srgb, hsl(var(--primary)) 13%, transparent);
+  --chat-read: #2f7fe8;
+  --chat-online: hsl(142 64% 30%);
+  /* warm neutral incoming bubble */
+  --chat-incoming: 36 33% 99%;
+  --chat-incoming-line: 34 18% 86%;
+  --chat-own-bg: color-mix(in srgb, hsl(var(--primary)) 19%, hsl(var(--card)));
+  --chat-own-border: color-mix(in srgb, hsl(var(--primary)) 34%, hsl(var(--card)));
+  /* author name palette (8 hues) */
+  --ca0: 346 62% 40%; --ca1: 22 78% 36%; --ca2: 152 62% 28%; --ca3: 192 76% 29%;
+  --ca4: 220 66% 42%; --ca5: 262 52% 45%; --ca6: 292 52% 40%; --ca7: 38 80% 30%;
+}
+.dark {
+  --chat-accent-text: color-mix(in srgb, hsl(var(--primary)) 46%, hsl(var(--foreground)));
+  --chat-tint-1: color-mix(in srgb, hsl(var(--primary)) 9%, hsl(var(--card)));
+  --chat-tint-2: color-mix(in srgb, hsl(var(--primary)) 18%, hsl(var(--card)));
+  --chat-tint-3: color-mix(in srgb, hsl(var(--primary)) 28%, hsl(var(--card)));
+  --chat-line: color-mix(in srgb, hsl(var(--primary)) 34%, hsl(var(--border)));
+  --chat-stripe-b: color-mix(in oklab, hsl(var(--primary)) 70%, white);
+  --chat-canvas-tint: color-mix(in srgb, hsl(var(--primary)) 6%, hsl(var(--chat-canvas)));
+  --chat-dot: color-mix(in srgb, hsl(var(--primary)) 20%, transparent);
+  --chat-read: #6aa8ff;
+  --chat-online: hsl(142 60% 62%);
+  --chat-incoming: 30 7% 15%;
+  --chat-incoming-line: 30 6% 23%;
+  --chat-own-bg: color-mix(in srgb, hsl(var(--primary)) 34%, hsl(222 12% 16%));
+  --chat-own-border: color-mix(in srgb, hsl(var(--primary)) 50%, hsl(222 12% 22%));
+  --ca0: 346 88% 74%; --ca1: 24 92% 68%; --ca2: 152 60% 62%; --ca3: 190 78% 62%;
+  --ca4: 218 90% 74%; --ca5: 262 85% 78%; --ca6: 292 78% 74%; --ca7: 44 92% 64%;
+}
+
+/* ---------- Conversation list ---------- */
+.chat-workspace .chat-conversation-sidebar { background: hsl(var(--card)) !important; border-right: 1px solid hsl(var(--border)); }
+.chat-conversation-sidebar > div:first-child { background: var(--chat-tint-1); border-bottom: 1px solid var(--chat-line) !important; }
+.chat-conversation-sidebar h3 { letter-spacing: -0.01em; }
+.chat-count {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; padding: 0 7px;
+  border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 1;
+  background: var(--chat-tint-3); color: var(--chat-accent-text); border: 1px solid var(--chat-line);
+}
+/* filter chips: selected = company color */
+.chat-conversation-sidebar button[aria-pressed] { height: 28px !important; padding: 0 11px !important; font-size: 12px; font-weight: 500; border: 1px solid hsl(var(--border)); background: hsl(var(--card)) !important; color: hsl(var(--muted-foreground)); transition: background-color .18s, color .18s, border-color .18s; }
+.chat-conversation-sidebar button[aria-pressed]:hover { background: var(--chat-tint-2) !important; color: var(--chat-accent-text); border-color: var(--chat-line); }
+.chat-conversation-sidebar button[aria-pressed="true"] { background: hsl(var(--primary)) !important; border-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+/* search lights up in the company color */
+.chat-conversation-sidebar input { transition: border-color .18s, box-shadow .18s, background-color .18s; }
+.chat-conversation-sidebar input:focus, .chat-conversation-sidebar input:focus-visible { border-color: hsl(var(--primary)) !important; box-shadow: 0 0 0 3px var(--chat-focus) !important; outline: none !important; }
+.chat-conversation-sidebar .relative:focus-within > svg { color: var(--chat-accent-text); }
+/* rows */
+.chat-workspace .chat-conversation-row { position: relative; transition: background-color .18s, box-shadow .18s; }
+.chat-workspace .chat-conversation-row:hover { background: var(--chat-tint-1) !important; }
+.chat-workspace .chat-conversation-row.chat-conversation-selected, .chat-workspace .chat-conversation-selected { background: var(--chat-tint-2) !important; box-shadow: inset 3px 0 0 hsl(var(--primary)) !important; }
+.chat-conversation-row .chat-conv-name { transition: color .18s; }
+.chat-conversation-row.is-unread .chat-conv-name { font-weight: 700; }
+.chat-conversation-row.is-unread .chat-conv-time { color: var(--chat-accent-text); font-weight: 700; }
+.chat-conversation-row.is-unread p { color: hsl(var(--foreground)); }
+.chat-conversation-row span.text-primary, .chat-msg-avatar span.text-primary { color: var(--chat-accent-text) !important; }
+.chat-conversation-row .bg-primary\/10, .chat-msg-avatar .bg-primary\/10 { background-color: var(--chat-tint-3) !important; }
+.chat-conversation-row .bg-secondary\/10 { background-color: var(--chat-tint-2) !important; }
+.chat-conversation-row .text-secondary { color: var(--chat-accent-text) !important; }
+.chat-conversation-row > span[class*="bg-primary"], .chat-conversation-row span.bg-primary { box-shadow: 0 0 0 3px var(--chat-focus); }
+/* avatar ring on the selected row */
+.chat-conversation-selected .relative > span.overflow-hidden, .chat-conversation-selected > div.rounded-full { box-shadow: 0 0 0 2px hsl(var(--card)), 0 0 0 4px hsl(var(--primary)); }
+
+/* ---------- Conversation header ---------- */
+.chat-thread .chat-thread-header { position: relative; padding-top: 14px; }
+.chat-thread .chat-thread-header::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: linear-gradient(90deg, var(--chat-stripe-a), var(--chat-stripe-b)); }
+.chat-head-avatar span.overflow-hidden { width: 44px; height: 44px; box-shadow: 0 0 0 2px hsl(var(--card)), 0 0 0 4px var(--chat-line); }
+.chat-head-block { width: 44px !important; height: 44px !important; box-shadow: 0 0 0 2px hsl(var(--card)), 0 0 0 4px var(--chat-line); }
+.chat-thread-header h3 { font-size: 16px; letter-spacing: -0.01em; }
+.chat-head-status { font-size: 12px !important; font-weight: 500; color: var(--chat-accent-text) !important; }
+.chat-head-status[data-online="true"] { color: var(--chat-online) !important; }
+.chat-thread .chat-thread-header :is(button, a[role="button"]):not(.chat-msg *) { transition: background-color .18s, color .18s; }
+.chat-thread .chat-thread-header :is(button, a[role="button"]):not(.chat-msg *):hover { background-color: var(--chat-tint-2) !important; color: var(--chat-accent-text) !important; }
+
+/* ---------- Message area ---------- */
+.chat-workspace .chat-history {
+  background-color: var(--chat-canvas-tint);
+  background-image: radial-gradient(var(--chat-dot) 1px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+.chat-workspace .chat-thread { background-color: var(--chat-canvas-tint); }
+.chat-date-label, .chat-workspace .chat-date-label {
+  border-radius: 999px !important; padding: 3px 12px !important; font-size: 11px; font-weight: 600;
+  background: var(--chat-tint-3) !important; color: var(--chat-accent-text); border: 1px solid var(--chat-line) !important;
+}
+.chat-bubble { border-radius: 14px !important; transition: border-color .18s, background-color .18s; }
+.chat-bubble-incoming { background: hsl(var(--chat-incoming)) !important; border: 1px solid hsl(var(--chat-incoming-line)) !important; }
+.chat-bubble-outgoing { background: var(--chat-own-bg) !important; border: 1px solid var(--chat-own-border) !important; }
+/* corner "tail": first bubble of a run (sector) or every bubble (DM / group, which have no runs) */
+.chat-msg:not(.is-grouped):not(.is-own) .chat-bubble, .chat-bubble-col .chat-bubble-incoming { border-top-left-radius: 4px !important; }
+.chat-msg.is-own:not(.is-grouped) .chat-bubble, .chat-bubble-col.items-end .chat-bubble-outgoing { border-top-right-radius: 4px !important; }
+.chat-bubble-outgoing a { color: var(--chat-accent-text); text-decoration: underline; text-underline-offset: 2px; }
+/* author names: stable color per person */
+.chat-author-0 { --ca: var(--ca0); } .chat-author-1 { --ca: var(--ca1); } .chat-author-2 { --ca: var(--ca2); } .chat-author-3 { --ca: var(--ca3); }
+.chat-author-4 { --ca: var(--ca4); } .chat-author-5 { --ca: var(--ca5); } .chat-author-6 { --ca: var(--ca6); } .chat-author-7 { --ca: var(--ca7); }
+.chat-msg-author[class*="chat-author-"] > span:first-child, [class*="chat-author-"] > .chat-author-name { color: hsl(var(--ca)) !important; }
+/* read ticks and quiet time */
+.chat-bubble-outgoing .chat-message-meta svg.lucide-check-check { color: var(--chat-read) !important; }
+.chat-message-meta { opacity: .85; }
+.chat-reaction.is-mine { background: var(--chat-tint-3) !important; border-color: var(--chat-line) !important; }
+/* new message: soft fade + rise */
+@keyframes chat-msg-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.chat-bubble, .chat-msg .chat-msg-avatar { animation: chat-msg-in 220ms ease-out backwards; }
+
+/* ---------- Composer ---------- */
+.chat-workspace .chat-composer { background: hsl(var(--card)) !important; border-top: 1px solid var(--chat-line) !important; }
+.chat-composer > div.relative.z-10 { border-radius: 16px !important; border: 1.5px solid hsl(var(--border)); background: hsl(var(--card)); transition: border-color .18s, box-shadow .18s; padding: 5px; }
+.chat-composer > div.relative.z-10:focus-within { border-color: hsl(var(--primary)) !important; box-shadow: 0 0 0 3px var(--chat-focus) !important; }
+.chat-composer button:not([title="Enviar mensagem"]) { transition: background-color .18s, color .18s; }
+.chat-composer button:not([title="Enviar mensagem"]):not(:disabled):hover { background: var(--chat-tint-2) !important; color: var(--chat-accent-text) !important; }
+.chat-composer button[title="Enviar mensagem"] { width: 40px; height: 40px; border-radius: 999px !important; background: hsl(var(--primary)) !important; color: hsl(var(--primary-foreground)) !important; transition: transform .18s, background-color .18s, opacity .18s; }
+.chat-composer button[title="Enviar mensagem"]:disabled { background: var(--chat-tint-3) !important; color: var(--chat-accent-text) !important; opacity: .7; }
+.chat-composer button[title="Enviar mensagem"]:not(:disabled) { animation: chat-send-pop 220ms cubic-bezier(.3,1.5,.5,1); }
+.chat-composer button[title="Enviar mensagem"]:not(:disabled):hover { transform: scale(1.06); }
+@keyframes chat-send-pop { from { transform: scale(.82); } to { transform: scale(1); } }
+
+/* ---------- Insights panel ---------- */
+aside[aria-label^="Detalhes da conversa"] .rounded-t-\[4px\] { background: hsl(var(--primary)) !important; }
+aside[aria-label^="Detalhes da conversa"] .bg-foreground\/70 { background: hsl(var(--primary)) !important; }
+aside[aria-label^="Detalhes da conversa"] .bg-background.shadow-sm { background: var(--chat-tint-2) !important; color: var(--chat-accent-text) !important; }
+aside[aria-label^="Detalhes da conversa"] > div:first-child .bg-muted\/70 { background: var(--chat-tint-1) !important; }
+
+/* ---------- Empty states ---------- */
+.chat-empty-art svg { display: block; }
+.chat-empty-back { fill: var(--chat-tint-3); }
+.chat-empty-front { fill: hsl(var(--primary)); }
+.chat-empty-ink { fill: hsl(var(--primary-foreground)); stroke: hsl(var(--primary-foreground)); stroke-width: 0; opacity: .9; }
+.chat-empty-ink path { stroke: hsl(var(--primary-foreground)); }
+.chat-empty-dot { fill: var(--chat-stripe-b); }
+.chat-empty-dot2 { fill: var(--chat-line); }
+.chat-empty .ui-btn:not(.ew *) { border-radius: 999px !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-bubble, .chat-msg .chat-msg-avatar, .chat-composer button[title="Enviar mensagem"]:not(:disabled) { animation: none !important; }
+  .chat-workspace * { transition-duration: 0.01ms !important; }
+}
