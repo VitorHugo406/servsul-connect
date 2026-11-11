@@ -1,17 +1,17 @@
 // Legal documents of ewvon (Termos de Uso, Política de Privacidade, Política de Cookies, DPA).
 // Text lives here so the public pages (/termos, /privacidade, /cookies, /dpa), the acceptance gate and the
 // registry of acceptances (legal_acceptances) all use the same version. Bump LEGAL.version whenever a text changes:
-// everybody is asked to accept again. Items in [colchetes] must be filled in by the owner before publishing.
+// everybody is asked to accept again. TODO (when the CNPJ exists, before charging customers): replace document/address/owner with the company data and bump the version.
 export const LEGAL = {
-  version: '2026-11-11',
-  updated: '11 de novembro de 2026',
+  version: '2026-11-12',
+  updated: '12 de novembro de 2026',
   brand: 'ewvon',
   owner: 'Vitor Hugo Almeida Santos',
-  document: '[CNPJ ou CPF a preencher]',
-  address: '[endereço completo a preencher]',
+  document: 'pessoa física (CPF informado no contrato ou, mediante solicitação, pelo e-mail de contato)',
+  address: 'São Paulo/SP (endereço completo informado no contrato ou, mediante solicitação, pelo e-mail de contato)',
   email: 'ewvonsuporte@gmail.com',
   dpo: 'Vitor Hugo Almeida Santos',
-  forum: '[comarca a definir]',
+  forum: 'São Paulo/SP',
 };
 
 export type LegalDocId = 'termos' | 'privacidade' | 'cookies' | 'dpa';
