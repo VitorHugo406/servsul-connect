@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "533113361517",
+    "project_id": "ewvon-8e3e3",
+    "storage_bucket": "ewvon-8e3e3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:533113361517:android:5ad622bbb82b8820c35b64",
+        "android_client_info": {
+          "package_name": "br.com.ewvon.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBGl3lQq0EzCqFhtDJHEBS9zwerFZ7yE3o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

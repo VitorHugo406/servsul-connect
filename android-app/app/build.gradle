@@ -1,4 +1,7 @@
-plugins { id 'com.android.application' }
+plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services'
+}
 
 def ksFile = System.getenv('EWVON_KEYSTORE')
 android {
@@ -8,8 +11,8 @@ android {
         applicationId 'br.com.ewvon.app'
         minSdk 23
         targetSdk 34
-        versionCode 12
-        versionName '2.0.2'
+        versionCode 13
+        versionName '2.1.0'
     }
     signingConfigs {
         release {
@@ -31,4 +34,6 @@ android {
 }
 dependencies {
     implementation 'androidx.core:core:1.13.1'
+    implementation platform('com.google.firebase:firebase-bom:33.5.1')
+    implementation 'com.google.firebase:firebase-messaging'
 }

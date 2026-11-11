@@ -40,6 +40,7 @@
         <service android:name=".PollService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Mantém a conexão com o servidor para entregar mensagens e ligações do ewvon" />
         </service>
+        <service android:name=".Fcm" android:exported="false"><intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter></service>
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /><action android:name="br.com.ewvon.app.WATCHDOG" /></intent-filter>
         </receiver>

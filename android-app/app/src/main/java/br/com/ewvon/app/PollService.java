@@ -99,12 +99,5 @@ public class PollService extends Service {
         }
     }
 
-    private void handle(JSONObject e) {
-        String kind = e.optString("kind");
-        if ("call-end".equals(kind)) { CallRinger.stop(this, e.optString("callId")); return; }
-        if (MainActivity.visible) return;   // the app is on screen: the site shows its own banner and ringtone
-        String title = e.optString("title", "ewvon"), body = e.optString("body", ""), url = e.optString("url", "/"), icon = e.optString("icon", null);
-        if ("call".equals(kind)) CallRinger.start(this, e.optString("callId"), title, body, url, icon);
-        else Notifier.show(this, kind, title, body, e.optString("tag", null), url, icon);
-    }
+    private void handle(JSONObject e) { Events.handle(this, e); }
 }

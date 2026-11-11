@@ -102,6 +102,7 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIF);
         else askBattery();
         PollService.start(this);
+        Fcm.sync(this);
     }
 
     /** Only in debug builds (used by tests): sets the device secret from an intent extra. */
@@ -226,6 +227,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void setDevice(String secret, String profileId) {
             p().edit().putString("secret", secret).putString("profile", profileId).putLong("last", -1).apply();
             PollService.start(getApplicationContext());
+            Fcm.sync(getApplicationContext());
         }
         /** JSON for the Settings screen: is the background connection alive and unrestricted? */
         @JavascriptInterface public String status() {
