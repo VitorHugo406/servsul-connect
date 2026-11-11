@@ -1,33 +1,35 @@
-/* Focus mode (desktop): shell chrome fades out, the tab area expands to the full page. */
+/* Focus mode (desktop): shell chrome fades out, the tab area expands to the full page.
+   Sidebar, top bar and tab area share the same duration and easing, so they move as one calm gesture;
+   the chrome only drifts a few pixels while it fades (subtle), the tab area does the visible work. */
 @media (min-width: 768px) {
   :root {
-    --focus-ease: cubic-bezier(0.22, 1, 0.36, 1);
-    --focus-dur: 520ms;
+    --focus-ease: cubic-bezier(0.45, 0.05, 0.25, 1);
+    --focus-dur: 460ms;
+    --focus-fade: 360ms;
   }
-  /* Restore: tab shrinks first, chrome returns slightly after (staggered). */
   .ewvon-sidebar {
-    transition: transform var(--focus-dur) var(--focus-ease) 120ms, opacity 380ms ease 120ms, visibility 0s linear 0s !important;
+    transition: transform var(--focus-dur) var(--focus-ease), opacity var(--focus-fade) var(--focus-ease), visibility 0s linear 0s !important;
   }
   .ewvon-topbar {
-    transition: transform var(--focus-dur) var(--focus-ease) 200ms, opacity 380ms ease 200ms, margin-top var(--focus-dur) var(--focus-ease), visibility 0s linear 0s !important;
+    transition: transform var(--focus-dur) var(--focus-ease), opacity var(--focus-fade) var(--focus-ease), margin-top var(--focus-dur) var(--focus-ease), visibility 0s linear 0s !important;
   }
   .ewvon-main {
     transition: margin var(--focus-dur) var(--focus-ease), border-radius var(--focus-dur) var(--focus-ease) !important;
   }
   html.focus-mode .ewvon-sidebar {
-    transform: translateX(calc(-100% - 24px));
+    transform: translateX(-28px);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition: transform var(--focus-dur) var(--focus-ease), opacity 380ms ease, visibility 0s linear var(--focus-dur) !important;
+    transition: transform var(--focus-dur) var(--focus-ease), opacity var(--focus-fade) var(--focus-ease), visibility 0s linear var(--focus-dur) !important;
   }
   html.focus-mode .ewvon-topbar {
-    transform: translateY(-24px);
+    transform: translateY(-14px);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
     margin-top: calc(-1 * var(--focus-topbar-h, 68px)) !important;
-    transition: transform var(--focus-dur) var(--focus-ease) 80ms, opacity 380ms ease 80ms, margin-top var(--focus-dur) var(--focus-ease), visibility 0s linear var(--focus-dur) !important;
+    transition: transform var(--focus-dur) var(--focus-ease), opacity var(--focus-fade) var(--focus-ease), margin-top var(--focus-dur) var(--focus-ease), visibility 0s linear var(--focus-dur) !important;
   }
   html.focus-mode .ewvon-main {
     margin: 0 !important;
