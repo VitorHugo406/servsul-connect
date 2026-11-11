@@ -43,7 +43,7 @@ public class Fcm extends FirebaseMessagingService {
                 h.setRequestMethod("POST"); h.setDoOutput(true); h.setConnectTimeout(10_000); h.setReadTimeout(15_000);
                 h.setRequestProperty("Content-Type", "application/json"); h.setRequestProperty("apikey", KEY);
                 try (OutputStream o = h.getOutputStream()) { o.write(new JSONObject().put("_secret", secret).put("_token", token).toString().getBytes(StandardCharsets.UTF_8)); }
-                if (h.getResponseCode() / 100 == 2) p.edit().putBoolean("fcm_sent", true).putString("fcm_secret", secret).apply();
+                if (h.getResponseCode() / 100 == 2) { p.edit().putBoolean("fcm_sent", true).putString("fcm_secret", secret).apply(); PollService.stop(c); }
             } catch (Exception ignored) { }
         }, "ewvon-fcm").start();
     }

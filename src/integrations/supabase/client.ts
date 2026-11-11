@@ -35,8 +35,16 @@ function pumpJoins() {
 }
 try {
   const rawChannel = supabase.channel.bind(supabase);
+  // supabase-js hands back the SAME channel when a name is reused. Two screens/hooks listening with the same fixed
+  // name then crash ("cannot add postgres_changes callbacks after subscribe()") and the app loses its data until the
+  // next login. Database-change channels get their own name when the name is already in use; broadcast channels
+  // (calls, typing) must keep the shared name so people can reach each other.
+  const SHARED_TOPIC = /^(ewvon-ring-|ewvon-call-|typing-|ewvon-chat-calls|sector-presence)/;
+  let dupCounter = 0;
   (supabase as unknown as { channel: typeof supabase.channel }).channel = ((name: string, opts?: Parameters<typeof supabase.channel>[1]) => {
-    const ch = rawChannel(name, opts);
+    let topic = name;
+    if (!SHARED_TOPIC.test(name) && supabase.getChannels().some((c) => c.topic === `realtime:${name}`)) topic = `${name}~${++dupCounter}`;
+    const ch = rawChannel(topic, opts);
     const rawSubscribe = ch.subscribe.bind(ch);
     const rawUnsubscribe = ch.unsubscribe.bind(ch);
     let cancelled = false;

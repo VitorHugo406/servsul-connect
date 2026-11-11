@@ -28,7 +28,11 @@ public class PollService extends Service {
 
     static void start(Context c) {
         SharedPreferences p = c.getSharedPreferences("ewvon", Context.MODE_PRIVATE);
-        if (p.getString("secret", "").isEmpty()) return;
+        String secret = p.getString("secret", "");
+        if (secret.isEmpty()) return;
+        // Firebase already delivers messages and calls with the app closed: the always-on connection (and its
+        // "Recebendo mensagens e ligações" notification) is only a fallback for phones without Firebase.
+        if (p.getBoolean("fcm_sent", false) && secret.equals(p.getString("fcm_secret", ""))) { stop(c); return; }
         Intent i = new Intent(c, PollService.class);
         try { if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i); else c.startService(i); } catch (Exception ignored) { }
     }

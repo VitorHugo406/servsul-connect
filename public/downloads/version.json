@@ -1,1 +1,1 @@
-{ "version": "2.1.1", "required": false, "notes": "Ligações: vibração para ao atender, Recusar avisa quem ligou e a chamada não atende mais sozinha." }
+{ "version": "2.1.2", "required": false, "notes": "Sem a notificação fixa \"Recebendo mensagens e ligações\". Mensagens e ligações continuam chegando pelo Firebase." }
