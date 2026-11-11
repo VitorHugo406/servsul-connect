@@ -41,3 +41,79 @@
     transition: none !important;
   }
 }
+
+/* Focus-mode tab switcher: solid, semi-translucent navy pill that grows out of a gear. No blur (project rule). */
+.focus-switcher {
+  position: fixed; top: 14px; left: 50%; z-index: 45;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  pointer-events: none;
+  --fs-bg: rgba(16, 30, 62, 0.82);
+  opacity: 0; transition: opacity 300ms ease;
+}
+.focus-switcher[data-open='true'] { opacity: 1; }
+.focus-switcher > * { pointer-events: auto; }
+.focus-switcher-pill {
+  display: flex; align-items: center; height: var(--fs-gear); overflow: hidden;
+  width: var(--fs-gear); border-radius: 999px;
+  background: var(--fs-bg); border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 24px rgba(8, 16, 40, 0.28);
+  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  color: #fff; box-sizing: border-box;
+}
+.focus-switcher[data-open='true'] .focus-switcher-pill {
+  width: var(--fs-w);
+  transition: width 420ms cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+.focus-switcher button { appearance: none; border: 0; background: transparent; color: #fff; padding: 0; cursor: pointer; box-shadow: none; }
+.focus-switcher-gear {
+  flex: none; width: calc(var(--fs-gear) - 2px); height: calc(var(--fs-gear) - 2px); border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.focus-switcher-gear-icon { display: block; }
+.focus-switcher[data-open='true'] .focus-switcher-gear-icon { animation: fs-spin 8s linear infinite; }
+.focus-switcher-viewport {
+  flex: none; position: relative; height: var(--fs-item); overflow: hidden;
+}
+.focus-switcher-viewport[data-scroll='true'] {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+}
+.focus-switcher-track { position: relative; height: 100%; transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1); }
+.focus-switcher-bubble {
+  position: absolute; left: 2px; top: 2px; width: calc(var(--fs-item) - 4px); height: calc(var(--fs-item) - 4px);
+  border-radius: 999px; background: rgba(255, 255, 255, 0.22);
+  transition: transform 280ms cubic-bezier(0.34, 1.3, 0.5, 1);
+}
+.focus-switcher-item {
+  position: absolute; top: 0; width: var(--fs-item); height: var(--fs-item);
+  display: flex; align-items: center; justify-content: center; border-radius: 999px;
+}
+.focus-switcher-icon { display: flex; transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1); opacity: 0.88; }
+.focus-switcher-item:hover .focus-switcher-icon { transform: scale(1.12); opacity: 1; }
+.focus-switcher-item[data-active='true'] .focus-switcher-icon { transform: scale(1.25); opacity: 1; animation: fs-hop 360ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.focus-switcher-item[data-active='true']:hover .focus-switcher-icon { transform: scale(1.25); }
+.focus-switcher[data-open='true'] .focus-switcher-item[data-active='false'] .focus-switcher-icon {
+  animation: fs-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards; animation-delay: calc(var(--fs-i, 0) * 30ms + 120ms);
+}
+.focus-switcher-item:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
+.focus-switcher-caption { display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none !important; }
+.focus-switcher-label {
+  padding: 3px 12px; border-radius: 999px; background: var(--fs-bg); border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff; font-size: 12px; font-weight: 600; line-height: 18px; white-space: nowrap;
+  animation: fs-label 240ms ease-out;
+}
+.focus-switcher-hint {
+  font-size: 10.5px; line-height: 14px; color: #fff; padding: 1px 8px; border-radius: 999px;
+  background: rgba(16, 30, 62, 0.6); opacity: 0; transition: opacity 300ms ease 200ms;
+}
+.focus-switcher[data-open='true'] .focus-switcher-hint { opacity: 0.85; }
+@keyframes fs-spin { to { transform: rotate(360deg); } }
+@keyframes fs-hop { 0% { transform: translateY(0) scale(1.25); } 40% { transform: translateY(-7px) scale(1.35); } 100% { transform: translateY(0) scale(1.25); } }
+@keyframes fs-pop { 0% { transform: scale(0.4); opacity: 0; } 100% { transform: scale(1); opacity: 0.88; } }
+@keyframes fs-label { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .focus-switcher, .focus-switcher-pill, .focus-switcher-gear, .focus-switcher-track, .focus-switcher-bubble, .focus-switcher-icon, .focus-switcher-hint { transition: none !important; }
+  .focus-switcher-gear-icon, .focus-switcher-icon, .focus-switcher-label { animation: none !important; }
+}

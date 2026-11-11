@@ -19,6 +19,7 @@ export function setFocusMode(next: boolean) {
   if (next === active) return;
   if (next && !isDesktop()) return;
   if (next) measureTopbar();
+  if (!next) setFocusSwitcher(false);
   active = next;
   document.documentElement.classList.toggle(CLASS, next);
   listeners.forEach((l) => l());
@@ -31,4 +32,20 @@ const subscribe = (cb: () => void) => { listeners.add(cb); return () => { listen
 
 export function useFocusMode() {
   return useSyncExternalStore(subscribe, () => active, () => false);
+}
+
+// Focus-mode tab switcher (gear pill) open state. Only meaningful while focus mode is on.
+let switcherOpen = false;
+const switcherListeners = new Set<() => void>();
+export function setFocusSwitcher(next: boolean) {
+  if (next && !active) return;
+  if (next === switcherOpen) return;
+  switcherOpen = next;
+  switcherListeners.forEach((l) => l());
+}
+export const toggleFocusSwitcher = () => setFocusSwitcher(!switcherOpen);
+export const isFocusSwitcherOpen = () => switcherOpen;
+const subscribeSwitcher = (cb: () => void) => { switcherListeners.add(cb); return () => { switcherListeners.delete(cb); }; };
+export function useFocusSwitcher() {
+  return useSyncExternalStore(subscribeSwitcher, () => switcherOpen, () => false);
 }

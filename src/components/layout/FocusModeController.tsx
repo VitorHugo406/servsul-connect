@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { setFocusMode, toggleFocusMode, useFocusMode } from '@/hooks/useFocusMode';
+import { setFocusMode, toggleFocusMode, toggleFocusSwitcher, useFocusMode } from '@/hooks/useFocusMode';
 
 const TOAST_KEY = 'ewvon:focus-mode-toast';
 
 // Main: Ctrl/Cmd+Shift+F. Extra: Ctrl/Cmd+Shift+T (browsers reserve it; works in installed apps/PWA).
+const isSwitcherShortcut = (e: KeyboardEvent) => e.code === 'KeyE' && e.shiftKey && (e.ctrlKey || e.metaKey) && !e.altKey;
+
 const isFocusShortcut = (e: KeyboardEvent) =>
   (e.code === 'KeyF' || e.code === 'KeyT') && e.shiftKey && (e.ctrlKey || e.metaKey) && !e.altKey;
 
@@ -14,6 +16,12 @@ export function FocusModeController() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (isSwitcherShortcut(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!e.repeat) toggleFocusSwitcher();
+        return;
+      }
       if (!isFocusShortcut(e)) return;
       e.preventDefault();
       e.stopPropagation();
@@ -29,8 +37,8 @@ export function FocusModeController() {
   useEffect(() => {
     if (focus) {
       try {
-        if (!sessionStorage.getItem(TOAST_KEY)) { sessionStorage.setItem(TOAST_KEY, '1'); toast('Modo foco ligado. Pressione Ctrl+Shift+F para voltar.'); }
-      } catch { toast('Modo foco ligado. Pressione Ctrl+Shift+F para voltar.'); }
+        if (!sessionStorage.getItem(TOAST_KEY)) { sessionStorage.setItem(TOAST_KEY, '1'); toast('Modo foco ligado. Ctrl+Shift+F volta · Ctrl+Shift+E troca de aba.'); }
+      } catch { toast('Modo foco ligado. Ctrl+Shift+F volta · Ctrl+Shift+E troca de aba.'); }
     }
     const t = window.setTimeout(() => window.dispatchEvent(new Event('resize')), 700);
     return () => window.clearTimeout(t);
