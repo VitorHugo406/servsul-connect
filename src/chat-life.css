@@ -191,18 +191,15 @@ aside[aria-label^="Detalhes da conversa"] .bg-background.shadow-sm { background:
 .chat-rail-label { font-size: 11px; font-weight: 500; line-height: 1.15; margin-top: -2px; letter-spacing: .005em; }
 .chat-rail-item[aria-pressed="true"] .chat-rail-label { font-weight: 700; }
 .chat-rail-mark { position: relative; display: grid; place-items: center; }
-/* 3D illustrations (Fluent Emoji 3D): soft shadow under the art; the active one levitates over a solid light plate */
+/* flat filled glyphs (Fluent System Icons): light on the dark rail, white when active, gold star for favorites */
 .chat-rail-mark { width: 40px; height: 36px; }
-.chat-rail-img { width: 30px; height: 30px; object-fit: contain; display: block; user-select: none; -webkit-user-drag: none; filter: drop-shadow(0 3px 3px rgba(8, 6, 40, .45)); transition: transform .16s ease, filter .16s ease; }
-/* the person/people art is dark navy: a solid light disc keeps it readable on the dark rail */
-.chat-rail-mark.has-plate::before { content: ""; position: absolute; width: 34px; height: 34px; border-radius: 999px; background: #e3e1fb; }
-.chat-rail-mark.has-plate .chat-rail-img { position: relative; width: 26px; height: 26px; filter: drop-shadow(0 2px 2px rgba(20, 18, 70, .35)); }
-.chat-rail-item[aria-pressed="true"] .chat-rail-mark.has-plate .chat-rail-img { filter: drop-shadow(0 3px 3px rgba(20, 18, 70, .4)); }
-.chat-rail-item:hover .chat-rail-img { transform: translateY(-1px) scale(1.04); }
+.chat-rail-glyph { display: block; color: rgba(255, 255, 255, .82); transition: transform .16s ease, color .16s ease; }
+.chat-rail-item:hover .chat-rail-glyph { color: #fff; transform: translateY(-1px); }
 .chat-rail-item[aria-pressed="true"] { background: rgba(255, 255, 255, .18) !important; }
-.chat-rail-item[aria-pressed="true"] .chat-rail-img { transform: translateY(-2px) scale(1.08); filter: drop-shadow(0 5px 4px rgba(8, 6, 40, .55)); }
-.chat-rail-badge { position: absolute; top: -1px; right: 1px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: #e5484d; color: #fff; font-size: 10.5px; font-weight: 700; line-height: 17px; text-align: center; border: 2px solid #2b2970; box-sizing: content-box; }
-@media (prefers-reduced-motion: reduce) { .chat-rail-img { transition: none !important; } }
+.chat-rail-item[aria-pressed="true"] .chat-rail-glyph { color: #fff; }
+.chat-rail-item.is-footer .chat-rail-glyph { color: #fbbf24; }
+.chat-rail-badge { position: absolute; top: -5px; right: -9px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: #e5484d; color: #fff; font-size: 10.5px; font-weight: 700; line-height: 17px; text-align: center; border: 2px solid #2b2970; box-sizing: content-box; }
+@media (prefers-reduced-motion: reduce) { .chat-rail-glyph { transition: none !important; } }
 
 /* list column a bit narrower now that the rail takes the left edge; list moves right with the rail */
 .chat-workspace .chat-conversation-sidebar { width: 316px !important; min-width: 296px; }
@@ -286,3 +283,7 @@ aside[aria-label^="Detalhes da conversa"] .bg-background.shadow-sm { background:
 .chat-call-badge-block.is-3d img { width: 28px; height: 28px; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(20, 18, 70, .35)); }
 .chat-call-kind.is-3d { width: 22px; height: 22px; right: -6px; bottom: -5px; background: #4a46b8; }
 .chat-call-kind.is-3d img { width: 15px; height: 15px; object-fit: contain; }
+/* call history: flat glyphs instead of 3D art */
+.chat-call-badge-block { background: hsl(var(--chat-hover)); }
+.chat-call-badge-block .chat-rail-glyph { color: hsl(var(--foreground)); }
+.chat-call-kind .chat-rail-glyph { color: #fff; }
