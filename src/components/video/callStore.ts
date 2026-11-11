@@ -43,6 +43,9 @@ function flush() {
   })();
 }
 
+/** Run `f` whenever any call row changes (Realtime); returns the unsubscribe. Used by the chat call history list. */
+export function onCallsChange(f: () => void) { listeners.add(f); listen(); return () => { listeners.delete(f); }; }
+
 /** Re-read one call now (after this tab changed it). */
 export function refreshCall(id: string) { queue.add(id); if (timer == null) timer = window.setTimeout(flush, 30); }
 

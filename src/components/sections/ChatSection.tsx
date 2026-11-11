@@ -15,7 +15,7 @@ import { useMessages, useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { ChatMessage, DateSeparator } from '@/components/chat/ChatMessage';
-import { ChatEmptyState } from '@/components/chat/ChatEmptyState';
+import { ChatEmptyState, focusConversationSearch } from '@/components/chat/ChatEmptyState';
 import { useAllUsersPresence } from '@/hooks/usePresence';
 import { PresenceIndicator } from '@/components/user/PresenceIndicator';
 import { ChatInput } from '@/components/chat/ChatInput';
@@ -40,7 +40,9 @@ import { ChatPersonalizationDialog, getChatBackgroundKey } from '@/components/ch
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSound } from '@/hooks/useSound';
-import { useConversations } from '@/hooks/useDirectMessages';
+import { useConversations, useActiveUsers } from '@/hooks/useDirectMessages';
+import { ChatRail, type ChatRailView } from '@/components/chat/ChatRail';
+import { ChatCallsList } from '@/components/chat/ChatCallsList';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatVideoButton } from '@/components/video/ChatVideoButton';
 import { useMessageReactions } from '@/hooks/useMessageReactions';
@@ -75,6 +77,8 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const [conversationSearch, setConversationSearch] = useState('');
   const [conversationFilter, setConversationFilter] = useState<ChatListFilter>('all');
   const [showListSearch, setShowListSearch] = useState(false);
+  const [showCalls, setShowCalls] = useState(false);
+  const { users: callPeople } = useActiveUsers();
   const { plan: callPlan } = useCompanyPlan();
   useEffect(() => { const open = () => setShowListSearch(true); window.addEventListener(OPEN_LIST_SEARCH_EVENT, open); return () => window.removeEventListener(OPEN_LIST_SEARCH_EVENT, open); }, []);
   const { className: typographyClass } = useChatTypography();
@@ -351,6 +355,17 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const dmEls = dmList.filter(c => !favorites.includes('dm:'+c.partnerId)).map(renderDmItem);
   const sectorEls = sectorList.filter((sec:any) => !favorites.includes('sector:'+sec.id)).map(renderSectorItem);
   const groupEls = groupList.filter(g => !favorites.includes('group:'+g.id)).map(renderGroupItem);
+  const railActive: ChatRailView = showCalls ? 'calls' : conversationFilter === 'direct' || conversationFilter === 'groups' || conversationFilter === 'sectors' ? conversationFilter : 'all';
+  const selectRail = (v: ChatRailView) => { if (v === 'calls') { setShowCalls(true); return; } setShowCalls(false); setConversationFilter(v); };
+  const markCount = (prefix: string) => unreadMarks.filter(k => k.startsWith(prefix)).length;
+  const dmUnread = conversations.reduce((n, c) => n + (c.unreadCount > 0 ? c.unreadCount : unreadMarks.includes('dm:' + c.partnerId) ? 1 : 0), 0);
+  const railBadges = { direct: dmUnread, groups: markCount('group:'), sectors: markCount('sector:'), all: dmUnread + markCount('group:') + markCount('sector:') };
+  const callPeopleList = callPeople.map(u => ({ id: u.id, name: u.display_name || u.name, avatar_url: u.avatar_url }));
+  const openCallConversation = (conv: 'dm' | 'group' | 'sector', target: string) => {
+    if (conv === 'dm') { setChatMode('direct'); setSelectedUserId(target); setSelectedGroupId(null); }
+    else if (conv === 'group') { setChatMode('groups'); setSelectedGroupId(target); setSelectedUserId(null); }
+    else { setChatMode('sectors'); setActiveSector(target); setSelectedUserId(null); setSelectedGroupId(null); }
+  };
   const listCallConv = chatMode === 'direct' && selectedUserId ? 'dm' as const : chatMode === 'groups' && selectedGroupId ? 'group' as const : chatMode === 'sectors' && effectiveSector ? 'sector' as const : null;
   const listCallTarget = listCallConv === 'dm' ? selectedUserId : listCallConv === 'group' ? selectedGroupId : effectiveSector;
   const canCallFromList = !!listCallConv && !!listCallTarget && !!callPlan && planHasFeature(callPlan, 'video_calls');
@@ -371,29 +386,30 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     </>}
 
     <div className="chat-workspace-body flex min-h-0 flex-1 overflow-hidden">
+      {!isMobile ? <ChatRail active={railActive} onSelect={selectRail} badges={railBadges} /> : null}
       <aside className="chat-conversation-sidebar hidden w-[min(34%,360px)] min-w-[290px] shrink-0 flex-col md:flex">
         <div className="chat-list-head">
-          <div className="chat-list-top"><h3 className="chat-list-title">Chat</h3>
+          <div className="chat-list-top"><h3 className="chat-list-title">{showCalls ? 'Chamadas' : 'Chat'}</h3>
             <div className="chat-list-tools">
-              <Button variant="ghost" size="icon" className="chat-list-tool" title="Buscar conversas" aria-label="Buscar conversas" aria-pressed={showListSearch} onClick={() => { const next = !showListSearch; setShowListSearch(next); if (!next) setConversationSearch(''); }}><Search className="h-[18px] w-[18px]"/></Button>
+              {!showCalls ? <Button variant="ghost" size="icon" className="chat-list-tool" title="Buscar conversas" aria-label="Buscar conversas" aria-pressed={showListSearch} onClick={() => { const next = !showListSearch; setShowListSearch(next); if (!next) setConversationSearch(''); }}><Search className="h-[18px] w-[18px]"/></Button> : null}
               {canCallFromList ? <Button variant="ghost" size="icon" className="chat-list-tool" title="Chamada de vídeo da conversa aberta" aria-label="Chamada de vídeo da conversa aberta" onClick={() => startChatCall(listCallConv!, listCallTarget!)}><Video className="h-[18px] w-[18px]"/></Button> : null}
               <Button variant="ghost" size="icon" className="chat-list-tool" title="Nova conversa" aria-label="Nova conversa" onClick={() => window.dispatchEvent(new Event(OPEN_LIST_SEARCH_EVENT))}><SquarePen className="h-[18px] w-[18px]"/></Button>
             </div>
           </div>
-          <div className="chat-pills" role="group" aria-label="Filtrar conversas">{(['unread', 'direct', 'sectors', 'groups', 'favorites'] as const).map(filter => <button key={filter} type="button" className="chat-pill" aria-pressed={conversationFilter === filter} onClick={() => setConversationFilter(conversationFilter === filter ? 'all' : filter)}>{{unread:'Não lidas',direct:'Chats',sectors:'Setores',groups:'Grupos',favorites:'Favoritas'}[filter]}</button>)}</div>
-          {showListSearch ? <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/><Input value={conversationSearch} onChange={e => setConversationSearch(e.target.value)} aria-label="Buscar conversas" placeholder="Buscar" autoFocus className="chat-list-search h-8 pl-9 text-sm"/></div> : null}
+          {!showCalls ? <div className="chat-pills" role="group" aria-label="Filtrar conversas">{(['unread', 'favorites'] as const).map(filter => <button key={filter} type="button" className="chat-pill" aria-pressed={conversationFilter === filter} onClick={() => setConversationFilter(conversationFilter === filter ? 'all' : filter)}>{{unread:'Não lidas',favorites:'Favoritas'}[filter]}</button>)}</div> : null}
+          {showListSearch && !showCalls ? <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/><Input value={conversationSearch} onChange={e => setConversationSearch(e.target.value)} aria-label="Buscar conversas" placeholder="Buscar" autoFocus className="chat-list-search h-8 pl-9 text-sm"/></div> : null}
         </div>
-        <ScrollArea className="min-h-0 flex-1">
+        {showCalls ? <ScrollArea className="min-h-0 flex-1"><div className="chat-list-body"><ChatCallsList meId={profile!.id} companyId={profile?.company_id} people={callPeopleList} sectors={accessibleSectors.map((x: any) => ({ id: x.id, name: x.name, color: x.color }))} groups={groups.map(g => ({ id: g.id, name: g.name }))} canCall={!!callPlan && planHasFeature(callPlan, 'video_calls')} onOpen={openCallConversation} onCall={(conv, target, audio) => startChatCall(conv, target, audio)} /></div></ScrollArea> : <ScrollArea className="min-h-0 flex-1">
           <div className="chat-list-body">
             {favEls.length > 0 ? <ChatListSection id="favorites" label="Favoritos" count={favEls.length}>{favEls}</ChatListSection> : null}
             {dmEls.length > 0 ? <ChatListSection id="direct" label="Chats" count={dmEls.length}>{dmEls}</ChatListSection> : null}
             {sectorEls.length > 0 ? <ChatListSection id="sectors" label="Setores" count={sectorEls.length}>{sectorEls}</ChatListSection> : null}
             {groupEls.length > 0 ? <ChatListSection id="groups" label="Grupos" count={groupEls.length}>{groupEls}</ChatListSection> : null}
           </div>
-        </ScrollArea>
+        </ScrollArea>}
       </aside>
       <div className="chat-thread flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden !border-0 !rounded-none !shadow-none">
-    {chatMode === 'sectors' ? <>
+    {chatMode === 'sectors' && !currentSector && !isMobile ? <ChatEmptyState kind="select" title="Selecione uma conversa" text="Escolha uma conversa na lista ou comece uma nova." actionLabel="Nova conversa" onAction={focusConversationSearch} /> : chatMode === 'sectors' ? <>
 
       <div className={cn('chat-thread-header flex items-center gap-3 shrink-0', isMobile ? 'hidden' : 'px-4 py-3')}>
         <div className="chat-head-block flex items-center justify-center rounded-xl text-white shrink-0 h-10 w-10" style={{ backgroundColor: currentSector?.color }}><span className="font-bold text-lg">{currentSector?.name.charAt(0)}</span></div>
@@ -401,7 +417,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
         <div className="chat-head-actions flex items-center gap-1 ml-auto"><ChatVideoButton conv="sector" target={effectiveSector} />{effectiveSector ? <ChatTasksControl kind="sector" chatId={effectiveSector} onPost={(t) => sendMessage(t)} /> : null}<Sheet><SheetTrigger asChild><Button variant="ghost" size="icon" title="Personalizar chat" onClick={() => setShowSectorPersonalization(true)}><Palette className="h-5 w-5" /></Button></SheetTrigger></Sheet>{isAdmin && effectiveSector && effectiveSector !== geralSectorId && <Sheet><SheetTrigger asChild><Button variant="ghost" size="icon" title="Automações de resumo"><Bot className="h-5 w-5" /></Button></SheetTrigger><SheetContent><SheetHeader><SheetTitle>Automações - {currentSector?.name}</SheetTitle></SheetHeader><div className="mt-6"><ScheduledSummaryConfig targetType="sector" targetId={effectiveSector} targetName={currentSector?.name || 'Setor'} /></div></SheetContent></Sheet>}{effectiveSector && effectiveSector !== geralSectorId && <Sheet><SheetTrigger asChild><Button variant="ghost" size="icon" title="Mídia e arquivos"><FolderOpen className="h-5 w-5" /></Button></SheetTrigger><SheetContent><SheetHeader><SheetTitle>Mídia e Arquivos - {currentSector?.name}</SheetTitle></SheetHeader><div className="mt-6"><ChatMediaFilter chatType="sector" chatId={effectiveSector} /></div></SheetContent></Sheet>}<span className="chat-head-sep" aria-hidden="true" /><Button variant="ghost" size="icon" onClick={() => (wide ? setPanelMode((m) => (m === 'people' ? 'stats' : 'people')) : setShowSectorUsers(!showSectorUsers))} title={(wide ? panelMode === 'people' : showSectorUsers) ? 'Ver dados da conversa' : 'Ver membros do setor'}>{(wide ? panelMode === 'people' : showSectorUsers) ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button><Button variant="ghost" size="icon" onClick={() => { setShowSearch(!showSearch); if (showSearch) { setMessageSearchQuery(''); setSearchDate(null); } }} title="Buscar mensagens"><Search className="h-5 w-5" /></Button></div>
       </div>
       {showSearch && <div className="border-b border-border bg-card px-4 py-2"><div className="flex items-center gap-2"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Buscar por mensagem..." value={messageSearchQuery} onChange={e => setMessageSearchQuery(e.target.value)} className="pl-9 h-9 text-sm" autoFocus /></div><div className="flex items-center gap-1 flex-shrink-0"><CalendarIcon className="h-4 w-4 text-muted-foreground" /><Input type="date" value={searchDate || ''} onChange={e => setSearchDate(e.target.value || null)} className="w-[140px] h-9 text-xs" /></div>{(messageSearchQuery || searchDate) && <Button variant="ghost" size="sm" className="h-9 px-2 text-xs flex-shrink-0" onClick={() => { setMessageSearchQuery(''); setSearchDate(null); }}>Limpar</Button>}</div></div>}
-      <div className="chat-history flex min-h-0 flex-1 overflow-hidden" style={sectorBackground ? { backgroundImage: `linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)), url(${sectorBackground})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}><ScrollArea className={cn('min-w-0 flex-1 px-3 py-3 sm:px-6 sm:py-4', showSectorUsers && !isMobile && !wide && 'border-r border-border')} onScrollCapture={handleViewportScroll} onTouchStart={() => { shouldAutoScrollRef.current = false; }} onWheel={(e) => { if (e.deltaY < 0) shouldAutoScrollRef.current = false; }}><div className="space-y-2">{messagesLoading ? <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div> : messages.length === 0 ? <ChatEmptyState kind="empty" name={currentSector?.name} title={`Comece a conversa em ${currentSector?.name || 'este setor'}`} text={canSendMessages ? 'Seja o primeiro a enviar uma mensagem neste setor!' : 'Aguarde mensagens da sua equipe'} /> : filteredMessages.map((message, index, filteredArr) => { const prevMessage = index > 0 ? filteredArr[index - 1] : null; const msgDate = new Date(message.created_at).toDateString(); const prevDate = prevMessage ? new Date(prevMessage.created_at).toDateString() : null; const showDateSeparator = msgDate !== prevDate; return <div key={message.id} id={`msg-${message.id}`} className="transition-colors duration-500 rounded-lg">{showDateSeparator && <DateSeparator date={message.created_at} />}<ChatMessage message={message} index={index} grouped={!showDateSeparator && !!prevMessage && prevMessage.author_id === message.author_id && Date.parse(message.created_at) - Date.parse(prevMessage.created_at) < 5 * 60_000} onReply={handleReply} reactions={reactions[message.id]} onToggleReaction={toggleReaction} onScrollToMessage={handleScrollToMessage} /></div>; })}<div ref={messagesEndRef} /></div>{showScrollToBottom && <button onClick={scrollToBottom} className="fixed bottom-32 right-8 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all" title="Ir para o final"><ChevronDown className="h-5 w-5" /></button>}</ScrollArea>{showSectorUsers && !isMobile && !wide && <div className="w-72 flex-shrink-0"><SectorUsersList sectorId={effectiveSector || ''} inline /></div>}</div>
+      <div className="chat-history flex min-h-0 flex-1 overflow-hidden" style={sectorBackground ? { backgroundImage: `linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)), url(${sectorBackground})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}><ScrollArea className={cn('min-w-0 flex-1 px-3 py-3 sm:px-6 sm:py-4', showSectorUsers && !isMobile && !wide && 'border-r border-border')} onScrollCapture={handleViewportScroll} onTouchStart={() => { shouldAutoScrollRef.current = false; }} onWheel={(e) => { if (e.deltaY < 0) shouldAutoScrollRef.current = false; }}><div className="space-y-2">{messagesLoading ? <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div> : messages.length === 0 ? <ChatEmptyState kind="empty" name={currentSector?.name} title="Comece a conversa neste setor" text={canSendMessages ? 'Seja o primeiro a enviar uma mensagem neste setor!' : 'Aguarde mensagens da sua equipe'} /> : filteredMessages.map((message, index, filteredArr) => { const prevMessage = index > 0 ? filteredArr[index - 1] : null; const msgDate = new Date(message.created_at).toDateString(); const prevDate = prevMessage ? new Date(prevMessage.created_at).toDateString() : null; const showDateSeparator = msgDate !== prevDate; return <div key={message.id} id={`msg-${message.id}`} className="transition-colors duration-500 rounded-lg">{showDateSeparator && <DateSeparator date={message.created_at} />}<ChatMessage message={message} index={index} grouped={!showDateSeparator && !!prevMessage && prevMessage.author_id === message.author_id && Date.parse(message.created_at) - Date.parse(prevMessage.created_at) < 5 * 60_000} onReply={handleReply} reactions={reactions[message.id]} onToggleReaction={toggleReaction} onScrollToMessage={handleScrollToMessage} /></div>; })}<div ref={messagesEndRef} /></div>{showScrollToBottom && <button onClick={scrollToBottom} className="fixed bottom-32 right-8 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all" title="Ir para o final"><ChevronDown className="h-5 w-5" /></button>}</ScrollArea>{showSectorUsers && !isMobile && !wide && <div className="w-72 flex-shrink-0"><SectorUsersList sectorId={effectiveSector || ''} inline /></div>}</div>
       {showSectorUsers && isMobile && <div className="absolute inset-0 z-50 bg-background"><div className="flex items-center justify-between border-b border-border p-3"><h3 className="font-semibold">Membros do Setor</h3><Button variant="ghost" size="icon" onClick={() => setShowSectorUsers(false)}><ArrowLeft className="h-5 w-5" /></Button></div><SectorUsersList sectorId={effectiveSector || ''} inline /></div>}
       <TypingIndicator typingUsers={typingUsers} />{canSendMessages ? <ChatInput onSendMessage={handleSendMessage} onTyping={sendTyping} onMention={handleMention} replyTo={replyTo} onClearReply={() => setReplyTo(null)} /> : <div className="border-t border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">Você só pode enviar mensagens no seu próprio setor</div>}
       <ChatPersonalizationDialog open={showSectorPersonalization} onOpenChange={setShowSectorPersonalization} chatId={effectiveSector ? `sector-${effectiveSector}` : null} chatName={currentSector?.name || 'Setor'} />
