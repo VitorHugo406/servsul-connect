@@ -4639,7 +4639,7 @@ cfgM.addEventListener('change',e=>{
 });
 
 /* =================== ROTINA DE ALMOÇO =================== */
-const FORCE={};
+const FORCE={};function FORCE_RESET(){for(const k in FORCE)delete FORCE[k]}
 const LUNCH_DEF={on:false,ini:720,fim:780,dest:'sofa'};
 const LN=()=>Object.assign({},LUNCH_DEF,CFG.lunch||{});
 const LOUNGEC={x:-14.5,z:10.3};
@@ -5679,12 +5679,15 @@ let EWV_BOOTED=false,EWV_FONTS=false,EWV_PENDING=null;
 function ewvDone(){const l=document.getElementById('ewvLoad');if(l)l.remove()}
 function ewvMsg(t,sub){const l=document.getElementById('ewvLoad');if(l)l.innerHTML='<div style="text-align:center;max-width:420px;padding:0 20px"><div style="font-size:18px;color:#12151C;margin-bottom:6px">'+t+'</div><div style="font-weight:500;font-size:13px">'+sub+'</div></div>'}
 /* converte o que veio do banco para o formato do painel; devolve false se não há pessoas */
+function ewvConv(p){
+  const list=(p.emps||[]).map(a=>({xid:String(a.id||''),nome:a.nome,depto:a.depto||'Sem setor',cargo:a.cargo||'',st:a.st||'',sal:NaN,adm:toDate(a.adm),dem:toDate(a.dem),faltas:0,he:0,sexo:'',cc:'',alm:a.lunch?true:null,almIni:null,almFim:null,bat:null,atr:null,bh:null,nasc:toDate(a.nasc),ctr:'',fv:null})).filter(e=>e.adm);
+  const rooms=(p.rooms||[]).map(r=>({name:r.name,cap:r.cap||6,type:r.cap>8?'long':r.cap>5?'round':'small',meets:(r.meets||[]).map(m=>({ini:m.ini,fim:m.fim,assunto:m.assunto||'',desc:m.desc||'',resp:m.resp||'',n:m.n||0,ppl:(m.ppl||[]).map(id=>({x:String(id)}))}))}));
+  return {list,rooms,co:(p.company&&p.company.name)||'',logo:(p.company&&p.company.logo)||''};
+}
 function ewvMake(p){
-  EWV_CO=(p.company&&p.company.name)||'';EWV_LOGO=(p.company&&p.company.logo)||'';
-  const list=(p.emps||[]).map(a=>({xid:String(a.id||''),nome:a.nome,depto:a.depto||'Sem setor',cargo:a.cargo||'',st:a.st||'',sal:NaN,adm:toDate(a.adm),dem:toDate(a.dem),faltas:0,he:0,sexo:'',cc:'',alm:null,almIni:null,almFim:null,bat:null,atr:null,bh:null,nasc:toDate(a.nasc),ctr:'',fv:null})).filter(e=>e.adm);
-  if(!list.length)return false;
-  EMPS=list;
-  ROOMS=(p.rooms||[]).map(r=>({name:r.name,cap:r.cap||6,type:r.cap>8?'long':r.cap>5?'round':'small',meets:(r.meets||[]).map(m=>({ini:m.ini,fim:m.fim,assunto:m.assunto||'',desc:m.desc||'',resp:m.resp||'',n:m.n||0,ppl:(m.ppl||[]).map(id=>({x:String(id)}))}))}));
+  const n=ewvConv(p);EWV_CO=n.co;EWV_LOGO=n.logo;
+  if(!n.list.length)return false;
+  EMPS=n.list;ROOMS=n.rooms;
   SOURCE='ewvon';ROOMSRC='ewvon';NOTES=[];MAPE={nome:0,depto:1,cargo:2,adm:4,dem:5};HAS=hasFrom(MAPE,EMPS);
   return true;
 }
@@ -5699,8 +5702,25 @@ function ewvTryBoot(){
   if(!ewvMake(EWV_PENDING)){ewvMsg('Ainda não há pessoas cadastradas','Cadastre colaboradores e setores no ewvon para ver os dados da sua empresa aqui.');return}
   EWV_BOOTED=true;boot();ewvKeepFloor();if(CUR){try{rebuildAll()}catch(e){}}ewvDone();
 }
+function ewvSameShape(p){
+  const n=ewvConv(p);
+  if(n.list.length!==EMPS.length||n.rooms.length!==ROOMS.length)return null;
+  for(let i=0;i<n.list.length;i++){const a=n.list[i],b=EMPS[i];if(a.xid!==b.xid||a.nome!==b.nome||a.depto!==b.depto||a.cargo!==b.cargo||+a.adm!==+b.adm||(+a.dem||0)!==(+b.dem||0))return null}
+  for(let i=0;i<n.rooms.length;i++){const a=n.rooms[i],b=ROOMS[i];if(a.name!==b.name||a.cap!==b.cap)return null}
+  return n;
+}
 function ewvApply(p){
   try{
+    const same=ewvSameShape(p);
+    if(same){   /* only status, lunch or bookings changed: update the same people and rooms in place (no rebuild, floor and camera stay) */
+      EWV_CO=same.co;EWV_LOGO=same.logo;
+      EMPS.forEach((e,i)=>{e.st=same.list[i].st;e.alm=same.list[i].alm});
+      ROOMS.forEach((r,i)=>{r.meets=same.rooms[i].meets});
+      FORCE_RESET();
+      applyClock(true);lunchSync(false);drawScreen();greet();
+      if($('#panel').classList.contains('open'))renderPanel(true);
+      return;
+    }
     if(!ewvMake(p))return;
     const keepFloor=CUR;recalc();ewvCfg();CUR=keepFloor;ensureCfg();saveCfg();applyTheme(true);rebuildAll();
   }catch(err){console.error('ewvon dash',err)}

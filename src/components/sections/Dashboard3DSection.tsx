@@ -36,6 +36,7 @@ async function loadCompanyData(companyId: string, company: { name: string; logo:
   const emps = people.map((p) => ({
     id: p.id, nome: nameOf(p), depto: sectors.get(p.sector_id) || 'Sem setor', cargo: ROLE[p.autonomy_level] || 'Colaborador',
     st: online.has(p.user_id) ? (STATUS[p.user_status || 'available'] || 'Online') : 'Offline',
+    lunch: online.has(p.user_id) && p.user_status === 'lunch',
     adm: day(p.created_at), dem: p.is_active ? null : day(p.updated_at), nasc: day(p.birth_date),
   }));
   const parts = new Map<string, string[]>();
@@ -43,7 +44,7 @@ async function loadCompanyData(companyId: string, company: { name: string; logo:
   const rooms = ((rm.data || []) as any[]).map((r) => ({
     name: r.name, cap: r.capacity,
     meets: ((bk.data || []) as any[]).filter((b) => b.room_id === r.id).map((b) => {
-      const ids = parts.get(b.id) || [];
+      const ids = [...new Set([...(b.booked_by && byId.has(b.booked_by) ? [b.booked_by] : []), ...(parts.get(b.id) || [])])];
       return { ini: minutes(new Date(b.starts_at)), fim: minutes(new Date(b.ends_at)), assunto: b.title || 'Reunião', desc: b.notes || '', resp: nameOf(byId.get(b.booked_by)), n: ids.length, ppl: ids };
     }),
   }));
@@ -64,7 +65,7 @@ export function Dashboard3DSection({ onExit }: { onExit: () => void }) {
     let hex = '#FF6A1A';
     if (m) { const h = +m[1], s = +m[2] / 100, l = +m[3] / 100; const a = s * Math.min(l, 1 - l); const f = (n: number) => { const k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, '0'); }; hex = `#${f(0)}${f(8)}${f(4)}`; }
     const fg = readableOn(hex);
-    return `/dash/painel.html?v=20261111c&c=${encodeURIComponent(hex)}&fg=${encodeURIComponent(fg)}`;
+    return `/dash/painel.html?v=20261111d&c=${encodeURIComponent(hex)}&fg=${encodeURIComponent(fg)}`;
   }, []);
   useEffect(() => {
     let alive = true;
