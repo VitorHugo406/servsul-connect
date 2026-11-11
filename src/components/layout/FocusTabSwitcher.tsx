@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Settings } from 'lucide-react';
 import { useVisibleMenuItems } from './menuItems';
 import { setFocusSwitcher, useFocusMode, useFocusSwitcher } from '@/hooks/useFocusMode';
 
 const ITEM = 44;      // width of one tab icon slot
-const GEAR = 52;      // closed circle / gear slot
-const PAD = 8;        // right padding of the pill
+const GEAR = 52;      // closed circle size / pill height
+const PAD = 6;        // side padding of the pill
 const MAX_VISIBLE = 9;
 const AUTO_CLOSE_MS = 4000;
 const EXIT_MS = 320;
 
 interface Props { activeSection: string; onSectionChange: (section: string) => void; }
 
-// Focus-mode tab switcher: a gear that expands into a pill of tab icons (opened with Ctrl+Shift+E).
+// Focus-mode tab switcher: a pill of tab icons that grows from a circle (opened with Ctrl+Shift+E).
 // Keys are captured on window while open, so the focus stays in whatever field the user was typing in.
 export function FocusTabSwitcher({ activeSection, onSectionChange }: Props) {
   const focus = useFocusMode();
@@ -20,7 +19,6 @@ export function FocusTabSwitcher({ activeSection, onSectionChange }: Props) {
   const items = useVisibleMenuItems();
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
-  const [bump, setBump] = useState(0);
   const hovering = useRef(false);
   const timer = useRef<number>();
   const lastWheel = useRef(0);
@@ -29,7 +27,7 @@ export function FocusTabSwitcher({ activeSection, onSectionChange }: Props) {
   const idx = items.findIndex((i) => i.id === activeSection);
   const visible = Math.min(n, MAX_VISIBLE);
   const trackW = visible * ITEM;
-  const pillW = GEAR + trackW + PAD;
+  const pillW = trackW + PAD * 2;
 
   // Mount/unmount around the open flag so the collapse animation can play.
   useEffect(() => {
@@ -40,7 +38,6 @@ export function FocusTabSwitcher({ activeSection, onSectionChange }: Props) {
       return () => { cancelAnimationFrame(r1); cancelAnimationFrame(r2); };
     }
     setOpen(false);
-    setBump(0);
     const t = window.setTimeout(() => setMounted(false), EXIT_MS);
     return () => window.clearTimeout(t);
   }, [wantOpen]);
@@ -60,7 +57,6 @@ export function FocusTabSwitcher({ activeSection, onSectionChange }: Props) {
   const go = useCallback((dir: 1 | -1) => {
     if (n === 0) return;
     const next = idx < 0 ? (dir === 1 ? 0 : n - 1) : (idx + dir + n) % n;
-    setBump((b) => b + 60);
     onSectionChange(items[next].id);
     arm();
   }, [n, idx, items, onSectionChange, arm]);
@@ -101,11 +97,6 @@ export function FocusTabSwitcher({ activeSection, onSectionChange }: Props) {
       }}
     >
       <div className="focus-switcher-pill">
-        <button type="button" className="focus-switcher-gear" aria-label="Fechar seletor de abas"
-          onMouseDown={(e) => e.preventDefault()} onClick={() => setFocusSwitcher(false)}
-          style={{ transform: `rotate(${(open ? 360 : 0) + (open ? bump : 0)}deg)` }}>
-          <Settings className="focus-switcher-gear-icon" size={24} strokeWidth={2} aria-hidden />
-        </button>
         <div className="focus-switcher-viewport" style={{ width: trackW, ['--fs-fade' as string]: n > MAX_VISIBLE ? '1' : '0' }} data-scroll={n > MAX_VISIBLE ? 'true' : 'false'}>
           <div className="focus-switcher-track" style={{ transform: `translateX(${offset}px)`, width: n * ITEM }}>
             {idx >= 0 && <span className="focus-switcher-bubble" aria-hidden style={{ transform: `translateX(${idx * ITEM}px)` }} />}
@@ -117,7 +108,7 @@ export function FocusTabSwitcher({ activeSection, onSectionChange }: Props) {
                   aria-label={item.label} title={item.label} aria-current={active ? 'page' : undefined}
                   style={{ left: i * ITEM, ['--fs-i' as string]: Math.min(i, 14) }}
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => { if (!active) { setBump((b) => b + 60); onSectionChange(item.id); } arm(); }}>
+                  onClick={() => { if (!active) { onSectionChange(item.id); } arm(); }}>
                   <span className="focus-switcher-icon" key={active ? `a-${activeSection}` : 'i'}><Icon size={22} strokeWidth={2} aria-hidden /></span>
                 </button>
               );
@@ -127,7 +118,6 @@ export function FocusTabSwitcher({ activeSection, onSectionChange }: Props) {
       </div>
       <div className="focus-switcher-caption" aria-live="polite">
         {current && <span className="focus-switcher-label" key={current.id}>{current.label}</span>}
-        <span className="focus-switcher-hint">← → trocar · Esc fechar</span>
       </div>
     </div>
   );

@@ -42,21 +42,21 @@
   }
 }
 
-/* Focus-mode tab switcher: solid, semi-translucent navy pill that grows out of a gear. No blur (project rule). */
+/* Focus-mode tab switcher: solid navy pill (same color as the chat rail) that grows out of a circle. No blur, no transparency. */
 .focus-switcher {
   position: fixed; top: 14px; left: 50%; z-index: 45;
   transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 8px;
   pointer-events: none;
-  --fs-bg: rgba(16, 30, 62, 0.82);
+  --fs-bg: #14264a;   /* same navy as the chat rail, fully solid */
   opacity: 0; transition: opacity 300ms ease;
 }
 .focus-switcher[data-open='true'] { opacity: 1; }
 .focus-switcher > * { pointer-events: auto; }
 .focus-switcher-pill {
-  display: flex; align-items: center; height: var(--fs-gear); overflow: hidden;
-  width: var(--fs-gear); border-radius: 999px;
-  background: var(--fs-bg); border: 1px solid rgba(255, 255, 255, 0.14);
+  display: flex; align-items: center; justify-content: center; height: var(--fs-gear); overflow: hidden;
+  width: var(--fs-gear); padding: 0 6px; border-radius: 999px;
+  background: var(--fs-bg);
   box-shadow: 0 8px 24px rgba(8, 16, 40, 0.28);
   transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
   color: #fff; box-sizing: border-box;
@@ -66,13 +66,6 @@
   transition: width 420ms cubic-bezier(0.34, 1.4, 0.5, 1);
 }
 .focus-switcher button { appearance: none; border: 0; background: transparent; color: #fff; padding: 0; cursor: pointer; box-shadow: none; }
-.focus-switcher-gear {
-  flex: none; width: calc(var(--fs-gear) - 2px); height: calc(var(--fs-gear) - 2px); border-radius: 999px;
-  display: flex; align-items: center; justify-content: center;
-  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.focus-switcher-gear-icon { display: block; }
-.focus-switcher[data-open='true'] .focus-switcher-gear-icon { animation: fs-spin 8s linear infinite; }
 .focus-switcher-viewport {
   flex: none; position: relative; height: var(--fs-item); overflow: hidden;
 }
@@ -100,20 +93,14 @@
 .focus-switcher-item:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
 .focus-switcher-caption { display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none !important; }
 .focus-switcher-label {
-  padding: 3px 12px; border-radius: 999px; background: var(--fs-bg); border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 3px 12px; border-radius: 999px; background: var(--fs-bg);
   color: #fff; font-size: 12px; font-weight: 600; line-height: 18px; white-space: nowrap;
   animation: fs-label 240ms ease-out;
 }
-.focus-switcher-hint {
-  font-size: 10.5px; line-height: 14px; color: #fff; padding: 1px 8px; border-radius: 999px;
-  background: rgba(16, 30, 62, 0.6); opacity: 0; transition: opacity 300ms ease 200ms;
-}
-.focus-switcher[data-open='true'] .focus-switcher-hint { opacity: 0.85; }
-@keyframes fs-spin { to { transform: rotate(360deg); } }
 @keyframes fs-hop { 0% { transform: translateY(0) scale(1.25); } 40% { transform: translateY(-7px) scale(1.35); } 100% { transform: translateY(0) scale(1.25); } }
 @keyframes fs-pop { 0% { transform: scale(0.4); opacity: 0; } 100% { transform: scale(1); opacity: 0.88; } }
 @keyframes fs-label { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) {
-  .focus-switcher, .focus-switcher-pill, .focus-switcher-gear, .focus-switcher-track, .focus-switcher-bubble, .focus-switcher-icon, .focus-switcher-hint { transition: none !important; }
-  .focus-switcher-gear-icon, .focus-switcher-icon, .focus-switcher-label { animation: none !important; }
+  .focus-switcher, .focus-switcher-pill, .focus-switcher-track, .focus-switcher-bubble, .focus-switcher-icon { transition: none !important; }
+  .focus-switcher-icon, .focus-switcher-label { animation: none !important; }
 }
