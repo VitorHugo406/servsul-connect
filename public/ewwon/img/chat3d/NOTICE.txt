@@ -1,0 +1,4 @@
+Ícones 3D do chat: Fluent Emoji (3D) da Microsoft, licença MIT.
+Fonte: https://github.com/microsoft/fluentui-emoji
+Copyright (c) Microsoft Corporation. Permission is hereby granted, free of charge, to any person obtaining a copy of these
+files, to deal in them without restriction, subject to the MIT License terms.
