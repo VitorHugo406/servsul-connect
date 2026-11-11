@@ -156,6 +156,35 @@ public class MainActivity extends Activity {
         try { startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()))); } catch (Exception ignored) { }
     }
 
+    private static boolean aggressiveMaker() {
+        String m = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER.toLowerCase();
+        return m.contains("xiaomi") || m.contains("redmi") || m.contains("poco") || m.contains("huawei") || m.contains("honor") || m.contains("oppo") || m.contains("realme") || m.contains("vivo") || m.contains("oneplus") || m.contains("samsung") || m.contains("asus") || m.contains("tecno") || m.contains("infinix");
+    }
+
+    /** Xiaomi/HyperOS: the "no restrictions" battery screen for this app. */
+    void openMakerBattery() {
+        try { startActivity(new Intent().setComponent(new android.content.ComponentName("com.miui.powerkeeper", "com.miui.powerkeeper.ui.HiddenAppsConfigActivity")).putExtra("package_name", getPackageName()).putExtra("package_label", "ewvon")); return; } catch (Exception ignored) { }
+        try { startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()))); } catch (Exception ignored) { }
+    }
+
+    /** Phones from makers that close apps swiped from the recents list need these settings, or notifications stop with the app closed. Shown until confirmed. */
+    private void makerGuide() {
+        SharedPreferences p = getSharedPreferences("ewvon", MODE_PRIVATE);
+        if (!aggressiveMaker() || p.getBoolean("maker_done", false) || !p.getBoolean("battery_step_done", false) && !ignoringBattery()) return;
+        if (isFinishing() || System.currentTimeMillis() - p.getLong("maker_asked_at", 0) < 4 * 3600_000L) return;
+        p.edit().putLong("maker_asked_at", System.currentTimeMillis()).apply();
+        boolean xiaomi = Build.MANUFACTURER != null && Build.MANUFACTURER.toLowerCase().matches(".*(xiaomi|redmi|poco).*");
+        String msg = "Para receber mensagens e ligações com o app FECHADO, este celular precisa de 3 ajustes:\n\n"
+                + "1. Início automático: ligue o ewvon.\n"
+                + (xiaomi ? "2. Economia de bateria: escolha \"Sem restrições\".\n" : "2. Bateria: permita o uso em segundo plano / sem restrições.\n")
+                + "3. Na lista de apps recentes, segure o card do ewvon e toque no cadeado (fixar), para o sistema não fechar o app.\n\nToque em cada botão, faça o ajuste e volte.";
+        android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(this).setTitle("Ajustes para as notificações").setMessage(msg).setCancelable(false)
+                .setPositiveButton("1. Início automático", (d, w) -> openBackgroundSettings())
+                .setNeutralButton(xiaomi ? "2. Bateria" : "2. Bateria", (d, w) -> { if (xiaomi) openMakerBattery(); else requestBatteryWhitelist(); })
+                .setNegativeButton("Já fiz tudo", (d, w) -> p.edit().putBoolean("maker_done", true).apply());
+        b.show();
+    }
+
     /** Android 14+: full-screen incoming-call screen must be allowed by the user. */
     private void askFullScreen() {
         if (Build.VERSION.SDK_INT < 34) return;
@@ -171,7 +200,7 @@ public class MainActivity extends Activity {
         if (i.hasExtra("url")) web.loadUrl(urlFrom(i));
         CallRinger.stopAll(this);
     }
-    @Override protected void onResume() { super.onResume(); visible = true; CallRinger.stopAll(this); web.onResume(); PollService.start(this); askBattery(); askFullScreen(); }
+    @Override protected void onResume() { super.onResume(); visible = true; CallRinger.stopAll(this); web.onResume(); PollService.start(this); BootReceiver.arm(this); askBattery(); askFullScreen(); web.postDelayed(this::makerGuide, 4000); }
     @Override protected void onPause() { visible = false; web.onPause(); super.onPause(); }
     @Override protected void onSaveInstanceState(Bundle b) { super.onSaveInstanceState(b); web.saveState(b); }
     @Override public void onBackPressed() { if (web.canGoBack()) web.goBack(); else super.onBackPressed(); }
@@ -204,6 +233,8 @@ public class MainActivity extends Activity {
             boolean fsi = Build.VERSION.SDK_INT < 34 || ((android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE)).canUseFullScreenIntent();
             return "{\"registered\":" + (!p().getString("secret", "").isEmpty()) + ",\"battery\":" + ignoringBattery() + ",\"lastOkSecondsAgo\":" + (ok == 0 ? -1 : (System.currentTimeMillis() - ok) / 1000) + ",\"fullScreen\":" + fsi + "}";
         }
+        @JavascriptInterface public void markMakerDone() { p().edit().putBoolean("maker_done", true).apply(); }
+        @JavascriptInterface public void openMakerBattery() { runOnUiThread(MainActivity.this::openMakerBattery); }
         @JavascriptInterface public void fixBattery() { runOnUiThread(MainActivity.this::requestBatteryWhitelist); }
         @JavascriptInterface public void openBackgroundSettings() { runOnUiThread(MainActivity.this::openBackgroundSettings); }
         @JavascriptInterface public void clearDevice() {

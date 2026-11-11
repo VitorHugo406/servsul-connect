@@ -48,11 +48,11 @@ export function InstallAppBox({ api }: { api: EwApi }) {
   );
 }
 
-type NativeApi = { status(): string; fixBattery(): void; openBackgroundSettings(): void };
+type NativeApi = { status(): string; fixBattery(): void; openBackgroundSettings(): void; openMakerBattery?(): void; markMakerDone?(): void };
 /** Inside the Android app: shows whether notifications and calls can arrive with the app closed, and fixes it. */
 export function NativeNotifBox() {
   const n = typeof window !== 'undefined' ? ((window as unknown as { EwvonNative?: NativeApi }).EwvonNative ?? null) : null;
-  const [st, setSt] = useState<{ registered: boolean; battery: boolean; lastOkSecondsAgo: number; fullScreen: boolean } | null>(null);
+  const [st, setSt] = useState<{ registered: boolean; battery: boolean; lastOkSecondsAgo: number; fullScreen: boolean; maker?: string; makerDone?: boolean } | null>(null);
   useEffect(() => {
     if (!n || !n.status) return;
     const read = () => { try { setSt(JSON.parse(n.status())); } catch { /* ignore */ } };
@@ -68,7 +68,10 @@ export function NativeNotifBox() {
         <small>{!st.registered ? 'Entre na sua conta para registrar este aparelho.' : !st.battery ? 'O Android pode pausar o app quando o celular dorme. Libere o uso em segundo plano.' : st.lastOkSecondsAgo < 0 || st.lastOkSecondsAgo >= 90 ? 'Conectando ao servidor…' : st.fullScreen ? 'Tudo certo: mensagens e ligações chegam mesmo com o app fechado.' : 'Ative a tela cheia de ligações nas configurações do aplicativo.'}</small>
       </div></div>
       {!st.battery ? <button className="btn full" onClick={() => n.fixBattery()}>Liberar uso em segundo plano</button> : null}
-      <button className="btn full" style={{ marginTop: 8 }} onClick={() => n.openBackgroundSettings()}>Ajustes de início automático do aparelho</button>
+      <button className="btn full" style={{ marginTop: 8 }} onClick={() => n.openBackgroundSettings()}>1. Início automático do aparelho</button>
+      {n.openMakerBattery ? <button className="btn full" style={{ marginTop: 8 }} onClick={() => n.openMakerBattery?.()}>2. Economia de bateria: sem restrições</button> : null}
+      {!st.makerDone ? <small style={{ display: 'block', marginTop: 8, opacity: 0.8 }}>3. Na lista de apps recentes, segure o card do ewvon e toque no cadeado (fixar), para o sistema não fechar o app. Depois toque em “Já fiz tudo”.</small> : null}
+      {!st.makerDone && n.markMakerDone ? <button className="btn full" style={{ marginTop: 8 }} onClick={() => n.markMakerDone?.()}>Já fiz tudo</button> : null}
     </div>
   );
 }

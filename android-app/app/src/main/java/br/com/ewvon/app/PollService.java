@@ -52,6 +52,7 @@ public class PollService extends Service {
         Notifier.channels(this);
         if (Build.VERSION.SDK_INT >= 34) startForeground(7, Notifier.foreground(this), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         else startForeground(7, Notifier.foreground(this));
+        BootReceiver.arm(this);
         if (!running) {
             running = true;
             PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
@@ -73,6 +74,7 @@ public class PollService extends Service {
         while (running) {
             String secret = p.getString("secret", "");
             if (secret.isEmpty()) { stopSelf(); return; }
+            BootReceiver.arm(this);
             try {
                 JSONObject req = new JSONObject().put("secret", secret).put("after", p.getLong("last", -1));
                 HttpURLConnection h = (HttpURLConnection) new URL(ENDPOINT).openConnection();
