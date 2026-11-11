@@ -192,7 +192,7 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
 
         {!grouped && !isOwn && <div className={cn('chat-msg-author relative z-10 mb-1 flex w-fit max-w-full flex-wrap items-center gap-1.5', authorColorClass(message.author_id))}>
           <span className="min-w-0 max-w-full truncate text-xs font-medium text-foreground sm:text-sm">{displayName}</span>
-          {authorSectorName && <span className="max-w-full break-words text-[10px] text-muted-foreground sm:text-xs">{authorSectorName}</span>}
+          {authorSectorName && <span className="max-w-full break-words text-[10px] text-muted-foreground sm:text-xs">{authorSectorName}</span>}<span className="chat-msg-time">{formatTime(message.created_at)}</span>
         </div>}
 
         <div className={cn('flex w-full min-w-0 max-w-full items-end gap-1.5', isOwn && 'flex-row-reverse')}>
