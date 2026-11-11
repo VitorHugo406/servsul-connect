@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
 import { appConfirm, appPrompt } from '@/lib/appDialog';
 import { toast } from 'sonner';
+import { AiCard, type AiRow } from '@/components/integrations/AiCard';
 import { GuideDropdown, SlackGuide, TeamsGuide, WhatsAppGuide } from '@/components/integrations/IntegrationGuides';
 
 type Provider = 'slack' | 'teams' | 'whatsapp';
@@ -134,9 +135,10 @@ export function IntegrationsSection() {
   if (!isAdmin) return <div className="p-8 text-center text-sm text-muted-foreground">Somente o administrador da empresa configura integrações.</div>;
   return (
     <div className="space-y-5 p-4 md:p-6">
-      <PageHeader icon={<Plug />} title="Integrações" subtitle="Leve avisos, comunicados, cards e reuniões do ewvon para as ferramentas que a equipe já usa." />
+      <PageHeader icon={<Plug />} title="Integrações" subtitle="Leve avisos, cards e reuniões do ewvon para as ferramentas da equipe e conecte a IA da sua empresa." />
       {loading ? <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div> : (
         <>
+          <AiCard row={rows.find((r) => (r.provider as string) === 'claude') as unknown as AiRow | undefined} onChanged={() => void load()} />
           <div className="grid gap-3 xl:grid-cols-2">
             {(['slack', 'teams', 'whatsapp'] as Provider[]).map((p) => <ProviderCard key={p} provider={p} row={rows.find((r) => r.provider === p)} onChanged={() => void load()} />)}
           </div>
