@@ -191,13 +191,12 @@ aside[aria-label^="Detalhes da conversa"] .bg-background.shadow-sm { background:
 .chat-rail-label { font-size: 11px; font-weight: 500; line-height: 1.15; margin-top: -2px; letter-spacing: .005em; }
 .chat-rail-item[aria-pressed="true"] .chat-rail-label { font-weight: 700; }
 .chat-rail-mark { position: relative; display: grid; place-items: center; }
-/* flat filled glyphs (Fluent System Icons): light on the dark rail, white when active, gold star for favorites */
+/* flat filled glyphs (Fluent System Icons): always pure white on the dark rail */
 .chat-rail-mark { width: 40px; height: 36px; }
-.chat-rail-glyph { display: block; color: rgba(255, 255, 255, .82); transition: transform .16s ease, color .16s ease; }
+.chat-rail-glyph { display: block; color: #fff; transition: transform .16s ease, color .16s ease; }
 .chat-rail-item:hover .chat-rail-glyph { color: #fff; transform: translateY(-1px); }
 .chat-rail-item[aria-pressed="true"] { background: rgba(255, 255, 255, .18) !important; }
 .chat-rail-item[aria-pressed="true"] .chat-rail-glyph { color: #fff; }
-.chat-rail-item.is-footer .chat-rail-glyph { color: #fbbf24; }
 .chat-rail-badge { position: absolute; top: -5px; right: -9px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: #e5484d; color: #fff; font-size: 10.5px; font-weight: 700; line-height: 17px; text-align: center; border: 2px solid #2b2970; box-sizing: content-box; }
 @media (prefers-reduced-motion: reduce) { .chat-rail-glyph { transition: none !important; } }
 
