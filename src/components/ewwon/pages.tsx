@@ -8,7 +8,7 @@ import * as N from './notify';
 import { I, Chev } from './icons';
 import { ST, StatusKey, fitTextarea } from './util';
 import { MyEvaluationsBox, EvaluationPage } from './evals';
-import { InstallAppBox } from './installapp';
+import { InstallAppBox, NativeNotifBox } from './installapp';
 import { supabase } from '@/integrations/supabase/client';
 import { appConfirm } from '@/lib/appDialog';
 
@@ -272,6 +272,7 @@ function SettingsPage({ api }: { api: EwApi }) {
       <div className="note"><I n="lock" /><span>Suas reuniões, tarefas e métricas pessoais ficam visíveis apenas para você e para a administração.</span></div>
       <div className="sl">Conversas</div>
       {tg('enter', 'Enviar com Enter', 'Desligado: use Ctrl + Enter')}
+      <NativeNotifBox />
       <div className="sl">Privacidade e termos</div>
       <div className="opt" onClick={() => window.open('/termos', '_blank')}><div>Termos de Uso<small>Regras de uso da plataforma</small></div><Chev /></div>
       <div className="opt" onClick={() => window.open('/privacidade', '_blank')}><div>Política de Privacidade<small>Como tratamos seus dados (LGPD)</small></div><Chev /></div>

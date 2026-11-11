@@ -116,15 +116,54 @@ public class MainActivity extends Activity {
         return HOME + "?app=1";
     }
 
-    /** Asks (once) to let the app run in the background without battery limits, so notifications and calls arrive. */
+    boolean ignoringBattery() {
+        PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+        return pm == null || pm.isIgnoringBatteryOptimizations(getPackageName());
+    }
+
+    /** Without this Android pauses the network of a closed app while the phone sleeps (Doze) and notifications stop arriving. Asked again until granted. */
     private void askBattery() {
         SharedPreferences p = getSharedPreferences("ewvon", MODE_PRIVATE);
-        if (p.getBoolean("battery_asked", false)) return;
-        PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-        if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
-            p.edit().putBoolean("battery_asked", true).apply();
-            try { startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName()))); } catch (Exception ignored) { }
+        if (ignoringBattery()) return;
+        long last = p.getLong("battery_asked_at", 0);
+        if (System.currentTimeMillis() - last < 6 * 3600_000L) return;
+        p.edit().putLong("battery_asked_at", System.currentTimeMillis()).apply();
+        requestBatteryWhitelist();
+    }
+
+    void requestBatteryWhitelist() {
+        try { startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName()))); }
+        catch (Exception e) { try { startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)); } catch (Exception ignored) { } }
+    }
+
+    /** Opens the manufacturer's "auto-start / background" screen when it exists (Xiaomi, Oppo, Vivo, Huawei, Samsung...), else the app settings. */
+    void openBackgroundSettings() {
+        String[][] oem = {
+            {"com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"},
+            {"com.letv.android.letvsafe", "com.letv.android.letvsafe.AutobootManageActivity"},
+            {"com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"},
+            {"com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity"},
+            {"com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity"},
+            {"com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity"},
+            {"com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"},
+            {"com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity"},
+            {"com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity"},
+            {"com.asus.mobilemanager", "com.asus.mobilemanager.autostart.AutoStartActivity"},
+        };
+        for (String[] c : oem) {
+            try { startActivity(new Intent().setComponent(new android.content.ComponentName(c[0], c[1]))); return; } catch (Exception ignored) { }
         }
+        try { startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()))); } catch (Exception ignored) { }
+    }
+
+    /** Android 14+: full-screen incoming-call screen must be allowed by the user. */
+    private void askFullScreen() {
+        if (Build.VERSION.SDK_INT < 34) return;
+        android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        SharedPreferences p = getSharedPreferences("ewvon", MODE_PRIVATE);
+        if (nm == null || nm.canUseFullScreenIntent() || p.getBoolean("fsi_asked", false)) return;
+        p.edit().putBoolean("fsi_asked", true).apply();
+        try { startActivity(new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:" + getPackageName()))); } catch (Exception ignored) { }
     }
 
     @Override protected void onNewIntent(Intent i) {
@@ -132,7 +171,7 @@ public class MainActivity extends Activity {
         if (i.hasExtra("url")) web.loadUrl(urlFrom(i));
         CallRinger.stopAll(this);
     }
-    @Override protected void onResume() { super.onResume(); visible = true; CallRinger.stopAll(this); web.onResume(); }
+    @Override protected void onResume() { super.onResume(); visible = true; CallRinger.stopAll(this); web.onResume(); PollService.start(this); askBattery(); askFullScreen(); }
     @Override protected void onPause() { visible = false; web.onPause(); super.onPause(); }
     @Override protected void onSaveInstanceState(Bundle b) { super.onSaveInstanceState(b); web.saveState(b); }
     @Override public void onBackPressed() { if (web.canGoBack()) web.goBack(); else super.onBackPressed(); }
@@ -159,6 +198,14 @@ public class MainActivity extends Activity {
             p().edit().putString("secret", secret).putString("profile", profileId).putLong("last", -1).apply();
             PollService.start(getApplicationContext());
         }
+        /** JSON for the Settings screen: is the background connection alive and unrestricted? */
+        @JavascriptInterface public String status() {
+            long ok = p().getLong("lastOk", 0);
+            boolean fsi = Build.VERSION.SDK_INT < 34 || ((android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE)).canUseFullScreenIntent();
+            return "{\"registered\":" + (!p().getString("secret", "").isEmpty()) + ",\"battery\":" + ignoringBattery() + ",\"lastOkSecondsAgo\":" + (ok == 0 ? -1 : (System.currentTimeMillis() - ok) / 1000) + ",\"fullScreen\":" + fsi + "}";
+        }
+        @JavascriptInterface public void fixBattery() { runOnUiThread(MainActivity.this::requestBatteryWhitelist); }
+        @JavascriptInterface public void openBackgroundSettings() { runOnUiThread(MainActivity.this::openBackgroundSettings); }
         @JavascriptInterface public void clearDevice() {
             p().edit().remove("secret").remove("profile").remove("last").apply();
             PollService.stop(getApplicationContext());

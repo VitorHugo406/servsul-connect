@@ -47,3 +47,28 @@ export function InstallAppBox({ api }: { api: EwApi }) {
     </div>
   );
 }
+
+type NativeApi = { status(): string; fixBattery(): void; openBackgroundSettings(): void };
+/** Inside the Android app: shows whether notifications and calls can arrive with the app closed, and fixes it. */
+export function NativeNotifBox() {
+  const n = typeof window !== 'undefined' ? ((window as unknown as { EwvonNative?: NativeApi }).EwvonNative ?? null) : null;
+  const [st, setSt] = useState<{ registered: boolean; battery: boolean; lastOkSecondsAgo: number; fullScreen: boolean } | null>(null);
+  useEffect(() => {
+    if (!n || !n.status) return;
+    const read = () => { try { setSt(JSON.parse(n.status())); } catch { /* ignore */ } };
+    read(); const t = window.setInterval(read, 3000);
+    return () => window.clearInterval(t);
+  }, [n]);
+  if (!n || !st) return null;
+  const ok = st.registered && st.battery && st.lastOkSecondsAgo >= 0 && st.lastOkSecondsAgo < 90;
+  return (
+    <div className="box ewx-install">
+      <div className="ewx-install-h"><div>
+        <b>{ok ? 'Notificações e ligações com o app fechado: ativas' : 'Notificações com o app fechado: precisa de ajuste'}</b>
+        <small>{!st.registered ? 'Entre na sua conta para registrar este aparelho.' : !st.battery ? 'O Android pode pausar o app quando o celular dorme. Libere o uso em segundo plano.' : st.lastOkSecondsAgo < 0 || st.lastOkSecondsAgo >= 90 ? 'Conectando ao servidor…' : st.fullScreen ? 'Tudo certo: mensagens e ligações chegam mesmo com o app fechado.' : 'Ative a tela cheia de ligações nas configurações do aplicativo.'}</small>
+      </div></div>
+      {!st.battery ? <button className="btn full" onClick={() => n.fixBattery()}>Liberar uso em segundo plano</button> : null}
+      <button className="btn full" style={{ marginTop: 8 }} onClick={() => n.openBackgroundSettings()}>Ajustes de início automático do aparelho</button>
+    </div>
+  );
+}

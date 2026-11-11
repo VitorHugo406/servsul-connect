@@ -36,6 +36,18 @@ public class PollService extends Service {
 
     @Override public IBinder onBind(Intent i) { return null; }
 
+    /** The app was swiped away from the recent apps: keep (or immediately restart) the connection. */
+    @Override public void onTaskRemoved(Intent rootIntent) {
+        try {
+            Intent i = new Intent(getApplicationContext(), PollService.class);
+            android.app.PendingIntent pi = android.app.PendingIntent.getService(getApplicationContext(), 91, i, android.app.PendingIntent.FLAG_ONE_SHOT | android.app.PendingIntent.FLAG_IMMUTABLE);
+            android.app.AlarmManager am = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
+            if (am != null) am.set(android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP, android.os.SystemClock.elapsedRealtime() + 1500, pi);
+        } catch (Exception ignored) { }
+        start(getApplicationContext());
+        super.onTaskRemoved(rootIntent);
+    }
+
     @Override public int onStartCommand(Intent i, int flags, int id) {
         Notifier.channels(this);
         if (Build.VERSION.SDK_INT >= 34) startForeground(7, Notifier.foreground(this), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
@@ -75,7 +87,7 @@ public class PollService extends Service {
                 JSONObject res = new JSONObject(sb.toString());
                 JSONArray ev = res.optJSONArray("events");
                 if (ev != null) for (int k = 0; k < ev.length(); k++) handle(ev.getJSONObject(k));
-                p.edit().putLong("last", res.optLong("last", p.getLong("last", -1))).apply();
+                p.edit().putLong("last", res.optLong("last", p.getLong("last", -1))).putLong("lastOk", System.currentTimeMillis()).apply();
                 backoff = 1000;
             } catch (Exception e) {
                 if (!running) return;

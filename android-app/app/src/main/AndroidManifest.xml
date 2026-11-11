@@ -35,7 +35,7 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".PollService" android:exported="false" android:foregroundServiceType="specialUse">
+        <service android:name=".PollService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Mantém a conexão com o servidor para entregar mensagens e ligações do ewvon" />
         </service>
         <receiver android:name=".BootReceiver" android:exported="true">
