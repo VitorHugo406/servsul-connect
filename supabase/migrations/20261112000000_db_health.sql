@@ -1,0 +1,12 @@
+DROP INDEX IF EXISTS public.attachment_lifecycle_object_uidx;
+CREATE INDEX IF NOT EXISTS chat_calls_caller_idx ON public.chat_calls (caller_id);
+CREATE INDEX IF NOT EXISTS push_devices_profile_idx ON public.push_devices (profile_id);
+CREATE INDEX IF NOT EXISTS push_devices_company_idx ON public.push_devices (company_id);
+CREATE INDEX IF NOT EXISTS chat_reactions_profile_idx ON public.chat_reactions (profile_id);
+CREATE INDEX IF NOT EXISTS chat_reactions_company_idx ON public.chat_reactions (company_id);
+CREATE INDEX IF NOT EXISTS support_ticket_messages_author_idx ON public.support_ticket_messages (author_profile_id);
+CREATE INDEX IF NOT EXISTS e2e_media_sender_idx ON public.e2e_media (sender_profile_id);
+DROP POLICY IF EXISTS "Own acceptances" ON public.legal_acceptances;
+CREATE POLICY "Own acceptances" ON public.legal_acceptances FOR SELECT TO authenticated USING (user_id = (select auth.uid()) OR public.is_super_admin());
+DROP POLICY IF EXISTS "Sender registers media" ON public.e2e_media;
+CREATE POLICY "Sender registers media" ON public.e2e_media FOR INSERT TO authenticated WITH CHECK (sender_profile_id = public.get_current_profile_id() AND company_id = public.current_company_id() AND path LIKE (company_id::text || '/' || (select auth.uid())::text || '/%'));
