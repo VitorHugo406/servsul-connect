@@ -27,13 +27,15 @@ async function loadCompanyData(companyId: string, company: { name: string; logo:
     db.from('meeting_bookings').select('id,room_id,title,notes,starts_at,ends_at,booked_by').eq('company_id', companyId).gte('ends_at', start.toISOString()).lte('starts_at', end.toISOString()),
     db.from('meeting_booking_participants').select('booking_id,profile_id'),
     db.from('user_presence').select('user_id,is_online,last_heartbeat'),
-    // HR / time-clock status synced by the `hr-sync` edge function. Failure or no integration = no HR data (never invented).
-    db.from('hr_people_status').select('profile_id,status,clock_in,hours_bank_minutes,synced_at,source'),
+    // HR / time-clock data synced by `hr-sync`. Failure or no integration = no HR data (never invented).
+    db.from('hr_people_status').select('profile_id,status,clock_in,hours_bank_minutes,synced_at,source,data'),
   ]);
   const hrById = new Map<string, any>();
   ((hrq?.error ? [] : hrq?.data || []) as any[]).forEach((x) => {
-    if (!x?.synced_at || Date.now() - new Date(x.synced_at).getTime() > 36 * 3600 * 1000) return;   // stale sync: not shown as current
-    hrById.set(x.profile_id, { status: x.status, clockIn: x.clock_in ?? null, bankMinutes: x.hours_bank_minutes ?? null, syncedAt: x.synced_at });
+    const age = x?.synced_at ? Date.now() - new Date(x.synced_at).getTime() : Infinity;
+    if (!(age < 24 * 3600 * 1000)) return;                       // month totals only while fresh (< 24 h)
+    const fresh = age < 15 * 60 * 1000;                          // status of the day only while fresh (< 15 min)
+    hrById.set(x.profile_id, { status: fresh ? x.status ?? null : null, clockIn: fresh ? x.clock_in ?? null : null, bankMinutes: x.hours_bank_minutes ?? null, syncedAt: x.synced_at, data: x.data ?? null });
   });
   const people: any[] = pr.data || [];
   const sectors = new Map<string, string>(((sc.data || []) as any[]).map((x) => [x.id, x.name]));
@@ -73,7 +75,7 @@ export function Dashboard3DSection({ onExit }: { onExit: () => void }) {
     let hex = '#FF6A1A';
     if (m) { const h = +m[1], s = +m[2] / 100, l = +m[3] / 100; const a = s * Math.min(l, 1 - l); const f = (n: number) => { const k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, '0'); }; hex = `#${f(0)}${f(8)}${f(4)}`; }
     const fg = readableOn(hex);
-    return `/dash/painel.html?v=20261112a&c=${encodeURIComponent(hex)}&fg=${encodeURIComponent(fg)}`;
+    return `/dash/painel.html?v=20261112b&c=${encodeURIComponent(hex)}&fg=${encodeURIComponent(fg)}`;
   }, []);
   useEffect(() => {
     let alive = true;
@@ -101,7 +103,7 @@ export function Dashboard3DSection({ onExit }: { onExit: () => void }) {
     let ch = supabase.channel('dash-live-' + companyId);
     tables.forEach((table) => { ch = ch.on('postgres_changes' as never, { event: '*', schema: 'public', table }, soon); });
     ch.subscribe();
-    const t = window.setInterval(() => void send(), 20000);   // safety net next to Realtime
+    const t = window.setInterval(() => void send(), 30000);   // safety net next to Realtime
     return () => { alive = false; window.clearTimeout(timer); window.removeEventListener('message', on); window.clearInterval(t); void supabase.removeChannel(ch); };
   }, [onExit, companyId, company?.name, logoUrl]);
   return <iframe ref={frame} onLoad={() => window.setTimeout(() => void sendRef.current(true), 50)} title="Dash" src={src} className="fixed inset-0 z-40 h-full w-full border-0 bg-[#E8EDF2]" allow="fullscreen" data-company={profile?.company_id || ''} />;

@@ -2863,8 +2863,8 @@ function setHover(t,e){
   let tt=t.tipT,ts=t.tipS;
   if(t.kind==='room'){const room=ROOMS[t.i],st=roomStatus(room,CLOCK.min);ts=(st.busy?'Ocupada até '+hhmm(st.cur.fim):'Livre agora')+' · clique para ver os horários'}
   if(EDIT){const k=editKey(t);ts=k&&EG.has(k)?'Arraste para mover':'Conclua a edição para abrir'}
-  const hl=t.kind==='person'?hrLine(EMPS[t.id]):'';
-  tipEl.innerHTML='<b>'+esc(tt)+'</b><span>'+esc(ts||'')+'</span>'+(hl?'<span class="hrl">'+esc(hl)+'</span>':'');tipEl.hidden=false;
+  const hl=t.kind==='person'?hrHtml(EMPS[t.id]):'';
+  tipEl.innerHTML='<b>'+esc(tt)+'</b><span>'+esc(ts||'')+'</span>'+hl;tipEl.hidden=false;
   const rc=stageEl.getBoundingClientRect(),x=e.clientX-rc.left+16,y=e.clientY-rc.top+16;
   tipEl.style.left=clamp(x,8,rc.width-tipEl.offsetWidth-8)+'px';tipEl.style.top=clamp(y,8,rc.height-tipEl.offsetHeight-8)+'px';
 }
@@ -2968,7 +2968,7 @@ function pPerson(id){
   const active=isActive(e);
   const h='<div style="display:flex;gap:12px;align-items:center"><span class="av lg\'+hrCls(e)+\'" style="background:\'+avc(e.nome)+\'">'+esc(ini(e.nome))+'</span><div><div style="font-weight:800;font-size:16px">'+esc(e.cargo||'Cargo não informado')+'</div><div class="note">'+esc(e.depto)+'</div></div></div>'+
     '<div class="sp">'+(active?'<span class="tg ok">Ativo</span>'+(e.st?'<span class="tg">'+esc(e.st)+'</span>':''):'<span class="tg mut">Desligado em '+fmtDate(e.dem)+'</span>')+(hrOut(e)?'<span class="tg warn">'+HR_LAB[e.hr.status]+'</span>':e.hr&&e.hr.status==='late'?'<span class="tg warn">Atrasado</span>':'')+(HAS.faltas?faltaTag(e.faltas||0):'')+((HAS.he&&(e.he||0)>=12)?'<span class="tg warn">'+e.he+' h extras</span>':'')+(leadLv(e)?'<span class="tg" style="background:#FFF3C4;color:#7A5200">'+LEADN[leadLv(e)]+'</span>':'')+'</div>'+
-    (hrLine(e)?'<p class="note" style="margin:8px 0 0">'+esc(hrLine(e))+'</p>':'')+
+    (hrInfo(e).length?'<div class="note" style="margin:8px 0 0;display:grid;gap:2px">'+hrInfo(e).map(x=>'<span'+(x.warn?' style="color:#C98508;font-weight:700"':'')+'>'+esc(x.t)+'</span>').join('')+'</div>':'')+
     '<div class="kgrid">'+
     '<div class="k"><small>Admissão</small><b>'+(e.afk?'—':fmtDate(e.adm))+'</b></div>'+
     '<div class="k"><small>Tempo de casa</small><b>'+(e.afk?'—':esc(tenureFrom(e)))+'</b></div>'+
@@ -5686,18 +5686,33 @@ const HR_LAB={present:'Presente',late:'Atrasado',absent:'Falta',vacation:'Féria
 function hrOut(e){return !!(e&&e.hr&&(e.hr.status==='absent'||e.hr.status==='vacation'||e.hr.status==='leave'))}
 function hrCls(e){return !e||!e.hr?'':hrOut(e)?' hr-out':e.hr.status==='late'?' hr-late':''}
 function hrHM(iso){const d=new Date(iso);return isNaN(d)?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
-function hrBank(m){if(m==null||!isFinite(m))return '';const a=Math.abs(Math.round(m));return (m<0?'-':'+')+String(Math.floor(a/60)).padStart(2,'0')+'h'+String(a%60).padStart(2,'0')}
-function hrLine(e){
-  if(!e||!e.hr)return '';
-  const h=e.hr,sameDay=h.clockIn&&new Date(h.clockIn).toDateString()===new Date().toDateString();
-  let t=HR_LAB[h.status]||'';if(!t)return '';
-  if((h.status==='present'||h.status==='late')&&sameDay)t+=(h.status==='present'?' desde ':' · entrada ')+hrHM(h.clockIn);
-  const b=hrBank(h.bankMinutes);return 'Ponto: '+t+(b?' · Banco de horas '+b:'');
+function hrBank(m){if(m==null||!isFinite(m))return '';const a=Math.abs(Math.round(m));return (m<0?'\u2212':'+')+String(Math.floor(a/60)).padStart(2,'0')+'h'+String(a%60).padStart(2,'0')}
+function hrNum(v){return v==null||v===''||!isFinite(+v)?null:+v}
+/* linhas de informação de ponto/RH da pessoa: [{t,warn}] (só o que existe) */
+function hrInfo(e){
+  const o=[];if(!e||!e.hr)return o;
+  const h=e.hr,d=h.data||{},sameDay=h.clockIn&&new Date(h.clockIn).toDateString()===new Date().toDateString();
+  if(HR_LAB[h.status]){let t='Ponto: '+HR_LAB[h.status];if((h.status==='present'||h.status==='late')&&sameDay)t+=(h.status==='present'?' desde ':' \u00b7 entrada ')+hrHM(h.clockIn);o.push({t,warn:h.status==='late'})}
+  if(d.cargo)o.push({t:'Cargo: '+d.cargo});
+  if(d.ctr)o.push({t:'Contrato: '+d.ctr});
+  const b=hrBank(h.bankMinutes);if(b)o.push({t:'Banco de horas '+b,warn:h.bankMinutes<0});
+  const f=hrNum(d.faltas);if(f!=null)o.push({t:'Faltas no m\u00eas: '+f,warn:f>0});
+  const he=hrNum(d.he);if(he!=null)o.push({t:'Horas extras: '+he+' h'});
+  const at=hrNum(d.atr);if(at!=null)o.push({t:'Atrasos no m\u00eas: '+at+' min',warn:at>0});
+  const fv=hrNum(d.fv);if(fv!=null)o.push({t:'F\u00e9rias vencidas: '+fv+' dias',warn:fv>30});
+  const bt=hrNum(d.bat);if(bt!=null)o.push({t:'Batidas hoje: '+bt+(bt%2?' (marca\u00e7\u00e3o faltando)':''),warn:bt%2===1});
+  return o;
 }
+function hrLine(e){return hrInfo(e).map(x=>x.t).join(' \u00b7 ')}
+function hrHtml(e){return hrInfo(e).map(x=>'<span class="hrl"'+(x.warn?' style="color:#F5A524"':'')+'>'+esc(x.t)+'</span>').join('')}
 function hrSummary(){
-  let n=0,on=0,late=0,abs=0;
-  EMPS.forEach(e=>{if(!e.hr||!isActive(e))return;n++;if(e.hr.status==='present'||e.hr.status==='late')on++;if(e.hr.status==='late')late++;if(e.hr.status==='absent')abs++});
-  return n?'No ponto: '+on+' · Atrasos: '+late+' · Faltas: '+abs:'';
+  let n=0,on=0,late=0,abs=0,f=0,he=0,hf=0,hh=0;
+  EMPS.forEach(e=>{if(!e.hr||!isActive(e))return;const s=e.hr.status;if(s){n++;if(s==='present'||s==='late')on++;if(s==='late')late++;if(s==='absent')abs++}
+    const d=e.hr.data||{},a=hrNum(d.faltas),b=hrNum(d.he);if(a!=null){f+=a;hf++}if(b!=null){he+=b;hh++}});
+  const parts=[];
+  if(n)parts.push('No ponto: '+on+' \u00b7 Atrasos: '+late+' \u00b7 Faltas: '+abs);
+  if(hf||hh)parts.push((hf?'Faltas no m\u00eas: '+f:'')+(hf&&hh?' \u00b7 ':'')+(hh?'Horas extras: '+he+' h':''));
+  return parts.join('<br>');
 }
 /* ===== ewvon: dados reais do banco (colaboradores, status, setores, salas e reuniões) ===== */
 let EWV_BOOTED=false,EWV_FONTS=false,EWV_PENDING=null;
@@ -5705,7 +5720,7 @@ function ewvDone(){const l=document.getElementById('ewvLoad');if(l)l.remove()}
 function ewvMsg(t,sub){const l=document.getElementById('ewvLoad');if(l)l.innerHTML='<div style="text-align:center;max-width:420px;padding:0 20px"><div style="font-size:18px;color:#12151C;margin-bottom:6px">'+t+'</div><div style="font-weight:500;font-size:13px">'+sub+'</div></div>'}
 /* converte o que veio do banco para o formato do painel; devolve false se não há pessoas */
 function ewvConv(p){
-  const list=(p.emps||[]).map(a=>({xid:String(a.id||''),nome:a.nome,depto:a.depto||'Sem setor',cargo:a.cargo||'',st:a.st||'',sal:NaN,adm:toDate(a.adm),dem:toDate(a.dem),faltas:0,he:0,sexo:'',cc:'',alm:a.lunch?true:null,almIni:null,almFim:null,bat:null,atr:null,bh:null,nasc:toDate(a.nasc),ctr:'',fv:null,hr:(a.hr&&HR_LAB[a.hr.status])?{status:a.hr.status,clockIn:a.hr.clockIn||null,bankMinutes:(a.hr.bankMinutes==null?null:+a.hr.bankMinutes),syncedAt:a.hr.syncedAt||null}:null})).filter(e=>e.adm);
+  const list=(p.emps||[]).map(a=>({xid:String(a.id||''),nome:a.nome,depto:a.depto||'Sem setor',cargo:a.cargo||'',st:a.st||'',sal:NaN,adm:toDate(a.adm),dem:toDate(a.dem),faltas:0,he:0,sexo:'',cc:'',alm:a.lunch?true:null,almIni:null,almFim:null,bat:null,atr:null,bh:null,nasc:toDate(a.nasc),ctr:'',fv:null,hr:(a.hr&&typeof a.hr==='object')?{status:HR_LAB[a.hr.status]?a.hr.status:null,clockIn:a.hr.clockIn||null,bankMinutes:(a.hr.bankMinutes==null?null:+a.hr.bankMinutes),syncedAt:a.hr.syncedAt||null,data:(a.hr.data&&typeof a.hr.data==='object')?a.hr.data:null}:null})).filter(e=>e.adm);
   const rooms=(p.rooms||[]).map(r=>({name:r.name,cap:r.cap||6,type:r.cap>8?'long':r.cap>5?'round':'small',meets:(r.meets||[]).map(m=>({ini:m.ini,fim:m.fim,assunto:m.assunto||'',desc:m.desc||'',resp:m.resp||'',n:m.n||0,ppl:(m.ppl||[]).map(id=>({x:String(id)}))}))}));
   return {list,rooms,co:(p.company&&p.company.name)||'',logo:(p.company&&p.company.logo)||''};
 }
