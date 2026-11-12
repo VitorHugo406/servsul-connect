@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils';
 
 const FN = 'https://scslfueixmuolkmgdslk.supabase.co/functions/v1/billing';
 const PENDING_KEY = 'ewvon:signup:pending';
+// The payment tab opened by the wizard: closed by the confirmation page once the payment is confirmed.
+let payWindow: Window | null = null;
 type Plan = { id: string; name: string; description: string; price_cents: number; annual_price_cents: number | null; max_users: number; max_sectors: number; storage_gb: number; features: string[] };
 const FEATURE_LABEL: Record<string, string> = {
   chat: 'Chat por setores e conversas', announcements: 'Avisos', important_notices: 'Comunicados importantes', tasks: 'Quadros de tarefas', notes: 'Anotações',
@@ -158,7 +160,7 @@ function Wizard() {
       safeSet(PENDING_KEY, JSON.stringify({ id: d.id, token: d.token }));
       setAdm((a) => ({ ...a, password: '', confirm: '' }));
       const back = `/assinar/retorno?s=${encodeURIComponent(d.id)}&t=${encodeURIComponent(d.token)}`;
-      if (pay) { try { pay.opener = null; } catch { /* ignore */ } pay.location.href = d.checkout_url; navigate(back); }
+      if (pay) { payWindow = pay; pay.location.href = d.checkout_url; navigate(back); }
       else window.location.assign(d.checkout_url);
     } catch (e) { try { pay?.close(); } catch { /* ignore */ } setErr((e as Error).message); setBusy(false); }
   };
@@ -318,7 +320,13 @@ function ReturnView() {
         const d = await call('status', { id, token });
         if (stop) return;
         setState(d); setTries((t) => t + 1);
-        if (d.status === 'active') { safeSet(PENDING_KEY, null); return; }
+        if (d.status === 'active') {
+          safeSet(PENDING_KEY, null);
+          try { document.title = 'Pagamento confirmado · ewvon'; } catch { /* ignore */ }
+          try { if (payWindow && !payWindow.closed) payWindow.close(); } catch { /* ignore */ }
+          payWindow = null; try { window.focus(); } catch { /* ignore */ }
+          return;
+        }
         if (['expired', 'canceled'].includes(d.status)) return;
       } catch (e) { if (!stop) setState({ error: (e as Error).message }); }
       if (!stop) window.setTimeout(tick, tries0.current < 12 ? 3000 : 6000);
@@ -342,6 +350,6 @@ function ReturnView() {
   if (state.status === 'canceled') return box('Pagamento não aprovado', 'O Mercado Pago não aprovou o pagamento e a assinatura foi encerrada. Nenhuma empresa foi criada e nada foi cobrado. Tente de novo com outro cartão de crédito, de preferência um que você já use no Mercado Pago.', <Button asChild><a href="/assinar">Tentar novamente</a></Button>, <X className="h-5 w-5" />);
   if (state.status === 'expired') return box('Cadastro encerrado', 'O pagamento não foi concluído em 3 dias. Nenhuma cobrança foi feita. Você pode começar de novo.', <Button asChild><a href="/assinar">Assinar novamente</a></Button>, <X className="h-5 w-5" />);
   if (state.status === 'provisioning' || state.status === 'failed') return box('Pagamento confirmado', 'Estamos criando a sua empresa. Isso leva poucos instantes; esta página atualiza sozinha.', null, <Loader2 className="h-5 w-5 animate-spin" />);
-  return box('Aguardando confirmação do pagamento', <>Assim que o Mercado Pago confirmar, a sua empresa é criada automaticamente. Esta página atualiza sozinha{tries > 24 ? '. Pagamentos podem levar alguns minutos para serem confirmados.' : '.'}</>,
+  return box('Aguardando confirmação do pagamento', <>Pague na aba do Mercado Pago e volte para esta: assim que o pagamento for confirmado, a sua empresa é criada e esta tela muda sozinha. Se a aba do Pix continuar aberta, é só fechá-la. Esta página atualiza sozinha{tries > 24 ? '. Pagamentos podem levar alguns minutos para serem confirmados.' : '.'}</>,
     <div className="flex flex-wrap justify-center gap-2"><Button variant="outline" onClick={() => setNonce((n) => n + 1)}>Já paguei, verificar agora</Button>{state.checkout_url ? <Button variant="outline" asChild><a href={state.checkout_url} target="_blank" rel="noreferrer">Abrir o pagamento</a></Button> : null}</div>, <Loader2 className="h-5 w-5 animate-spin" />);
 }
