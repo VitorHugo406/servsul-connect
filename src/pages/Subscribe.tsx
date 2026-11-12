@@ -34,8 +34,9 @@ const CYCLE_OPTIONS: { id: Cycle; label: string; hint: string }[] = [
 const annualOf = (p: Plan) => p.annual_price_cents ?? Math.round(p.price_cents * 12 * 0.92);
 const priceOf = (p: Plan, c: Cycle) => (c === 'annual' ? annualOf(p) : p.price_cents);
 const periodOf = (c: Cycle) => (c === 'annual' ? '/ano' : c === 'once' ? ' por 1 mês' : '/mês');
-const call = async (route: string, body: unknown) => {
-  const r = await fetch(`${FN}/${route}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) });
+const EMAIL_FN = 'https://scslfueixmuolkmgdslk.supabase.co/functions/v1/signup-email';
+const call = async (route: string, body: unknown, base = FN) => {
+  const r = await fetch(route ? `${base}/${route}` : base, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data?.error || 'Não foi possível concluir. Tente novamente.');
   return data;
@@ -105,6 +106,7 @@ function Wizard() {
   const [logo, setLogo] = useState<{ data: string; type: string; preview: string } | null>(null);
   const [adm, setAdm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [accepted, setAccepted] = useState(false);
+  const [ev, setEv] = useState({ sent: false, verified: '', code: '', busy: false, msg: '', err: '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -127,12 +129,13 @@ function Wizard() {
     if (step === 2) {
       if (adm.name.trim().length < 3) return 'Informe o nome do administrador.';
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(adm.email.trim())) return 'Informe um e-mail válido.';
+      if (adm.email.trim().toLowerCase() !== ev.verified) return 'Confirme seu e-mail: peça o código e digite os 6 dígitos recebidos.';
       const pe = passwordError(adm.password); if (pe) return pe;
       if (adm.password !== adm.confirm) return 'As senhas não coincidem.';
       return '';
     }
     return accepted ? '' : 'Confirme que leu e concorda com a cobrança mensal.';
-  }, [step, plan, company, adm, accepted]);
+  }, [step, plan, company, adm, accepted, ev.verified]);
 
   const pickLogo = async (file?: File) => {
     if (!file) return;
@@ -141,6 +144,19 @@ function Wizard() {
     if (opt.size > 1024 * 1024) { setErr('A logo deve ter no máximo 1MB.'); return; }
     const data = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsDataURL(opt); });
     setLogo({ data, type: opt.type || 'image/png', preview: data }); setErr('');
+  };
+
+  const emailOk = adm.email.trim().toLowerCase() === ev.verified;
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(adm.email.trim());
+  const sendCode = async () => {
+    setEv((v) => ({ ...v, busy: true, err: '', msg: '' }));
+    try { await call('', { action: 'send', email: adm.email.trim() }, EMAIL_FN); setEv((v) => ({ ...v, busy: false, sent: true, code: '', msg: 'Enviamos um código de 6 dígitos para o seu e-mail. Confira também o spam.' })); }
+    catch (e) { setEv((v) => ({ ...v, busy: false, err: (e as Error).message })); }
+  };
+  const checkCode = async () => {
+    setEv((v) => ({ ...v, busy: true, err: '' }));
+    try { await call('', { action: 'verify', email: adm.email.trim(), code: ev.code }, EMAIL_FN); setEv((v) => ({ ...v, busy: false, verified: adm.email.trim().toLowerCase(), err: '', msg: '' })); setErr(''); }
+    catch (e) { setEv((v) => ({ ...v, busy: false, err: (e as Error).message })); }
   };
 
   const next = () => { if (stepError) { setErr(stepError); return; } setErr(''); setStep((s) => Math.min(3, s + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); };
@@ -255,7 +271,23 @@ function Wizard() {
             <div className="grid max-w-md gap-4">
               <p className="text-[13px] text-muted-foreground">Esta será a conta de administrador da empresa. Depois você cadastra os colaboradores pelo sistema.</p>
               <div className="space-y-1.5"><Label htmlFor="an">Nome completo</Label><Input id="an" maxLength={80} autoComplete="name" value={adm.name} onChange={(e) => setAdm({ ...adm, name: e.target.value })} /></div>
-              <div className="space-y-1.5"><Label htmlFor="ae">E-mail de acesso</Label><Input id="ae" type="email" maxLength={160} autoComplete="email" value={adm.email} onChange={(e) => setAdm({ ...adm, email: e.target.value })} /></div>
+              <div className="space-y-1.5"><Label htmlFor="ae">E-mail de acesso</Label><Input id="ae" type="email" maxLength={160} autoComplete="email" value={adm.email} onChange={(e) => { setAdm({ ...adm, email: e.target.value }); setEv((v) => ({ ...v, sent: false, code: '', msg: '', err: '' })); }} />
+                {emailOk ? <p className="flex items-center gap-1.5 pt-1 text-[12px] font-medium text-emerald-600"><Check className="h-3.5 w-3.5" />E-mail confirmado</p> : (
+                  <div className="space-y-2 pt-1">
+                    {!ev.sent ? <Button type="button" variant="outline" size="sm" disabled={!emailValid || ev.busy} onClick={sendCode}>{ev.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}Enviar código de confirmação</Button> : (
+                      <>
+                        <div className="flex gap-2">
+                          <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="000000" className="w-32 text-center tracking-[0.3em]" value={ev.code} onChange={(e) => setEv((v) => ({ ...v, code: e.target.value.replace(/\D/g, '').slice(0, 6), err: '' }))} />
+                          <Button type="button" size="sm" disabled={ev.code.length !== 6 || ev.busy} onClick={checkCode}>{ev.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}Confirmar</Button>
+                        </div>
+                        <button type="button" className="text-[12px] text-muted-foreground underline" disabled={ev.busy} onClick={sendCode}>Reenviar código</button>
+                      </>
+                    )}
+                    {ev.msg ? <p className="text-[12px] text-muted-foreground">{ev.msg}</p> : null}
+                    {ev.err ? <p className="text-[12px] text-destructive">{ev.err}</p> : null}
+                  </div>
+                )}
+              </div>
               <div className="space-y-1.5"><Label htmlFor="ap">Senha</Label><Input id="ap" type="password" maxLength={72} autoComplete="new-password" value={adm.password} onChange={(e) => setAdm({ ...adm, password: e.target.value })} /><PasswordChecklist value={adm.password} className="pt-1" /></div>
               <div className="space-y-1.5"><Label htmlFor="ac">Confirmar senha</Label><Input id="ac" type="password" maxLength={72} autoComplete="new-password" value={adm.confirm} onChange={(e) => setAdm({ ...adm, confirm: e.target.value })} /></div>
             </div>
