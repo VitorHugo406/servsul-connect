@@ -17,7 +17,8 @@ const minutes = (d: Date) => d.getHours() * 60 + d.getMinutes();
 const STATUS: Record<string, string> = { available: 'Disponível', busy: 'Ocupado', meeting: 'Em reunião', lunch: 'Almoço', away: 'Ausente', offline: 'Offline' };
 
 /** The same company data the rest of ewvon uses: people (with status), sectors, meeting rooms and today's bookings. */
-async function loadCompanyData(companyId: string, company: { name: string; logo: string }) {
+async function loadCompanyData(companyId: string, company: { name: string; logo: string }, prog: (f: number) => void = () => {}) {
+  prog(0.1);
   const start = new Date(); start.setHours(0, 0, 0, 0);
   const end = new Date(); end.setHours(23, 59, 59, 999);
   const [pr, sc, rm, bk, pt, pres] = await Promise.all([
@@ -28,6 +29,7 @@ async function loadCompanyData(companyId: string, company: { name: string; logo:
     db.from('meeting_booking_participants').select('booking_id,profile_id'),
     db.from('user_presence').select('user_id,is_online,last_heartbeat'),
   ]);
+  prog(0.6);
   const people: any[] = pr.data || [];
   const sectors = new Map<string, string>(((sc.data || []) as any[]).map((x) => [x.id, x.name]));
   const byId = new Map<string, any>(people.map((p) => [p.id, p]));
@@ -49,6 +51,7 @@ async function loadCompanyData(companyId: string, company: { name: string; logo:
     }),
   }));
   const hr = await loadHrSources();
+  prog(0.95);
   if (hr.length) return { mode: 'api' as const, sources: hr, emps: [], rooms, company };   // employees come from the connected HR systems, not from ewvon
   return { emps, rooms, company };
 }
@@ -96,14 +99,14 @@ export function Dashboard3DSection({ onExit }: { onExit: () => void }) {
     let hex = '#FF6A1A';
     if (m) { const h = +m[1], s = +m[2] / 100, l = +m[3] / 100; const a = s * Math.min(l, 1 - l); const f = (n: number) => { const k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, '0'); }; hex = `#${f(0)}${f(8)}${f(4)}`; }
     const fg = readableOn(hex);
-    return `/dash/painel.html?v=20261112c&c=${encodeURIComponent(hex)}&fg=${encodeURIComponent(fg)}`;
+    return `/dash/painel.html?v=20261112d&c=${encodeURIComponent(hex)}&fg=${encodeURIComponent(fg)}`;
   }, []);
   useEffect(() => {
     let alive = true;
     const send = async (force = false) => {
       if (!companyId) return;
       try {
-        const data = await loadCompanyData(companyId, { name: company?.name || '', logo: logoUrl || '' });
+        const data = await loadCompanyData(companyId, { name: company?.name || '', logo: logoUrl || '' }, (p) => { if (!last.current) frame.current?.contentWindow?.postMessage({ type: 'ewvon:dash-progress', p }, location.origin); });
         const sig = JSON.stringify(data);
         if (!alive || (!force && sig === last.current)) return;
         last.current = sig;
