@@ -1706,11 +1706,11 @@ function screenData(m){
     const a=arr.slice().sort((x,y)=>y[key]-x[key]).slice(0,8);
     return {kind:'rank',title,big,sub,labels:a.map(d=>d.name),values:a.map(d=>d[key]),fmt};
   };
-  if(m==='abs'){if(!HAS.faltas)return {na:'Sua planilha não tem a coluna Faltas.',title:'Absenteísmo'};
+  if(m==='abs'){if(!HAS.faltas)return {na:'A fonte conectada não informa a coluna Faltas.',title:'Absenteísmo'};
     return top(DEPT,'abs',fmtPct,'Absenteísmo por departamento',fmtPct(S.abs),fmtInt(S.faltas)+' faltas no mês · '+fmtInt(S.active)+' ativos')}
   if(m==='turn'&&!HAS.adm)return {na:'A fonte conectada não informa a data de admissão.',title:'Turnover'};
   if(m==='turn')return top(DEPT,'turnYear',fmtPct,'Turnover anualizado por departamento',fmtPct(S.turnYear),'Janela de '+WIN+' meses · '+S.adm+' admissões e '+S.des+' desligamentos');
-  if(m==='he'){if(!HAS.he)return {na:'Sua planilha não tem a coluna Horas Extras.',title:'Horas extras'};
+  if(m==='he'){if(!HAS.he)return {na:'A fonte conectada não informa a coluna Horas Extras.',title:'Horas extras'};
     const arr=DEPT.map(d=>({name:d.name,v:d.active?d.he/d.active:0}));
     const a=arr.sort((x,y)=>y.v-x.v).slice(0,8);
     return {kind:'rank',title:'Horas extras por pessoa no mês',big:fmtInt(S.he)+' h',sub:(S.active?(S.he/S.active).toLocaleString('pt-BR',{maximumFractionDigits:1}):'0')+' h por pessoa em média',labels:a.map(d=>d.name),values:a.map(d=>d.v),fmt:v=>v.toLocaleString('pt-BR',{maximumFractionDigits:1})+' h'}}
@@ -3023,7 +3023,7 @@ function pReception(){
   return {title:'Recepção',sub:floorLabel(CUR),html:h,back:null};
 }
 function pPayroll(){
-  if(!HAS.sal)return {title:'Folha de pagamento',sub:'',html:'<p class="note">Sua planilha não tem a coluna Salário, então não há valores para mostrar.</p>',back:null};
+  if(!HAS.sal)return {title:'Folha de pagamento',sub:'',html:'<p class="note">A fonte conectada não informa a coluna Salário, então não há valores para mostrar.</p>',back:null};
   const act=EMPS.filter(e=>isActive(e)&&isFinite(e.sal)),sal=act.map(e=>e.sal).sort((a,b)=>a-b),med=sal.length?sal[Math.floor(sal.length/2)]:0;
   const by=DEPT.map(d=>({name:d.name,v:d.folha})).sort((a,b)=>b.v-a.v).slice(0,10);
   const B=['até 2,5 mil','2,5 a 4 mil','4 a 6 mil','6 a 10 mil','10 mil+'],T=[2500,4000,6000,10000],c=[0,0,0,0,0];
