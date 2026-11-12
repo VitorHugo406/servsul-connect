@@ -55,7 +55,7 @@ interface Preset { name: string; cat: string; url?: string; path: string; auth: 
 const BEARER = (name: string, cat: string): Preset => ({ name, cat, path: 'data', auth: 'bearer', needsUrl: true, tokenLabel: 'Token da API', note: 'Cole o endereço (URL) da API da sua conta em Opções avançadas.' });
 const OAUTH = (name: string, cat: string): Preset => ({ name, cat, path: 'data', auth: 'oauth', needsUrl: true, tokenLabel: 'Client ID:Client Secret', note: 'Informe Client ID e Secret (id:secret), o endereço do login (token) e o endereço da API da sua conta.' });
 const PRESETS: Record<string, Preset> = {
-  convenia: { name: 'Convenia', cat: 'Gestão de pessoas', url: 'https://public-api.convenia.com.br/api/v3/employees?paginate=200', path: 'data', auth: 'header', header: 'token', needsUrl: false, tokenLabel: 'Token da Convenia', note: 'Token na área de integrações da Convenia. Nesta versão não busca sexo e desligados pessoa a pessoa.' },
+  convenia: { name: 'Convenia', cat: 'Gestão de pessoas', url: 'https://public-api.convenia.com.br/api/v3/employees?paginate=200', path: 'data', auth: 'header', header: 'token', needsUrl: false, tokenLabel: 'Token da Convenia', note: 'Token na área de integrações da Convenia. Busca também cargo, sexo e demitidos; os detalhes completam aos poucos por causa do limite da Convenia.' },
   pontomais: { name: 'Pontomais', cat: 'Ponto eletrônico', url: 'https://api.pontomaisweb.com.br/external_api/v1/employees', path: 'employees', auth: 'header', header: 'access-token', needsUrl: false, tokenLabel: 'Token do Pontomais', note: 'Endereço sugerido. Confirme na documentação da sua conta.' },
   tangerino: { name: 'Sólides / Tangerino', cat: 'Ponto eletrônico', url: 'https://employer.tangerino.com.br/employee/find-all', path: 'content', auth: 'header', header: 'Authorization', needsUrl: false, tokenLabel: 'Token', note: 'Endereço sugerido. Confirme na documentação da sua conta.' },
   factorial: { name: 'Factorial', cat: 'Gestão de pessoas', url: 'https://api.factorialhr.com/api/2025-01-01/resources/employees/employees', path: 'data', auth: 'header', header: 'x-api-key', needsUrl: false, tokenLabel: 'Chave da API', note: 'Endereço sugerido. Confirme a versão da API na documentação.' },
@@ -135,12 +135,17 @@ async function oauthToken(url: string, idSecret: string): Promise<string> {
   oauthCache.set(k, { tok, exp: Date.now() + (Number(j.expires_in) || 300) * 1000 }); return tok;
 }
 
-async function fetchRecords(cfg: Cfg, secret: string): Promise<any[]> {
-  const headers: Record<string, string> = { Accept: 'application/json', 'User-Agent': 'ewvon-hr-sync/2' };
+async function buildHeaders(cfg: Cfg, secret: string): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { Accept: 'application/json', 'User-Agent': 'ewvon-hr-sync/3' };
   if (cfg.auth === 'bearer') headers.Authorization = `Bearer ${secret}`;
   else if (cfg.auth === 'header') headers[cfg.header] = secret;
   else if (cfg.auth === 'basic') headers.Authorization = `Basic ${btoa(unescape(encodeURIComponent(secret)))}`;
   else headers.Authorization = `Bearer ${await oauthToken(cfg.oauth_url, secret)}`;
+  return headers;
+}
+
+async function fetchRecords(cfg: Cfg, secret: string): Promise<any[]> {
+  const headers = await buildHeaders(cfg, secret);
   const deadline = Date.now() + 45_000;
   let next: string | null = cfg.url, pages = 0, pg = 1, first = '', all: any[] = [];
   const pageUrl = (u: string, n: number) => { const x = new URL(u); x.searchParams.set('page', String(n)); return x.href; };
@@ -178,8 +183,8 @@ const SYN: Record<string, string[]> = {
   nome: ['nome', 'colaborador', 'funcionario', 'empregado', 'name', 'fullname', 'employeename', 'nomecompleto', 'employee', 'nomefuncionario', 'displayname', 'employeefullname'],
   depto: ['departamento', 'depto', 'setor', 'area', 'department', 'dept', 'departmentname', 'departamentonome', 'departamentodescricao', 'lotacao', 'secao', 'departmentdescription'],
   cc: ['centrodecusto', 'centrocusto', 'cc', 'costcenter', 'costcentre', 'centrodecustos', 'andar', 'floor'],
-  cargo: ['cargo', 'funcao', 'role', 'position', 'jobtitle', 'title', 'job'],
-  sal: ['salario', 'salariobase', 'remuneracao', 'salariomensal', 'salary', 'wage', 'basesalary', 'pay'],
+  cargo: ['cargo', 'funcao', 'job', 'jobtitle', 'jobname', 'jobposition', 'position', 'positionname', 'occupation', 'ocupacao', 'cargonome', 'role', 'title'],
+  sal: ['salario', 'salariobase', 'remuneracao', 'salariomensal', 'salary', 'wage', 'basesalary', 'pay', 'salarysalary', 'salaryvalue', 'salaryamount', 'salarybase', 'salariovalor'],
   adm: ['admissao', 'dataadmissao', 'dtadmissao', 'dataadm', 'hiredate', 'hiredat', 'startdate', 'admissiondate', 'hiredon', 'dateofhire', 'admittedat', 'hiringdate', 'datacontratacao', 'dtcontratacao', 'contratacao', 'hireddate', 'startedat', 'contractstart'],
   dem: ['demissao', 'desligamento', 'datademissao', 'datadesligamento', 'dtdemissao', 'datadesl', 'terminationdate', 'enddate', 'termination', 'terminatedat', 'leavedate', 'dismissaldate', 'dismissal'],
   sexo: ['sexo', 'genero', 'gender', 'sex'],
@@ -219,6 +224,11 @@ function detectColumns(recs: any[]): Record<string, string> {
   for (const r of recs.slice(0, 30)) if (r && typeof r === 'object') for (const k of Object.keys(flat(r, '', {}))) { const n = norm(k); if (n && !keys.has(n)) keys.set(n, k); }
   const map: Record<string, string> = {};
   for (const f in SYN) for (const syn of SYN[f]) { if (keys.has(syn)) { map[f] = keys.get(syn)!; break; } }
+  // second pass for nested fields ("job name", "salary value"): the last word of the key may be the known name
+  for (const f in SYN) {
+    if (map[f]) continue;
+    for (const [n, orig] of keys) { const tail = norm(orig.split(' ').pop()); if (tail !== n && SYN[f].includes(tail) && !Object.values(map).includes(orig)) { map[f] = orig; break; } }
+  }
   return map;
 }
 function mapEmployees(recs: any[]): { emps: Emp[]; columns: Record<string, string> } {
@@ -240,17 +250,85 @@ function mapEmployees(recs: any[]): { emps: Emp[]; columns: Record<string, strin
 }
 
 const MAX_EMPLOYEES = 20000;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Convenia: the list of active people lacks some fields and dismissed people are on another endpoint. Same calls the
+// original Dash made: /employees (active), /employees/dismissed (last years) and /employees/{id} for the details
+// (job, gender, dismissal date). The API allows ~50 calls per minute, so each run fetches a few details and the rest
+// come on the next runs; what was fetched stays stored.
+const CONV_DETAILS_PER_RUN = 32;
+async function convGet(url: string, headers: Record<string, string>): Promise<any | null | 'rate'> {
+  const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 15_000);
+  try {
+    const r = await fetch(url, { headers, redirect: 'manual', signal: ac.signal });
+    if (r.status === 429) return 'rate';
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error(`A Convenia respondeu com erro ${r.status}${r.status === 401 || r.status === 403 ? ' (confira o token e as permissões dele)' : ''}.`);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+const detailOf = (j: any) => (j && j.data && !Array.isArray(j.data)) ? j.data : (j && Array.isArray(j.data) ? j.data[0] : j) || {};
+const genderOf = (d: any) => { const g = String(d?.gender ?? '').trim().toUpperCase().charAt(0); return g === 'M' || g === 'F' ? g : ''; };
+
+async function convEnrich(cfg: Cfg, secret: string, sourceId: string, active: Emp[]): Promise<{ emps: Emp[]; note: string }> {
+  const headers = await buildHeaders(cfg, secret);
+  const m = cfg.url.match(/^(https:\/\/[^/]+\/api\/v3)/i); const base = m ? m[1] : 'https://public-api.convenia.com.br/api/v3';
+  let note = '';
+  const from = new Date(); from.setFullYear(from.getFullYear() - 3);
+  let disRecs: any[] = [];
+  try { disRecs = await fetchRecords({ ...cfg, url: `${base}/employees/dismissed?paginate=200&from_date=${from.toISOString().slice(0, 10)}`, path: cfg.path || 'data' }, secret); }
+  catch (e) { note = `Demitidos: ${(e as Error).message}`; }
+  const activeIds = new Set(active.map((e) => e.key));
+  const dis = disRecs.filter((x) => x && x.id != null && !activeIds.has(String(x.id)));
+  const disDate = new Map<string, string | null>(dis.map((x) => [String(x.id), toDate(x.dismissal?.date ?? x.dismissal_date ?? x.dismissal)]));
+  const { data: stored } = await admin.from('hr_employees').select('*').eq('source_id', sourceId).limit(MAX_EMPLOYEES);
+  const byKey = new Map<string, any>((stored || []).map((r: any) => [r.ext_key, r]));
+  const todo: { id: string; isDis: boolean }[] = [];
+  for (const x of dis) { const id = String(x.id); const c = byKey.get(id); if (!c || !c.name) todo.push({ id, isDis: true }); }
+  for (const e of active) { const c = byKey.get(e.key); if ((!e.cargo && !c?.cargo) || (!e.sexo && !c?.sexo)) todo.push({ id: e.key, isDis: false }); }
+  const fetched = new Map<string, Emp>();
+  let n = 0;
+  for (const t of todo.slice(0, CONV_DETAILS_PER_RUN)) {
+    if (n++) await sleep(1300);
+    let j: any;
+    try { j = await convGet(`${base}/employees/${encodeURIComponent(t.id)}`, headers); } catch (e) { note = note || (e as Error).message; break; }
+    if (j === 'rate') { note = note || 'A Convenia limitou as consultas; os detalhes continuam no próximo minuto.'; break; }
+    if (!j) continue;
+    const d = detailOf(j); const one = mapEmployees([d]).emps[0];
+    const b1: Emp = one ? { ...one, key: t.id } : { key: t.id, name: '', depto: '', cargo: '', sexo: '', ctr: '', cc: '', kemp: '', adm: null, dem: null, nasc: null, salary: null, fv: null };
+    b1.sexo = genderOf(d) || b1.sexo;
+    if (t.isDis) b1.dem = b1.dem || disDate.get(t.id) || toDate(d?.dismissal?.date) || null;
+    fetched.set(t.id, b1);
+  }
+  const out: Emp[] = [];
+  for (const e of active) {
+    const c = byKey.get(e.key); const f = fetched.get(e.key);
+    out.push({ ...e, cargo: e.cargo || f?.cargo || c?.cargo || '', sexo: e.sexo || f?.sexo || c?.sexo || '', depto: e.depto || f?.depto || '', ctr: e.ctr || f?.ctr || c?.ctr || '', cc: e.cc || f?.cc || c?.cc || '' });
+  }
+  for (const x of dis) {
+    const id = String(x.id); const f = fetched.get(id); const c = byKey.get(id);
+    if (f) out.push({ ...f, dem: f.dem || disDate.get(id) || null });
+    else if (c && c.name) out.push({ key: id, name: c.name, depto: c.depto || '', cargo: c.cargo || '', sexo: c.sexo || '', ctr: c.ctr || '', cc: c.cc || '', kemp: c.kemp || '', adm: c.adm, dem: c.dem || disDate.get(id) || null, nasc: c.nasc, salary: c.salary == null ? null : Number(c.salary), fv: c.vacation_overdue == null ? null : Number(c.vacation_overdue) });
+  }
+  const pending = Math.max(0, todo.length - fetched.size);
+  if (pending) note = note || `${pending} cadastro(s) ainda serão completados nos próximos minutos (cargo, sexo e demitidos).`;
+  return { emps: out, note };
+}
+
 async function runSync(row: any) {
   const startedAt = new Date().toISOString();
   try {
     const cfg = cleanConfig(row.config); if (typeof cfg === 'string') throw new Error(cfg);
-    const recs = await fetchRecords(cfg, await open(row.secret_enc));
-    const { emps, columns } = mapEmployees(recs);
+    const secret = await open(row.secret_enc);
+    const recs = await fetchRecords(cfg, secret);
+    let { emps, columns } = mapEmployees(recs);
     if (!columns.depto || !columns.adm) {
       const seen = Object.keys(columns).map((k) => LABELS[k] || k).join(', ') || 'nenhuma';
       throw new Error(`Não encontrei as colunas de Departamento e Admissão na resposta (reconhecidas: ${seen}). Em Opções avançadas, confira o endereço e o caminho da lista.`);
     }
     if (!emps.length) throw new Error('A resposta não trouxe nenhum colaborador com nome ou data de admissão.');
+    let note = '';
+    if (cfg.preset === 'convenia') { const r = await convEnrich(cfg, secret, row.id, emps); emps = r.emps; note = r.note; }
     const now = new Date().toISOString();
     const payload = emps.slice(0, MAX_EMPLOYEES).map((e) => ({ source_id: row.id, company_id: row.company_id, ext_key: e.key, name: e.name, depto: e.depto || null, cargo: e.cargo || null, sexo: e.sexo || null, ctr: e.ctr || null, cc: e.cc || null, kemp: e.kemp || null, adm: e.adm, dem: e.dem, nasc: e.nasc, salary: e.salary, vacation_overdue: e.fv, synced_at: now }));
     for (let i = 0; i < payload.length; i += 500) {
@@ -258,8 +336,8 @@ async function runSync(row: any) {
       if (error) throw new Error('Não foi possível gravar os colaboradores.');
     }
     await admin.from('hr_employees').delete().eq('source_id', row.id).lt('synced_at', startedAt);
-    await admin.from('hr_sources').update({ last_status: 'ok', last_error: null, last_used_at: new Date().toISOString(), last_count: payload.length }).eq('id', row.id);
-    return { ok: true, total: payload.length, columns: Object.keys(columns).map((k) => LABELS[k] || k) };
+    await admin.from('hr_sources').update({ last_status: 'ok', last_error: note || null, last_used_at: new Date().toISOString(), last_count: payload.length }).eq('id', row.id);
+    return { ok: true, total: payload.length, dismissed: payload.filter((p) => p.dem).length, columns: Object.keys(columns).map((k) => LABELS[k] || k), note };
   } catch (e) {
     const msg = (e as Error).message.slice(0, 300);
     await admin.from('hr_sources').update({ last_status: 'erro', last_error: msg, last_used_at: new Date().toISOString() }).eq('id', row.id);
