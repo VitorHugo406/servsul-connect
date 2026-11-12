@@ -48,11 +48,11 @@
 
 /* Bubbles: no tails, large rounded corners (small corner on the author's side), own = soft brand tint with dark text */
 .chat-bubble {
-  border-radius: 20px 20px 20px 6px !important;
+  border-radius: 6px 20px 20px 20px !important;
   padding: 9px 14px 7px !important;
   box-shadow: none !important;
 }
-.chat-bubble-outgoing { border-radius: 20px 20px 6px 20px !important; }
+.chat-bubble-outgoing { border-radius: 20px 6px 20px 20px !important; }
 .chat-bubble::before { display: none !important; }
 .chat-bubble-incoming {
   background: hsl(var(--chat-incoming)) !important;

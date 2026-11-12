@@ -19,9 +19,9 @@ import { ChatSenderAvatar } from './ChatSenderIdentity';
 import { SignedStorageImage, SignedStorageLink } from '@/components/common/SignedStorageMedia';
 import { Button } from '@/components/ui/button';
 import { ChatEmojiGrid } from './ChatEmojiGrid';
+import { REACTION_EMOJIS } from '@/lib/chatReactionEmojis';
 
-const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '🚀', '😍', '🥰', '😘', '🤩', '😎', '🤔', '🙌', '💯', '🎉', '🥳', '🤣', '😅', '😡', '😱', '😭', '🙏', '🤝', '👀', '💪', '✨', '❤️‍🔥', '💙', '💚', '💛', '💜', '🫶', '😴', '🤗', '😏', '🤯', '🥹', '😇', '🤪', '😈', '🤍', '🖤', '💔', '👏🏻', '👍🏻'];
-
+const QUICK_REACTIONS = REACTION_EMOJIS;
 interface Author { id: string; name: string; display_name: string | null; avatar_url: string | null; sector_id: string | null; sector_name?: string | null; sector_color?: string | null; }
 interface ReplyAuthor { name: string; display_name: string | null; }
 interface Message {

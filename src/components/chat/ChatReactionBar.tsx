@@ -6,6 +6,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { withCompany } from '@/lib/companyScope';
 import { cn } from '@/lib/utils';
 import { reactedJustNow, reactionBurst } from '@/lib/reactionFx';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ChatEmojiGrid } from './ChatEmojiGrid';
+import { REACTION_EMOJIS } from '@/lib/chatReactionEmojis';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sb = supabase as any;
@@ -117,14 +120,12 @@ export function ChatReactionBar({ reactions, isOwn, onToggle }: { reactions: { e
         </button>
       ))}
       {leaving.map((r) => <span key={`l-${r.emoji}`} className="chat-reaction is-leaving" aria-hidden="true"><span>{r.emoji}</span></span>)}
-      <span className="chat-reaction-add-wrap">
-        <button type="button" className="chat-reaction-add" aria-label="Reagir" onClick={() => setOpen(!open)}><SmilePlus className="h-3.5 w-3.5" /></button>
-        {open ? (
-          <span className="chat-reaction-picker" onMouseLeave={() => setOpen(false)}>
-            {QUICK_REACTIONS.map((e) => <button key={e} type="button" onClick={(ev) => { toggle(e, ev.currentTarget); setOpen(false); }}>{e}</button>)}
-          </span>
-        ) : null}
-      </span>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild><button type="button" className="chat-reaction-add" aria-label="Reagir"><SmilePlus className="h-3.5 w-3.5" /></button></PopoverTrigger>
+        <PopoverContent side="top" align={isOwn ? 'end' : 'start'} collisionPadding={12} avoidCollisions className="chat-emoji-popover chat-rx-popover z-[500] w-auto p-2">
+          <ChatEmojiGrid emojis={REACTION_EMOJIS} label="Escolher reação" onSelect={(e, origin) => { toggle(e, origin ?? null); setOpen(false); }} />
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

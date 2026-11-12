@@ -286,3 +286,5 @@ aside[aria-label^="Detalhes da conversa"] .bg-background.shadow-sm { background:
 .chat-call-badge-block { background: hsl(var(--chat-hover)); }
 .chat-call-badge-block .chat-rail-glyph { color: hsl(var(--foreground)); }
 .chat-call-kind .chat-rail-glyph { color: #fff; }
+/* Chat settings (font and size) must win over the fixed sizes of chat-pro / chat-ewwon. */
+.chat-message-text { font-family: var(--chat-message-font) !important; font-size: var(--chat-message-size) !important; }

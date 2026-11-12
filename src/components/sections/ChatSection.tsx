@@ -4,7 +4,7 @@ import { ChatTasksControl } from '@/components/chat/ChatTasksControl';
 import { ChatConversationItem } from '@/components/chat/ChatConversationItem';
 import { ChatSenderAvatar } from '@/components/chat/ChatSenderIdentity';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { ChevronDown, Settings, SquarePen, Video } from 'lucide-react';
+import { ChevronDown, Settings, SquarePen } from 'lucide-react';
 import { ChatListSection } from '@/components/chat/ChatListSection';
 import { startChatCall } from '@/components/video/VideoCallHost';
 import { useCompanyPlan } from '@/hooks/useCompanyPlan';
@@ -367,9 +367,6 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
     else if (conv === 'group') { setChatMode('groups'); setSelectedGroupId(target); setSelectedUserId(null); }
     else { setChatMode('sectors'); setActiveSector(target); setSelectedUserId(null); setSelectedGroupId(null); }
   };
-  const listCallConv = chatMode === 'direct' && selectedUserId ? 'dm' as const : chatMode === 'groups' && selectedGroupId ? 'group' as const : chatMode === 'sectors' && effectiveSector ? 'sector' as const : null;
-  const listCallTarget = listCallConv === 'dm' ? selectedUserId : listCallConv === 'group' ? selectedGroupId : effectiveSector;
-  const canCallFromList = !!listCallConv && !!listCallTarget && !!callPlan && planHasFeature(callPlan, 'video_calls');
 
   return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={cn("chat-workspace flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden !border-0 !rounded-none bg-card !p-0 !shadow-none", typographyClass)}>
 
@@ -393,7 +390,6 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
           <div className="chat-list-top"><h3 className="chat-list-title">{showCalls ? 'Chamadas' : 'Chat'}</h3>
             <div className="chat-list-tools">
               {!showCalls ? <Button variant="ghost" size="icon" className="chat-list-tool" title="Buscar conversas" aria-label="Buscar conversas" aria-pressed={showListSearch} onClick={() => { const next = !showListSearch; setShowListSearch(next); if (!next) setConversationSearch(''); }}><Search className="h-[18px] w-[18px]"/></Button> : null}
-              {canCallFromList ? <Button variant="ghost" size="icon" className="chat-list-tool" title="Chamada de vídeo da conversa aberta" aria-label="Chamada de vídeo da conversa aberta" onClick={() => startChatCall(listCallConv!, listCallTarget!)}><Video className="h-[18px] w-[18px]"/></Button> : null}
               <Button variant="ghost" size="icon" className="chat-list-tool" title="Nova conversa" aria-label="Nova conversa" onClick={() => window.dispatchEvent(new Event(OPEN_LIST_SEARCH_EVENT))}><SquarePen className="h-[18px] w-[18px]"/></Button>
             </div>
           </div>
