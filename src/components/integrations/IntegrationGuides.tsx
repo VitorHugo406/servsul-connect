@@ -175,3 +175,23 @@ export function WhatsAppGuide() {
     </>
   );
 }
+
+export function HrGuide() {
+  return (
+    <div className="space-y-2">
+      <Step n={1} title="Escolha como os dados chegam" open>
+        <p>Se o seu sistema de ponto tem uma <K>API de consulta</K>, use a aba <K>Buscar por API</K>: o ewvon consulta o sistema a cada poucos minutos. Se ele sabe <K>enviar dados</K> (webhook ou script), use <K>Receber por envio (push)</K>.</p>
+      </Step>
+      <Step n={2} title="Pegue o acesso e o endereço na documentação do sistema">
+        <p>Na documentação (ou com o suporte) do Ahgora, Nexti, Convenia ou outro, anote: o <K>endereço da API</K>, o <K>caminho</K> que lista a situação do ponto do dia e o <K>token ou chave</K> de acesso. Eles variam de sistema para sistema, por isso o ewvon não os preenche.</p>
+      </Step>
+      <Step n={3} title="Diga onde estão os dados na resposta">
+        <p>Informe o campo que identifica a pessoa (e-mail, CPF ou matrícula, igual ao cadastro do ewvon), o campo da situação e, se houver, o da entrada e o do banco de horas (em minutos). Em <K>Situações</K>, relacione cada valor que o sistema envia ao status do ewvon.</p>
+      </Step>
+      <Step n={4} title="Salve, teste e sincronize">
+        <p>Clique em <K>Salvar</K>, depois em <K>Testar conexão</K>: a prévia mostra quantos registros casaram com pessoas do ewvon. Se nenhum casar, revise o identificador. Então use <K>Sincronizar agora</K>.</p>
+        <Tip>Os dados aparecem só no Dash 3D: presença, atraso (ponto âmbar), falta, férias, afastamento e banco de horas.</Tip>
+      </Step>
+    </div>
+  );
+}

@@ -20,14 +20,21 @@ const STATUS: Record<string, string> = { available: 'Disponível', busy: 'Ocupad
 async function loadCompanyData(companyId: string, company: { name: string; logo: string }) {
   const start = new Date(); start.setHours(0, 0, 0, 0);
   const end = new Date(); end.setHours(23, 59, 59, 999);
-  const [pr, sc, rm, bk, pt, pres] = await Promise.all([
+  const [pr, sc, rm, bk, pt, pres, hrq] = await Promise.all([
     db.from('profiles').select('id,user_id,name,display_name,sector_id,created_at,updated_at,birth_date,autonomy_level,is_active,profile_type,user_status').eq('company_id', companyId).neq('profile_type', 'system').limit(2000),
     db.from('sectors').select('id,name').eq('company_id', companyId),
     db.from('meeting_rooms').select('id,name,capacity').eq('company_id', companyId).eq('is_active', true).order('name'),
     db.from('meeting_bookings').select('id,room_id,title,notes,starts_at,ends_at,booked_by').eq('company_id', companyId).gte('ends_at', start.toISOString()).lte('starts_at', end.toISOString()),
     db.from('meeting_booking_participants').select('booking_id,profile_id'),
     db.from('user_presence').select('user_id,is_online,last_heartbeat'),
+    // HR / time-clock status synced by the `hr-sync` edge function. Failure or no integration = no HR data (never invented).
+    db.from('hr_people_status').select('profile_id,status,clock_in,hours_bank_minutes,synced_at,source'),
   ]);
+  const hrById = new Map<string, any>();
+  ((hrq?.error ? [] : hrq?.data || []) as any[]).forEach((x) => {
+    if (!x?.synced_at || Date.now() - new Date(x.synced_at).getTime() > 36 * 3600 * 1000) return;   // stale sync: not shown as current
+    hrById.set(x.profile_id, { status: x.status, clockIn: x.clock_in ?? null, bankMinutes: x.hours_bank_minutes ?? null, syncedAt: x.synced_at });
+  });
   const people: any[] = pr.data || [];
   const sectors = new Map<string, string>(((sc.data || []) as any[]).map((x) => [x.id, x.name]));
   const byId = new Map<string, any>(people.map((p) => [p.id, p]));
@@ -38,6 +45,7 @@ async function loadCompanyData(companyId: string, company: { name: string; logo:
     st: online.has(p.user_id) ? (STATUS[p.user_status || 'available'] || 'Online') : 'Offline',
     lunch: online.has(p.user_id) && p.user_status === 'lunch',
     adm: day(p.created_at), dem: p.is_active ? null : day(p.updated_at), nasc: day(p.birth_date),
+    hr: hrById.get(p.id) ?? null,
   }));
   const parts = new Map<string, string[]>();
   ((pt.data || []) as any[]).forEach((x) => { if (byId.has(x.profile_id)) parts.set(x.booking_id, [...(parts.get(x.booking_id) || []), x.profile_id]); });
@@ -65,7 +73,7 @@ export function Dashboard3DSection({ onExit }: { onExit: () => void }) {
     let hex = '#FF6A1A';
     if (m) { const h = +m[1], s = +m[2] / 100, l = +m[3] / 100; const a = s * Math.min(l, 1 - l); const f = (n: number) => { const k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, '0'); }; hex = `#${f(0)}${f(8)}${f(4)}`; }
     const fg = readableOn(hex);
-    return `/dash/painel.html?v=20261111e&c=${encodeURIComponent(hex)}&fg=${encodeURIComponent(fg)}`;
+    return `/dash/painel.html?v=20261112a&c=${encodeURIComponent(hex)}&fg=${encodeURIComponent(fg)}`;
   }, []);
   useEffect(() => {
     let alive = true;
@@ -89,7 +97,7 @@ export function Dashboard3DSection({ onExit }: { onExit: () => void }) {
     // Real time: any change to people, sectors, rooms, bookings or presence refreshes the Dash (grouped, so a burst is one update).
     let timer = 0;
     const soon = () => { window.clearTimeout(timer); timer = window.setTimeout(() => void send(), 900); };
-    const tables = ['profiles', 'sectors', 'meeting_rooms', 'meeting_bookings', 'meeting_booking_participants', 'user_presence'];
+    const tables = ['profiles', 'sectors', 'meeting_rooms', 'meeting_bookings', 'meeting_booking_participants', 'user_presence', 'hr_people_status'];
     let ch = supabase.channel('dash-live-' + companyId);
     tables.forEach((table) => { ch = ch.on('postgres_changes' as never, { event: '*', schema: 'public', table }, soon); });
     ch.subscribe();
