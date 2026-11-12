@@ -41,6 +41,16 @@ const call = async (route: string, body: unknown, base = FN) => {
   if (!r.ok) throw new Error(data?.error || 'Não foi possível concluir. Tente novamente.');
   return data;
 };
+const onlyDigits = (v: string) => v.replace(/\D/g, '');
+const maskCnpj = (v: string) => { const d = onlyDigits(v).slice(0, 14); return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2'); };
+const maskCep = (v: string) => onlyDigits(v).slice(0, 8).replace(/^(\d{5})(\d)/, '$1-$2');
+const maskPhone = (v: string) => { const d = onlyDigits(v).slice(0, 11); return d.length > 10 ? d.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3') : d.length > 6 ? d.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3') : d.length > 2 ? d.replace(/^(\d{2})(\d+)$/, '($1) $2') : d; };
+const cnpjValid = (v: string) => {
+  const d = onlyDigits(v); if (d.length !== 14 || /^(\d)\1+$/.test(d)) return false;
+  const calc = (len: number) => { let sum = 0, pos = len - 7; for (let i = len; i >= 1; i--) { sum += Number(d[len - i]) * pos--; if (pos < 2) pos = 9; } const r = sum % 11; return r < 2 ? 0 : 11 - r; };
+  return calc(12) === Number(d[12]) && calc(13) === Number(d[13]);
+};
+const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 const safeGet = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
 const safeSet = (k: string, v: string | null) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* ignore */ } };
 
@@ -105,6 +115,7 @@ function Wizard() {
   const [company, setCompany] = useState({ name: '', primary: '#111827', secondary: '#6366f1' });
   const [logo, setLogo] = useState<{ data: string; type: string; preview: string } | null>(null);
   const [adm, setAdm] = useState({ name: '', email: '', password: '', confirm: '' });
+  const [co, setCo] = useState({ legal: '', cnpj: '', phone: '', zip: '', street: '', number: '', comp: '', district: '', city: '', uf: '' });
   const [accepted, setAccepted] = useState(false);
   const [ev, setEv] = useState({ sent: false, verified: '', code: '', busy: false, msg: '', err: '' });
   const [busy, setBusy] = useState(false);
@@ -124,18 +135,24 @@ function Wizard() {
     if (step === 1) {
       if (company.name.trim().length < 2) return 'Informe o nome da empresa.';
       if (!/^#[0-9a-f]{6}$/i.test(company.primary) || !/^#[0-9a-f]{6}$/i.test(company.secondary)) return 'Use cores no formato #RRGGBB.';
+      if (co.legal.trim().length < 3) return 'Informe a razão social da empresa.';
+      if (!cnpjValid(co.cnpj)) return 'Informe um CNPJ válido.';
+      if (onlyDigits(co.zip).length !== 8) return 'Informe o CEP com 8 números.';
+      if (co.street.trim().length < 3 || !co.number.trim() || co.district.trim().length < 2 || co.city.trim().length < 2) return 'Preencha o endereço completo da empresa.';
+      if (!UFS.includes(co.uf)) return 'Escolha o estado (UF).';
+      if (co.phone && ![10, 11].includes(onlyDigits(co.phone).length)) return 'Telefone inválido. Use DDD + número.';
       return '';
     }
     if (step === 2) {
       if (adm.name.trim().length < 3) return 'Informe o nome do administrador.';
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(adm.email.trim())) return 'Informe um e-mail válido.';
-      if (adm.email.trim().toLowerCase() !== ev.verified) return 'Confirme seu e-mail: peça o código e digite os 6 dígitos recebidos.';
+      if (!ev.verified || adm.email.trim().toLowerCase() !== ev.verified) return 'Confirme seu e-mail: peça o código e digite os 6 dígitos recebidos.';
       const pe = passwordError(adm.password); if (pe) return pe;
       if (adm.password !== adm.confirm) return 'As senhas não coincidem.';
       return '';
     }
     return accepted ? '' : 'Confirme que leu e concorda com a cobrança mensal.';
-  }, [step, plan, company, adm, accepted, ev.verified]);
+  }, [step, plan, company, co, adm, accepted, ev.verified]);
 
   const pickLogo = async (file?: File) => {
     if (!file) return;
@@ -146,7 +163,7 @@ function Wizard() {
     setLogo({ data, type: opt.type || 'image/png', preview: data }); setErr('');
   };
 
-  const emailOk = adm.email.trim().toLowerCase() === ev.verified;
+  const emailOk = !!ev.verified && adm.email.trim().toLowerCase() === ev.verified;
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(adm.email.trim());
   const sendCode = async () => {
     setEv((v) => ({ ...v, busy: true, err: '', msg: '' }));
@@ -167,6 +184,7 @@ function Wizard() {
     // confirmation page: it confirms the payment by itself even if Mercado Pago never sends the visitor back (Pix, boleto).
     const pay = window.open('', '_blank');
     try {
+      await call('', { action: 'company', email: adm.email.trim(), data: { legal_name: co.legal, cnpj: co.cnpj, phone: co.phone, zip: co.zip, street: co.street, number: co.number, complement: co.comp, district: co.district, city: co.city, state: co.uf } }, EMAIL_FN);
       const d = await call('signup', {
         plan_id: planId,
         billing_cycle: cycle,
@@ -264,6 +282,26 @@ function Wizard() {
                   </div>
                 </div>
               </div>
+                <div className="space-y-4 rounded-lg border border-border p-4 md:col-span-2">
+                  <p className="text-[13px] font-medium">Dados cadastrais <span className="font-normal text-muted-foreground">(usados no recibo e nos documentos de pagamento)</span></p>
+                  <div className="space-y-1.5"><Label htmlFor="cl">Razão social</Label><Input id="cl" maxLength={120} value={co.legal} onChange={(e) => setCo({ ...co, legal: e.target.value })} /></div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5"><Label htmlFor="cj">CNPJ</Label><Input id="cj" inputMode="numeric" maxLength={18} placeholder="00.000.000/0000-00" value={co.cnpj} onChange={(e) => setCo({ ...co, cnpj: maskCnpj(e.target.value) })} /></div>
+                    <div className="space-y-1.5"><Label htmlFor="ct">Telefone <span className="font-normal text-muted-foreground">(opcional)</span></Label><Input id="ct" inputMode="tel" maxLength={15} placeholder="(11) 99999-9999" value={co.phone} onChange={(e) => setCo({ ...co, phone: maskPhone(e.target.value) })} /></div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[150px_1fr_110px]">
+                    <div className="space-y-1.5"><Label htmlFor="cz">CEP</Label><Input id="cz" inputMode="numeric" maxLength={9} placeholder="00000-000" value={co.zip} onChange={(e) => setCo({ ...co, zip: maskCep(e.target.value) })} /></div>
+                    <div className="space-y-1.5"><Label htmlFor="cs">Endereço</Label><Input id="cs" maxLength={120} value={co.street} onChange={(e) => setCo({ ...co, street: e.target.value })} /></div>
+                    <div className="space-y-1.5"><Label htmlFor="cu">Número</Label><Input id="cu" maxLength={12} value={co.number} onChange={(e) => setCo({ ...co, number: e.target.value })} /></div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_90px]">
+                    <div className="space-y-1.5"><Label htmlFor="cm">Complemento <span className="font-normal text-muted-foreground">(opcional)</span></Label><Input id="cm" maxLength={60} value={co.comp} onChange={(e) => setCo({ ...co, comp: e.target.value })} /></div>
+                    <div className="space-y-1.5"><Label htmlFor="cb">Bairro</Label><Input id="cb" maxLength={80} value={co.district} onChange={(e) => setCo({ ...co, district: e.target.value })} /></div>
+                    <div className="space-y-1.5"><Label htmlFor="cc">Cidade</Label><Input id="cc" maxLength={80} value={co.city} onChange={(e) => setCo({ ...co, city: e.target.value })} /></div>
+                    <div className="space-y-1.5"><Label htmlFor="cf">UF</Label>
+                      <select id="cf" value={co.uf} onChange={(e) => setCo({ ...co, uf: e.target.value })} className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm"><option value="">--</option>{UFS.map((u) => <option key={u} value={u}>{u}</option>)}</select></div>
+                  </div>
+                </div>
             </div>
           ) : null}
 
@@ -296,7 +334,7 @@ function Wizard() {
           {step === 3 && plan ? (
             <div className="space-y-4">
               <dl className="divide-y divide-border rounded-[10px] border border-border text-sm">
-                {[['Plano', `${plan.name} · ${brl(priceOf(plan, cycle))}${periodOf(cycle)}`], ['Forma de pagamento', CYCLE_OPTIONS.find((c) => c.id === cycle)!.label], ['Empresa', company.name], ['Cores', `${company.primary} · ${company.secondary}`], ['Logo', logo ? 'Enviada' : 'Sem logo'], ['Administrador', `${adm.name} (${adm.email})`]].map(([k, v]) => (
+                {[['Plano', `${plan.name} · ${brl(priceOf(plan, cycle))}${periodOf(cycle)}`], ['Forma de pagamento', CYCLE_OPTIONS.find((c) => c.id === cycle)!.label], ['Empresa', company.name], ['Razão social', co.legal], ['CNPJ', co.cnpj], ['Cores', `${company.primary} · ${company.secondary}`], ['Logo', logo ? 'Enviada' : 'Sem logo'], ['Administrador', `${adm.name} (${adm.email})`]].map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-4 px-4 py-3"><dt className="text-muted-foreground">{k}</dt><dd className="text-right font-medium">{v}</dd></div>
                 ))}
               </dl>
@@ -367,18 +405,20 @@ function ReturnView() {
     return () => { stop = true; };
   }, [id, token, nonce]);
 
-  const box = (title: string, text: React.ReactNode, extra?: React.ReactNode, icon?: React.ReactNode) => (
-    <div className="mx-auto max-w-lg rounded-[10px] border border-border bg-card p-8 text-center">
-      <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-muted">{icon}</div>
-      <h1 className="text-xl font-semibold">{title}</h1>
-      <div className="mt-2 text-sm text-muted-foreground">{text}</div>
-      {extra ? <div className="mt-6">{extra}</div> : null}
+  const box = (title: string, text: React.ReactNode, extra?: React.ReactNode, icon?: React.ReactNode, ok = false) => (
+    <div className="flex min-h-[70vh] items-center justify-center">
+      <div className="w-full max-w-xl rounded-[14px] border border-border bg-card px-8 py-12 text-center sm:px-12">
+        <div className={ok ? 'mx-auto mb-6 grid h-24 w-24 place-items-center rounded-full bg-emerald-600 text-white' : 'mx-auto mb-5 grid h-14 w-14 place-items-center rounded-full bg-muted'}>{icon}</div>
+        <h1 className={ok ? 'text-3xl font-semibold sm:text-4xl' : 'text-2xl font-semibold'}>{title}</h1>
+        <div className={ok ? 'mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg' : 'mt-3 text-base text-muted-foreground'}>{text}</div>
+        {extra ? <div className="mt-8">{extra}</div> : null}
+      </div>
     </div>
   );
 
   if (!id || !token) return box('Cadastro não encontrado', 'Abra o link que recebeu ao concluir o pagamento, neste mesmo navegador.', <Button asChild><a href="/assinar">Começar de novo</a></Button>, <X className="h-5 w-5" />);
   if (state.error) return box('Não foi possível consultar', state.error, null, <X className="h-5 w-5" />);
-  if (state.status === 'active') return box('Empresa criada!', <>O pagamento foi confirmado e <b className="text-foreground">{state.company_name}</b> já está pronta. Entre com o e-mail <b className="text-foreground">{state.admin_email}</b> e a senha que você definiu.</>, <Button asChild><a href={`/auth?company=${encodeURIComponent(state.slug || '')}`}>Entrar no ewvon</a></Button>, <Check className="h-5 w-5" />);
+  if (state.status === 'active') return box('Empresa criada!', <>O pagamento foi confirmado e <b className="text-foreground">{state.company_name}</b> já está pronta. Enviamos o recibo e os dados do cadastro para o seu e-mail. Entre com o e-mail <b className="text-foreground">{state.admin_email}</b> e a senha que você definiu.</>, <Button size="lg" asChild><a href={`/auth?company=${encodeURIComponent(state.slug || '')}`}>Entrar no ewvon</a></Button>, <Check className="h-12 w-12" strokeWidth={3} />, true);
   if (state.status === 'canceled') return box('Pagamento não aprovado', 'O Mercado Pago não aprovou o pagamento e a assinatura foi encerrada. Nenhuma empresa foi criada e nada foi cobrado. Tente de novo com outro cartão de crédito, de preferência um que você já use no Mercado Pago.', <Button asChild><a href="/assinar">Tentar novamente</a></Button>, <X className="h-5 w-5" />);
   if (state.status === 'expired') return box('Cadastro encerrado', 'O pagamento não foi concluído em 3 dias. Nenhuma cobrança foi feita. Você pode começar de novo.', <Button asChild><a href="/assinar">Assinar novamente</a></Button>, <X className="h-5 w-5" />);
   if (state.status === 'provisioning' || state.status === 'failed') return box('Pagamento confirmado', 'Estamos criando a sua empresa. Isso leva poucos instantes; esta página atualiza sozinha.', null, <Loader2 className="h-5 w-5 animate-spin" />);

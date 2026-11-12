@@ -22,6 +22,14 @@ const limited = (key: string, max: number, windowMs = 10 * 60_000) => {
   list.push(now); hits.set(key, list); return list.length > max;
 };
 
+const cnpjOk = (v: string) => {
+  const d = v.replace(/\D/g, ''); if (d.length !== 14 || /^(\d)\1+$/.test(d)) return false;
+  const calc = (len: number) => { let sum = 0, pos = len - 7; for (let i = len; i >= 1; i--) { sum += Number(d[len - i]) * pos--; if (pos < 2) pos = 9; } const r = sum % 11; return r < 2 ? 0 : 11 - r; };
+  return calc(12) === Number(d[12]) && calc(13) === Number(d[13]);
+};
+const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+const txt = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : '');
+
 Deno.serve(async (req) => {
   const headers = { ...cors(req.headers.get('Origin')), 'Content-Type': 'application/json' };
   const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers });
@@ -78,6 +86,26 @@ Deno.serve(async (req) => {
         return reply({ error: 'Código incorreto.' }, 400);
       }
       await admin.from('signup_email_codes').update({ verified_at: new Date().toISOString(), attempts: 0 }).eq('email', email);
+      return reply({ ok: true });
+    }
+    if (body.action === 'company') {
+      if (limited(ip + ':c', 20)) return reply({ error: 'Muitas tentativas. Tente novamente em alguns minutos.' }, 429);
+      const { data: row } = await admin.from('signup_email_codes').select('verified_at').eq('email', email).maybeSingle();
+      if (!row?.verified_at || Date.now() - new Date(row.verified_at).getTime() > 3_300_000) return reply({ error: 'Confirme o e-mail novamente para continuar.' }, 403);
+      const c = body.data || {};
+      const out = {
+        legal_name: txt(c.legal_name, 120), cnpj: txt(c.cnpj, 20).replace(/\D/g, ''), phone: txt(c.phone, 20).replace(/\D/g, ''),
+        zip: txt(c.zip, 12).replace(/\D/g, ''), street: txt(c.street, 120), number: txt(c.number, 12), complement: txt(c.complement, 60),
+        district: txt(c.district, 80), city: txt(c.city, 80), state: txt(c.state, 2).toUpperCase(),
+      };
+      if (out.legal_name.length < 3) return reply({ error: 'Informe a razão social (nome da empresa).' }, 400);
+      if (!cnpjOk(out.cnpj)) return reply({ error: 'CNPJ inválido. Confira os números.' }, 400);
+      if (out.zip.length !== 8) return reply({ error: 'Informe o CEP com 8 números.' }, 400);
+      if (out.street.length < 3 || !out.number || out.district.length < 2 || out.city.length < 2) return reply({ error: 'Preencha o endereço completo da empresa.' }, 400);
+      if (!UFS.includes(out.state)) return reply({ error: 'Informe a UF (ex.: SP).' }, 400);
+      if (out.phone && (out.phone.length < 10 || out.phone.length > 11)) return reply({ error: 'Telefone inválido. Use DDD + número.' }, 400);
+      const { error } = await admin.from('signup_email_codes').update({ company_data: out }).eq('email', email);
+      if (error) { console.error(error); return reply({ error: 'Não foi possível salvar os dados da empresa.' }, 500); }
       return reply({ ok: true });
     }
     return reply({ error: 'Pedido inválido' }, 400);
