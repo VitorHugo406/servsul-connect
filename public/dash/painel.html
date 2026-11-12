@@ -65,10 +65,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .tip[hidden]{display:none}
 .tip b{display:block;font-weight:700}
 .tip span{color:#C8D0DE;font-size:11.5px}
-.tip span.hrl{display:block;margin-top:2px;color:#fff}
-.av{position:relative}
-.av.hr-out{opacity:.42}
-.av.hr-late::after{content:'';position:absolute;right:-1px;top:-1px;width:10px;height:10px;border-radius:50%;background:#F5A524;border:2px solid #fff;box-sizing:border-box}
 .hrsum{font-size:12px;opacity:.85}
 .msg3d{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:30px;color:var(--muted);font-weight:600}
 .msg3d[hidden]{display:none}
@@ -2863,8 +2859,7 @@ function setHover(t,e){
   let tt=t.tipT,ts=t.tipS;
   if(t.kind==='room'){const room=ROOMS[t.i],st=roomStatus(room,CLOCK.min);ts=(st.busy?'Ocupada até '+hhmm(st.cur.fim):'Livre agora')+' · clique para ver os horários'}
   if(EDIT){const k=editKey(t);ts=k&&EG.has(k)?'Arraste para mover':'Conclua a edição para abrir'}
-  const hl=t.kind==='person'?hrHtml(EMPS[t.id]):'';
-  tipEl.innerHTML='<b>'+esc(tt)+'</b><span>'+esc(ts||'')+'</span>'+hl;tipEl.hidden=false;
+  tipEl.innerHTML='<b>'+esc(tt)+'</b><span>'+esc(ts||'')+'</span>';tipEl.hidden=false;
   const rc=stageEl.getBoundingClientRect(),x=e.clientX-rc.left+16,y=e.clientY-rc.top+16;
   tipEl.style.left=clamp(x,8,rc.width-tipEl.offsetWidth-8)+'px';tipEl.style.top=clamp(y,8,rc.height-tipEl.offsetHeight-8)+'px';
 }
@@ -2938,7 +2933,7 @@ function pScreen(){
 function leadSec(d){
   const ld=d.act.filter(e=>leadLv(e)>0).sort((a,b)=>leadLv(b)-leadLv(a)||String(a.nome).localeCompare(String(b.nome),'pt-BR'));
   if(!ld.length)return '';
-  return '<div class="sec"><h3>Lideranças ('+ld.length+')</h3><div class="rows">'+ld.map(e=>'<button type="button" class="row" data-person="'+e._i+'"><span class="av\'+hrCls(e)+\'" style="background:\'+avc(e.nome)+\'">'+esc(ini(e.nome))+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(e.nome||'Sem nome')+'</span><span class="s" style="display:block">'+esc(e.cargo||'—')+'</span></span><span class="tg" style="background:#FFF3C4;color:#7A5200">'+LEADN[leadLv(e)]+'</span></button>').join('')+'</div><p class="note" style="margin-top:6px">No 3D: coroa é diretoria, losango é gerência e bandeira é coordenação.</p></div>';
+  return '<div class="sec"><h3>Lideranças ('+ld.length+')</h3><div class="rows">'+ld.map(e=>'<button type="button" class="row" data-person="'+e._i+'"><span class="av" style="background:'+avc(e.nome)+'">'+esc(ini(e.nome))+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(e.nome||'Sem nome')+'</span><span class="s" style="display:block">'+esc(e.cargo||'—')+'</span></span><span class="tg" style="background:#FFF3C4;color:#7A5200">'+LEADN[leadLv(e)]+'</span></button>').join('')+'</div><p class="note" style="margin-top:6px">No 3D: coroa é diretoria, losango é gerência e bandeira é coordenação.</p></div>';
 }
 function pDept(name){
   const d=DMAP.get(name);
@@ -2952,7 +2947,7 @@ function pDept(name){
     '<div class="k"><small>Absenteísmo</small><b>'+(HAS.faltas?fmtPct(d.abs):'—')+'</b></div></div>'+
     (HAS.adm?'<div class="sec"><h3>Headcount nos últimos '+WIN+' meses</h3>'+colsHtml({kind:'series',labels:d.mo.map(o=>MES[o.m]),values:d.mo.map(o=>o.hc)})+'</div>':'')+
     leadSec(d)+'<div class="sec"><h3>Pessoas ('+d.act.length+')</h3><div class="rows">'+d.act.slice().sort((a,b)=>(b.faltas||0)-(a.faltas||0)||String(a.nome).localeCompare(String(b.nome),'pt-BR')).slice(0,80).map(e=>
-      '<button type="button" class="row" data-person="'+e._i+'"><span class="av\'+hrCls(e)+\'" style="background:\'+avc(e.nome)+\'">'+esc(ini(e.nome))+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(e.nome||'Sem nome')+'</span><span class="s" style="display:block">'+esc(e.cargo||'—')+'</span></span>'+(HAS.faltas?faltaTag(e.faltas||0):'')+'</button>').join('')+'</div>'+(d.act.length>80?'<p class="note" style="margin-top:6px">Mostrando 80 de '+d.act.length+'. Use a busca no topo para achar alguém.</p>':'')+'</div>';
+      '<button type="button" class="row" data-person="'+e._i+'"><span class="av" style="background:'+avc(e.nome)+'">'+esc(ini(e.nome))+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(e.nome||'Sem nome')+'</span><span class="s" style="display:block">'+esc(e.cargo||'—')+'</span></span>'+(HAS.faltas?faltaTag(e.faltas||0):'')+'</button>').join('')+'</div>'+(d.act.length>80?'<p class="note" style="margin-top:6px">Mostrando 80 de '+d.act.length+'. Use a busca no topo para achar alguém.</p>':'')+'</div>';
   return {title:name,sub:floorLabel(CFG.deptFloor[name])+' · '+Math.min(400,d.act.length)+' pessoas em 3D',html:h,back:{kind:'depts'}};
 }
 function tenure(d){const m=Math.max(0,Math.floor((today-d)/(30.44*86400000))),y=Math.floor(m/12),r=m%12;return (y?y+(y>1?' anos':' ano'):'')+(y&&r?' e ':'')+(r||!y?r+(r===1?' mês':' meses'):'')}
@@ -2966,9 +2961,8 @@ function pPerson(id){
       cmp='<div class="sec"><h3>Salário no departamento</h3><p style="font-weight:700">'+(Math.abs(df)<1?'Na mediana de '+esc(e.depto):fmtPct(Math.abs(df))+(df>0?' acima':' abaixo')+' da mediana de '+esc(e.depto))+'</p><p class="note">Mediana: '+fmtBRL(med)+'</p></div>'}
   }
   const active=isActive(e);
-  const h='<div style="display:flex;gap:12px;align-items:center"><span class="av lg\'+hrCls(e)+\'" style="background:\'+avc(e.nome)+\'">'+esc(ini(e.nome))+'</span><div><div style="font-weight:800;font-size:16px">'+esc(e.cargo||'Cargo não informado')+'</div><div class="note">'+esc(e.depto)+'</div></div></div>'+
-    '<div class="sp">'+(active?'<span class="tg ok">Ativo</span>'+(e.st?'<span class="tg">'+esc(e.st)+'</span>':''):'<span class="tg mut">Desligado em '+fmtDate(e.dem)+'</span>')+(hrOut(e)?'<span class="tg warn">'+HR_LAB[e.hr.status]+'</span>':e.hr&&e.hr.status==='late'?'<span class="tg warn">Atrasado</span>':'')+(HAS.faltas?faltaTag(e.faltas||0):'')+((HAS.he&&(e.he||0)>=12)?'<span class="tg warn">'+e.he+' h extras</span>':'')+(leadLv(e)?'<span class="tg" style="background:#FFF3C4;color:#7A5200">'+LEADN[leadLv(e)]+'</span>':'')+'</div>'+
-    (hrInfo(e).length?'<div class="note" style="margin:8px 0 0;display:grid;gap:2px">'+hrInfo(e).map(x=>'<span'+(x.warn?' style="color:#C98508;font-weight:700"':'')+'>'+esc(x.t)+'</span>').join('')+'</div>':'')+
+  const h='<div style="display:flex;gap:12px;align-items:center"><span class="av lg" style="background:'+avc(e.nome)+'">'+esc(ini(e.nome))+'</span><div><div style="font-weight:800;font-size:16px">'+esc(e.cargo||'Cargo não informado')+'</div><div class="note">'+esc(e.depto)+'</div></div></div>'+
+    '<div class="sp">'+(active?'<span class="tg ok">Ativo</span>'+(e.st?'<span class="tg">'+esc(e.st)+'</span>':''):'<span class="tg mut">Desligado em '+fmtDate(e.dem)+'</span>')+(HAS.faltas?faltaTag(e.faltas||0):'')+((HAS.he&&(e.he||0)>=12)?'<span class="tg warn">'+e.he+' h extras</span>':'')+(leadLv(e)?'<span class="tg" style="background:#FFF3C4;color:#7A5200">'+LEADN[leadLv(e)]+'</span>':'')+'</div>'+
     '<div class="kgrid">'+
     '<div class="k"><small>Admissão</small><b>'+(e.afk?'—':fmtDate(e.adm))+'</b></div>'+
     '<div class="k"><small>Tempo de casa</small><b>'+(e.afk?'—':esc(tenureFrom(e)))+'</b></div>'+
@@ -2989,7 +2983,7 @@ function pRoom(i){
   const left=(m)=>((m-DAY0)/(DAY1-DAY0)*100).toFixed(2)+'%',wd=(a,b)=>((b-a)/(DAY1-DAY0)*100).toFixed(2)+'%';
   let h='<div class="state '+(st.busy?'busy':'free')+'"><i></i><div><b>'+(st.busy?'Ocupada':'Livre')+' às '+hhmm(CLOCK.min)+'</b><span>'+
     (st.busy?esc(st.cur.assunto||'Reunião')+' · até '+hhmm(st.cur.fim)+(st.cur.resp?' · '+esc(st.cur.resp):''):(st.next?'Próxima reunião às '+hhmm(st.next.ini):'Sem mais reuniões hoje'))+'</span></div></div>';
-  if(st.busy&&st.cur.ppl&&st.cur.ppl.length){const ix=pplMatch(st.cur.ppl);if(ix.length)h+='<div class="sec"><h3>Na sala agora</h3><div class="rows">'+ix.map(i=>{const e=EMPS[i];return '<button type="button" class="row" data-person="'+i+'"><span class="av\'+hrCls(e)+\'" style="background:\'+avc(e.nome)+\'">'+esc(ini(e.nome))+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(e.nome||'Sem nome')+'</span><span class="s" style="display:block">'+esc(e.cargo||e.depto)+'</span></span><span></span></button>'}).join('')+'</div></div>'}
+  if(st.busy&&st.cur.ppl&&st.cur.ppl.length){const ix=pplMatch(st.cur.ppl);if(ix.length)h+='<div class="sec"><h3>Na sala agora</h3><div class="rows">'+ix.map(i=>{const e=EMPS[i];return '<button type="button" class="row" data-person="'+i+'"><span class="av" style="background:'+avc(e.nome)+'">'+esc(ini(e.nome))+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(e.nome||'Sem nome')+'</span><span class="s" style="display:block">'+esc(e.cargo||e.depto)+'</span></span><span></span></button>'}).join('')+'</div></div>'}
   h+='<div class="sec"><h3>Dia de hoje</h3><div class="tl">'+room.meets.map(m=>'<i style="left:'+left(Math.max(DAY0,m.ini))+';width:'+wd(Math.max(DAY0,m.ini),Math.min(DAY1,m.fim))+'" title="'+hhmm(m.ini)+' às '+hhmm(m.fim)+'"></i>').join('')+'<em style="left:'+left(clamp(CLOCK.min,DAY0,DAY1))+'"></em></div><div class="tlt"><span>08h</span><span>10h</span><span>12h</span><span>14h</span><span>16h</span><span>18h</span></div></div>';
   h+='<div class="sec"><h3>Reuniões</h3>'+(room.meets.length?'<div class="rows">'+room.meets.map(m=>'<div class="row" style="cursor:default"><span class="tg '+(CLOCK.min>=m.ini&&CLOCK.min<m.fim?'bad':CLOCK.min>=m.fim?'mut':'warn')+'">'+hhmm(m.ini)+'–'+hhmm(m.fim)+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(m.assunto||'Reunião')+'</span><span class="s" style="display:block">'+esc(m.resp||'')+(m.n?' · '+m.n+' pessoas':'')+'</span>'+(m.desc?'<span class="s" style="display:block;white-space:normal">'+esc(m.desc)+'</span>':'')+'</span><span></span></div>').join('')+'</div>':'<p class="note">Nenhuma reunião marcada.</p>')+'</div>';
   h+='<div class="sec"><h3>Horários livres</h3>'+(fw.length?'<div class="sp">'+fw.map(w=>'<span class="tg ok">'+hhmm(w[0])+'–'+hhmm(w[1])+'</span>').join('')+'</div>':'<p class="note">Sem horários livres entre 08h e 18h.</p>')+'</div>';
@@ -3011,7 +3005,7 @@ function pDepts(){
 function pReception(){
   const staff=EMPS.filter(e=>isActive(e)&&/recep/i.test((e.cargo||'')+' '+(e.depto||'')));
   let h='<div class="state free"><i></i><div><b>Balcão de atendimento</b><span>'+esc(floorLabel(CUR))+'</span></div></div>';
-  h+='<div class="sec"><h3>Equipe da recepção ('+staff.length+')</h3>'+(staff.length?'<div class="rows">'+staff.map(e=>'<button type="button" class="row" data-person="'+e._i+'"><span class="av\'+hrCls(e)+\'" style="background:\'+avc(e.nome)+\'">'+esc(ini(e.nome))+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(e.nome||'Sem nome')+'</span><span class="s" style="display:block">'+esc(e.cargo||e.depto)+'</span></span><span></span></button>').join('')+'</div>':'<p class="note">Nenhum colaborador com cargo de recepção na planilha. Cadastre o cargo Recepcionista para ver a equipe aqui.</p>')+'</div>';
+  h+='<div class="sec"><h3>Equipe da recepção ('+staff.length+')</h3>'+(staff.length?'<div class="rows">'+staff.map(e=>'<button type="button" class="row" data-person="'+e._i+'"><span class="av" style="background:'+avc(e.nome)+'">'+esc(ini(e.nome))+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(e.nome||'Sem nome')+'</span><span class="s" style="display:block">'+esc(e.cargo||e.depto)+'</span></span><span></span></button>').join('')+'</div>':'<p class="note">Nenhum colaborador com cargo de recepção na planilha. Cadastre o cargo Recepcionista para ver a equipe aqui.</p>')+'</div>';
   return {title:'Recepção',sub:floorLabel(CUR),html:h,back:null};
 }
 function pPayroll(){
@@ -3082,7 +3076,7 @@ $('#q').addEventListener('input',e=>{
   const q=norm(e.target.value),box=$('#qres');
   if(q.length<2){box.hidden=true;return}
   const r=EMPS.filter(x=>isActive(x)&&norm(x.nome||'').includes(q)).slice(0,8);
-  box.innerHTML=r.length?r.map(x=>'<button type="button" class="row" data-qp="'+x._i+'"><span class="av\'+hrCls(x)+\'" style="background:\'+avc(x.nome)+\'">'+esc(ini(x.nome))+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(x.nome)+'</span><span class="s" style="display:block">'+esc(x.depto)+'</span></span><span></span></button>').join(''):'<p class="note" style="padding:10px">Ninguém encontrado.</p>';
+  box.innerHTML=r.length?r.map(x=>'<button type="button" class="row" data-qp="'+x._i+'"><span class="av" style="background:'+avc(x.nome)+'">'+esc(ini(x.nome))+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(x.nome)+'</span><span class="s" style="display:block">'+esc(x.depto)+'</span></span><span></span></button>').join(''):'<p class="note" style="padding:10px">Ninguém encontrado.</p>';
   box.hidden=false;
 });
 $('#qres').addEventListener('click',e=>{const b=e.target.closest('[data-qp]');if(b){focusOn({kind:'person',id:+b.dataset.qp});$('#q').value=''}});
@@ -3101,7 +3095,7 @@ function greet(){
   const h=new Date().getHours(),sd=h<12?'Bom dia':h<18?'Boa tarde':'Boa noite';
   const busy=ROOMS.filter(r=>roomStatus(r,CLOCK.min).busy).length;
   const fl=floorObj(CUR);
-  $('#hello').innerHTML='<h1>'+sd+(EWV_CO?', '+esc(EWV_CO):'')+'</h1><p><span class="live"></span>'+(fl?esc(floorLabel(CUR)):'')+'</p><p>'+fmtInt(S.active)+' colaboradores ativos · '+(ROOMS.length?busy+' de '+ROOMS.length+' salas ocupadas às '+hhmm(CLOCK.min):'salas de reunião: —')+'</p>'+(hrSummary()?'<p class="hrsum">'+hrSummary()+'</p>':'')+upd+'<p style="margin-top:6px">Clique no telão, em uma sala, mesa, pessoa ou no arquivo da folha. Arraste para girar.</p>';
+  $('#hello').innerHTML='<h1>'+sd+(EWV_CO?', '+esc(EWV_CO):'')+'</h1><p><span class="live"></span>'+(fl?esc(floorLabel(CUR)):'')+'</p><p>'+fmtInt(S.active)+' colaboradores ativos · '+(ROOMS.length?busy+' de '+ROOMS.length+' salas ocupadas às '+hhmm(CLOCK.min):'salas de reunião: —')+'</p>'+(EWV_APIMODE?'<p class="hrsum">Fonte: '+esc(SOURCE)+' \u00b7 '+fmtInt(EMPS.length)+' colaboradores</p>':'')+upd+'<p style="margin-top:6px">Clique no telão, em uma sala, mesa, pessoa ou no arquivo da folha. Arraste para girar.</p>';
   $('#sampleTag').hidden=true;
 }
 
@@ -4652,7 +4646,7 @@ const LN=()=>Object.assign({},LUNCH_DEF,CFG.lunch||{});
 const LOUNGEC={x:-14.5,z:10.3};
 let WALK=[],CUPS=[],LSL=null;
 function lunchAway(e,min){
-  if(!isActive(e)||hrOut(e))return false;if(FORCE[e._i]!=null)return FORCE[e._i];
+  if(!isActive(e))return false;if(FORCE[e._i]!=null)return FORCE[e._i];
   if(e.alm!=null)return !!e.alm;
   if(e.almIni!=null&&e.almFim!=null)return min>=e.almIni&&min<e.almFim;
   const L=LN();if(!L.on)return false;
@@ -4754,10 +4748,10 @@ function pathTo(P,slot,rev,mt){
   else{const g=elevGeom();pts=[home,g.out,g.door,g.in]}
   return rev?pts.slice().reverse():pts;
 }
-function goAway(P,imm,mt,hr){
-  const slot=hr?null:mt?meetSlot(mt):awaySlot(P);P.away=true;P.hr=!!hr;P.slot=slot;P.mt=mt||null;
+function goAway(P,imm,mt){
+  const slot=mt?meetSlot(mt):awaySlot(P);P.away=true;P.slot=slot;P.mt=mt||null;
   if(P.tag)P.tag.visible=false;
-  if(!mt&&!hr)showCup(P,true);P.lead=lookOf(P.e).lead;
+  if(!mt)showCup(P,true);P.lead=lookOf(P.e).lead;
   if(imm){P.model.visible=false;if(slot)placeAway(P,slot);else{P.cx=P.hx;P.cz=P.hz;P.cy=0}return}
   P.busy=true;P.model.visible=false;
   startWalk({e:P.e,P,el:!slot,hold:slot?0:1.1,pts:pathTo(P,slot,false,mt),done:k=>{
@@ -4768,8 +4762,8 @@ function goAway(P,imm,mt,hr){
 }
 function goBack(P,imm){
   const slot=P.slot,mt=P.mt;
-  if(imm){clearAlt(P);releaseSlot(P);P.away=false;P.hr=false;P.slot=null;P.mt=null;P.model.visible=true;P.x=P.hx;P.z=P.hz;showCup(P,false);return}
-  clearAlt(P);releaseSlot(P);P.away=false;P.hr=false;P.slot=null;P.mt=null;P.busy=true;
+  if(imm){clearAlt(P);releaseSlot(P);P.away=false;P.slot=null;P.mt=null;P.model.visible=true;P.x=P.hx;P.z=P.hz;showCup(P,false);return}
+  clearAlt(P);releaseSlot(P);P.away=false;P.slot=null;P.mt=null;P.busy=true;
   const go=()=>startWalk({e:P.e,P,el:!slot,pts:pathTo(P,slot,true,mt),done:k=>{
     disposeWalker(k);P.busy=false;P.model.visible=true;P.x=P.hx;P.z=P.hz;showCup(P,false);
     setTimeout(()=>lunchSync(false),0);
@@ -4782,10 +4776,10 @@ function lunchSync(imm){
   PERS.forEach(P=>{
     if(P.rec||!P.e||P.caf||P.busy)return;
     if(P.hx==null){P.hx=P.x;P.hz=P.z}
-    const ho=hrOut(P.e),mt=ho?null:(MEETM.get(P.e._i)||null),kind=ho?'h':mt?'m':(lunchAway(P.e,CLOCK.min)?'l':null);
-    if(kind&&!P.away)goAway(P,imm,mt,ho);
+    const mt=MEETM.get(P.e._i)||null,kind=mt?'m':(lunchAway(P.e,CLOCK.min)?'l':null);
+    if(kind&&!P.away)goAway(P,imm,mt);
     else if(!kind&&P.away)goBack(P,imm);
-    else if(kind&&P.away&&((kind==='m')!==!!P.mt||(kind==='h')!==!!P.hr||(mt&&P.mt&&P.mt.key!==mt.key))){goBack(P,imm);if(imm)goAway(P,imm,mt,ho)}
+    else if(kind&&P.away&&((kind==='m')!==!!P.mt||(mt&&P.mt&&P.mt.key!==mt.key))){goBack(P,imm);if(imm)goAway(P,imm,mt)}
   });
   cafeSync(imm);meetSync(imm);
   if(FOCUS)applyLabelVis();
@@ -5076,7 +5070,7 @@ const serE=e=>[e.nome,e.depto,e.cargo,isFinite(e.sal)?e.sal:null,iso(e.adm),iso(
 const sigE=e=>serE(e).slice(0,10).join('|');
 const deE=a=>Object.assign({nome:a[0],depto:a[1],cargo:a[2],sal:a[3]==null?NaN:a[3],adm:toDate(a[4]),dem:toDate(a[5]),faltas:a[6],he:a[7],sexo:a[8],cc:a[9]||'',alm:a[10]==null?null:a[10],almIni:a[11]==null?null:a[11],almFim:a[12]==null?null:a[12]},deX(a));
 function saveSrcs(){if(EWVX)return;try{localStorage.setItem(SKEY,JSON.stringify(SRCS.map(s=>Object.assign({},s,{emps:s.emps.map(serE)}))))}catch(e){}}
-function loadSrcs(){if(EWVX){SRCS=[];return}
+function loadSrcs(){if(EWVX){if(!EWV_APIMODE)SRCS=[];return}
   try{const j=JSON.parse(localStorage.getItem(SKEY)||'null');SRCS=Array.isArray(j)?j.map(s=>Object.assign(s,{emps:(s.emps||[]).map(deE).filter(e=>e.adm)})):[]}catch(e){SRCS=[]}
   {const last=new Map(),ky=s=>s.cfg.preset+'|'+s.cfg.url+'|'+(s.cfg.urlR||'');SRCS.forEach(s=>{if(s.kind==='api'&&s.cfg){const o=last.get(ky(s));if(!o||(s.at||0)>=(o.at||0))last.set(ky(s),s)}});SRCS=SRCS.filter(s=>!(s.kind==='api'&&s.cfg)||last.get(ky(s))===s)}
   if(!SRCS.length&&SOURCE!=='exemplo'&&EMPS.length)SRCS=[{id:'file:anterior',label:SOURCE,kind:'file',cfg:null,emps:EMPS.slice(),rooms:ROOMSRC!=='exemplo'?ROOMS.slice():[],map:MAPE||{},at:Date.now(),msgs:[],err:''}];
@@ -5351,7 +5345,7 @@ async function apiRun(src){
   }
 }
 function refreshSrc(id){const r=SRCS.find(s=>s.id===id);return r&&r.kind==='api'?apiRun({id:r.id,label:r.label,kind:'api',cfg:r.cfg}):null}
-async function bootRefresh(){for(const s of SRCS.filter(s=>s.kind==='api'))await refreshSrc(s.id)}
+async function bootRefresh(){for(const s of SRCS.filter(s=>s.kind==='api'&&s.cfg))await refreshSrc(s.id)}
 function apiReset(){
   apiEditId=null;$('#apiName').value='';$('#apiPreset').value='custom';$('#apiUrl').value='';$('#apiUrlR').value='';$('#apiHdr').value='';$('#apiPath').value='data';$('#apiEvery').value='1';if(window.sysReset)sysReset();
   $('#apiHdr').placeholder='Cabeçalhos, um por linha\n'+PRE.custom.hdr;$('#apiTitle').textContent='Adicionar uma API';$('#apiDeepRow').hidden=true;$('#apiDeep').checked=true;$('#apiGo').textContent='Adicionar e carregar';$('#apiCancel').hidden=true;
@@ -5681,46 +5675,13 @@ function boot(){
   requestAnimationFrame(frame);srcUI();apiSchedule();bootRefresh();
   window.__dp={THEME,focusOn,cam,PERS,fadeSwitch,setEdit,addExtra,EG,apiRun,ingest,get SRCS(){return SRCS},scr:(x,z)=>{const v=new THREE.Vector3(x,0,z).project(camera),r=cv.getBoundingClientRect();return {x:r.left+(v.x+1)/2*r.width,y:r.top+(1-v.y)/2*r.height}},get CFG(){return CFG},get CUR(){return CUR},get fail(){return !OK},get EMPS(){return EMPS},THEME,applyTheme,applyWallTex,buildWorld,elevTrip,elevOpen,saveCfg,applyTheme,lunchSync,apiSchedule,refreshSrc,autoTick};
 }
-/* ===== ponto / RH (hr_people_status): só aparece quando o ewvon envia dados de RH ===== */
-const HR_LAB={present:'Presente',late:'Atrasado',absent:'Falta',vacation:'Férias',leave:'Afastado',off:'Folga'};
-function hrOut(e){return !!(e&&e.hr&&(e.hr.status==='absent'||e.hr.status==='vacation'||e.hr.status==='leave'))}
-function hrCls(e){return !e||!e.hr?'':hrOut(e)?' hr-out':e.hr.status==='late'?' hr-late':''}
-function hrHM(iso){const d=new Date(iso);return isNaN(d)?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
-function hrBank(m){if(m==null||!isFinite(m))return '';const a=Math.abs(Math.round(m));return (m<0?'\u2212':'+')+String(Math.floor(a/60)).padStart(2,'0')+'h'+String(a%60).padStart(2,'0')}
-function hrNum(v){return v==null||v===''||!isFinite(+v)?null:+v}
-/* linhas de informação de ponto/RH da pessoa: [{t,warn}] (só o que existe) */
-function hrInfo(e){
-  const o=[];if(!e||!e.hr)return o;
-  const h=e.hr,d=h.data||{},sameDay=h.clockIn&&new Date(h.clockIn).toDateString()===new Date().toDateString();
-  if(HR_LAB[h.status]){let t='Ponto: '+HR_LAB[h.status];if((h.status==='present'||h.status==='late')&&sameDay)t+=(h.status==='present'?' desde ':' \u00b7 entrada ')+hrHM(h.clockIn);o.push({t,warn:h.status==='late'})}
-  if(d.cargo)o.push({t:'Cargo: '+d.cargo});
-  if(d.ctr)o.push({t:'Contrato: '+d.ctr});
-  const b=hrBank(h.bankMinutes);if(b)o.push({t:'Banco de horas '+b,warn:h.bankMinutes<0});
-  const f=hrNum(d.faltas);if(f!=null)o.push({t:'Faltas no m\u00eas: '+f,warn:f>0});
-  const he=hrNum(d.he);if(he!=null)o.push({t:'Horas extras: '+he+' h'});
-  const at=hrNum(d.atr);if(at!=null)o.push({t:'Atrasos no m\u00eas: '+at+' min',warn:at>0});
-  const fv=hrNum(d.fv);if(fv!=null)o.push({t:'F\u00e9rias vencidas: '+fv+' dias',warn:fv>30});
-  const bt=hrNum(d.bat);if(bt!=null)o.push({t:'Batidas hoje: '+bt+(bt%2?' (marca\u00e7\u00e3o faltando)':''),warn:bt%2===1});
-  return o;
-}
-function hrLine(e){return hrInfo(e).map(x=>x.t).join(' \u00b7 ')}
-function hrHtml(e){return hrInfo(e).map(x=>'<span class="hrl"'+(x.warn?' style="color:#F5A524"':'')+'>'+esc(x.t)+'</span>').join('')}
-function hrSummary(){
-  let n=0,on=0,late=0,abs=0,f=0,he=0,hf=0,hh=0;
-  EMPS.forEach(e=>{if(!e.hr||!isActive(e))return;const s=e.hr.status;if(s){n++;if(s==='present'||s==='late')on++;if(s==='late')late++;if(s==='absent')abs++}
-    const d=e.hr.data||{},a=hrNum(d.faltas),b=hrNum(d.he);if(a!=null){f+=a;hf++}if(b!=null){he+=b;hh++}});
-  const parts=[];
-  if(n)parts.push('No ponto: '+on+' \u00b7 Atrasos: '+late+' \u00b7 Faltas: '+abs);
-  if(hf||hh)parts.push((hf?'Faltas no m\u00eas: '+f:'')+(hf&&hh?' \u00b7 ':'')+(hh?'Horas extras: '+he+' h':''));
-  return parts.join('<br>');
-}
 /* ===== ewvon: dados reais do banco (colaboradores, status, setores, salas e reuniões) ===== */
-let EWV_BOOTED=false,EWV_FONTS=false,EWV_PENDING=null;
+let EWV_BOOTED=false,EWV_FONTS=false,EWV_PENDING=null,EWV_APIMODE=false;
 function ewvDone(){const l=document.getElementById('ewvLoad');if(l)l.remove()}
 function ewvMsg(t,sub){const l=document.getElementById('ewvLoad');if(l)l.innerHTML='<div style="text-align:center;max-width:420px;padding:0 20px"><div style="font-size:18px;color:#12151C;margin-bottom:6px">'+t+'</div><div style="font-weight:500;font-size:13px">'+sub+'</div></div>'}
 /* converte o que veio do banco para o formato do painel; devolve false se não há pessoas */
 function ewvConv(p){
-  const list=(p.emps||[]).map(a=>({xid:String(a.id||''),nome:a.nome,depto:a.depto||'Sem setor',cargo:a.cargo||'',st:a.st||'',sal:NaN,adm:toDate(a.adm),dem:toDate(a.dem),faltas:0,he:0,sexo:'',cc:'',alm:a.lunch?true:null,almIni:null,almFim:null,bat:null,atr:null,bh:null,nasc:toDate(a.nasc),ctr:'',fv:null,hr:(a.hr&&typeof a.hr==='object')?{status:HR_LAB[a.hr.status]?a.hr.status:null,clockIn:a.hr.clockIn||null,bankMinutes:(a.hr.bankMinutes==null?null:+a.hr.bankMinutes),syncedAt:a.hr.syncedAt||null,data:(a.hr.data&&typeof a.hr.data==='object')?a.hr.data:null}:null})).filter(e=>e.adm);
+  const list=(p.emps||[]).map(a=>({xid:String(a.id||''),nome:a.nome,depto:a.depto||'Sem setor',cargo:a.cargo||'',st:a.st||'',sal:NaN,adm:toDate(a.adm),dem:toDate(a.dem),faltas:0,he:0,sexo:'',cc:'',alm:a.lunch?true:null,almIni:null,almFim:null,bat:null,atr:null,bh:null,nasc:toDate(a.nasc),ctr:'',fv:null})).filter(e=>e.adm);
   const rooms=(p.rooms||[]).map(r=>({name:r.name,cap:r.cap||6,type:r.cap>8?'long':r.cap>5?'round':'small',meets:(r.meets||[]).map(m=>({ini:m.ini,fim:m.fim,assunto:m.assunto||'',desc:m.desc||'',resp:m.resp||'',n:m.n||0,ppl:(m.ppl||[]).map(id=>({x:String(id)}))}))}));
   return {list,rooms,co:(p.company&&p.company.name)||'',logo:(p.company&&p.company.logo)||''};
 }
@@ -5728,19 +5689,44 @@ function ewvMake(p){
   const n=ewvConv(p);EWV_CO=n.co;EWV_LOGO=n.logo;
   if(!n.list.length)return false;
   EMPS=n.list;ROOMS=n.rooms;
+  EWV_APIMODE=false;SRCS=[];
   SOURCE='ewvon';ROOMSRC='ewvon';NOTES=[];MAPE={nome:0,depto:1,cargo:2,adm:4,dem:5};HAS=hasFrom(MAPE,EMPS);
   return true;
 }
+/* ----- modo API: colaboradores vêm dos sistemas de RH conectados (não do cadastro do ewvon); salas e reuniões continuam do ewvon ----- */
+function ewvApiSrcs(p){
+  const out=[];
+  (p.sources||[]).forEach(s=>{
+    const r=parseTables([{name:s.label,rows:s.rows||[]}]);
+    if(r.err||!r.emps.length)return;
+    out.push({id:'api:'+s.id,label:s.label,kind:'api',cfg:null,emps:r.emps,rooms:[],map:r.map,at:Date.now(),msgs:r.msgs,err:''});
+  });
+  return out;
+}
+function ewvApiMake(p,srcs){
+  const n=ewvConv(p);EWV_CO=n.co;EWV_LOGO=n.logo;
+  SRCS=srcs;EWV_APIMODE=true;
+  EMPS=mergeEmpsFlex();if(!EMPS.length){EWV_APIMODE=false;SRCS=[];return false}
+  ROOMS=n.rooms;ROOMSRC='ewvon';NOTES=[];
+  MAPE=Object.assign({},...SRCS.map(s=>s.map||{}));
+  SOURCE=SRCS.map(s=>s.label).join(' + ');
+  HAS={sal:EMPS.some(e=>isFinite(e.sal)),faltas:false,he:false,sexo:EMPS.some(e=>e.sexo),cargo:EMPS.some(e=>e.cargo),nome:EMPS.some(e=>e.nome),dem:EMPS.some(e=>e.dem),cc:EMPS.some(e=>e.cc),bat:false,atr:false,bh:false,nasc:EMPS.some(e=>e.nasc),ctr:EMPS.some(e=>e.ctr),fv:EMPS.some(e=>e.fv!=null),adm:EMPS.some(e=>!e.afk)};
+  EWV_SIGA=EMPS.map(sigE).join('\n');
+  return true;
+}
+let EWV_SIGA='';
 function ewvKeepFloor(){try{const f=sessionStorage.getItem('ewv.cur');if(f&&floorObj(f))CUR=f}catch(e){}}
 setInterval(()=>{try{if(CUR)sessionStorage.setItem('ewv.cur',CUR)}catch(e){}},1000);
 function ewvSeats(){ROOMS.forEach(r=>{const c=CFG.rooms&&CFG.rooms[r.name];if(c&&r.cap)c.seats=clamp(Math.round(r.cap),2,12)})}
 function ewvCfg(){
-  const sig=DEPT.map(d=>d.name).sort().join('|');let prev='';try{prev=localStorage.getItem('ewv.sig')||''}catch(e){}
-  if(sig!==prev){defaultCfg(true,true);try{localStorage.setItem('ewv.sig',sig)}catch(e){}}
+  const sig=(EWV_APIMODE?'api:':'')+DEPT.map(d=>d.name).sort().join('|');let prev='';try{prev=localStorage.getItem('ewv.sig')||''}catch(e){}
+  if(sig!==prev){defaultCfg(!EWV_APIMODE,true);try{localStorage.setItem('ewv.sig',sig)}catch(e){}}
 }
 function ewvTryBoot(){
   if(EWV_BOOTED||!EWV_FONTS||!EWV_PENDING)return;
-  if(!ewvMake(EWV_PENDING)){ewvMsg('Ainda não há pessoas cadastradas','Cadastre colaboradores e setores no ewvon para ver os dados da sua empresa aqui.');return}
+  if(EWV_PENDING.mode==='api'){
+    if(!ewvApiMake(EWV_PENDING,ewvApiSrcs(EWV_PENDING))){ewvMsg('Nenhum colaborador válido nos sistemas de RH','Confira a conexão em Integrações: as fontes precisam trazer departamento e data de admissão.');return}
+  }else if(!ewvMake(EWV_PENDING)){ewvMsg('Ainda não há pessoas cadastradas','Cadastre colaboradores e setores no ewvon para ver os dados da sua empresa aqui.');return}
   EWV_BOOTED=true;boot();ewvKeepFloor();if(CUR){try{rebuildAll()}catch(e){}}ewvDone();
 }
 function ewvSameShape(p){
@@ -5750,12 +5736,30 @@ function ewvSameShape(p){
   for(let i=0;i<n.rooms.length;i++){const a=n.rooms[i],b=ROOMS[i];if(a.name!==b.name||a.cap!==b.cap)return null}
   return n;
 }
+function ewvApplyApi(p){
+  const srcs=ewvApiSrcs(p);
+  if(!srcs.length){showMsg3d('Os sistemas de RH não trouxeram colaboradores válidos. O Dash mantém o último estado.',8000);return}
+  const prev=SRCS;SRCS=srcs;const nm=mergeEmpsFlex(),n=ewvConv(p);
+  const same=EWV_APIMODE&&nm.length===EMPS.length&&nm.map(sigE).join('\n')===EWV_SIGA&&n.rooms.length===ROOMS.length&&n.rooms.every((r,i)=>r.name===ROOMS[i].name&&r.cap===ROOMS[i].cap);
+  if(same){   /* só valores secundários ou reuniões mudaram: atualiza no lugar */
+    EWV_CO=n.co;EWV_LOGO=n.logo;
+    EMPS.forEach((e,i)=>{['nasc','ctr','fv'].forEach(f=>{e[f]=nm[i][f]})});EMIX=null;
+    ROOMS.forEach((r,i)=>{r.meets=n.rooms[i].meets});
+    FORCE_RESET();applyClock(true);lunchSync(false);drawScreen();greet();
+    if($('#panel').classList.contains('open'))renderPanel(true);
+    return;
+  }
+  SRCS=prev;
+  if(!ewvApiMake(p,srcs))return;
+  const keepFloor=CUR;recalc();ewvCfg();CUR=keepFloor;ensureCfg();ewvSeats();saveCfg();applyTheme(true);rebuildAll();
+}
 function ewvApply(p){
   try{
-    const same=ewvSameShape(p);
+    if(p.mode==='api'){ewvApplyApi(p);return}
+    const same=EWV_APIMODE?null:ewvSameShape(p);
     if(same){   /* only status, lunch or bookings changed: update the same people and rooms in place (no rebuild, floor and camera stay) */
       EWV_CO=same.co;EWV_LOGO=same.logo;
-      EMPS.forEach((e,i)=>{e.st=same.list[i].st;e.alm=same.list[i].alm;e.hr=same.list[i].hr});
+      EMPS.forEach((e,i)=>{e.st=same.list[i].st;e.alm=same.list[i].alm});
       ROOMS.forEach((r,i)=>{r.meets=same.rooms[i].meets});
       FORCE_RESET();
       applyClock(true);lunchSync(false);drawScreen();greet();

@@ -179,15 +179,15 @@ export function WhatsAppGuide() {
 export function HrGuide() {
   return (
     <div className="space-y-2">
-      <Step n={1} title="Escolha o sistema e cole a chave" open>
-        <p>Em <K>Buscar por API</K>, escolha o seu sistema (Convenia, Pontomais, Tangerino, Ahgora, Nexti…) e cole a <K>chave de acesso</K>. Você a gera no painel do próprio sistema, em algo como “Integrações” ou “API”. O texto abaixo da escolha diz onde.</p>
+      <Step n={1} title="Adicione o sistema e cole a chave" open>
+        <p>Clique em <K>Adicionar sistema</K>, escolha o seu (Convenia, Pontomais, Tangerino, Ahgora, Nexti…) e cole a <K>chave de acesso</K>. Você a gera no painel do próprio sistema, em algo como “Integrações” ou “API”. O texto abaixo da escolha diz onde.</p>
       </Step>
       <Step n={2} title="Conectar e carregar">
-        <p>Clique em <K>Conectar e carregar</K>. O ewvon reconhece as colunas sozinho (nome, setor, cargo, banco de horas, faltas…) e mostra quantas pessoas foram reconhecidas. A atualização é automática, a cada 1 minuto.</p>
-        <Tip>Para uma pessoa ser reconhecida, o cadastro dela no ewvon precisa ter o mesmo e-mail, CPF, matrícula ou nome do sistema de ponto.</Tip>
+        <p>Clique em <K>Conectar e carregar</K>. O ewvon reconhece as colunas sozinho (nome, departamento, cargo, salário, admissão, demissão, sexo, nascimento, contrato, férias vencidas…) e mostra quantos colaboradores vieram. A atualização é automática.</p>
+        <Tip>Com um sistema ligado, o Dash 3D usa os colaboradores dele em vez dos cadastrados no ewvon. Salas e reuniões continuam vindo do ewvon.</Tip>
       </Step>
-      <Step n={3} title="Sistema que não está na lista">
-        <p>Use “Seu sistema” ou “Qualquer API” e informe o endereço da API em <K>Opções avançadas</K>. Se ele sabe enviar dados, use a aba <K>Receber por envio (push)</K>.</p>
+      <Step n={3} title="Mais de um sistema">
+        <p>Você pode ligar até 6 sistemas (por exemplo, uma por filial). Use o botão <K>Usar no Dash</K> para ligar ou desligar cada um. Se o sistema não está na lista, use “Seu sistema” ou “Qualquer API” e informe o endereço em <K>Opções avançadas</K>.</p>
       </Step>
     </div>
   );

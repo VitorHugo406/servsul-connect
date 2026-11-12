@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { appConfirm, appPrompt } from '@/lib/appDialog';
 import { toast } from 'sonner';
 import { AiCard, type AiRow } from '@/components/integrations/AiCard';
-import { HrCard, type HrRow } from '@/components/integrations/HrCard';
+import { HrCard } from '@/components/integrations/HrCard';
 import { GuideDropdown, SlackGuide, TeamsGuide, WhatsAppGuide } from '@/components/integrations/IntegrationGuides';
 
 type Provider = 'slack' | 'teams' | 'whatsapp';
@@ -140,7 +140,7 @@ export function IntegrationsSection() {
       {loading ? <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div> : (
         <>
           <AiCard row={rows.find((r) => (r.provider as string) === 'claude') as unknown as AiRow | undefined} onChanged={() => void load()} />
-          <HrCard row={rows.find((r) => (r.provider as string) === 'hr') as unknown as HrRow | undefined} onChanged={() => void load()} />
+          <HrCard />
           <div className="grid gap-3 xl:grid-cols-2">
             {(['slack', 'teams', 'whatsapp'] as Provider[]).map((p) => <ProviderCard key={p} provider={p} row={rows.find((r) => r.provider === p)} onChanged={() => void load()} />)}
           </div>
