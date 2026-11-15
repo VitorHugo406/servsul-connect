@@ -1353,7 +1353,7 @@ export default function EwwonApp() {
               const lockMode = recUi?.mode === 'lock' || (voiceRec.recording && !recUi);
               const micMode = !draft.trim() && !pending.length && !sending;
               return (
-                <div className={'cmp' + (recOn ? ' ewx-rec' : '') + (recUi?.mode === 'hold' ? ' hold' : '')}>
+                <div className={'cmp' + (recOn ? ' ewx-rec' : '') + (recUi?.mode === 'hold' ? ' hold' : '') + (/@ewvon\s?ai/i.test(draft) ? ' ai-glow' : '')}>
                   {recOn ? [
                     lockMode ? <button key="rx" className="ewx-rec-x" aria-label="Cancelar áudio" onClick={() => { voiceRec.cancel(); micG.current = null; setRecUi(null); }}><I n="trash" /></button> : null,
                     <span key="rd" className="ewx-rec-dot" />,

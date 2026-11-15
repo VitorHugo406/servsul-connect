@@ -119,3 +119,21 @@
 aside[aria-label^="Detalhes da conversa"] button { border-radius: 8px !important; box-shadow: none !important; }
 aside[aria-label^="Detalhes da conversa"] > div:first-child > div { border-radius: 10px !important; }
 .ewvon-home button.rounded-full:not(:has(> img)) { border-radius: 8px !important; }
+
+/* EwvonAI mentioned: the composer glows with the AI colors (purple, orange, blue) while the tag is in the text. */
+@property --ai-ang { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+.chat-composer-box.ai-glow, .ew .cmp.ai-glow { position: relative; border-color: transparent !important; animation: ai-pulse 3.2s ease-in-out infinite; }
+.chat-composer-box.ai-glow::before, .ew .cmp.ai-glow::before {
+  content: ''; position: absolute; inset: -1.5px; border-radius: inherit; padding: 2px; pointer-events: none;
+  background: conic-gradient(from var(--ai-ang), #7c5cff, #ff8a4c, #4c8dff, #b06bff, #ff8a4c, #7c5cff);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: ai-spin 3s linear infinite;
+}
+@keyframes ai-spin { to { --ai-ang: 360deg; } }
+@keyframes ai-pulse {
+  0%, 100% { box-shadow: 0 0 14px 1px rgba(124, 92, 255, .45); }
+  33% { box-shadow: 0 0 16px 2px rgba(255, 138, 76, .42); }
+  66% { box-shadow: 0 0 16px 2px rgba(76, 141, 255, .45); }
+}
+@media (prefers-reduced-motion: reduce) { .chat-composer-box.ai-glow, .ew .cmp.ai-glow, .chat-composer-box.ai-glow::before, .ew .cmp.ai-glow::before { animation: none; } }

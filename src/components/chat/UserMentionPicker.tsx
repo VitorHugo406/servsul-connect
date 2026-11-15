@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useActiveUsers } from '@/hooks/useDirectMessages';
 import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,8 +30,8 @@ export function UserMentionPicker({ query, onSelect, onClose }: UserMentionPicke
   if (filtered.length === 0 && !showAi) return null;
 
   return (
-    <div className="absolute bottom-full left-0 right-0 mb-1 z-50 bg-card border border-border rounded-xl shadow-lg max-h-[250px] overflow-hidden">
-      <ScrollArea className="max-h-[250px]">
+    <div className="absolute bottom-full left-0 right-0 mb-1 z-50 bg-card border border-border rounded-xl shadow-lg">
+      <div className="max-h-[250px] overflow-y-auto overscroll-contain">
         <div className="p-1">
           {showAi && (
             <button
@@ -43,7 +42,7 @@ export function UserMentionPicker({ query, onSelect, onClose }: UserMentionPicke
               <CosmicBlob size={32} label="EwvonAI" />
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-medium text-foreground truncate block">EwvonAI</span>
-                <span className="text-xs text-muted-foreground">Assistente de IA · pergunte ou peça tarefas</span>
+                <span className="text-xs text-muted-foreground block truncate">Assistente de IA · pergunte ou peça tarefas</span>
               </div>
             </button>
           )}
@@ -73,7 +72,7 @@ export function UserMentionPicker({ query, onSelect, onClose }: UserMentionPicke
             );
           })}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
