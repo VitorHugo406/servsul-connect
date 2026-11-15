@@ -115,3 +115,16 @@
 .dk-pg .dk-sec>div:last-child{padding:24px}
 .dk-pg .dk-ftb{background:#E9EFF7;border-top:1px solid #D5DBE5}
 .dk-pg .dk-ftb{margin-top:auto}.dk-pg .dk-mm>div>*{flex:none}
+
+/* Gerenciamento: tons de cinza, sem cabeçalho dentro da aba e sem faixa branca nas abas */
+.dk-pg .dk-sec>div:first-child{display:none!important}
+.dk-pg .dk-sec>div:last-child{padding:24px}
+.dk-pg .dk-sec{margin:20px 24px;border-color:#D9DBDF}
+.dk-pg.dk-mg .dk-ml,.dk-pg.dk-mg .dk-mm{border-color:#D9DBDF}
+.dk-pg .dk-ml .sh,.dk-pg .dk-dh,.dk-pg .dk-ftb{background:#ECEDEF;border-color:#D9DBDF}
+.dk-pg .dk-ml .dk-cnt{background:#F2F3F5;border-color:#D9DBDF}
+.dk-pg .dk-mm>div{background:#F2F3F5}
+.dk-pg .dk-nav{background:#F2F3F5!important;border-bottom-color:#D9DBDF}
+.dk-pg .dk-li.sel{background:#ECEDEF!important}
+.dk-pg .dk-li:hover{background:#F6F6F7!important}
+.dk-pg .dk-li.sel::before,.dk-pg .dk-ind{background:#171A21}
