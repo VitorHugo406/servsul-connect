@@ -7,11 +7,34 @@ export const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_BliZc1EBDW4h3U3eL-4qYQ_b
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+let renewing: Promise<{ data: { session: { access_token: string } | null } }> | null = null;
+const renewOnce = () => (renewing ??= (async () => { try { const r = await supabase.auth.refreshSession(); return { data: { session: r.data.session } }; } catch { return { data: { session: null } }; } finally { setTimeout(() => { renewing = null; }, 2000); } })());
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     persistSession: true,
     autoRefreshToken: true,
+  },
+  global: {
+    // A request that reaches the server with an expired login token (tab asleep, token renewal late) used to fail with
+    // "permission denied" / "JWT expired" and look like the person had been logged out. Renew the login once and repeat it.
+    fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+      const res = await fetch(input, init);
+      try {
+        if (res.status !== 401) return res;
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        if (!url.startsWith(SUPABASE_URL) || url.includes('/auth/v1/')) return res;
+        const headers = new Headers(init?.headers);
+        const bearer = (headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+        if (!bearer || bearer === SUPABASE_PUBLISHABLE_KEY) return res;
+        const { data } = await renewOnce();
+        const fresh = data?.session?.access_token;
+        if (!fresh || fresh === bearer) return res;
+        headers.set('Authorization', `Bearer ${fresh}`);
+        return await fetch(input, { ...init, headers });
+      } catch { return res; }
+    },
   },
   realtime: {
     // After a drop, every channel rejoins at once; slow and randomize the retries so the server's per-socket join limit is not hit.

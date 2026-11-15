@@ -20,6 +20,7 @@ const cacheProfile=(p:Profile)=>{try{localStorage.setItem(`${PROFILE_CACHE_PREFI
 const readCachedCompany=(id:string):any|null=>{try{const raw=localStorage.getItem(`${COMPANY_CACHE_PREFIX}${id}`);if(!raw)return null;const c=JSON.parse(raw);return c?.id===id&&c?.primary_color&&c?.secondary_color?c:null;}catch{return null;}};
 const cacheCompany=(c:any)=>{try{localStorage.setItem(`${COMPANY_CACHE_PREFIX}${c.id}`,JSON.stringify(c));}catch{}};
 
+const RT_KEY='ewvon:rt';
 export function AuthProvider({children}:{children:ReactNode}){
  const manualOut=useRef(false);const hiddenAt=useRef(0);const sessRef=useRef<Session|null>(null);const failRef=useRef(false);const lastOk=useRef(0);const retryTimer=useRef<number|undefined>(undefined);const[user,setUser]=useState<User|null>(null);const[session,setSession]=useState<Session|null>(null);const[profile,setProfile]=useState<Profile|null>(null);const[sector,setSector]=useState<Sector|null>(null);const[additionalSectors,setAdditionalSectors]=useState<Sector[]>([]);const[roles,setRoles]=useState<UserRole[]>([]);const[permissions,setPermissions]=useState<UserPermissions|null>(null);const[loading,setLoading]=useState(true);const[verifying,setVerifying]=useState(false);const isAdmin=roles.some(r=>r.role==='admin');const allAccessibleSectorIds=[GERAL_SECTOR_ID,...(profile?.sector_id?[profile.sector_id]:[]),...additionalSectors.map(s=>s.id)];
  sessRef.current=session;
@@ -44,7 +45,13 @@ export function AuthProvider({children}:{children:ReactNode}){
  const refreshProfile=async()=>{if(user)await fetchProfile(user.id)};const refreshPermissions=async()=>{if(user)await fetchPermissions(user.id)};const canAccess=(permission:keyof UserPermissions)=>isAdmin||Boolean(permissions?.[permission]);const hasSectorAccess=(sectorId:string)=>isAdmin||allAccessibleSectorIds.includes(sectorId);
  useEffect(()=>{const{data:{subscription}}=supabase.auth.onAuthStateChange((event,session0)=>{const apply=(session:Session|null)=>{setSession(session);setUser(session?.user??null);if(session?.user){void hydrateCachedProfile(session.user.id);setTimeout(()=>void fetchProfileSafe(session.user.id),0);}else{setProfile(null);setActiveCompanyId(null);setSector(null);setAdditionalSectors([]);setRoles([]);setPermissions(null);}};
   /* Another tab of this same browser may be renewing the shared login right now: before treating a sign-out we did not ask for as real, look at the stored session again. */
-  if(event==='SIGNED_OUT'&&!manualOut.current){window.setTimeout(async()=>{const{data:{session:s2}}=await supabase.auth.getSession();apply(s2??null);},800);return;}
+  if(session0?.refresh_token){try{localStorage.setItem(RT_KEY,session0.refresh_token);}catch{}}
+  if(event==='SIGNED_OUT'&&!manualOut.current){window.setTimeout(async()=>{const{data:{session:s2}}=await supabase.auth.getSession();if(s2){apply(s2);return;}
+   /* The login vanished without the person asking (token renewal hiccup, throttled/sleeping tab): try once more with the last refresh token we saw before sending them to the login screen. */
+   let rt:string|null=null;try{rt=localStorage.getItem(RT_KEY);}catch{}
+   if(rt){const{data:r}=await supabase.auth.refreshSession({refresh_token:rt});if(r?.session){apply(r.session);return;}}
+   try{localStorage.removeItem(RT_KEY);}catch{}apply(null);},800);return;}
+  if(event==='SIGNED_OUT'){try{localStorage.removeItem(RT_KEY);}catch{}}
   manualOut.current=false;apply(session0);});supabase.auth.getSession().then(async({data:{session}})=>{setSession(session);setUser(session?.user??null);if(session?.user){await hydrateCachedProfile(session.user.id);await fetchProfileSafe(session.user.id);setLoading(false);}else setLoading(false);});return()=>subscription.unsubscribe();},[]);
  useEffect(()=>{if(profile?.id)void ensureNativeDevice(profile.id);},[profile?.id]);
  /* Coming back to the tab/app or regaining internet: reload the data if the last load failed or is old. */
@@ -69,7 +76,7 @@ export function AuthProvider({children}:{children:ReactNode}){
  useEffect(()=>{if(!user)return;let last=Date.now(),lastRefresh=Date.now();const mark=()=>{last=Date.now()};
   const evs=['pointerdown','keydown','wheel','touchstart'];evs.forEach(ev=>window.addEventListener(ev,mark,{passive:true}));
   const onMsg=(e:MessageEvent)=>{if(e.origin===window.location.origin&&(e.data as {type?:string})?.type==='ewvon:activity')mark();};window.addEventListener('message',onMsg);
-  const t=window.setInterval(async()=>{if(document.hidden||Date.now()-last>10*60_000||Date.now()-lastRefresh<12*60_000)return;lastRefresh=Date.now();try{await supabase.auth.refreshSession();}catch{/* the normal refresh handling takes over */}},60_000);
+  const t=window.setInterval(async()=>{const exp=(sessRef.current?.expires_at??0)*1000;const soon=!!exp&&exp-Date.now()<10*60_000;if(!soon&&(document.hidden||Date.now()-last>10*60_000||Date.now()-lastRefresh<12*60_000))return;if(Date.now()-lastRefresh<20_000)return;lastRefresh=Date.now();try{await supabase.auth.refreshSession();}catch{/* the normal refresh handling takes over */}},30_000);
   return()=>{evs.forEach(ev=>window.removeEventListener(ev,mark));window.removeEventListener('message',onMsg);window.clearInterval(t);};},[user?.id]);
  useEffect(()=>{if(!user)return;const channel=supabase.channel(`auth-sync-${user.id}`).on('postgres_changes',{event:'*',schema:'public',table:'user_permissions',filter:`user_id=eq.${user.id}`},()=>fetchPermissions(user.id)).on('postgres_changes',{event:'*',schema:'public',table:'user_roles',filter:`user_id=eq.${user.id}`},()=>fetchProfile(user.id)).subscribe();return()=>{supabase.removeChannel(channel);};},[user]);
  const signIn=async(email:string,password:string)=>{const{data,error}=await supabase.auth.signInWithPassword({email,password});if(error)return{error:error as Error|null};if(data.user){const{data:profileData,error:profileError}=await supabase.from('profiles').select('is_active').eq('user_id',data.user.id).maybeSingle();if(profileError){console.error('Error checking user status:',profileError);await supabase.auth.signOut({ scope: 'local' });return{error:new Error('Erro ao verificar status do usuário')};}if(profileData&&!profileData.is_active){await supabase.auth.signOut({ scope: 'local' });return{error:new Error('Usuário inativo. Entre em contato com o administrador.')}}}return{error:null};};
