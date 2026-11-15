@@ -209,7 +209,8 @@ function SourceForm({ presets, source, onChanged, onClose }: { presets: Preset[]
   );
 }
 
-export function HrCard() {
+export function HrCard({ view = 'sistema' }: { view?: 'sistema' | 'dash' }) {
+  const isDash = view === 'dash';
   const [sources, setSources] = useState<Source[] | null>(null);
   const [listErr, setListErr] = useState('');
   const [presets, setPresets] = useState<Preset[] | null>(null);
@@ -248,12 +249,12 @@ export function HrCard() {
       <div className="dk-hd">
         <span className="dk-tile" style={{ background: '#171A21' }}><Users className="h-5 w-5" /></span>
         <div>
-          <h2>Importar colaboradores e RH (Dash 3D)</h2>
+          <h2>{isDash ? 'Dados do Dash 3D (sistema de RH)' : 'Sistema de RH: importar colaboradores'}</h2>
           <span className={`dk-stt${sources && sources.length ? ' on' : ''}`}>{sources === null ? 'Carregando…' : sources.length ? `${sources.length} sistema(s) conectado(s)` : 'Nenhum sistema conectado'}</span>
         </div>
         {sources && sources.length < 6 && form === null ? <button className="dk-btn pri dk-sp" type="button" onClick={() => setForm('new')} disabled={!presets}><Plus className="h-4 w-4" />Adicionar sistema</button> : null}
       </div>
-      <div className="space-y-2 rounded-xl border border-border p-3">
+      {!isDash ? <div className="space-y-2 rounded-xl border border-border p-3">
         <p className="text-[14px] font-semibold">Importar colaboradores como usuários</p>
         <p className="text-[12.5px] text-muted-foreground">Cria os acessos e as fichas automaticamente a partir do sistema de gestão de pessoas (Convenia, Senior, Pontomais e outros). Respeita o limite de usuários do plano: se houver mais gente do que vagas, importa em ordem alfabética e pergunta antes.</p>
         {sources === null ? null : !sources.length ? (
@@ -262,8 +263,8 @@ export function HrCard() {
           <div className="flex flex-wrap gap-2">{sources.map((s) => <button key={s.id} className="dk-btn pri" type="button" onClick={() => setImporting(importing === s.id ? null : s.id)} disabled={busy !== null || s.last_status === 'erro'}><UserPlus className="mr-1.5 h-4 w-4" />Importar de {s.label || nameOf(s)}</button>)}</div>
         )}
         {sources?.map((s) => importing === s.id ? <ImportPanel key={s.id} source={s} name={s.label || nameOf(s)} onClose={() => { setImporting(null); void load(); }} /> : null)}
-      </div>
-      <p className="dk-tx">Conecte o seu sistema de gestão de pessoas (Convenia, Pontomais, Tangerino, Ahgora, Nexti e outros), cole só a chave e o <b>Dash 3D passa a usar os colaboradores desses sistemas</b> (admissões, salários, demissões, cargos, departamentos, férias vencidas…) no lugar dos cadastrados no ewvon. Dá para ligar mais de um sistema. Dados de ponto não são importados. Os dados são atualizados sozinhos.</p>
+      </div> : null}
+      {isDash ? <p className="dk-tx">Conecte o seu sistema de gestão de pessoas (Convenia, Pontomais, Tangerino, Ahgora, Nexti e outros), cole só a chave e o <b>Dash 3D passa a usar os colaboradores desses sistemas</b> (admissões, salários, demissões, cargos, departamentos, férias vencidas…) no lugar dos cadastrados no ewvon. Dá para ligar mais de um sistema. Dados de ponto não são importados. Os dados são atualizados sozinhos.</p> : <p className="dk-tx">Os sistemas conectados aqui (a mesma conexão serve ao Dash 3D) são lidos pela API só para criar os acessos e as fichas dos colaboradores. Dados de ponto não são importados.</p>}
       <p className="dk-priv">Privacidade: salários, demissões e demais dados ficam visíveis só para administradores e para quem tem acesso ao Dash.</p>
 
       <GuideDropdown title="Como configurar"><HrGuide /></GuideDropdown>
@@ -286,13 +287,13 @@ export function HrCard() {
                       {nameOf(s)} · {s.last_count ?? 0} colaboradores · {s.last_used_at ? `atualizado ${ago(s.last_used_at)}` : 'ainda sem atualização'}
                     </p>
                   </div>
-                  <label className="flex items-center gap-2 text-[12px] text-muted-foreground">Usar no Dash<Switch checked={s.enabled} disabled={busy !== null} onCheckedChange={(on) => void toggle(s, on)} aria-label="Usar no Dash" /></label>
+                  {isDash ? <label className="flex items-center gap-2 text-[12px] text-muted-foreground">Usar no Dash<Switch checked={s.enabled} disabled={busy !== null} onCheckedChange={(on) => void toggle(s, on)} aria-label="Usar no Dash" /></label> : null}
                 </div>
                 {failed && s.last_error ? <p className="rounded-lg bg-destructive/10 px-3 py-2 text-[12px] text-destructive">{s.last_error}</p> : null}
                 {!failed && s.last_error ? <p className="rounded-lg bg-muted px-3 py-2 text-[12px] text-muted-foreground">{s.last_error}</p> : null}
                 <div className="flex flex-wrap gap-2">
                   <button className="dk-btn" type="button" onClick={() => void sync(s)} disabled={busy !== null}>{busy === 'sync' + s.id ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1.5 h-4 w-4" />}Sincronizar agora</button>
-                  <button className="dk-btn" type="button" onClick={() => setImporting(importing === s.id ? null : s.id)} disabled={busy !== null || failed}><UserPlus className="mr-1.5 h-4 w-4" />Importar como usuários</button>
+                  {!isDash ? <button className="dk-btn" type="button" onClick={() => setImporting(importing === s.id ? null : s.id)} disabled={busy !== null || failed}><UserPlus className="mr-1.5 h-4 w-4" />Importar como usuários</button> : null}
                   <button className="dk-btn" type="button" onClick={() => setForm(s.id)} disabled={busy !== null}><Pencil className="mr-1.5 h-4 w-4" />Editar</button>
                   <button className="dk-btn" style={{ color: '#8E1B10' }} type="button" onClick={() => void remove(s)} disabled={busy !== null}><Trash2 className="mr-1.5 h-4 w-4" />Remover</button>
                 </div>

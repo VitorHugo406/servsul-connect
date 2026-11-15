@@ -118,6 +118,7 @@ export function IntegrationsSection() {
   const [rows, setRows] = useState<Row[]>([]);
   const [log, setLog] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'sistema' | 'dash' | 'ia' | 'msg'>('sistema');
   const load = useCallback(async () => {
     const [{ data: r }, { data: d }] = await Promise.all([
       (supabase as any).from('company_integrations').select('provider, enabled, events, config, last_status, last_error, last_used_at'),
@@ -132,11 +133,19 @@ export function IntegrationsSection() {
     <div className="dk-pg dk-cards">
       {loading ? <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div> : (
         <>
-          <AiCard row={rows.find((r) => (r.provider as string) === 'claude') as unknown as AiRow | undefined} onChanged={() => void load()} />
-          <HrCard />
-          <div className="dk-g3">
-            {(['slack', 'teams', 'whatsapp'] as Provider[]).map((p) => <ProviderCard key={p} provider={p} row={rows.find((r) => r.provider === p)} onChanged={() => void load()} />)}
+          <div className="dk-seg" role="group" aria-label="Integrações" style={{ alignSelf: 'flex-start' }}>
+            {([['sistema', 'Sistema de RH'], ['dash', 'Dash 3D'], ['ia', 'IA'], ['msg', 'Mensagens']] as const).map(([id, label]) => (
+              <button key={id} type="button" aria-pressed={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{label}</button>
+            ))}
           </div>
+          {tab === 'sistema' ? <HrCard view="sistema" /> : null}
+          {tab === 'dash' ? <HrCard view="dash" /> : null}
+          {tab === 'ia' ? <AiCard row={rows.find((r) => (r.provider as string) === 'claude') as unknown as AiRow | undefined} onChanged={() => void load()} /> : null}
+          {tab === 'msg' ? (
+            <>
+              <div className="dk-g3">
+                {(['slack', 'teams', 'whatsapp'] as Provider[]).map((p) => <ProviderCard key={p} provider={p} row={rows.find((r) => r.provider === p)} onChanged={() => void load()} />)}
+              </div>
           <div className="dk-panel dk-pad" style={{ padding: 0 }}>
             <div style={{ padding: '16px 24px', borderBottom: '1px solid #E1E5EB', fontWeight: 600, fontSize: 15 }}>Últimos envios</div>
             {!log.length ? <p className="dk-empty" style={{ textAlign: 'left' }}>Nenhum envio ainda.</p> : (
@@ -148,6 +157,8 @@ export function IntegrationsSection() {
               ))}</div>
             )}
           </div>
+            </>
+          ) : null}
         </>
       )}
     </div>
