@@ -89,6 +89,8 @@ interface WarRoomCreateOptions {
 
 export function useWarRooms() {
   const [warRooms, setWarRooms] = useState<WarRoom[]>([]);
+  const [roomActions, setRoomActions] = useState<Record<string, WarRoomAction[]>>({});
+  const [roomMembers, setRoomMembers] = useState<Record<string, WarRoomMember[]>>({});
   const [loading, setLoading] = useState(true);
   const { user, profile, isAdmin, canAccess } = useAuth();
   const { toast } = useToast();
@@ -111,7 +113,20 @@ export function useWarRooms() {
       setLoading(false);
       return;
     }
-    setWarRooms((data || []) as unknown as WarRoom[]);
+    const rooms = (data || []) as unknown as WarRoom[];
+    setWarRooms(rooms);
+    const ids = rooms.map(r => r.id);
+    if (ids.length) {
+      const [acts, mems] = await Promise.all([
+        supabase.from('war_room_actions' as any).select('*').in('war_room_id', ids).order('position', { ascending: true }),
+        supabase.from('war_room_members').select('*, profile:profiles(id, name, display_name, avatar_url)').in('war_room_id', ids),
+      ]);
+      const ga: Record<string, WarRoomAction[]> = {};
+      ((acts.data || []) as unknown as WarRoomAction[]).forEach(a => { (ga[a.war_room_id] ||= []).push(a); });
+      const gm: Record<string, WarRoomMember[]> = {};
+      ((mems.data || []) as unknown as WarRoomMember[]).forEach(m => { (gm[m.war_room_id] ||= []).push(m); });
+      setRoomActions(ga); setRoomMembers(gm);
+    }
     setLoading(false);
   }, []);
 
@@ -257,7 +272,7 @@ export function useWarRooms() {
     return true;
   };
 
-  return { warRooms, loading, canCreateWarRoom, createWarRoom, closeWarRoom, deleteWarRoom, createEmergencyCard, fetchWarRooms };
+  return { warRooms, roomActions, roomMembers, loading, canCreateWarRoom, createWarRoom, closeWarRoom, deleteWarRoom, createEmergencyCard, fetchWarRooms };
 }
 
 export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) {
@@ -449,11 +464,30 @@ export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) 
     await fetchAll();
   };
 
+  const reorderActions = async (ids: string[]) => {
+    const byId = new Map(actions.map(a => [a.id, a]));
+    setActions(ids.map((id, i) => ({ ...(byId.get(id) as WarRoomAction), position: i })));
+    const results = await Promise.all(ids.map((id, i) => byId.get(id)?.position === i ? null
+      : supabase.from('war_room_actions' as any).update({ position: i } as any).eq('id', id)));
+    const err = results.find(r => r && (r as any).error) as any;
+    if (err) fail('Erro ao reordenar', err.error.message);
+    await fetchAll();
+  };
+
   const setActionDone = async (id: string, done: boolean) => {
     const { error } = await supabase.rpc('war_room_set_action' as any, { _action: id, _done: done });
     if (error) { fail('Não foi possível atualizar a ação', error.message); return false; }
     await fetchAll();
     return true;
+  };
+
+  const clearHistory = async () => {
+    if (!roomId) return;
+    await Promise.all([
+      supabase.from('war_room_messages').delete().eq('war_room_id', roomId),
+      supabase.from('war_room_timeline').delete().eq('war_room_id', roomId),
+    ]);
+    await fetchAll();
   };
 
   const sendMessage = async (content: string) => {
@@ -501,7 +535,7 @@ export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) 
     return true;
   };
 
-  return { members, timeline, messages, actions, loading, acknowledge, addTimelineEntry, sendMessage, addAction, updateAction, deleteAction, moveAction, setActionDone, isRoomCreator, refetch: fetchAll };
+  return { members, timeline, messages, actions, loading, acknowledge, addTimelineEntry, sendMessage, addAction, updateAction, deleteAction, moveAction, reorderActions, clearHistory, setActionDone, isRoomCreator, refetch: fetchAll };
 }
 
 /** Cards ligados a uma War Room ativa (controlados pela sala: só dá para concluir subtarefas). */
