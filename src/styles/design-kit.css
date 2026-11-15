@@ -128,3 +128,6 @@
 .dk-pg .dk-li.sel{background:#ECEDEF!important}
 .dk-pg .dk-li:hover{background:#F6F6F7!important}
 .dk-pg .dk-li.sel::before,.dk-pg .dk-ind{background:#171A21}
+.dk-pg .dk-dh{padding:12px 24px!important;gap:14px}
+.dk-pg .dk-bav{width:44px;height:44px;font-size:17px}
+.dk-pg .dk-dh h2{font-size:17px}

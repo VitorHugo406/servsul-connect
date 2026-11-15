@@ -223,9 +223,11 @@ export function ManagementSection() {
             <div className="dk-dh">
               <div className="dk-bav">{sel.avatar_url ? <img src={sel.avatar_url} alt="" /> : (sel.name || '?')[0].toUpperCase()}</div>
               <div>
-                <h2>{sel.name}</h2>
-                <div className="su" style={{ color: '#4A5563' }}>{sel.email} • {roleOf(sel) === 'admin' ? 'Admin' : sectorName(sel)}</div>
-                <div className="dk-bd"><em>{roleOf(sel)}</em><span className={sel.is_active ? 'dk-s1' : 'dk-s0'} style={{ color: sel.is_active ? '#0A6B3D' : undefined }}>{sel.is_active ? 'Ativo' : 'Inativo'}</span></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <h2 style={{ margin: 0 }}>{sel.name}</h2>
+                  <div className="dk-bd" style={{ marginTop: 0 }}><em>{roleOf(sel)}</em><span className={sel.is_active ? 'dk-s1' : 'dk-s0'} style={{ color: sel.is_active ? '#0A6B3D' : undefined }}>{sel.is_active ? 'Ativo' : 'Inativo'}</span></div>
+                </div>
+                <div className="su" style={{ color: '#4A5563', marginTop: 2 }}>{sel.email} • {roleOf(sel) === 'admin' ? 'Admin' : sectorName(sel)}</div>
               </div>
               <div className="dk-acts">
                 {canChangePasswords && <button className="dk-lk" onClick={() => setPasswordUser(sel)}>Senha</button>}
