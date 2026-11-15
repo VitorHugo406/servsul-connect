@@ -2422,7 +2422,7 @@ function buildSurround(idx){
   });
   /* prédio abaixo (andares inferiores) e esqueleto acima */
   if(idx>0){
-    const A=fa('own');sideBox(A,X0+.1,X1-.1,Z0+.1,Z1-.1,-idx*LVH-1.2,Math.min(idx,1)*LVH,24,LVH);topQuad(roofA,X0+.1,X1-.1,Z0+.1,Z1-.1,-1.2,12);
+    const A=fa('own');sideBox(A,X0+.1,X1-.1,Z0+.1,Z1-.1,-idx*LVH-1.2,Math.min(idx,1)*LVH,24,LVH);topQuad(roofA,X0+.1,X1-.1,Z0+.1,Z1-.1,-idx*LVH-1.2+LVH,12);   /* topo do térreo, medido a partir do chão: acompanha a cidade em vez de ficar solto no ar */
     const nm=(EWV_CO||THEME().company||'Empresa').trim()||'Empresa';
     const lb=new THREE.Mesh(new THREE.PlaneGeometry(X1-X0-.4,LVH-1.2),MK({map:lobbyTex(nm),roughness:.35,metalness:.2,env:.6}));lb.geometry.userData.own=true;lb.position.set((X0+X1)/2,-idx*LVH+(LVH-1.2)/2,Z1-.06);S.add(lb);
     box(BM,X1-X0,.5,3.2,'#C9CCD0',(X0+X1)/2,-idx*LVH+(LVH-1.2)-.05,Z1+1.4);
@@ -3481,42 +3481,61 @@ function fadeSwitch(id,cb){
     if(cb)cb();
   };
   if(REDUCED||!OK||FTR||!FLR){if(FTR)return;instant();return}
-  /* sem recarregar: a câmera sobe ou desce pelo prédio. Descendo, o andar de cima sai (o "teto" some);
-     subindo, os andares de cima descem e se encaixam (o teto é colocado) e a câmera sobe junto. */
-  const from=Math.max(0,floorIdx(CUR)),to=Math.max(0,floorIdx(id)),dir=to>from?1:-1,span=Math.abs(to-from);
-  tw=null;var F;FTR={id,cb,from,to,dir,span,t0:performance.now(),dur:1300+span*450,ty0:cam.ty};
-  FLS.forEach((fl,j)=>{fl.g.position.set(0,0,0);fl.g.visible=j<from||(dir>0&&j>from&&j<=to)});
-  /* descendo, os andares de cima saem: o poço de vidro do elevador já termina no andar de destino em vez de ficar solto no ar */
-  if(SHAFT&&dir<0&&from>0){if(to<=0)SHAFT.visible=false;else{const k=to/from,y0=-from*LVH-1.2;SHAFT.scale.y=k;SHAFT.position.y=y0*(1-k)}}
+  /* O prédio é uma coisa só. O andar de destino é montado COMPLETO antes da animação e o andar de onde você sai continua
+     inteiro (uma cópia viva dele) até acabar: descendo, os andares de cima levantam e saem; subindo, o andar de destino desce
+     e se encaixa. Nada é trocado ou aparece depois, só se move. */
+  const from=Math.max(0,floorIdx(CUR)),to=Math.max(0,floorIdx(id)),dir=to>from?1:-1,span=Math.abs(to-from),off=(from-to)*LVH;
+  tw=null;
+  let GH=null,kitGH=null;
   try{
-    F=FTR;F.kits=new Map();
-    if(dir<0){F.kits.set(FLR,fadeKit(FLR));for(let j=from-1;j>to;j--){const fl=FLS.get(j);if(fl)F.kits.set(fl.g,fadeKit(fl.g))}}
-    else for(let j=from+1;j<=to;j++){const fl=FLS.get(j);if(fl){const k=fadeKit(fl.g);k.set(0);F.kits.set(fl.g,k)}}
-  }catch(e){console.error('fadeKit',e)}
+    GH=FLR.clone(true);scene.add(GH);   /* andar antigo, inteiro (estrutura + pessoas + móveis) */
+    kitGH=fadeKit(GH);                  /* materiais próprios: a cor das paredes do andar novo não muda o antigo */
+  }catch(e){console.error('ghost',e);if(GH&&GH.parent)GH.parent.remove(GH);GH=null;kitGH=null}
+  /* peças do andar antigo que o buildWorld vai liberar: a cópia viva (GH) ainda as desenha durante a animação e as registra de novo na placa de vídeo; ao final liberamos de verdade */
+  const oldG=new Set(),oldT=new Set();
+  try{dyn.traverse(o=>{if(o.isMesh&&o.geometry&&(o.geometry.userData.own||o.geometry.userData.baked))oldG.add(o.geometry);const m=o.material;if(m&&m.userData&&m.userData.sign&&m.map)oldT.add(m.map)})}catch(e){}
+  const ty0=cam.ty;
+  CUR=id;buildWorld();railUI();greet();   /* andar de destino completo, já no lugar (nível 0) */
+  FTR={id,cb,from,to,dir,span,off,t0:performance.now(),dur:1300+span*450,ty0,GH,oldG,oldT,kits:new Map()};
+  cam.ty=ty0+off;                          /* o mundo passou a ter o destino como nível 0: a câmera continua no andar antigo */
+  if(GH){GH.position.set(0,off,0);FTR.kits.set(GH,kitGH)}
+  const keep=fl=>{try{const k=fadeKit(fl);FTR.kits.set(fl,k);return k}catch(e){return null}};
+  FLS.forEach((fl,j)=>{
+    fl.g.position.set(0,0,0);
+    if(j===from){fl.g.visible=false;return}                       /* o andar antigo é a cópia viva (GH) */
+    if(dir<0)fl.g.visible=j<to||(j>to&&j<from);                   /* descendo: os do meio levantam junto */
+    else fl.g.visible=j<to;                                       /* subindo: os do meio já estão no lugar; só o destino desce */
+    if(dir<0&&j>to&&j<from)keep(fl.g);
+  });
+  if(dir>0){const k=keep(FLR);if(k)k.set(0)}
+  FLR.position.set(0,dir>0?60:0,0);
 }
 function floorTransTick(now){
   const F=FTR;if(!F)return;
   const u=clamp((now-F.t0)/F.dur,0,1),e=ease(u);
-  cam.ty=F.ty0+F.dir*F.span*LVH*e;
+  cam.ty=F.ty0+F.off*(1-e);
   const UP=60;   /* o andar sobe (ou desce) 100% na vertical, até sair da tela */
   const kf=(o,a)=>{const k=F.kits&&F.kits.get(o);if(k)k.set(a)};
   if(F.dir<0){
-    const lift=(o,k)=>{const q=ease(clamp((u-k*.06)/.5,0,1));o.position.set(0,UP*q,0);o.visible=q<.995;kf(o,clamp(1-q*1.6,0,1))};
-    lift(FLR,0);
-    for(let j=F.from-1;j>F.to;j--){const fl=FLS.get(j);if(fl)lift(fl.g,F.from-j)}
+    const lift=(o,k,base)=>{const q=ease(clamp((u-k*.06)/.5,0,1));o.position.set(0,base+UP*q,0);o.visible=q<.995;kf(o,clamp(1-q*1.6,0,1))};
+    if(F.GH)lift(F.GH,0,F.off);
+    for(let j=F.from-1;j>F.to;j--){const fl=FLS.get(j);if(fl)lift(fl.g,F.from-j,0)}
   }else{
-    for(let j=F.from+1;j<=F.to;j++){const fl=FLS.get(j);if(!fl)continue;const q=ease(clamp((u-(j-F.from-1)*.08)/.55,0,1));fl.g.visible=true;fl.g.position.set(0,UP*(1-q),0);kf(fl.g,clamp((q-.35)*1.6,0,1))}
+    const arrive=(o,k)=>{const q=ease(clamp((u-k*.08)/.55,0,1));o.visible=true;o.position.set(0,UP*(1-q),0);kf(o,clamp((q-.35)*1.6,0,1))};
+    arrive(FLR,F.to-F.from-1);
   }
   frame.sh=true;
   if(u>=1)floorTransEnd();
 }
 function floorTransEnd(){
   const F=FTR;FTR=null;
-  try{if(F.kits)F.kits.forEach(k=>k.done())}catch(e){console.error('fadeKit done',e)}
+  try{if(F.kits)F.kits.forEach(k=>{if(k)k.done()})}catch(e){console.error('fadeKit done',e)}
+  if(F.oldG)F.oldG.forEach(g=>{try{g.dispose()}catch(e){}});if(F.oldT)F.oldT.forEach(t=>{try{t.dispose()}catch(e){}});
+  if(F.GH&&F.GH.parent)F.GH.parent.remove(F.GH);   /* só sai de cena: os recursos são do andar vivo. O andar antigo vira de novo uma cópia leve do prédio (atualizada) */
   FLR.position.set(0,0,0);FLR.visible=true;
-  cam.ty=F.ty0;   /* o andar de destino passa a ser o andar do nível 0: a imagem não muda, só ganha todos os detalhes */
-  CUR=F.id;buildWorld();railUI();greet();
-  refreshFloor(F.from);   /* o andar que acabou de sair vira uma cópia leve, atualizada */
+  cam.ty=F.ty0;
+  placeStack();
+  refreshFloor(F.from);
   tw=null;if(F.cb)F.cb();
   if(EWV_DEFER){EWV_DEFER=false;try{if(EWV_READY&&EWV_PENDING)ewvApply(EWV_PENDING)}catch(e){}}
 }
