@@ -14,6 +14,30 @@ export interface WarRoom {
   created_at: string;
   closed_at: string | null;
   updated_at: string;
+  target_at: string | null;
+  emergency_board_id: string | null;
+  emergency_column_id: string | null;
+}
+
+export interface WarRoomAction {
+  id: string;
+  war_room_id: string;
+  title: string;
+  assigned_to: string | null;
+  duration_min: number;
+  position: number;
+  status: 'pending' | 'done';
+  started_at: string | null;
+  completed_at: string | null;
+  completed_by: string | null;
+  subtask_id: string | null;
+  created_at: string;
+}
+
+export interface NewWarRoomAction {
+  title: string;
+  assigned_to: string | null;
+  duration_min: number;
 }
 
 export interface WarRoomMember {
@@ -56,19 +80,11 @@ export interface WarRoomMessage {
   };
 }
 
-export interface EmergencyTaskInput {
-  board_id: string;
-  column_id: string;
-  title: string;
-  description?: string;
-  priority?: 'low' | 'medium' | 'high' | 'urgent';
-  due_date?: string;
-  subtask_groups?: Array<{ title: string; subtasks: string[] }>;
-}
-
 interface WarRoomCreateOptions {
-  initialTimeline?: string[];
-  emergencyTask?: EmergencyTaskInput;
+  targetAt?: string | null;
+  actions?: NewWarRoomAction[];
+  board_id?: string;
+  column_id?: string;
 }
 
 export function useWarRooms() {
@@ -95,7 +111,7 @@ export function useWarRooms() {
       setLoading(false);
       return;
     }
-    setWarRooms((data || []) as WarRoom[]);
+    setWarRooms((data || []) as unknown as WarRoom[]);
     setLoading(false);
   }, []);
 
@@ -103,77 +119,15 @@ export function useWarRooms() {
     fetchWarRooms();
   }, [fetchWarRooms]);
 
-  const createEmergencyTask = async (task: EmergencyTaskInput, warRoomId?: string) => {
-    if (!profile || !user) return { data: null, error: new Error('Usuário não autenticado') };
-
-    const { data: lastTaskInColumn } = await supabase
-      .from('tasks')
-      .select('position')
-      .eq('board_id', task.board_id)
-      .eq('status', task.column_id)
-      .order('position', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const nextPosition = (lastTaskInColumn?.position ?? -1) + 1;
-
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert(withCompany({
-        board_id: task.board_id,
-        status: task.column_id,
-        title: task.title,
-        description: task.description || null,
-        priority: task.priority || 'high',
-        due_date: task.due_date || null,
-        created_by: profile.id,
-        position: nextPosition,
-        is_emergency: true,
-      }))
-      .select('id, title, task_number, board_id, status')
-      .single();
-
-  if (error) {
-    toast({ title: 'Erro ao criar card emergencial', description: error.message, variant: 'destructive' });
-    return { data: null, error };
-  }
-
-  // Insert subtask groups and subtasks if provided
-  if (task.subtask_groups && task.subtask_groups.length > 0) {
-    for (let gi = 0; gi < task.subtask_groups.length; gi++) {
-      const group = task.subtask_groups[gi];
-      const { data: groupData } = await supabase
-        .from('subtask_groups')
-        .insert({ task_id: data.id, title: group.title, position: gi })
-        .select('id')
-        .single();
-      if (groupData && group.subtasks.length > 0) {
-        await supabase.from('task_subtasks').insert(
-          group.subtasks.map((title, si) => ({
-            task_id: data.id,
-            group_id: groupData.id,
-            title,
-            position: si,
-            is_completed: false,
-          }))
-        );
-      }
+  /** Cria o card emergencial: só quadro + coluna; o resto vem da sala. */
+  const createEmergencyCard = async (roomId: string, boardId: string, columnId: string) => {
+    const { data, error } = await supabase.rpc('war_room_create_card' as any, { _room: roomId, _board: boardId, _column: columnId });
+    if (error) {
+      toast({ title: 'Erro ao criar o card', description: error.message, variant: 'destructive' });
+      return null;
     }
-  }
-
-  if (warRoomId) {
-    await Promise.all([
-      supabase.from('war_rooms').update({ task_id: data.id }).eq('id', warRoomId),
-      supabase.from('war_room_timeline').insert({
-        war_room_id: warRoomId,
-        content: `Card emergencial #${data.task_number} criado: ${data.title}`,
-        created_by: user.id,
-        task_id: data.id,
-      } as any),
-    ]);
-  }
-
-    return { data, error: null };
+    const row = Array.isArray(data) ? data[0] : data;
+    return row as { o_task_id: string; o_task_number: number } | null;
   };
 
   const createWarRoom = async (
@@ -186,7 +140,7 @@ export function useWarRooms() {
 
     const { data: room, error } = await supabase
       .from('war_rooms')
-      .insert(withCompany({ title, description, created_by: user.id }))
+      .insert(withCompany({ title, description, created_by: user.id, target_at: options?.targetAt || null }) as any)
       .select()
       .single();
 
@@ -195,7 +149,7 @@ export function useWarRooms() {
       return null;
     }
 
-    const plannedActions = (options?.initialTimeline || []).map(item => item.trim()).filter(Boolean);
+    const plannedActions = (options?.actions || []).filter(a => a.title.trim());
 
     const uniqueMemberProfileIds = Array.from(new Set([...memberProfileIds, profile.id]));
 
@@ -238,28 +192,33 @@ export function useWarRooms() {
       ]);
     }
 
-    if (options?.emergencyTask) {
-      await createEmergencyTask(options.emergencyTask, room.id);
+    if (plannedActions.length > 0) {
+      const { error: actErr } = await supabase.from('war_room_actions' as any).insert(
+        plannedActions.map((a, i) => ({
+          war_room_id: room.id,
+          title: a.title.trim(),
+          assigned_to: a.assigned_to,
+          duration_min: a.duration_min,
+          position: i,
+          created_by: user.id,
+        })) as any,
+      );
+      if (actErr) toast({ title: 'Erro ao salvar as ações', description: actErr.message, variant: 'destructive' });
     }
 
-    const timelineInserts = [
-      {
-        war_room_id: room.id,
-        content: `War Room "${title}" criada`,
-        created_by: user.id,
-      },
-      ...plannedActions.map((action, index) => ({
-        war_room_id: room.id,
-        content: `Ação planejada ${index + 1}: ${action}`,
-        created_by: user.id,
-      })),
-    ];
+    await supabase.from('war_room_timeline').insert({
+      war_room_id: room.id,
+      content: `War Room "${title}" criada`,
+      created_by: user.id,
+    });
 
-    await supabase.from('war_room_timeline').insert(timelineInserts);
+    if (options?.board_id && options?.column_id) {
+      await createEmergencyCard(room.id, options.board_id, options.column_id);
+    }
 
     toast({ title: 'War Room criada com sucesso!' });
     fetchWarRooms();
-    return room as WarRoom;
+    return room as unknown as WarRoom;
   };
 
   const closeWarRoom = async (roomId: string) => {
@@ -269,10 +228,10 @@ export function useWarRooms() {
       .eq('id', roomId);
 
     if (error) {
-      toast({ title: 'Erro ao fechar War Room', variant: 'destructive' });
+      toast({ title: 'Erro ao fechar War Room', description: error.message, variant: 'destructive' });
       return;
     }
-    toast({ title: 'War Room encerrada' });
+    toast({ title: 'War Room encerrada', description: 'O card foi movido para Concluída.' });
     fetchWarRooms();
   };
 
@@ -298,13 +257,14 @@ export function useWarRooms() {
     return true;
   };
 
-  return { warRooms, loading, canCreateWarRoom, createWarRoom, closeWarRoom, deleteWarRoom, createEmergencyTask, fetchWarRooms };
+  return { warRooms, loading, canCreateWarRoom, createWarRoom, closeWarRoom, deleteWarRoom, createEmergencyCard, fetchWarRooms };
 }
 
 export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) {
   const [members, setMembers] = useState<WarRoomMember[]>([]);
   const [timeline, setTimeline] = useState<WarRoomTimelineEntry[]>([]);
   const [messages, setMessages] = useState<WarRoomMessage[]>([]);
+  const [actions, setActions] = useState<WarRoomAction[]>([]);
   const [loading, setLoading] = useState(true);
   const { user, profile, isAdmin } = useAuth();
   const { toast } = useToast();
@@ -316,7 +276,7 @@ export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) 
 
     setLoading(true);
 
-    const [membersRes, timelineRes, messagesRes] = await Promise.all([
+    const [membersRes, timelineRes, messagesRes, actionsRes] = await Promise.all([
       supabase
         .from('war_room_members')
         .select('*, profile:profiles(id, name, display_name, avatar_url)')
@@ -331,8 +291,15 @@ export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) 
         .select('*, sender:profiles!war_room_messages_sender_id_fkey(id, name, display_name, avatar_url)')
         .eq('war_room_id', roomId)
         .order('created_at', { ascending: true }),
+      supabase
+        .from('war_room_actions' as any)
+        .select('*')
+        .eq('war_room_id', roomId)
+        .order('position', { ascending: true })
+        .order('created_at', { ascending: true }),
     ]);
 
+    if (actionsRes.data) setActions(actionsRes.data as unknown as WarRoomAction[]);
     if (membersRes.data) setMembers(membersRes.data as unknown as WarRoomMember[]);
 
     if (timelineRes.data) {
@@ -396,6 +363,11 @@ export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) 
         { event: '*', schema: 'public', table: 'war_room_timeline', filter: `war_room_id=eq.${roomId}` },
         () => fetchAll(),
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'war_room_actions', filter: `war_room_id=eq.${roomId}` },
+        () => fetchAll(),
+      )
       .subscribe();
 
     return () => {
@@ -435,6 +407,53 @@ export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) 
     }
 
     fetchAll();
+  };
+
+  const fail = (title: string, message?: string) => toast({ title, description: message, variant: 'destructive' });
+
+  const addAction = async (a: NewWarRoomAction) => {
+    if (!roomId || !user) return false;
+    const pos = actions.reduce((m, x) => Math.max(m, x.position), -1) + 1;
+    const { error } = await supabase.from('war_room_actions' as any).insert({
+      war_room_id: roomId, title: a.title.trim(), assigned_to: a.assigned_to, duration_min: a.duration_min, position: pos, created_by: user.id,
+    } as any);
+    if (error) { fail('Erro ao adicionar ação', error.message); return false; }
+    await fetchAll();
+    return true;
+  };
+
+  const updateAction = async (id: string, patch: Partial<Pick<WarRoomAction, 'title' | 'assigned_to' | 'duration_min'>>) => {
+    const { error } = await supabase.from('war_room_actions' as any).update(patch as any).eq('id', id);
+    if (error) { fail('Erro ao salvar a ação', error.message); return false; }
+    await fetchAll();
+    return true;
+  };
+
+  const deleteAction = async (id: string) => {
+    const { error } = await supabase.from('war_room_actions' as any).delete().eq('id', id);
+    if (error) { fail('Erro ao remover a ação', error.message); return false; }
+    await fetchAll();
+    return true;
+  };
+
+  const moveAction = async (id: string, dir: -1 | 1) => {
+    const list = [...actions].sort((a, b) => a.position - b.position);
+    const i = list.findIndex(a => a.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    [list[i], list[j]] = [list[j], list[i]];
+    const results = await Promise.all(list.map((a, idx) => a.position === idx ? null
+      : supabase.from('war_room_actions' as any).update({ position: idx } as any).eq('id', a.id)));
+    const err = results.find(r => r && (r as any).error) as any;
+    if (err) fail('Erro ao reordenar', err.error.message);
+    await fetchAll();
+  };
+
+  const setActionDone = async (id: string, done: boolean) => {
+    const { error } = await supabase.rpc('war_room_set_action' as any, { _action: id, _done: done });
+    if (error) { fail('Não foi possível atualizar a ação', error.message); return false; }
+    await fetchAll();
+    return true;
   };
 
   const sendMessage = async (content: string) => {
@@ -482,5 +501,23 @@ export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) 
     return true;
   };
 
-  return { members, timeline, messages, loading, acknowledge, addTimelineEntry, sendMessage, isRoomCreator, refetch: fetchAll };
+  return { members, timeline, messages, actions, loading, acknowledge, addTimelineEntry, sendMessage, addAction, updateAction, deleteAction, moveAction, setActionDone, isRoomCreator, refetch: fetchAll };
+}
+
+/** Cards ligados a uma War Room ativa (controlados pela sala: só dá para concluir subtarefas). */
+export function useWarRoomLockedTasks() {
+  const [locked, setLocked] = useState<Set<string>>(new Set());
+  const load = useCallback(async () => {
+    const { data, error } = await supabase.rpc('war_room_locked_tasks' as any);
+    if (error) return;
+    setLocked(new Set(((data || []) as Array<{ task_id: string }>).map(r => r.task_id)));
+  }, []);
+  useEffect(() => {
+    load();
+    const ch = supabase.channel(`wr-locks-${Math.random().toString(36).slice(2)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'war_rooms' }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [load]);
+  return locked;
 }

@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/common/PageHeader';
+import { useWarRoomLockedTasks } from '@/hooks/useWarRooms';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -393,6 +394,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
   const { columns, addColumn, updateColumn, deleteColumn, refetch: refetchColumns } = useBoardColumns(board.id);
   const { tasks, archivedTasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: refetchTasks } = useBoardTasks(board.id, restrictedTaskId);
+  const warLocks = useWarRoomLockedTasks();
   const { members, addMember, removeMember, updateMemberRole } = useBoardMembers(board.id);
   const {
     labels,
@@ -1111,6 +1113,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
   // Drag and drop
   const handleDragStart = (e: React.DragEvent, task: BoardTask) => {
+    if (warLocks.has(task.id)) { e.preventDefault(); toast.error('Card controlado pela War Room: não pode ser movido enquanto ela estiver ativa.'); return; }
     setDraggedTask(task);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', task.id);
@@ -1755,7 +1758,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                           )}
                         </div>
                         {/* Quick actions */}
-                        <div className="absolute top-2 right-2">
+                        <div className={cn("absolute top-2 right-2", warLocks.has(task.id) && "hidden")}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                               <Button variant="secondary" size="icon" className="h-6 w-6 rounded-full shadow-sm">
@@ -2003,7 +2006,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                       return (
                         <div
                           key={task.id}
-                          draggable
+                          draggable={!warLocks.has(task.id)}
                           onDragStart={(e) => handleDragStart(e, task)}
                           onDragEnd={handleDragEnd}
                           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); handleDragOver(e, column.id, index); }}
@@ -2121,7 +2124,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                           </div>
 
                           {/* Quick action on hover */}
-                          <div className="absolute top-1 right-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
+                          <div className={cn("absolute top-1 right-1 opacity-0 group-hover/card:opacity-100 transition-opacity", warLocks.has(task.id) && "hidden")}>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                 <Button variant="secondary" size="icon" className="h-6 w-6 rounded-full shadow-sm">

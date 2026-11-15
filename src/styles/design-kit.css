@@ -131,3 +131,17 @@
 .dk-pg .dk-dh{padding:12px 24px!important;gap:14px}
 .dk-pg .dk-bav{width:44px;height:44px;font-size:17px}
 .dk-pg .dk-dh h2{font-size:17px}
+
+/* War Room (WarRoomSection.tsx) — classes wr-* scoped under .wr-pg */
+.wr-pg .wr-card{background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:10px;padding:16px}
+.wr-pg .wr-h{font-size:13px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:hsl(var(--muted-foreground))}
+.wr-pg .wr-label{display:block;font-size:12px;font-weight:600;margin-bottom:4px}
+.wr-pg .wr-stat{position:relative;overflow:hidden;background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.wr-pg .wr-stat span{font-size:11px;font-weight:600;text-transform:uppercase;color:hsl(var(--muted-foreground))}
+.wr-pg .wr-stat b{font-size:20px;font-weight:700}
+.wr-pg .wr-stat em{font-style:normal;font-size:11px;font-weight:600}
+.wr-pg .wr-stat i{position:absolute;left:0;bottom:0;height:3px;background:#171A21;transition:width .3s}
+.wr-pg .wr-stat.ok em{color:#15803d}
+.wr-pg .wr-stat.late em{color:#C62828}
+.wr-pg .wr-stat.late{border-color:#C6282855}
+.wr-lock{pointer-events:none;opacity:.7}

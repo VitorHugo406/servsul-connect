@@ -26,6 +26,7 @@ import { useTaskActivities, TaskActivity } from '@/hooks/useTaskActivities';
 import { TaskLabel } from '@/hooks/useTaskLabels';
 import { useTaskDecisions } from '@/hooks/useTaskDecisions';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useWarRoomLockedTasks } from '@/hooks/useWarRooms';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
 import { TaskCompletionReport } from './TaskCompletionReport';
@@ -245,6 +246,15 @@ interface TaskDetailDialogProps {
 
 export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskLabels, allLabels, onToggleLabel, onCreateLabel, onDeleteLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate, onMakeTemplate, boardMembers, getTaskAssignees, onSetTaskAssignees, allUsers }: TaskDetailDialogProps) {
   const isMobile = useIsMobile();
+  const warLocks = useWarRoomLockedTasks();
+  const warLocked = !!task && warLocks.has(task.id);
+  const L = (node: React.ReactNode) => (warLocked ? <div className="wr-lock">{node}</div> : node);
+  const lockedMsg = () => { toast.error('Card controlado pela War Room: só é possível concluir as subtarefas.'); return Promise.resolve(false as any); };
+  const renderWarBanner = () => warLocked ? (
+    <div className="mx-4 mt-3 flex items-center gap-2 rounded-md border border-[#C62828]/30 bg-[#FDECEC] px-3 py-2 text-xs font-medium text-[#C62828]">
+      <Siren className="h-4 w-4 shrink-0" /> Card controlado por uma War Room ativa. Título, descrição e prazo vêm da sala; as subtarefas são a timeline e só podem ser concluídas. Ao encerrar a sala, o card vai para Concluída.
+    </div>
+  ) : null;
   const { comments, addComment, loading: commentsLoading } = useTaskComments(task?.id || null);
   const { subtasks, addSubtask, toggleSubtask, deleteSubtask, updateSubtask, reorderSubtasks, completed, total, loading: subtasksLoading } = useSubtasks(task?.id || null, boardId);
   const { groups, addGroup, deleteGroup, loading: groupsLoading } = useSubtaskGroups(task?.id || null);
@@ -1062,13 +1072,13 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
         collapsedGroups={collapsedGroups}
         toggleGroupCollapse={toggleGroupCollapse}
         onToggleSubtask={toggleSubtask}
-        onDeleteSubtask={deleteSubtask}
-        onUpdateSubtask={updateSubtask}
-        onReorderSubtasks={reorderSubtasks}
-        onAddSubtask={(gid, title) => addSubtask(title, gid)}
-        onDeleteGroup={deleteGroup}
+        onDeleteSubtask={warLocked ? (lockedMsg as any) : deleteSubtask}
+        onUpdateSubtask={warLocked ? (lockedMsg as any) : updateSubtask}
+        onReorderSubtasks={warLocked ? (lockedMsg as any) : reorderSubtasks}
+        onAddSubtask={(gid, title) => warLocked ? lockedMsg() : addSubtask(title, gid)}
+        onDeleteGroup={warLocked ? (lockedMsg as any) : deleteGroup}
       />
-      {renderAddChecklist()}
+      {L(renderAddChecklist())}
     </div>
   );
 
@@ -1228,14 +1238,15 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
         <DialogContent className="max-w-full w-full h-[95vh] max-h-[95vh] overflow-hidden flex flex-col p-0 gap-0">
           {renderCover()}
           {renderTemplateBanner()}
+          {renderWarBanner()}
           <ScrollArea className="flex-1">
-            {renderHeader()}
+            {L(renderHeader())}
             <div className="h-px bg-border mx-4" />
-            {renderActionButtons()}
+            {L(renderActionButtons())}
             <div className="h-px bg-border mx-4" />
-            {!task.is_template && renderInfoRow()}
-            {renderDescription()}
-            {renderDecisions()}
+            {!task.is_template && L(renderInfoRow())}
+            {L(renderDescription())}
+            {L(renderDecisions())}
             <div className="h-px bg-border mx-4" />
             {renderProgress()}
             {renderSubtasks()}
@@ -1244,7 +1255,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
             {renderTimeline()}
             {renderCommentInput()}
           </ScrollArea>
-          {renderFooter()}
+          {L(renderFooter())}
         </DialogContent>
       </Dialog>
     );
@@ -1256,18 +1267,19 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
         {renderCover()}
         {renderTemplateBanner()}
-        {renderHeader()}
+          {renderWarBanner()}
+        {L(renderHeader())}
         <div className="h-px bg-border mx-4" />
-        {renderActionButtons()}
+        {L(renderActionButtons())}
         <div className="h-px bg-border mx-4" />
 
         <div className="flex flex-1 overflow-hidden">
           {/* Left: Details & Subtasks */}
           <ScrollArea className="flex-1 border-r border-border">
             <div className="pb-6">
-              {!task.is_template && renderInfoRow()}
-              {renderDescription()}
-              {renderDecisions()}
+              {!task.is_template && L(renderInfoRow())}
+              {L(renderDescription())}
+              {L(renderDecisions())}
               {renderProgress()}
               {renderSubtasks()}
               </div>
@@ -1283,7 +1295,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
           </div>
         </div>
 
-        {renderFooter()}
+        {L(renderFooter())}
       </DialogContent>
     </Dialog>
   );
