@@ -24,6 +24,8 @@ const LOGO_BUCKET = 'company-logos';
 const PERIOD_GRACE_DAYS = 3;
 const CYCLES = ['monthly', 'annual', 'once'] as const;
 const periodDays = (cycle: string) => (cycle === 'annual' ? 366 : 31);
+// One rule for the yearly price (the plan's own value, or 12 months with 8% off), used by signup, renewals, add-ons and reminders.
+const annualCents = (p: any): number => (p?.annual_price_cents ?? Math.round((p?.price_cents ?? 0) * 12 * 0.92));
 const WEBHOOK_URL = `${Deno.env.get('SUPABASE_URL')}/functions/v1/billing/webhook`;
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -75,12 +77,20 @@ const slugify = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300
 
 const tokenMode = () => { const t = Deno.env.get('MP_ACCESS_TOKEN') || ''; return !t ? 'missing' : t.startsWith('TEST-') ? 'test' : 'production'; };
 
+let lastTokenAlert = 0;
 async function mp(path: string, init: RequestInit = {}) {
   const token = Deno.env.get('MP_ACCESS_TOKEN');
   if (!token) throw Object.assign(new Error('Pagamento ainda não configurado'), { status: 503 });
   const r = await fetch(MP_API + path, { ...init, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...(init.headers || {}) } });
   const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(new Error(`Mercado Pago ${r.status}: ${body?.message || body?.error || 'erro'}`), { status: 502, mp: body });
+  if (!r.ok) {
+    // The key was revoked/expired: nobody could pay and nothing would tell us. Warn the super admin (at most once an hour).
+    if ((r.status === 401 || r.status === 403) && Date.now() - lastTokenAlert > 3600e3) {
+      lastTokenAlert = Date.now();
+      void notifySuperAdmin(`*Mercado Pago recusou a chave de acesso*\n\nO Mercado Pago respondeu ${r.status} a uma consulta (${path.split('?')[0]}). Enquanto isso não for resolvido, novos pagamentos não abrem e confirmações podem atrasar. Gere uma nova chave no painel do Mercado Pago e atualize o segredo MP_ACCESS_TOKEN.`);
+    }
+    throw Object.assign(new Error(`Mercado Pago ${r.status}: ${body?.message || body?.error || 'erro'}`), { status: 502, mp: body });
+  }
   return body;
 }
 
@@ -145,7 +155,7 @@ async function sendReminders(out: Record<string, string>) {
       const daysLeft = Math.ceil((due - Date.now()) / 864e5);
       if (sub.current_period_end && daysLeft <= 5 && daysLeft >= -PERIOD_GRACE_DAYS && sub.reminder_sent_for !== sub.current_period_end) {
         const { data: plan } = await admin.from('subscription_plans').select('name, price_cents, annual_price_cents').eq('id', sub.plan_id).maybeSingle();
-        const base = sub.billing_cycle === 'annual' ? (plan?.annual_price_cents ?? (plan?.price_cents ?? 0) * 12) : (plan?.price_cents ?? 0);
+        const base = sub.billing_cycle === 'annual' ? annualCents(plan) : (plan?.price_cents ?? 0);
         const total = base + extrasMonthlyCents(sub, cfg) * (sub.billing_cycle === 'annual' ? 12 : 1);
         const date = new Date(due).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
         const auto = sub.billing_cycle !== 'once' && !!sub.provider_subscription_id;
@@ -193,8 +203,16 @@ async function provision(signupId: string, silent = false): Promise<{ ok: boolea
     // 1. Company (reuse the one from an earlier partial attempt).
     let companyId: string | null = s.company_id;
     if (!companyId) {
-      const { data: c, error } = await admin.from('companies').insert({ name: s.company_name, slug: s.slug, primary_color: s.primary_color, secondary_color: s.secondary_color, is_active: true }).select('id').single();
-      if (error) throw new Error('Empresa: ' + error.message);
+      let slug = s.slug as string;
+      let ins = await admin.from('companies').insert({ name: s.company_name, slug, primary_color: s.primary_color, secondary_color: s.secondary_color, is_active: true }).select('id').single();
+      if (ins.error && (ins.error as any).code === '23505') {
+        // The address (slug) was taken by someone else after the checkout opened: keep the payment, pick a free variation.
+        slug = `${String(s.slug).slice(0, 34)}-${crypto.getRandomValues(new Uint32Array(1))[0].toString(36).slice(0, 5)}`;
+        ins = await admin.from('companies').insert({ name: s.company_name, slug, primary_color: s.primary_color, secondary_color: s.secondary_color, is_active: true }).select('id').single();
+        if (!ins.error) await admin.from('company_signups').update({ slug }).eq('id', s.id);
+      }
+      if (ins.error) throw new Error('Empresa: ' + ins.error.message);
+      const c = ins.data;
       companyId = c.id;
       await admin.from('company_signups').update({ company_id: companyId }).eq('id', s.id);
     }
@@ -214,7 +232,7 @@ async function provision(signupId: string, silent = false): Promise<{ ok: boolea
     const periodEnd = new Date(Date.now() + (periodDays(cycle) + PERIOD_GRACE_DAYS) * 864e5).toISOString();
     const { error: subErr } = await admin.from('company_subscriptions').upsert({ company_id: companyId, plan_id: s.plan_id, status: 'active', billing_cycle: cycle, provider: 'mercadopago', provider_subscription_id: cycle === 'once' ? null : s.preapproval_id, provider_customer_id: cycle === 'once' ? s.last_payment_id : null, current_period_end: periodEnd }, { onConflict: 'company_id' });
     if (subErr) throw new Error('Assinatura: ' + subErr.message);
-    if (s.last_payment_id) await admin.from('company_payments').upsert({ company_id: companyId, provider_payment_id: String(s.last_payment_id), kind: 'signup', description: `Assinatura ${cycle === 'annual' ? 'anual' : cycle === 'once' ? 'mensal avulsa' : 'mensal'} · plano ${s.plan_id}`, amount_cents: s.amount_cents, paid_at: s.paid_at || new Date().toISOString() }, { onConflict: 'provider,provider_payment_id', ignoreDuplicates: true });
+    if (s.last_payment_id) { const { error: payErr } = await admin.from('company_payments').upsert({ company_id: companyId, provider_payment_id: String(s.last_payment_id), kind: 'signup', description: `Assinatura ${cycle === 'annual' ? 'anual' : cycle === 'once' ? 'mensal avulsa' : 'mensal'} · plano ${s.plan_id}`, amount_cents: s.amount_cents, paid_at: s.paid_at || new Date().toISOString() }, { onConflict: 'provider,provider_payment_id', ignoreDuplicates: true }); if (payErr) console.error('company_payments', payErr); }
     // 4. Admin user.
     const { data: existingProfile } = await admin.from('profiles').select('user_id, company_id').ilike('email', s.admin_email).maybeSingle();
     let userId: string | null = existingProfile?.company_id === companyId ? existingProfile.user_id : null;
@@ -239,7 +257,14 @@ async function provision(signupId: string, silent = false): Promise<{ ok: boolea
     const msg = e instanceof Error ? e.message : String(e);
     console.error('provision failed', s.id, msg);
     await admin.from('company_signups').update({ status: 'failed', error: msg.slice(0, 500), updated_at: new Date().toISOString() }).eq('id', s.id);
-    if ((s.attempts || 0) === 0 || (s.attempts || 0) >= 5) await notifySuperAdmin(`*Falha ao criar empresa paga*\n\nEmpresa: ${s.company_name}\nE-mail: ${s.admin_email}\nErro: ${msg}\n\nO sistema tenta de novo automaticamente.`);
+    const att = s.attempts || 0;
+    if (att === 0 || att === 3 || att === 7) await notifySuperAdmin(`*Falha ao criar empresa paga* (tentativa ${att + 1})\n\nEmpresa: ${s.company_name}\nE-mail: ${s.admin_email}\nPagamento confirmado: ${s.paid_at ? 'sim' : 'ainda não'}\nErro: ${msg}\n\nO sistema tenta de novo a cada 5 minutos (até 8 vezes). Depois disso é preciso resolver manualmente.`);
+    // The customer has paid: tell them it is being finished instead of leaving them wondering.
+    if (att === 0 && s.paid_at && mailerConfigured()) {
+      try {
+        await sendMail({ to: s.admin_email, subject: 'ewvon · Recebemos o seu pagamento', html: layout(`<div style="background:#fff;border-radius:18px;padding:28px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#18181b"><h2 style="margin:0 0 8px;font-size:20px">Recebemos o seu pagamento</h2><p style="margin:0 0 12px;font-size:14px;color:#52525b">O pagamento da empresa <b>${esc(s.company_name)}</b> foi confirmado. Estamos finalizando a criação do acesso e você recebe um novo e-mail com o recibo assim que terminar, normalmente em poucos minutos.</p><p style="margin:0;font-size:13px;color:#71717a">Se passar de 1 hora, responda este e-mail ou escreva para ewvonsuporte@gmail.com. Você não será cobrado de novo.</p></div>`, 'Recebemos o seu pagamento') });
+      } catch (mailErr) { console.error('failure mail', mailErr); }
+    }
     return { ok: false, error: msg };
   }
 }
@@ -297,7 +322,7 @@ async function applyRecurring(preapprovalId: string, paymentStatus: string, amou
   if (!sub) return 'assinatura não vinculada';
   if (paymentStatus === 'approved') {
     const { data: plan } = await admin.from('subscription_plans').select('price_cents, annual_price_cents').eq('id', sub.plan_id).maybeSingle();
-    const expected = sub.billing_cycle === 'annual' ? (plan?.annual_price_cents ?? (plan?.price_cents ?? 0) * 10) : plan?.price_cents;
+    const expected = sub.billing_cycle === 'annual' ? annualCents(plan) : plan?.price_cents;
     if (expected && Math.round(amount * 100) < expected) return 'valor abaixo do plano';
     const base = Math.max(Date.now(), new Date(sub.current_period_end || 0).getTime() - PERIOD_GRACE_DAYS * 864e5);
     await admin.from('company_subscriptions').update({ status: 'active', current_period_end: new Date(base + (periodDays(sub.billing_cycle) + PERIOD_GRACE_DAYS) * 864e5).toISOString() }).eq('company_id', sub.company_id);
@@ -325,7 +350,7 @@ async function syncRecurringAmount(companyId: string): Promise<string> {
   if (!sub?.provider_subscription_id || sub.billing_cycle === 'once') return 'sem cobrança automática';
   const { data: plan } = await admin.from('subscription_plans').select('price_cents, annual_price_cents').eq('id', sub.plan_id).maybeSingle();
   const cfg = await billingSettings();
-  const base = sub.billing_cycle === 'annual' ? (plan?.annual_price_cents ?? (plan?.price_cents ?? 0) * 12) : (plan?.price_cents ?? 0);
+  const base = sub.billing_cycle === 'annual' ? annualCents(plan) : (plan?.price_cents ?? 0);
   const total = base + extrasMonthlyCents(sub, cfg) * (sub.billing_cycle === 'annual' ? 12 : 1);
   try {
     await mp(`/preapproval/${encodeURIComponent(sub.provider_subscription_id)}`, { method: 'PUT', body: JSON.stringify({ auto_recurring: { transaction_amount: total / 100, currency_id: 'BRL' } }) });
@@ -340,7 +365,7 @@ async function syncRecurringAmount(companyId: string): Promise<string> {
 async function planChangeQuote(sub: any, target: any) {
   const { data: cur } = await admin.from('subscription_plans').select('price_cents, annual_price_cents').eq('id', sub.plan_id).maybeSingle();
   const annual = sub.billing_cycle === 'annual';
-  const price = (p: any) => (annual ? (p?.annual_price_cents ?? (p?.price_cents ?? 0) * 12) : (p?.price_cents ?? 0));
+  const price = (p: any) => (annual ? annualCents(p) : (p?.price_cents ?? 0));
   const totalDays = annual ? 365 : 30;
   const endMs = new Date(sub.current_period_end || Date.now()).getTime() - PERIOD_GRACE_DAYS * 864e5;
   const daysLeft = Math.max(0, Math.min(totalDays, Math.ceil((endMs - Date.now()) / 864e5)));
@@ -380,6 +405,43 @@ async function applyOrder(orderId: string, payment: any): Promise<string> {
   const { data: comp } = await admin.from('companies').select('name').eq('id', order.company_id).maybeSingle();
   await notifySuperAdmin(`*Pagamento confirmado*\n\nEmpresa: ${comp?.name}\nItem: ${label}\nValor: R$ ${(order.amount_cents / 100).toFixed(2)}${sync}`);
   return 'pedido aplicado' + sync;
+}
+
+// Renewals of automatic subscriptions: the webhook can be lost, so once an hour every subscription close to its due date
+// (or already late) is compared with Mercado Pago. A payment is applied only if it is not recorded yet (idempotent).
+async function reconcileRenewals(out: Record<string, string>) {
+  const { data: subs } = await admin.from('company_subscriptions').select('company_id, status, billing_cycle, current_period_end, provider_subscription_id')
+    .in('status', ['active', 'past_due']).not('provider_subscription_id', 'is', null).neq('billing_cycle', 'once')
+    .lt('current_period_end', new Date(Date.now() + (PERIOD_GRACE_DAYS + 2) * 864e5).toISOString()).limit(25);
+  let n = 0, applied = 0;
+  for (const sub of (subs ?? []) as any[]) {
+    n++;
+    try {
+      const pre = await mp(`/preapproval/${encodeURIComponent(sub.provider_subscription_id)}`);
+      if (pre.status === 'cancelled' && sub.status !== 'canceled') {
+        await admin.from('company_subscriptions').update({ status: 'canceled' }).eq('company_id', sub.company_id);
+        const { data: c } = await admin.from('companies').select('name').eq('id', sub.company_id).maybeSingle();
+        await notifySuperAdmin(`*Assinatura cancelada no Mercado Pago*\n\nEmpresa: ${c?.name || sub.company_id}\nA assinatura ${sub.provider_subscription_id} foi cancelada (pelo cliente ou pelo Mercado Pago).`);
+        out['renovacao:' + sub.company_id] = 'assinatura cancelada';
+        continue;
+      }
+      if (pre.status === 'paused' && sub.status === 'active') await admin.from('company_subscriptions').update({ status: 'past_due' }).eq('company_id', sub.company_id);
+      const found = await mp(`/authorized_payments/search?preapproval_id=${encodeURIComponent(sub.provider_subscription_id)}`);
+      const approved = (found?.results || []).filter((p: any) => p?.payment?.status === 'approved' && p?.payment?.id).slice(0, 4);
+      if (!approved.length) continue;
+      const ids = approved.map((p: any) => String(p.payment.id));
+      const { data: known } = await admin.from('company_payments').select('provider_payment_id').eq('company_id', sub.company_id).in('provider_payment_id', ids);
+      const have = new Set((known ?? []).map((k: any) => k.provider_payment_id));
+      for (const ap of approved.slice().reverse()) {
+        const pid = String(ap.payment.id);
+        if (have.has(pid)) continue;
+        const r = await applyRecurring(sub.provider_subscription_id, 'approved', Number(ap.transaction_amount || 0), pid);
+        if (r === 'renovada') applied++;
+        out['renovacao:' + sub.company_id] = r;
+      }
+    } catch (e) { out['renovacao:' + sub.company_id] = 'erro: ' + (e as Error).message; }
+  }
+  out.renovacoes = `${n} verificada(s), ${applied} aplicada(s)`;
 }
 
 // x-signature: "ts=...,v1=..."  ; manifest "id:<data.id>;request-id:<x-request-id>;ts:<ts>;"
@@ -427,7 +489,7 @@ Deno.serve(async (req) => {
       const { data: plan } = await admin.from('subscription_plans').select('id, name, price_cents, annual_price_cents, is_active').eq('id', planId).maybeSingle();
       if (!plan || !plan.is_active) return reply({ error: 'Plano inválido.' }, 400);
       const cycle = (CYCLES as readonly string[]).includes(body.billing_cycle) ? body.billing_cycle as string : 'monthly';
-      const amountCents = cycle === 'annual' ? (plan.annual_price_cents ?? plan.price_cents * 10) : plan.price_cents;
+      const amountCents = cycle === 'annual' ? annualCents(plan) : plan.price_cents;
       const cycleLabel = cycle === 'annual' ? 'anual' : cycle === 'once' ? 'mensal avulso' : 'mensal';
       const companyName = clean(body.company?.name, 80);
       const adminName = clean(body.admin?.name, 80);
@@ -440,10 +502,18 @@ Deno.serve(async (req) => {
       const pe = passwordRuleError(password); if (pe) return reply({ error: pe }, 400);
       const { data: emailUsed } = await admin.from('profiles').select('id').ilike('email', adminEmail).limit(1);
       if (emailUsed?.length) return reply({ error: 'Este e-mail já tem uma conta no ewvon. Use outro e-mail para o administrador.' }, 409);
-      const { data: openSignup } = await admin.from('company_signups').select('id').ilike('admin_email', adminEmail).in('status', ['pending_payment', 'provisioning', 'failed']).limit(1);
-      if (openSignup?.length) {
-        // Same e-mail starting again: cancel the previous unpaid attempt.
-        await admin.from('company_signups').update({ status: 'canceled', password_enc: null }).eq('id', openSignup[0].id).eq('status', 'pending_payment');
+      // The login e-mail may exist in the authentication service without a profile (leftover): creating the company would then fail after the payment.
+      const { data: authUsed } = await admin.rpc('auth_email_exists', { _email: adminEmail });
+      if (authUsed === true) return reply({ error: 'Este e-mail já tem uma conta no ewvon. Use outro e-mail para o administrador.' }, 409);
+      const { data: openSignup } = await admin.from('company_signups').select('*').ilike('admin_email', adminEmail).in('status', ['pending_payment', 'provisioning', 'failed']).limit(3);
+      for (const prior of openSignup ?? []) {
+        if (prior.status !== 'pending_payment') return reply({ error: 'Já existe um cadastro com este e-mail em andamento (pagamento confirmado). Aguarde o e-mail com o acesso ou fale com o suporte.' }, 409);
+        // Same e-mail starting again: before dropping the previous attempt, make sure it was not paid in the meantime (Pix/boleto confirm later).
+        let paid = false;
+        try { paid = (await checkSignupPaid(prior)).startsWith('provision'); } catch (e) { console.error('prior check', e); }
+        if (paid) return reply({ error: 'O pagamento desse cadastro acabou de ser confirmado. Aguarde o e-mail com o acesso ou fale com o suporte.' }, 409);
+        // Superseded (not failed): the encrypted password is kept so a late Pix still creates the company; the database wipes it after the payment window.
+        await admin.from('company_signups').update({ status: 'canceled' }).eq('id', prior.id).eq('status', 'pending_payment');
       }
       // Unique slug.
       let slug = slugify(companyName);
@@ -617,6 +687,17 @@ Deno.serve(async (req) => {
         else result = await applyRecurring(preId, status, Number(ap.transaction_amount || 0), String(ap?.payment?.id || ''));
       } else if (topic === 'payment') {
         const pay = await mp(`/v1/payments/${encodeURIComponent(dataId)}`);
+        if (['refunded', 'charged_back', 'cancelled'].includes(String(pay?.status))) {
+          // A payment we already counted was refunded or disputed: flag the company and warn the super admin (access is not removed automatically).
+          const { data: cp } = await admin.from('company_payments').select('company_id, kind, amount_cents').eq('provider', 'mercadopago').eq('provider_payment_id', String(pay.id)).maybeSingle();
+          if (cp) {
+            if (['signup', 'renewal', 'once_renewal'].includes(cp.kind)) await admin.from('company_subscriptions').update({ status: 'past_due' }).eq('company_id', cp.company_id).eq('status', 'active');
+            const { data: c } = await admin.from('companies').select('name').eq('id', cp.company_id).maybeSingle();
+            await notifySuperAdmin(`*Pagamento ${pay.status === 'charged_back' ? 'contestado (chargeback)' : pay.status === 'refunded' ? 'devolvido' : 'cancelado'}*\n\nEmpresa: ${c?.name || cp.company_id}\nValor: ${brl(cp.amount_cents)} (${cp.kind})\nPagamento: ${pay.id}\nA assinatura da empresa foi marcada como "Pagamento pendente". Decida se mantém ou encerra o acesso.`);
+            await admin.from('payment_events').insert({ provider: 'mercadopago', topic, resource_id: dataId, signature_ok: sigOk, result: ('pagamento ' + pay.status + ' registrado').slice(0, 200) });
+            return reply({ ok: true });
+          }
+        }
         const orderRef = typeof pay?.external_reference === 'string' && /^order:[0-9a-f-]{36}$/.test(pay.external_reference) ? pay.external_reference.slice(6) : null;
         if (orderRef) {
           result = await applyOrder(orderRef, pay);
@@ -702,6 +783,8 @@ Deno.serve(async (req) => {
       // Expire unpaid signups after 3 days (wipes the encrypted password).
       await admin.from('company_signups').update({ status: 'expired', password_enc: null }).eq('status', 'pending_payment').neq('billing_cycle', 'once').lt('created_at', new Date(Date.now() - 3 * 864e5).toISOString());
       await admin.from('company_signups').update({ status: 'expired', password_enc: null }).eq('status', 'pending_payment').eq('billing_cycle', 'once').lt('created_at', new Date(Date.now() - 12 * 864e5).toISOString());
+      // Superseded/closed attempts keep their encrypted password only for the payment window (12 days), then it is wiped.
+      await admin.from('company_signups').update({ password_enc: null }).in('status', ['canceled', 'expired']).not('password_enc', 'is', null).lt('created_at', new Date(Date.now() - 13 * 864e5).toISOString());
       const { data: open } = await admin.from('company_signups').select('*').in('status', ['pending_payment', 'failed']).lt('attempts', 8).order('created_at').limit(40);
       for (const s of open ?? []) {
         try { out[s.id] = s.status === 'failed' && s.paid_at ? ((await provision(s.id)).ok ? 'provisionada' : 'falhou de novo') : await checkSignupPaid(s); }
@@ -720,6 +803,8 @@ Deno.serve(async (req) => {
       // Provisioning stuck for more than 15 minutes (function crashed mid-way) -> retry.
       const { data: stuck } = await admin.from('company_signups').select('id').eq('status', 'provisioning').lt('updated_at', new Date(Date.now() - 15 * 60e3).toISOString());
       for (const s of stuck ?? []) { await admin.from('company_signups').update({ status: 'failed' }).eq('id', s.id).eq('status', 'provisioning'); out[s.id] = ((await provision(s.id)).ok ? 'retomada' : 'falhou'); }
+      // Renewals that never reached us (lost notification): check Mercado Pago once an hour.
+      if (new Date().getUTCMinutes() < 5 || new URL(req.url).searchParams.get('force') === '1') { try { await reconcileRenewals(out); } catch (e) { out.renovacoes = 'erro: ' + (e as Error).message; } }
       try { await sendReminders(out); } catch (e) { out.lembretes = 'erro: ' + (e as Error).message; }
       out.capacidade = await checkSystemCapacity();
       return reply({ ok: true, checked: out });
