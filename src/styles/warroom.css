@@ -247,3 +247,10 @@
 .wn-edit input,.wn-edit select{height:34px;border:1px solid #C5CBD5;border-radius:8px;padding:0 8px;font:inherit;background:#fff;min-width:0}
 .wd-in[disabled]{background:#F0F2F5;color:#5A6472}
 .wd-st-big small{font-size:13px;font-weight:500;color:#4A5563}
+/* Convocados compactos: grade de várias colunas com rolagem, para muitas pessoas */
+.wd-inf{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr)!important;gap:20px!important;padding:14px 20px!important}
+.wd-inf p{max-height:88px;overflow:auto;word-break:break-word}
+.wd-cv{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px 14px!important;max-height:104px;overflow:auto}
+.wd-cv .wd-pp{gap:7px;min-width:0;padding:2px 0}
+.wd-cv .wd-pp .wd-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px}
+.wd-cv .wd-pp .wd-z{font-size:11px;white-space:nowrap}
