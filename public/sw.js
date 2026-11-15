@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ewvor-runtime-v9';
+const CACHE_NAME = 'ewvor-runtime-v10';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/icons/logo-192.png',

@@ -22,7 +22,7 @@ export default function LandingPage() {
     <iframe
       ref={landingFrame}
       title="ewvon"
-      src="/ewvon-landing.html"
+      src="/ewvon-landing.html?v=4"
       className="fixed inset-0 h-full w-full border-0"
       style={{ display: "block" }}
       allow="clipboard-write"
