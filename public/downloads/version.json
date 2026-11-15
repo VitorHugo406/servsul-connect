@@ -1,1 +1,1 @@
-{ "version": "2.1.2", "required": false, "notes": "Sem a notificação fixa \"Recebendo mensagens e ligações\". Mensagens e ligações continuam chegando pelo Firebase." }
+{ "version": "2.1.3", "required": false, "notes": "Novo ícone do app em cinza grafite (degradê) e nome Ewvon." }
