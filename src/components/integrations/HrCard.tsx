@@ -248,10 +248,20 @@ export function HrCard() {
       <div className="dk-hd">
         <span className="dk-tile" style={{ background: '#171A21' }}><Users className="h-5 w-5" /></span>
         <div>
-          <h2>RH e Pessoas (Dash 3D)</h2>
+          <h2>Importar colaboradores e RH (Dash 3D)</h2>
           <span className={`dk-stt${sources && sources.length ? ' on' : ''}`}>{sources === null ? 'Carregando…' : sources.length ? `${sources.length} sistema(s) conectado(s)` : 'Nenhum sistema conectado'}</span>
         </div>
         {sources && sources.length < 6 && form === null ? <button className="dk-btn pri dk-sp" type="button" onClick={() => setForm('new')} disabled={!presets}><Plus className="h-4 w-4" />Adicionar sistema</button> : null}
+      </div>
+      <div className="space-y-2 rounded-xl border border-border p-3">
+        <p className="text-[14px] font-semibold">Importar colaboradores como usuários</p>
+        <p className="text-[12.5px] text-muted-foreground">Cria os acessos e as fichas automaticamente a partir do sistema de gestão de pessoas (Convenia, Senior, Pontomais e outros). Respeita o limite de usuários do plano: se houver mais gente do que vagas, importa em ordem alfabética e pergunta antes.</p>
+        {sources === null ? null : !sources.length ? (
+          <div className="flex flex-wrap items-center gap-2"><span className="text-[12.5px]">Primeiro conecte o sistema (cole só a chave de acesso):</span><button className="dk-btn pri" type="button" onClick={() => setForm('new')} disabled={!presets || form !== null}><Plus className="mr-1.5 h-4 w-4" />Conectar sistema</button></div>
+        ) : (
+          <div className="flex flex-wrap gap-2">{sources.map((s) => <button key={s.id} className="dk-btn pri" type="button" onClick={() => setImporting(importing === s.id ? null : s.id)} disabled={busy !== null || s.last_status === 'erro'}><UserPlus className="mr-1.5 h-4 w-4" />Importar de {s.label || nameOf(s)}</button>)}</div>
+        )}
+        {sources?.map((s) => importing === s.id ? <ImportPanel key={s.id} source={s} name={s.label || nameOf(s)} onClose={() => { setImporting(null); void load(); }} /> : null)}
       </div>
       <p className="dk-tx">Conecte o seu sistema de gestão de pessoas (Convenia, Pontomais, Tangerino, Ahgora, Nexti e outros), cole só a chave e o <b>Dash 3D passa a usar os colaboradores desses sistemas</b> (admissões, salários, demissões, cargos, departamentos, férias vencidas…) no lugar dos cadastrados no ewvon. Dá para ligar mais de um sistema. Dados de ponto não são importados. Os dados são atualizados sozinhos.</p>
       <p className="dk-priv">Privacidade: salários, demissões e demais dados ficam visíveis só para administradores e para quem tem acesso ao Dash.</p>
@@ -286,7 +296,6 @@ export function HrCard() {
                   <button className="dk-btn" type="button" onClick={() => setForm(s.id)} disabled={busy !== null}><Pencil className="mr-1.5 h-4 w-4" />Editar</button>
                   <button className="dk-btn" style={{ color: '#8E1B10' }} type="button" onClick={() => void remove(s)} disabled={busy !== null}><Trash2 className="mr-1.5 h-4 w-4" />Remover</button>
                 </div>
-                {importing === s.id ? <ImportPanel source={s} name={s.label || nameOf(s)} onClose={() => { setImporting(null); void load(); }} /> : null}
               </div>
             );
           })}
