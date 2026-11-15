@@ -397,6 +397,7 @@ function WarRoomDetail({ room: initial, onBack }: { room: WarRoom; onBack: () =>
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [cardModal, setCardModal] = useState(false);
+  const [cvOpen, setCvOpen] = useState(false);
   const [tick, setTick] = useState(0);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -510,7 +511,7 @@ function WarRoomDetail({ room: initial, onBack }: { room: WarRoom; onBack: () =>
   const confirmed = members.filter(m => m.has_acknowledged).length;
 
   return (
-    <div className="dk-pg wd-pg" onClick={() => setMenuId(null)}>
+    <div className="dk-pg wd-pg" onClick={() => { setMenuId(null); setCvOpen(false); }}>
       <header className={d('panel top')}>
         <button type="button" className={d('bk')} aria-label="Voltar" onClick={onBack}><Ico name="back" size={18} /></button>
         <div className={d('sir')}><Ico name="siren" size={22} /></div>
@@ -545,17 +546,25 @@ function WarRoomDetail({ room: initial, onBack }: { room: WarRoom; onBack: () =>
           </div>
           <div className={d('inf')}>
             <div><div className={d('lab')}>Descrição</div><p>{room.description || 'Sem descrição.'}</p></div>
-            <div><div className={d('lab')}>Convocados</div><div className={d('cv')}>
-              {members.map((m: WarRoomMember) => (
-                <div key={m.id} className={d('pp')}>
-                  <Av p={d} person={{ ...(m.profile || {}), autonomy_level: person(m.profile_id)?.autonomy_level }} />
-                  <span className={d('n')}>{nameOf(m.profile)}</span>
-                  {m.has_acknowledged
-                    ? <span className={d('z ok')}><Ico name="check" size={13} /> Confirmou</span>
-                    : <span className={d('z no')}>Pendente</span>}
+            <div className={d('cvw')}><div className={d('lab')}>Convocados</div>
+              <button type="button" className={d('cvb')} aria-expanded={cvOpen} onClick={e => { e.stopPropagation(); setCvOpen(o => !o); }}>
+                <span><b>{members.length}</b> {members.length === 1 ? 'convocado' : 'convocados'} · {confirmed} {confirmed === 1 ? 'confirmou' : 'confirmaram'}</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: cvOpen ? 'rotate(180deg)' : undefined }}><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+              {cvOpen && (
+                <div className={d('cvl')} onClick={e => e.stopPropagation()}>
+                  {members.map((m: WarRoomMember) => (
+                    <div key={m.id} className={d('pp')}>
+                      <Av p={d} person={{ ...(m.profile || {}), autonomy_level: person(m.profile_id)?.autonomy_level }} />
+                      <span className={d('n')}>{nameOf(m.profile)}</span>
+                      {m.has_acknowledged
+                        ? <span className={d('z ok')}><Ico name="check" size={13} /> Confirmou</span>
+                        : <span className={d('z no')}>Pendente</span>}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div></div>
+              )}
+            </div>
           </div>
           <div className={d('chh')}>Chat<span>{members.length} {members.length === 1 ? 'convocado' : 'convocados'}</span></div>
           <div className={d('msgs')}>
