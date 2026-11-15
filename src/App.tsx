@@ -17,6 +17,7 @@ import { EwwonLoader } from "@/components/common/EwwonLoader";
 import { FloatingNoteProvider } from "@/contexts/FloatingNoteContext";
 import { supabase } from "@/integrations/supabase/client";
 import { applyBrand, getCachedBrand } from "@/lib/branding";
+import { SuspendedGate } from "@/components/common/SuspendedGate";
 import { AdminBirthdayPdfGuard } from "@/components/birthday/AdminBirthdayPdfGuard";
 import { Building2, Check, Loader2, X } from "lucide-react";
 import { CookieBanner } from "@/components/legal/CookieBanner";
@@ -99,7 +100,7 @@ function AppRoutes() {
   // The new login (company + user) is used on every screen size; ?full=1 opens the complete form.
   const mobileLogin = !full;
   const authContent = mobileLogin ? <PublicRoute><EwwonLogin /></PublicRoute> : <PublicRoute><Auth /></PublicRoute>;
-  return <>{mobileLogin ? null : <PersistentAccessNavigation />}<Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><E2EBoot /><LegalGate /><UpdatePrompt /><CookieBanner /><Routes><Route path="/" element={<RootRoute />} /><Route path="/auth" element={!mobileLogin && location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={mobileLogin ? authContent : <PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="/termos" element={<Legal doc="termos" />} /><Route path="/privacidade" element={<Legal doc="privacidade" />} /><Route path="/cookies" element={<Legal doc="cookies" />} /><Route path="/dpa" element={<Legal doc="dpa" />} /><Route path="/assinar" element={<Subscribe />} /><Route path="/assinar/retorno" element={<Subscribe />} /><Route path="*" element={<RootRoute />} /></Routes></Suspense></>;
+  return <>{mobileLogin ? null : <PersistentAccessNavigation />}<Suspense fallback={<LoadingScreen />}><AdminBirthdayPdfGuard /><E2EBoot /><LegalGate /><SuspendedGate /><UpdatePrompt /><CookieBanner /><Routes><Route path="/" element={<RootRoute />} /><Route path="/auth" element={!mobileLogin && location.search.includes('company=') ? <CompanyBrandGate>{authContent}</CompanyBrandGate> : authContent} /><Route path="/select-company" element={mobileLogin ? authContent : <PublicRoute><SelectCompany /></PublicRoute>} /><Route path="/birthday-report" element={<BirthdayShare />} /><Route path="/termos" element={<Legal doc="termos" />} /><Route path="/privacidade" element={<Legal doc="privacidade" />} /><Route path="/cookies" element={<Legal doc="cookies" />} /><Route path="/dpa" element={<Legal doc="dpa" />} /><Route path="/assinar" element={<Subscribe />} /><Route path="/assinar/retorno" element={<Subscribe />} /><Route path="*" element={<RootRoute />} /></Routes></Suspense></>;
 }
 function E2EBoot() { const { profile } = useAuth(); useEffect(() => { if (profile?.id) initE2E(profile.id); }, [profile?.id]); return null; }
 function AppShell() { return <><DemoTimer /><AuthProvider><CompanyProvider><FloatingNoteProvider><AppRoutes /></FloatingNoteProvider></CompanyProvider></AuthProvider></>; }

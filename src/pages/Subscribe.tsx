@@ -376,7 +376,7 @@ function ReturnView() {
   const saved = (() => { try { return JSON.parse(safeGet(PENDING_KEY) || 'null'); } catch { return null; } })();
   const id = params.get('s') || saved?.id;
   const token = params.get('t') || saved?.token;
-  const [state, setState] = useState<{ status?: string; company_name?: string; slug?: string | null; admin_email?: string; checkout_url?: string | null; error?: string }>({});
+  const [state, setState] = useState<{ status?: string; company_name?: string; slug?: string | null; admin_email?: string; checkout_url?: string | null; error?: string; refused?: boolean }>({});
   const [tries, setTries] = useState(0);
   const [nonce, setNonce] = useState(0);
   const tries0 = useRef(0);
@@ -422,6 +422,8 @@ function ReturnView() {
   if (state.status === 'canceled') return box('Pagamento não aprovado', 'O Mercado Pago não aprovou o pagamento e a assinatura foi encerrada. Nenhuma empresa foi criada e nada foi cobrado. Tente de novo com outro cartão de crédito, de preferência um que você já use no Mercado Pago.', <Button asChild><a href="/assinar">Tentar novamente</a></Button>, <X className="h-5 w-5" />);
   if (state.status === 'expired') return box('Cadastro encerrado', 'O pagamento não foi concluído em 3 dias. Nenhuma cobrança foi feita. Você pode começar de novo.', <Button asChild><a href="/assinar">Assinar novamente</a></Button>, <X className="h-5 w-5" />);
   if (state.status === 'provisioning' || state.status === 'failed') return box('Pagamento confirmado', <>Estamos criando a sua empresa. Isso leva poucos instantes; esta página atualiza sozinha.{tries > 25 || state.status === 'failed' ? <> <b className="text-foreground">Está demorando mais do que o normal, mas o seu pagamento já está garantido: você não precisa pagar de novo.</b> Assim que terminar, enviamos o acesso e o recibo para o seu e-mail. Se passar de 1 hora, escreva para ewvonsuporte@gmail.com.</> : null}</>, null, <Loader2 className="h-5 w-5 animate-spin" />);
+  if (state.refused) return box('Pagamento recusado — você pode tentar de novo', <>O Mercado Pago recusou essa tentativa de pagamento, mas <b className="text-foreground">o cadastro continua aberto</b>. Abra o pagamento de novo e use outro cartão ou outra forma (Pix, por exemplo). Se o novo pagamento for aprovado, a empresa é criada normalmente. Nada foi cobrado na tentativa recusada.</>,
+    <div className="flex flex-wrap justify-center gap-2">{state.checkout_url ? <Button asChild><a href={state.checkout_url} target="_blank" rel="noreferrer">Voltar ao pagamento</a></Button> : null}<Button variant="outline" onClick={() => setNonce((n) => n + 1)}>Já paguei, verificar agora</Button></div>, <X className="h-5 w-5" />);
   return box('Aguardando confirmação do pagamento', <>Pague na aba do Mercado Pago e volte para esta: assim que o pagamento for confirmado, a sua empresa é criada e esta tela muda sozinha. Se a aba do Pix continuar aberta, é só fechá-la. Esta página atualiza sozinha{tries > 24 ? '. Pagamentos podem levar alguns minutos para serem confirmados.' : '.'}</>,
     <div className="flex flex-wrap justify-center gap-2"><Button variant="outline" onClick={() => setNonce((n) => n + 1)}>Já paguei, verificar agora</Button>{state.checkout_url ? <Button variant="outline" asChild><a href={state.checkout_url} target="_blank" rel="noreferrer">Abrir o pagamento</a></Button> : null}</div>, <Loader2 className="h-5 w-5 animate-spin" />);
 }

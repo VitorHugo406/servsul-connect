@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.receipt]
 verify_jwt = false
+
+[functions.company-export]
+verify_jwt = false

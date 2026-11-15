@@ -290,16 +290,23 @@ async function checkOncePaid(s: any): Promise<string> {
 async function checkSignupPaid(signup: any): Promise<string> {
   let s = signup;
   if (s.billing_cycle === 'once') return checkOncePaid(s);
-  if (!s.preapproval_id && s.mp_plan_id) {
+  let pre: any = s.preapproval_id ? await mp(`/preapproval/${encodeURIComponent(s.preapproval_id)}`) : null;
+  if (!pre || pre.status === 'cancelled') {
+    // A refused card cancels THAT subscription at Mercado Pago, but the buyer can try again (another card or method) on the same link:
+    // look for another attempt under this plan instead of giving up on the signup.
+    if (!s.mp_plan_id) { if (pre) { await admin.from('company_signups').update({ status: 'canceled', password_enc: null }).eq('id', s.id).eq('status', 'pending_payment'); return 'cancelada'; } return 'sem assinatura'; }
     const found = await mp(`/preapproval/search?preapproval_plan_id=${encodeURIComponent(s.mp_plan_id)}`);
     const subs = (found?.results || []).filter((p: any) => p?.preapproval_plan_id === s.mp_plan_id);
-    const pick = subs.find((p: any) => p.status === 'authorized') || subs[0];
-    if (!pick) return 'aguardando assinatura';
-    await admin.from('company_signups').update({ preapproval_id: pick.id }).eq('id', s.id);
-    s = { ...s, preapproval_id: pick.id };
+    const alive = subs.find((p: any) => p.status === 'authorized') || subs.find((p: any) => p.status === 'pending');
+    if (!alive) {
+      const refused = !!pre || subs.length > 0;
+      if (refused) await admin.from('company_signups').update({ error: 'Pagamento recusado pelo Mercado Pago. Tente de novo com outro cartão.' }).eq('id', s.id).eq('status', 'pending_payment');
+      return refused ? 'recusado: aguardando nova tentativa' : 'aguardando assinatura';
+    }
+    await admin.from('company_signups').update({ preapproval_id: alive.id, error: null }).eq('id', s.id);
+    s = { ...s, preapproval_id: alive.id };
+    pre = await mp(`/preapproval/${encodeURIComponent(alive.id)}`);
   }
-  if (!s.preapproval_id) return 'sem assinatura';
-  const pre = await mp(`/preapproval/${encodeURIComponent(s.preapproval_id)}`);
   if (pre.preapproval_plan_id !== s.mp_plan_id && pre.external_reference !== s.id) return 'referência divergente';
   if (['expired', 'canceled'].includes(s.status) && ['authorized', 'pending'].includes(pre.status)) {
     // Paid through an old link after the signup was closed: stop the subscription and warn the super admin.
@@ -307,7 +314,6 @@ async function checkSignupPaid(signup: any): Promise<string> {
     await notifySuperAdmin(`*Assinatura cancelada automaticamente*\n\nAlguém assinou pelo link de um cadastro já encerrado (${s.company_name}, ${s.admin_email}). A assinatura ${s.preapproval_id} foi cancelada. Se houve cobrança, devolva pelo Mercado Pago.`);
     return 'cadastro encerrado: assinatura cancelada';
   }
-  if (pre.status === 'cancelled') { await admin.from('company_signups').update({ status: 'canceled', password_enc: null }).eq('id', s.id).eq('status', 'pending_payment'); return 'cancelada'; }
   const search = await mp(`/authorized_payments/search?preapproval_id=${encodeURIComponent(s.preapproval_id)}`);
   const approved = (search?.results || []).find((p: any) => p?.payment?.status === 'approved' && Math.round(Number(p?.transaction_amount) * 100) >= s.amount_cents);
   if (!approved) return `aguardando (${pre.status})`;
@@ -325,7 +331,7 @@ async function applyRecurring(preapprovalId: string, paymentStatus: string, amou
     const expected = sub.billing_cycle === 'annual' ? annualCents(plan) : plan?.price_cents;
     if (expected && Math.round(amount * 100) < expected) return 'valor abaixo do plano';
     const base = Math.max(Date.now(), new Date(sub.current_period_end || 0).getTime() - PERIOD_GRACE_DAYS * 864e5);
-    await admin.from('company_subscriptions').update({ status: 'active', current_period_end: new Date(base + (periodDays(sub.billing_cycle) + PERIOD_GRACE_DAYS) * 864e5).toISOString() }).eq('company_id', sub.company_id);
+    await admin.from('company_subscriptions').update({ status: 'active', current_period_end: new Date(base + (periodDays(sub.billing_cycle) + PERIOD_GRACE_DAYS) * 864e5).toISOString(), pending_notice_for: null, suspended_notice_for: null, export_notice_for: null, final_notice_for: null, deletion_asked_for: null }).eq('company_id', sub.company_id);
     if (paymentId) await admin.from('company_payments').upsert({ company_id: sub.company_id, provider_payment_id: paymentId, kind: 'renewal', description: `Renovação ${sub.billing_cycle === 'annual' ? 'anual' : 'mensal'}`, amount_cents: Math.round(amount * 100) }, { onConflict: 'provider,provider_payment_id', ignoreDuplicates: true });
     return 'renovada';
   }
@@ -394,13 +400,21 @@ async function applyOrder(orderId: string, payment: any): Promise<string> {
     const { data: np } = await admin.from('subscription_plans').select('name').eq('id', order.target_plan_id).maybeSingle();
     await admin.from('company_subscriptions').update({ plan_id: order.target_plan_id }).eq('company_id', order.company_id);
     label = `mudança para o plano ${np?.name || order.target_plan_id} (diferença até a próxima cobrança)`;
+  } else if (order.kind === 'regularize') {
+    // Paid manually: access is back for one more month. A still-live automatic subscription is cancelled so a later retry does not charge twice.
+    const base = Math.max(Date.now(), new Date(sub?.current_period_end || 0).getTime() - PERIOD_GRACE_DAYS * 864e5);
+    if (sub?.provider_subscription_id && sub.billing_cycle !== 'once') {
+      try { await mp(`/preapproval/${encodeURIComponent(sub.provider_subscription_id)}`, { method: 'PUT', body: JSON.stringify({ status: 'cancelled' }) }); } catch (e) { console.error('cancel preapproval on regularize', e); }
+    }
+    await admin.from('company_subscriptions').update({ status: 'active', billing_cycle: 'once', provider_subscription_id: null, provider_customer_id: String(payment.id), current_period_end: new Date(base + (31 + PERIOD_GRACE_DAYS) * 864e5).toISOString(), pending_notice_for: null, suspended_notice_for: null, export_notice_for: null, final_notice_for: null, deletion_asked_for: null }).eq('company_id', order.company_id);
+    label = 'regularização do pagamento (1 mês)';
   } else {
     const base = Math.max(Date.now(), new Date(sub?.current_period_end || 0).getTime() - PERIOD_GRACE_DAYS * 864e5);
     await admin.from('company_subscriptions').update({ status: 'active', current_period_end: new Date(base + (31 + PERIOD_GRACE_DAYS) * 864e5).toISOString() }).eq('company_id', order.company_id);
     label = 'renovação de 1 mês';
   }
   await admin.from('company_payments').upsert({ company_id: order.company_id, provider_payment_id: String(payment.id), kind: order.kind, description: label.charAt(0).toUpperCase() + label.slice(1), amount_cents: order.amount_cents }, { onConflict: 'provider,provider_payment_id', ignoreDuplicates: true });
-  const sync = order.kind === 'once_renewal' ? '' : ' · ' + await syncRecurringAmount(order.company_id);
+  const sync = order.kind === 'once_renewal' || order.kind === 'regularize' ? '' : ' · ' + await syncRecurringAmount(order.company_id);
   if (order.kind === 'extra_storage' || order.kind === 'plan_change') await checkSystemCapacity();
   const { data: comp } = await admin.from('companies').select('name').eq('id', order.company_id).maybeSingle();
   await notifySuperAdmin(`*Pagamento confirmado*\n\nEmpresa: ${comp?.name}\nItem: ${label}\nValor: R$ ${(order.amount_cents / 100).toFixed(2)}${sync}`);
@@ -442,6 +456,87 @@ async function reconcileRenewals(out: Record<string, string>) {
     } catch (e) { out['renovacao:' + sub.company_id] = 'erro: ' + (e as Error).message; }
   }
   out.renovacoes = `${n} verificada(s), ${applied} aplicada(s)`;
+}
+
+// ---------- payment pending -> suspended -> data kept 30 days -> deletion request ----------
+const fmtBR = (d: Date) => d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+async function mailOwner(companyId: string, subject: string, title: string, lines: string[], button?: { label: string; url: string }) {
+  const { data: owner } = await admin.rpc('company_owner_email', { _cid: companyId });
+  if (!owner || !mailerConfigured()) return false;
+  const html = `<div style="background:#fff;border-radius:18px;padding:28px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#18181b"><h2 style="margin:0 0 12px;font-size:20px">${esc(title)}</h2>${lines.map((l) => `<p style="margin:0 0 12px;font-size:14px;line-height:1.55;color:#3f3f46">${l}</p>`).join('')}${button ? `<p style="margin:18px 0 0"><a href="${button.url}" style="display:inline-block;background:#14264a;color:#fff;text-decoration:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:600">${esc(button.label)}</a></p>` : ''}</div>`;
+  try { await sendMail({ to: String(owner), subject: `ewvon · ${subject}`, html: layout(html, title) }); return true; } catch (e) { console.error('mailOwner', e); return false; }
+}
+async function superAdminProfileId(): Promise<string | null> {
+  const { data: supers } = await admin.from('user_roles').select('user_id').eq('role', 'super_admin');
+  const ids = (supers ?? []).map((r: any) => r.user_id);
+  if (!ids.length) return null;
+  const { data } = await admin.from('profiles').select('id').in('user_id', ids).eq('company_id', ADMIN_COMPANY_ID).order('created_at').limit(1).maybeSingle();
+  return data?.id ?? null;
+}
+async function reconcileLifecycle(out: Record<string, string>) {
+  const { data: subs } = await admin.from('company_subscriptions')
+    .select('company_id, status, billing_cycle, current_period_end, provider_subscription_id, pending_notice_for, suspended_notice_for, export_notice_for, final_notice_for, deletion_asked_for')
+    .in('status', ['active', 'past_due', 'canceled']).not('plan_id', 'is', null).is('trial_ends_at', null).not('current_period_end', 'is', null)
+    .lt('current_period_end', new Date(Date.now() + 2 * 864e5).toISOString()).limit(60);
+  if (!subs?.length) return;
+  const { data: comps } = await admin.from('companies').select('id, name, slug, is_system').in('id', subs.map((x: any) => x.company_id));
+  const byId = new Map((comps ?? []).map((c: any) => [c.id, c]));
+  const DAY = 864e5, now = Date.now();
+  for (const sub of subs as any[]) {
+    const comp: any = byId.get(sub.company_id);
+    if (!comp || comp.is_system) continue;
+    try {
+      const endIso: string = sub.current_period_end, end = new Date(endIso).getTime(), due = end - PERIOD_GRACE_DAYS * DAY;
+      const deleteAt = end + 30 * DAY, login = `${SITE_URL}/auth?company=${encodeURIComponent(comp.slug)}`;
+      const pendingFrom = due + (sub.provider_subscription_id ? 6 * 3600e3 : 0);
+      const acts: string[] = [];
+      // 1. Payment pending (from the due date): warning in Pagamentos (the page) + Comunicados + e-mail.
+      if (now >= pendingFrom && now < end && sub.pending_notice_for !== endIso) {
+        const days = Math.max(1, Math.ceil((end - now) / DAY));
+        await notifyCompanyAdmin(sub.company_id, `*Pagamento pendente*\n\nNão identificamos o pagamento do plano da empresa ${comp.name}. Regularize em Pagamentos em até ${days} dia(s) (até ${fmtBR(new Date(end))}). Depois dessa data o acesso de todos os usuários da empresa fica suspenso até o pagamento.`);
+        await mailOwner(sub.company_id, 'Pagamento pendente', 'Pagamento pendente', [`Não identificamos o pagamento do plano da empresa <b>${esc(comp.name)}</b>.`, `Regularize em <b>Pagamentos</b> em até <b>${days} dia(s)</b> (até ${fmtBR(new Date(end))}). Depois dessa data o acesso de <b>todos os usuários</b> da empresa fica suspenso até o pagamento ser feito.`], { label: 'Abrir o ewvon', url: login });
+        await admin.from('company_subscriptions').update({ pending_notice_for: endIso }).eq('company_id', sub.company_id);
+        acts.push('aviso de pendência');
+      }
+      // 2. Suspended: tell the creator e-mail how to pay and that the data will be deleted in 30 days.
+      if (now >= end && sub.suspended_notice_for !== endIso) {
+        await mailOwner(sub.company_id, 'Acesso suspenso por pagamento pendente', 'O acesso da empresa foi suspenso', [`O pagamento do plano da empresa <b>${esc(comp.name)}</b> não foi identificado e o acesso de todos os usuários está suspenso.`, `Para liberar tudo de volta, entre no ewvon com este e-mail e faça o pagamento (Pix, boleto ou cartão). Os dados estão guardados e voltam exatamente como estavam.`, `<b>Importante:</b> se o pagamento não for regularizado até <b>${fmtBR(new Date(deleteAt))}</b> (30 dias corridos), todos os dados da empresa serão apagados definitivamente. Antes disso você pode baixar tudo (usuários, tarefas, mensagens e mais) em um arquivo ZIP, entrando com este e-mail.`], { label: 'Pagar e liberar o acesso', url: login });
+        await admin.from('company_subscriptions').update({ suspended_notice_for: endIso }).eq('company_id', sub.company_id);
+        acts.push('aviso de suspensão');
+      }
+      // 3. Seven days before the deletion: the ZIP with all the data goes to the creator e-mail only.
+      if (now >= deleteAt - 7 * DAY && sub.export_notice_for !== endIso) {
+        try {
+          const r = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/company-export`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-billing-cron': await cronSecret() }, body: JSON.stringify({ company_id: sub.company_id, email: true }) });
+          if (r.ok) { await mailOwner(sub.company_id, 'Faltam 7 dias para a exclusão dos dados', 'Faltam 7 dias para a exclusão dos dados', [`O pagamento da empresa <b>${esc(comp.name)}</b> continua pendente. Se não for regularizado até <b>${fmtBR(new Date(deleteAt))}</b>, todos os dados serão apagados definitivamente.`, 'Enviamos em outro e-mail o arquivo ZIP com todos os dados (somente para este endereço).'], { label: 'Pagar e liberar o acesso', url: login }); await admin.from('company_subscriptions').update({ export_notice_for: endIso }).eq('company_id', sub.company_id); acts.push('ZIP enviado'); }
+          else acts.push('ZIP falhou (' + r.status + ')');
+        } catch (e) { acts.push('ZIP erro: ' + (e as Error).message); }
+      }
+      // 4. The day before.
+      if (now >= deleteAt - 1 * DAY && now < deleteAt && sub.final_notice_for !== endIso) {
+        await mailOwner(sub.company_id, 'Último dia para regularizar', 'Amanhã os dados da empresa serão apagados', [`Se o pagamento da empresa <b>${esc(comp.name)}</b> não for feito até <b>${fmtBR(new Date(deleteAt))}</b>, todos os dados serão apagados definitivamente.`], { label: 'Pagar e liberar o acesso', url: login });
+        await admin.from('company_subscriptions').update({ final_notice_for: endIso }).eq('company_id', sub.company_id);
+        acts.push('último aviso');
+      }
+      // 5. 30 days after the suspension: the super admin gets the card with the two buttons (nothing is deleted here).
+      if (now >= deleteAt && sub.deletion_asked_for !== endIso) {
+        const sa = await superAdminProfileId();
+        if (sa) {
+          const [{ count: people }, { data: used }] = await Promise.all([admin.from('profiles').select('id', { count: 'exact', head: true }).eq('company_id', comp.id), admin.rpc('company_storage_used', { _company_id: comp.id })]);
+          const { data: reqRow, error } = await admin.from('company_deletion_requests').insert({ company_id: comp.id, company_name: comp.name, trial_ends_at: endIso, people: people ?? 0, storage_bytes: Number(used) || 0 }).select('id').single();
+          if (error) throw error;
+          await admin.from('direct_messages').insert({ sender_id: SYSTEM_SENDER_ID, receiver_id: sa, company_id: ADMIN_COMPANY_ID, content: `*Excluir os dados de ${comp.name}?*\n\nO pagamento da empresa venceu em ${fmtBR(new Date(end))} e já se passaram 30 dias sem regularização. O acesso está suspenso e o ZIP com os dados já foi enviado ao e-mail de criação.\newvon-delete:${reqRow.id}` });
+          await admin.from('company_subscriptions').update({ status: 'canceled', deletion_asked_for: endIso }).eq('company_id', sub.company_id);
+          acts.push('pedido de exclusão enviado');
+        } else acts.push('sem super admin');
+      }
+      if (acts.length) out['ciclo:' + comp.name] = acts.join(', ');
+    } catch (e) { out['ciclo:' + comp.name] = 'erro: ' + (e as Error).message; }
+  }
+}
+async function cronSecret(): Promise<string> {
+  const { data } = await admin.rpc('billing_cron_secret_value');
+  return String(data || '');
 }
 
 // x-signature: "ts=...,v1=..."  ; manifest "id:<data.id>;request-id:<x-request-id>;ts:<ts>;"
@@ -589,7 +684,7 @@ Deno.serve(async (req) => {
       const { data: sub } = await admin.from('company_subscriptions').select('*').eq('company_id', prof.company_id).maybeSingle();
       if (!comp || comp.is_system || !sub?.plan_id || sub.status === 'exempt') return reply({ error: 'Esta empresa não tem plano pago para fazer compras.' }, 400);
       const body = await req.json().catch(() => ({}));
-      const kind = ['extra_users', 'extra_storage', 'once_renewal', 'plan_change'].includes(body?.kind) ? body.kind : null;
+      const kind = ['extra_users', 'extra_storage', 'once_renewal', 'plan_change', 'regularize'].includes(body?.kind) ? body.kind : null;
       if (kind === 'plan_change') {
         const targetId = clean(body?.plan_id, 40);
         const { data: target } = await admin.from('subscription_plans').select('id, name, price_cents, annual_price_cents, is_active').eq('id', targetId).maybeSingle();
@@ -624,15 +719,24 @@ Deno.serve(async (req) => {
       const qty = Math.max(1, Math.min(500, Math.floor(Number(body?.quantity) || 1)));
       if (!kind) return reply({ error: 'Pedido inválido.' }, 400);
       if (kind === 'once_renewal' && sub.billing_cycle !== 'once') return reply({ error: 'Sua assinatura renova automaticamente.' }, 400);
+      if (kind === 'regularize') {
+        // Only when the payment is late (pending or suspended). Once suspended, only the e-mail that created the company may pay/regularize.
+        const due = new Date(sub.current_period_end || 0).getTime() - PERIOD_GRACE_DAYS * 864e5;
+        if (!sub.current_period_end || Date.now() < due) return reply({ error: 'Não há pagamento pendente.' }, 400);
+        if (Date.now() >= new Date(sub.current_period_end).getTime()) {
+          const { data: ownerEmail } = await admin.rpc('company_owner_email', { _cid: comp.id });
+          if (!ownerEmail || String(u.user.email || '').toLowerCase() !== String(ownerEmail).toLowerCase()) return reply({ error: 'Somente o e-mail que criou a empresa pode regularizar o pagamento.' }, 403);
+        }
+      }
       const cfg = await billingSettings();
       const { data: plan } = await admin.from('subscription_plans').select('name, price_cents').eq('id', sub.plan_id).maybeSingle();
       // Add-ons are charged now until the next renewal (whole months), then join the automatic charge.
       const monthsLeft = sub.billing_cycle === 'annual' ? Math.max(1, Math.ceil((new Date(sub.current_period_end || Date.now()).getTime() - Date.now()) / (30 * 864e5))) : 1;
       const unit = kind === 'extra_users' ? cfg.extra_user_cents : kind === 'extra_storage' ? cfg.storage_pack_cents : 0;
-      const amount = kind === 'once_renewal' ? (plan?.price_cents ?? 0) + extrasMonthlyCents(sub, cfg) : unit * qty * monthsLeft;
+      const amount = kind === 'once_renewal' || kind === 'regularize' ? (plan?.price_cents ?? 0) + extrasMonthlyCents(sub, cfg) : unit * qty * monthsLeft;
       if (!amount) return reply({ error: 'Valor inválido.' }, 400);
-      const title = kind === 'extra_users' ? `${qty} usuário(s) extra(s)` : kind === 'extra_storage' ? `${qty * cfg.storage_pack_gb} GB de armazenamento extra` : `Renovação de 1 mês · plano ${plan?.name}`;
-      const { data: order, error: oErr } = await admin.from('billing_orders').insert({ company_id: comp.id, kind, quantity: kind === 'once_renewal' ? 1 : qty, amount_cents: amount, created_by: u.user.id }).select('id').single();
+      const title = kind === 'extra_users' ? `${qty} usuário(s) extra(s)` : kind === 'extra_storage' ? `${qty * cfg.storage_pack_gb} GB de armazenamento extra` : kind === 'regularize' ? `Regularização do pagamento · plano ${plan?.name} (1 mês)` : `Renovação de 1 mês · plano ${plan?.name}`;
+      const { data: order, error: oErr } = await admin.from('billing_orders').insert({ company_id: comp.id, kind, quantity: kind === 'once_renewal' || kind === 'regularize' ? 1 : qty, amount_cents: amount, created_by: u.user.id }).select('id').single();
       if (oErr) return reply({ error: 'Não foi possível criar o pedido.' }, 500);
       const back = `${SITE_URL}/pagamentos?pedido=${order.id}`;
       const pref = await mp('/checkout/preferences', { method: 'POST', body: JSON.stringify({
@@ -660,8 +764,8 @@ Deno.serve(async (req) => {
         await admin.from('company_signups').update({ updated_at: new Date().toISOString() }).eq('id', s.id);
         try { await checkSignupPaid(s); } catch (e) { console.error('status check', e); }
       }
-      const { data: now } = await admin.from('company_signups').select('status, company_name, slug, admin_email, checkout_url').eq('id', id).maybeSingle();
-      return reply({ status: now?.status, company_name: now?.company_name, slug: now?.status === 'active' ? now.slug : null, admin_email: now?.admin_email, checkout_url: now?.status === 'pending_payment' ? now.checkout_url : null });
+      const { data: now } = await admin.from('company_signups').select('status, company_name, slug, admin_email, checkout_url, error').eq('id', id).maybeSingle();
+      return reply({ refused: now?.status === 'pending_payment' && /recusad/i.test(now?.error || ''), status: now?.status, company_name: now?.company_name, slug: now?.status === 'active' ? now.slug : null, admin_email: now?.admin_email, checkout_url: now?.status === 'pending_payment' ? now.checkout_url : null });
     }
 
     // ---- Mercado Pago notifications ----
@@ -762,7 +866,7 @@ Deno.serve(async (req) => {
       finally {
         if (userId) { await admin.from('user_permissions').delete().eq('user_id', userId); await admin.from('user_roles').delete().eq('user_id', userId); await admin.from('profiles').delete().eq('user_id', userId); await admin.auth.admin.deleteUser(userId); }
         if (signupId) await admin.from('company_signups').delete().eq('id', signupId);
-        if (companyId) await admin.from('companies').delete().eq('id', companyId);
+        if (companyId) { await admin.from('sectors').delete().eq('company_id', companyId); await admin.from('company_payments').delete().eq('company_id', companyId); await admin.from('company_subscriptions').delete().eq('company_id', companyId); const { error: delErr } = await admin.from('companies').delete().eq('id', companyId); if (delErr) report.cleanup_error = delErr.message; }
         report.cleaned = true;
       }
       return reply(report);
@@ -805,6 +909,7 @@ Deno.serve(async (req) => {
       for (const s of stuck ?? []) { await admin.from('company_signups').update({ status: 'failed' }).eq('id', s.id).eq('status', 'provisioning'); out[s.id] = ((await provision(s.id)).ok ? 'retomada' : 'falhou'); }
       // Renewals that never reached us (lost notification): check Mercado Pago once an hour.
       if (new Date().getUTCMinutes() < 5 || new URL(req.url).searchParams.get('force') === '1') { try { await reconcileRenewals(out); } catch (e) { out.renovacoes = 'erro: ' + (e as Error).message; } }
+      if (new Date().getUTCMinutes() < 5 || new URL(req.url).searchParams.get('force') === '1') { try { await reconcileLifecycle(out); } catch (e) { out.ciclo = 'erro: ' + (e as Error).message; } }
       try { await sendReminders(out); } catch (e) { out.lembretes = 'erro: ' + (e as Error).message; }
       out.capacidade = await checkSystemCapacity();
       return reply({ ok: true, checked: out });

@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { FEATURE_LABEL } from '@/lib/planAccess';
 import { toast } from 'sonner';
 import { appConfirm } from '@/lib/appDialog';
+import { useBillingGate } from '@/hooks/useBillingGate';
 
 type PlanOption = { id: string; name: string; description: string | null; price_cents: number; annual_price_cents: number | null; max_users: number; max_sectors: number; storage_gb: number };
 type Payment = { id: string; kind: string; description: string | null; amount_cents: number; paid_at: string; status: string };
@@ -46,6 +47,7 @@ function Meter({ icon: Icon, label, used, limit, fmt = (n: number) => String(n) 
 export function BillingSection() {
   const { isAdmin } = useAuth();
   const { plan, loading, reload } = useCompanyPlan();
+  const { gate } = useBillingGate();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [users, setUsers] = useState(1);
@@ -89,7 +91,7 @@ export function BillingSection() {
     return () => window.clearInterval(t);
   }, [reload]);
 
-  const order = async (kind: 'extra_users' | 'extra_storage' | 'once_renewal', quantity = 1) => {
+  const order = async (kind: 'extra_users' | 'extra_storage' | 'once_renewal' | 'regularize', quantity = 1) => {
     setBusy(kind);
     const { data, error } = await supabase.functions.invoke('billing/order', { body: { kind, quantity } });
     setBusy(null);
@@ -113,6 +115,14 @@ export function BillingSection() {
     <div className="space-y-5 p-4 md:p-6">
       <PageHeader icon={<CreditCard />} title="Pagamentos" subtitle="Plano da empresa, limites de uso, compras de extras e histórico de pagamentos."
         actions={<Button variant="outline" size="sm" className="h-9" onClick={() => { void reload(); void loadPayments(); }}><RefreshCw className="mr-2 h-4 w-4" />Atualizar</Button>} />
+
+      {gate.state === 'pending' ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/50 bg-amber-500/10 p-4 text-sm">
+          <div><p className="font-semibold text-amber-800 dark:text-amber-200">Pagamento pendente</p>
+            <p className="text-[13px] text-amber-900/80 dark:text-amber-100/80">Não identificamos o pagamento do plano. Regularize em até {gate.days_to_block} dia(s) (até {fmtDate(gate.blocked_at || null)}); depois disso o acesso de todos os usuários da empresa fica suspenso até o pagamento{gate.amount_cents != null ? ` · valor ${brl(gate.amount_cents)}` : ''}.</p></div>
+          <Button className="h-9" onClick={() => void order('regularize')} disabled={busy !== null}>{busy === 'regularize' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Pagar agora</Button>
+        </div>
+      ) : null}
 
       <div className="grid gap-3 lg:grid-cols-3">
         <Card className="lg:col-span-2"><CardContent className="p-5">
