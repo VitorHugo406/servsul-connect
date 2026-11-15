@@ -40,9 +40,9 @@ export function AiCard({ row, onChanged }: { row?: AiRow; onChanged: () => void 
     catch (e) { toast.error((e as Error).message); } finally { setBusy(null); }
   };
   const remove = async () => {
-    if (!(await appConfirm({ title: 'Desconectar o ewvon AI?', message: 'A chave é apagada e o @ewvonai para de responder nos chats da empresa.', confirmText: 'Desconectar', danger: true }))) return;
+    if (!(await appConfirm({ title: 'Desconectar o EwvonAI?', message: 'A chave é apagada e o @ewvonai para de responder nos chats da empresa.', confirmText: 'Desconectar', danger: true }))) return;
     setBusy('remove');
-    try { await call('remove', {}); toast.success('ewvon AI desconectado.'); onChanged(); }
+    try { await call('remove', {}); toast.success('EwvonAI desconectado.'); onChanged(); }
     catch (e) { toast.error((e as Error).message); } finally { setBusy(null); }
   };
 
@@ -52,7 +52,7 @@ export function AiCard({ row, onChanged }: { row?: AiRow; onChanged: () => void 
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: '#D97757' }}><Sparkles className="h-5 w-5" /></span>
           <div>
-            <p className="text-[15px] font-semibold">ewvon AI (Claude)</p>
+            <p className="text-[15px] font-semibold">EwvonAI (Claude)</p>
             <p className="flex items-center gap-1 text-[12px] text-muted-foreground">
               {!row ? 'Não conectado' : row.last_status === 'erro'
                 ? <><AlertCircle className="h-3.5 w-3.5 text-destructive" />Último uso falhou</>

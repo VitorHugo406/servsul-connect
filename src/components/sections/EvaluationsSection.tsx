@@ -22,6 +22,7 @@ import * as E from '@/lib/evaluations';
 import type { Criterion, EvalItem, EvalRow, EvalStatus } from '@/lib/evaluations';
 import { appConfirm } from '@/lib/appDialog';
 import { downloadEvaluationPdf } from '@/lib/evalDocument';
+import { CriteriaModelPanel } from '@/components/evaluations/CriteriaModelPanel';
 import { FORM_TYPES, formTypeLabel, type FormType } from '@/lib/evalPresets';
 import { contractDates, daysSinceAdmission, getEmployeeRecord } from '@/lib/employeeRecord';
 
@@ -57,7 +58,7 @@ export function EvaluationsSection() {
   const canManage = isAdmin || MANAGER_LEVELS.includes(profile?.autonomy_level || '');
   const [list, setList] = useState<EvalRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'team' | 'mine'>(canManage ? 'team' : 'mine');
+  const [tab, setTab] = useState<'team' | 'mine' | 'criteria'>(canManage ? 'team' : 'mine');
   const [filter, setFilter] = useState<'all' | EvalStatus>('all');
   const [q, setQ] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -114,20 +115,20 @@ export function EvaluationsSection() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         {canManage ? (
           <div className="inline-flex w-fit rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
-            {([['team', 'Equipe'], ['mine', 'Minhas']] as const).map(([id, label]) => (
+            {([['team', 'Equipe'], ['mine', 'Minhas'], ['criteria', 'Critérios']] as const).map(([id, label]) => (
               <button key={id} onClick={() => { setTab(id); setFilter('all'); }} className={cn('rounded-lg px-4 py-1.5 text-sm font-medium transition', tab === id ? 'bg-white text-foreground shadow-sm dark:bg-zinc-950' : 'text-zinc-500 hover:text-foreground')}>
                 {label}{id === 'mine' && pendingMine ? <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[10px] text-white">{pendingMine}</span> : null}
               </button>
             ))}
           </div>
         ) : <div />}
-        <label className="relative block w-full lg:w-72">
+        {tab !== 'criteria' ? <label className="relative block w-full lg:w-72">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar pessoa ou período" className="rounded-xl pl-9" />
-        </label>
+        </label> : null}
       </div>
 
-      {(
+      {tab === 'criteria' ? <CriteriaModelPanel isAdmin={isAdmin} /> : (
         <>
           <div className="flex flex-wrap gap-2">
             {FILTERS.filter((f) => tab === 'team' || f.id !== 'draft').map((f) => {
@@ -185,29 +186,39 @@ function NewEvaluationDialog({ meId, onClose, onCreated }: { meId: string; onClo
   const [formType, setFormType] = useState<FormType | null>(null);
   const [hint, setHint] = useState<string>('');
   const [prev, setPrev] = useState<E.PreviousScores | null | undefined>(undefined);
+  const [existing, setExisting] = useState<{ form_type: string; status: string }[]>([]);
+  const [devModel, setDevModel] = useState<E.ModelCriterion[]>([]);
+  const [selCrit, setSelCrit] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const blocked = useMemo(() => E.blockedFormTypes(existing), [existing]);
 
   useEffect(() => { E.listTeamPeople().then(setPeople).catch((e) => { toast.error((e as Error).message); setPeople([]); }); }, []);
 
   // Picking the person suggests the form from the admission date (experience until 90 days, development after).
   useEffect(() => {
     if (!who) return;
-    setHint(''); setPrev(undefined);
+    setHint(''); setPrev(undefined); setExisting([]);
     void (async () => {
+      const ex = await E.personForms(who); setExisting(ex);
+      const bl = E.blockedFormTypes(ex);
       const rec = await getEmployeeRecord(who);
       const d = daysSinceAdmission(rec);
-      if (d == null) { setHint('Data de admissão não cadastrada: escolha o tipo manualmente.'); return; }
-      if (d <= 90) { setFormType(d <= 52 ? 'exp45' : 'exp90'); setHint(`Admitido há ${d} dia(s): ainda no contrato de experiência (${contractDates(rec).end1 ? 'sugestão: ' + (d <= 52 ? '45' : '90') + ' dias' : ''}).`); }
-      else { setFormType(d <= 150 ? 'devPos' : 'devSemestral'); setHint(`Admitido há ${d} dias: já passou da experiência, use a avaliação de desenvolvimento.`); }
+      if (d == null) { setHint('Data de admissão não cadastrada: escolha o tipo manualmente.'); setFormType((cur) => (cur && bl[cur] ? null : cur)); return; }
+      if (d <= 90 && !bl.exp45 && !bl.exp90) { setFormType(d <= 52 && !bl.exp45 ? 'exp45' : 'exp90'); setHint(`Admitido há ${d} dia(s): ainda no contrato de experiência (${contractDates(rec).end1 ? 'sugestão: ' + (d <= 52 ? '45' : '90') + ' dias' : ''}).`); }
+      else { setFormType(d <= 150 ? 'devPos' : 'devSemestral'); setHint(d > 90 ? `Admitido há ${d} dias: já passou da experiência, use a avaliação de desenvolvimento.` : 'As avaliações de experiência desta pessoa já foram feitas: use as de desenvolvimento (pós-experiência).'); }
     })();
   }, [who]);
+  useEffect(() => {
+    if (!formType || !formType.startsWith('dev')) return;
+    void E.listModel('development').then((m) => { setDevModel(m); setSelCrit(m.map((c) => c.id)); }).catch((e) => toast.error((e as Error).message));
+  }, [formType]);
   useEffect(() => { setPrev(undefined); if (who && formType === 'exp90') void E.previousExperienceScores(who).then(setPrev); }, [who, formType]);
 
   const filtered = (people || []).filter((p) => !q.trim() || (p.name + ' ' + p.sector).toLowerCase().includes(q.trim().toLowerCase()));
   const create = async () => {
     if (!who || !formType) return toast.error('Escolha a pessoa e o tipo da avaliação.');
     setBusy(true);
-    try { onCreated(await E.createEvaluation({ evaluatedId: who, formType, period, meProfileId: meId })); toast.success('Avaliação criada. Agora preencha as notas.'); }
+    try { onCreated(await E.createEvaluation({ evaluatedId: who, formType, period, meProfileId: meId, criteriaIds: formType.startsWith('dev') ? selCrit : undefined })); toast.success('Avaliação criada. Agora preencha as notas.'); }
     catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
   const groupBtn = (kind: 'experience' | 'development', title: string) => (
@@ -215,8 +226,8 @@ function NewEvaluationDialog({ meId, onClose, onCreated }: { meId: string; onClo
       <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">{title}</p>
       <div className="flex flex-wrap gap-1.5">
         {FORM_TYPES.filter((f) => f.kind === kind).map((f) => (
-          <button key={f.id} type="button" aria-pressed={formType === f.id} onClick={() => setFormType(f.id)}
-            className={cn('rounded-full border px-3 py-1.5 text-xs font-medium transition', formType === f.id ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900' : 'border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800')}>{f.label}</button>
+          <button key={f.id} type="button" aria-pressed={formType === f.id} disabled={!!blocked[f.id]} title={blocked[f.id]} onClick={() => setFormType(f.id)}
+            className={cn('rounded-full border px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40 disabled:line-through', formType === f.id ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900' : 'border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800')}>{f.label}</button>
         ))}
       </div>
     </div>
@@ -250,16 +261,29 @@ function NewEvaluationDialog({ meId, onClose, onCreated }: { meId: string; onClo
                 {groupBtn('experience', 'Contrato de experiência')}
                 {groupBtn('development', 'Desempenho e desenvolvimento')}
                 {hint ? <p className="text-xs text-zinc-500">{hint}</p> : null}
+                {Object.keys(blocked).length ? <p className="text-xs text-amber-700 dark:text-amber-300">{blocked.exp90 ? 'A avaliação de 90 dias desta pessoa já foi feita: só avaliações de desenvolvimento (pós-experiência).' : 'A avaliação de 45 dias desta pessoa já foi feita.'}</p> : null}
                 {formType === 'exp90' && prev === null ? <p className="rounded-xl border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">Não há avaliação de 45 dias enviada para esta pessoa: a comparação de evolução não vai aparecer.</p> : null}
                 {formType === 'exp90' && prev ? <p className="rounded-xl bg-zinc-100 p-2 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">Vamos comparar com a avaliação de 45 dias (média {E.fmtScore(prev.average)}).</p> : null}
               </div>
-              <div className="space-y-2"><Label>3. Período</Label><Input value={period} onChange={(e) => setPeriod(e.target.value)} placeholder="Ex.: 1º semestre de 2026" className="rounded-xl" /></div>
+              {formType?.startsWith('dev') && devModel.length ? (
+                <div className="space-y-2">
+                  <Label>3. Critérios ({selCrit.length})</Label>
+                  <div className="max-h-40 space-y-1 overflow-y-auto rounded-xl border p-2">
+                    {devModel.map((c) => (
+                      <label key={c.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                        <Checkbox checked={selCrit.includes(c.id)} onCheckedChange={(v) => setSelCrit((x) => (v ? [...x, c.id] : x.filter((i) => i !== c.id)))} />{c.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : formType ? <p className="rounded-xl bg-zinc-100 p-2 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">Os critérios da avaliação de experiência seguem o modelo cadastrado pelo administrador da empresa.</p> : null}
+              <div className="space-y-2"><Label>{formType?.startsWith('dev') ? '4' : '3'}. Período</Label><Input value={period} onChange={(e) => setPeriod(e.target.value)} placeholder="Ex.: 1º semestre de 2026" className="rounded-xl" /></div>
             </div>
           </div>
         )}
         <DialogFooter>
           <Button variant="outline" className="rounded-xl" onClick={onClose}>Cancelar</Button>
-          <Button className="rounded-xl" disabled={busy || !who || !formType} onClick={() => void create()}>Criar e preencher</Button>
+          <Button className="rounded-xl" disabled={busy || !who || !formType || (formType.startsWith('dev') && !selCrit.length)} onClick={() => void create()}>Criar e preencher</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -424,58 +448,6 @@ function FeedbackField({ label, value, onChange, editable, placeholder, rows = 3
       <Label className="text-sm font-semibold">{label}</Label>
       {editable ? <Textarea rows={rows} className="rounded-xl" value={value} onChange={(e) => onChange?.(e.target.value)} placeholder={placeholder} />
         : <p className="whitespace-pre-wrap rounded-2xl bg-zinc-50 px-3 py-2.5 text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">{value}</p>}
-    </div>
-  );
-}
-
-// ---------- criteria ----------
-function CriteriaPanel({ criteria, userId, onChange }: { criteria: Criterion[]; userId: string; onChange: () => Promise<void> }) {
-  const [edit, setEdit] = useState<{ id?: string; name: string; description: string } | null>(null);
-  const [busy, setBusy] = useState(false);
-  const run = async (fn: () => Promise<unknown>, ok: string) => {
-    setBusy(true);
-    try { await fn(); toast.success(ok); setEdit(null); await onChange(); } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
-  };
-  return (
-    <div className="space-y-3">
-      <div className="ewvon-glass-panel flex flex-col gap-3 rounded-2xl border border-white/80 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="font-semibold text-foreground">Critérios de avaliação</p>
-          <p className="text-sm text-zinc-500">São os itens que recebem nota de 1 a 5. Ao criar uma avaliação você escolhe quais usar.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="rounded-xl" disabled={busy} onClick={() => void run(async () => { const n = await E.addSuggestedCriteria(userId, criteria.map((c) => c.name)); if (!n) throw new Error('Os critérios sugeridos já foram adicionados.'); }, 'Critérios sugeridos adicionados')}><Sparkles className="mr-2 h-4 w-4" />Usar sugeridos</Button>
-          <Button className="rounded-xl" onClick={() => setEdit({ name: '', description: '' })}><Plus className="mr-2 h-4 w-4" />Novo critério</Button>
-        </div>
-      </div>
-      {!criteria.length ? <p className="py-10 text-center text-sm text-zinc-500">Nenhum critério ainda. Clique em <b>Usar sugeridos</b> para começar rápido.</p> : null}
-      <div className="grid gap-2 md:grid-cols-2">
-        {criteria.map((c) => (
-          <div key={c.id} className={cn('flex items-start gap-3 rounded-2xl border border-zinc-200 bg-background p-3 dark:border-zinc-800', !c.is_active && 'opacity-60')}>
-            <div className="min-w-0 flex-1">
-              <p className="font-medium text-foreground">{c.name}{!c.is_active ? <span className="ml-2 text-xs text-zinc-500">(desativado)</span> : null}</p>
-              {c.description ? <p className="text-xs text-zinc-500">{c.description}</p> : null}
-            </div>
-            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg" title="Editar" onClick={() => setEdit({ id: c.id, name: c.name, description: c.description || '' })}><Pencil className="h-4 w-4" /></Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg" title={c.is_active ? 'Desativar' : 'Ativar'} disabled={busy} onClick={() => void run(() => E.setCriterionActive(c.id, !c.is_active), c.is_active ? 'Critério desativado' : 'Critério ativado')}>{c.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button>
-          </div>
-        ))}
-      </div>
-      {edit ? (
-        <Dialog open onOpenChange={(o) => { if (!o) setEdit(null); }}>
-          <DialogContent className="max-w-md rounded-3xl">
-            <DialogHeader><DialogTitle>{edit.id ? 'Editar critério' : 'Novo critério'}</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-1.5"><Label>Nome</Label><Input className="rounded-xl" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="Ex.: Atendimento ao cliente" /></div>
-              <div className="space-y-1.5"><Label>O que é avaliado</Label><Textarea className="rounded-xl" rows={3} value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} placeholder="Explique em uma frase" /></div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" className="rounded-xl" onClick={() => setEdit(null)}>Cancelar</Button>
-              <Button className="rounded-xl" disabled={busy || !edit.name.trim()} onClick={() => void run(() => E.saveCriterion(edit, userId), 'Critério salvo')}>Salvar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      ) : null}
     </div>
   );
 }

@@ -122,14 +122,14 @@ async function handleAsk(table: string, id: string) {
   const { data: integ } = await admin.from('company_integrations').select('secret_enc, enabled, config').eq('company_id', cid).eq('provider', 'claude').maybeSingle();
   if (!integ?.enabled || !integ.secret_enc) {
     // No Claude key registered: tell the person (instead of staying silent) and nudge the company to connect one.
-    await insertReply('*ewvon AI ainda não está ativo nesta empresa.*\n\nA empresa não possui chaves de acesso à API de inteligência artificial cadastradas. Entre em contato com o administrador do sistema para cadastrar a API da Claude em Integrações > ewvon AI. Com ela, o ewvon AI responde perguntas e cria tarefas direto do chat, e mais funcionalidades de IA ficam liberadas para a equipe.');
+    await insertReply('*EwvonAI ainda não está ativo nesta empresa.*\n\nA empresa não possui chaves de acesso à API de inteligência artificial cadastradas. Entre em contato com o administrador do sistema para cadastrar a API da Claude em Integrações > EwvonAI. Com ela, o EwvonAI responde perguntas e cria tarefas direto do chat, e mais funcionalidades de IA ficam liberadas para a equipe.');
     return;
   }
   const { data: me } = await admin.from('profiles').select('id, user_id, name, display_name, company_id, is_active').eq('id', authorId).maybeSingle();
   if (!me || me.company_id !== cid || !me.is_active) return;
   const limit = Math.min(Math.max(Number(integ.config?.daily_limit) || 30, 1), 500);
   const { data: allowed } = await admin.rpc('ai_use', { _profile: me.id, _company: cid, _limit: limit });
-  if (allowed !== true) { await insertReply(`Você chegou ao limite de ${limit} pedidos por dia para o ewvon AI. Volte amanhã ou peça ao administrador para aumentar o limite.`); return; }
+  if (allowed !== true) { await insertReply(`Você chegou ao limite de ${limit} pedidos por dia para o EwvonAI. Volte amanhã ou peça ao administrador para aumentar o limite.`); return; }
 
   const question = String(msg.content || '').replace(/@ewvon\s?ai/gi, '').replace(/\s+/g, ' ').trim();
   if (!question) { await insertReply('Oi! Pode me perguntar qualquer coisa ou pedir para criar tarefas. Exemplo: "@ewvonai crie uma tarefa para revisar o contrato até sexta, prioridade alta".'); return; }
@@ -139,7 +139,7 @@ async function handleAsk(table: string, id: string) {
   const authorIds = [...new Set((recent || []).map((m: any) => m.author_id || m.sender_id))];
   const { data: names } = authorIds.length ? await admin.from('profiles').select('id, name, display_name').in('id', authorIds) : { data: [] } as any;
   const nameOf = new Map<string, string>((names || []).map((p: any) => [p.id, p.display_name || p.name]));
-  nameOf.set(AI_SENDER, 'ewvon AI');
+  nameOf.set(AI_SENDER, 'EwvonAI');
   const history = (recent || []).reverse().map((m: any) => `${nameOf.get(m.author_id || m.sender_id) || 'Alguém'}: ${String(m.content).replace(/\s+/g, ' ').slice(0, 400)}`).join('\n');
 
   const [{ data: owned }, { data: member }] = await Promise.all([
@@ -160,7 +160,7 @@ async function handleAsk(table: string, id: string) {
   const today = new Date(); const todayBR = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }).format(today);
   const isoBR = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(today);
   const system = [
-    'Você é o ewvon AI, o assistente de IA da plataforma ewvon (gestão e comunicação corporativa), respondendo dentro de um chat da empresa.',
+    'Você é o EwvonAI, o assistente de IA da plataforma ewvon (gestão e comunicação corporativa), respondendo dentro de um chat da empresa.',
     'Responda em português do Brasil, de forma curta, clara e útil (no máximo ~8 linhas, sem enrolação). Pode usar *negrito* e listas simples. Não use títulos markdown (#) nem tabelas.',
     'Você pode responder dúvidas gerais (inclusive fora do sistema), ajudar a redigir textos e criar cards de tarefas com a ferramenta create_task.',
     'Ao criar cards: use um título objetivo, escreva uma descrição útil, defina prioridade e prazo quando a pessoa indicar ou quando for razoável deduzir, e crie subtarefas se o pedido tiver etapas. Só atribua responsável se a pessoa pediu e o nome estiver na lista de pessoas.',
@@ -226,7 +226,7 @@ async function createTask(input: any, ctx: { me: any; cid: string; boards: { id:
   if (error || !t) throw new Error(error?.message || 'falha ao criar');
   const subs = (Array.isArray(input.subtasks) ? input.subtasks : []).map((s: unknown) => String(s).trim().slice(0, 200)).filter(Boolean).slice(0, 15);
   if (subs.length) await admin.from('task_subtasks').insert(subs.map((s: string, i: number) => ({ task_id: t.id, title: s, position: i })));
-  await admin.rpc('log_task_activity_secure', { _task_id: t.id, _action_type: 'created', _description: 'Card criado pelo ewvon AI', _metadata: { source: 'ewvon-ai', requested_by: ctx.me.id } }).then(() => undefined, () => undefined);
+  await admin.rpc('log_task_activity_secure', { _task_id: t.id, _action_type: 'created', _description: 'Card criado pelo EwvonAI', _metadata: { source: 'ewvon-ai', requested_by: ctx.me.id } }).then(() => undefined, () => undefined);
   const who = assigned ? ctx.peopleList.find((p) => p.id === assigned)?.name : null;
   return `Card #${t.task_number ?? ''} criado: "${title}" no mural "${board.name}", coluna "${col.title}", prioridade ${priority}${due ? `, prazo ${input.due_date}` : ''}${who ? `, responsável ${who}` : ''}${subs.length ? `, ${subs.length} subtarefa(s)` : ''}.`;
 }

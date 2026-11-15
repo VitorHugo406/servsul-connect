@@ -125,9 +125,6 @@ function groupItems(o: EvalPdfOptions): { group: string; items: EvalPdfItem[] }[
     const found = groups.find((x) => x.group === g);
     if (found) found.items.push(item); else groups.push({ group: g, items: [item] });
   }
-  // keep the printed order of the model
-  const order = preset.map((g) => g.group);
-  groups.sort((a, b) => (order.indexOf(a.group) + 99) % 99 - (order.indexOf(b.group) + 99) % 99);
   return groups;
 }
 
@@ -176,8 +173,10 @@ function page1(c: Ctx) {
   const noW = 24, ciW = 33, notaW = 56, evoW = evo ? 66 : 0;
   const critW = CW - noW - 5 * ciW - notaW - evoW;
   const xCrit = M + noW, xEvo = xCrit + critW, xC0 = xEvo + evoW, xNota = xC0 + 5 * ciW;
-  const hh = 26, gh = 17, rh2 = exp ? 28 : 26, mh = 36;
+  const hh = 26, gh = 17, mh = 36;
   const nItems = groups.reduce((s, gr) => s + gr.items.length, 0);
+  // the admin's model may have more or fewer criteria than the printed one: rows shrink to keep the page whole
+  const rh2 = Math.max(18, Math.min(exp ? 28 : 26, (y - 112 - hh - groups.length * gh - mh) / Math.max(1, nItems)));
   const th = hh + groups.length * gh + nItems * rh2 + mh, ty0 = y, tb = ty0 - th;
 
   p.clipRR(M, tb, CW, th, 10, () => {
@@ -205,9 +204,10 @@ function page1(c: Ctx) {
     p.text(M + 9, yy - 11.6, gr.group, { w: 'Bold', size: 7.2 });
     yy -= gh;
     for (const it of gr.items) {
-      p.text(M + noW / 2, yy - 17, String(num), { w: 'Bold', size: 8.6, align: 'c' });
-      p.text(xCrit + 8, yy - 12.5, p.ellipsize(it.name, 'Bold', 8.4, critW - 12), { w: 'Bold', size: 8.4 });
-      if (it.description) p.text(xCrit + 8, yy - 22, p.ellipsize(it.description, 'Regular', 6.5, critW - 12), { size: 6.5, color: GRAY });
+      const tight = rh2 < 25;
+      p.text(M + noW / 2, yy - rh2 / 2 - 3, String(num), { w: 'Bold', size: 8.6, align: 'c' });
+      p.text(xCrit + 8, tight ? yy - rh2 / 2 - 3 : yy - 12.5, p.ellipsize(it.name, 'Bold', 8.4, critW - 12), { w: 'Bold', size: 8.4 });
+      if (it.description && !tight) p.text(xCrit + 8, yy - 22, p.ellipsize(it.description, 'Regular', 6.5, critW - 12), { size: 6.5, color: GRAY });
       if (evo && it.prev != null) miniEvolution(c, xEvo, yy, evoW, rh2, it.prev, it.score);
       for (let i = 0; i < 5; i++) {
         const cx = xC0 + i * ciW + ciW / 2, on = it.score != null && Math.round(it.score) === i + 1;

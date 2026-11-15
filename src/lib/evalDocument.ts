@@ -41,7 +41,7 @@ export async function buildEvaluationDocument(ev: EvalRow, baseItems: EvalItem[]
   const logo = await companyLogoImage(company?.logo_url);
   const prev = formType === 'exp90' ? await previousScores(ev) : null;
   const prevByName = new Map((prev?.items || []).map((i) => [i.name, i.score]));
-  const pdfItems: EvalPdfItem[] = items.map((i) => ({ name: i.name, description: i.description || undefined, score: i.score, prev: prev ? prevByName.get(i.name) ?? null : undefined }));
+  const pdfItems: EvalPdfItem[] = items.map((i) => ({ name: i.name, description: i.description || undefined, group: i.group || undefined, score: i.score, prev: prev ? prevByName.get(i.name) ?? null : undefined }));
   const scored = items.filter((i) => i.score != null);
   const average = over.average ?? (scored.length ? scored.reduce((s, i) => s + (i.score || 0), 0) / scored.length : ev.score);
   const dates = contractDates(record);

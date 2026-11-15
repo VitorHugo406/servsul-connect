@@ -6,7 +6,7 @@ import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { AI_SENDER_ID } from '@/lib/systemSender';
-import { Sparkles } from 'lucide-react';
+import { CosmicBlob } from '@/components/common/CosmicBlob';
 
 interface UserMentionPickerProps {
   query: string;
@@ -37,12 +37,12 @@ export function UserMentionPicker({ query, onSelect, onClose }: UserMentionPicke
           {showAi && (
             <button
               key="ewvonai"
-              onClick={() => onSelect({ id: AI_SENDER_ID, name: 'ewvon AI', display_name: 'ewvonai' })}
+              onClick={() => onSelect({ id: AI_SENDER_ID, name: 'EwvonAI', display_name: 'EwvonAI' })}
               className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-muted transition-colors"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background"><Sparkles className="h-4 w-4" /></span>
+              <CosmicBlob size={32} label="EwvonAI" />
               <div className="flex-1 min-w-0">
-                <span className="text-sm font-medium text-foreground truncate block">ewvonai</span>
+                <span className="text-sm font-medium text-foreground truncate block">EwvonAI</span>
                 <span className="text-xs text-muted-foreground">Assistente de IA · pergunte ou peça tarefas</span>
               </div>
             </button>

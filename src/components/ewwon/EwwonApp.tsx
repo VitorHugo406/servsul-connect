@@ -40,7 +40,7 @@ export const avStyle = (p: { photo: string | null; hue: number }) => (p.photo ? 
 export const covStyle = (p: { cover: string | null; hue: number }) => (p.cover ? { background: `url("${p.cover}") center/cover` } : { background: `hsl(${p.hue} 32% 24%)` });
 
 export function Av({ p, cls = '', onClick, st }: { p: { id?: string; photo: string | null; hue: number; i: string; sys?: boolean }; cls?: string; onClick?: (e: React.MouseEvent) => void; st?: StatusKey | null }) {
-  if (p.sys || isSystemSender(p.id)) return <div className={`av ewx-sysav${cls ? ' ' + cls : ''}`} data-p={p.id || ''}><CosmicBlob size={48} /></div>;
+  if (p.sys || isSystemSender(p.id) || p.id === AI_SENDER_ID) return <div className={`av ewx-sysav${cls ? ' ' + cls : ''}`} data-p={p.id || ''}><CosmicBlob size={48} label={p.id === AI_SENDER_ID ? 'EwvonAI' : undefined} /></div>;
   return (
     <div className={`av${st ? ' on' : ''}${cls ? ' ' + cls : ''}`} data-p={p.id || ''} onClick={onClick}
       style={{ ...avStyle(p), ['--sc' as string]: st ? ST[st][1] : '#46d37b' }}>
@@ -1552,7 +1552,7 @@ function Bubble({ m, sender, group, picking, onPick, onReact, onProfile, onImage
       {dx ? <span className="ewx-sw-ic" style={{ opacity: Math.min(1, dx / 56), transform: `scale(${0.6 + Math.min(1, dx / 56) * 0.4})` }}><I n="reply" /></span> : null}
       {gm && sender ? (
         <>
-          {sender.sys ? <div className="gav ewx-sysav"><CosmicBlob size={30} /></div> : <div className="gav" style={avStyle(sender)} onClick={() => onProfile(sender.id)}>{sender.photo ? '' : sender.i}</div>}
+          {sender.sys || sender.id === AI_SENDER_ID ? <div className="gav ewx-sysav"><CosmicBlob size={30} label={sender.id === AI_SENDER_ID ? 'EwvonAI' : undefined} /></div> : <div className="gav" style={avStyle(sender)} onClick={() => onProfile(sender.id)}>{sender.photo ? '' : sender.i}</div>}
           <div className="gb"><div className="sn">{sender.n}</div>{qb}{bub}{rx}{tmh}</div>
         </>
       ) : <>{qb}{bub}{rx}{tmh}</>}

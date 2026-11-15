@@ -13,7 +13,7 @@ const sb = supabase as any;
 export type EvalStatus = 'draft' | 'sent' | 'contested' | 'finalized';
 
 export interface Criterion { id: string; name: string; description: string | null; is_active: boolean }
-export interface EvalItem { id: string; competency_id: string; name: string; description: string | null; score: number | null; comment: string | null; prev?: number | null }
+export interface EvalItem { id: string; competency_id: string; name: string; description: string | null; score: number | null; comment: string | null; prev?: number | null; group?: string | null }
 export interface EvalRow {
   id: string; status: EvalStatus;
   evaluatorId: string; evaluatorName: string;
@@ -132,11 +132,11 @@ export async function getItems(evaluationId: string, kind?: string): Promise<Eva
   if (error) throw err(error, 'Não foi possível carregar os critérios da avaliação.');
   const items = (data || []) as { id: string; competency_id: string; score: number | null; evaluator_comment: string | null }[];
   if (!items.length) return [];
-  const { data: comps } = await sb.from('eval_competencies').select('id, name, description').in('id', items.map((i) => i.competency_id));
-  const C = new Map<string, { name: string; description: string | null }>((comps || []).map((c: { id: string }) => [c.id, c]));
-  const out = items.map((i) => ({ id: i.id, competency_id: i.competency_id, name: C.get(i.competency_id)?.name || 'Critério', description: C.get(i.competency_id)?.description ?? null, score: i.score == null ? null : Number(i.score), comment: i.evaluator_comment }));
-  if (kind === 'experience' || kind === 'development') { const order = PRESETS[kind].flatMap((g) => g.items.map((x) => x.name)); out.sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name)); }
-  return out;
+  const { data: comps } = await sb.from('eval_competencies').select('id, name, description, group_name, sort_order').in('id', items.map((i) => i.competency_id));
+  const C = new Map<string, { name: string; description: string | null; group_name: string | null; sort_order: number }>((comps || []).map((c: { id: string }) => [c.id, c]));
+  const out = items.map((i) => ({ id: i.id, competency_id: i.competency_id, name: C.get(i.competency_id)?.name || 'Critério', description: C.get(i.competency_id)?.description ?? null, group: C.get(i.competency_id)?.group_name ?? null, order: C.get(i.competency_id)?.sort_order ?? 0, score: i.score == null ? null : Number(i.score), comment: i.evaluator_comment }));
+  if (kind === 'experience' || kind === 'development') out.sort((a, b) => a.order - b.order);
+  return out.map(({ order: _o, ...rest }) => rest);
 }
 
 async function history(evaluationId: string, meProfileId: string, action: string, oldStatus: string | null, newStatus: string, details?: string | null) {
@@ -159,19 +159,57 @@ export async function previousExperienceScores(evaluatedId: string): Promise<Pre
   return { evaluationId: d.evaluation_id, average: d.average == null ? null : Number(d.average), date: d.date, items: (d.items || []).map((i) => ({ name: i.name, score: i.score == null ? null : Number(i.score) })) };
 }
 
-export async function createEvaluation(p: { evaluatedId: string; formType: FormType; period: string; meProfileId: string }) {
+export interface ModelCriterion { id: string; name: string; description: string | null; group_name: string | null; sort_order: number; is_active: boolean }
+const seedOf = (kind: EvalKind) => PRESETS[kind].flatMap((g) => g.items.map((i) => ({ ...i, group: g.group })));
+
+/** Criteria of a model (experience: registered by the company admin; development: admin or supervisors). Starts from the standard form. */
+export async function listModel(kind: EvalKind, includeInactive = false): Promise<ModelCriterion[]> {
+  const { data, error } = await sb.rpc('eval_model', { _category: kind, _seed: seedOf(kind), _all: includeInactive });
+  if (error) throw err(error, 'Não foi possível carregar os critérios.');
+  return (data || []) as ModelCriterion[];
+}
+export async function saveModelCriterion(kind: EvalKind, c: { id?: string; name: string; description?: string | null; group_name: string; sort_order?: number }) {
+  const row = { name: c.name.trim(), description: c.description?.trim() || null, group_name: c.group_name };
+  const { error } = c.id
+    ? await sb.from('eval_competencies').update(row).eq('id', c.id)
+    : await sb.from('eval_competencies').insert(withCompany({ ...row, category: kind, is_active: true, sort_order: c.sort_order ?? 999 }));
+  if (error) throw err(error, 'Só o administrador da empresa pode alterar o modelo de experiência.');
+}
+export async function setModelCriterionActive(id: string, active: boolean) {
+  const { error } = await sb.from('eval_competencies').update({ is_active: active }).eq('id', id);
+  if (error) throw err(error, 'Não foi possível atualizar o critério.');
+}
+export async function moveModelCriterion(a: ModelCriterion, b: ModelCriterion) {
+  const r1 = await sb.from('eval_competencies').update({ sort_order: b.sort_order }).eq('id', a.id);
+  const r2 = await sb.from('eval_competencies').update({ sort_order: a.sort_order }).eq('id', b.id);
+  if (r1.error || r2.error) throw err(r1.error || r2.error, 'Não foi possível reordenar.');
+}
+
+/** What was already created for this person (drives which form types are still allowed). */
+export async function personForms(evaluatedId: string): Promise<{ form_type: string; status: string }[]> {
+  const { data } = await sb.rpc('person_eval_forms', { _evaluated: evaluatedId });
+  return (data || []) as { form_type: string; status: string }[];
+}
+/** Experience evaluations happen once: one 45-day, one 90-day, and nothing of experience after the 90-day. */
+export function blockedFormTypes(existing: { form_type: string }[]): Partial<Record<FormType, string>> {
+  const has = (t: string) => existing.some((e) => e.form_type === t);
+  const out: Partial<Record<FormType, string>> = {};
+  if (has('exp90')) { for (const t of ['exp45', 'exp90', 'expExtra'] as FormType[]) out[t] = 'A de 90 dias já foi feita: use só as de desenvolvimento'; }
+  else { if (has('exp45')) out.exp45 = 'A de 45 dias já foi feita'; }
+  return out;
+}
+
+export async function createEvaluation(p: { evaluatedId: string; formType: FormType; period: string; meProfileId: string; criteriaIds?: string[] }) {
   const ft = FORM_TYPES.find((f) => f.id === p.formType);
   if (!ft) throw new Error('Escolha o tipo da avaliação.');
-  const flat = PRESETS[ft.kind].flatMap((g) => g.items);
-  const { data: comps, error: ce } = await sb.rpc('ensure_eval_competencies', { _category: ft.kind, _items: flat });
-  if (ce) throw err(ce, 'Não foi possível preparar os critérios da avaliação.');
-  const idByName = new Map<string, string>(((comps || []) as { id: string; name: string }[]).map((c) => [c.name, c.id]));
-  const criteriaIds = flat.map((i) => idByName.get(i.name)).filter((x): x is string => !!x);
-  if (criteriaIds.length !== flat.length) throw new Error('Não foi possível preparar os critérios da avaliação.');
+  const model = await listModel(ft.kind);
+  // Experience always uses the whole model registered by the admin; development can use a selection of it.
+  const criteria = ft.kind === 'experience' ? model : model.filter((m) => (p.criteriaIds ? p.criteriaIds.includes(m.id) : true));
+  if (!criteria.length) throw new Error('Escolha pelo menos um critério.');
   const prev = ft.id === 'exp90' ? await previousExperienceScores(p.evaluatedId) : null;
   const { data, error } = await sb.from('evaluations').insert(withCompany({ evaluator_id: p.meProfileId, evaluated_id: p.evaluatedId, period_label: p.period.trim() || currentPeriod(), status: 'draft', kind: ft.kind, form_type: ft.id, phase: ft.phase, prev_evaluation_id: prev?.evaluationId ?? null })).select('id').single();
-  if (error || !data) throw err(error, 'Só o gestor da equipe da pessoa pode criar a avaliação dela.');
-  const { error: e2 } = await sb.from('evaluation_items').insert(criteriaIds.map((cid) => ({ evaluation_id: data.id, competency_id: cid, weight: 1, score: null })));
+  if (error || !data) throw new Error(/já foi criada|de 90 dias/i.test(error?.message || '') ? error.message.replace(/^.*?:\s*/, '') : 'Só o gestor da equipe da pessoa pode criar a avaliação dela.');
+  const { error: e2 } = await sb.from('evaluation_items').insert(criteria.map((c) => ({ evaluation_id: data.id, competency_id: c.id, weight: 1, score: null })));
   if (e2) { await sb.from('evaluations').delete().eq('id', data.id); throw err(e2, 'Não foi possível criar a avaliação.'); }
   await history(data.id, p.meProfileId, 'created', null, 'draft');
   return data.id as string;
