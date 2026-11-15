@@ -80,7 +80,7 @@ const TOOLS = [
   },
 ];
 
-const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 const findByName = <T extends { name?: string; title?: string }>(list: T[], q?: string) => {
   if (!q) return null; const n = norm(q);
   return list.find((x) => norm(x.name ?? x.title ?? '') === n) || list.find((x) => norm(x.name ?? x.title ?? '').includes(n) || n.includes(norm(x.name ?? x.title ?? ''))) || null;
@@ -120,7 +120,11 @@ async function handleAsk(table: string, id: string) {
 
   // 2. Company settings, author, daily limit
   const { data: integ } = await admin.from('company_integrations').select('secret_enc, enabled, config').eq('company_id', cid).eq('provider', 'claude').maybeSingle();
-  if (!integ?.enabled || !integ.secret_enc) return;
+  if (!integ?.enabled || !integ.secret_enc) {
+    // No Claude key registered: tell the person (instead of staying silent) and nudge the company to connect one.
+    await insertReply('*ewvon AI ainda não está ativo nesta empresa.*\n\nA empresa não possui chaves de acesso à API de inteligência artificial cadastradas. Entre em contato com o administrador do sistema para cadastrar a API da Claude em Integrações > ewvon AI. Com ela, o ewvon AI responde perguntas e cria tarefas direto do chat, e mais funcionalidades de IA ficam liberadas para a equipe.');
+    return;
+  }
   const { data: me } = await admin.from('profiles').select('id, user_id, name, display_name, company_id, is_active').eq('id', authorId).maybeSingle();
   if (!me || me.company_id !== cid || !me.is_active) return;
   const limit = Math.min(Math.max(Number(integ.config?.daily_limit) || 30, 1), 500);

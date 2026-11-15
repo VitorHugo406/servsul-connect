@@ -5,6 +5,8 @@ import { useActiveUsers } from '@/hooks/useDirectMessages';
 import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { AI_SENDER_ID } from '@/lib/systemSender';
+import { Sparkles } from 'lucide-react';
 
 interface UserMentionPickerProps {
   query: string;
@@ -17,18 +19,34 @@ export function UserMentionPicker({ query, onSelect, onClose }: UserMentionPicke
   const { sectors } = useSectors();
   const { profile } = useAuth();
 
+  // ewvon AI can always be tagged; when the company has no AI key the assistant answers with a notice.
+  const q = query.toLowerCase();
+  const showAi = !q || 'ewvonai'.startsWith(q) || 'ewvon ai'.startsWith(q) || 'ia'.startsWith(q);
   const filtered = users.filter(u => {
     if (u.id === profile?.id) return false;
     const name = (u.display_name || u.name || '').toLowerCase();
     return name.includes(query.toLowerCase());
   }).slice(0, 8);
 
-  if (filtered.length === 0) return null;
+  if (filtered.length === 0 && !showAi) return null;
 
   return (
     <div className="absolute bottom-full left-0 right-0 mb-1 z-50 bg-card border border-border rounded-xl shadow-lg max-h-[250px] overflow-hidden">
       <ScrollArea className="max-h-[250px]">
         <div className="p-1">
+          {showAi && (
+            <button
+              key="ewvonai"
+              onClick={() => onSelect({ id: AI_SENDER_ID, name: 'ewvon AI', display_name: 'ewvonai' })}
+              className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-muted transition-colors"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background"><Sparkles className="h-4 w-4" /></span>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-medium text-foreground truncate block">ewvonai</span>
+                <span className="text-xs text-muted-foreground">Assistente de IA · pergunte ou peça tarefas</span>
+              </div>
+            </button>
+          )}
           {filtered.map((user) => {
             const sector = sectors.find(s => s.id === user.sector_id);
             const displayName = user.display_name || user.name;

@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { CardMentionPicker, formatCardMention } from './CardMentionPicker';
 import { UserMentionPicker } from './UserMentionPicker';
+import { AI_SENDER_ID } from '@/lib/systemSender';
 import { ComposerMirror } from '@/components/ewwon/msgbody';
 import '@/components/common/liveFormat.css';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -115,7 +116,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
     const textBeforeCursor = message.substring(0, cursorPos);
     const atIndex = textBeforeCursor.lastIndexOf('@');
     setMessage(message.substring(0, atIndex) + `@${displayName} ` + message.substring(cursorPos));
-    setShowUserPicker(false); setUserQuery(''); inputRef.current?.focus(); onMention?.(user.id, displayName);
+    setShowUserPicker(false); setUserQuery(''); inputRef.current?.focus(); if (user.id !== AI_SENDER_ID) onMention?.(user.id, displayName);
   };
   const handleCardSelect = (task: any) => {
     const mention = formatCardMention(task);
