@@ -27,12 +27,12 @@ function Step({ n, title, children, open }: { n: number; title: string; children
 
 export function GuideDropdown({ title = 'Passo a passo detalhado', children }: { title?: string; children: ReactNode }) {
   return (
-    <details className="group/g rounded-xl border border-border">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-[13px] font-semibold text-foreground [&::-webkit-details-marker]:hidden">
+    <details>
+      <summary>
         {title}
-        <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open/g:rotate-180" />
+        <ChevronDown className="cv h-4 w-4" />
       </summary>
-      <div className="space-y-2 px-3 pb-3">{children}</div>
+      <div>{children}</div>
     </details>
   );
 }

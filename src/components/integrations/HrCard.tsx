@@ -4,8 +4,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Users, Loader2, Trash2, CheckCircle2, AlertCircle, RefreshCw, PlugZap, Plus, Pencil, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { appConfirm } from '@/lib/appDialog';
@@ -140,9 +138,9 @@ function SourceForm({ presets, source, onChanged, onClose }: { presets: Preset[]
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" className="h-9" onClick={() => void save()} disabled={busy !== null}>{busy === 'save' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{source ? 'Salvar e recarregar' : 'Conectar e carregar'}</Button>
-        <Button size="sm" variant="outline" className="h-9" onClick={() => void runTest()} disabled={busy !== null}>{busy === 'test' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlugZap className="mr-2 h-4 w-4" />}Testar conexão</Button>
-        <Button size="sm" variant="ghost" className="h-9" onClick={onClose} disabled={busy !== null}>{res?.kind === 'save' && !res.r.error ? 'Fechar' : 'Cancelar'}</Button>
+        <button className="dk-btn pri" type="button" onClick={() => void save()} disabled={busy !== null}>{busy === 'save' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{source ? 'Salvar e recarregar' : 'Conectar e carregar'}</button>
+        <button className="dk-btn" type="button" onClick={() => void runTest()} disabled={busy !== null}>{busy === 'test' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlugZap className="mr-2 h-4 w-4" />}Testar conexão</button>
+        <button className="dk-btn" type="button" onClick={onClose} disabled={busy !== null}>{res?.kind === 'save' && !res.r.error ? 'Fechar' : 'Cancelar'}</button>
       </div>
     </div>
   );
@@ -182,24 +180,22 @@ export function HrCard() {
   const editing = form && form !== 'new' ? sources?.find((s) => s.id === form) : undefined;
 
   return (
-    <Card><CardContent className="space-y-4 p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-foreground text-background"><Users className="h-5 w-5" /></span>
-          <div>
-            <p className="text-[15px] font-semibold">RH e Pessoas (Dash 3D)</p>
-            <p className="text-[12px] text-muted-foreground">{sources === null ? 'Carregando…' : sources.length ? `${sources.length} sistema(s) conectado(s)` : 'Nenhum sistema conectado'}</p>
-          </div>
+    <div className="dk-panel dk-pad">
+      <div className="dk-hd">
+        <span className="dk-tile" style={{ background: '#171A21' }}><Users className="h-5 w-5" /></span>
+        <div>
+          <h2>RH e Pessoas (Dash 3D)</h2>
+          <span className={`dk-stt${sources && sources.length ? ' on' : ''}`}>{sources === null ? 'Carregando…' : sources.length ? `${sources.length} sistema(s) conectado(s)` : 'Nenhum sistema conectado'}</span>
         </div>
-        {sources && sources.length < 6 && form === null ? <Button size="sm" className="h-9" onClick={() => setForm('new')} disabled={!presets}><Plus className="mr-1.5 h-4 w-4" />Adicionar sistema</Button> : null}
+        {sources && sources.length < 6 && form === null ? <button className="dk-btn pri dk-sp" type="button" onClick={() => setForm('new')} disabled={!presets}><Plus className="h-4 w-4" />Adicionar sistema</button> : null}
       </div>
-      <p className="text-[13px] text-muted-foreground">Conecte o seu sistema de gestão de pessoas (Convenia, Pontomais, Tangerino, Ahgora, Nexti e outros), cole só a chave e o <b className="text-foreground">Dash 3D passa a usar os colaboradores desses sistemas</b> (admissões, salários, demissões, cargos, departamentos, férias vencidas…) no lugar dos cadastrados no ewvon. Dá para ligar mais de um sistema. Dados de ponto não são importados. Os dados são atualizados sozinhos.</p>
-      <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-[12px] text-muted-foreground">Privacidade: salários, demissões e demais dados ficam visíveis só para administradores e para quem tem acesso ao Dash.</p>
+      <p className="dk-tx">Conecte o seu sistema de gestão de pessoas (Convenia, Pontomais, Tangerino, Ahgora, Nexti e outros), cole só a chave e o <b>Dash 3D passa a usar os colaboradores desses sistemas</b> (admissões, salários, demissões, cargos, departamentos, férias vencidas…) no lugar dos cadastrados no ewvon. Dá para ligar mais de um sistema. Dados de ponto não são importados. Os dados são atualizados sozinhos.</p>
+      <p className="dk-priv">Privacidade: salários, demissões e demais dados ficam visíveis só para administradores e para quem tem acesso ao Dash.</p>
 
       <GuideDropdown title="Como configurar"><HrGuide /></GuideDropdown>
 
-      {listErr ? <p className="rounded-lg bg-destructive/10 px-3 py-2 text-[12px] text-destructive">{listErr}</p> : null}
-      {presetErr ? <div className="flex flex-wrap items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-[12px] text-destructive">{presetErr}<Button type="button" size="sm" variant="outline" className="h-7" onClick={() => void loadPresets()}>Tentar de novo</Button></div> : null}
+      {listErr ? <div className="dk-err">{listErr}</div> : null}
+      {presetErr ? <div className="flex flex-wrap items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-[12px] text-destructive">{presetErr}<button className="dk-btn" type="button" onClick={() => void loadPresets()}>Tentar de novo</button></div> : null}
       {sources === null && !listErr ? <div className="flex justify-center p-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : null}
 
       {sources?.length ? (
@@ -221,9 +217,9 @@ export function HrCard() {
                 {failed && s.last_error ? <p className="rounded-lg bg-destructive/10 px-3 py-2 text-[12px] text-destructive">{s.last_error}</p> : null}
                 {!failed && s.last_error ? <p className="rounded-lg bg-muted px-3 py-2 text-[12px] text-muted-foreground">{s.last_error}</p> : null}
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => void sync(s)} disabled={busy !== null}>{busy === 'sync' + s.id ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1.5 h-4 w-4" />}Sincronizar agora</Button>
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => setForm(s.id)} disabled={busy !== null}><Pencil className="mr-1.5 h-4 w-4" />Editar</Button>
-                  <Button size="sm" variant="ghost" className="h-8 text-destructive" onClick={() => void remove(s)} disabled={busy !== null}><Trash2 className="mr-1.5 h-4 w-4" />Remover</Button>
+                  <button className="dk-btn" type="button" onClick={() => void sync(s)} disabled={busy !== null}>{busy === 'sync' + s.id ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1.5 h-4 w-4" />}Sincronizar agora</button>
+                  <button className="dk-btn" type="button" onClick={() => setForm(s.id)} disabled={busy !== null}><Pencil className="mr-1.5 h-4 w-4" />Editar</button>
+                  <button className="dk-btn" style={{ color: '#8E1B10' }} type="button" onClick={() => void remove(s)} disabled={busy !== null}><Trash2 className="mr-1.5 h-4 w-4" />Remover</button>
                 </div>
               </div>
             );
@@ -232,6 +228,6 @@ export function HrCard() {
       ) : null}
 
       {form !== null && presets ? <SourceForm key={form} presets={presets} source={editing} onChanged={() => void load()} onClose={() => setForm(null)} /> : null}
-    </CardContent></Card>
+    </div>
   );
 }

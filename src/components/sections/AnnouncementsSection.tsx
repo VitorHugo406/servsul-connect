@@ -1,433 +1,240 @@
-import { PageHeader } from '@/components/common/PageHeader';
-import { TabMark3D } from '@/components/common/TabMark3D';
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pin, AlertTriangle, Clock, Trash2, Plus, X, Send, CalendarClock, Calendar, Sparkles , Megaphone} from 'lucide-react';
+import { Pin, Pencil, MoreVertical, RotateCcw, Trash2, X, Send, CalendarClock } from 'lucide-react';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CardGridSkeleton } from '@/components/ui/skeletons';
-import { useSectors } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { appConfirm } from '@/lib/appDialog';
 
-const priorityStyles = {
-  normal: {
-    badge: 'bg-muted text-muted-foreground',
-    border: 'border-border',
-  },
-  important: {
-    badge: 'bg-secondary/20 text-secondary border-secondary',
-    border: 'border-secondary/30',
-  },
-  urgent: {
-    badge: 'bg-destructive/20 text-destructive border-destructive',
-    border: 'border-destructive/30',
-  },
-};
+type Priority = 'normal' | 'important' | 'urgent';
+type Status = 'active' | 'scheduled' | 'expired';
+type Row = { a: any; status: Status };
 
-const priorityLabels: Record<string, string> = {
-  normal: 'Normal',
-  important: 'Importante',
-  urgent: 'Urgente',
+const PRIORITY: Record<string, { label: string; cls: string }> = {
+  normal: { label: 'Geral', cls: 'dk-gy' },
+  important: { label: 'Importante', cls: 'dk-m' },
+  urgent: { label: 'Urgente', cls: 'dk-u' },
 };
+const STATUS: Record<Status, { label: string; cls: string; dot: string; group: string }> = {
+  active: { label: 'Ativo', cls: 'dk-s1', dot: '#0A6B3D', group: 'Ativos' },
+  scheduled: { label: 'Agendado', cls: 'dk-s2', dot: '#0F4C81', group: 'Agendados' },
+  expired: { label: 'Expirado', cls: 'dk-s3', dot: '#5A6472', group: 'Expirados' },
+};
+const DAY = 86400000;
+const dm = (d?: string | null) => d ? new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '';
+const dmh = (d?: string | null) => d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+const plural = (n: number) => `${n} ${n === 1 ? 'dia' : 'dias'}`;
+
+function validity(a: any, status: Status) {
+  const now = Date.now(), s = a.start_at ? new Date(a.start_at).getTime() : null, e = a.expire_at ? new Date(a.expire_at).getTime() : null;
+  if (status === 'scheduled') return { main: `${dmh(a.start_at)}${e ? ` – ${dmh(a.expire_at)}` : ''}`, sub: `Publica em ${plural(Math.max(1, Math.ceil(((s ?? now) - now) / DAY)))}` };
+  if (status === 'expired') return { main: `${dm(a.start_at || a.created_at)} – ${dm(a.expire_at)}`, sub: `Expirou há ${plural(Math.max(1, Math.floor((now - (e ?? now)) / DAY)))}` };
+  if (!e) return { main: `Desde ${dm(a.start_at || a.created_at)}`, sub: 'Sem data de término' };
+  return { main: `${dm(a.start_at || a.created_at)} – ${dm(a.expire_at)}`, sub: `Termina em ${plural(Math.max(0, Math.ceil((e - now) / DAY)))}` };
+}
 
 export function AnnouncementsSection() {
-  const {
-    announcements,
-    scheduledAnnouncements,
-    expiredAnnouncements,
-    loading,
-    createAnnouncement,
-    deleteAnnouncement,
-    canManageAnnouncements,
-  } = useAnnouncements();
-  const { sectors } = useSectors();
+  const { announcements, scheduledAnnouncements, expiredAnnouncements, loading, createAnnouncement, updateAnnouncement, deleteAnnouncement, refetch, canManageAnnouncements } = useAnnouncements();
   const { profile, isAdmin } = useAuth();
   const { markAllAnnouncementsAsRead, refetch: refetchNotifications } = useNotifications();
-  const [activeTab, setActiveTab] = useState('active');
+  const [tab, setTab] = useState<'all' | Status>('all');
+  const [q, setQ] = useState('');
+  const [typeF, setTypeF] = useState('all');
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [stats, setStats] = useState<Record<string, { reads: number; total: number }>>({});
 
-  useEffect(() => {
-    markAllAnnouncementsAsRead();
-    refetchNotifications();
-  }, [markAllAnnouncementsAsRead, refetchNotifications]);
+  useEffect(() => { markAllAnnouncementsAsRead(); refetchNotifications(); }, [markAllAnnouncementsAsRead, refetchNotifications]);
 
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [priority, setPriority] = useState<'normal' | 'important' | 'urgent'>('normal');
+  const [priority, setPriority] = useState<Priority>('normal');
   const [isPinned, setIsPinned] = useState(false);
   const [startAt, setStartAt] = useState('');
   const [expireAt, setExpireAt] = useState('');
 
-  // The create action lives in the main site header. Keep the form state here,
-  // where the existing create/update logic already lives, and expose only a
-  // small UI event so the header does not need to know anything about the form.
+  const openNew = () => { setEditingId(null); setTitle(''); setContent(''); setPriority('normal'); setIsPinned(false); setStartAt(''); setExpireAt(''); setShowForm(true); };
+  // The create action also lives in the main site header (UI event, so the header knows nothing about this form).
   useEffect(() => {
-    const handleOpenNewAnnouncement = () => {
-      if (canManageAnnouncements) setShowForm(true);
-    };
-
-    window.addEventListener('nuvexa:open-new-announcement', handleOpenNewAnnouncement);
-    return () => window.removeEventListener('nuvexa:open-new-announcement', handleOpenNewAnnouncement);
+    const handler = () => { if (canManageAnnouncements) openNew(); };
+    window.addEventListener('nuvexa:open-new-announcement', handler);
+    return () => window.removeEventListener('nuvexa:open-new-announcement', handler);
   }, [canManageAnnouncements]);
 
-  const canDelete = (authorId: string) => {
-    return profile?.id === authorId || isAdmin;
-  };
+  const localInput = (iso?: string | null) => { if (!iso) return ''; const d = new Date(iso); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
+  const openEdit = (a: any) => { setEditingId(a.id); setTitle(a.title); setContent(a.content); setPriority((a.priority as Priority) || 'normal'); setIsPinned(!!a.is_pinned); setStartAt(localInput(a.start_at || a.created_at)); setExpireAt(localInput(a.expire_at)); setShowForm(true); window.scrollTo?.({ top: 0, behavior: 'smooth' }); };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
-  };
+  useEffect(() => { if (showForm && !startAt) { setStartAt(localInput(new Date().toISOString())); } }, [showForm, startAt]);
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR', {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
+  const canDelete = (authorId: string) => profile?.id === authorId || isAdmin;
+
+  const rows: Row[] = useMemo(() => {
+    const seen = new Set<string>(); const out: Row[] = [];
+    const add = (list: any[], status: Status) => list.forEach(a => { if (!seen.has(a.id)) { seen.add(a.id); out.push({ a, status }); } });
+    add(announcements, 'active'); add(scheduledAnnouncements, 'scheduled'); add(expiredAnnouncements, 'expired');
+    return out;
+  }, [announcements, scheduledAnnouncements, expiredAnnouncements]);
+
+  // Quantas pessoas já leram cada aviso (função do banco, só para quem gerencia avisos).
+  const idsKey = rows.map(r => r.a.id).join(',');
+  useEffect(() => {
+    if (!canManageAnnouncements || !rows.length) { setStats({}); return; }
+    let live = true;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any).rpc('announcement_read_stats', { _ids: rows.map(r => r.a.id) }).then(({ data, error }: any) => {
+      if (!live || error || !Array.isArray(data)) return;
+      const m: Record<string, { reads: number; total: number }> = {};
+      data.forEach((d: any) => { m[d.announcement_id] = { reads: d.reads, total: d.total }; });
+      setStats(m);
     });
-  };
+    return () => { live = false; };
+  }, [idsKey, canManageAnnouncements]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const formatDateShort = (dateStr: string | null) => {
-    if (!dateStr) return 'Sem data';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  const counts = { all: rows.length, active: announcements.length, scheduled: scheduledAnnouncements.length, expired: expiredAnnouncements.length };
+  const filtered = rows.filter(r => (tab === 'all' || r.status === tab) && (typeF === 'all' || r.a.priority === typeF) && (!q.trim() || String(r.a.title).toLowerCase().includes(q.trim().toLowerCase())));
+  const groups = (['active', 'scheduled', 'expired'] as Status[]).map(s => ({ s, items: filtered.filter(r => r.status === s) })).filter(g => g.items.length);
 
-  const handleDelete = async (id: string) => {
-    if (await appConfirm({ title: 'Excluir este aviso?', message: 'Ele deixará de aparecer para todos.', confirmText: 'Excluir', danger: true })) {
-      const { error } = await deleteAnnouncement(id);
-      if (error) {
-        toast.error('Erro ao excluir aviso');
-      } else {
-        toast.success('Aviso excluído com sucesso');
-        refetchNotifications();
-      }
-    }
+  const handleDelete = async (ids: string[]) => {
+    if (!(await appConfirm({ title: ids.length > 1 ? `Excluir ${ids.length} avisos?` : 'Excluir este aviso?', message: 'Eles deixarão de aparecer para todos.', confirmText: 'Excluir', danger: true }))) return;
+    let failed = 0;
+    for (const id of ids) { const { error } = await deleteAnnouncement(id); if (error) failed++; }
+    if (failed) toast.error('Alguns avisos não puderam ser excluídos'); else toast.success(ids.length > 1 ? 'Avisos excluídos' : 'Aviso excluído com sucesso');
+    setSel(new Set()); refetchNotifications(); refetch();
+  };
+  const reactivate = async (a: any) => {
+    const { error } = await updateAnnouncement(a.id, { start_at: new Date().toISOString(), expire_at: null });
+    if (error) toast.error('Não foi possível reativar'); else { toast.success('Aviso reativado'); refetch(); }
+  };
+  const togglePin = async (a: any) => {
+    const { error } = await updateAnnouncement(a.id, { is_pinned: !a.is_pinned });
+    if (error) toast.error('Não foi possível alterar'); else { toast.success(a.is_pinned ? 'Aviso desafixado' : 'Aviso fixado'); refetch(); }
+  };
+  const exportCsv = () => {
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const lines = [['Título', 'Conteúdo', 'Tipo', 'Situação', 'Início', 'Fim', 'Leitura'].map(esc).join(';')].concat(filtered.map(({ a, status }) => [a.title, a.content, PRIORITY[a.priority]?.label || 'Geral', STATUS[status].label, dmh(a.start_at || a.created_at), dmh(a.expire_at), stats[a.id] ? `${stats[a.id].reads}/${stats[a.id].total}` : ''].map(esc).join(';')));
+    const url = URL.createObjectURL(new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' }));
+    const el = document.createElement('a'); el.href = url; el.download = 'avisos.csv'; el.click(); URL.revokeObjectURL(url);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!title.trim() || !content.trim()) {
-      toast.error('Preencha o título e o conteúdo');
-      return;
-    }
-
-    if (!startAt) {
-      toast.error('Data de início é obrigatória');
-      return;
-    }
-
+    if (!title.trim() || !content.trim()) { toast.error('Preencha o título e o conteúdo'); return; }
+    if (!startAt) { toast.error('Data de início é obrigatória'); return; }
     setFormLoading(true);
-    const { error } = await createAnnouncement(
-      title,
-      content,
-      priority,
-      isPinned,
-      new Date(startAt).toISOString(),
-      expireAt ? new Date(expireAt).toISOString() : null
-    );
-
-    if (error) {
-      console.error('Error creating announcement:', error);
-      toast.error('Erro ao criar aviso. Verifique suas permissões.');
-    } else {
-      toast.success(new Date(startAt) > new Date() ? 'Aviso agendado com sucesso!' : 'Aviso publicado com sucesso!');
-      setTitle('');
-      setContent('');
-      setPriority('normal');
-      setIsPinned(false);
-      setStartAt('');
-      setExpireAt('');
-      setShowForm(false);
+    const start = new Date(startAt).toISOString(), end = expireAt ? new Date(expireAt).toISOString() : null;
+    const { error } = editingId
+      ? await updateAnnouncement(editingId, { title, content, priority, is_pinned: isPinned, start_at: start, expire_at: end })
+      : await createAnnouncement(title, content, priority, isPinned, start, end);
+    if (error) { console.error('Error saving announcement:', error); toast.error('Erro ao salvar aviso. Verifique suas permissões.'); }
+    else {
+      toast.success(editingId ? 'Aviso atualizado' : new Date(startAt) > new Date() ? 'Aviso agendado com sucesso!' : 'Aviso publicado com sucesso!');
+      setShowForm(false); setEditingId(null); refetch();
     }
     setFormLoading(false);
   };
 
-  useEffect(() => {
-    if (showForm && !startAt) {
-      const now = new Date();
-      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-      setStartAt(now.toISOString().slice(0, 16));
-    }
-  }, [showForm, startAt]);
+  if (loading) return <div className="dk-pg"><div className="dk-panel" style={{ padding: 24 }}><Skeleton className="h-10 w-full rounded-full" /><div className="mt-4 space-y-3"><Skeleton className="h-14 w-full" /><Skeleton className="h-14 w-full" /><Skeleton className="h-14 w-full" /></div></div></div>;
 
-  const renderAnnouncementCard = (announcement: any, showScheduleInfo = false, isExpired = false) => {
-    const author = announcement.author;
-    const authorSector = sectors.find((s) => s.id === author?.sector_id);
-    const priorityKey = announcement.priority as keyof typeof priorityStyles;
-
+  const colSpan = canManageAnnouncements ? 8 : 5;
+  const renderRow = ({ a, status }: Row) => {
+    const v = validity(a, status), st = stats[a.id], pct = st && st.total ? Math.min(100, Math.round((st.reads / st.total) * 100)) : 0;
     return (
-      <motion.div
-        key={announcement.id}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={cn(isExpired && 'opacity-60')}
-      >
-        <Card
-          className={cn(
-            'overflow-hidden border-2 transition-all hover:shadow-lg',
-            priorityStyles[priorityKey]?.border || priorityStyles.normal.border,
-            announcement.is_pinned && 'ring-2 ring-secondary/50',
-            isExpired && 'border-muted'
-          )}
-        >
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-3 flex-1">
-                {announcement.is_pinned && <Pin className="h-4 w-4 text-secondary flex-shrink-0" />}
-                <h4 className="font-display text-lg font-semibold text-foreground line-clamp-1">{announcement.title}</h4>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {showScheduleInfo && (
-                  <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    Agendado
-                  </Badge>
-                )}
-                {isExpired && (
-                  <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200">Expirado</Badge>
-                )}
-                <Badge variant="outline" className={cn(priorityStyles[priorityKey]?.badge || priorityStyles.normal.badge)}>
-                  {priorityKey === 'urgent' && <AlertTriangle className="mr-1 h-3 w-3" />}
-                  {priorityLabels[priorityKey] || 'Normal'}
-                </Badge>
-                {canDelete(announcement.author_id) && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => handleDelete(announcement.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-4 text-sm leading-relaxed text-muted-foreground line-clamp-3">{announcement.content}</p>
-
-            {(showScheduleInfo || announcement.expire_at) && (
-              <div className="mb-4 flex flex-wrap gap-3 text-xs">
-                {showScheduleInfo && announcement.start_at && (
-                  <div className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-blue-600">
-                    <CalendarClock className="h-3 w-3" />
-                    Início: {formatDateShort(announcement.start_at)}
-                  </div>
-                )}
-                {announcement.expire_at && (
-                  <div className={cn('flex items-center gap-1 rounded-full px-2 py-1', isExpired ? 'bg-gray-100 text-gray-600' : 'bg-amber-50 text-amber-600')}>
-                    <Clock className="h-3 w-3" />
-                    {isExpired ? 'Expirou' : 'Expira'}: {formatDateShort(announcement.expire_at)}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="flex items-center justify-between border-t border-border pt-4">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={author?.avatar_url || ''} />
-                  <AvatarFallback className="text-xs text-white" style={{ backgroundColor: authorSector?.color || '#6366f1' }}>
-                    {getInitials(author?.display_name || author?.name || 'U')}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{author?.display_name || author?.name}</p>
-                  {authorSector && <p className="text-xs text-muted-foreground">{authorSector.name}</p>}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                {formatDate(announcement.created_at)}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <tr key={a.id} className={status === 'expired' ? 'dk-exp' : undefined}>
+        {canManageAnnouncements && <td><input type="checkbox" aria-label="Selecionar" checked={sel.has(a.id)} onChange={() => setSel(prev => { const n = new Set(prev); n.has(a.id) ? n.delete(a.id) : n.add(a.id); return n; })} /></td>}
+        <td><div className="dk-ti">{a.is_pinned && <Pin className="mr-1.5 inline h-3.5 w-3.5 text-[#0F4C81]" aria-label="Fixado" />}{a.title}</div><div className="dk-su" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.content}</div></td>
+        <td><span className={`dk-ty ${PRIORITY[a.priority]?.cls || 'dk-gy'}`}>{PRIORITY[a.priority]?.label || 'Geral'}</span></td>
+        {canManageAnnouncements && <td>Todos os usuários</td>}
+        <td>{v.main}<div className="dk-sub">{v.sub}</div></td>
+        {canManageAnnouncements && <td>{status === 'scheduled' || !st ? '—' : <div className="dk-rd"><div className="dk-rb"><i style={{ width: `${pct}%` }} /></div>{st.reads}/{st.total}</div>}</td>}
+        {canManageAnnouncements ? <td><span className={`dk-st ${STATUS[status].cls}`}>{STATUS[status].label}</span></td> : <td>{a.author?.display_name || a.author?.name || '—'}</td>}
+        {canManageAnnouncements && <td className="dk-ac">
+          {status === 'expired' ? <button className="dk-ic" aria-label="Reativar" title="Reativar" onClick={() => reactivate(a)}><RotateCcw size={17} /></button> : <button className="dk-ic" aria-label="Editar" title="Editar" onClick={() => openEdit(a)}><Pencil size={17} /></button>}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild><button className="dk-ic" aria-label="Mais ações"><MoreVertical size={17} /></button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => togglePin(a)}><Pin className="mr-2 h-4 w-4" />{a.is_pinned ? 'Desafixar' : 'Fixar no topo'}</DropdownMenuItem>
+              {canDelete(a.author_id) && <DropdownMenuItem className="text-destructive" onClick={() => handleDelete([a.id])}><Trash2 className="mr-2 h-4 w-4" />Excluir</DropdownMenuItem>}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </td>}
+      </tr>
     );
   };
 
-  if (loading) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="p-4 sm:p-6">
-          <CardGridSkeleton count={4} columns="md:grid-cols-2" cardHeight="h-32" />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
-      <div className="flex-1 overflow-auto p-4 sm:p-6">
-        <PageHeader className="mb-5" eyebrow="Comunicação" icon={<Megaphone />} title="Avisos" subtitle="Comunicados da empresa para toda a equipe"
-          actions={canManageAnnouncements && !showForm ? <Button className="rounded-xl" onClick={() => setShowForm(true)}><Plus className="mr-2 h-4 w-4" />Novo aviso</Button> : undefined}
-          />
-        <AnimatePresence>
-          {showForm && canManageAnnouncements && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-6 overflow-hidden"
-            >
-              <Card className="border-2 border-primary/20">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <h4 className="font-display text-lg font-semibold text-foreground">Criar Novo Aviso</h4>
-                    <Button variant="ghost" size="icon" onClick={() => setShowForm(false)} aria-label="Fechar formulário">
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="title">Título *</Label>
-                      <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título do aviso" className="h-11" required />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="content">Conteúdo *</Label>
-                      <Textarea id="content" value={content} onChange={(e) => setContent(e.target.value)} placeholder="Escreva o conteúdo do aviso..." rows={4} required />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="startAt"><CalendarClock className="inline h-4 w-4 mr-1" />Data/Hora de início *</Label>
-                        <Input id="startAt" type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} className="h-11" required />
-                        <p className="text-xs text-muted-foreground">Agende para o futuro ou publique agora</p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="expireAt"><CalendarClock className="inline h-4 w-4 mr-1" />Data/Hora de expiração</Label>
-                        <Input id="expireAt" type="datetime-local" value={expireAt} onChange={(e) => setExpireAt(e.target.value)} className="h-11" />
-                        <p className="text-xs text-muted-foreground">Deixe em branco para não expirar</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Prioridade</Label>
-                        <Select value={priority} onValueChange={(v) => setPriority(v as typeof priority)}>
-                          <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="normal">Normal</SelectItem>
-                            <SelectItem value="important">Importante</SelectItem>
-                            <SelectItem value="urgent">Urgente</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="flex items-center gap-3 pt-0 sm:pt-6">
-                        <Switch id="pinned" checked={isPinned} onCheckedChange={setIsPinned} />
-                        <Label htmlFor="pinned" className="cursor-pointer"><Pin className="inline h-4 w-4 mr-1" />Fixar no topo</Label>
-                      </div>
-                    </div>
-
-                    <Button type="submit" disabled={formLoading} className="w-full gap-2 h-11">
-                      {formLoading ? (
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4" />
-                          {startAt && new Date(startAt) > new Date() ? 'Agendar Aviso' : 'Publicar Aviso'}
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {canManageAnnouncements ? (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full grid grid-cols-3 mb-6">
-              <TabsTrigger value="active" className="gap-1">Ativos{announcements.length > 0 && <Badge variant="secondary" className="ml-1 h-5 px-1.5">{announcements.length}</Badge>}</TabsTrigger>
-              <TabsTrigger value="scheduled" className="gap-1">Agendados{scheduledAnnouncements.length > 0 && <Badge variant="secondary" className="ml-1 h-5 px-1.5">{scheduledAnnouncements.length}</Badge>}</TabsTrigger>
-              <TabsTrigger value="expired" className="gap-1">Expirados{expiredAnnouncements.length > 0 && <Badge variant="secondary" className="ml-1 h-5 px-1.5">{expiredAnnouncements.length}</Badge>}</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="active" className="mt-0">
-              {announcements.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="mb-4"><TabMark3D icon={<Megaphone />} /></div>
-                  <h4 className="font-display text-lg font-semibold text-foreground">Nenhum aviso ativo</h4>
-                  <p className="text-sm text-muted-foreground">Clique em "+ Novo Aviso" no cabeçalho para criar um comunicado</p>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="dk-pg">
+      <AnimatePresence>
+        {showForm && canManageAnnouncements && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+            <div className="dk-panel dk-pad">
+              <div className="dk-hd"><h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{editingId ? 'Editar aviso' : 'Criar novo aviso'}</h2><button type="button" className="dk-ic dk-sp" onClick={() => setShowForm(false)} aria-label="Fechar formulário"><X size={17} /></button></div>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2"><Label htmlFor="title">Título *</Label><Input id="title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Título do aviso" className="h-11 rounded-xl" required /></div>
+                <div className="space-y-2"><Label htmlFor="content">Conteúdo *</Label><Textarea id="content" value={content} onChange={e => setContent(e.target.value)} placeholder="Escreva o conteúdo do aviso..." rows={4} className="rounded-xl" required /></div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2"><Label htmlFor="startAt"><CalendarClock className="mr-1 inline h-4 w-4" />Data/Hora de início *</Label><Input id="startAt" type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} className="h-11 rounded-xl" required /><p className="dk-hp">Agende para o futuro ou publique agora</p></div>
+                  <div className="space-y-2"><Label htmlFor="expireAt"><CalendarClock className="mr-1 inline h-4 w-4" />Data/Hora de expiração</Label><Input id="expireAt" type="datetime-local" value={expireAt} onChange={e => setExpireAt(e.target.value)} className="h-11 rounded-xl" /><p className="dk-hp">Deixe em branco para não expirar</p></div>
                 </div>
-              ) : (
-                <div className="space-y-4">{announcements.map((announcement) => renderAnnouncementCard(announcement))}</div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="scheduled" className="mt-0">
-              {scheduledAnnouncements.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="mb-4 rounded-full bg-muted p-4"><Calendar className="h-8 w-8 text-muted-foreground" /></div>
-                  <h4 className="font-display text-lg font-semibold text-foreground">Nenhum aviso agendado</h4>
-                  <p className="text-sm text-muted-foreground">Avisos com data futura aparecerão aqui</p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2"><Label>Prioridade</Label>
+                    <Select value={priority} onValueChange={v => setPriority(v as Priority)}><SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="normal">Normal</SelectItem><SelectItem value="important">Importante</SelectItem><SelectItem value="urgent">Urgente</SelectItem></SelectContent></Select></div>
+                  <div className="flex items-center gap-3 pt-0 sm:pt-6"><Switch id="pinned" checked={isPinned} onCheckedChange={setIsPinned} /><Label htmlFor="pinned" className="cursor-pointer"><Pin className="mr-1 inline h-4 w-4" />Fixar no topo</Label></div>
                 </div>
-              ) : (
-                <div className="space-y-4">{scheduledAnnouncements.map((announcement) => renderAnnouncementCard(announcement, true))}</div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="expired" className="mt-0">
-              {expiredAnnouncements.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="mb-4 rounded-full bg-muted p-4"><Clock className="h-8 w-8 text-muted-foreground" /></div>
-                  <h4 className="font-display text-lg font-semibold text-foreground">Nenhum aviso expirado</h4>
-                  <p className="text-sm text-muted-foreground">Avisos expirados dos últimos 30 dias aparecerão aqui</p>
-                </div>
-              ) : (
-                <div className="space-y-4">{expiredAnnouncements.map((announcement) => renderAnnouncementCard(announcement, false, true))}</div>
-              )}
-            </TabsContent>
-          </Tabs>
-        ) : (
-          <div className="space-y-6">
-            {announcements.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="mb-4"><TabMark3D icon={<Megaphone />} /></div>
-                <h4 className="font-display text-lg font-semibold text-foreground">Nenhum aviso</h4>
-                <p className="text-sm text-muted-foreground">Não há avisos publicados ainda</p>
-              </div>
-            ) : (
-              <div className="space-y-4">{announcements.map((announcement) => renderAnnouncementCard(announcement))}</div>
-            )}
-          </div>
+                <Button type="submit" disabled={formLoading} className="h-11 w-full gap-2 rounded-full" style={{ background: '#0F4C81' }}>
+                  {formLoading ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <><Send className="h-4 w-4" />{editingId ? 'Salvar alterações' : startAt && new Date(startAt) > new Date() ? 'Agendar aviso' : 'Publicar aviso'}</>}
+                </Button>
+              </form>
+            </div>
+          </motion.div>
         )}
+      </AnimatePresence>
+
+      <div className="dk-panel">
+        <div className="dk-bar">
+          {canManageAnnouncements ? (
+            <div className="dk-tabs" role="group" aria-label="Situação">
+              {([['all', 'Todos'], ['active', 'Ativos'], ['scheduled', 'Agendados'], ['expired', 'Expirados']] as const).map(([k, l]) => (
+                <button key={k} aria-pressed={tab === k} className={`dk-tab${tab === k ? ' on' : ''}`} onClick={() => setTab(k)}>{l}<b>{counts[k]}</b></button>
+              ))}
+            </div>
+          ) : <div className="dk-ti" style={{ fontSize: 16 }}>Avisos da empresa</div>}
+          <div className="dk-flt">
+            <input type="text" placeholder="Buscar por título" aria-label="Buscar por título" value={q} onChange={e => setQ(e.target.value)} />
+            <select aria-label="Tipo" value={typeF} onChange={e => setTypeF(e.target.value)}>
+              <option value="all">Tipo: todos</option><option value="normal">Geral</option><option value="important">Importante</option><option value="urgent">Urgente</option>
+            </select>
+            {canManageAnnouncements && <button className="dk-btn" onClick={exportCsv}>Exportar</button>}
+            {canManageAnnouncements && <button className="dk-btn pri" onClick={openNew}>+ Novo aviso</button>}
+          </div>
+        </div>
+        {sel.size > 0 && canManageAnnouncements && <div className="dk-bar" style={{ background: '#EDF3FD', padding: '10px 24px' }}><span style={{ fontWeight: 600 }}>{sel.size} selecionado{sel.size > 1 ? 's' : ''}</span><button className="dk-btn" onClick={() => handleDelete(Array.from(sel).filter(id => { const r = rows.find(x => x.a.id === id); return r && canDelete(r.a.author_id); }))}><Trash2 size={15} />Excluir selecionados</button></div>}
+        {filtered.length === 0 ? <div className="dk-empty"><b>{rows.length === 0 ? 'Nenhum aviso por aqui' : 'Nenhum aviso encontrado'}</b><div className="dk-sub" style={{ marginTop: 6 }}>{rows.length === 0 ? (canManageAnnouncements ? 'Clique em "+ Novo aviso" para criar um comunicado.' : 'Não há avisos publicados ainda.') : 'Ajuste a busca ou os filtros.'}</div></div> : (
+          <div className="dk-scroll"><table className="dk-table">
+            <thead><tr>
+              {canManageAnnouncements && <th style={{ width: 36 }}><input type="checkbox" aria-label="Selecionar todos" checked={sel.size > 0 && sel.size === filtered.length} onChange={e => setSel(e.target.checked ? new Set(filtered.map(r => r.a.id)) : new Set())} /></th>}
+              <th>Aviso</th><th>Tipo</th>{canManageAnnouncements && <th>Público</th>}<th>Vigência</th>{canManageAnnouncements && <th>Leitura</th>}<th>{canManageAnnouncements ? 'Situação' : 'Publicado por'}</th>{canManageAnnouncements && <th style={{ width: 96 }} />}
+            </tr></thead>
+            <tbody>
+              {groups.map(g => [
+                <tr key={`g-${g.s}`} className="g"><td colSpan={colSpan}><span style={{ background: STATUS[g.s].dot }} />{STATUS[g.s].group} ({g.items.length})</td></tr>,
+                ...g.items.map(renderRow),
+              ])}
+            </tbody>
+          </table></div>
+        )}
+        <div className="dk-ft"><span>Exibindo {filtered.length} de {rows.length} avisos</span><span>Ordenado por situação e data de vigência</span></div>
       </div>
     </motion.div>
   );

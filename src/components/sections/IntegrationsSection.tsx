@@ -1,11 +1,9 @@
 // Company admin: connect Slack, Microsoft Teams and WhatsApp.
 // Secrets go straight to the `integrations` edge function, which encrypts them; this screen never reads them back.
 import { useCallback, useEffect, useState } from 'react';
-import { Plug, Loader2, Send, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, Send, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,22 +66,18 @@ function ProviderCard({ provider, row, onChanged }: { provider: Provider; row?: 
   };
 
   return (
-    <Card><CardContent className="space-y-4 p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl text-[15px] font-bold text-white" style={{ background: meta.color }}>{meta.letter}</span>
-          <div>
-            <p className="text-[15px] font-semibold">{meta.name}</p>
-            <p className="flex items-center gap-1 text-[12px] text-muted-foreground">
-              {!row ? 'Não conectado' : row.last_status === 'erro'
-                ? <><AlertCircle className="h-3.5 w-3.5 text-destructive" />Último envio falhou</>
-                : <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />Conectado{row.last_used_at ? ` · último envio ${new Date(row.last_used_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}</>}
-            </p>
-          </div>
+    <div className="dk-panel dk-pad">
+      <div className="dk-hd">
+        <span className="dk-tile" style={{ background: meta.color }}>{meta.letter}</span>
+        <div>
+          <h2>{meta.name}</h2>
+          <span className={`dk-stt${row && row.last_status !== 'erro' ? ' on' : ''}`}>
+            {!row ? 'Não conectado' : row.last_status === 'erro' ? 'Último envio falhou' : `Conectado${row.last_used_at ? ` · último envio ${new Date(row.last_used_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}`}
+          </span>
         </div>
-        {row ? <Switch checked={enabled} onCheckedChange={setEnabled} aria-label="Ativar" /> : null}
+        {row ? <span className="dk-sp"><Switch checked={enabled} onCheckedChange={setEnabled} aria-label="Ativar" /></span> : null}
       </div>
-      {row?.last_status === 'erro' && row.last_error ? <p className="rounded-lg bg-destructive/10 px-3 py-2 text-[12px] text-destructive">{row.last_error}</p> : null}
+      {row?.last_status === 'erro' && row.last_error ? <div className="dk-err">{row.last_error}</div> : null}
 
       <GuideDropdown title={row ? 'Passo a passo detalhado' : 'Como conseguir os dados (passo a passo detalhado)'}>
         {provider === 'slack' ? <SlackGuide /> : provider === 'teams' ? <TeamsGuide /> : <WhatsAppGuide />}
@@ -97,25 +91,25 @@ function ProviderCard({ provider, row, onChanged }: { provider: Provider; row?: 
         </div>
       ) : null}
       <div>
-        <p className="mb-1 text-[12px] text-muted-foreground">{meta.secretLabel}{row ? ' · já salvo, preencha só para trocar' : ''}</p>
+        <p className="lbl" style={{ marginBottom: 6 }}>{meta.secretLabel}{row ? ' · já salvo, preencha só para trocar' : ''}</p>
         <Input type="password" autoComplete="off" placeholder={row ? '••••••••••••' : meta.placeholder} value={secret} onChange={(e) => setSecret(e.target.value)} />
       </div>
       <div>
-        <p className="mb-1.5 text-[12px] text-muted-foreground">Enviar quando houver</p>
+        <p className="lbl" style={{ marginBottom: 8 }}>Enviar quando houver</p>
         <div className="flex flex-wrap gap-1.5">
           {Object.entries(EVENT_LABEL).filter(([k]) => provider !== 'whatsapp' || k === 'announcement' || k === 'task_assigned').map(([k, label]) => {
             const on = events.includes(k);
             return <button key={k} type="button" onClick={() => setEvents(on ? events.filter((e) => e !== k) : [...events, k])} className="ui-chip" aria-pressed={on}>{label}</button>;
           })}
         </div>
-        {provider === 'whatsapp' ? <p className="mt-1.5 text-[11px] text-muted-foreground">Avisos vão para todos os funcionários com celular no cadastro (cada mensagem é cobrada pela Meta); cards vão só para o responsável.</p> : null}
+        {provider === 'whatsapp' ? <p className="dk-hp">Avisos vão para todos os funcionários com celular no cadastro (cada mensagem é cobrada pela Meta); cards vão só para o responsável.</p> : null}
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" className="h-9" onClick={() => void save()} disabled={busy !== null}>{busy === 'save' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{row ? 'Salvar alterações' : 'Conectar'}</Button>
-        {row ? <Button size="sm" variant="outline" className="h-9" onClick={() => void test()} disabled={busy !== null}>{busy === 'test' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Enviar teste</Button> : null}
-        {row ? <Button size="sm" variant="ghost" className="h-9 text-destructive" onClick={() => void remove()} disabled={busy !== null}><Trash2 className="mr-2 h-4 w-4" />Desconectar</Button> : null}
+        <button className="dk-btn pri" type="button" onClick={() => void save()} disabled={busy !== null}>{busy === 'save' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{row ? 'Salvar alterações' : 'Conectar'}</button>
+        {row ? <button className="dk-btn" type="button" onClick={() => void test()} disabled={busy !== null}>{busy === 'test' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Enviar teste</button> : null}
+        {row ? <button className="dk-btn" style={{ color: '#8E1B10' }} type="button" onClick={() => void remove()} disabled={busy !== null}><Trash2 className="mr-2 h-4 w-4" />Desconectar</button> : null}
       </div>
-    </CardContent></Card>
+    </div>
   );
 }
 
@@ -133,28 +127,27 @@ export function IntegrationsSection() {
   }, []);
   useEffect(() => { if (isAdmin) void load(); }, [load, isAdmin]);
 
-  if (!isAdmin) return <div className="p-8 text-center text-sm text-muted-foreground">Somente o administrador da empresa configura integrações.</div>;
+  if (!isAdmin) return <div className="dk-pg"><div className="dk-empty">Somente o administrador da empresa configura integrações.</div></div>;
   return (
-    <div className="space-y-5 p-4 md:p-6">
-      <PageHeader icon={<Plug />} title="Integrações" subtitle="Leve avisos, cards e reuniões do ewvon para as ferramentas da equipe e conecte a IA da sua empresa." />
+    <div className="dk-pg dk-cards">
       {loading ? <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div> : (
         <>
           <AiCard row={rows.find((r) => (r.provider as string) === 'claude') as unknown as AiRow | undefined} onChanged={() => void load()} />
           <HrCard />
-          <div className="grid gap-3 xl:grid-cols-2">
+          <div className="dk-g3">
             {(['slack', 'teams', 'whatsapp'] as Provider[]).map((p) => <ProviderCard key={p} provider={p} row={rows.find((r) => r.provider === p)} onChanged={() => void load()} />)}
           </div>
-          <Card><CardContent className="p-0">
-            <div className="border-b border-border px-4 py-3"><p className="text-[15px] font-semibold">Últimos envios</p></div>
-            {!log.length ? <p className="px-4 py-6 text-sm text-muted-foreground">Nenhum envio ainda.</p> : (
-              <div className="divide-y divide-border">{log.map((d) => (
-                <div key={d.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-[13px]">
-                  <span className="flex min-w-0 items-center gap-2">{d.ok ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" /> : <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />}<span className="truncate">{META[d.provider as Provider]?.name || d.provider} · {d.event === 'test' ? 'Teste' : EVENT_LABEL[d.event] || d.event}{d.detail ? ` · ${d.detail}` : ''}</span></span>
-                  <span className="shrink-0 text-muted-foreground">{new Date(d.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+          <div className="dk-panel dk-pad" style={{ padding: 0 }}>
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid #E1E5EB', fontWeight: 600, fontSize: 15 }}>Últimos envios</div>
+            {!log.length ? <p className="dk-empty" style={{ textAlign: 'left' }}>Nenhum envio ainda.</p> : (
+              <div>{log.map((d) => (
+                <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 24px', borderBottom: '1px solid #E9ECF0', fontSize: 13 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}><i className="dk-dt" style={{ background: d.ok ? '#0A6B3D' : '#8E1B10' }} /><span className="truncate">{META[d.provider as Provider]?.name || d.provider} · {d.event === 'test' ? 'Teste' : EVENT_LABEL[d.event] || d.event}{d.detail ? ` · ${d.detail}` : ''}</span></span>
+                  <span style={{ color: '#4A5563' }}>{new Date(d.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
               ))}</div>
             )}
-          </CardContent></Card>
+          </div>
         </>
       )}
     </div>

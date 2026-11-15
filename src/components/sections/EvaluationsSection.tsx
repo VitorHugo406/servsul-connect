@@ -24,7 +24,7 @@ import { appConfirm } from '@/lib/appDialog';
 import { downloadEvaluationPdf } from '@/lib/evalDocument';
 import { CriteriaModelPanel } from '@/components/evaluations/CriteriaModelPanel';
 import { FORM_TYPES, formTypeLabel, type FormType } from '@/lib/evalPresets';
-import { contractDates, daysSinceAdmission, getEmployeeRecord } from '@/lib/employeeRecord';
+import { brDate, contractDates, daysSinceAdmission, getEmployeeRecord, type EmployeeRecord } from '@/lib/employeeRecord';
 
 const MANAGER_LEVELS = ['admin', 'gerente', 'supervisor', 'diretoria'];
 const FILTERS: { id: 'all' | EvalStatus; label: string }[] = [
@@ -80,91 +80,102 @@ export function EvaluationsSection() {
   const pendingMine = mine.filter((e) => e.status === 'sent').length;
   const current = list.find((e) => e.id === openId) || null;
 
-  return (
-    <div className="space-y-5 p-4 md:p-6">
-      <PageHeader
-        icon={<ClipboardCheck />} eyebrow="Desempenho" title="Avaliações"
-        subtitle={canManage ? 'Avalie sua equipe por critérios simples, de 1 a 5, e acompanhe a ciência de cada pessoa.' : 'Veja as avaliações que você recebeu, as notas e os feedbacks.'}
-        actions={<>
-          {base.length ? <Button variant="outline" className="rounded-xl" onClick={() => { if (!openReport(E.summaryReport(base, tab === 'mine' ? 'Minhas avaliações' : 'Avaliações da equipe'))) toast.error('Permita pop-ups para abrir o relatório.'); }}><FileText className="mr-2 h-4 w-4" />Relatório</Button> : null}
-          {canManage ? <Button className="rounded-xl" onClick={() => setCreating(true)}><Plus className="mr-2 h-4 w-4" />Nova avaliação</Button> : null}
-        </>}
-      />
+  const [periodF, setPeriodF] = useState('all');
+  const [recs, setRecs] = useState<Record<string, EmployeeRecord | null>>({});
+  const periods = useMemo(() => Array.from(new Set(base.map((e) => e.period).filter(Boolean))), [base]);
+  const shown2 = shown.filter((e) => periodF === 'all' || e.period === periodF);
+  // Dias de experiência vêm da data de admissão (dado protegido): busca só das pessoas em avaliação de experiência que aparecem na lista.
+  const needIds = useMemo(() => Array.from(new Set(shown2.filter((e) => e.kind === 'experience').map((e) => e.evaluatedId))).filter((id) => !(id in recs)).slice(0, 40), [shown2, recs]);
+  useEffect(() => {
+    if (!needIds.length || !canManage) return;
+    let live = true;
+    Promise.all(needIds.map((id) => getEmployeeRecord(id).then((r) => [id, r] as const).catch(() => [id, null] as const))).then((rs) => { if (live) setRecs((prev) => ({ ...prev, ...Object.fromEntries(rs) })); });
+    return () => { live = false; };
+  }, [needIds, canManage]);
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          { l: tab === 'mine' ? 'Recebidas' : 'Avaliações', v: base.length },
-          { l: 'Aguardando ciência', v: base.filter((e) => e.status === 'sent').length },
-          { l: 'Concluídas', v: base.filter((e) => e.status === 'finalized').length },
-          { l: 'Nota média', v: E.fmtScore(avg), sub: E.scaleLabel(avg) },
-        ].map((k) => (
-          <div key={k.l} className="ewvon-glass-panel rounded-2xl border border-white/80 p-4 shadow-[0_8px_30px_rgba(24,24,27,0.04)]">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{k.l}</p>
-            <p className="mt-1 text-2xl font-semibold text-foreground">{k.v}</p>
-            {k.sub ? <p className="text-xs text-zinc-500">{k.sub}</p> : null}
+  const chipCls: Record<EvalStatus, string> = { draft: 'dk-c-n', sent: 'dk-c-a', contested: 'dk-c-r', finalized: 'dk-c-g' };
+  const scoreCls = (v: number | null) => (v == null ? 'nn' : v >= 4 ? 'g' : v >= 3 ? 'b' : 'nn');
+  const COLORS = ['#DDE6F8', '#F6E3D3', '#DCEBDD', '#F3DDE6', '#E4DDF3'];
+  const tint = (n: string) => COLORS[Array.from(n).reduce((a, c) => a + c.charCodeAt(0), 0) % COLORS.length];
+  const phaseLabel = (e: EvalRow) => (e.formType === 'exp45' ? '1º período · 45 dias' : e.formType === 'exp90' ? '2º período · 90 dias' : e.formType ? formTypeLabel(e.formType) : e.period);
+  const expCell = (e: EvalRow) => {
+    if (e.kind !== 'experience') return <span>—</span>;
+    const r = recs[e.evaluatedId]; const d = r ? daysSinceAdmission(r) : null;
+    if (r == null || d == null) return <span>—</span>;
+    const end = brDate(contractDates(r).end2).slice(0, 5);
+    return <div><div className="dk-pr"><div className="dk-rb w90"><i style={{ width: `${Math.max(0, Math.min(100, (d / 90) * 100))}%` }} /></div>Dia {Math.min(d, 90)} de 90</div><div className="dk-sub">{d >= 90 ? `Encerrada em ${end}` : `Termina em ${end}`}</div></div>;
+  };
+
+  return (
+    <div className="dk-pg">
+      <div className="dk-top">
+        {canManage ? (
+          <div className="dk-seg" role="group" aria-label="Visão">
+            {([['team', 'Equipe'], ['mine', 'Minhas'], ['criteria', 'Critérios']] as const).map(([id, label]) => (
+              <button key={id} aria-pressed={tab === id} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); setFilter('all'); setPeriodF('all'); }}>{label}{id === 'mine' && pendingMine ? ` (${pendingMine})` : ''}</button>
+            ))}
           </div>
-        ))}
+        ) : <div className="dk-ti" style={{ fontSize: 16 }}>Minhas avaliações</div>}
+        <div className="dk-flt">
+          {base.length && tab !== 'criteria' ? <button className="dk-btn" onClick={() => { if (!openReport(E.summaryReport(base, tab === 'mine' ? 'Minhas avaliações' : 'Avaliações da equipe'))) toast.error('Permita pop-ups para abrir o relatório.'); }}><FileText size={15} />Relatório</button> : null}
+          {canManage ? <button className="dk-btn pri" onClick={() => setCreating(true)}><Plus size={15} />Nova avaliação</button> : null}
+        </div>
       </div>
 
+      {tab !== 'criteria' ? (
+        <div className="dk-kp">
+          <div className="dk-k"><i className="dk-dt" style={{ background: '#0F4C81' }} /><span className="l">{tab === 'mine' ? 'Recebidas' : 'Avaliações'}</span><span className="v">{base.length}</span></div>
+          <div className="dk-k"><i className="dk-dt" style={{ background: '#B7791F' }} /><span className="l">Aguardando ciência</span><span className="v">{base.filter((e) => e.status === 'sent').length}</span></div>
+          <div className="dk-k"><i className="dk-dt" style={{ background: '#0A6B3D' }} /><span className="l">Concluídas</span><span className="v">{base.filter((e) => e.status === 'finalized').length}</span></div>
+          <div className="dk-k"><span className="l">Nota média</span><span className="v">{E.fmtScore(avg)}</span>{avg != null ? <span className="s">{E.scaleLabel(avg)}</span> : null}</div>
+        </div>
+      ) : null}
+
       {pendingMine && tab !== 'mine' ? (
-        <button onClick={() => { setTab('mine'); setFilter('sent'); }} className="flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-          <Star className="h-4 w-4" /><span><b>{pendingMine} {pendingMine === 1 ? 'avaliação sua aguarda' : 'avaliações suas aguardam'}</b> sua ciência. Clique para ver.</span>
+        <button onClick={() => { setTab('mine'); setFilter('sent'); }} className="dk-err" style={{ background: '#FEF5E4', borderColor: '#E3C48F', color: '#7A4300', textAlign: 'left', cursor: 'pointer' }}>
+          <Star size={16} /><span><b>{pendingMine} {pendingMine === 1 ? 'avaliação sua aguarda' : 'avaliações suas aguardam'}</b> sua ciência. Clique para ver.</span>
         </button>
       ) : null}
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        {canManage ? (
-          <div className="inline-flex w-fit rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
-            {([['team', 'Equipe'], ['mine', 'Minhas'], ['criteria', 'Critérios']] as const).map(([id, label]) => (
-              <button key={id} onClick={() => { setTab(id); setFilter('all'); }} className={cn('rounded-lg px-4 py-1.5 text-sm font-medium transition', tab === id ? 'bg-white text-foreground shadow-sm dark:bg-zinc-950' : 'text-zinc-500 hover:text-foreground')}>
-                {label}{id === 'mine' && pendingMine ? <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[10px] text-white">{pendingMine}</span> : null}
-              </button>
-            ))}
-          </div>
-        ) : <div />}
-        {tab !== 'criteria' ? <label className="relative block w-full lg:w-72">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar pessoa ou período" className="rounded-xl pl-9" />
-        </label> : null}
-      </div>
-
-      {tab === 'criteria' ? <CriteriaModelPanel isAdmin={isAdmin} /> : (
-        <>
-          <div className="flex flex-wrap gap-2">
-            {FILTERS.filter((f) => tab === 'team' || f.id !== 'draft').map((f) => {
-              const n = f.id === 'all' ? base.length : base.filter((e) => e.status === f.id).length;
-              return <button key={f.id} onClick={() => setFilter(f.id)} className={cn('rounded-full border px-3 py-1 text-xs font-medium transition', filter === f.id ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900' : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800')}>{f.label} · {n}</button>;
-            })}
-          </div>
-          {loading ? (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-32 rounded-2xl" />)}</div>
-          ) : !shown.length ? (
-            <div className="ewvon-glass-panel flex flex-col items-center gap-2 rounded-2xl border border-white/80 px-6 py-14 text-center">
-              <ClipboardCheck className="h-8 w-8 text-zinc-400" />
-              <p className="font-medium text-foreground">{tab === 'mine' ? 'Você ainda não recebeu avaliações' : 'Nenhuma avaliação por aqui'}</p>
-              <p className="max-w-sm text-sm text-zinc-500">{tab === 'mine' ? 'Quando seu gestor enviar uma avaliação, ela aparece aqui para você ler e dar ciência.' : 'Crie uma nova avaliação escolhendo a pessoa da sua equipe e o tipo (experiência ou desenvolvimento).'}</p>
+      {tab === 'criteria' ? <div className="dk-panel dk-pad"><CriteriaModelPanel isAdmin={isAdmin} /></div> : (
+        <div className="dk-panel">
+          <div className="dk-bar">
+            <div className="dk-tabs" role="group" aria-label="Situação">
+              {FILTERS.filter((f) => tab === 'team' || f.id !== 'draft').map((f) => {
+                const n = f.id === 'all' ? base.length : base.filter((e) => e.status === f.id).length;
+                return <button key={f.id} aria-pressed={filter === f.id} onClick={() => setFilter(f.id)} className={`dk-tab${filter === f.id ? ' on' : ''}`}>{f.label}<b>{n}</b></button>;
+              })}
             </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {shown.map((e) => (
-                <button key={e.id} onClick={() => setOpenId(e.id)} className="ewvon-glass-panel group flex flex-col gap-3 rounded-2xl border border-white/80 p-4 text-left shadow-[0_8px_30px_rgba(24,24,27,0.04)] transition hover:-translate-y-0.5 hover:shadow-md">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm font-semibold text-white dark:bg-white dark:text-zinc-900">{initials(tab === 'mine' ? e.evaluatorName : e.evaluatedName)}</div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-foreground">{tab === 'mine' ? e.period : e.evaluatedName}</p>
-                      <p className="truncate text-xs text-zinc-500">{tab === 'mine' ? `Avaliado por ${e.evaluatorName}` : [e.evaluatedSector, e.period].filter(Boolean).join(' · ')}{e.formType ? ` · ${e.kind === 'experience' ? 'Experiência' : 'Desenvolvimento'}: ${formTypeLabel(e.formType)}` : ''}</p>
-                    </div>
-                    <ScoreBadge v={e.score} />
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <StatusPill s={e.status} />
-                    <span className="text-xs text-zinc-500">{new Date(e.sentAt || e.createdAt).toLocaleDateString('pt-BR')}</span>
-                  </div>
-                </button>
-              ))}
+            <div className="dk-flt">
+              <input type="text" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar pessoa ou período" aria-label="Buscar pessoa ou período" />
+              <select aria-label="Período" value={periodF} onChange={(e) => setPeriodF(e.target.value)}><option value="all">Período: todos</option>{periods.map((p) => <option key={p} value={p}>{p}</option>)}</select>
             </div>
-          )}
-        </>
+          </div>
+          {loading ? <div style={{ padding: 24 }}><Skeleton className="h-14 w-full" /><Skeleton className="mt-3 h-14 w-full" /><Skeleton className="mt-3 h-14 w-full" /></div>
+            : !shown2.length ? <div className="dk-empty"><b>{tab === 'mine' ? 'Você ainda não recebeu avaliações' : 'Nenhuma avaliação por aqui'}</b><div className="dk-sub" style={{ marginTop: 6 }}>{tab === 'mine' ? 'Quando seu gestor enviar uma avaliação, ela aparece aqui para você ler e dar ciência.' : 'Crie uma nova avaliação escolhendo a pessoa da sua equipe e o tipo (experiência ou desenvolvimento).'}</div></div>
+            : (
+              <div className="dk-scroll"><table className="dk-table">
+                <thead><tr><th>{tab === 'mine' ? 'Avaliador' : 'Colaborador'}</th><th>Período avaliado</th><th>Experiência</th><th>Nota</th><th>Situação</th><th>Data</th><th style={{ width: 96 }} /></tr></thead>
+                <tbody>
+                  {shown2.map((e) => {
+                    const who = tab === 'mine' ? e.evaluatorName : e.evaluatedName;
+                    return (
+                      <tr key={e.id} style={{ cursor: 'pointer' }} onClick={() => setOpenId(e.id)}>
+                        <td><div className="dk-pe"><div className="dk-av sm" style={{ background: tint(who) }}>{(tab !== 'mine' && e.evaluatedAvatar) ? <img src={e.evaluatedAvatar} alt="" /> : initials(who)}</div><div><div className="dk-ti">{who}</div><div className="dk-su">{tab === 'mine' ? 'Gestor' : e.evaluatedSector || '—'}</div></div></div></td>
+                        <td><div className="dk-ti" style={{ fontSize: 13.5 }}>{phaseLabel(e)}</div><div className="dk-su">Avaliador: {e.evaluatorName}</div></td>
+                        <td>{expCell(e)}</td>
+                        <td><div className="dk-nt"><span className={`dk-sc ${scoreCls(e.score)}`}>{E.fmtScore(e.score)}</span><span className="dk-cl">{e.score != null ? E.scaleLabel(e.score) : 'Sem nota'}</span></div></td>
+                        <td><span className={`dk-chp ${chipCls[e.status]}`}>{E.STATUS_LABEL[e.status]}</span></td>
+                        <td>{new Date(e.sentAt || e.createdAt).toLocaleDateString('pt-BR')}</td>
+                        <td className="dk-ac"><button className="dk-ic" aria-label="Ver" onClick={(ev) => { ev.stopPropagation(); setOpenId(e.id); }}><Eye size={17} /></button>{canManage && e.status === 'draft' ? <button className="dk-ic" aria-label="Editar" onClick={(ev) => { ev.stopPropagation(); setOpenId(e.id); }}><Pencil size={17} /></button> : null}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table></div>
+            )}
+          <div className="dk-ft"><span>Exibindo {shown2.length} de {base.length} avaliações</span><span>Notas de 1 a 5 · Supera a partir de 4,0</span></div>
+        </div>
       )}
 
       {creating && profile ? (

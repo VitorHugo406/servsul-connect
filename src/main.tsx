@@ -10,6 +10,7 @@ import "./warroom-fixes.css";
 import "./chat-runtime-fixes.css";
 import "./chat-ewwon.css";
 import "./chat-pro.css";
+import "./styles/design-kit.css";
 import "./chat-life.css";
 import "./focus-mode.css";
 
