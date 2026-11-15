@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { appConfirm } from '@/lib/appDialog';
 import { toast } from 'sonner';
+import { BrandDot, BrandTile } from '@/components/integrations/BrandMark';
 import { HR_PRESETS } from '@/lib/hrPresets';
 import { GuideDropdown, HrGuide } from '@/components/integrations/IntegrationGuides';
 
@@ -156,12 +157,12 @@ function SourceForm({ presets, source, onChanged, onClose }: { presets: Preset[]
       <div>
         <p className={lbl}>1. Sistema</p>
         <div className="space-y-2">
-          <div className="relative max-w-sm"><Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="h-9 pl-8" placeholder="Buscar sistema" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+          <div className="relative max-w-sm"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="h-10 !pl-10" placeholder="Buscar sistema" value={q} onChange={(e) => setQ(e.target.value)} /></div>
           <div className="max-h-56 space-y-2.5 overflow-y-auto rounded-lg border border-border p-2.5">
             {groups.length ? groups.map(([cat, list]) => (
               <div key={cat}>
                 <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{cat}</p>
-                <div className="flex flex-wrap gap-1.5">{list.map((p) => <button key={p.id} type="button" className="ui-chip" aria-pressed={presetId === p.id} onClick={() => choose(p)}>{p.name}</button>)}</div>
+                <div className="flex flex-wrap gap-1.5">{list.map((p) => <button key={p.id} type="button" className="ui-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }} aria-pressed={presetId === p.id} onClick={() => choose(p)}><BrandDot id={p.id} name={p.name} />{p.name}</button>)}</div>
               </div>
             )) : <p className="text-[12px] text-muted-foreground">Nenhum sistema com esse nome. Use “Qualquer API” ou “Seu sistema”.</p>}
           </div>
@@ -274,12 +275,15 @@ export function HrCard({ view = 'sistema' }: { view?: 'sistema' | 'dash' }) {
             return (
               <div key={s.id} className="space-y-2" style={{ padding: '14px 18px', borderTop: i ? '1px solid #E1E5EB' : 0 }}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <BrandTile id={s.preset} name={nameOf(s)} size={40} />
+                    <div className="min-w-0">
                     <p className="truncate text-[14px] font-semibold">{s.label || nameOf(s)}</p>
                     <p className="flex flex-wrap items-center gap-x-1.5 text-[12px] text-muted-foreground">
                       {failed ? <AlertCircle className="h-3.5 w-3.5 text-destructive" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
                       {s.last_count ?? 0} colaboradores · {s.last_used_at ? `atualizado ${ago(s.last_used_at)}` : 'ainda sem atualização'}
                     </p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1.5">
                     {isDash ? <label className="mr-2 flex items-center gap-2 text-[12.5px] text-muted-foreground">Usar no Dash<Switch checked={s.enabled} disabled={busy !== null} onCheckedChange={(on) => void toggle(s, on)} aria-label="Usar no Dash" /></label> : null}

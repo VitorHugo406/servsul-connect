@@ -1,7 +1,8 @@
 // Company admin: connect the company's own Claude API key. Members then write "@ewvonai ..." in a sector or group chat.
 // The key goes straight to the `ewvon-ai` edge function, which validates and encrypts it; this screen never reads it back.
+import { BrandTile } from '@/components/integrations/BrandMark';
 import { useEffect, useState } from 'react';
-import { Sparkles, Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -47,7 +48,7 @@ export function AiCard({ row, onChanged }: { row?: AiRow; onChanged: () => void 
   return (
     <div className="dk-panel dk-pad">
       <div className="dk-hd">
-        <span className="dk-tile" style={{ background: '#D97757' }}><Sparkles className="h-5 w-5" /></span>
+        <BrandTile id="claude" name="Claude" />
         <div>
           <h2>EwvonAI (Claude)</h2>
           <span className={`dk-stt${row && row.last_status !== 'erro' ? ' on' : ''}`}>{!row ? 'Não conectado' : row.last_status === 'erro' ? 'Último uso falhou' : `Conectado · chave ${row.config?.hint || ''}`}</span>

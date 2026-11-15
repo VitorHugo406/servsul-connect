@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { appConfirm, appPrompt } from '@/lib/appDialog';
 import { toast } from 'sonner';
 import { AiCard, type AiRow } from '@/components/integrations/AiCard';
+import { BrandTile } from '@/components/integrations/BrandMark';
 import { HrCard } from '@/components/integrations/HrCard';
 import { GuideDropdown, SlackGuide, TeamsGuide, WhatsAppGuide } from '@/components/integrations/IntegrationGuides';
 
@@ -68,7 +69,7 @@ function ProviderCard({ provider, row, onChanged }: { provider: Provider; row?: 
   return (
     <div className="dk-panel dk-pad">
       <div className="dk-hd">
-        <span className="dk-tile" style={{ background: meta.color }}>{meta.letter}</span>
+        <BrandTile id={provider} name={meta.name} color={meta.color} letter={meta.letter} />
         <div>
           <h2>{meta.name}</h2>
           <span className={`dk-stt${row && row.last_status !== 'erro' ? ' on' : ''}`}>
