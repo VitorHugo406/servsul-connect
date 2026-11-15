@@ -8,6 +8,12 @@ const sb = supabase as any;
 export interface EmployeeRecord {
   admission_date?: string; job_title?: string; salary?: string; rg?: string; cpf?: string; pis?: string; ctps?: string;
   contract_start?: string; contract_end_1?: string; contract_end_2?: string; registration?: string; manager_name?: string; notes?: string;
+  // Ficha completa (tela Gerenciamento)
+  social_name?: string; marital_status?: string; education?: string; rg_issuer?: string; sex?: string;
+  phone_alt?: string; personal_email?: string; emergency_name?: string; emergency_relation?: string; emergency_phone?: string;
+  zip?: string; street?: string; number?: string; complement?: string; district?: string; city?: string; state?: string;
+  unit?: string; contract_type?: string; work_start?: string; work_end?: string; break_time?: string; weekly_hours?: string; work_days?: string;
+  bank?: string; agency?: string; account?: string; account_type?: string; pix_type?: string; pix_key?: string;
 }
 
 export async function getEmployeeRecord(profileId: string): Promise<EmployeeRecord> {

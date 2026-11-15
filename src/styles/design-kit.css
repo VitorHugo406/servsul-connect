@@ -24,3 +24,64 @@
 .dk-pg.dk-cards{padding:24px!important;gap:16px}
 .dk-pg.dk-cards .dk-panel.dk-pad{margin:0}
 .dk-pg .dk-err{margin:0 24px 16px}
+/* Gerenciamento: lista de colaboradores + ficha */
+.dk-pg.dk-mg{display:grid;grid-template-columns:330px minmax(0,1fr);align-items:stretch;min-height:100%}
+.dk-pg .dk-ml{background:#F6F7F9;display:flex;flex-direction:column;min-height:0}
+.dk-pg .dk-ml .sh{padding:16px;display:flex;flex-direction:column;gap:12px}
+.dk-pg .dk-ml .srow{display:flex;gap:8px}
+.dk-pg .dk-srch{flex:1;min-width:0;height:38px;border:1px solid #C5CBD5!important;border-radius:10px!important;padding:0 12px;font:inherit;background:#fff;color:#1C2430;box-shadow:none!important}
+.dk-pg .dk-b2{height:38px;padding:0 16px;border-radius:10px!important;border:1px solid #AEB6C2;background:#fff;font:inherit;font-weight:600;color:#1C2430;cursor:pointer;white-space:nowrap}
+.dk-pg .dk-b2.pri{background:#171A21!important;border-color:#171A21;color:#fff!important}
+.dk-pg .dk-b2[disabled]{opacity:.55;cursor:default}
+.dk-pg .dk-tb{display:flex;gap:18px}
+.dk-pg .dk-tb button{border:0;border-bottom:2px solid transparent;background:transparent;font:inherit;font-weight:500;color:#4A5563;padding:4px 0 8px;cursor:pointer}
+.dk-pg .dk-tb button.on{color:#171A21;border-bottom-color:#171A21}
+.dk-pg .dk-tb span{color:#6B7482;margin-left:4px}
+.dk-pg .dk-li{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;border:0;border-bottom:1px solid #E7EAEF;background:transparent;padding:13px 16px;font:inherit;color:inherit;cursor:pointer}
+.dk-pg .dk-li.sel{background:#fff}
+.dk-pg .dk-li:hover{background:#fff}
+.dk-pg .dk-mav{width:38px;height:38px;border-radius:50%;background:#1B2340;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none}
+.dk-pg .dk-lt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dk-pg .dk-lt .ti{font-weight:600;font-size:14px}
+.dk-pg .dk-lt .su{color:#4A5563;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dk-pg .dk-bd{display:flex;gap:10px;align-items:center;margin-top:3px;font-size:12px}
+.dk-pg .dk-bd em{font-style:normal;font-weight:600;background:#1B2340;color:#fff;border-radius:5px;padding:1px 7px}
+.dk-pg .dk-s1,.dk-pg .dk-s0{font-weight:600;display:inline-flex;align-items:center;gap:5px}
+.dk-pg .dk-s0{color:#5A6472}
+.dk-pg .dk-s1::before,.dk-pg .dk-s0::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.dk-pg .dk-cnt{padding:12px 16px;font-size:12.5px;color:#4A5563}
+.dk-pg .dk-dh{display:flex;align-items:center;gap:16px;padding:22px 32px;flex-wrap:wrap}
+.dk-pg .dk-bav{width:56px;height:56px;border-radius:50%;background:#1B2340;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:20px}
+.dk-pg .dk-dh h2{margin:0 0 2px;font-size:19px;font-weight:600}
+.dk-pg .dk-acts{margin-left:auto;display:flex;gap:6px;align-items:center}
+.dk-pg .dk-lk{border:0;background:transparent;font:inherit;font-weight:500;color:#2B3544;padding:8px 10px;border-radius:8px!important;cursor:pointer}
+.dk-pg .dk-lk:hover{background:#EDEFF2}
+.dk-pg .dk-lk.dg{color:#B3261E}
+.dk-pg .dk-nav{display:flex;gap:26px;padding:0 32px;border-bottom:1px solid #E3E6EB;position:sticky;top:0;background:#fff;z-index:3}
+.dk-pg .dk-nav button{padding:10px 0 12px;font-weight:500;color:#4A5563;border:0;border-bottom:2px solid transparent;background:transparent;cursor:pointer}
+.dk-pg .dk-nav button.on{color:#171A21;border-bottom-color:#171A21}
+.dk-pg .dk-sec{display:grid;grid-template-columns:230px minmax(0,1fr);gap:36px;padding:28px 32px;border-bottom:1px solid #E3E6EB}
+.dk-pg .dk-sec h3{margin:0 0 6px;font-size:14.5px;font-weight:600}
+.dk-pg .dk-sec .hp{color:#4A5563;font-size:12.5px;line-height:1.5}
+.dk-pg .dk-gr6{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px 14px;align-content:start}
+.dk-pg .dk-f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.dk-pg .dk-f label,.dk-pg .dk-f .lab{font-size:12.5px;font-weight:500;color:#3C4756}
+.dk-pg .dk-f input:not([type=checkbox]):not([type=radio]),.dk-pg .dk-f select{height:40px;border:1px solid #C5CBD5!important;border-radius:10px!important;padding:0 12px;font:inherit;background:#fff;color:#1C2430;width:100%;box-shadow:none!important}
+.dk-pg .dk-f input:disabled,.dk-pg .dk-f select:disabled{background:#F6F7F9;color:#6B7482}
+.dk-pg .dk-mk{position:relative}
+.dk-pg .dk-mk input{padding-right:76px!important;letter-spacing:.06em}
+.dk-pg .dk-mo{position:absolute;right:6px;top:6px;height:28px;padding:0 10px;border:0;border-radius:6px!important;background:#EDEFF2;font:inherit;font-size:12px;font-weight:600;color:#2B3544;cursor:pointer}
+.dk-pg .dk-opts{display:flex;gap:22px;flex-wrap:wrap;padding-top:2px}
+.dk-pg .dk-opts label,.dk-pg .dk-ck{display:inline-flex;align-items:center;gap:7px;font-weight:400;color:#1C2430;font-size:13.5px}
+.dk-pg .dk-opts input,.dk-pg .dk-ck input{width:16px;height:16px;margin:0;accent-color:#171A21}
+.dk-pg .dk-pm{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #EDEFF2;font-weight:500}
+.dk-pg .dk-sw{width:42px;height:24px;border-radius:999px!important;border:0;background:#8A94A3;position:relative;cursor:pointer;flex:none}
+.dk-pg .dk-sw i{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}
+.dk-pg .dk-sw.on{background:#171A21}.dk-pg .dk-sw.on i{left:21px}
+.dk-pg .dk-sw[disabled]{opacity:.55;cursor:default}
+.dk-pg .dk-pg2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 40px}
+.dk-pg .dk-pwr{grid-column:span 6;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-top:4px;color:#4A5563}
+.dk-pg .dk-ftb{display:flex;justify-content:flex-end;gap:8px;padding:18px 32px;background:#F6F7F9;position:sticky;bottom:0;z-index:3}
+.dk-pg .dk-mm{background:#fff;min-width:0;display:flex;flex-direction:column}
+@media (max-width:1180px){.dk-pg.dk-mg{grid-template-columns:1fr}.dk-pg .dk-sec{grid-template-columns:1fr;gap:12px}}
+.dk-pg.dk-mg{height:100%;overflow:hidden}.dk-pg .dk-mm{height:100%;min-height:0;overflow:hidden}.dk-pg .dk-ml{height:100%;overflow:hidden}
