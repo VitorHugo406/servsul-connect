@@ -149,7 +149,7 @@ self.addEventListener('push', (event) => {
     const count = (prev && prev.data && prev.data.count ? prev.data.count : 0) + 1;
     const lines = [...((prev && prev.data && prev.data.lines) || []), d.body || ''].slice(-6);
     const isNotice = d.kind === 'notice' || d.kind === 'birthday';
-    const title = isNotice ? (d.title || 'Novo aviso') : count > 1 ? `${d.title} · ${count} mensagens` : (d.title || 'ewvon');
+    const title = isNotice ? (d.title || 'Novo aviso') : count > 1 ? `${d.title} · ${count} mensagens` : (d.title || 'Ewvon');
     await self.registration.showNotification(title, {
       body: isNotice ? `${d.body || ''}${d.company ? `\n${d.company} · Avisos` : ''}` : count > 1 ? lines.join('\n') : (d.body || 'Nova mensagem'),
       icon: d.icon || '/icons/notify-person.png?v=3',
