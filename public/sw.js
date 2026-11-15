@@ -67,7 +67,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request).then((response) => {
         // Standalone pages (e.g. /teste-gratuito.html) must never overwrite the cached app shell.
-        const standalonePage = url.pathname.endsWith('.html') && url.pathname !== '/index.html';
+        const standalonePage = (url.pathname.endsWith('.html') && url.pathname !== '/index.html') || /^\/(gestao-de-tarefas|chat-corporativo|avaliacao-de-desempenho|gestao-administrativa)\/?$/.test(url.pathname);
         if (response.ok && response.type === 'basic' && !standalonePage) {
           const copy = response.clone();
           event.waitUntil(
