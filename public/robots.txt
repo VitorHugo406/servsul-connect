@@ -6,4 +6,4 @@ Disallow: /select-company
 Disallow: /birthday-report
 Disallow: /assinar/retorno
 
-Sitemap: https://ewvon.vercel.app/sitemap.xml
+Sitemap: https://ewvon.com/sitemap.xml

@@ -4,7 +4,7 @@ Plataforma de gestão corporativa: chat por setores, conversas diretas e grupos,
 
 - Front-end: Vite + React + TypeScript + Tailwind/shadcn
 - Back-end: Supabase (banco, autenticação, armazenamento e funções)
-- Hospedagem: Vercel (https://ewvon.vercel.app)
+- Hospedagem: Vercel (https://ewvon.com)
 
 ## Desenvolvimento
 
