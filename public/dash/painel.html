@@ -4219,30 +4219,31 @@ function makePerson0(o,opt){
   const skin=emat(o.skin,{roughness:.5},.3),hair=emat(o.hair,{roughness:.36},.8),shirt=emat(o.shirt,{roughness:.88},.1),pants=emat(F?'#2F3548':'#2D3445',{roughness:.85},.08),
     dark=emat('#1B1F2A',{roughness:.4},.5),shoe=emat('#15171C',{roughness:.28},1),sole=emat('#E8E8E8',{roughness:.8},.1),metal=emat('#2B2F38',{roughness:.28,metalness:.9},1.4),gold=emat('#D8A93B',{roughness:.22,metalness:1},1.7),white=emat('#F5F5F3',{roughness:.5},.3);
   const jack=o.lead>=2,jc=emat(o.lead===3?'#1E2433':'#2F3A55',{roughness:.75},.2);
-  const t1=F?.38:.46,t2=F?.46:.54,shx=F?.88:1.1,sox=F?.46:.56,top=jack?jc:shirt;
-  g.add(mesh(G.cyl(t1,t2,.95,28),top,0,1.4,0,{c:1}));
-  g.add(mesh(G.sph(.46,24,16),top,0,1.82,0,{c:1,sy:.55,sx:shx}));
-  if(F)g.add(mesh(G.cyl(.46,.7,.5,28),emat(shade(o.shirt,.62),{roughness:.9},.1),0,.98,0,{c:1}));
-  else g.add(mesh(G.cyl(t2+.01,t2+.01,.08,28),emat('#2A1E16',{roughness:.5},.5),0,.97,0));
-  if(!F)g.add(mesh(G.box(.14,.1,.03),gold,0,.97,t2+.01));
-  g.add(mesh(G.cyl(.14,.15,.24,14),skin,0,2.04,0));
+  const t1=F?.31:.37,t2=F?.37:.43,shx=F?.92:1.12,sox=F?.43:.52,top=jack?jc:shirt;
+  const sy=stand?.66:0,U=new THREE.Group();U.position.y=sy;g.add(U);   /* em pé o tronco sobe: pernas de tamanho real */
+  U.add(mesh(G.cyl(t1,t2,.95,28),top,0,1.4,0,{c:1}));
+  U.add(mesh(G.sph(.4,24,16),top,0,1.82,0,{c:1,sy:.55,sx:shx}));
+  if(F)U.add(mesh(G.cyl(.46,.7,.5,28),emat(shade(o.shirt,.62),{roughness:.9},.1),0,.98,0,{c:1}));
+  else U.add(mesh(G.cyl(t2+.01,t2+.01,.08,28),emat('#2A1E16',{roughness:.5},.5),0,.97,0));
+  if(!F)U.add(mesh(G.box(.14,.1,.03),gold,0,.97,t2+.01));
+  U.add(mesh(G.cyl(.1,.115,.34,14),skin,0,2.12,0));
   // gola, botões, gravata, lapela
   if(jack){
-    g.add(mesh(G.box(.2,.62,.02),white,0,1.62,t1+.095));
-    for(const s of[-1,1])g.add(mesh(G.box(.07,.6,.04),jc,s*.17,1.6,t1+.11,{rz:s*.25}));
-    g.add(mesh(G.sph(.03,8,6),metal,0,1.25,t2+.01));
-  }else for(let k=0;k<4;k++)g.add(mesh(G.sph(.03,8,6),white,0,1.15+k*.17,(t1+(t2-t1)*(.7-k*.15))+.01));
-  if(!F||jack){for(const s of[-1,1])g.add(mesh(G.box(.2,.05,.2),white,s*.1,1.99,.12,{ry:s*.5,rz:s*.15}))}
-  if(o.tie){const tc=o.lead===3?'#7A1220':o.lead===2?'#1D3F8F':'#12A072';g.add(mesh(G.box(.1,.08,.06),emat(tc,{roughness:.4},.8),0,1.93,t1+.1));g.add(mesh(G.box(.11,.58,.03),emat(tc,{roughness:.4},.8),0,1.62,t1+.115,{rx:-.04}))}
+    U.add(mesh(G.box(.2,.62,.02),white,0,1.62,t1+.095));
+    for(const s of[-1,1])U.add(mesh(G.box(.07,.6,.04),jc,s*.17,1.6,t1+.11,{rz:s*.25}));
+    U.add(mesh(G.sph(.03,8,6),metal,0,1.25,t2+.01));
+  }else for(let k=0;k<4;k++)U.add(mesh(G.sph(.03,8,6),white,0,1.15+k*.17,(t1+(t2-t1)*(.7-k*.15))+.01));
+  if(!F||jack){for(const s of[-1,1])U.add(mesh(G.box(.2,.05,.2),white,s*.1,1.99,.12,{ry:s*.5,rz:s*.15}))}
+  if(o.tie){const tc=o.lead===3?'#7A1220':o.lead===2?'#1D3F8F':'#12A072';U.add(mesh(G.box(.1,.08,.06),emat(tc,{roughness:.4},.8),0,1.93,t1+.1));U.add(mesh(G.box(.11,.58,.03),emat(tc,{roughness:.4},.8),0,1.62,t1+.115,{rx:-.04}))}
   if(o.lan){
     const lc=emat('#FF6A1A',{roughness:.6},.2);
-    for(const s of[-1,1])g.add(mesh(G.box(.035,.55,.015),lc,s*.1,1.78,t1+.13,{rz:s*-.28}));
-    g.add(mesh(G.box(.13,.04,.03),metal,0,1.5,t1+.15));
-    g.add(mesh(G.box(.3,.4,.015),new THREE.MeshStandardMaterial({map:idTex(),roughness:.35}),0,1.28,t1+.17,{c:1}));
+    for(const s of[-1,1])U.add(mesh(G.box(.035,.55,.015),lc,s*.1,1.78,t1+.13,{rz:s*-.28}));
+    U.add(mesh(G.box(.13,.04,.03),metal,0,1.5,t1+.15));
+    U.add(mesh(G.box(.3,.4,.015),new THREE.MeshStandardMaterial({map:idTex(),roughness:.35}),0,1.28,t1+.17,{c:1}));
   }
-  if(F&&o.neck){g.add(mesh(G.tor(.19,.012,Math.PI*1.6),gold,0,1.97,.02,{rx:Math.PI/2+.5,rz:Math.PI*.2}));g.add(mesh(G.sph(.035,10,8),gold,0,1.78,.2))}
+  if(F&&o.neck){U.add(mesh(G.tor(.19,.012,Math.PI*1.6),gold,0,1.97,.02,{rx:Math.PI/2+.5,rz:Math.PI*.2}));U.add(mesh(G.sph(.035,10,8),gold,0,1.78,.2))}
   // cabeça
-  const head=new THREE.Group();head.position.y=2.62;g.add(head);
+  const head=new THREE.Group();head.position.y=2.45;head.scale.setScalar(.5);U.add(head);   /* cabeça em proporção de gente */
   const skull=mesh(G.sph(.62,32,24),skin,0,0,0,{c:1});head.add(skull);pick.push(skull);
   head.add(mesh(G.sph(.2,12,10),skin,0,-.52,.12,{sx:1.5,sy:.45,sz:.9}));
   const irisC=['#3A2A1E','#2F4F3A','#2E4F7A','#5A3A1E'][(hash(o.hair+o.skin)>>>2)%4];
@@ -4266,7 +4267,7 @@ function makePerson0(o,opt){
   else if(hs===12){head.add(mesh(G.sph(.16,12,10),hair,0,.3,-.64,{c:1}));head.add(mesh(G.cyl(.13,.07,.95,10),hair,0,-.12,-.78,{rx:.55,c:1}))}
   else if(hs===13){head.add(mesh(G.box(1.2,.75,.22),hair,0,-.12,-.55,{c:1}));for(const s of[-1,1])head.add(mesh(G.box(.18,.75,.62),hair,s*.6,-.12,-.1,{c:1}))}
   else if(hs===20){for(const s of[-1,1])head.add(mesh(G.box(.08,.28,.12),hair,s*.58,-.1,.12))}
-  else if(hs===21){for(let k=0;k<8;k++){const a=k/8*Math.PI*2;head.add(mesh(G.cone(.15,.46),hair,Math.sin(a)*.34,.64,Math.cos(a)*.34-.05,{rx:Math.cos(a)*.5,rz:-Math.sin(a)*.5}))}}
+  else if(hs===21){for(let k=0;k<7;k++){const a=k/7*Math.PI*2;head.add(mesh(G.sph(.2,10,8),hair,Math.sin(a)*.38,.58,Math.cos(a)*.38-.05,{sy:.8,c:1}))};head.add(mesh(G.sph(.34,12,10),hair,0,.66,-.03,{sy:.7,c:1}))}
   else if(hs===22){head.add(mesh(G.box(.75,.18,.34),hair,.14,.5,.42,{rz:-.3,rx:.45,c:1}))}
   else if(hs===14){head.add(mesh(G.box(1.22,1.3,.3),hair,0,-.45,-.52,{c:1}));for(const s of[-1,1])for(let k=0;k<4;k++)head.add(mesh(G.sph(.2,10,8),hair,s*(.62+(k%2)*.04),-.05-k*.3,-.12+Math.sin(k*1.7)*.12,{c:1}))}
   else if(hs===15){const bd=emat('#E86A4A',{roughness:.5},.3);for(let k=0;k<4;k++)head.add(mesh(G.sph(.17-k*.012,10,8),hair,0,-.12-k*.25,-.72-k*.02,{c:1}));head.add(mesh(G.sph(.07,8,6),bd,0,-.95,-.78))}
@@ -4292,8 +4293,8 @@ function makePerson0(o,opt){
   // braços
   for(const s of[-1,1]){
     const sleeve=jack?jc:shirt,fore=(F&&!jack)?skin:sleeve;
-    let sho,elb,hand,arm=g;
-    if(stand){arm=new THREE.Group();arm.position.set(s*sox,1.85,0);g.add(arm);parts[s<0?'armL':'armR']=arm;sho=new THREE.Vector3();elb=new THREE.Vector3(s*.02,-.5,.03);hand=new THREE.Vector3(s*.03,-.98,.08)}
+    let sho,elb,hand,arm=U;
+    if(stand){arm=new THREE.Group();arm.position.set(s*sox,1.85,0);U.add(arm);parts[s<0?'armL':'armR']=arm;sho=new THREE.Vector3();elb=new THREE.Vector3(s*.02,-.62,.03);hand=new THREE.Vector3(s*.03,-1.22,.08)}
     else{sho=new THREE.Vector3(s*sox,1.85,0);elb=new THREE.Vector3(s*(sox+.1),1.38,.32);hand=new THREE.Vector3(s*.3,1.4,.85)}
     limbG(arm,sho,elb,.13,sleeve);arm.add(mesh(G.sph(.13,12,10),sleeve,elb.x,elb.y,elb.z,{c:1}));limbG(arm,elb,hand,.11,fore);
     if(!F||jack)arm.add(mesh(G.cyl(.115,.115,.07,14),white,hand.x*.12+elb.x*.88,hand.y*.12+elb.y*.88,hand.z*.12+elb.z*.88,{}));
@@ -4308,7 +4309,7 @@ function makePerson0(o,opt){
     }
     // pernas
     let hip,knee,foot,leg=g;
-    if(stand){leg=new THREE.Group();leg.position.set(s*.24,.98,0);g.add(leg);parts[s<0?'legL':'legR']=leg;hip=new THREE.Vector3();knee=new THREE.Vector3(0,-.48,.02);foot=new THREE.Vector3(0,-.84,0)}
+    if(stand){leg=new THREE.Group();leg.position.set(s*.24,.98+.66,0);g.add(leg);parts[s<0?'legL':'legR']=leg;hip=new THREE.Vector3();knee=new THREE.Vector3(0,-.8,.02);foot=new THREE.Vector3(0,-1.5,0)}
     else{hip=new THREE.Vector3(s*.24,.98,0);knee=new THREE.Vector3(s*.24,.98,.85);foot=new THREE.Vector3(s*.24,.14,.92)}
     limbG(leg,hip,knee,.17,pants);leg.add(mesh(G.sph(.17,12,10),pants,knee.x,knee.y,knee.z));limbG(leg,knee,foot,.145,pants);
     const fy=foot.y-.06+(stand?0:0);
