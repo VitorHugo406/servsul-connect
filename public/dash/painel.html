@@ -1575,35 +1575,76 @@ function rebuildPerson(id){
 }
 /* ----- todos os andares, de verdade: cada andar tem a mesma planta do andar real (mesas, pessoas, salas, sofá, recepção, elevador...) ----- */
 let BELOW=null,ABOVE=null,LOWK=[],GLB=null,LBM=null,FLR=null,FTR=null;const FLS=new Map();
-function disposeBelow(){
-  [BELOW,ABOVE].forEach(R=>{if(!R)return;R.traverse(o=>{if(o.isMesh&&o.geometry&&o.geometry.userData.own)o.geometry.dispose()});if(R.parent)R.parent.remove(R)});
-  BELOW=ABOVE=null;LOWK=[];FLS.clear();
-}
 function belowGlassMat(){
   if(!GLB){GLB=new THREE.MeshStandardMaterial({color:0xC4E3F4,transparent:true,opacity:.14,roughness:.05,metalness:.2,side:THREE.DoubleSide,depthWrite:false});GLB.userData.keep=true}
   if(ENV&&!GLB.envMap){GLB.envMap=ENV;GLB.envMapIntensity=1.4;GLB.needsUpdate=true}
   return GLB;
 }
-function buildBelow(){
-  disposeBelow();
+/* o prédio inteiro é uma cena só: todos os andares ficam montados; trocar de andar só move a câmera e liga/desliga o andar que vira o ativo */
+let STACK=null,STACKSIG='',SHAFT=null,LSM=null;
+function disposeFloorObj(g){
+  g.traverse(o=>{if(o.isMesh&&o.geometry&&o.geometry.userData.own)o.geometry.dispose();const m=o.material;if(m&&m.userData&&m.userData.sign){if(m.map)m.map.dispose();m.dispose()}});
+  if(g.parent)g.parent.remove(g);
+}
+function disposeStack(){if(STACK)disposeFloorObj(STACK);STACK=null;FLS.clear();if(SHAFT){disposeFloorObj(SHAFT);SHAFT=null}}
+function stackSig(){
+  try{const T=THEME();return JSON.stringify([CFG.floors.map(f=>[f.id,f.reception,f.name]),CFG.layout,CFG.deptFloor,CFG.rooms,EXX,EXZ,EMPS.length,ROOMS.map(r=>r.name),T.wall||'',T.byFloor||'',T.floor||'',DEPT.map(d=>d.name+':'+d.act.length)])}catch(e){return String(Math.random())}
+}
+function liveSig(j){
+  const f=CFG.floors[j],a=[];
+  floorDepts(f.id).forEach(d=>d.act.forEach(e=>{if(MEETM.has(e._i)||lunchAway(e,CLOCK.min))a.push(e._i)}));
+  MEETM.forEach((mt,id)=>{const r=ROOMS[mt.ri];if(r&&roomCfg(r).floor===f.id)a.push('m'+id+mt.key)});
+  floorRooms(f.id).forEach(ri=>{const st=roomStatus(ROOMS[ri],CLOCK.min);a.push('r'+ri+(st.busy?1:0)+(st.cur?Math.round(st.cur.n||0):0))});
+  return a.join(',');
+}
+function refreshFloor(j){
+  const old=FLS.get(j);if(!STACK||!old)return;
+  const nf=lowFloor(j,j*LVH,elevSpot());nf.sig=liveSig(j);nf.g.visible=old.g.visible;nf.g.position.copy(old.g.position);
+  disposeFloorObj(old.g);STACK.add(nf.g);FLS.set(j,nf);
+}
+/* andares que mudam sozinhos (reunião, almoço, status) são atualizados no lugar, sem recarregar o prédio */
+function liveStack(now){
+  if(!STACK||FTR||now-(liveStack.t||0)<3000)return;liveStack.t=now;
+  try{meetCompute()}catch(e){}
+  const cur=curIdx();FLS.forEach((fl,j)=>{if(j===cur)return;if(liveSig(j)!==fl.sig)refreshFloor(j)});
+}
+function ensureStack(){
   if(!OK)return;
   try{meetCompute()}catch(_){}
-  const cur=Math.max(0,floorIdx(CUR));
-  BELOW=new THREE.Group();ABOVE=new THREE.Group();BELOW.userData.sceneRoot=ABOVE.userData.sceneRoot=true;
-  const ES=elevSpot();ELEVP={x:ES.x,z:ES.z,r:ES.r};
-  ECAB=makeCab();BELOW.add(ECAB);
-  {/* o poço do elevador atravessa o prédio inteiro: a cabine sobe e desce dentro dele */
+  const sig=stackSig();
+  if(!STACK||sig!==STACKSIG){
+    disposeStack();STACKSIG=sig;
+    STACK=new THREE.Group();STACK.userData.sceneRoot=true;
+    const ES=elevSpot();
+    for(let j=1;j<CFG.floors.length;j++){   /* o térreo (recepção) é o prédio de baixo do cenário */
+      const fl=lowFloor(j,j*LVH,ES);fl.sig=liveSig(j);STACK.add(fl.g);FLS.set(j,fl);
+    }
+    scene.add(STACK);
+  }
+  if(!ECAB){ECAB=makeCab();scene.add(ECAB)}
+  placeStack();
+}
+function placeStack(){
+  if(!STACK)return;const cur=curIdx(),ES=elevSpot();ELEVP={x:ES.x,z:ES.z,r:ES.r};
+  STACK.position.y=-cur*LVH;
+  FLS.forEach((fl,j)=>{fl.g.position.set(0,0,0);fl.g.visible=j<cur});
+  /* poço do elevador: só do térreo até o andar em que estamos, nada acima */
+  if(SHAFT){disposeFloorObj(SHAFT);SHAFT=null}
+  if(cur>0){
     const rot=ES.r%2===1,ew=rot?2.4:3.8,ed=rot?3.8:2.4,hTot=cur*LVH+1.2,y0=-cur*LVH-1.2;
-    if(cur>0){const sh=new THREE.Mesh(G.box(ew,hTot,ed),belowGlassMat());sh.geometry.userData.own=true;sh.position.set(ES.x,y0+hTot/2,ES.z);sh.renderOrder=2;BELOW.add(sh);
+    SHAFT=new THREE.Group();SHAFT.userData.sceneRoot=true;
+    const sh=new THREE.Mesh(G.box(ew,hTot,ed),belowGlassMat());sh.geometry.userData.own=true;sh.position.set(ES.x,y0+hTot/2,ES.z);sh.renderOrder=2;SHAFT.add(sh);
     const pm=new THREE.MeshStandardMaterial({color:0xB9BFCA,metalness:.7,roughness:.35});
-    for(const sx of[-1,1])for(const sz of[-1,1]){const po=new THREE.Mesh(G.box(.14,hTot,.14),pm);po.geometry.userData.own=true;po.position.set(ES.x+sx*(ew/2),y0+hTot/2,ES.z+sz*(ed/2));BELOW.add(po)}}
+    for(const sx of[-1,1])for(const sz of[-1,1]){const po=new THREE.Mesh(G.box(.14,hTot,.14),pm);po.geometry.userData.own=true;po.position.set(ES.x+sx*(ew/2),y0+hTot/2,ES.z+sz*(ed/2));SHAFT.add(po)}
+    scene.add(SHAFT);
   }
-  for(let j=1;j<CFG.floors.length;j++){   /* o térreo (recepção) é o prédio de baixo do cenário */
-    if(j===cur)continue;
-    const fl=lowFloor(j,(j-cur)*LVH,ES);
-    (j<cur?BELOW:ABOVE).add(fl.g);FLS.set(j,fl);
-  }
-  scene.add(BELOW);scene.add(ABOVE);ABOVE.visible=false;
+}
+function floorSignTex(f){
+  const c=document.createElement('canvas');c.width=1024;c.height=256;const g=c.getContext('2d'),num=String(fnum(f.id));
+  g.textBaseline='middle';g.textAlign='left';g.fillStyle='#12151C';g.font='800 190px '+FONT;g.fillText(num,30,138);
+  const nx=g.measureText(num).width+70;g.fillStyle='#4B5565';g.font='700 40px '+FONT;g.fillText('ANDAR',nx,84);
+  g.fillStyle='#12151C';g.font='800 64px '+FONT;g.fillText(fname(f),nx,158,1024-nx-20);
+  return new THREE.CanvasTexture(c);
 }
 function lowFloor(j,fy,ES){
   const f=CFG.floors[j],X0=-20.3,X1=20.3+EXX,Z0=-13.3,Z1=13.3+EXZ,W=X1-X0,D=Z1-Z0,cx=(X0+X1)/2,cz=(Z0+Z1)/2;
@@ -1635,7 +1676,7 @@ function lowFloor(j,fy,ES){
     add(G.box(W+.6,9,.6),wc,cx,fy+4.5,Z0);add(G.box(.6,9,D),wc,X0,fy+4.5,cz);add(G.box(.6,9,D),wc,X1,fy+4.5,cz);
     add(G.box(W+.6,.3,.32),'#F7F8FA',cx,fy+8.8,Z0+.3);add(G.box(.32,.3,D),'#F7F8FA',X0+.3,fy+8.8,cz);add(G.box(.32,.3,D),'#F7F8FA',X1-.3,fy+8.8,cz);
     for(const wx of[-16.4,5.6]){add(G.box(3.2,4.4,.1),'#2B3140',wx,fy+5.6,Z0+.36);add(G.box(2.9,4.1,.05),'#D3EAF8',wx,fy+5.6,Z0+.42)}
-    add(G.box(12.5,6.5,.3),'#0E1117',SCR.x,fy+SCR.y,Z0+.5);add(G.box(12.1,6.1,.04),'#1B2433',SCR.x,fy+SCR.y,Z0+.68);
+    add(G.box(12.5,6.5,.3),'#0E1117',SCR.x,fy+SCR.y,Z0+.5);
     for(let x=X0;x<=X1+.01;x+=W/8)add(G.box(.22,LVH-1.4,.22),'#52606E',x,fy+(LVH-1.4)/2,Z1);
     /* ilhas dos departamentos: mesma planta do andar real */
     const rids=floorRooms(f.id).slice(0,6),RP=roomPlan(rids),L=LAY(f.id);
@@ -1711,6 +1752,11 @@ function lowFloor(j,fy,ES){
   if(!LBM){LBM=new THREE.MeshBasicMaterial({vertexColors:true});LBM.userData.keep=true}
   const mL=vMesh(LB,LBM,false);if(mL)g.add(mL);
   extras.forEach(o=>g.add(o));
+  /* o telão mostra os mesmos gráficos do andar ativo (mesma tela) e cada andar tem a sua placa */
+  {LSM=LSM||new THREE.MeshBasicMaterial({map:screenTex});LSM.userData.keep=true;
+   const sc=new THREE.Mesh(G.plane(SCR.w,SCR.h),LSM);sc.geometry.userData.own=true;sc.position.set(SCR.x,fy+SCR.y,Z0+.69);g.add(sc);
+   const sm=new THREE.MeshBasicMaterial({map:floorSignTex(f),transparent:true,depthWrite:false});sm.userData.sign=1;
+   const sg=new THREE.Mesh(G.plane(7.2,1.8),sm);sg.geometry.userData.own=true;sg.position.set(13.9,fy+7.4,Z0+.36);g.add(sg)}
   /* vidro da frente */
   const h=LVH-1.4,gm=new THREE.Mesh(new THREE.PlaneGeometry(W,h),glass);gm.geometry.userData.own=true;gm.position.set(cx,fy+h/2,Z1);gm.renderOrder=3;g.add(gm);
   return {g,fy};
@@ -1721,7 +1767,7 @@ function buildWorld(){
   if(!OK)return;WORLD++;
   NAV=null;LSL=null;frame.n=0;disposeDyn();DPICK=[];TAGS=[];SIGNS=[];ISL.clear();PERS.clear();EG.clear();RM.length=0;ANIM.length=0;LEAVES.length=0;PART.length=0;WALK=[];CUPS=[];SLOCC.clear();CAFE=null;ELEV=null;MEETP=new Map();
   dyn=new THREE.Group();scene.add(dyn);
-  ensureSurround();buildBelow();
+  ensureSurround();ensureStack();
   if(LGS){
     const po=LAY(CUR).p.lg0,x=po?po.x:-14.5,z=po?po.z:10.3;LGS.position.set(x,0,z);
     reg(LGS,{kind:'lounge',ek:'lg0',tipT:'Sofá de descanso',tipS:'Em edição você pode mover',foot:{type:'rect',x:x,z:z+.6,w:6,d:6}},DPICK);
@@ -2002,7 +2048,7 @@ function drawScreen(){
 /* =================== CENÁRIO EXTERNO (v16) — lojas, rua, carros, pedestres, prédio =================== */
 let LGS=null;
 const LVH=10.5,SWK=5.2,CRW=13,RDL=[5.2,5.6,5.6,5.2],EXTX=175,EXTZ=110;
-let SURR=null,SURRK='',SKY=null,VPAR=null;
+let SURR=null,SURRK='',SURRIDX=0,SKY=null,VPAR=null;
 const AMB={cars:[],peds:[],lanes:[],lm:null,state:{m:'g',c:'r'},phase:0,xc:[],lamps:[]};
 const _vm=new THREE.Matrix4(),_vq=new THREE.Quaternion(),_ve=new THREE.Euler(),_vp=new THREE.Vector3(),_vs=new THREE.Vector3(),_vn=new THREE.Matrix3(),_vc=new THREE.Color(),_vv=new THREE.Vector3();
 const VMAT={};
@@ -2508,14 +2554,14 @@ function lampSet(){
 }
 function ensureSurround(){
   if(!OK)return;
-  const idx=Math.max(0,floorIdx(CUR)),key=idx+'|'+EXX+'|'+EXZ+'|'+(THEME().company||'')+'|'+CFG.floors.length;
+  const idx=Math.max(0,floorIdx(CUR)),key=(idx===0?0:1)+'|'+EXX+'|'+EXZ+'|'+(THEME().company||'')+'|'+CFG.floors.length;
   if(!SKY){
     const sk=new THREE.Mesh(new THREE.SphereGeometry(380,32,16),new THREE.MeshBasicMaterial({map:skyTex(),side:THREE.BackSide,fog:false,depthWrite:false}));
     sk.renderOrder=-10;sk.frustumCulled=false;SKY=new THREE.Group();SKY.userData.sceneRoot=true;SKY.add(sk);scene.add(SKY);scene.fog=new THREE.Fog('#E3EBF1',170,400);
   }
-  if(key===SURRK&&SURR)return;
-  disposeSurr();SURRK=key;AMB.phase=0;AMB.state={m:'g',c:'r'};
-  try{SURR=buildSurround(idx);SURR.userData.sceneRoot=true;scene.add(SURR)}catch(e){console.error('surround',e);SURR=null}
+  if(key===SURRK&&SURR){SURR.position.y=-(idx-SURRIDX)*LVH;return}   /* mesma cidade: só acompanha o andar, sem reconstruir */
+  disposeSurr();SURRK=key;SURRIDX=idx;AMB.phase=0;AMB.state={m:'g',c:'r'};
+  try{SURR=buildSurround(idx);SURR.userData.sceneRoot=true;SURR.position.y=0;scene.add(SURR)}catch(e){console.error('surround',e);SURR=null}
 }
 function ambTick(dt,t){
   if(SKY)SKY.position.copy(camera.position);
@@ -3028,7 +3074,7 @@ function frame(now){
   frame.cap=!busy;
   if(!busy&&now-(frame.lr||0)<30)return;
   frame.lr=now;
-  floorTransTick(now);
+  floorTransTick(now);liveStack(now);
   if(tw){
     const k=ease(clamp((now-tw.t0)/tw.dur,0,1));
     for(const key in tw.to)cam[key]=tw.from[key]+(tw.to[key]-tw.from[key])*k;
@@ -3394,8 +3440,7 @@ function fadeSwitch(id,cb){
      subindo, os andares de cima descem e se encaixam (o teto é colocado) e a câmera sobe junto. */
   const from=Math.max(0,floorIdx(CUR)),to=Math.max(0,floorIdx(id)),dir=to>from?1:-1,span=Math.abs(to-from);
   tw=null;FTR={id,cb,from,to,dir,span,t0:performance.now(),dur:1300+span*450,ty0:cam.ty};
-  if(ABOVE){ABOVE.visible=true;FLS.forEach((fl,j)=>{if(j>from)fl.g.visible=dir>0&&j<=to});}
-  FLS.forEach((fl,j)=>{if(j<from)fl.g.visible=true});
+  FLS.forEach((fl,j)=>{fl.g.position.set(0,0,0);fl.g.visible=j<from||(dir>0&&j>from&&j<=to)});
 }
 function floorTransTick(now){
   const F=FTR;if(!F)return;
@@ -3416,6 +3461,7 @@ function floorTransEnd(){
   FLR.position.set(0,0,0);FLR.visible=true;
   cam.ty=F.ty0;   /* o andar de destino passa a ser o andar do nível 0: a imagem não muda, só ganha todos os detalhes */
   CUR=F.id;buildWorld();railUI();greet();
+  refreshFloor(F.from);   /* o andar que acabou de sair vira uma cópia leve, atualizada */
   tw=null;if(F.cb)F.cb();
 }
 $('#rail').addEventListener('click',e=>{
