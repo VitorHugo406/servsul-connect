@@ -7,7 +7,7 @@ import { Seg } from './EwwonApp';
 import { I, Chev } from './icons';
 import * as E from '@/lib/evaluations';
 import type { EvalItem, EvalRow } from '@/lib/evaluations';
-import { openReport } from '@/lib/reports';
+import { downloadEvaluationPdf } from '@/lib/evalDocument';
 
 const TONE: Record<string, string> = { good: '#46d37b', info: '#7cc6ff', warn: '#ffc36b', bad: '#ff7a7a', neutral: '#9a9aa6' };
 const toneOf = (v: number | null) => TONE[E.scoreTone(v)];
@@ -85,7 +85,7 @@ export function EvaluationPage({ id, api }: { id: string; api: EwApi }) {
       const l = await E.listEvaluations({ evaluatedId: api.me.id });
       const found = l.find((x) => x.id === id) || null;
       setEv(found);
-      if (found) setItems(await E.getItems(id));
+      if (found) setItems(await E.getItems(id, found.kind));
     } catch { setEv(null); }
   }, [api.me.id, id]);
   useEffect(() => { void load(); }, [load]);
@@ -151,7 +151,7 @@ export function EvaluationPage({ id, api }: { id: string; api: EwApi }) {
         </div>
       ) : null}
 
-      <button className="btn sec full" onClick={() => { if (!openReport(E.evaluationReport(ev, items))) api.toast('Não foi possível abrir o relatório'); }}><I n="upload" />Baixar relatório</button>
+      <button className="btn sec full" disabled={busy} onClick={async () => { setBusy(true); try { await downloadEvaluationPdf(ev, items); } catch { api.toast('Não foi possível gerar o PDF'); } finally { setBusy(false); } }}><I n="upload" />Baixar PDF da avaliação</button>
     </div>
   );
 }

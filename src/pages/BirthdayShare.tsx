@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { Cake, MessageCircle, Users, LogIn, CalendarDays, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,14 +13,19 @@ import { supabase } from '@/integrations/supabase/client';
 type BirthdayItem = { id: string; name: string; sector: string; birthDate: string; birthDay: number; celebrationDate?: string | null; avatar?: string | null };
 type Snapshot = { companyName: string; monthName: string; theme: string; generatedAt: string; expiresAt: string; people: BirthdayItem[] };
 const uuidFromCompact = (value: string) => value.length === 32 ? `${value.slice(0,8)}-${value.slice(8,12)}-${value.slice(12,16)}-${value.slice(16,20)}-${value.slice(20)}` : value;
-function decodeSnapshot(value: string | null): Snapshot | null { if (!value) return null; try { const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4); const binary = atob(padded); const raw = JSON.parse(new TextDecoder().decode(Uint8Array.from(binary, c => c.charCodeAt(0)))); const sectors: string[] = raw.s || []; const people = (raw.p || []).map((p: [string,string,number,string,string?,string?]) => ({ id: uuidFromCompact(p[0]), name: p[1], sector: sectors[p[2]] || 'Sem setor', birthDay: Number(p[3].slice(-2)), birthDate: p[3], celebrationDate: p[4] ? String(p[4]).slice(0, 10) : null, avatar: p[5] ? String(p[5]) : null })); return { companyName: raw.c || 'Empresa', monthName: raw.m || '', theme: raw.t || 'Corporativo', generatedAt: raw.g || '', expiresAt: raw.x || '', people }; } catch { return null; } }
+function snapshotFromRaw(raw: any): Snapshot | null { try { const sectors: string[] = raw.s || []; const people = (raw.p || []).map((p: [string,string,number,string,string?,string?]) => ({ id: uuidFromCompact(p[0]), name: p[1], sector: sectors[p[2]] || 'Sem setor', birthDay: Number(p[3].slice(-2)), birthDate: p[3], celebrationDate: p[4] ? String(p[4]).slice(0, 10) : null, avatar: p[5] ? String(p[5]) : null })); return { companyName: raw.c || 'Empresa', monthName: raw.m || '', theme: raw.t || 'Corporativo', generatedAt: raw.g || '', expiresAt: raw.x || '', people }; } catch { return null; } }
+function decodeSnapshot(value: string | null): Snapshot | null { if (!value) return null; try { const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4); const binary = atob(padded); return snapshotFromRaw(JSON.parse(new TextDecoder().decode(Uint8Array.from(binary, c => c.charCodeAt(0))))); } catch { return null; } }
 
 export default function BirthdayShare() {
   const [params] = useSearchParams(); const navigate = useNavigate(); const { user, profile } = useAuth();
-  const snapshot = useMemo(() => decodeSnapshot(params.get('data')), [params]); const sector = params.get('sector') || 'Todos';
+  const { id: shortId } = useParams(); const shareId = shortId || params.get('s');
+  const [remote, setRemote] = useState<Snapshot | null | undefined>(shareId ? undefined : null);
+  useEffect(() => { if (!shareId) return; let alive = true; void (supabase as any).rpc('get_birthday_share', { _id: shareId }).then(({ data }: { data: unknown }) => { if (alive) setRemote(data ? snapshotFromRaw(data) : null); }); return () => { alive = false; }; }, [shareId]);
+  const snapshot = useMemo(() => remote ?? decodeSnapshot(params.get('data')), [params, remote]); const sector = params.get('sector') || 'Todos';
   const [selectedPerson, setSelectedPerson] = useState<BirthdayItem | null>(null); const [message, setMessage] = useState(''); const [sending, setSending] = useState(false);
   const sectors = useMemo(() => snapshot ? ['Todos', ...Array.from(new Set(snapshot.people.map(p => p.sector))).sort((a,b) => a.localeCompare(b))] : ['Todos'], [snapshot]);
   const filtered = useMemo(() => !snapshot ? [] : sector === 'Todos' ? snapshot.people : snapshot.people.filter(p => p.sector === sector), [snapshot, sector]);
+  if (shareId && remote === undefined) return <Empty title="Carregando…" text="Buscando os aniversariantes." icon={<Cake className="mx-auto mb-4 h-10 w-10 text-primary" />} />;
   if (!snapshot) return <Empty title="Relatório indisponível" text="O QR Code não contém um relatório válido." icon={<Cake className="mx-auto mb-4 h-10 w-10 text-primary" />} />;
   if (snapshot.expiresAt && Date.now() > new Date(snapshot.expiresAt).getTime()) return <Empty title="Relatório encerrado" text="Este painel de aniversariantes não está mais disponível para leitura." icon={<CalendarDays className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />} />;
   const isMessageWindowOpen = (person: BirthdayItem) => { const date = person.celebrationDate || person.birthDate; if (!date) return false; const target = new Date(date + 'T00:00:00'); const end = new Date(target); end.setDate(end.getDate() + 1); const now = new Date(); return now >= target && now < end; };

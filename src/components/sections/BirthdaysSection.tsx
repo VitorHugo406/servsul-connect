@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Cake, PartyPopper, Calendar, CheckCircle2, Download, Send, Sparkles, Users, QrCode, Image as ImageIcon, Upload, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { buildBirthdayPdf } from '@/lib/pdf/birthdayPdf';
+import { circularPhoto, companyLogoImage, ewvonLogoImage } from '@/lib/pdf/pdfAssets';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CardGridSkeleton, StatsSkeleton } from '@/components/ui/skeletons';
 import { useBirthdays } from '@/hooks/useData';
@@ -20,23 +21,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { withCompany } from '@/lib/companyScope';
-import { createCompanyLogoUrl } from '@/lib/companyLogo';
 import { canManageBirthdayPresentation, upcomingBirthdayPeople } from '@/lib/birthdayPresentation';
 
 const monthThemes: Record<number, { name: string; emoji: string }> = {
   1: { name: 'Verão Corporativo', emoji: '☀️' }, 2: { name: 'Carnaval de Conquistas', emoji: '🎭' }, 3: { name: 'Ciclo de Renovação', emoji: '🌿' }, 4: { name: 'Celebração Especial', emoji: '🎁' }, 5: { name: 'Mês de Reconhecimento', emoji: '🌟' }, 6: { name: 'Festa Junina', emoji: '🌽' }, 7: { name: 'Arraiá de Talentos', emoji: '🎊' }, 8: { name: 'Mês de Excelência', emoji: '🏆' }, 9: { name: 'Primavera', emoji: '🌸' }, 10: { name: 'Energia da Equipe', emoji: '⚡' }, 11: { name: 'Gratidão e Parceria', emoji: '🤝' }, 12: { name: 'Natal', emoji: '🎄' },
 };
 
-const pdfThemes = [
-  { id: 'corporate', name: 'Corporativo', accent: [24,56,91] as [number,number,number], soft: [244,241,233] as [number,number,number], highlight: [177,137,73] as [number,number,number], photo: null },
-  { id: 'junina', name: 'Festa Junina', accent: [112,72,45] as [number,number,number], soft: [250,241,222] as [number,number,number], highlight: [78,113,75] as [number,number,number], photo: 'https://images.unsplash.com/photo-1688948871859-e3673c0b36bc?auto=format&fit=crop&w=1800&q=84' },
-  { id: 'christmas', name: 'Natal', accent: [42,82,61] as [number,number,number], soft: [241,244,239] as [number,number,number], highlight: [160,76,69] as [number,number,number], photo: 'https://images.unsplash.com/photo-1512389142860-9c449e58a543?auto=format&fit=crop&w=1800&q=84' },
-  { id: 'newyear', name: 'Ano Novo', accent: [89,70,39] as [number,number,number], soft: [246,243,235] as [number,number,number], highlight: [113,91,55] as [number,number,number], photo: 'https://images.unsplash.com/photo-1512248805576-c1b31f6fcab1?auto=format&fit=crop&w=1800&q=84' },
-  { id: 'spring', name: 'Primavera', accent: [94,82,104] as [number,number,number], soft: [247,242,247] as [number,number,number], highlight: [89,128,95] as [number,number,number], photo: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1800&q=84' },
-];
-
 type BirthdayPerson = ReturnType<typeof useBirthdays>['birthdayPeople'][number];
-type PdfTheme = typeof pdfThemes[number];
 
 export function BirthdaysSection() {
   const { profile, roles } = useAuth();
@@ -46,12 +37,8 @@ export function BirthdaysSection() {
   const [messages, setMessages] = useState<Record<string, string>>({});
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
-  const [selectedPdfTheme, setSelectedPdfTheme] = useState('corporate');
-  const companyImageKey = `ewvor:birthday-pdf:corporate-image:${company?.id || 'default'}`;
-  const [corporateImage, setCorporateImage] = useState<string | null>(() => { try { return localStorage.getItem(companyImageKey); } catch { return null; } });
   const currentMonth = new Date().getMonth() + 1;
   const theme = monthThemes[currentMonth];
-  const pdfTheme = pdfThemes.find(x => x.id === selectedPdfTheme) ?? pdfThemes[0];
   const todayBirthdays = birthdayPeople.filter(p => p.isToday);
   const celebrationToday = birthdayPeople.filter(p => p.isCelebrationToday);
   const upcomingBirthdays = birthdayPeople.filter(p => !p.isToday && p.birthDay > currentDay);
@@ -62,134 +49,31 @@ export function BirthdaysSection() {
 
   const sendGreeting = async (person: BirthdayPerson) => { if (!profile) return; const message = messages[person.id]?.trim(); if (!message) { toast.error('Escreva uma mensagem antes de enviar.'); return; } setSendingId(person.id); const content = `🎉 Feliz aniversário, ${person.name}!\n\n${message}\n\n— ${profile.display_name || profile.name}`; const { error } = await supabase.from('messages').insert(withCompany({ content, author_id: profile.id, sector_id: GERAL_SECTOR_ID })); setSendingId(null); if (error) { toast.error('Não foi possível enviar no chat Geral.'); return; } setMessages(prev => ({ ...prev, [person.id]: '' })); toast.success('Mensagem enviada no chat Geral!'); };
 
-  const loadImage = async (src: string) => { if (!src) return null; try { const response = await fetch(src); const blob = await response.blob(); return await new Promise<string>(resolve => { const reader = new FileReader(); reader.onloadend = () => resolve(String(reader.result)); reader.readAsDataURL(blob); }); } catch { return null; } };
-  const loadImageElement = async (src: string) => await new Promise<HTMLImageElement | null>(resolve => { if (!src) return resolve(null); const image = new Image(); image.crossOrigin = 'anonymous'; image.onload = () => resolve(image); image.onerror = () => resolve(null); image.src = src; });
-  const handleCorporateImage = (file: File | null) => { if (!file) return; if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { toast.error('Use uma imagem JPG, PNG ou WEBP.'); return; } if (file.size > 3 * 1024 * 1024) { toast.error('A imagem deve ter no máximo 3MB.'); return; } const reader = new FileReader(); reader.onload = () => { const value = String(reader.result); try { localStorage.setItem(companyImageKey, value); setCorporateImage(value); toast.success('Imagem corporativa salva para este relatório.'); } catch { toast.error('Não foi possível salvar a imagem.'); } }; reader.readAsDataURL(file); };
-  const clearCorporateImage = () => { try { localStorage.removeItem(companyImageKey); } catch {} setCorporateImage(null); toast.success('Imagem corporativa removida.'); };
-
-  const encodeShareData = (people: BirthdayPerson[]) => { const sectors = Array.from(new Set(people.map(p => p.sector || 'Sem setor'))); const compact = { c: company?.name || 'Empresa', m: new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }), t: pdfTheme.name, g: new Date().toISOString(), x: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).toISOString(), s: sectors, p: people.map(p => [p.id.replace(/-/g, ''), p.name, sectors.indexOf(p.sector || 'Sem setor'), p.birthDate, p.celebrationDate || '', p.avatar || '']) }; const bytes = new TextEncoder().encode(JSON.stringify(compact)); let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte); return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, ''); };
-  const getShareUrl = (people: BirthdayPerson[]) => `${window.location.origin}/birthday-report?data=${encodeShareData(people)}`;
-  const loadQrImage = (url: string) => loadImageElement(`https://quickchart.io/qr?text=${encodeURIComponent(url)}&size=360&margin=2&ecLevel=M`);
-
-  const PAGE_W = 210, PAGE_H = 297, MARGIN = 14, CONTENT_W = PAGE_W - MARGIN * 2;
-  const setText = (doc: jsPDF, rgb: [number, number, number]) => doc.setTextColor(rgb[0], rgb[1], rgb[2]);
-  const setFill = (doc: jsPDF, rgb: [number, number, number]) => doc.setFillColor(rgb[0], rgb[1], rgb[2]);
-  const setDraw = (doc: jsPDF, rgb: [number, number, number]) => doc.setDrawColor(rgb[0], rgb[1], rgb[2]);
-  const truncate = (doc: jsPDF, text: string, width: number) => { let v = text || ''; while (doc.getTextWidth(v) > width && v.length > 1) v = v.slice(0, -1); return v !== text ? `${v.slice(0, -1)}…` : v; };
-
-  // ---- PDF layout (redesigned): dark photo band, horizontal cards, QR footer ----
-  const HERO_H = 70;
-  const prepareHeroPhoto = async (src: string) => {
-    const image = await loadImageElement(src);
-    if (!image) return null;
-    // Rounded photo for the header (no dark overlay: prints clean on white paper).
-    const canvas = document.createElement('canvas'); canvas.width = 900; canvas.height = 600;
-    const ctx = canvas.getContext('2d'); if (!ctx) return null;
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const r = 60; ctx.beginPath(); ctx.moveTo(r, 0); ctx.arcTo(900, 0, 900, 600, r); ctx.arcTo(900, 600, 0, 600, r); ctx.arcTo(0, 600, 0, 0, r); ctx.arcTo(0, 0, 900, 0, r); ctx.closePath(); ctx.clip();
-    const scale = Math.max(canvas.width / image.width, canvas.height / image.height); const drawW = image.width * scale; const drawH = image.height * scale;
-    ctx.drawImage(image, (canvas.width - drawW) / 2, (canvas.height - drawH) / 2, drawW, drawH);
-    return canvas.toDataURL('image/jpeg', 0.86);
-  };
-
-  const makeCircularAvatar = async (src: string | null | undefined) => {
-    if (!src) return null; const image = await loadImageElement(src); if (!image) return null;
-    const size = 200; const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size; const ctx = canvas.getContext('2d'); if (!ctx) return null;
-    ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
-    const scale = Math.max(size / image.width, size / image.height); const w = image.width * scale; const h = image.height * scale; ctx.drawImage(image, (size - w) / 2, (size - h) / 2, w, h);
-    return canvas.toDataURL('image/png');
-  };
-
-  const drawBackgroundPhoto = async (doc: jsPDF, selected: PdfTheme, imageData?: string | null) => {
-    // White page (print friendly). The theme photo sits in a rounded frame on the right of the header.
-    const source = imageData || (selected.photo ? await loadImage(selected.photo) : null);
-    if (source) { try { const prepared = await prepareHeroPhoto(source); if (prepared) doc.addImage(prepared, 'JPEG', PAGE_W - MARGIN - 57, 30, 57, 38, undefined, 'FAST'); } catch { /* no photo */ } }
-    setDraw(doc, selected.accent); doc.setLineWidth(0.8); doc.line(MARGIN, HERO_H + 1, PAGE_W - MARGIN, HERO_H + 1);
-  };
-
-  const drawLogo = async (doc: jsPDF, selected: PdfTheme) => {
-    const logoUrl = company?.logo_url ? await createCompanyLogoUrl(company.logo_url) : null; const logo = logoUrl ? await loadImage(logoUrl) : null;
-    setDraw(doc, [222, 222, 228]); doc.setLineWidth(0.3); doc.roundedRect(MARGIN, 10, 24, 17, 4, 4, 'S');
-    if (logo) { try { doc.addImage(logo, 'PNG', MARGIN + 2, 11.5, 20, 14, undefined, 'FAST'); return; } catch { /* initials */ } }
-    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.text(getInitials(company?.name || 'ewvon'), MARGIN + 12, 20.5, { align: 'center' });
-  };
-
-  const drawHeader = async (doc: jsPDF, monthName: string, count: number, selected: PdfTheme) => {
-    await drawLogo(doc, selected);
-    setText(doc, [17, 17, 19]); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text(truncate(doc, company?.name || 'ewvon', 90), MARGIN + 29, 17.5);
-    setText(doc, [113, 113, 122]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.text('Comunicação interna', MARGIN + 29, 22.5);
-    const month = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-    setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.text(month.toUpperCase(), MARGIN, 42, { charSpace: 0.6 });
-    setText(doc, [17, 17, 19]); doc.setFont('helvetica', 'bold'); doc.setFontSize(30); doc.text('Aniversariantes', MARGIN, 55);
-    setText(doc, [82, 82, 91]); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.text('Celebrar a vida é reconhecer as histórias que nos inspiram todos os dias.', MARGIN, 62.5);
-    const pill = `${count} ${count === 1 ? 'pessoa' : 'pessoas'} celebrando`;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(7); const pw = doc.getTextWidth(pill) + 10;
-    setDraw(doc, selected.accent); doc.setLineWidth(0.4); doc.roundedRect(PAGE_W - MARGIN - pw, 12, pw, 9, 4.5, 4.5, 'S');
-    setText(doc, selected.accent); doc.text(pill, PAGE_W - MARGIN - pw / 2, 17.8, { align: 'center' });
-  };
-
-  const drawPerson = async (doc: jsPDF, person: BirthdayPerson, x: number, y: number, w: number, h: number, selected: PdfTheme, compact: boolean) => {
-    const today = person.isToday;
-    setFill(doc, [255, 255, 255]); doc.roundedRect(x, y, w, h, 4, 4, 'F');
-    if (today) { setDraw(doc, selected.accent); doc.setLineWidth(0.7); } else { setDraw(doc, [228, 228, 233]); doc.setLineWidth(0.3); }
-    doc.roundedRect(x, y, w, h, 4, 4, 'S');
-    const av = Math.min(h - 7, compact ? 11 : 13); const avX = x + 4; const avY = y + (h - av) / 2;
-    const avatar = await makeCircularAvatar(person.avatar);
-    if (avatar) { try { doc.addImage(avatar, 'PNG', avX, avY, av, av, undefined, 'FAST'); } catch { /* initials */ } }
-    else { setFill(doc, selected.soft); doc.circle(avX + av / 2, avY + av / 2, av / 2, 'F'); setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(compact ? 5.5 : 6.5); doc.text(getInitials(person.name), avX + av / 2, avY + av / 2 + 1.6, { align: 'center' }); }
-    const dW = compact ? 11 : 13; const dH = h - 7; const dX = x + w - dW - 3.5; const dY = y + 3.5;
-    if (today) { setFill(doc, selected.accent); doc.roundedRect(dX, dY, dW, dH, 3, 3, 'F'); } else { setDraw(doc, [212, 212, 216]); doc.setLineWidth(0.3); doc.roundedRect(dX, dY, dW, dH, 3, 3, 'S'); }
-    setText(doc, today ? [255, 255, 255] : [20, 20, 26]); doc.setFont('helvetica', 'bold'); doc.setFontSize(compact ? 9 : 11);
-    doc.text(String(person.birthDay).padStart(2, '0'), dX + dW / 2, dY + dH / 2 + 0.6, { align: 'center' });
-    doc.setFontSize(compact ? 4.2 : 4.8); doc.setFont('helvetica', 'bold');
-    doc.text((formatBirthday(person.birthDate).split(' de ')[1] || '').slice(0, 3).toUpperCase(), dX + dW / 2, dY + dH / 2 + (compact ? 4.6 : 5.6), { align: 'center' });
-    const tx = avX + av + 3.5; const tw = dX - tx - 2.5;
-    setText(doc, [14, 14, 18]); doc.setFont('helvetica', 'bold'); doc.setFontSize(compact ? 6.4 : 7.6); doc.text(truncate(doc, person.name, tw), tx, y + h / 2 - (today ? 1.6 : 0.4));
-    setText(doc, [110, 110, 122]); doc.setFont('helvetica', 'normal'); doc.setFontSize(compact ? 4.8 : 5.6); doc.text(truncate(doc, person.sector || 'Sem departamento', tw), tx, y + h / 2 + (today ? 2.4 : 3.6));
-    if (today) { setText(doc, selected.accent); doc.setFont('helvetica', 'bold'); doc.setFontSize(compact ? 4.6 : 5.2); doc.text('HOJE', tx, y + h / 2 + 6.2); }
-  };
-
-  const drawFixedQrFooter = async (doc: jsPDF, url: string, selected: PdfTheme) => {
-    const qr = await loadQrImage(url); const footerH = 32; const y = PAGE_H - footerH - 10; const qrSize = 25;
-    setDraw(doc, [212, 212, 216]); doc.setLineWidth(0.35); doc.roundedRect(MARGIN, y, CONTENT_W, footerH, 6, 6, 'S');
-    if (qr) { try { doc.addImage(qr, 'PNG', MARGIN + 5, y + 4.5, qrSize - 2, qrSize - 2, undefined, 'FAST'); } catch { /* no qr */ } }
-    setText(doc, [17, 17, 19]); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('Consulte no celular', MARGIN + qrSize + 10, y + 10.5);
-    setText(doc, [82, 82, 91]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.4);
-    doc.text('Leia o QR Code para ver os aniversariantes e filtrar por setor.', MARGIN + qrSize + 10, y + 16.5);
-    doc.text('O botão de mensagem aparece no período de celebração (é preciso entrar no ewvon).', MARGIN + qrSize + 10, y + 21.5);
+  // One standard model for every company (see src/lib/pdf/birthdayPdf.ts): logo watermark, company color, small QR, numbered pages.
+  const encodeShareData = (people: BirthdayPerson[]) => { const sectors = Array.from(new Set(people.map(p => p.sector || 'Sem setor'))); return { c: company?.name || 'Empresa', m: new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }), t: 'Padrão', g: new Date().toISOString(), x: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).toISOString(), s: sectors, p: people.map(p => [p.id.replace(/-/g, ''), p.name, sectors.indexOf(p.sector || 'Sem setor'), p.birthDate, p.celebrationDate || '', p.avatar || '']) }; };
+  /** Short link (small, easy-to-scan QR). Falls back to the long self-contained link if the short one cannot be created. */
+  const getShareUrl = async (people: BirthdayPerson[]) => {
+    const payload = encodeShareData(people);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc('create_birthday_share', { _payload: payload, _expires: payload.x });
+      if (!error && typeof data === 'string' && data) return `${window.location.origin}/b/${data}`;
+    } catch { /* fallback below */ }
+    const bytes = new TextEncoder().encode(JSON.stringify(payload)); let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte);
+    return `${window.location.origin}/birthday-report?data=${btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')}`;
   };
 
   const generateMonthlyPdf = async () => {
     if (!canManage) return;
     setGeneratingPdf(true);
     try {
-      const doc = new jsPDF('p', 'mm', 'a4');
-      const monthName = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-      await drawBackgroundPhoto(doc, pdfTheme, pdfTheme.id === 'corporate' ? corporateImage : null);
-      await drawHeader(doc, monthName, birthdayPeople.length, pdfTheme);
-      const n = birthdayPeople.length;
-      const cols = n > 16 ? 3 : 2;
-      const compact = cols === 3;
-      const gap = 3;
-      const cardW = (CONTENT_W - gap * (cols - 1)) / cols;
-      const gridY = HERO_H + 8;
-      const footerTop = PAGE_H - 46;
-      const rows = Math.max(1, Math.ceil(n / cols));
-      const cardH = Math.max(15, Math.min(22, (footerTop - gridY - gap * (rows - 1)) / rows));
-      if (n === 0) {
-        setFill(doc, [255, 255, 255]); doc.roundedRect(MARGIN, gridY, CONTENT_W, 30, 5, 5, 'F'); setText(doc, [110, 110, 122]); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text('Nenhum aniversariante neste mês', PAGE_W / 2, gridY + 17, { align: 'center' });
-      } else {
-        for (let i = 0; i < n; i++) {
-          const col = i % cols; const row = Math.floor(i / cols);
-          await drawPerson(doc, birthdayPeople[i], MARGIN + col * (cardW + gap), gridY + row * (cardH + gap), cardW, cardH, pdfTheme, compact);
-        }
-      }
-      await drawFixedQrFooter(doc, getShareUrl(birthdayPeople), pdfTheme);
-      setText(doc, [150, 150, 160]); doc.setFont('helvetica', 'normal'); doc.setFontSize(5.5); doc.text(`${company?.name || 'ewvon'} · uso interno · gerado pelo ewvon`, PAGE_W - MARGIN, PAGE_H - 5, { align: 'right' });
-      const companySlug = (company?.name || 'ewvor').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      const monthSlug = monthName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
-      doc.save(`aniversariantes_${companySlug}_${monthSlug}_${pdfTheme.id}.pdf`);
-      toast.success(`PDF ${pdfTheme.name} gerado!`);
+      const now = new Date();
+      const [logo, ewvonLogo, url] = await Promise.all([companyLogoImage(company?.logo_url), ewvonLogoImage(), getShareUrl(birthdayPeople)]);
+      const people = await Promise.all(birthdayPeople.map(async (p) => ({ name: p.name, sector: p.sector, day: p.birthDay, avatar: await circularPhoto(p.avatar) })));
+      const doc = await buildBirthdayPdf({ companyName: company?.name || 'Empresa', primaryColor: company?.primary_color, secondaryColor: company?.secondary_color, logo, ewvonLogo, month: now.getMonth() + 1, year: now.getFullYear(), people, url });
+      const slug = (v: string) => v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      doc.save(`aniversariantes_${slug(company?.name || 'empresa')}_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}.pdf`);
+      toast.success('PDF gerado!');
     } catch (error) { console.error('Erro ao gerar PDF de aniversariantes:', error); toast.error('Não foi possível gerar o PDF.'); }
     finally { setGeneratingPdf(false); }
   };
@@ -202,7 +86,7 @@ export function BirthdaysSection() {
       {upcoming.length === 0 ? <p className="py-12 text-center text-sm text-muted-foreground">Nenhum próximo aniversariante neste mês.</p> : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{upcoming.map(person => <Card key={person.id}><CardContent className="flex items-center gap-3 p-5"><Avatar className="h-11 w-11 shrink-0"><AvatarImage src={person.avatar} alt={person.name} /><AvatarFallback className="bg-muted text-muted-foreground">{getInitials(person.name)}</AvatarFallback></Avatar><div className="min-w-0"><h3 className="break-words text-sm font-semibold text-foreground">{person.name}</h3><p className="break-words text-xs text-muted-foreground">{person.sector || 'Sem departamento'}</p></div></CardContent></Card>)}</div>}
     </div>;
   }
-  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 p-4 md:p-6"><PageHeader icon={<Cake />} title="Aniversariantes" subtitle="Felicitações do mês. Quando o aniversário cai em fim de semana ou feriado, a mensagem é antecipada." actions={<><Select value={selectedPdfTheme} onValueChange={(v) => setSelectedPdfTheme(v as typeof selectedPdfTheme)}><SelectTrigger className="h-9 w-[170px]" aria-label="Tema do PDF"><SelectValue /></SelectTrigger><SelectContent>{pdfThemes.map(item => <SelectItem key={item.id} value={item.id}>Tema: {item.name}</SelectItem>)}</SelectContent></Select>{selectedPdfTheme === 'corporate' && <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium hover:bg-muted" title="Foto JPG, PNG ou WEBP até 3MB"><ImageIcon className="h-4 w-4" />{corporateImage ? 'Trocar fundo' : 'Fundo do PDF'}<input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => handleCorporateImage(e.target.files?.[0] || null)} /></label>}{selectedPdfTheme === 'corporate' && corporateImage && <Button type="button" variant="ghost" size="sm" onClick={clearCorporateImage} className="h-9 text-muted-foreground">Remover fundo</Button>}<Button onClick={generateMonthlyPdf} disabled={generatingPdf || birthdayPeople.length === 0} className="h-9 gap-2"><Download className="h-4 w-4" />{generatingPdf ? 'Gerando...' : 'Baixar PDF'}</Button></>} /><div className="grid grid-cols-2 gap-3 md:grid-cols-4"><Metric icon={Users} label="No mês" value={birthdayPeople.length} /><Metric icon={PartyPopper} label="Hoje" value={todayBirthdays.length} /><Metric icon={Sparkles} label="Mensagem hoje" value={celebrationToday.length} /><Metric icon={Calendar} label="Setores" value={sectorCount} /></div>{celebrationToday.length > 0 && <section className="space-y-3"><SectionTitle icon={PartyPopper} title="Felicitações para enviar hoje" subtitle="Se o aniversário cair em sábado, domingo ou feriado, a mensagem aparece antecipada." /><div className="grid gap-4 lg:grid-cols-2">{celebrationToday.map((person, index) => <motion.div key={person.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}><Card className="overflow-hidden rounded-2xl border-secondary/30 bg-gradient-to-br from-secondary/10 via-card to-card shadow-sm"><CardContent className="space-y-4 p-4 sm:p-5"><BirthdayRow person={person} getInitials={getInitials} badge="Mensagem hoje" highlight /><Textarea value={messages[person.id] || ''} onChange={e => setMessages(prev => ({ ...prev, [person.id]: e.target.value }))} placeholder={`Escreva uma mensagem para ${person.name}...`} className="min-h-[88px] rounded-xl" /><Button onClick={() => sendGreeting(person)} disabled={sendingId === person.id} className="w-full gap-2 rounded-xl"><Send className="h-4 w-4" /> Enviar no chat Geral</Button></CardContent></Card></motion.div>)}</div></section>}<section className="space-y-3"><SectionTitle icon={Calendar} title="Próximos aniversariantes do mês" subtitle="Quem ainda vai fazer aniversário este mês. Quem já fez aparece logo abaixo, em anteriores." />{todayBirthdays.length + upcomingBirthdays.length === 0 && birthdayPeople.length > 0 ? <p className="rounded-2xl border border-dashed border-border/60 py-10 text-center text-sm text-muted-foreground">Todos os aniversariantes deste mês já comemoraram.</p> : birthdayPeople.length === 0 ? <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-16 text-center"><div className="mb-1 flex h-16 w-16 items-center justify-center rounded-full bg-muted"><Cake className="h-6 w-6 text-muted-foreground" /></div><h4 className="font-display text-lg font-semibold text-foreground">Nenhum aniversariante</h4><p className="text-sm text-muted-foreground">Não há aniversariantes neste mês com data cadastrada.</p></div> : <div className="grid gap-3 xl:grid-cols-2">{[...todayBirthdays, ...upcomingBirthdays].map((person, index) => <motion.div key={person.id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.03 }}><Card className="rounded-2xl border-border/60 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"><CardContent className="p-4"><BirthdayRow person={person} getInitials={getInitials} badge={person.isToday ? 'Hoje' : formatBirthday(person.birthDate)} /></CardContent></Card></motion.div>)}</div>}</section>{pastBirthdays.length > 0 && <section className="space-y-3"><SectionTitle icon={Calendar} title="Aniversariantes anteriores" subtitle="Já comemoraram neste mês." /><div className="grid gap-3 opacity-70 xl:grid-cols-2">{[...pastBirthdays].sort((a, b) => b.birthDay - a.birthDay).map(person => <Card key={person.id} className="rounded-2xl border-border/60"><CardContent className="p-4"><BirthdayRow person={person} getInitials={getInitials} badge={formatBirthday(person.birthDate)} /></CardContent></Card>)}</div></section>}</motion.div>;
+  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 p-4 md:p-6"><PageHeader icon={<Cake />} title="Aniversariantes" subtitle="Felicitações do mês. Quando o aniversário cai em fim de semana ou feriado, a mensagem é antecipada." actions={<><Button onClick={generateMonthlyPdf} disabled={generatingPdf || birthdayPeople.length === 0} className="h-9 gap-2"><Download className="h-4 w-4" />{generatingPdf ? 'Gerando...' : 'Baixar PDF'}</Button></>} /><div className="grid grid-cols-2 gap-3 md:grid-cols-4"><Metric icon={Users} label="No mês" value={birthdayPeople.length} /><Metric icon={PartyPopper} label="Hoje" value={todayBirthdays.length} /><Metric icon={Sparkles} label="Mensagem hoje" value={celebrationToday.length} /><Metric icon={Calendar} label="Setores" value={sectorCount} /></div>{celebrationToday.length > 0 && <section className="space-y-3"><SectionTitle icon={PartyPopper} title="Felicitações para enviar hoje" subtitle="Se o aniversário cair em sábado, domingo ou feriado, a mensagem aparece antecipada." /><div className="grid gap-4 lg:grid-cols-2">{celebrationToday.map((person, index) => <motion.div key={person.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}><Card className="overflow-hidden rounded-2xl border-secondary/30 bg-gradient-to-br from-secondary/10 via-card to-card shadow-sm"><CardContent className="space-y-4 p-4 sm:p-5"><BirthdayRow person={person} getInitials={getInitials} badge="Mensagem hoje" highlight /><Textarea value={messages[person.id] || ''} onChange={e => setMessages(prev => ({ ...prev, [person.id]: e.target.value }))} placeholder={`Escreva uma mensagem para ${person.name}...`} className="min-h-[88px] rounded-xl" /><Button onClick={() => sendGreeting(person)} disabled={sendingId === person.id} className="w-full gap-2 rounded-xl"><Send className="h-4 w-4" /> Enviar no chat Geral</Button></CardContent></Card></motion.div>)}</div></section>}<section className="space-y-3"><SectionTitle icon={Calendar} title="Próximos aniversariantes do mês" subtitle="Quem ainda vai fazer aniversário este mês. Quem já fez aparece logo abaixo, em anteriores." />{todayBirthdays.length + upcomingBirthdays.length === 0 && birthdayPeople.length > 0 ? <p className="rounded-2xl border border-dashed border-border/60 py-10 text-center text-sm text-muted-foreground">Todos os aniversariantes deste mês já comemoraram.</p> : birthdayPeople.length === 0 ? <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 py-16 text-center"><div className="mb-1 flex h-16 w-16 items-center justify-center rounded-full bg-muted"><Cake className="h-6 w-6 text-muted-foreground" /></div><h4 className="font-display text-lg font-semibold text-foreground">Nenhum aniversariante</h4><p className="text-sm text-muted-foreground">Não há aniversariantes neste mês com data cadastrada.</p></div> : <div className="grid gap-3 xl:grid-cols-2">{[...todayBirthdays, ...upcomingBirthdays].map((person, index) => <motion.div key={person.id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.03 }}><Card className="rounded-2xl border-border/60 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"><CardContent className="p-4"><BirthdayRow person={person} getInitials={getInitials} badge={person.isToday ? 'Hoje' : formatBirthday(person.birthDate)} /></CardContent></Card></motion.div>)}</div>}</section>{pastBirthdays.length > 0 && <section className="space-y-3"><SectionTitle icon={Calendar} title="Aniversariantes anteriores" subtitle="Já comemoraram neste mês." /><div className="grid gap-3 opacity-70 xl:grid-cols-2">{[...pastBirthdays].sort((a, b) => b.birthDay - a.birthDay).map(person => <Card key={person.id} className="rounded-2xl border-border/60"><CardContent className="p-4"><BirthdayRow person={person} getInitials={getInitials} badge={formatBirthday(person.birthDate)} /></CardContent></Card>)}</div></section>}</motion.div>;
 }
 
 function Metric({ label, value }: { icon: LucideIcon; label: string; value: number }) { return <Card><CardContent className="p-4"><p className="text-[13px] text-muted-foreground">{label}</p><p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{value}</p></CardContent></Card>; }

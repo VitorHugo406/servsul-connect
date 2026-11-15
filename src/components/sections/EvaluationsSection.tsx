@@ -3,7 +3,7 @@
 // lista de critérios, dão nota de 1 a 5 em cada um e escrevem o feedback.
 // O colaborador recebe, lê e dá ciência (ou pede revisão). Logic in src/lib/evaluations.ts.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ClipboardCheck, Plus, Search, FileText, Send, Save, Trash2, Check, RotateCcw, Pencil, Sparkles, Star, Eye, EyeOff } from 'lucide-react';
+import { ClipboardCheck, Plus, Search, FileText, Send, Save, Trash2, Check, RotateCcw, Pencil, Sparkles, Star, Eye, EyeOff, TrendingUp, TrendingDown, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,9 @@ import { cn } from '@/lib/utils';
 import * as E from '@/lib/evaluations';
 import type { Criterion, EvalItem, EvalRow, EvalStatus } from '@/lib/evaluations';
 import { appConfirm } from '@/lib/appDialog';
+import { downloadEvaluationPdf } from '@/lib/evalDocument';
+import { FORM_TYPES, formTypeLabel, type FormType } from '@/lib/evalPresets';
+import { contractDates, daysSinceAdmission, getEmployeeRecord } from '@/lib/employeeRecord';
 
 const MANAGER_LEVELS = ['admin', 'gerente', 'supervisor', 'diretoria'];
 const FILTERS: { id: 'all' | EvalStatus; label: string }[] = [
@@ -53,9 +56,8 @@ export function EvaluationsSection() {
   const { profile, isAdmin } = useAuth();
   const canManage = isAdmin || MANAGER_LEVELS.includes(profile?.autonomy_level || '');
   const [list, setList] = useState<EvalRow[]>([]);
-  const [criteria, setCriteria] = useState<Criterion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'team' | 'mine' | 'criteria'>(canManage ? 'team' : 'mine');
+  const [tab, setTab] = useState<'team' | 'mine'>(canManage ? 'team' : 'mine');
   const [filter, setFilter] = useState<'all' | EvalStatus>('all');
   const [q, setQ] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -63,10 +65,9 @@ export function EvaluationsSection() {
 
   const load = useCallback(async () => {
     try {
-      const [evs, crs] = await Promise.all([E.listEvaluations(), canManage ? E.listCriteria(true) : Promise.resolve([])]);
-      setList(evs); setCriteria(crs);
+      setList(await E.listEvaluations());
     } catch (e) { toast.error((e as Error).message); } finally { setLoading(false); }
-  }, [canManage]);
+  }, []);
   useEffect(() => { void load(); }, [load]);
 
   const mine = useMemo(() => list.filter((e) => e.evaluatedId === profile?.id && e.status !== 'draft'), [list, profile?.id]);
@@ -77,7 +78,6 @@ export function EvaluationsSection() {
   const avg = scored.length ? scored.reduce((s, e) => s + (e.score || 0), 0) / scored.length : null;
   const pendingMine = mine.filter((e) => e.status === 'sent').length;
   const current = list.find((e) => e.id === openId) || null;
-  const activeCriteria = criteria.filter((c) => c.is_active);
 
   return (
     <div className="space-y-5 p-4 md:p-6">
@@ -86,7 +86,7 @@ export function EvaluationsSection() {
         subtitle={canManage ? 'Avalie sua equipe por critérios simples, de 1 a 5, e acompanhe a ciência de cada pessoa.' : 'Veja as avaliações que você recebeu, as notas e os feedbacks.'}
         actions={<>
           {base.length ? <Button variant="outline" className="rounded-xl" onClick={() => { if (!openReport(E.summaryReport(base, tab === 'mine' ? 'Minhas avaliações' : 'Avaliações da equipe'))) toast.error('Permita pop-ups para abrir o relatório.'); }}><FileText className="mr-2 h-4 w-4" />Relatório</Button> : null}
-          {canManage ? <Button className="rounded-xl" onClick={() => { if (!activeCriteria.length) { setTab('criteria'); toast('Cadastre os critérios antes de avaliar.'); return; } setCreating(true); }}><Plus className="mr-2 h-4 w-4" />Nova avaliação</Button> : null}
+          {canManage ? <Button className="rounded-xl" onClick={() => setCreating(true)}><Plus className="mr-2 h-4 w-4" />Nova avaliação</Button> : null}
         </>}
       />
 
@@ -114,24 +114,20 @@ export function EvaluationsSection() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         {canManage ? (
           <div className="inline-flex w-fit rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
-            {([['team', 'Equipe'], ['mine', 'Minhas'], ['criteria', 'Critérios']] as const).map(([id, label]) => (
+            {([['team', 'Equipe'], ['mine', 'Minhas']] as const).map(([id, label]) => (
               <button key={id} onClick={() => { setTab(id); setFilter('all'); }} className={cn('rounded-lg px-4 py-1.5 text-sm font-medium transition', tab === id ? 'bg-white text-foreground shadow-sm dark:bg-zinc-950' : 'text-zinc-500 hover:text-foreground')}>
                 {label}{id === 'mine' && pendingMine ? <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[10px] text-white">{pendingMine}</span> : null}
               </button>
             ))}
           </div>
         ) : <div />}
-        {tab !== 'criteria' ? (
-          <label className="relative block w-full lg:w-72">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar pessoa ou período" className="rounded-xl pl-9" />
-          </label>
-        ) : null}
+        <label className="relative block w-full lg:w-72">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar pessoa ou período" className="rounded-xl pl-9" />
+        </label>
       </div>
 
-      {tab === 'criteria' ? (
-        <CriteriaPanel criteria={criteria} userId={profile?.user_id || ''} onChange={load} />
-      ) : (
+      {(
         <>
           <div className="flex flex-wrap gap-2">
             {FILTERS.filter((f) => tab === 'team' || f.id !== 'draft').map((f) => {
@@ -145,7 +141,7 @@ export function EvaluationsSection() {
             <div className="ewvon-glass-panel flex flex-col items-center gap-2 rounded-2xl border border-white/80 px-6 py-14 text-center">
               <ClipboardCheck className="h-8 w-8 text-zinc-400" />
               <p className="font-medium text-foreground">{tab === 'mine' ? 'Você ainda não recebeu avaliações' : 'Nenhuma avaliação por aqui'}</p>
-              <p className="max-w-sm text-sm text-zinc-500">{tab === 'mine' ? 'Quando seu gestor enviar uma avaliação, ela aparece aqui para você ler e dar ciência.' : 'Crie uma nova avaliação escolhendo a pessoa e os critérios.'}</p>
+              <p className="max-w-sm text-sm text-zinc-500">{tab === 'mine' ? 'Quando seu gestor enviar uma avaliação, ela aparece aqui para você ler e dar ciência.' : 'Crie uma nova avaliação escolhendo a pessoa da sua equipe e o tipo (experiência ou desenvolvimento).'}</p>
             </div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -155,7 +151,7 @@ export function EvaluationsSection() {
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm font-semibold text-white dark:bg-white dark:text-zinc-900">{initials(tab === 'mine' ? e.evaluatorName : e.evaluatedName)}</div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold text-foreground">{tab === 'mine' ? e.period : e.evaluatedName}</p>
-                      <p className="truncate text-xs text-zinc-500">{tab === 'mine' ? `Avaliado por ${e.evaluatorName}` : [e.evaluatedSector, e.period].filter(Boolean).join(' · ')}</p>
+                      <p className="truncate text-xs text-zinc-500">{tab === 'mine' ? `Avaliado por ${e.evaluatorName}` : [e.evaluatedSector, e.period].filter(Boolean).join(' · ')}{e.formType ? ` · ${e.kind === 'experience' ? 'Experiência' : 'Desenvolvimento'}: ${formTypeLabel(e.formType)}` : ''}</p>
                     </div>
                     <ScoreBadge v={e.score} />
                   </div>
@@ -171,7 +167,7 @@ export function EvaluationsSection() {
       )}
 
       {creating && profile ? (
-        <NewEvaluationDialog criteria={activeCriteria} meId={profile.id} onClose={() => setCreating(false)} onCreated={async (id) => { setCreating(false); await load(); setOpenId(id); }} />
+        <NewEvaluationDialog meId={profile.id} onClose={() => setCreating(false)} onCreated={async (id) => { setCreating(false); await load(); setOpenId(id); }} />
       ) : null}
       {current && profile ? (
         <EvaluationDialog ev={current} meId={profile.id} canManage={canManage} isAdmin={isAdmin} onClose={() => setOpenId(null)} onChanged={load} />
@@ -181,76 +177,109 @@ export function EvaluationsSection() {
 }
 
 // ---------- new evaluation ----------
-function NewEvaluationDialog({ criteria, meId, onClose, onCreated }: { criteria: Criterion[]; meId: string; onClose: () => void; onCreated: (id: string) => void }) {
-  const [people, setPeople] = useState<{ id: string; name: string; sector: string }[]>([]);
+function NewEvaluationDialog({ meId, onClose, onCreated }: { meId: string; onClose: () => void; onCreated: (id: string) => void }) {
+  const [people, setPeople] = useState<{ id: string; name: string; sector: string }[] | null>(null);
   const [who, setWho] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [period, setPeriod] = useState(E.currentPeriod());
-  const [sel, setSel] = useState<string[]>(criteria.map((c) => c.id));
+  const [formType, setFormType] = useState<FormType | null>(null);
+  const [hint, setHint] = useState<string>('');
+  const [prev, setPrev] = useState<E.PreviousScores | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    void (async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let query = (supabase as any).from('profiles').select('id, name, display_name, sector_id').eq('is_active', true).order('name');
-      const cid = getActiveCompanyId(); if (cid) query = query.eq('company_id', cid);
-      const [{ data }, { data: secs }] = await Promise.all([query, supabase.from('sectors').select('id, name')]);
-      const S = new Map((secs || []).map((s) => [s.id, s.name]));
-      setPeople(((data || []) as { id: string; name: string; display_name: string | null; sector_id: string | null }[]).filter((p) => p.id !== meId).map((p) => ({ id: p.id, name: p.display_name || p.name, sector: (p.sector_id && S.get(p.sector_id)) || '' })));
-    })();
-  }, [meId]);
+  useEffect(() => { E.listTeamPeople().then(setPeople).catch((e) => { toast.error((e as Error).message); setPeople([]); }); }, []);
 
-  const filtered = people.filter((p) => !q.trim() || (p.name + ' ' + p.sector).toLowerCase().includes(q.trim().toLowerCase()));
+  // Picking the person suggests the form from the admission date (experience until 90 days, development after).
+  useEffect(() => {
+    if (!who) return;
+    setHint(''); setPrev(undefined);
+    void (async () => {
+      const rec = await getEmployeeRecord(who);
+      const d = daysSinceAdmission(rec);
+      if (d == null) { setHint('Data de admissão não cadastrada: escolha o tipo manualmente.'); return; }
+      if (d <= 90) { setFormType(d <= 52 ? 'exp45' : 'exp90'); setHint(`Admitido há ${d} dia(s): ainda no contrato de experiência (${contractDates(rec).end1 ? 'sugestão: ' + (d <= 52 ? '45' : '90') + ' dias' : ''}).`); }
+      else { setFormType(d <= 150 ? 'devPos' : 'devSemestral'); setHint(`Admitido há ${d} dias: já passou da experiência, use a avaliação de desenvolvimento.`); }
+    })();
+  }, [who]);
+  useEffect(() => { setPrev(undefined); if (who && formType === 'exp90') void E.previousExperienceScores(who).then(setPrev); }, [who, formType]);
+
+  const filtered = (people || []).filter((p) => !q.trim() || (p.name + ' ' + p.sector).toLowerCase().includes(q.trim().toLowerCase()));
   const create = async () => {
-    if (!who) return toast.error('Escolha quem será avaliado.');
+    if (!who || !formType) return toast.error('Escolha a pessoa e o tipo da avaliação.');
     setBusy(true);
-    try { onCreated(await E.createEvaluation({ evaluatedId: who, period, criteriaIds: sel, meProfileId: meId })); toast.success('Avaliação criada. Agora preencha as notas.'); }
+    try { onCreated(await E.createEvaluation({ evaluatedId: who, formType, period, meProfileId: meId })); toast.success('Avaliação criada. Agora preencha as notas.'); }
     catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
+  const groupBtn = (kind: 'experience' | 'development', title: string) => (
+    <div className="space-y-1.5">
+      <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">{title}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {FORM_TYPES.filter((f) => f.kind === kind).map((f) => (
+          <button key={f.id} type="button" aria-pressed={formType === f.id} onClick={() => setFormType(f.id)}
+            className={cn('rounded-full border px-3 py-1.5 text-xs font-medium transition', formType === f.id ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900' : 'border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800')}>{f.label}</button>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-w-2xl rounded-3xl">
-        <DialogHeader><DialogTitle>Nova avaliação</DialogTitle><DialogDescription>Escolha a pessoa, o período e os critérios. Você preenche as notas em seguida.</DialogDescription></DialogHeader>
-        <div className="grid gap-5 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label>1. Quem será avaliado</Label>
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar pessoa" className="rounded-xl" />
-            <div className="max-h-64 space-y-1 overflow-y-auto rounded-xl border p-1">
-              {filtered.map((p) => (
-                <button key={p.id} onClick={() => setWho(p.id)} className={cn('flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm', who === p.id ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800')}>
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[11px] font-semibold text-zinc-700">{initials(p.name)}</span>
-                  <span className="min-w-0 flex-1 truncate">{p.name}</span>
-                  <span className="truncate text-xs opacity-70">{p.sector}</span>
-                </button>
-              ))}
-              {!filtered.length ? <p className="p-3 text-center text-xs text-zinc-500">Ninguém encontrado</p> : null}
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div className="space-y-2"><Label>2. Período</Label><Input value={period} onChange={(e) => setPeriod(e.target.value)} placeholder="Ex.: 1º semestre de 2026" className="rounded-xl" /></div>
+        <DialogHeader><DialogTitle>Nova avaliação</DialogTitle><DialogDescription>Só o gestor da equipe pode avaliar quem está nela. Escolha a pessoa e o tipo; os critérios e o PDF seguem o modelo padrão.</DialogDescription></DialogHeader>
+        {people && !people.length ? (
+          <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">Você não é gestor de nenhuma equipe com pessoas. Para avaliar alguém, a pessoa precisa estar numa equipe que você lidera (Gestão &gt; Equipes).</p>
+        ) : (
+          <div className="grid gap-5 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>3. Critérios ({sel.length})</Label>
-              <div className="max-h-48 space-y-1 overflow-y-auto rounded-xl border p-2">
-                {criteria.map((c) => (
-                  <label key={c.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
-                    <Checkbox checked={sel.includes(c.id)} onCheckedChange={(v) => setSel((s) => (v ? [...s, c.id] : s.filter((x) => x !== c.id)))} />{c.name}
-                  </label>
+              <Label>1. Quem será avaliado (sua equipe)</Label>
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar pessoa" className="rounded-xl" />
+              <div className="max-h-64 space-y-1 overflow-y-auto rounded-xl border p-1">
+                {!people ? <p className="p-3 text-center text-xs text-zinc-500">Carregando…</p> : filtered.map((p) => (
+                  <button key={p.id} onClick={() => setWho(p.id)} className={cn('flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm', who === p.id ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800')}>
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[11px] font-semibold text-zinc-700">{initials(p.name)}</span>
+                    <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                    <span className="truncate text-xs opacity-70">{p.sector}</span>
+                  </button>
                 ))}
+                {people && !filtered.length ? <p className="p-3 text-center text-xs text-zinc-500">Ninguém encontrado</p> : null}
               </div>
             </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>2. Tipo da avaliação</Label>
+                {groupBtn('experience', 'Contrato de experiência')}
+                {groupBtn('development', 'Desempenho e desenvolvimento')}
+                {hint ? <p className="text-xs text-zinc-500">{hint}</p> : null}
+                {formType === 'exp90' && prev === null ? <p className="rounded-xl border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">Não há avaliação de 45 dias enviada para esta pessoa: a comparação de evolução não vai aparecer.</p> : null}
+                {formType === 'exp90' && prev ? <p className="rounded-xl bg-zinc-100 p-2 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">Vamos comparar com a avaliação de 45 dias (média {E.fmtScore(prev.average)}).</p> : null}
+              </div>
+              <div className="space-y-2"><Label>3. Período</Label><Input value={period} onChange={(e) => setPeriod(e.target.value)} placeholder="Ex.: 1º semestre de 2026" className="rounded-xl" /></div>
+            </div>
           </div>
-        </div>
+        )}
         <DialogFooter>
           <Button variant="outline" className="rounded-xl" onClick={onClose}>Cancelar</Button>
-          <Button className="rounded-xl" disabled={busy || !who || !sel.length} onClick={() => void create()}>Criar e preencher</Button>
+          <Button className="rounded-xl" disabled={busy || !who || !formType} onClick={() => void create()}>Criar e preencher</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-// ---------- detail / fill / respond ----------
+function Evolution({ prev, cur }: { prev: number; cur: number | null }) {
+  const d = cur == null ? 0 : cur - prev;
+  return (
+    <div className="mt-1.5 flex items-center gap-2 text-[11px] text-zinc-500" title="Evolução desde a avaliação de 45 dias">
+      <div className="w-24 space-y-0.5">
+        <div className="flex items-center gap-1"><div className="h-1.5 rounded-full bg-zinc-300" style={{ width: `${(prev / 5) * 100}%` }} /><span>{prev}</span></div>
+        <div className="flex items-center gap-1"><div className="h-1.5 rounded-full bg-zinc-900 dark:bg-white" style={{ width: `${((cur ?? 0) / 5) * 100}%` }} /><span className="font-semibold text-foreground">{cur ?? '–'}</span></div>
+      </div>
+      {cur != null ? <span className={cn('font-semibold', d > 0 ? 'text-emerald-600' : d < 0 ? 'text-amber-600' : 'text-zinc-500')}>{d > 0 ? `▲ +${d}` : d < 0 ? `▼ −${Math.abs(d)}` : '= igual'}</span> : null}
+      <span>45 dias → agora</span>
+    </div>
+  );
+}
+
 function EvaluationDialog({ ev, meId, canManage, isAdmin, onClose, onChanged }: { ev: EvalRow; meId: string; canManage: boolean; isAdmin: boolean; onClose: () => void; onChanged: () => Promise<void> }) {
   const [items, setItems] = useState<EvalItem[] | null>(null);
   const [feedback, setFeedback] = useState(ev.feedback || '');
@@ -259,10 +288,13 @@ function EvaluationDialog({ ev, meId, canManage, isAdmin, onClose, onChanged }: 
   const [reply, setReply] = useState('');
   const [mode, setMode] = useState<'view' | 'review'>('view');
   const [busy, setBusy] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [prev, setPrev] = useState<E.PreviousScores | null>(null);
   const editable = (ev.evaluatorId === meId || isAdmin || canManage) && (ev.status === 'draft' || ev.status === 'contested') && ev.evaluatedId !== meId;
   const isEvaluated = ev.evaluatedId === meId;
 
-  useEffect(() => { E.getItems(ev.id).then(setItems).catch((e) => toast.error((e as Error).message)); }, [ev.id]);
+  useEffect(() => { E.getItems(ev.id, ev.kind).then(setItems).catch((e) => toast.error((e as Error).message)); }, [ev.id, ev.kind]);
+  useEffect(() => { if (ev.formType === 'exp90') void E.previousExperienceScores(ev.evaluatedId).then(setPrev); }, [ev.formType, ev.evaluatedId]);
 
   const patch = (): E.DraftPatch => ({ items: (items || []).map((i) => ({ id: i.id, score: i.score, comment: i.comment })), feedback, strengths, improvements });
   const live = items?.filter((i) => i.score != null) || [];
@@ -272,7 +304,19 @@ function EvaluationDialog({ ev, meId, canManage, isAdmin, onClose, onChanged }: 
     try { await fn(); toast.success(ok); await onChanged(); if (close) onClose(); }
     catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
-  const report = () => { if (items && !openReport(E.evaluationReport({ ...ev, feedback, strengths, improvements, score: editable ? liveAvg : ev.score }, items))) toast.error('Permita pop-ups para abrir o relatório.'); };
+  const report = async () => {
+    if (!items) return;
+    setPdfBusy(true);
+    try { await downloadEvaluationPdf(ev, items, { items, feedback, strengths, improvements, average: editable ? liveAvg : ev.score }); toast.success('PDF gerado.'); if (cmp) toast(cmp.delta > 0.04 ? `Evolução: a média subiu ${E.fmtScore(Math.abs(cmp.delta))} desde os 45 dias.` : cmp.delta < -0.04 ? `Atenção: a média caiu ${E.fmtScore(Math.abs(cmp.delta))} desde os 45 dias.` : 'A média ficou igual à dos 45 dias.'); }
+    catch (e) { console.error(e); toast.error('Não foi possível gerar o PDF.'); } finally { setPdfBusy(false); }
+  };
+  const curAvg = editable ? liveAvg : ev.score;
+  const cmp = prev && prev.average != null && curAvg != null ? { prev: prev.average, cur: curAvg, delta: curAvg - prev.average } : null;
+  const prevOf = (name: string) => prev?.items.find((i) => i.name === name)?.score ?? null;
+  const send = async () => {
+    if (cmp && cmp.delta < -0.04 && !(await appConfirm({ title: 'A média ficou menor que a de 45 dias', message: `A média atual (${E.fmtScore(cmp.cur)}) é menor que a da avaliação de 45 dias (${E.fmtScore(cmp.prev)}). Deseja enviar mesmo assim?`, confirmText: 'Enviar mesmo assim' }))) return;
+    await run(() => E.sendEvaluation(ev, patch(), meId), ev.status === 'contested' ? 'Avaliação reenviada' : 'Avaliação enviada ao colaborador');
+  };
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -281,7 +325,7 @@ function EvaluationDialog({ ev, meId, canManage, isAdmin, onClose, onChanged }: 
           <div className="flex items-start gap-4 pr-6">
             <ScoreBadge v={editable ? liveAvg : ev.score} big />
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium uppercase tracking-[.16em] text-zinc-500">{ev.period}</p>
+              <p className="text-xs font-medium uppercase tracking-[.16em] text-zinc-500">{[ev.formType ? (ev.kind === 'experience' ? 'Experiência' : 'Desenvolvimento') + ' · ' + formTypeLabel(ev.formType) : '', ev.period].filter(Boolean).join(' · ')}</p>
               <DialogTitle className="mt-1 text-2xl">{ev.evaluatedName}</DialogTitle>
               <DialogDescription className="mt-1">{[ev.evaluatedSector, `Avaliador: ${ev.evaluatorName}`].filter(Boolean).join(' · ')}</DialogDescription>
               <div className="mt-2 flex flex-wrap items-center gap-2"><StatusPill s={ev.status} />{(editable ? liveAvg : ev.score) != null ? <span className="text-xs text-zinc-500">{E.scaleLabel(editable ? liveAvg : ev.score)}</span> : null}</div>
@@ -295,6 +339,13 @@ function EvaluationDialog({ ev, meId, canManage, isAdmin, onClose, onChanged }: 
           </div>
         ) : null}
 
+        {cmp ? (
+          <div className={cn('flex items-center gap-3 rounded-2xl border p-3 text-sm', cmp.delta < -0.04 ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100' : cmp.delta > 0.04 ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100' : 'border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300')}>
+            {cmp.delta < -0.04 ? <TrendingDown className="h-5 w-5 shrink-0" /> : <TrendingUp className="h-5 w-5 shrink-0" />}
+            <span><b>{cmp.delta < -0.04 ? 'Atenção: a média está menor que a de 45 dias' : cmp.delta > 0.04 ? 'A média está maior que a de 45 dias' : 'A média está igual à de 45 dias'}</b> · 45 dias: {E.fmtScore(cmp.prev)} → agora: {E.fmtScore(cmp.cur)} ({cmp.delta >= 0 ? '+' : '−'}{E.fmtScore(Math.abs(cmp.delta))})</span>
+          </div>
+        ) : ev.formType === 'exp90' && !prev ? <p className="rounded-2xl border border-zinc-200 p-3 text-xs text-zinc-500 dark:border-zinc-700">Não há avaliação de 45 dias enviada para comparar.</p> : null}
+
         {!items ? <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div> : (
           <div className="space-y-2">
             <p className="text-sm font-semibold text-foreground">Critérios</p>
@@ -304,6 +355,7 @@ function EvaluationDialog({ ev, meId, canManage, isAdmin, onClose, onChanged }: 
                   <div className="min-w-0">
                     <p className="font-medium text-foreground">{it.name}</p>
                     {it.description ? <p className="text-xs text-zinc-500">{it.description}</p> : null}
+                    {prev && prevOf(it.name) != null ? <Evolution prev={prevOf(it.name)!} cur={it.score} /> : null}
                   </div>
                   {editable ? (
                     <div className="flex shrink-0 gap-1">
@@ -343,13 +395,13 @@ function EvaluationDialog({ ev, meId, canManage, isAdmin, onClose, onChanged }: 
 
         <DialogFooter className="flex-wrap gap-2 sm:justify-between">
           <div className="flex gap-2">
-            {items?.length ? <Button variant="outline" className="rounded-xl" onClick={report}><FileText className="mr-2 h-4 w-4" />PDF</Button> : null}
+            {items?.length ? <Button variant="outline" className="rounded-xl" disabled={pdfBusy} onClick={() => void report()}>{pdfBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}PDF</Button> : null}
             {(isAdmin || (ev.evaluatorId === meId && ev.status === 'draft')) ? <Button variant="ghost" className="rounded-xl text-rose-600" disabled={busy} onClick={async () => { if (await appConfirm({ title: 'Excluir esta avaliação?', message: 'Esta ação não pode ser desfeita.', confirmText: 'Excluir', danger: true })) void run(() => E.deleteEvaluation(ev.id), 'Avaliação excluída'); }}><Trash2 className="mr-2 h-4 w-4" />Excluir</Button> : null}
           </div>
           <div className="flex flex-wrap gap-2">
             {editable ? <>
               <Button variant="outline" className="rounded-xl" disabled={busy || !items} onClick={() => void run(() => E.saveDraft(ev.id, patch()), 'Rascunho salvo', false)}><Save className="mr-2 h-4 w-4" />Salvar rascunho</Button>
-              <Button className="rounded-xl" disabled={busy || !items} onClick={() => void run(() => E.sendEvaluation(ev, patch(), meId), ev.status === 'contested' ? 'Avaliação reenviada' : 'Avaliação enviada ao colaborador')}><Send className="mr-2 h-4 w-4" />{ev.status === 'contested' ? 'Reenviar' : 'Enviar ao colaborador'}</Button>
+              <Button className="rounded-xl" disabled={busy || !items} onClick={() => void send()}><Send className="mr-2 h-4 w-4" />{ev.status === 'contested' ? 'Reenviar' : 'Enviar ao colaborador'}</Button>
             </> : null}
             {isEvaluated && ev.status === 'sent' ? (mode === 'view' ? <>
               <Button variant="outline" className="rounded-xl" onClick={() => setMode('review')}><RotateCcw className="mr-2 h-4 w-4" />Pedir revisão</Button>

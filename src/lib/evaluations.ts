@@ -5,6 +5,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { withCompany } from '@/lib/companyScope';
 import type { ReportSpec, Tone } from '@/lib/reports';
+import { FORM_TYPES, PRESETS, type EvalKind, type FormType } from '@/lib/evalPresets';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sb = supabase as any;
@@ -12,7 +13,7 @@ const sb = supabase as any;
 export type EvalStatus = 'draft' | 'sent' | 'contested' | 'finalized';
 
 export interface Criterion { id: string; name: string; description: string | null; is_active: boolean }
-export interface EvalItem { id: string; competency_id: string; name: string; description: string | null; score: number | null; comment: string | null }
+export interface EvalItem { id: string; competency_id: string; name: string; description: string | null; score: number | null; comment: string | null; prev?: number | null }
 export interface EvalRow {
   id: string; status: EvalStatus;
   evaluatorId: string; evaluatorName: string;
@@ -21,6 +22,7 @@ export interface EvalRow {
   feedback: string | null; strengths: string | null; improvements: string | null;
   evaluatedComment: string | null;
   createdAt: string; sentAt: string | null; finishedAt: string | null; version: number;
+  kind: 'general' | EvalKind; formType: FormType | null; phase: number | null; docNumber: number | null; docKey: string | null; companyId: string | null;
 }
 
 export const STATUS_LABEL: Record<EvalStatus, string> = { draft: 'Rascunho', sent: 'Aguardando ciência', contested: 'Revisão pedida', finalized: 'Concluída' };
@@ -63,7 +65,7 @@ const err = (e: unknown, fallback: string) => { const m = (e as { message?: stri
 
 // ---------- criteria ----------
 export async function listCriteria(includeInactive = false): Promise<Criterion[]> {
-  let q = sb.from('eval_competencies').select('id, name, description, is_active').order('name');
+  let q = sb.from('eval_competencies').select('id, name, description, is_active').not('category', 'in', '(experience,development)').order('name');
   if (!includeInactive) q = q.eq('is_active', true);
   const { data, error } = await q;
   if (error) throw err(error, 'Não foi possível carregar os critérios.');
@@ -90,7 +92,7 @@ export async function addSuggestedCriteria(userId: string, existing: string[]) {
 }
 
 // ---------- evaluations ----------
-interface DbEval { id: string; status: string; evaluator_id: string; evaluated_id: string; period_label: string | null; overall_score: number | null; overall_comment: string | null; strengths: string | null; improvements: string | null; evaluated_comment: string | null; created_at: string; sent_at: string | null; finalized_at: string | null; version: number | null }
+interface DbEval { id: string; status: string; evaluator_id: string; evaluated_id: string; period_label: string | null; overall_score: number | null; overall_comment: string | null; strengths: string | null; improvements: string | null; evaluated_comment: string | null; created_at: string; sent_at: string | null; finalized_at: string | null; version: number | null; kind: string | null; form_type: string | null; phase: number | null; doc_number: number | null; doc_key: string | null; company_id: string | null }
 
 export async function listEvaluations(filter?: { evaluatedId?: string }): Promise<EvalRow[]> {
   let q = sb.from('evaluations').select('*').order('created_at', { ascending: false });
@@ -120,29 +122,56 @@ export async function listEvaluations(filter?: { evaluatedId?: string }): Promis
       feedback: r.overall_comment, strengths: r.strengths, improvements: r.improvements,
       evaluatedComment: r.evaluated_comment,
       createdAt: r.created_at, sentAt: r.sent_at, finishedAt: status === 'finalized' ? r.finalized_at : null, version: r.version || 1,
+      kind: (r.kind as EvalRow['kind']) || 'general', formType: (r.form_type as FormType | null) ?? null, phase: r.phase ?? null, docNumber: r.doc_number ?? null, docKey: r.doc_key ?? null, companyId: r.company_id ?? null,
     };
   });
 }
 
-export async function getItems(evaluationId: string): Promise<EvalItem[]> {
+export async function getItems(evaluationId: string, kind?: string): Promise<EvalItem[]> {
   const { data, error } = await sb.from('evaluation_items').select('id, competency_id, score, evaluator_comment, created_at').eq('evaluation_id', evaluationId).order('created_at');
   if (error) throw err(error, 'Não foi possível carregar os critérios da avaliação.');
   const items = (data || []) as { id: string; competency_id: string; score: number | null; evaluator_comment: string | null }[];
   if (!items.length) return [];
   const { data: comps } = await sb.from('eval_competencies').select('id, name, description').in('id', items.map((i) => i.competency_id));
   const C = new Map<string, { name: string; description: string | null }>((comps || []).map((c: { id: string }) => [c.id, c]));
-  return items.map((i) => ({ id: i.id, competency_id: i.competency_id, name: C.get(i.competency_id)?.name || 'Critério', description: C.get(i.competency_id)?.description ?? null, score: i.score == null ? null : Number(i.score), comment: i.evaluator_comment }));
+  const out = items.map((i) => ({ id: i.id, competency_id: i.competency_id, name: C.get(i.competency_id)?.name || 'Critério', description: C.get(i.competency_id)?.description ?? null, score: i.score == null ? null : Number(i.score), comment: i.evaluator_comment }));
+  if (kind === 'experience' || kind === 'development') { const order = PRESETS[kind].flatMap((g) => g.items.map((x) => x.name)); out.sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name)); }
+  return out;
 }
 
 async function history(evaluationId: string, meProfileId: string, action: string, oldStatus: string | null, newStatus: string, details?: string | null) {
   await Promise.resolve(sb.from('evaluation_history').insert({ evaluation_id: evaluationId, action, performed_by: meProfileId, old_status: oldStatus, new_status: newStatus, details: details || null })).catch(() => undefined);
 }
 
-export async function createEvaluation(p: { evaluatedId: string; period: string; criteriaIds: string[]; meProfileId: string }) {
-  if (!p.criteriaIds.length) throw new Error('Escolha pelo menos um critério.');
-  const { data, error } = await sb.from('evaluations').insert(withCompany({ evaluator_id: p.meProfileId, evaluated_id: p.evaluatedId, period_label: p.period.trim() || currentPeriod(), status: 'draft' })).select('id').single();
-  if (error || !data) throw err(error, 'Não foi possível criar a avaliação.');
-  const { error: e2 } = await sb.from('evaluation_items').insert(p.criteriaIds.map((cid) => ({ evaluation_id: data.id, competency_id: cid, weight: 1, score: null })));
+/** People the signed-in user manages (members of the teams they supervise): the only ones they may evaluate. */
+export async function listTeamPeople(): Promise<{ id: string; name: string; sector: string }[]> {
+  const { data, error } = await sb.rpc('my_team_people');
+  if (error) throw err(error, 'Não foi possível carregar a sua equipe.');
+  return ((data || []) as { profile_id: string; name: string; sector_name: string | null }[]).map((r) => ({ id: r.profile_id, name: r.name, sector: r.sector_name || '' })).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export interface PreviousScores { evaluationId: string; average: number | null; date: string | null; items: { name: string; score: number | null }[] }
+/** Scores of the person's latest sent 45-day evaluation (null if there is none). */
+export async function previousExperienceScores(evaluatedId: string): Promise<PreviousScores | null> {
+  const { data, error } = await sb.rpc('previous_experience_scores', { _evaluated: evaluatedId });
+  if (error || !data) return null;
+  const d = data as { evaluation_id: string; average: number | null; date: string | null; items: { name: string; score: number | null }[] };
+  return { evaluationId: d.evaluation_id, average: d.average == null ? null : Number(d.average), date: d.date, items: (d.items || []).map((i) => ({ name: i.name, score: i.score == null ? null : Number(i.score) })) };
+}
+
+export async function createEvaluation(p: { evaluatedId: string; formType: FormType; period: string; meProfileId: string }) {
+  const ft = FORM_TYPES.find((f) => f.id === p.formType);
+  if (!ft) throw new Error('Escolha o tipo da avaliação.');
+  const flat = PRESETS[ft.kind].flatMap((g) => g.items);
+  const { data: comps, error: ce } = await sb.rpc('ensure_eval_competencies', { _category: ft.kind, _items: flat });
+  if (ce) throw err(ce, 'Não foi possível preparar os critérios da avaliação.');
+  const idByName = new Map<string, string>(((comps || []) as { id: string; name: string }[]).map((c) => [c.name, c.id]));
+  const criteriaIds = flat.map((i) => idByName.get(i.name)).filter((x): x is string => !!x);
+  if (criteriaIds.length !== flat.length) throw new Error('Não foi possível preparar os critérios da avaliação.');
+  const prev = ft.id === 'exp90' ? await previousExperienceScores(p.evaluatedId) : null;
+  const { data, error } = await sb.from('evaluations').insert(withCompany({ evaluator_id: p.meProfileId, evaluated_id: p.evaluatedId, period_label: p.period.trim() || currentPeriod(), status: 'draft', kind: ft.kind, form_type: ft.id, phase: ft.phase, prev_evaluation_id: prev?.evaluationId ?? null })).select('id').single();
+  if (error || !data) throw err(error, 'Só o gestor da equipe da pessoa pode criar a avaliação dela.');
+  const { error: e2 } = await sb.from('evaluation_items').insert(criteriaIds.map((cid) => ({ evaluation_id: data.id, competency_id: cid, weight: 1, score: null })));
   if (e2) { await sb.from('evaluations').delete().eq('id', data.id); throw err(e2, 'Não foi possível criar a avaliação.'); }
   await history(data.id, p.meProfileId, 'created', null, 'draft');
   return data.id as string;

@@ -24,6 +24,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { EmployeeRecordFields } from '@/components/management/EmployeeRecordFields';
+import { saveEmployeeRecord, type EmployeeRecord } from '@/lib/employeeRecord';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
@@ -90,6 +92,7 @@ export function UserRegistrationDialog({
   const [company, setCompany] = useState('');
   const [profileType, setProfileType] = useState<'admin' | 'user' | 'supervisor' | 'diretoria'>('user');
   const [registrationNumber, setRegistrationNumber] = useState('');
+  const [employeeRecord, setEmployeeRecord] = useState<EmployeeRecord>({});
   const [password, setPassword] = useState('');
 
   // Step 2 fields
@@ -111,6 +114,7 @@ export function UserRegistrationDialog({
     setCompany('');
     setProfileType('user');
     setRegistrationNumber('');
+    setEmployeeRecord({});
     setPassword('');
     setSectorId('');
     setBirthDate('');
@@ -228,6 +232,14 @@ export function UserRegistrationDialog({
         return;
       }
 
+      const hasRecord = Object.values(employeeRecord).some((v) => v && String(v).trim());
+      if (hasRecord || registrationNumber) {
+        const { data: created } = await supabase.from('profiles').select('id').ilike('email', email.trim()).maybeSingle();
+        if (created?.id) {
+          try { await saveEmployeeRecord(created.id, { ...employeeRecord, ...(registrationNumber ? { registration: registrationNumber } : {}) }); }
+          catch { toast.error('Usuário criado, mas não foi possível salvar os dados do funcionário. Edite o usuário para preencher.'); }
+        }
+      }
       toast.success('Usuário criado com sucesso!');
       resetForm();
       onSuccess();
@@ -477,6 +489,8 @@ export function UserRegistrationDialog({
                     <p className="text-xs text-destructive">{errors.birthDate}</p>
                   )}
                 </div>
+
+                <div className="col-span-2"><EmployeeRecordFields value={employeeRecord} onChange={setEmployeeRecord} /></div>
 
                 {/* Setores Adicionais */}
                 <div className="col-span-2 space-y-2">
