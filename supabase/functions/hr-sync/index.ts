@@ -5,6 +5,8 @@
 //   POST /hr-sync/presets  list of supported systems          POST /hr-sync/save    create/update a source
 //   POST /hr-sync/test     recognised columns + preview       POST /hr-sync/sync    sync one source now
 //   POST /hr-sync/toggle   { id, enabled }                    POST /hr-sync/remove  { id } disconnect and delete its people
+//   POST /hr-sync/import-preview { id }  how many people can become users, plan seats left
+//   POST /hr-sync/import-run { id, mode:'all' }  create the users (alphabetical, up to the plan limit); call again while pending > 0
 //   POST /hr-sync/cron     database (Vault secret header): syncs the sources that are due
 // A failure of the third-party API is reported as a failure: nothing is invented.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -219,14 +221,15 @@ const toIso = (v: unknown): string | null => { if (!v) return null; const d = ne
 const toDate = (v: unknown): string | null => { const i = toIso(v); return i ? i.slice(0, 10) : null; };
 
 interface Emp { key: string; name: string; depto: string; cargo: string; sexo: string; ctr: string; cc: string; kemp: string; adm: string | null; dem: string | null; nasc: string | null; salary: number | null; fv: number | null }
-function detectColumns(recs: any[]): Record<string, string> {
+function detectColumns(recs: any[], dict: Record<string, string[]> = SYN, tailOnly?: string[]): Record<string, string> {
+  const SYN = dict;
   const keys = new Map<string, string>();
   for (const r of recs.slice(0, 30)) if (r && typeof r === 'object') for (const k of Object.keys(flat(r, '', {}))) { const n = norm(k); if (n && !keys.has(n)) keys.set(n, k); }
   const map: Record<string, string> = {};
   for (const f in SYN) for (const syn of SYN[f]) { if (keys.has(syn)) { map[f] = keys.get(syn)!; break; } }
   // second pass for nested fields ("job name", "salary value"): the last word of the key may be the known name
   for (const f in SYN) {
-    if (map[f]) continue;
+    if (map[f] || (tailOnly && !tailOnly.includes(f))) continue;
     for (const [n, orig] of keys) { const tail = norm(orig.split(' ').pop()); if (tail !== n && SYN[f].includes(tail) && !Object.values(map).includes(orig)) { map[f] = orig; break; } }
   }
   return map;
@@ -345,6 +348,140 @@ async function runSync(row: any) {
   }
 }
 
+// ---------- importing people as ewvon users ----------
+// Reads the people of a connected system again (nothing is invented), keeps the ones that can become users (active, with
+// e-mail, not yet registered) and creates them in ALPHABETICAL order, up to the seats the company's plan still has
+// (company_limits.max_users = NULL means unlimited). Everything the ewvon registry has is filled when the system sends it:
+// profile columns + encrypted employee record (written with the admin's own session through set_employee_record).
+const IMP: Record<string, string[]> = {
+  email: ['email', 'emailcorporativo', 'emailtrabalho', 'workemail', 'emailprofissional', 'corporateemail', 'mail', 'emailaddress', 'useremail', 'emailcomercial', 'emailempresa', 'emailempresarial'],
+  tel: ['telefone', 'celular', 'phone', 'mobile', 'cellphone', 'phonenumber', 'fone', 'whatsapp', 'telefonecelular', 'mobilephone', 'telefonecomercial', 'workphone', 'telefoneprincipal'],
+  tel2: ['telefone2', 'telefonealternativo', 'celular2', 'phone2', 'altphone', 'telefonefixo', 'homephone', 'telefoneresidencial', 'telefonepessoal'],
+  cpf: ['cpf', 'documentocpf', 'cpfnumber', 'numerocpf'],
+  rg: ['rg', 'identidade', 'numerorg', 'documentorg', 'rgnumber', 'numeroidentidade'],
+  rgorg: ['orgaoemissor', 'orgaoexpedidor', 'rgissuer', 'emissor', 'rgorgao', 'orgaoemissorrg'],
+  pis: ['pis', 'pispasep', 'nispis', 'nis', 'pasep', 'numeropis'],
+  ctps: ['ctps', 'carteiradetrabalho', 'numeroctps', 'ctpsnumero'],
+  civil: ['estadocivil', 'maritalstatus', 'civilstatus'],
+  esc: ['escolaridade', 'grauinstrucao', 'educationlevel', 'education', 'instrucao', 'grauescolaridade'],
+  social: ['nomesocial', 'socialname', 'preferredname', 'apelido', 'nickname'],
+  emailp: ['emailpessoal', 'personalemail', 'emailparticular'],
+  cep: ['cep', 'zip', 'zipcode', 'postalcode', 'codigopostal'],
+  rua: ['logradouro', 'rua', 'street', 'addressstreet', 'streetname', 'endereco', 'address'],
+  num: ['numeroendereco', 'addressnumber', 'streetnumber', 'numerologradouro', 'numerocasa'],
+  comp: ['complemento', 'complement', 'addresscomplement', 'addressline2'],
+  bairro: ['bairro', 'district', 'neighborhood'],
+  cidade: ['cidade', 'city', 'municipio', 'addresscity'],
+  uf: ['uf', 'estado', 'state', 'addressstate'],
+  gestor: ['gestor', 'gerente', 'supervisor', 'lider', 'manager', 'managername', 'chefe', 'superior', 'responsavel', 'reportsto', 'gestorimediato'],
+  unid: ['unidade', 'branch', 'unit', 'localdetrabalho', 'worklocation', 'local'],
+  jornada: ['jornada', 'cargahoraria', 'horassemanais', 'weeklyhours', 'workload', 'cargahorariasemanal'],
+  ini: ['horarioentrada', 'entrada', 'inicioexpediente', 'workstart'],
+  fim: ['horariosaida', 'saida', 'fimexpediente', 'workend'],
+  emerg: ['contatoemergencia', 'emergencycontact', 'emergencyname', 'nomecontatoemergencia'],
+  emergtel: ['telefoneemergencia', 'emergencyphone', 'telefonecontatoemergencia'],
+  emergrel: ['parentescoemergencia', 'emergencyrelation', 'parentesco'],
+};
+const IMP_TAIL = ['email', 'cpf', 'pis', 'tel', 'cep'];
+interface Person { key: string; name: string; email: string; dem: string | null; birth: string | null; depto: string; reg: string; phone: string; address: string; rec: Record<string, string> }
+const digitsOf = (v: unknown) => String(v ?? '').replace(/\D/g, '');
+const fmtCpf = (v: unknown) => { const d = digitsOf(v); return d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : ''; };
+const fmtPhone = (v: unknown) => { const d = digitsOf(v).replace(/^55(?=\d{10,11}$)/, ''); return d.length === 11 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}` : d.length === 10 ? `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}` : ''; };
+const fmtTime = (v: unknown) => { const m = String(v ?? '').match(/^(\d{1,2}):(\d{2})/); return m ? `${m[1].padStart(2, '0')}:${m[2]}` : ''; };
+const fmtMoney = (n: number | null) => (n == null || n <= 0 ? '' : n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+const MARITAL: [RegExp, string][] = [[/solteir/i, 'Solteiro(a)'], [/casad/i, 'Casado(a)'], [/uni[aã]o|estavel|estável/i, 'União estável'], [/divorc|separad/i, 'Divorciado(a)'], [/vi[uú]v/i, 'Viúvo(a)']];
+const EDU: [RegExp, string][] = [[/p[oó]s|mestr|doutor|especializ/i, 'Pós-graduação'], [/superior.*(incompleto)|incompleto.*superior|cursando/i, 'Superior incompleto'], [/superior|gradua/i, 'Superior completo'], [/m[eé]dio|2.? grau/i, 'Médio completo'], [/fundamental|1.? grau/i, 'Fundamental completo']];
+const CONTRACT: [RegExp, string][] = [[/clt|celetist/i, 'CLT'], [/pj|jur[ií]dica/i, 'PJ'], [/est[aá]gi/i, 'Estágio'], [/tempor/i, 'Temporário'], [/aprendiz/i, 'Aprendiz']];
+const pick = (v: string, list: [RegExp, string][]) => { for (const [re, out] of list) if (re.test(v)) return out; return ''; };
+
+function mapPeople(recs: any[]): Person[] {
+  const base = detectColumns(recs); const ext = detectColumns(recs, IMP, IMP_TAIL);
+  const out: Person[] = []; const seen = new Set<string>();
+  const txt = (v: unknown) => (v == null ? '' : String(v).trim());
+  for (const r of recs) {
+    if (!r || typeof r !== 'object') continue;
+    const o: any = flat(r, '', {});
+    if (o.name && o.last_name) o.name = `${o.name} ${o.last_name}`; else if (o.first_name && o.last_name) o.name = `${o.first_name} ${o.last_name}`;
+    const g = (f: string) => base[f] ? o[base[f]] : undefined; const x = (f: string) => ext[f] ? o[ext[f]] : undefined;
+    const name = txt(g('nome') ?? o.name); if (!name) continue;
+    let email = txt(x('email')).toLowerCase(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) email = '';
+    const key = txt(g('xid')) || txt(g('km')) || `${norm(name)}|${toDate(g('adm')) ?? ''}`;
+    const dedupe = email || key; if (seen.has(dedupe)) continue; seen.add(dedupe);
+    const sex = txt(g('sexo')).toUpperCase().charAt(0); const wd = txt(x('jornada')).match(/\d+(?:[.,]\d+)?/);
+    const street = txt(x('rua')), number = txt(x('num')), district = txt(x('bairro')), city = txt(x('cidade')), uf = txt(x('uf')).slice(0, 2).toUpperCase();
+    const rec: Record<string, string> = {
+      admission_date: toDate(g('adm')) || '', job_title: txt(g('cargo')), salary: fmtMoney(toNum(g('sal'))), registration: txt(g('km')),
+      cpf: fmtCpf(x('cpf')), rg: txt(x('rg')).slice(0, 30), rg_issuer: txt(x('rgorg')).toUpperCase().slice(0, 20), pis: digitsOf(x('pis')).slice(0, 11), ctps: txt(x('ctps')).slice(0, 30),
+      social_name: txt(x('social')).slice(0, 120), marital_status: pick(txt(x('civil')), MARITAL), education: pick(txt(x('esc')), EDU),
+      sex: sex === 'M' || sex === 'F' ? sex : sex ? 'O' : '', phone_alt: fmtPhone(x('tel2')), personal_email: txt(x('emailp')).toLowerCase().slice(0, 120),
+      emergency_name: txt(x('emerg')).slice(0, 120), emergency_relation: txt(x('emergrel')).slice(0, 60), emergency_phone: fmtPhone(x('emergtel')),
+      zip: digitsOf(x('cep')).length === 8 ? digitsOf(x('cep')).replace(/^(\d{5})(\d{3})$/, '$1-$2') : '', street: street.slice(0, 150), number: number.slice(0, 20), complement: txt(x('comp')).slice(0, 80), district: district.slice(0, 80), city: city.slice(0, 80), state: uf,
+      unit: txt(x('unid')) || txt(g('kemp')), contract_type: pick(txt(g('ctr')), CONTRACT), manager_name: txt(x('gestor')).slice(0, 120),
+      work_start: fmtTime(x('ini')), work_end: fmtTime(x('fim')), weekly_hours: wd ? wd[0].replace(',', '.') : '',
+    };
+    for (const k of Object.keys(rec)) if (!rec[k]) delete rec[k];
+    out.push({ key, name: name.slice(0, 160), email, dem: toDate(g('dem')), birth: toDate(g('nasc')), depto: txt(g('depto')).slice(0, 80), reg: txt(g('km')).slice(0, 40), phone: fmtPhone(x('tel')), address: [street && (number ? `${street}, ${number}` : street), district, city && (uf ? `${city}/${uf}` : city)].filter(Boolean).join(' - ').slice(0, 250), rec });
+  }
+  return out;
+}
+const byName = (a: Person, b: Person) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }) || a.email.localeCompare(b.email);
+
+async function importPlan(companyId: string, row: any) {
+  const cfg = cleanConfig(row.config); if (typeof cfg === 'string') throw new Error(cfg);
+  const people = mapPeople(await fetchRecords(cfg, await open(row.secret_enc)));
+  const active = people.filter((p) => !p.dem);
+  const withEmail = active.filter((p) => p.email);
+  const taken = new Set<string>();
+  for (let i = 0; i < withEmail.length; i += 150) {
+    const { data } = await admin.from('profiles').select('email').in('email', withEmail.slice(i, i + 150).map((p) => p.email));
+    for (const r of data || []) taken.add(String(r.email).toLowerCase());
+  }
+  const eligible = withEmail.filter((p) => !taken.has(p.email)).sort(byName);
+  const { data: lim } = await admin.rpc('company_limits', { _company_id: companyId });
+  const max: number | null = (Array.isArray(lim) ? lim[0]?.max_users : (lim as any)?.max_users) ?? null;
+  const { count } = await admin.from('profiles').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('is_active', true).not('profile_type', 'in', '(system,bot)');
+  const used = count ?? 0; const seats = max == null ? null : Math.max(0, max - used);
+  return { people, active, eligible, max, used, seats, summary: { total: people.length, dismissed: people.length - active.length, withoutEmail: active.length - withEmail.length, alreadyRegistered: withEmail.length - eligible.length, eligible: eligible.length } };
+}
+
+const strongPassword = () => { const a = crypto.getRandomValues(new Uint8Array(18)); const L = 'abcdefghjkmnpqrstuvwxyz', U = 'ABCDEFGHJKLMNPQRSTUVWXYZ', D = '23456789', S = '!@#$%&*?'; const all = L + U + D + S; return 'Aa1!' + Array.from(a, (b) => all[b % all.length]).join(''); };
+
+async function importBatch(who: { userId: string; companyId: string }, jwt: string, row: any, mode: string) {
+  const plan = await importPlan(who.companyId, row);
+  const take = plan.seats == null ? plan.eligible.length : Math.min(plan.seats, plan.eligible.length);
+  const queue = mode === 'all' ? plan.eligible.slice(0, take) : [];
+  const userDb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY') || '', { global: { headers: { Authorization: `Bearer ${jwt}` } }, auth: { persistSession: false, autoRefreshToken: false } });
+  const { data: secs } = await admin.from('sectors').select('id, name, is_general').eq('company_id', who.companyId);
+  const sectors = new Map<string, string>((secs || []).map((s: any) => [norm(s.name), s.id]));
+  const general = (secs || []).find((s: any) => s.is_general)?.id ?? null;
+  const deadline = Date.now() + 100_000; let created = 0, failed = 0, newSectors = 0, limitHit = false, first = ''; const errors: string[] = [];
+  for (let i = 0; i < queue.length; i++) {
+    const p = queue[i];
+    if (Date.now() > deadline) break;
+    let sectorId: string | null = general;
+    if (p.depto) {
+      const k = norm(p.depto);
+      if (!sectors.has(k)) { const { data: ns } = await admin.from('sectors').insert({ company_id: who.companyId, name: p.depto }).select('id').single(); if (ns) { sectors.set(k, ns.id); newSectors++; } }
+      sectorId = sectors.get(k) ?? general;
+    }
+    const { data: au, error: ae } = await admin.auth.admin.createUser({ email: p.email, password: strongPassword(), email_confirm: true, user_metadata: { name: p.name, display_name: p.name.split(' ')[0], company_id: who.companyId } });
+    if (ae || !au?.user) { failed++; if (errors.length < 5) errors.push(`${p.name}: ${/already been registered/i.test(ae?.message || '') ? 'e-mail já cadastrado' : 'não foi possível criar o acesso'}`); continue; }
+    const { error: pe } = await admin.from('profiles').update({ company_id: who.companyId, name: p.name, birth_date: p.birth, sector_id: sectorId, phone: p.phone || null, address: p.address || null, registration_number: p.reg || null, profile_type: 'user', autonomy_level: 'colaborador', is_active: true }).eq('user_id', au.user.id);
+    if (pe) {
+      await admin.auth.admin.deleteUser(au.user.id);
+      if (String(pe.message).includes('LIMITE_USUARIOS')) { limitHit = true; break; }
+      failed++; if (errors.length < 5) errors.push(`${p.name}: não foi possível salvar o perfil`); continue;
+    }
+    await admin.from('user_roles').insert({ user_id: au.user.id, role: 'colaborador' });
+    const { data: prof } = await admin.from('profiles').select('id').eq('user_id', au.user.id).maybeSingle();
+    if (prof?.id && Object.keys(p.rec).length) await userDb.rpc('set_employee_record', { _profile: prof.id, _data: p.rec });
+    created++; if (!first) first = p.name;
+  }
+  // what is still waiting after this batch (the app calls again until nothing is pending)
+  const pending = limitHit ? 0 : Math.max(0, queue.length - created - failed);
+  return { ok: true, created, failed, newSectors, pending, limitHit, errors, summary: plan.summary };
+}
+
 Deno.serve(async (req) => {
   const headers = { ...cors(req.headers.get('Origin')), 'Content-Type': 'application/json' };
   const reply = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers });
@@ -412,6 +549,21 @@ Deno.serve(async (req) => {
       const src = await own(body.id); if (!src) return reply({ error: 'Integração não encontrada.' }, 404);
       const r = await runSync(src);
       return reply(r, 'error' in r ? 400 : 200);
+    }
+    if (route === 'import-preview') {
+      const src = await own(body.id); if (!src) return reply({ error: 'Integração não encontrada.' }, 404);
+      try {
+        const p = await importPlan(who.companyId, src);
+        const willImport = p.seats == null ? p.eligible.length : Math.min(p.seats, p.eligible.length);
+        const inc = p.eligible.slice(0, willImport); const exc = p.eligible.slice(willImport);
+        return reply({ ok: true, ...p.summary, limit: p.max, used: p.used, seats: p.seats, willImport, over: exc.length > 0, excluded: exc.length, firstName: inc[0]?.name || null, lastName: inc[inc.length - 1]?.name || null, firstExcluded: exc[0]?.name || null,
+          fields: Array.from(new Set(inc.flatMap((x) => Object.keys(x.rec)))).length });
+      } catch (e) { return reply({ error: (e as Error).message }, 400); }
+    }
+    if (route === 'import-run') {
+      const src = await own(body.id); if (!src) return reply({ error: 'Integração não encontrada.' }, 404);
+      const jwt = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+      try { return reply(await importBatch(who, jwt, src, body.mode === 'all' ? 'all' : 'none')); } catch (e) { return reply({ error: (e as Error).message }, 400); }
     }
     if (route === 'toggle') {
       const src = await own(body.id); if (!src) return reply({ error: 'Integração não encontrada.' }, 404);

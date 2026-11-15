@@ -2,7 +2,7 @@
 // (admissions, salaries, dismissals, roles, departments…) for its metrics. No time-clock data is imported. Several systems can be connected.
 // The secret goes straight to the `hr-sync` edge function (encrypted there); this screen never reads it back.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Users, Loader2, Trash2, CheckCircle2, AlertCircle, RefreshCw, PlugZap, Plus, Pencil, Search } from 'lucide-react';
+import { Users, Loader2, Trash2, CheckCircle2, AlertCircle, RefreshCw, PlugZap, Plus, Pencil, Search, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -28,6 +28,69 @@ function ago(v: string | null | undefined) {
   if (m < 60) return `há ${m} min`;
   if (m < 1440) return `há ${Math.floor(m / 60)} h`;
   return `há ${Math.floor(m / 1440)} d`;
+}
+
+type ImpPreview = { total: number; dismissed: number; withoutEmail: number; alreadyRegistered: number; eligible: number; limit: number | null; used: number; seats: number | null; willImport: number; over: boolean; excluded: number; firstName: string | null; lastName: string | null; firstExcluded: string | null; fields: number };
+type ImpDone = { created: number; failed: number; newSectors: number; limitHit: boolean; errors: string[] };
+
+/** Create ewvon users from the people of a connected system: counts first, asks when the plan has fewer seats than people. */
+function ImportPanel({ source, name, onClose }: { source: Source; name: string; onClose: () => void }) {
+  const [pv, setPv] = useState<ImpPreview | null>(null);
+  const [err, setErr] = useState('');
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [done, setDone] = useState<ImpDone | null>(null);
+  useEffect(() => { let alive = true; call('import-preview', { id: source.id }).then((r) => alive && setPv(r as ImpPreview)).catch((e) => alive && setErr((e as Error).message)); return () => { alive = false; }; }, [source.id]);
+
+  const start = async () => {
+    if (!pv) return;
+    setRunning(true); setProgress(0);
+    const acc: ImpDone = { created: 0, failed: 0, newSectors: 0, limitHit: false, errors: [] };
+    try {
+      for (let i = 0; i < 40; i++) {
+        const r = await call('import-run', { id: source.id, mode: 'all' });
+        acc.created += r.created || 0; acc.failed += r.failed || 0; acc.newSectors += r.newSectors || 0; acc.limitHit = acc.limitHit || !!r.limitHit; acc.errors.push(...(r.errors || []));
+        setProgress(acc.created);
+        if (!r.pending || (!r.created && !r.failed)) break;
+      }
+      setDone(acc);
+    } catch (e) { setErr((e as Error).message); if (acc.created) setDone(acc); }
+    finally { setRunning(false); }
+  };
+
+  const box = 'space-y-3 rounded-xl border border-border p-3 text-[13px]';
+  if (done) return (
+    <div className={box}>
+      <p className="font-semibold">Importação concluída</p>
+      <p>{done.created} colaborador(es) criado(s){done.newSectors ? `, ${done.newSectors} setor(es) novo(s)` : ''}{done.failed ? `, ${done.failed} com falha` : ''}.{done.limitHit ? ' O limite do plano foi atingido e o restante não foi importado.' : ''}</p>
+      {done.errors.length ? <ul className="list-disc pl-5 text-[12px] text-muted-foreground">{done.errors.map((x, i) => <li key={i}>{x}</li>)}</ul> : null}
+      <p className="text-[12px] text-muted-foreground">Cada pessoa recebeu uma senha aleatória que ninguém conhece: ela entra pelo e-mail cadastrado usando “Esqueci minha senha”, ou você define a senha em Gerenciamento.</p>
+      <button className="dk-btn" type="button" onClick={onClose}>Fechar</button>
+    </div>
+  );
+  return (
+    <div className={box}>
+      <p className="font-semibold">Importar colaboradores de {name}</p>
+      {err ? <p className="rounded-lg bg-destructive/10 px-3 py-2 text-[12px] text-destructive">{err}</p> : null}
+      {!pv && !err ? <p className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Consultando o sistema e o limite do plano…</p> : null}
+      {pv ? (
+        <>
+          <p>O sistema tem <b>{pv.total}</b> pessoa(s): {pv.total - pv.dismissed} ativa(s){pv.dismissed ? `, ${pv.dismissed} desligada(s) (não são importadas)` : ''}.
+            {pv.withoutEmail ? ` ${pv.withoutEmail} sem e-mail válido (não dá para criar o acesso).` : ''}{pv.alreadyRegistered ? ` ${pv.alreadyRegistered} já têm cadastro no ewvon.` : ''} <b>{pv.eligible}</b> podem ser criadas.</p>
+          <p className="text-muted-foreground">{pv.limit == null ? 'Sua empresa não tem limite de usuários: todos serão importados.' : `Seu plano permite ${pv.limit} usuário(s) ativo(s); hoje há ${pv.used}, restam ${pv.seats}.`} São importados nome, e-mail, telefone, nascimento, setor (criado se não existir), matrícula e tudo que o sistema enviar da ficha (cargo, admissão, salário, documentos, endereço, contrato, jornada…).</p>
+          {pv.over ? (
+            <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-[12.5px]">Há mais pessoas do que o plano comporta. A importação segue a <b>ordem alfabética</b> pelo nome: dá para importar <b>{pv.willImport}</b> ({pv.firstName} … {pv.lastName}) e ficam de fora {pv.excluded}, a partir de {pv.firstExcluded}. Escolha importar essa quantidade ou não importar nada (você também pode comprar usuários extras em Pagamentos e tentar de novo).</p>
+          ) : null}
+          {pv.willImport === 0 ? <p className="text-muted-foreground">Não há ninguém para importar agora.</p> : null}
+          {running ? <p className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Criando usuários… {progress} de {pv.willImport}</p> : null}
+          <div className="flex flex-wrap gap-2">
+            {pv.willImport > 0 ? <button className="dk-btn pri" type="button" disabled={running} onClick={() => void start()}>{pv.over ? `Importar ${pv.willImport} (ordem alfabética)` : `Importar ${pv.willImport} colaborador(es)`}</button> : null}
+            <button className="dk-btn" type="button" disabled={running} onClick={onClose}>{pv.over ? 'Não importar nenhum' : 'Cancelar'}</button>
+          </div>
+        </>
+      ) : <button className="dk-btn" type="button" onClick={onClose}>Fechar</button>}
+    </div>
+  );
 }
 
 function SourceForm({ presets, source, onChanged, onClose }: { presets: Preset[]; source?: Source; onChanged: () => void; onClose: () => void }) {
@@ -152,6 +215,7 @@ export function HrCard() {
   const [presets, setPresets] = useState<Preset[] | null>(null);
   const [presetErr, setPresetErr] = useState('');
   const [form, setForm] = useState<'new' | string | null>(null);
+  const [importing, setImporting] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [, tick] = useState(0);
   useEffect(() => { const t = window.setInterval(() => tick((n) => n + 1), 30000); return () => window.clearInterval(t); }, []);
@@ -218,9 +282,11 @@ export function HrCard() {
                 {!failed && s.last_error ? <p className="rounded-lg bg-muted px-3 py-2 text-[12px] text-muted-foreground">{s.last_error}</p> : null}
                 <div className="flex flex-wrap gap-2">
                   <button className="dk-btn" type="button" onClick={() => void sync(s)} disabled={busy !== null}>{busy === 'sync' + s.id ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1.5 h-4 w-4" />}Sincronizar agora</button>
+                  <button className="dk-btn" type="button" onClick={() => setImporting(importing === s.id ? null : s.id)} disabled={busy !== null || failed}><UserPlus className="mr-1.5 h-4 w-4" />Importar como usuários</button>
                   <button className="dk-btn" type="button" onClick={() => setForm(s.id)} disabled={busy !== null}><Pencil className="mr-1.5 h-4 w-4" />Editar</button>
                   <button className="dk-btn" style={{ color: '#8E1B10' }} type="button" onClick={() => void remove(s)} disabled={busy !== null}><Trash2 className="mr-1.5 h-4 w-4" />Remover</button>
                 </div>
+                {importing === s.id ? <ImportPanel source={s} name={s.label || nameOf(s)} onClose={() => { setImporting(null); void load(); }} /> : null}
               </div>
             );
           })}
