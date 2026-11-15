@@ -1,0 +1,20 @@
+// Systems of people management the admin can connect (same list as the `hr-sync` edge function; kept here so the form opens
+// instantly and pre-filled even if the function is slow). Address, header, list path and login type come from each vendor's API docs.
+export interface HrPreset { id: string; name: string; cat: string; needsUrl?: boolean; auth: 'header' | 'bearer' | 'basic' | 'oauth'; header?: string | null; tokenLabel?: string; note?: string; url?: string | null; path?: string }
+const B = (id: string, name: string, cat: string): HrPreset => ({ id, name, cat, path: 'data', auth: 'bearer', needsUrl: true, tokenLabel: 'Token da API', note: 'Cole o endereço (URL) da API da sua conta em Opções avançadas.' });
+const O = (id: string, name: string, cat: string): HrPreset => ({ id, name, cat, path: 'data', auth: 'oauth', needsUrl: true, tokenLabel: 'Client ID:Client Secret', note: 'Informe Client ID e Secret (id:secret), o endereço do login (token) e o endereço da API da sua conta.' });
+export const HR_PRESETS: HrPreset[] = [
+  { id: 'convenia', name: 'Convenia', cat: 'Gestão de pessoas', url: 'https://public-api.convenia.com.br/api/v3/employees?paginate=200', path: 'data', auth: 'header', header: 'token', needsUrl: false, tokenLabel: 'Token da Convenia', note: 'Gere o token em Configurações > Integrações da Convenia. Busca também cargo, sexo e demitidos; os detalhes completam aos poucos por causa do limite da Convenia.' },
+  { id: 'pontomais', name: 'Pontomais', cat: 'Ponto eletrônico', url: 'https://api.pontomaisweb.com.br/external_api/v1/employees', path: 'employees', auth: 'header', header: 'access-token', needsUrl: false, tokenLabel: 'Token do Pontomais', note: 'Endereço sugerido. Confirme na documentação da sua conta.' },
+  { id: 'tangerino', name: 'Sólides / Tangerino', cat: 'Ponto eletrônico', url: 'https://employer.tangerino.com.br/employee/find-all', path: 'content', auth: 'header', header: 'Authorization', needsUrl: false, tokenLabel: 'Token', note: 'Endereço sugerido. Confirme na documentação da sua conta.' },
+  { id: 'factorial', name: 'Factorial', cat: 'Gestão de pessoas', url: 'https://api.factorialhr.com/api/2025-01-01/resources/employees/employees', path: 'data', auth: 'header', header: 'x-api-key', needsUrl: false, tokenLabel: 'Chave da API', note: 'Endereço sugerido. Confirme a versão da API na documentação.' },
+  { id: 'kenjo', name: 'Kenjo', cat: 'Gestão de pessoas', url: 'https://api.kenjo.io/api/v1/employees', path: '', auth: 'bearer', needsUrl: false, tokenLabel: 'Token', note: 'Endereço sugerido. Confirme na documentação da sua conta.' },
+  B('ahgora', 'Ahgora', 'Ponto eletrônico'), B('pontotel', 'Pontotel', 'Ponto eletrônico'), B('secullum', 'Secullum', 'Ponto eletrônico'),
+  B('dimep', 'Dimep', 'Ponto eletrônico'), B('henry', 'Henry', 'Ponto eletrônico'), B('controlid', 'Control iD', 'Ponto eletrônico'), B('pontofopag', 'PontoFopag', 'Ponto eletrônico'),
+  B('senior', 'Senior HCM', 'Gestão de pessoas'), B('sankhya', 'Sankhya', 'Gestão de pessoas'), B('protheus', 'TOTVS Protheus', 'Gestão de pessoas'), B('adp', 'ADP', 'Gestão de pessoas'),
+  B('bamboohr', 'BambooHR', 'Gestão de pessoas'), B('hibob', 'HiBob', 'Gestão de pessoas'), B('rippling', 'Rippling', 'Gestão de pessoas'), B('deel', 'Deel', 'Gestão de pessoas'), B('gusto', 'Gusto', 'Gestão de pessoas'),
+  { id: 'totvs', name: 'TOTVS RM', cat: 'Gestão de pessoas', path: 'data', auth: 'basic', needsUrl: true, tokenLabel: 'usuário:senha', note: 'Informe usuário:senha e cole o endereço da API do seu servidor em Opções avançadas.' },
+  O('nexti', 'Nexti', 'Ponto e escalas'), O('workday', 'Workday', 'Gestão de pessoas'), O('sap', 'SAP SuccessFactors', 'Gestão de pessoas'), O('oracle', 'Oracle HCM', 'Gestão de pessoas'), O('personio', 'Personio', 'Gestão de pessoas'),
+  B('custom', 'API própria', 'Seu sistema'),
+  { id: 'generic', name: 'Outro sistema (JSON)', cat: 'Qualquer API', path: '', auth: 'bearer', needsUrl: true, tokenLabel: 'Token da API', note: 'Qualquer API que devolva uma lista em JSON.' },
+];

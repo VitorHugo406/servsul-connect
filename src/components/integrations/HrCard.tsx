@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { appConfirm } from '@/lib/appDialog';
 import { toast } from 'sonner';
+import { HR_PRESETS } from '@/lib/hrPresets';
 import { GuideDropdown, HrGuide } from '@/components/integrations/IntegrationGuides';
 
 type Preset = { id: string; name: string; cat: string; needsUrl?: boolean; auth: 'header' | 'bearer' | 'basic' | 'oauth'; header?: string; tokenLabel?: string; note?: string; url?: string; path?: string };
@@ -213,7 +214,8 @@ export function HrCard({ view = 'sistema' }: { view?: 'sistema' | 'dash' }) {
   const isDash = view === 'dash';
   const [sources, setSources] = useState<Source[] | null>(null);
   const [listErr, setListErr] = useState('');
-  const [presets, setPresets] = useState<Preset[] | null>(null);
+  const [presetsSrv, setPresets] = useState<Preset[] | null>(null);
+  const presets: Preset[] = presetsSrv ?? (HR_PRESETS as Preset[]);
   const [presetErr, setPresetErr] = useState('');
   const [form, setForm] = useState<'new' | string | null>(null);
   const [importing, setImporting] = useState<string | null>(null);
@@ -244,7 +246,7 @@ export function HrCard({ view = 'sistema' }: { view?: 'sistema' | 'dash' }) {
 
   const editing = form && form !== 'new' ? sources?.find((s) => s.id === form) : undefined;
 
-  const openNew = () => { if (!presets) void loadPresets(); setForm('new'); };
+  const openNew = () => setForm('new');
   const canAdd = !!sources && sources.length < 6 && form === null;
   const icon = 'dk-ic bg';
 
@@ -263,15 +265,7 @@ export function HrCard({ view = 'sistema' }: { view?: 'sistema' | 'dash' }) {
         : <>Conecte o sistema de gestão de pessoas (Convenia, Senior, Pontomais e outros) para <b>criar os usuários automaticamente</b>. Se o plano tiver menos vagas que pessoas, a importação segue a ordem alfabética e pergunta antes.</>}</p>
 
       {listErr ? <div className="dk-err">{listErr}</div> : null}
-      {presetErr ? <div className="dk-err">{presetErr}<button type="button" onClick={() => void loadPresets()}>Tentar de novo</button></div> : null}
       {sources === null && !listErr ? <div className="flex justify-center p-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : null}
-
-      {sources && !sources.length && form === null ? (
-        <div className="dk-empty" style={{ background: '#F6F7F9', borderRadius: 16 }}>
-          <p style={{ marginBottom: 12 }}>Nenhum sistema conectado ainda. Você só precisa colar a chave de acesso.</p>
-          <button className="dk-btn pri lg" style={{ alignSelf: 'auto' }} type="button" onClick={openNew}><Plus className="h-4 w-4" />Adicionar sistema</button>
-        </div>
-      ) : null}
 
       {sources?.length ? (
         <div className="flex flex-col" style={{ background: '#F6F7F9', borderRadius: 16 }}>
@@ -304,7 +298,7 @@ export function HrCard({ view = 'sistema' }: { view?: 'sistema' | 'dash' }) {
         </div>
       ) : null}
 
-      {form !== null ? (presets ? <SourceForm key={form} presets={presets} source={editing} onChanged={() => void load()} onClose={() => setForm(null)} /> : <p className="flex items-center gap-2 text-[12.5px] text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Carregando a lista de sistemas…</p>) : null}
+      {form !== null ? <SourceForm key={form} presets={presets} source={editing} onChanged={() => void load()} onClose={() => setForm(null)} /> : null}
 
       <GuideDropdown title="Como configurar"><HrGuide /></GuideDropdown>
       {isDash ? <p className="dk-priv">Salários, demissões e demais dados ficam visíveis só para administradores e para quem tem acesso ao Dash.</p> : null}

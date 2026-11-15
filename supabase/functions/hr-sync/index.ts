@@ -34,7 +34,7 @@ async function open(stored: string) {
 }
 
 const cors = (origin: string | null) => ({
-  'Access-Control-Allow-Origin': origin && (origin === SITE_URL || /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin) || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) ? origin : SITE_URL,
+  'Access-Control-Allow-Origin': origin && (origin === SITE_URL || /^https:\/\/(www\.)?ewvon\.com$/.test(origin) || /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin) || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) ? origin : SITE_URL,
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-ewvon-key',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   Vary: 'Origin',
