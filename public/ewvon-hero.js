@@ -23,82 +23,94 @@
     /* barra de navegação sempre preta */
     'nav{--bg:#09090b;--ink:#f5f5f7;--mute:#a4a4ae;--line:#26262c;--c1:#131316;--c2:#1b1b20;--w:#1a1a1f;--inv:1;--gl:rgba(8,8,10,.92);--glb:rgba(8,8,10,.96);background:rgba(8,8,10,.92)!important;color:#f5f5f7;border:1px solid #1f1f24}' +
     'nav .btn{background:#fff;color:#0a0a0b}nav .btn s{background:#0a0a0b}nav .btn.o{background:transparent;color:#fff;border:1px solid #2c2c33}' +
-    '.kv{position:absolute;z-index:-1;left:50%;width:100vw;margin-left:-50vw;top:-96px;bottom:0;background:#09090b;overflow:hidden;border-radius:0 0 40px 40px;text-transform:uppercase;color:#fff}' +
+    /* palco: só transform e opacity animam (composição na GPU), nada de blur/clip-path animado */
+    '.kv{position:absolute;z-index:-1;left:50%;width:100vw;margin-left:-50vw;top:-96px;bottom:0;background:#09090b;overflow:hidden;border-radius:0 0 40px 40px;text-transform:uppercase;color:#fff;contain:layout paint}' +
+    '.kv *{backface-visibility:hidden}' +
     '.kvs{position:absolute;inset:0;display:none;overflow:hidden}.kvs.on{display:block}.kvs.up{z-index:2}' +
-    '.kvb{background:' + BLUE + ';color:#050c2b}.kvd{background:#09090b;color:#fff}' +
+    '.kvp{position:absolute;inset:0;will-change:transform}' +
+    '.kvb .kvp{background:' + BLUE + '}.kvd .kvp{background:#09090b}' +
+    '.kvb{color:#050c2b}.kvd{color:#fff}' +
     '.kvc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}' +
     '.kvw{display:inline-block;text-align:left}' +
-    '.kvt{font-weight:800;line-height:.88;letter-spacing:-.05em;font-size:clamp(44px,10.2vw,172px);white-space:nowrap;position:relative}' +
-    '.kvt.sm{font-size:clamp(20px,3.4vw,56px);letter-spacing:-.03em;margin-bottom:.12em;line-height:1}' +
-    '.kvm{display:inline-block;overflow:hidden;vertical-align:top;padding:.05em .03em .12em;margin:-.05em -.03em -.12em}' +
-    '.kvl{display:inline-block;opacity:0;transform:translateY(110%);animation:kvup .62s cubic-bezier(.2,.9,.2,1) forwards;animation-delay:calc(var(--d,0s) + var(--i) * 38ms)}' +
-    '@keyframes kvup{0%{opacity:0;transform:translateY(110%);filter:blur(10px)}55%{opacity:1}100%{opacity:1;transform:none;filter:none}}' +
-    '.kvs.out .kvc,.kvs.out .kvl2{animation:kvout .42s cubic-bezier(.6,0,1,1) forwards}' +
-    '@keyframes kvout{to{opacity:0;transform:translateX(-16%) scaleX(1.4);filter:blur(18px)}}' +
+    '.kvt{font-family:"Archivo Black","Plus Jakarta Sans",system-ui,sans-serif;font-weight:400;line-height:.9;letter-spacing:-.02em;font-size:clamp(40px,9.2vw,158px);white-space:nowrap;position:relative}' +
+    '.kvt.sm{font-size:clamp(18px,3.2vw,52px);letter-spacing:-.01em;margin-bottom:.14em;line-height:1}' +
+    '.kvm{display:inline-block;overflow:hidden;vertical-align:top;padding:.04em .02em .1em;margin:-.04em -.02em -.1em}' +
+    '.kvl{display:inline-block;transform:translate3d(0,112%,0);animation:kvup .75s cubic-bezier(.16,1,.3,1) forwards;animation-delay:calc(var(--d,0s) + var(--i) * 34ms);will-change:transform}' +
+    '@keyframes kvup{to{transform:translate3d(0,0,0)}}' +
+    /* saída: rastro de movimento sem blur (esticamento + fade) */
+    '.kvs.out .kvc,.kvs.out .kvside{animation:kvout .45s cubic-bezier(.7,0,.84,0) forwards}' +
+    '@keyframes kvout{to{opacity:0;transform:translate3d(-14%,0,0) scaleX(1.35)}}' +
     /* S0: ponto */
-    '.kvdot{position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px;border-radius:50%;background:' + BLUE + ';animation:kvdp .55s ease-in-out infinite alternate}@keyframes kvdp{to{transform:scale(1.9)}}' +
-    /* S1: campo azul abre do ponto */
-    '.kv1{clip-path:circle(0 at 50% 50%);animation:kvcircle .7s cubic-bezier(.7,0,.2,1) forwards}@keyframes kvcircle{to{clip-path:circle(150% at 50% 50%)}}' +
+    '.kvdot{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px;border-radius:50%;background:' + BLUE + ';animation:kvdp .6s ease-in-out infinite alternate}@keyframes kvdp{to{transform:scale(1.8)}}' +
+    /* S1: o ponto vira o campo azul (círculo que cresce) */
+    '.kv1 .kvp{border-radius:50%;left:50%;top:50%;right:auto;bottom:auto;width:20px;height:20px;margin:-10px;transform:scale(1);animation:kvgrow .8s cubic-bezier(.65,0,.2,1) forwards}' +
+    '@keyframes kvgrow{to{transform:scale(260)}}' +
+    '.kv1 .kvc{opacity:0;animation:kvfadein .01s linear .35s forwards}@keyframes kvfadein{to{opacity:1}}' +
     /* glitch na palavra */
-    '.kvt.gl:before{content:attr(data-t);position:absolute;left:0;top:0;width:100%;clip-path:inset(34% 0 44% 0);color:inherit;opacity:0;animation:kvgl .5s steps(7) 1.15s 1}' +
-    '@keyframes kvgl{0%{opacity:1;transform:translateX(-26px)}20%{transform:translateX(22px)}40%{transform:translateX(-12px)}60%{transform:translateX(30px)}80%{transform:translateX(-6px)}100%{opacity:0;transform:none}}' +
-    '.kvscan{position:absolute;left:0;right:0;height:3px;background:currentColor;opacity:0;animation:kvsc .55s linear 1.1s 1}@keyframes kvsc{0%{opacity:.9;top:30%}100%{opacity:0;top:78%}}' +
-    /* S3: abre pela linha do meio */
-    '.kv3{clip-path:inset(49.7% 0 49.7% 0);animation:kvopen .8s cubic-bezier(.7,0,.2,1) .05s forwards}@keyframes kvopen{to{clip-path:inset(0 0 0 0)}}' +
-    '.kvcard{position:absolute;left:50%;top:50%;width:min(52vw,720px);aspect-ratio:1440/860;border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 40px 90px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.16);transform:translate(-50%,-50%) perspective(1600px) rotateY(-20deg) rotateX(8deg) rotateZ(-3deg)}' +
+    '.kvt.gl:before{content:attr(data-t);position:absolute;left:0;top:0;width:100%;clip-path:inset(34% 0 44% 0);opacity:0;animation:kvgl .5s steps(7) 1.2s 1}' +
+    '@keyframes kvgl{0%{opacity:1;transform:translate3d(-24px,0,0)}20%{transform:translate3d(20px,0,0)}40%{transform:translate3d(-10px,0,0)}60%{transform:translate3d(28px,0,0)}80%{transform:translate3d(-6px,0,0)}100%{opacity:0;transform:none}}' +
+    '.kvscan{position:absolute;left:-2%;right:-2%;top:0;height:3px;background:currentColor;opacity:0;animation:kvsc .6s linear 1.15s 1}@keyframes kvsc{0%{opacity:.9;transform:translate3d(0,30%,0)}100%{opacity:0;transform:translate3d(0,320%,0)}}' +
+    /* S3: abre pela linha do meio (painel que cresce) e desfile de telas */
+    '.kv3 .kvp{transform:scaleY(.006);animation:kvopen .75s cubic-bezier(.65,0,.2,1) forwards}@keyframes kvopen{to{transform:scaleY(1)}}' +
+    '.kvcard{position:absolute;left:50%;top:50%;width:min(50vw,700px);aspect-ratio:1440/860;border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 30px 70px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.14);will-change:transform;transform:translate3d(-50%,-50%,0) perspective(1600px) rotateY(-18deg) rotateX(7deg) rotateZ(-3deg)}' +
     '.kvcard img{display:block;width:100%;height:100%;object-fit:cover;object-position:top}' +
-    '.kvcard.z{animation:kvz 1.15s cubic-bezier(.2,.9,.2,1) .35s both}' +
-    '@keyframes kvz{from{opacity:0;filter:blur(16px);transform:translate(-50%,-50%) perspective(1600px) rotateY(-55deg) rotateX(14deg) rotateZ(-10deg) scale(3.4)}to{opacity:1;filter:none;transform:translate(-50%,-50%) perspective(1600px) rotateY(-20deg) rotateX(8deg) rotateZ(-3deg) scale(1)}}' +
-    '.kvcard.z2{animation:kvz 1.15s cubic-bezier(.2,.9,.2,1) .35s both,kvfl 3.4s ease-in-out 1.6s infinite alternate}' +
-    '@keyframes kvfl{to{transform:translate(-50%,-52%) perspective(1600px) rotateY(-14deg) rotateX(6deg) rotateZ(-2deg)}}' +
+    '.kv3 .kvcard{opacity:0}' +
+    '.kv3 .c1{z-index:3;animation:kvr1 1.5s cubic-bezier(.16,1,.3,1) .55s both,kvfl 3.4s ease-in-out 2.1s infinite alternate}' +
+    '.kv3 .c2{z-index:2;width:min(36vw,500px);animation:kvr2 1.5s cubic-bezier(.16,1,.3,1) .75s both}' +
+    '.kv3 .c3{z-index:2;width:min(36vw,500px);animation:kvr3 1.5s cubic-bezier(.16,1,.3,1) .95s both}' +
+    '@keyframes kvr1{from{opacity:0;transform:translate3d(-50%,60vh,0) perspective(1600px) rotateY(-18deg) rotateX(7deg) rotateZ(-3deg)}to{opacity:1;transform:translate3d(-50%,-50%,0) perspective(1600px) rotateY(-18deg) rotateX(7deg) rotateZ(-3deg)}}' +
+    '@keyframes kvr2{from{opacity:0;transform:translate3d(-170%,60vh,0) perspective(1600px) rotateY(-26deg) rotateX(7deg) rotateZ(-6deg)}to{opacity:1;transform:translate3d(-128%,-70%,0) perspective(1600px) rotateY(-26deg) rotateX(7deg) rotateZ(-6deg)}}' +
+    '@keyframes kvr3{from{opacity:0;transform:translate3d(70%,60vh,0) perspective(1600px) rotateY(-10deg) rotateX(7deg) rotateZ(0deg)}to{opacity:1;transform:translate3d(28%,-30%,0) perspective(1600px) rotateY(-10deg) rotateX(7deg) rotateZ(0deg)}}' +
+    '@keyframes kvfl{to{transform:translate3d(-50%,-53%,0) perspective(1600px) rotateY(-14deg) rotateX(6deg) rotateZ(-2deg)}}' +
     /* S4: logo grande */
-    '.kvlogo{width:min(48vw,540px);filter:brightness(0);opacity:.92;animation:kvlg 1.1s cubic-bezier(.2,.9,.2,1) .15s both}@keyframes kvlg{from{opacity:0;transform:scale(3);filter:brightness(0) blur(20px)}to{opacity:.92;transform:none;filter:brightness(0)}}' +
-    '.kvbar{position:absolute;left:0;right:0;bottom:0;height:0;background:#09090b;animation:kvbar .5s cubic-bezier(.7,0,.2,1) 1.9s forwards}@keyframes kvbar{to{height:100%}}' +
+    '.kvlogo{width:min(46vw,520px);filter:brightness(0);opacity:0;will-change:transform;animation:kvlg 1s cubic-bezier(.16,1,.3,1) .1s forwards}@keyframes kvlg{from{opacity:0;transform:scale(2.4)}to{opacity:.92;transform:none}}' +
+    '.kvbar{position:absolute;left:0;right:0;bottom:0;top:0;background:#09090b;transform:scaleY(0);transform-origin:bottom;will-change:transform;animation:kvbar .55s cubic-bezier(.65,0,.2,1) 1.9s forwards}@keyframes kvbar{to{transform:scaleY(1)}}' +
     /* S5: cartão + texto lateral */
-    '.kv5{clip-path:inset(0 0 0 100%);animation:kvwipe .6s cubic-bezier(.7,0,.2,1) forwards}@keyframes kvwipe{to{clip-path:inset(0 0 0 0)}}' +
+    '.kv5 .kvp{transform:translate3d(100%,0,0);animation:kvwipe .65s cubic-bezier(.65,0,.2,1) forwards}@keyframes kvwipe{to{transform:none}}' +
+    '.kv5 .kvside,.kv5 .kvring,.kv5 .kvcard{opacity:0;animation:kvfadein .01s linear .4s forwards}' +
     '.kvside{position:absolute;left:7vw;top:50%;transform:translateY(-50%);text-align:left}' +
-    '.kvside .kvt{font-size:clamp(40px,8.2vw,138px);color:#fff}.kvside .kvt.sm{font-size:clamp(20px,3vw,48px);color:#8fa9ff}' +
-    '.kvpair{position:absolute;left:0;top:0;transform:translateY(-50%)}.kvpair.a{animation:kvhide .35s ease-in 1.45s forwards}@keyframes kvhide{to{opacity:0;transform:translateY(-50%) translateX(-6%);filter:blur(10px)}}' +
-    '.kvring{position:absolute;left:73%;top:50%;width:min(44vw,560px);aspect-ratio:1;margin:calc(min(44vw,560px) / -2) 0 0 calc(min(44vw,560px) / -2);border-radius:50%;border:2px dashed rgba(143,169,255,.35);animation:kvspin 14s linear infinite}@keyframes kvspin{to{transform:rotate(360deg)}}' +
-    '.kv5 .kvcard{left:73%;width:min(30vw,420px);aspect-ratio:3/4;animation:kvfly .9s cubic-bezier(.2,.9,.2,1) .3s both}.kv5 .kvcard img{object-position:left top}' +
-    '@keyframes kvfly{from{opacity:0;filter:blur(18px);transform:translate(40vw,-50%) perspective(1600px) rotateY(-50deg) rotateZ(-10deg)}to{opacity:1;filter:none;transform:translate(-50%,-50%) perspective(1600px) rotateY(-18deg) rotateX(6deg) rotateZ(-4deg)}}' +
-    /* S6: símbolos gigantes que se transformam */
+    '.kvside .kvt{font-size:clamp(38px,7.4vw,126px);color:#fff}.kvside .kvt.sm{font-size:clamp(18px,2.8vw,44px);color:#8fa9ff}' +
+    '.kvpair{position:absolute;left:0;top:0;transform:translateY(-50%)}.kvpair.a{animation:kvhide .4s cubic-bezier(.7,0,.84,0) 1.5s forwards}@keyframes kvhide{to{opacity:0;transform:translate3d(-8%,-50%,0)}}' +
+    '.kvring{position:absolute;left:73%;top:50%;width:min(44vw,560px);aspect-ratio:1;margin:calc(min(44vw,560px) / -2) 0 0 calc(min(44vw,560px) / -2);border-radius:50%;border:2px dashed rgba(143,169,255,.35);will-change:transform;animation:kvfadein .01s linear .4s forwards,kvspin 16s linear infinite}@keyframes kvspin{to{transform:rotate(360deg)}}' +
+    '.kv5 .kvcard{left:73%;width:min(30vw,420px);aspect-ratio:3/4;animation:kvfadein .01s linear .4s forwards,kvfly 1s cubic-bezier(.16,1,.3,1) .45s both}.kv5 .kvcard img{object-position:left top}' +
+    '@keyframes kvfly{from{transform:translate3d(60vw,-50%,0) perspective(1600px) rotateY(-45deg) rotateZ(-10deg)}to{transform:translate3d(-50%,-50%,0) perspective(1600px) rotateY(-18deg) rotateX(6deg) rotateZ(-4deg)}}' +
+    /* S6: símbolos gigantes que se transformam (só escala, giro e opacidade) */
     '.kvg{position:absolute;left:50%;top:46%;width:min(54vh,46vw,500px);aspect-ratio:1;margin:calc(min(54vh,46vw,500px) / -2) 0 0 calc(min(54vh,46vw,500px) / -2)}' +
-    '.kvg>div{position:absolute;inset:0;opacity:0;animation:kvgl 1s cubic-bezier(.4,0,.2,1) both}.kvg>div:nth-child(2){animation-delay:.95s}.kvg>div:nth-child(3){animation-delay:1.9s}' +
-    '.kvg svg{width:100%;height:100%}.kvg b{position:absolute;left:0;right:0;bottom:-14%;text-align:center;font-size:clamp(16px,2.2vw,30px);letter-spacing:.22em;font-weight:800}' +
-    '@keyframes kvgl{0%{opacity:0;transform:scale(.55) rotate(-14deg);filter:blur(18px)}22%{opacity:1;transform:none;filter:none}78%{opacity:1;transform:none;filter:none}100%{opacity:0;transform:scale(1.4) rotate(10deg);filter:blur(20px)}}' +
-    '.kv6 .kvcard{width:min(24vw,330px);animation:kvpass 2.9s cubic-bezier(.4,0,.2,1) both}@keyframes kvpass{from{opacity:0;transform:translate(-190%,-50%) perspective(1600px) rotateY(-40deg) rotateZ(-8deg);filter:blur(12px)}20%{opacity:1;filter:none}to{opacity:1;transform:translate(120%,-50%) perspective(1600px) rotateY(-10deg) rotateZ(-2deg);filter:blur(0)}}' +
+    '.kvg>div{position:absolute;inset:0;opacity:0;will-change:transform,opacity;animation:kvgl 1s cubic-bezier(.4,0,.2,1) both}.kvg>div:nth-child(2){animation-delay:.95s}.kvg>div:nth-child(3){animation-delay:1.9s}' +
+    '.kvg svg{width:100%;height:100%}.kvg b{font-family:"Archivo Black","Plus Jakarta Sans",sans-serif;font-weight:400;position:absolute;left:0;right:0;bottom:-14%;text-align:center;font-size:clamp(15px,2vw,28px);letter-spacing:.2em}' +
+    '@keyframes kvgl{0%{opacity:0;transform:scale(.5) rotate(-16deg)}24%{opacity:1;transform:none}76%{opacity:1;transform:none}100%{opacity:0;transform:scale(1.5) rotate(12deg)}}' +
+    '.kv6 .kvcard{width:min(24vw,330px);animation:kvpass 2.9s cubic-bezier(.45,0,.2,1) both}@keyframes kvpass{from{opacity:0;transform:translate3d(-200%,-50%,0) perspective(1600px) rotateY(-40deg) rotateZ(-8deg)}16%{opacity:1}to{opacity:1;transform:translate3d(125%,-50%,0) perspective(1600px) rotateY(-10deg) rotateZ(-2deg)}}' +
     /* S7: palavras em sequência */
-    '.kv7 .kvt{position:absolute;left:0;right:0;top:50%;margin-top:-.45em;text-align:center;font-size:clamp(50px,13vw,220px);opacity:0;animation:kvslam .95s cubic-bezier(.2,.9,.2,1) both}' +
+    '.kv7 .kvt{position:absolute;left:0;right:0;top:50%;margin-top:-.45em;text-align:center;font-size:clamp(46px,12vw,205px);opacity:0;will-change:transform,opacity;animation:kvslam .95s cubic-bezier(.16,1,.3,1) both}' +
     '.kv7 .kvt:nth-child(2){animation-delay:.95s}.kv7 .kvt:nth-child(3){animation-delay:1.9s;color:' + BLUE + '}' +
-    '@keyframes kvslam{0%{opacity:0;transform:scale(1.7);filter:blur(18px)}16%{opacity:1;transform:scale(1);filter:none}82%{opacity:1;transform:scale(1.02)}100%{opacity:0;transform:scale(.9);filter:blur(12px)}}' +
-    '.kv7 .kvcard{z-index:3;width:min(36vw,500px);animation:kvsweep 2.9s linear both}@keyframes kvsweep{from{transform:translate(-190%,-40%) perspective(1600px) rotateY(-30deg) rotateZ(-12deg);opacity:1}to{transform:translate(120%,-60%) perspective(1600px) rotateY(-20deg) rotateZ(-6deg);opacity:1}}' +
+    '@keyframes kvslam{0%{opacity:0;transform:scale(1.45)}18%{opacity:1;transform:scale(1)}84%{opacity:1;transform:scale(1.015)}100%{opacity:0;transform:scale(.92)}}' +
+    '.kv7 .kvcard{z-index:3;width:min(34vw,480px);animation:kvsweep 2.9s cubic-bezier(.4,0,.6,1) both}@keyframes kvsweep{from{transform:translate3d(-200%,-40%,0) perspective(1600px) rotateY(-30deg) rotateZ(-12deg)}to{transform:translate3d(125%,-60%,0) perspective(1600px) rotateY(-20deg) rotateZ(-6deg)}}' +
     /* S9: logo final */
-    '.kvwm{width:min(62vw,660px);animation:kvwm .9s cubic-bezier(.7,0,.2,1) .1s both}@keyframes kvwm{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}' +
+    '.kvwm{width:min(62vw,660px);clip-path:inset(0 100% 0 0);animation:kvwm .9s cubic-bezier(.65,0,.2,1) .1s forwards}@keyframes kvwm{to{clip-path:inset(0 0 0 0)}}' +
     '.kvtag{margin-top:22px;font-weight:700;font-size:clamp(12px,1.5vw,18px);letter-spacing:.3em;color:#c9c9d2;opacity:0;animation:kvfade .8s ease 1s forwards}@keyframes kvfade{to{opacity:1}}' +
     '.kvs.fin .kvc{animation:kvfin .8s ease forwards}@keyframes kvfin{to{opacity:0;transform:scale(.96)}}' +
     /* controles */
     '.kvctl{position:absolute;z-index:6;right:18px;bottom:16px;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:8px 16px;font:700 12px inherit;cursor:pointer;text-transform:none;letter-spacing:.02em}.kvctl:hover{background:rgba(255,255,255,.18)}' +
-    '@media (max-width:640px){.kvt{font-size:13vw}.kvt.sm{font-size:6vw}.kv7 .kvt{font-size:16vw}.kvside .kvt{font-size:11vw}.kvside .kvt.sm{font-size:5vw}.kvside{left:5vw}.kvring{left:78%}.kv5 .kvcard{left:78%;width:34vw}.hero.evk{padding-bottom:70px}}' +
+    '@media (max-width:640px){.kvt{font-size:10.2vw}.kvt.sm{font-size:5.4vw}.kv7 .kvt{font-size:13.5vw}.kvside .kvt{font-size:9vw}.kvside .kvt.sm{font-size:4.6vw}.kvside{left:5vw}.kvring{left:78%}.kv5 .kvcard{left:78%;width:34vw}.kv3 .c1{width:78vw}.kv3 .c2,.kv3 .c3{width:56vw}.hero.evk{padding-bottom:70px}}' +
     '@media (prefers-reduced-motion:reduce){.kv *{animation-duration:.01s!important;animation-delay:0s!important}}';
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
   var SV = '<svg viewBox="0 0 200 200" fill="none">';
   var S = [
     /* 0 ponto */ '<div class="kvs kvd"><div class="kvdot"></div></div>',
-    /* 1 SEU TRABALHO */ '<div class="kvs kvb kv1"><div class="kvc"><div class="kvt">' + L('SEU TRABALHO', .4) + '</div></div></div>',
-    /* 2 SEM BAGUNÇA */ '<div class="kvs kvb"><div class="kvc"><div class="kvw"><div class="kvt sm">' + L('SEM', .1) + '</div><div class="kvt gl" data-t="BAGUNÇA.">' + L('BAGUNÇA.', .25) + '<i class="kvscan"></i></div></div></div></div>',
-    /* 3 tela em zoom */ '<div class="kvs kvd kv3">' + card('chat', '', 'z') + '</div>',
-    /* 4 logo */ '<div class="kvs kvb"><div class="kvc"><img class="kvlogo" alt="" src="/ewwon/img/logo-mark.png"></div><div class="kvbar"></div></div>',
-    /* 5 UMA EQUIPE / UM SISTEMA */ '<div class="kvs kvd kv5"><div class="kvring"></div><div class="kvside"><div class="kvpair a"><div class="kvt sm">' + L('UMA', .5) + '</div><div class="kvt">' + L('EQUIPE.', .6) + '</div></div><div class="kvpair"><div class="kvt sm">' + L('UM', 1.75) + '</div><div class="kvt">' + L('SISTEMA.', 1.85) + '</div></div></div>' + card('tarefas', '', '') + '</div>',
-    /* 6 símbolos */ '<div class="kvs kvd kv6"><div class="kvg">' +
+    /* 1 SEU TRABALHO */ '<div class="kvs kvb kv1"><div class="kvp"></div><div class="kvc"><div class="kvt">' + L('SEU TRABALHO', .4) + '</div></div></div>',
+    /* 2 SEM BAGUNÇA */ '<div class="kvs kvb"><div class="kvp"></div><div class="kvc"><div class="kvw"><div class="kvt sm">' + L('SEM', .1) + '</div><div class="kvt gl" data-t="BAGUNÇA.">' + L('BAGUNÇA.', .25) + '<i class="kvscan"></i></div></div></div></div>',
+    /* 3 tela em zoom */ '<div class="kvs kvd kv3"><div class="kvp"></div>' + card('tarefas', '', 'c2') + card('calendario', '', 'c3') + card('chat', '', 'c1') + '</div>',
+    /* 4 logo */ '<div class="kvs kvb"><div class="kvp"></div><div class="kvc"><img class="kvlogo" alt="" src="/ewwon/img/logo-mark.png"></div><div class="kvbar"></div></div>',
+    /* 5 UMA EQUIPE / UM SISTEMA */ '<div class="kvs kvd kv5"><div class="kvp"></div><div class="kvring"></div><div class="kvside"><div class="kvpair a"><div class="kvt sm">' + L('UMA', .5) + '</div><div class="kvt">' + L('EQUIPE.', .6) + '</div></div><div class="kvpair"><div class="kvt sm">' + L('UM', 1.75) + '</div><div class="kvt">' + L('SISTEMA.', 1.85) + '</div></div></div>' + card('tarefas', '', '') + '</div>',
+    /* 6 símbolos */ '<div class="kvs kvd kv6"><div class="kvp"></div><div class="kvg">' +
       '<div>' + SV + '<path d="M30 46c0-9 7-16 16-16h108c9 0 16 7 16 16v70c0 9-7 16-16 16H88l-34 30v-30H46c-9 0-16-7-16-16z" fill="' + BLUE + '"/></svg><b>CONVERSAS</b></div>' +
       '<div>' + SV + '<circle cx="100" cy="100" r="72" fill="' + BLUE + '"/><path d="M62 102l26 26 52-56" stroke="#fff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></svg><b>TAREFAS</b></div>' +
       '<div>' + SV + '<rect x="28" y="40" width="144" height="130" rx="18" fill="' + BLUE + '"/><rect x="28" y="40" width="144" height="34" rx="18" fill="#fff" opacity=".9"/><rect x="50" y="26" width="12" height="28" rx="6" fill="#fff"/><rect x="138" y="26" width="12" height="28" rx="6" fill="#fff"/><g fill="#fff"><rect x="50" y="92" width="22" height="20" rx="5"/><rect x="89" y="92" width="22" height="20" rx="5"/><rect x="128" y="92" width="22" height="20" rx="5"/><rect x="50" y="128" width="22" height="20" rx="5"/><rect x="89" y="128" width="22" height="20" rx="5" opacity=".5"/></g></svg><b>REUNIÕES</b></div>' +
       '</div>' + card('dash', 'top:50%', '') + '</div>',
-    /* 7 CONVERSE ORGANIZE CONCLUA */ '<div class="kvs kvd kv7"><div class="kvt">CONVERSE.</div><div class="kvt">ORGANIZE.</div><div class="kvt">CONCLUA.</div>' + card('calendario', '', '') + '</div>',
-    /* 8 TUDO EM UM LUGAR */ '<div class="kvs kvb"><div class="kvc"><div class="kvw"><div class="kvt sm">' + L('TUDO', .1) + '</div><div class="kvt gl" data-t="EM UM LUGAR.">' + L('EM UM LUGAR.', .25) + '<i class="kvscan"></i></div></div></div></div>',
-    /* 9 logo final */ '<div class="kvs kvd kv9"><div class="kvc"><img class="kvwm" alt="" src="/ewwon/img/wordmark.png"><div class="kvtag">Sistema de gestão para equipes</div></div></div>'
+    /* 7 CONVERSE ORGANIZE CONCLUA */ '<div class="kvs kvd kv7"><div class="kvp"></div><div class="kvt">CONVERSE.</div><div class="kvt">ORGANIZE.</div><div class="kvt">CONCLUA.</div>' + card('calendario', '', '') + '</div>',
+    /* 8 TUDO EM UM LUGAR */ '<div class="kvs kvb"><div class="kvp"></div><div class="kvc"><div class="kvw"><div class="kvt sm">' + L('TUDO', .1) + '</div><div class="kvt gl" data-t="EM UM LUGAR.">' + L('EM UM LUGAR.', .25) + '<i class="kvscan"></i></div></div></div></div>',
+    /* 9 logo final */ '<div class="kvs kvd kv9"><div class="kvp"></div><div class="kvc"><img class="kvwm" alt="" src="/ewwon/img/wordmark.png"><div class="kvtag">Sistema de gestão para equipes</div></div></div>'
   ];
   var T = [0, 1500, 4300, 7000, 9700, 12100, 14800, 17900, 20900, 23300]; /* início de cada cena (ms) */
   var END = 26300;
@@ -134,7 +146,10 @@
     timers.push(setTimeout(finish, END));
   }
 
+  /* fonte pesada de título (Archivo Black): espera carregar antes de começar, para as letras não trocarem no meio */
+  var lk = document.createElement('link'); lk.rel = 'stylesheet'; lk.href = 'https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap'; document.head.appendChild(lk);
+  var fontReady = (document.fonts && document.fonts.load) ? Promise.race([document.fonts.load('1em "Archivo Black"'), new Promise(function (r) { setTimeout(r, 2500); })]) : Promise.resolve();
   var seen = false; try { seen = sessionStorage.getItem(KEY) === '1'; } catch (e) { }
   if (reduce || seen) { sc[0].classList.add('on'); sc[0].querySelector('.kvdot').style.display = 'none'; hero.classList.add('done'); ctl.textContent = '↻ Assistir de novo'; ctl.onclick = function () { play(); }; }
-  else play();
+  else fontReady.catch(function () { }).then(function () { return Promise.all(['chat', 'tarefas', 'calendario', 'dash'].map(function (n) { var i = new Image(); i.src = D + n + '.webp'; return i.decode ? i.decode().catch(function () { }) : 0; })); }).then(play);
 })();
