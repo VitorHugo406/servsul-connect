@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { appConfirm } from '@/lib/appDialog';
 import { toast } from 'sonner';
-import { BrandDot, BrandTile } from '@/components/integrations/BrandMark';
+import { BrandTile } from '@/components/integrations/BrandMark';
 import { HR_PRESETS } from '@/lib/hrPresets';
 import { GuideDropdown, HrGuide } from '@/components/integrations/IntegrationGuides';
 
@@ -158,11 +158,22 @@ function SourceForm({ presets, source, onChanged, onClose }: { presets: Preset[]
         <p className={lbl}>1. Sistema</p>
         <div className="space-y-2">
           <div className="relative max-w-sm"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="h-10 !pl-10" placeholder="Buscar sistema" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-          <div className="max-h-56 space-y-2.5 overflow-y-auto rounded-lg border border-border p-2.5">
+          <div className="max-h-[380px] space-y-4 overflow-y-auto rounded-2xl p-3" style={{ background: '#F6F7F9' }}>
             {groups.length ? groups.map(([cat, list]) => (
               <div key={cat}>
-                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{cat}</p>
-                <div className="flex flex-wrap gap-1.5">{list.map((p) => <button key={p.id} type="button" className="ui-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }} aria-pressed={presetId === p.id} onClick={() => choose(p)}><BrandDot id={p.id} name={p.name} />{p.name}</button>)}</div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{cat}</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: 8 }}>
+                  {list.map((p) => {
+                    const on = presetId === p.id;
+                    return (
+                      <button key={p.id} type="button" aria-pressed={on} onClick={() => choose(p)} title={p.name}
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '10px 6px 8px', border: 0, borderRadius: 16, background: on ? '#DCE8F7' : 'transparent', cursor: 'pointer', font: 'inherit' }}>
+                        <BrandTile id={p.id} name={p.name} size={56} />
+                        <span style={{ fontSize: 12, lineHeight: 1.25, fontWeight: on ? 600 : 500, color: '#1C2430', textAlign: 'center', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )) : <p className="text-[12px] text-muted-foreground">Nenhum sistema com esse nome. Use “Qualquer API” ou “Seu sistema”.</p>}
           </div>
