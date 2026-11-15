@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { withCompany } from '@/lib/companyScope';
@@ -35,8 +35,9 @@ export function useAnnouncements() {
   // Admins, or collaborators with the "Postar avisos" flag from Gestão (enforced by RLS too).
   const canManageAnnouncements = isAdmin || canAccess('can_post_announcements');
 
+  const loadedOnce = useRef(false);
   const fetchAnnouncements = useCallback(async () => {
-    setLoading(true);
+    if (!loadedOnce.current) setLoading(true);   // later refreshes keep the screen; the section shows the logo over it
     const now = new Date().toISOString();
     
     // Fetch active announcements (within valid date range)
@@ -94,6 +95,7 @@ export function useAnnouncements() {
       setExpiredAnnouncements(expiredData || []);
     }
 
+    loadedOnce.current = true;
     setLoading(false);
   }, [canManageAnnouncements]);
 

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { EwwonLoader } from '@/components/common/EwwonLoader';
 import { Pin, Pencil, MoreVertical, RotateCcw, Trash2, X, Send, CalendarClock } from 'lucide-react';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { supabase } from '@/integrations/supabase/client';
@@ -106,20 +106,23 @@ export function AnnouncementsSection() {
   const filtered = rows.filter(r => (tab === 'all' || r.status === tab) && (typeF === 'all' || r.a.priority === typeF) && (!q.trim() || String(r.a.title).toLowerCase().includes(q.trim().toLowerCase())));
   const groups = (['active', 'scheduled', 'expired'] as Status[]).map(s => ({ s, items: filtered.filter(r => r.status === s) })).filter(g => g.items.length);
 
+  const [busy, setBusy] = useState(false);
+  const reload = async () => { setBusy(true); try { await refetch(); } finally { setBusy(false); } };
   const handleDelete = async (ids: string[]) => {
     if (!(await appConfirm({ title: ids.length > 1 ? `Excluir ${ids.length} avisos?` : 'Excluir este aviso?', message: 'Eles deixarão de aparecer para todos.', confirmText: 'Excluir', danger: true }))) return;
     let failed = 0;
+    setBusy(true);
     for (const id of ids) { const { error } = await deleteAnnouncement(id); if (error) failed++; }
     if (failed) toast.error('Alguns avisos não puderam ser excluídos'); else toast.success(ids.length > 1 ? 'Avisos excluídos' : 'Aviso excluído com sucesso');
-    setSel(new Set()); refetchNotifications(); refetch();
+    setSel(new Set()); refetchNotifications(); void reload();
   };
   const reactivate = async (a: any) => {
     const { error } = await updateAnnouncement(a.id, { start_at: new Date().toISOString(), expire_at: null });
-    if (error) toast.error('Não foi possível reativar'); else { toast.success('Aviso reativado'); refetch(); }
+    if (error) toast.error('Não foi possível reativar'); else { toast.success('Aviso reativado'); void reload(); }
   };
   const togglePin = async (a: any) => {
     const { error } = await updateAnnouncement(a.id, { is_pinned: !a.is_pinned });
-    if (error) toast.error('Não foi possível alterar'); else { toast.success(a.is_pinned ? 'Aviso desafixado' : 'Aviso fixado'); refetch(); }
+    if (error) toast.error('Não foi possível alterar'); else { toast.success(a.is_pinned ? 'Aviso desafixado' : 'Aviso fixado'); void reload(); }
   };
   const exportCsv = () => {
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -142,12 +145,13 @@ export function AnnouncementsSection() {
     if (error) { console.error('Error saving announcement:', error); toast.error('Erro ao salvar aviso. Verifique suas permissões.'); }
     else {
       toast.success(editingId ? 'Aviso atualizado' : new Date(startAt) > new Date() ? 'Aviso agendado com sucesso!' : 'Aviso publicado com sucesso!');
-      setShowForm(false); setEditingId(null); refetch();
+      setShowForm(false); setEditingId(null); void reload();
     }
     setFormLoading(false);
   };
 
-  if (loading) return <div className="dk-pg"><div className="dk-panel" style={{ padding: 24 }}><Skeleton className="h-10 w-full rounded-full" /><div className="mt-4 space-y-3"><Skeleton className="h-14 w-full" /><Skeleton className="h-14 w-full" /><Skeleton className="h-14 w-full" /></div></div></div>;
+  const hasData = announcements.length + scheduledAnnouncements.length + expiredAnnouncements.length > 0;
+  if (loading && !hasData) return <div className="dk-pg" style={{ justifyContent: 'center' }}><EwwonLoader inline /></div>;
 
   const colSpan = canManageAnnouncements ? 8 : 5;
   const renderRow = ({ a, status }: Row) => {
@@ -176,7 +180,8 @@ export function AnnouncementsSection() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="dk-pg">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="dk-pg" style={{ position: 'relative' }}>
+      {busy ? <div style={{ position: 'absolute', inset: 0, zIndex: 20, background: 'rgba(246,247,249,.78)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 120 }}><EwwonLoader inline /></div> : null}
       <AnimatePresence>
         {showForm && canManageAnnouncements && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
