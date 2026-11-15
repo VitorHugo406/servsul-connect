@@ -244,66 +244,70 @@ export function HrCard({ view = 'sistema' }: { view?: 'sistema' | 'dash' }) {
 
   const editing = form && form !== 'new' ? sources?.find((s) => s.id === form) : undefined;
 
+  const openNew = () => { if (!presets) void loadPresets(); setForm('new'); };
+  const canAdd = !!sources && sources.length < 6 && form === null;
+  const icon = 'dk-ic bg';
+
   return (
     <div className="dk-panel dk-pad">
       <div className="dk-hd">
         <span className="dk-tile" style={{ background: '#171A21' }}><Users className="h-5 w-5" /></span>
         <div>
-          <h2>{isDash ? 'Dados do Dash 3D (sistema de RH)' : 'Sistema de RH: importar colaboradores'}</h2>
+          <h2>{isDash ? 'Dash 3D' : 'Sistema de RH'}</h2>
           <span className={`dk-stt${sources && sources.length ? ' on' : ''}`}>{sources === null ? 'Carregando…' : sources.length ? `${sources.length} sistema(s) conectado(s)` : 'Nenhum sistema conectado'}</span>
         </div>
-        {sources && sources.length < 6 && form === null ? <button className="dk-btn pri dk-sp" type="button" onClick={() => setForm('new')} disabled={!presets}><Plus className="h-4 w-4" />Adicionar sistema</button> : null}
+        {canAdd ? <button className="dk-btn pri dk-sp" type="button" onClick={openNew}><Plus className="h-4 w-4" />Adicionar sistema</button> : null}
       </div>
-      {!isDash ? <div className="space-y-2 rounded-xl border border-border p-3">
-        <p className="text-[14px] font-semibold">Importar colaboradores como usuários</p>
-        <p className="text-[12.5px] text-muted-foreground">Cria os acessos e as fichas automaticamente a partir do sistema de gestão de pessoas (Convenia, Senior, Pontomais e outros). Respeita o limite de usuários do plano: se houver mais gente do que vagas, importa em ordem alfabética e pergunta antes.</p>
-        {sources === null ? null : !sources.length ? (
-          <div className="flex flex-wrap items-center gap-2"><span className="text-[12.5px]">Primeiro conecte o sistema (cole só a chave de acesso):</span><button className="dk-btn pri" type="button" onClick={() => setForm('new')} disabled={!presets || form !== null}><Plus className="mr-1.5 h-4 w-4" />Conectar sistema</button></div>
-        ) : (
-          <div className="flex flex-wrap gap-2">{sources.map((s) => <button key={s.id} className="dk-btn pri" type="button" onClick={() => setImporting(importing === s.id ? null : s.id)} disabled={busy !== null || s.last_status === 'erro'}><UserPlus className="mr-1.5 h-4 w-4" />Importar de {s.label || nameOf(s)}</button>)}</div>
-        )}
-        {sources?.map((s) => importing === s.id ? <ImportPanel key={s.id} source={s} name={s.label || nameOf(s)} onClose={() => { setImporting(null); void load(); }} /> : null)}
-      </div> : null}
-      {isDash ? <p className="dk-tx">Conecte o seu sistema de gestão de pessoas (Convenia, Pontomais, Tangerino, Ahgora, Nexti e outros), cole só a chave e o <b>Dash 3D passa a usar os colaboradores desses sistemas</b> (admissões, salários, demissões, cargos, departamentos, férias vencidas…) no lugar dos cadastrados no ewvon. Dá para ligar mais de um sistema. Dados de ponto não são importados. Os dados são atualizados sozinhos.</p> : <p className="dk-tx">Os sistemas conectados aqui (a mesma conexão serve ao Dash 3D) são lidos pela API só para criar os acessos e as fichas dos colaboradores. Dados de ponto não são importados.</p>}
-      <p className="dk-priv">Privacidade: salários, demissões e demais dados ficam visíveis só para administradores e para quem tem acesso ao Dash.</p>
-
-      <GuideDropdown title="Como configurar"><HrGuide /></GuideDropdown>
+      <p className="dk-tx">{isDash
+        ? <>Os colaboradores dos sistemas ligados abaixo alimentam o <b>Dash 3D</b> (admissões, salários, cargos, departamentos…), no lugar dos cadastrados no ewvon.</>
+        : <>Conecte o sistema de gestão de pessoas (Convenia, Senior, Pontomais e outros) para <b>criar os usuários automaticamente</b>. Se o plano tiver menos vagas que pessoas, a importação segue a ordem alfabética e pergunta antes.</>}</p>
 
       {listErr ? <div className="dk-err">{listErr}</div> : null}
-      {presetErr ? <div className="flex flex-wrap items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-[12px] text-destructive">{presetErr}<button className="dk-btn" type="button" onClick={() => void loadPresets()}>Tentar de novo</button></div> : null}
+      {presetErr ? <div className="dk-err">{presetErr}<button type="button" onClick={() => void loadPresets()}>Tentar de novo</button></div> : null}
       {sources === null && !listErr ? <div className="flex justify-center p-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : null}
 
+      {sources && !sources.length && form === null ? (
+        <div className="dk-empty" style={{ background: '#F6F7F9', borderRadius: 16 }}>
+          <p style={{ marginBottom: 12 }}>Nenhum sistema conectado ainda. Você só precisa colar a chave de acesso.</p>
+          <button className="dk-btn pri lg" style={{ alignSelf: 'auto' }} type="button" onClick={openNew}><Plus className="h-4 w-4" />Adicionar sistema</button>
+        </div>
+      ) : null}
+
       {sources?.length ? (
-        <div className="divide-y divide-border rounded-xl border border-border">
-          {sources.map((s) => {
+        <div className="flex flex-col" style={{ background: '#F6F7F9', borderRadius: 16 }}>
+          {sources.map((s, i) => {
             const failed = s.last_status === 'erro';
             return (
-              <div key={s.id} className="space-y-2 p-3">
+              <div key={s.id} className="space-y-2" style={{ padding: '14px 18px', borderTop: i ? '1px solid #E1E5EB' : 0 }}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-semibold">{s.label || nameOf(s)}</p>
                     <p className="flex flex-wrap items-center gap-x-1.5 text-[12px] text-muted-foreground">
                       {failed ? <AlertCircle className="h-3.5 w-3.5 text-destructive" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
-                      {nameOf(s)} · {s.last_count ?? 0} colaboradores · {s.last_used_at ? `atualizado ${ago(s.last_used_at)}` : 'ainda sem atualização'}
+                      {s.last_count ?? 0} colaboradores · {s.last_used_at ? `atualizado ${ago(s.last_used_at)}` : 'ainda sem atualização'}
                     </p>
                   </div>
-                  {isDash ? <label className="flex items-center gap-2 text-[12px] text-muted-foreground">Usar no Dash<Switch checked={s.enabled} disabled={busy !== null} onCheckedChange={(on) => void toggle(s, on)} aria-label="Usar no Dash" /></label> : null}
+                  <div className="flex items-center gap-1.5">
+                    {isDash ? <label className="mr-2 flex items-center gap-2 text-[12.5px] text-muted-foreground">Usar no Dash<Switch checked={s.enabled} disabled={busy !== null} onCheckedChange={(on) => void toggle(s, on)} aria-label="Usar no Dash" /></label> : null}
+                    {!isDash ? <button className="dk-btn pri" type="button" onClick={() => setImporting(importing === s.id ? null : s.id)} disabled={busy !== null || failed}><UserPlus className="h-4 w-4" />Importar colaboradores</button> : null}
+                    <button className={icon} type="button" title="Sincronizar agora" aria-label="Sincronizar agora" onClick={() => void sync(s)} disabled={busy !== null}>{busy === 'sync' + s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}</button>
+                    <button className={icon} type="button" title="Editar" aria-label="Editar" onClick={() => setForm(s.id)} disabled={busy !== null}><Pencil className="h-4 w-4" /></button>
+                    <button className={icon} style={{ color: '#8E1B10' }} type="button" title="Remover" aria-label="Remover" onClick={() => void remove(s)} disabled={busy !== null}><Trash2 className="h-4 w-4" /></button>
+                  </div>
                 </div>
                 {failed && s.last_error ? <p className="rounded-lg bg-destructive/10 px-3 py-2 text-[12px] text-destructive">{s.last_error}</p> : null}
-                {!failed && s.last_error ? <p className="rounded-lg bg-muted px-3 py-2 text-[12px] text-muted-foreground">{s.last_error}</p> : null}
-                <div className="flex flex-wrap gap-2">
-                  <button className="dk-btn" type="button" onClick={() => void sync(s)} disabled={busy !== null}>{busy === 'sync' + s.id ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1.5 h-4 w-4" />}Sincronizar agora</button>
-                  {!isDash ? <button className="dk-btn" type="button" onClick={() => setImporting(importing === s.id ? null : s.id)} disabled={busy !== null || failed}><UserPlus className="mr-1.5 h-4 w-4" />Importar como usuários</button> : null}
-                  <button className="dk-btn" type="button" onClick={() => setForm(s.id)} disabled={busy !== null}><Pencil className="mr-1.5 h-4 w-4" />Editar</button>
-                  <button className="dk-btn" style={{ color: '#8E1B10' }} type="button" onClick={() => void remove(s)} disabled={busy !== null}><Trash2 className="mr-1.5 h-4 w-4" />Remover</button>
-                </div>
+                {!failed && s.last_error ? <p className="text-[12px] text-muted-foreground">{s.last_error}</p> : null}
+                {!isDash && importing === s.id ? <ImportPanel source={s} name={s.label || nameOf(s)} onClose={() => { setImporting(null); void load(); }} /> : null}
               </div>
             );
           })}
         </div>
       ) : null}
 
-      {form !== null && presets ? <SourceForm key={form} presets={presets} source={editing} onChanged={() => void load()} onClose={() => setForm(null)} /> : null}
+      {form !== null ? (presets ? <SourceForm key={form} presets={presets} source={editing} onChanged={() => void load()} onClose={() => setForm(null)} /> : <p className="flex items-center gap-2 text-[12.5px] text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Carregando a lista de sistemas…</p>) : null}
+
+      <GuideDropdown title="Como configurar"><HrGuide /></GuideDropdown>
+      {isDash ? <p className="dk-priv">Salários, demissões e demais dados ficam visíveis só para administradores e para quem tem acesso ao Dash.</p> : null}
     </div>
   );
 }
