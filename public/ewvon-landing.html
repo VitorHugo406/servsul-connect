@@ -279,7 +279,7 @@ footer{flex-direction:column;text-align:center;padding:28px 18px calc(30px + env
   <span class="tag">Sistema de gestão para equipes</span>
   <h1>Conversa. Tarefas. Reuniões.</h1>
   <p>Tudo que sua equipe precisa para trabalhar junta, em um só lugar. Simples de aprender e leve de usar.</p>
-  <div style="display:flex;gap:12px;justify-content:center"><a class="btn" href="#" data-ewvon-action="demo">Testar sistema <s><svg class="i"><use href="#ar"/></svg></s></a><a class="btn o" href="/select-company"><svg class="i" style="width:16px;height:16px"><use href="#user"/></svg>Entrar no sistema</a></div>
+  <div style="display:flex;gap:12px;justify-content:center"><a class="btn" href="#" data-ewvon-action="demo">Testar sistema <s><svg class="i"><use href="#ar"/></svg></s></a><a class="btn o" href="/select-company"><svg class="i" style="width:16px;height:16px"><use href="#user"/></svg>Entrar no sistema</a><a class="btn o" href="#" onclick="ewvonIntro();return false" aria-label="Assistir à apresentação">&#9654; Ver apresentação</a></div>
   <!-- Free test sign-up: visible until 15/12/2026 (São Paulo); the page and its endpoint also close on that date. -->
   <a class="beta" id="betaCta" href="/teste-gratuito.html" target="_top" hidden><span class="pulse"></span>Inscreva-se para testar gratuitamente<em>até 15/12</em><s><svg class="i"><use href="#ar"/></svg></s></a>
   <script>(function(){var b=document.getElementById('betaCta');if(b&&Date.now()<Date.parse('2026-12-16T03:00:00Z'))b.hidden=false;else if(b)b.remove()})();</script>
@@ -462,5 +462,6 @@ var nq=0;addEventListener('scroll',function(){if(!nq){nq=requestAnimationFrame(f
 })();
 </script>
 \n<script>(function(){if(Date.now()>=Date.parse('2027-01-01T03:00:00Z'))document.querySelectorAll('[data-launch]').forEach(function(a){a.removeAttribute('data-launch')});})();</script>
+<script src="/ewvon-intro.js"></script>
 </body>
 </html>

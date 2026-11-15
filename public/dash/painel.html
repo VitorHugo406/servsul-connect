@@ -2425,13 +2425,7 @@ function buildSurround(idx){
     box(BM,X1-X0,.5,3.2,'#C9CCD0',(X0+X1)/2,-idx*LVH+(LVH-1.2)-.05,Z1+1.4);
     for(let x=X0+4;x<X1-2;x+=9)box(BM,.25,5,.25,'#9AA0A6',x,-idx*LVH+(LVH-1.2)-2.8,Z1+2.8);
   }
-  const na=Math.min(3,nF-1-idx);
-  if(na>0){
-    const cx0=X0-.4,cx1=X1+.4,cz0=Z0-.4,cz1=Z1+.4,cc='#CDD1D6',top=na*LVH;
-    [[cx0,cz0],[cx1,cz0],[cx0,cz1],[cx1,cz1]].forEach(p=>box(BM,.45,top+1.2,.45,cc,p[0],(top-1.2)/2,p[1]));
-    for(let k=1;k<=na;k++){const y=k*LVH-.6;
-      box(BM,cx1-cx0,.3,.3,cc,(cx0+cx1)/2,y,cz0);box(BM,.3,.3,cz1-cz0,cc,cx0,y,(cz0+cz1)/2);}
-  }
+  /* sem esqueleto/teto nos andares de cima: acima do andar ativo não existe nada */
   /* edifícios vizinhos */
   const lvCap=idx===0?99:Math.max(1,Math.floor((-2.6-g)/FH));
   const roofProps=(x0,x1,z0,z1,y)=>{
@@ -3099,6 +3093,10 @@ function frame(now){
   if(!busy&&now-(frame.lr||0)<30)return;
   frame.lr=now;
   floorTransTick(now);liveStack(now);
+  if(!FTR){   /* fora da troca de andar, nada fica acima do andar ativo e o andar ativo nunca fica deslocado */
+    if(STACK){const c=curIdx();FLS.forEach((fl,j)=>{const v=j<c;if(fl.g.visible!==v)fl.g.visible=v;if(fl.g.position.y!==0)fl.g.position.y=0})}
+    if(FLR&&(FLR.position.y!==0||!FLR.visible)){FLR.position.set(0,0,0);FLR.visible=true}
+  }
   if(tw){
     const k=ease(clamp((now-tw.t0)/tw.dur,0,1));
     for(const key in tw.to)cam[key]=tw.from[key]+(tw.to[key]-tw.from[key])*k;
