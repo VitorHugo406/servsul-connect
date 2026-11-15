@@ -1594,6 +1594,7 @@ function rebuildPerson(id){
   return true;
 }
 /* ----- todos os andares, de verdade: cada andar tem a mesma planta do andar real (mesas, pessoas, salas, sofá, recepção, elevador...) ----- */
+var FPON=false;   /* passeio em 1ª pessoa ligado: o prédio fica inteiro (todos os andares fechados) */
 let BELOW=null,ABOVE=null,LOWK=[],GLB=null,LBM=null,FLR=null,FTR=null,CEILL=null;const FLS=new Map();
 function belowGlassMat(){
   if(!GLB){GLB=new THREE.MeshStandardMaterial({color:0xC4E3F4,transparent:true,opacity:.14,roughness:.05,metalness:.2,side:THREE.DoubleSide,depthWrite:false});GLB.userData.keep=true}
@@ -1648,7 +1649,7 @@ function ensureStack(){
 function placeStack(){
   if(!STACK)return;const cur=curIdx(),ES=elevSpot();ELEVP={x:ES.x,z:ES.z,r:ES.r};
   STACK.position.y=-cur*LVH;
-  FLS.forEach((fl,j)=>{fl.g.position.set(0,0,0);fl.g.visible=j<cur});
+  FLS.forEach((fl,j)=>{fl.g.position.set(0,0,0);fl.g.visible=FPON?j!==cur:j<cur});
   if(CEILL){const X0=-20.3,W=40.6+EXX,Z0=-13.3,D=26.6+EXZ;CEILL.visible=cur>0;CEILL.children.forEach(m=>{m.position.set(X0+W*(m.userData.ca+.5)/4,-1.3,Z0+D*(m.userData.cb+.5)/3)})}
   /* poço do elevador: só do térreo até o andar em que estamos, nada acima */
   if(SHAFT){disposeFloorObj(SHAFT);SHAFT=null}
@@ -3148,7 +3149,7 @@ function fpBlocked(R,x,z){
 function fpFace(fx,fz){return Math.atan2(-fx,-fz)}
 function fpEnter(){
   if(FP.on||!OK||EDIT)return;
-  FP.on=true;FP.ride=false;FP.busy=false;tw=null;document.body.classList.add('fp');
+  FP.on=true;FPON=true;FP.ride=false;FP.busy=false;tw=null;document.body.classList.add('fp');placeStack();fpLights(true);
   FP.ty0=cam.ty;FP.fov0=camera.fov;FP.near0=camera.near;camera.fov=68;camera.near=.2;camera.updateProjectionMatrix();camera.clearViewOffset();
   const g=elevGeom();FP.x=g.out.x;FP.z=g.out.z;FP.yaw=fpFace(g.out.x-ELEVP.x,g.out.z-ELEVP.z);FP.pitch=0;
   const hud=$('#fpHud');hud.hidden=false;$('#fpElev').hidden=true;$('#fpPeopleP').hidden=true;fpCeiling().visible=true;
@@ -3157,7 +3158,7 @@ function fpEnter(){
 function fpExit(){
   if(!FP.on)return;
   if(document.pointerLockElement)document.exitPointerLock();
-  FP.on=false;FP.keys.clear();FP.jx=FP.jy=0;document.body.classList.remove('fp');
+  FP.on=false;FPON=false;FP.keys.clear();FP.jx=FP.jy=0;document.body.classList.remove('fp');fpLights(false);placeStack();
   camera.fov=FP.fov0||35;camera.near=FP.near0||.5;camera.updateProjectionMatrix();
   $('#fpHud').hidden=true;if(FPC)FPC.visible=false;
   resize();
@@ -3175,12 +3176,46 @@ function fpUse(){
 function fpElevUI(msg){
   const box=$('#fpElev');box.hidden=false;
   const fl=CFG.floors.map(f=>{const n=fnum(f.id),nm=fname(f);return '<button type="button" data-f="'+esc(f.id)+'" class="'+(f.id===CUR?'on':'')+'"><i>'+n+'</i><span>Andar '+n+(nm?'<small>'+esc(nm)+'</small>':'')+'</span></button>'}).reverse().join('');
-  box.innerHTML='<h3>Elevador</h3><p>'+(msg||'Escolha o andar.')+'</p><div class="fl">'+fl+'</div><button type="button" class="fpbtn ex" id="fpOut">Sair do elevador</button>';
+  box.innerHTML='<h3>Elevador</h3><p>'+(msg||'Digite o número do andar no teclado (ou toque):')+'</p><div id="fpNum" style="font:800 34px inherit;text-align:center;margin:-4px 0 10px;letter-spacing:.06em">—</div><div class="fl">'+fl+'</div><button type="button" class="fpbtn ex" id="fpOut">Sair do elevador</button>';
 }
+function fpFade(to,ms){const f=$('#fpFade');if(f){f.style.transition='opacity '+ms+'ms';f.style.opacity=to?'1':'0'}}
 function fpRide(id,after){
-  if(id===CUR){return}
-  FP.busy=true;$('#fpElev').hidden=true;if(FPC)FPC.visible=false;
-  fadeSwitch(id,()=>{FP.busy=false;if(FPC)FPC.visible=true;if(after)after();else{FP.ride=true;fpElevUI('Chegamos ao andar '+fnum(CUR)+'. Escolha outro ou saia.')}});
+  if(id===CUR||FP.busy)return;
+  /* em 1ª pessoa não há animação de andar saindo ou entrando: escurece um instante e já aparece o andar escolhido */
+  FP.busy=true;$('#fpElev').hidden=true;fpFade(1,260);
+  setTimeout(()=>{
+    fadeSwitch(id,null,{instant:true});
+    fpLights(true);
+    setTimeout(()=>{fpFade(0,320);FP.busy=false;if(after)after();else{FP.ride=true;fpElevUI('Andar '+fnum(CUR)+'. Digite outro número ou saia.')}},120);
+  },300);
+}
+/* pontos de luz dentro do andar (só no passeio) */
+let FPL=null;
+function fpLights(on){
+  if(FPL){scene.remove(FPL);FPL.traverse(o=>{if(o.dispose)o.dispose()});FPL=null}
+  if(!on||!FPON)return;
+  FPL=new THREE.Group();FPL.userData.sceneRoot=true;
+  const W=40.6+EXX,D=26.6+EXZ,n=(window.matchMedia&&matchMedia('(pointer:coarse)').matches)?3:4;
+  const pts=n===3?[[.25,.5],[.75,.3],[.6,.75]]:[[.25,.3],[.75,.3],[.25,.72],[.75,.72]];
+  pts.forEach(q=>{const l=new THREE.PointLight(0xFFE6BF,.5,24,1.6);l.position.set(-20.3+W*q[0],LVH-2.4,-13.3+D*q[1]);FPL.add(l)});
+  scene.add(FPL);
+}
+let FPN='',FPNT=0;
+function fpDigit(k){
+  if(k==='backspace'){FPN=FPN.slice(0,-1)}
+  else if(k==='enter'){fpCommit();return}
+  else{FPN=(FPN+k).slice(0,3)}
+  clearTimeout(FPNT);const el=$('#fpNum');if(el)el.textContent=FPN||'—';
+  const hit=CFG.floors.filter(f=>String(fnum(f.id))===FPN);
+  const more=CFG.floors.some(f=>String(fnum(f.id)).startsWith(FPN)&&String(fnum(f.id))!==FPN);
+  if(FPN&&hit.length&&!more){fpCommit();return}   /* número completo: vai direto */
+  FPNT=setTimeout(fpCommit,900);
+}
+function fpCommit(){
+  clearTimeout(FPNT);const n=FPN;FPN='';const el=$('#fpNum');
+  const f=CFG.floors.find(x=>String(fnum(x.id))===n);
+  if(el)el.textContent='—';
+  if(f)fpRide(f.id);else if(n){const p=$('#fpElev p');if(p)p.textContent='Não existe o andar '+n+'.'}
 }
 function fpOutElev(){
   const g=elevGeom();FP.ride=false;FP.x=g.out.x;FP.z=g.out.z;FP.yaw=fpFace(g.out.x-ELEVP.x,g.out.z-ELEVP.z);$('#fpElev').hidden=true;
@@ -3214,7 +3249,7 @@ function fpCardFor(t){
   return '<b>'+esc(t.tipT||'')+'</b><span>'+esc((t.tipS||'').replace(/clique.*$/i,'').replace(/ · $/,''))+'</span>';
 }
 function fpTick(dt){
-  const ceil=fpCeiling();ceil.visible=!FTR&&!FP.busy;
+  const ceil=fpCeiling();ceil.visible=!FTR&&!FP.busy&&curIdx()>=floorsN()-1;
   /* movimento */
   if(!FP.ride&&!FP.busy){
     const k=FP.keys;let f=(k.has('w')||k.has('arrowup')?1:0)-(k.has('s')||k.has('arrowdown')?1:0)-FP.jy,r=(k.has('d')?1:0)-(k.has('a')?1:0)+FP.jx;
@@ -3251,7 +3286,7 @@ function fpInit(){
   hud.innerHTML='<div class="fptop"><button type="button" class="fpbtn" id="fpPeopleB">Pessoas</button><button type="button" class="fpbtn pri" id="fpExit">Sair do passeio</button></div>'
    +'<div class="fpcross"></div><div class="fpcard" id="fpCard" hidden></div><button type="button" class="fpbtn pri fpuse" id="fpUse" hidden>Entrar no elevador (E)</button>'
    +'<div class="fphelp">W A S D mover · mouse olhar (clique para travar) · Shift correr · E elevador · Esc sair</div>'
-   +'<div class="fpelev" id="fpElev" hidden></div><div class="fppeople" id="fpPeopleP" hidden></div><div class="fpjoy" id="fpJoy"><i></i></div>';
+   +'<div id="fpFade" style="position:absolute;inset:0;background:#000;opacity:0;pointer-events:none"></div><div class="fpelev" id="fpElev" hidden></div><div class="fppeople" id="fpPeopleP" hidden></div><div class="fpjoy" id="fpJoy"><i></i></div>';
   stageEl.appendChild(hud);
   const b=document.createElement('button');b.type='button';b.className='w';b.id='bWalk';b.textContent='Passear';b.title='Passear pelo prédio em 1ª pessoa';$('.ctrls').appendChild(b);
   b.addEventListener('click',()=>{if(!FP.on)fpEnter()});
@@ -3264,6 +3299,7 @@ function fpInit(){
   document.addEventListener('keydown',e=>{
     if(!FP.on)return;const tg=e.target;if(tg&&(tg.tagName==='INPUT'||tg.tagName==='TEXTAREA'))return;
     const k=e.key.toLowerCase();if(KEYS.includes(k)){FP.keys.add(k);e.preventDefault()}
+    else if(FP.ride&&!FP.busy&&(/^[0-9]$/.test(k)||k==='enter'||k==='backspace')){fpDigit(k);e.preventDefault()}
     else if(k==='e'){fpUse()}
     else if(k==='escape'){if(!FP.lock)fpExit()}
   },true);
@@ -3294,7 +3330,7 @@ function frame(now){
   frame.lr=now;
   floorTransTick(now);liveStack(now);
   if(!FTR){   /* fora da troca de andar, nada fica acima do andar ativo e o andar ativo nunca fica deslocado */
-    if(STACK){const c=curIdx();FLS.forEach((fl,j)=>{const v=j<c;if(fl.g.visible!==v)fl.g.visible=v;if(fl.g.position.y!==0)fl.g.position.y=0})}
+    if(STACK){const c=curIdx();FLS.forEach((fl,j)=>{const v=FPON?j!==c:j<c;if(fl.g.visible!==v)fl.g.visible=v;if(fl.g.position.y!==0)fl.g.position.y=0})}
     if(FLR&&(FLR.position.y!==0||!FLR.visible)){FLR.position.set(0,0,0);FLR.visible=true}
   }
   if(tw){
@@ -3675,13 +3711,13 @@ function fadeKit(root){
     done(){mm.forEach(([o,m])=>{o.material=m});map.forEach((c,q)=>{if(c!==q)c.dispose()})}
   };
 }
-function fadeSwitch(id,cb){
+function fadeSwitch(id,cb,opt){
   if(id===CUR){if(cb)cb();return}
   const instant=()=>{
     CUR=id;buildWorld();railUI();greet();tw=null;
     if(cb)cb();
   };
-  if(REDUCED||!OK||FTR||!FLR){if(FTR)return;instant();return}
+  if(REDUCED||!OK||FTR||!FLR||(opt&&opt.instant)){if(FTR)return;instant();return}
   /* O prédio é uma coisa só. O andar de destino é montado COMPLETO antes da animação e o andar de onde você sai continua
      inteiro (uma cópia viva dele) até acabar: descendo, os andares de cima levantam e saem; subindo, o andar de destino desce
      e se encaixa. Nada é trocado ou aparece depois, só se move. */
