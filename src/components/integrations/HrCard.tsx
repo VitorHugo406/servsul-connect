@@ -158,18 +158,18 @@ function SourceForm({ presets, source, onChanged, onClose }: { presets: Preset[]
         <p className={lbl}>1. Sistema</p>
         <div className="space-y-2">
           <div className="relative max-w-sm"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="h-10 !pl-10" placeholder="Buscar sistema" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-          <div className="max-h-[380px] space-y-4 overflow-y-auto rounded-2xl p-3" style={{ background: '#F6F7F9' }}>
+          <div className="max-h-[380px] space-y-3 overflow-y-auto rounded-2xl p-2.5" style={{ background: '#F6F7F9' }}>
             {groups.length ? groups.map(([cat, list]) => (
               <div key={cat}>
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{cat}</p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(76px, 1fr))', gap: 2 }}>
                   {list.map((p) => {
                     const on = presetId === p.id;
                     return (
                       <button key={p.id} type="button" aria-pressed={on} onClick={() => choose(p)} title={p.name}
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '10px 6px 8px', border: 0, borderRadius: 16, background: on ? '#DCE8F7' : 'transparent', cursor: 'pointer', font: 'inherit' }}>
-                        <BrandTile id={p.id} name={p.name} size={56} />
-                        <span style={{ fontSize: 12, lineHeight: 1.25, fontWeight: on ? 600 : 500, color: '#1C2430', textAlign: 'center', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</span>
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '7px 4px 6px', border: 0, borderRadius: 16, background: on ? '#DCE8F7' : 'transparent', cursor: 'pointer', font: 'inherit' }}>
+                        <BrandTile id={p.id} name={p.name} size={44} />
+                        <span style={{ fontSize: 11.5, lineHeight: 1.2, fontWeight: on ? 600 : 500, color: '#1C2430', textAlign: 'center', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</span>
                       </button>
                     );
                   })}
