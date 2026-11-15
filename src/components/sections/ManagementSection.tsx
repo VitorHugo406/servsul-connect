@@ -219,7 +219,7 @@ export function ManagementSection() {
 
       <main className="dk-mm">
         {!sel ? <div className="dk-empty">Selecione um colaborador na lista.</div> : (
-          <div ref={scrollRef} style={{ overflowY: 'auto', flex: 1, position: 'relative' }}>
+          <div ref={scrollRef} style={{ overflowY: 'auto', flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
             <div className="dk-dh">
               <div className="dk-bav">{sel.avatar_url ? <img src={sel.avatar_url} alt="" /> : (sel.name || '?')[0].toUpperCase()}</div>
               <div>
