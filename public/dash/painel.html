@@ -1573,114 +1573,152 @@ function rebuildPerson(id){
   P.model=pr.g;P.head=pr.head;P.picks=pr.pick;applyLabelVis();
   return true;
 }
-/* ----- andares de baixo em vidro de verdade: dá para ver mesas, pessoas do andar, café e sofá lá dentro ----- */
-let BELOW=null,LOWK=[],GLB=null,LBM=null;
+/* ----- todos os andares, de verdade: cada andar tem a mesma planta do andar real (mesas, pessoas, salas, sofá, recepção, elevador...) ----- */
+let BELOW=null,ABOVE=null,LOWK=[],GLB=null,LBM=null,FLR=null,FTR=null;const FLS=new Map();
 function disposeBelow(){
-  if(!BELOW)return;
-  BELOW.traverse(o=>{if(o.isMesh&&o.geometry&&o.geometry.userData.own)o.geometry.dispose()});
-  scene.remove(BELOW);BELOW=null;LOWK=[];
+  [BELOW,ABOVE].forEach(R=>{if(!R)return;R.traverse(o=>{if(o.isMesh&&o.geometry&&o.geometry.userData.own)o.geometry.dispose()});if(R.parent)R.parent.remove(R)});
+  BELOW=ABOVE=null;LOWK=[];FLS.clear();
 }
 function belowGlassMat(){
-  if(!GLB){GLB=new THREE.MeshStandardMaterial({color:0xC4E3F4,transparent:true,opacity:.12,roughness:.05,metalness:.2,side:THREE.DoubleSide,depthWrite:false});GLB.userData.keep=true}
+  if(!GLB){GLB=new THREE.MeshStandardMaterial({color:0xC4E3F4,transparent:true,opacity:.14,roughness:.05,metalness:.2,side:THREE.DoubleSide,depthWrite:false});GLB.userData.keep=true}
   if(ENV&&!GLB.envMap){GLB.envMap=ENV;GLB.envMapIntensity=1.4;GLB.needsUpdate=true}
   return GLB;
 }
 function buildBelow(){
   disposeBelow();
   if(!OK)return;
-  const idx=Math.max(0,floorIdx(CUR));if(idx<2)return;
-  const X0=-20.3,X1=20.3+EXX,Z0=-13.3,Z1=13.3+EXZ,W=X1-X0,D=Z1-Z0,cx=(X0+X1)/2,cz=(Z0+Z1)/2;
-  const root=new THREE.Group(),B=VB(),LB=VB(),vm=vmats(),glass=belowGlassMat();
-  const dk=.82,tint=c=>{_vc.set(c).multiplyScalar(dk);return '#'+_vc.getHexString()};
-  const add=(g,col,x,y,z,o)=>vAdd(B,g,tint(col),x,y,z,o);
+  try{meetCompute()}catch(_){}
+  const cur=Math.max(0,floorIdx(CUR));
+  BELOW=new THREE.Group();ABOVE=new THREE.Group();BELOW.userData.sceneRoot=ABOVE.userData.sceneRoot=true;
+  const ES=elevSpot();ELEVP={x:ES.x,z:ES.z,r:ES.r};
+  ECAB=makeCab();BELOW.add(ECAB);
+  {/* o poço do elevador atravessa o prédio inteiro: a cabine sobe e desce dentro dele */
+    const rot=ES.r%2===1,ew=rot?2.4:3.8,ed=rot?3.8:2.4,n=floorsN(),hTot=n*LVH,y0=-cur*LVH-1.2;
+    const sh=new THREE.Mesh(G.box(ew,hTot,ed),belowGlassMat());sh.geometry.userData.own=true;sh.position.set(ES.x,y0+hTot/2,ES.z);sh.renderOrder=2;BELOW.add(sh);
+    const pm=new THREE.MeshStandardMaterial({color:0xB9BFCA,metalness:.7,roughness:.35});
+    for(const sx of[-1,1])for(const sz of[-1,1]){const po=new THREE.Mesh(G.box(.14,hTot,.14),pm);po.geometry.userData.own=true;po.position.set(ES.x+sx*(ew/2),y0+hTot/2,ES.z+sz*(ed/2));BELOW.add(po)}
+  }
+  for(let j=1;j<CFG.floors.length;j++){   /* o térreo (recepção) é o prédio de baixo do cenário */
+    if(j===cur)continue;
+    const fl=lowFloor(j,(j-cur)*LVH,ES);
+    (j<cur?BELOW:ABOVE).add(fl.g);FLS.set(j,fl);
+  }
+  scene.add(BELOW);scene.add(ABOVE);ABOVE.visible=false;
+}
+function lowFloor(j,fy,ES){
+  const f=CFG.floors[j],X0=-20.3,X1=20.3+EXX,Z0=-13.3,Z1=13.3+EXZ,W=X1-X0,D=Z1-Z0,cx=(X0+X1)/2,cz=(Z0+Z1)/2;
+  const g=new THREE.Group(),B=VB(),LB=VB(),vm=vmats(),glass=belowGlassMat();g.userData.fy=fy;
+  const dk=.93,tint=c=>{_vc.set(c).multiplyScalar(dk);return '#'+_vc.getHexString()};
+  const add=(gg,col,x,y,z,o)=>vAdd(B,gg,tint(col),x,y,z,o);
+  const lightOf=e=>{try{return lookOf(e)}catch(_){return {}}};
   const person=(x,y,z,L,seated,face)=>{
     const sh=L.shirt||'#5B8DEF',sk=L.skin||'#E8B896',hr=L.hair||'#3A2A1F',pn='#2D3445',F=L.gender==='F';
     const R=(dx,dz)=>{const c=Math.cos(face||0),s=Math.sin(face||0);return [x+dx*c+dz*s,z-dx*s+dz*c]};
-    const put=(g,col,dx,dy,dz,oo)=>{const [px,pz]=R(dx,dz);add(g,col,px,y+dy,pz,Object.assign({ry:face||0},oo||{}))};
+    const put=(gg,col,dx,dy,dz,oo)=>{const [px,pz]=R(dx,dz);add(gg,col,px,y+dy,pz,Object.assign({ry:face||0},oo||{}))};
     put(G.cyl(F?.34:.42,F?.42:.5,.95,10),sh,0,1.4,0);put(G.sph(.46,10,8),sh,0,1.82,0,{sy:.55,sx:F?.85:1.05});
     put(G.sph(.55,12,9),sk,0,2.66,0);put(G.sph(.58,12,9),hr,0,2.8,-.07,{sy:.72});
-    if(seated){
-      put(G.box(.3,.3,.9),pn,-.24,.98,.45);put(G.box(.3,.3,.9),pn,.24,.98,.45);put(G.box(.28,.9,.28),pn,-.24,.55,.95);put(G.box(.28,.9,.28),pn,.24,.55,.95);
-      put(G.box(.2,.2,.95),sh,-.58,1.55,.45);put(G.box(.2,.2,.95),sh,.58,1.55,.45);
-    }else{
-      put(G.box(.3,1.0,.3),pn,-.2,.5,0);put(G.box(.3,1.0,.3),pn,.2,.5,0);put(G.box(.2,.95,.2),sh,-.58,1.4,0);put(G.box(.2,.95,.2),sh,.58,1.4,0);
-    }
+    if(seated){put(G.box(.3,.3,.9),pn,-.24,.98,.45);put(G.box(.3,.3,.9),pn,.24,.98,.45);put(G.box(.28,.9,.28),pn,-.24,.55,.95);put(G.box(.28,.9,.28),pn,.24,.55,.95);put(G.box(.2,.2,.95),sh,-.58,1.55,.45);put(G.box(.2,.2,.95),sh,.58,1.55,.45)}
+    else{put(G.box(.3,1.0,.3),pn,-.2,.5,0);put(G.box(.3,1.0,.3),pn,.2,.5,0);put(G.box(.2,.95,.2),sh,-.58,1.4,0);put(G.box(.2,.95,.2),sh,.58,1.4,0)}
   };
-  const lightOf=e=>{try{return lookOf(e)}catch(_){return {}}};
-  const plantAt=(x,y,z,sc)=>{add(G.cyl(.38*sc,.3*sc,.6*sc,10),'#F3F4F6',x,y+.3*sc,z);add(G.sph(.5*sc,8,6),'#3E9B5A',x,y+.95*sc,z);add(G.sph(.34*sc,8,6),'#4FB36B',x+.2*sc,y+1.35*sc,z+.1*sc)};
-  for(let j=1;j<idx;j++){
-    const f=CFG.floors[j];if(!f)continue;
-    const y0=-idx*LVH-1.2+j*LVH,fy=y0+.5;
-    /* laje, piso, pilares do vidro e luminárias */
-    add(G.box(W+.5,.5,D+.5),'#E3E6EA',cx,y0+.25,cz);
+  const chair=(x,z,col,ry)=>{add(G.cyl(.06,.06,.6,6),'#9AA3B2',x,fy+.3,z);add(G.box(.95,.14,.9),col,x,fy+.78,z,{ry:ry||0});add(G.box(.95,1.0,.12),col,x+Math.sin(ry||0)*-.52,fy+1.35,z+Math.cos(ry||0)*-.52,{ry:ry||0})};
+  const desk=(x,z)=>{add(G.box(1.7,.1,1.1),'#CBB99E',x,fy+1.25,z+1.15);add(G.box(.08,1.2,.95),'#C9CFDA',x-.76,fy+.6,z+1.15);add(G.box(.08,1.2,.95),'#C9CFDA',x+.76,fy+.6,z+1.15);add(G.box(.95,.04,.62),'#8E96A6',x,fy+1.32,z+1.1);add(G.box(.95,.6,.03),'#8E96A6',x,fy+1.64,z+1.4,{rx:.18})};
+  const plantAt=(x,z,sc)=>{add(G.cyl(.38*sc,.3*sc,.6*sc,10),'#F3F4F6',x,fy+.3*sc,z);add(G.sph(.5*sc,8,6),'#3E9B5A',x,fy+.95*sc,z);add(G.sph(.34*sc,8,6),'#4FB36B',x+.2*sc,fy+1.35*sc,z+.1*sc)};
+  const sv=CUR;CUR=f.id;   /* as funções de planta leem o andar atual */
+  const extras=[];
+  try{
+    /* laje, piso e luminárias */
+    add(G.box(W+.5,1.2,D+.5),'#F7F8FA',cx,fy-.6,cz);
     add(G.box(W-.2,.05,D-.2),'#C9A27A',cx,fy+.03,cz);
-    for(let x=X0;x<=X1+.01;x+=W/8){add(G.box(.22,LVH-.6,.22),'#52606E',x,fy+(LVH-.6)/2,Z1);add(G.box(.22,LVH-.6,.22),'#52606E',x,fy+(LVH-.6)/2,Z0)}
-    for(let z=Z0;z<=Z1+.01;z+=D/5){add(G.box(.22,LVH-.6,.22),'#52606E',X0,fy+(LVH-.6)/2,z);add(G.box(.22,LVH-.6,.22),'#52606E',X1,fy+(LVH-.6)/2,z)}
-    for(let a=0;a<4;a++)for(let b=0;b<3;b++)vAdd(LB,G.box(2.6,.08,1.1),'#FFF3D6',X0+W*(a+.5)/4,y0+LVH-.2,Z0+D*(b+.5)/3);
-    /* pessoas do andar (reais) em mesas */
-    const ppl=[];floorDepts(f.id).forEach(d=>d.act.forEach(e=>ppl.push(e)));
-    const aw=W-22,cols=Math.max(3,Math.floor(aw/2.9)),rows=4,cap=cols*rows,show=ppl.slice(0,cap);
-    show.forEach((e,k)=>{
-      const c=k%cols,r=Math.floor(k/cols),x=X0+11+(c+.5)*(aw/cols),z=Z1-6.4-r*3.3,L=lightOf(e);
-      add(G.cyl(.06,.06,.6,6),'#9AA3B2',x,fy+.3,z);add(G.box(.95,.14,.9),'#2B3140',x,fy+.78,z);add(G.box(.95,1.0,.12),'#2B3140',x,fy+1.35,z-.52);
-      person(x,fy,z,L,true,0);
-      add(G.box(1.7,.1,1.1),'#CBB99E',x,fy+1.25,z+1.15);add(G.box(.08,1.2,.95),'#C9CFDA',x-.76,fy+.6,z+1.15);add(G.box(.08,1.2,.95),'#C9CFDA',x+.76,fy+.6,z+1.15);
-      add(G.box(.95,.04,.62),'#8E96A6',x,fy+1.32,z+1.1);add(G.box(.95,.6,.03),'#8E96A6',x,fy+1.64,z+1.4,{rx:.18});
+    for(let a=0;a<4;a++)for(let b=0;b<3;b++)vAdd(LB,G.box(2.6,.08,1.1),'#FFF3D6',X0+W*(a+.5)/4,fy+LVH-1.5,Z0+D*(b+.5)/3);
+    /* paredes: esquerda, direita e fundo são parede de verdade; só a frente é vidro */
+    const wc=wallColor(f.id);
+    add(G.box(W+.6,9,.6),wc,cx,fy+4.5,Z0);add(G.box(.6,9,D),wc,X0,fy+4.5,cz);add(G.box(.6,9,D),wc,X1,fy+4.5,cz);
+    add(G.box(W+.6,.3,.32),'#F7F8FA',cx,fy+8.8,Z0+.3);add(G.box(.32,.3,D),'#F7F8FA',X0+.3,fy+8.8,cz);add(G.box(.32,.3,D),'#F7F8FA',X1-.3,fy+8.8,cz);
+    for(const wx of[-16.4,5.6]){add(G.box(3.2,4.4,.1),'#2B3140',wx,fy+5.6,Z0+.36);add(G.box(2.9,4.1,.05),'#D3EAF8',wx,fy+5.6,Z0+.42)}
+    add(G.box(12.5,6.5,.3),'#0E1117',SCR.x,fy+SCR.y,Z0+.5);add(G.box(12.1,6.1,.04),'#1B2433',SCR.x,fy+SCR.y,Z0+.68);
+    for(let x=X0;x<=X1+.01;x+=W/8)add(G.box(.22,LVH-1.4,.22),'#52606E',x,fy+(LVH-1.4)/2,Z1);
+    /* ilhas dos departamentos: mesma planta do andar real */
+    const rids=floorRooms(f.id).slice(0,6),RP=roomPlan(rids),L=LAY(f.id);
+    const dl=floorDepts(f.id).slice(0,12).map(d=>({d,n:Math.min(400,d.act.length)}));
+    if(LN().on&&LN().dest===f.id)dl.push({caf:true,n:0,sh:cafeShape()});
+    const plan=planIslands(dl,RP.zw,19.0+EXZ);
+    const absent=e=>MEETM.has(e._i)||lunchAway(e,CLOCK.min);
+    const sofaIds=[];
+    dl.forEach((o,i)=>{
+      const sh=plan.shape[i],pp=plan.pos[i]||{px:0,pz:0};
+      if(o.caf){
+        const rcz2=0,po=L.p.caf,dx=-19.6+pp.px+sh.w/2,dz=-11.2+pp.pz+sh.d/2,ccx=po?po.x:dx,ccz=po?po.z:dz;
+        add(G.box(sh.w-.2,.05,sh.d-.2),'#F4EFE6',ccx,fy+.06,ccz);
+        for(let r=0;r<sh.rows;r++)for(let c=0;c<sh.cols;c++){const tx=ccx+(c-(sh.cols-1)/2)*4.8,tz=ccz+(r-(sh.rows-1)/2)*4.4;add(G.cyl(1.1,1.1,.1,14),'#E9EEF3',tx,fy+1.2,tz);add(G.cyl(.2,.4,1.2,8),'#2A2F3A',tx,fy+.6,tz);
+          for(let k=0;k<6;k++){const a=k/6*Math.PI*2;chair(tx+Math.sin(a)*1.9,tz+Math.cos(a)*1.9,'#3A4150',a+Math.PI)}}
+        void rcz2;return;
+      }
+      const d=o.d,N=o.n,rcz=-3.35+sh.d/2,dx0=-19.6+pp.px+sh.w/2,dz0=-11.2+pp.pz+3.35,po=L.p['d:'+d.name];
+      const sx=po?po.x:dx0,sz=po?po.z:clamp(dz0,-13.2+sh.d/2-rcz,12.8+EXZ-sh.d/2-rcz),col=DCOL[hash(d.name)%8];
+      add(G.box(sh.w,.04,sh.d),col.rug,sx,fy+.07,sz+rcz);
+      d.act.slice().sort((a,b)=>(leadLv(b)-leadLv(a))||(a.adm-b.adm)).slice(0,N).forEach((e,k)=>{
+        const c=k%sh.cols,row=Math.floor(k/sh.cols),x=sx+(c-(sh.cols-1)/2)*1.8,z=sz-2.5+row*sh.dz;
+        chair(x,z,col.dot);desk(x,z);
+        if(!absent(e))person(x,fy,z,lightOf(e),true,0);else if(lunchAway(e,CLOCK.min)&&!MEETM.has(e._i)&&LN().dest==='sofa')sofaIds.push(e);
+      });
     });
-    /* salas de reunião deste andar: mesa, cadeiras e participantes */
-    const rms=floorRooms(f.id).slice(0,3);
-    rms.forEach((ri,q)=>{
-      const room=ROOMS[ri],rx=X1-6-q*0,rz=Z0+3.2+q*5.2,st=roomStatus(room,CLOCK.min),n=st.busy?clamp(Math.round(st.cur.n||(st.cur.ppl||[]).length||3),1,8):0;
-      add(G.box(5.8,.05,4.6),'#D8DEE8',rx,fy+.03,rz);add(G.cyl(1.5,1.5,.1,14),'#E9EEF3',rx,fy+1.2,rz);add(G.cyl(.2,.4,1.2,8),'#2A2F3A',rx,fy+.6,rz);
-      for(let c2=0;c2<6;c2++){const a=c2/6*Math.PI*2,px=rx+Math.sin(a)*2.1,pz=rz+Math.cos(a)*1.7;add(G.box(.8,.12,.8),'#3A4150',px,fy+.78,pz);add(G.cyl(.05,.05,.7,6),'#9AA3B2',px,fy+.4,pz);
-        if(c2<n){const pp=lightOf(EMPS[(c2*7+ri)%Math.max(1,EMPS.length)]||{});person(px,fy,pz,pp,true,Math.atan2(rx-px,rz-pz)+Math.PI)}}
+    /* salas de reunião: posição, status e participantes reais */
+    rids.forEach((ri,k)=>{
+      const b=RP.specs[k],room=ROOMS[ri],key='r:'+room.name,po=L.p[key],bcx=(b.x0+b.x1)/2,bcz=(b.z0+b.z1)/2,dx=po?po.x-bcx:0,dz=po?po.z-bcz:0;
+      const sp={x0:b.x0+dx,x1:b.x1+dx,z0:b.z0+dz,z1:b.z1+dz},rc=roomCfg(room),lay=scaleLay(layoutRoom(rc.model||'round',rc.seats||6),sp),rx=(sp.x0+sp.x1)/2,rz=(sp.z0+sp.z1)/2;
+      add(G.box(sp.x1-sp.x0-.2,.04,sp.z1-sp.z0-.2),'#EDEFF3',rx,fy+.06,rz);
+      const tb=lay.table,tY=fy+1.2;
+      if(tb.type==='round'){add(G.cyl(tb.r,tb.r,.16,24),'#FFFFFF',rx,tY,rz);add(G.cyl(.35,.6,1.15,10),'#C9CFDA',rx,fy+.58,rz)}
+      else if(tb.type==='rect'){add(G.box(tb.w,.16,tb.d),'#FFFFFF',rx,tY,rz);for(const s of[-1,1])add(G.box(.12,1.15,tb.d-.3),'#C9CFDA',rx+s*(tb.w/2-.5),fy+.58,rz)}
+      else{const px=rx+tb.x,pz=rz+tb.z;add(G.box(tb.w,.16,tb.d),'#FFFFFF',px,tY,pz);add(G.box(4.4,2.2,.08),'#F3F5F9',px,fy+2.5,pz-.95)}
+      lay.seats.forEach(s=>chair(rx+s.x,rz+s.z,'#2B3140',s.ry+Math.PI));
+      /* quem está na reunião agora (da planilha) e acompanhantes sem cadastro */
+      const st=roomStatus(room,CLOCK.min),S=lay.seats.length,taken=new Set();
+      MEETM.forEach((mt,id)=>{if(mt.ri!==ri||mt.sofa||mt.wait)return;const e=EMPS[id];if(!e)return;const si=Math.floor(mt.k*S/mt.T)%S,s=lay.seats[si];taken.add(si);person(rx+s.x,fy,rz+s.z,lightOf(e),true,s.ry)});
+      if(st.busy){const want=clamp(Math.round(st.cur.n||0),0,S);for(let si=0;si<S&&taken.size<want;si++){if(taken.has(si))continue;taken.add(si);const s=lay.seats[si];person(rx+s.x,fy,rz+s.z,lightOf(EMPS[(si*7+ri)%Math.max(1,EMPS.length)]||{}),true,s.ry)}}
+      add(G.sph(.2,8,6),st.busy?'#E03E4B':'#12A072',sp.x0+.15,fy+3.0,rz+1.8);
+      /* paredes de vidro da sala */
+      const door=2.6,gp=(w,d,x,z)=>{const m=new THREE.Mesh(G.box(w,3.4,d),glass);m.userData.own=true;m.geometry.userData.own=true;m.position.set(x,fy+1.7,z);m.renderOrder=3;g.add(m);add(G.box(w+.05,.1,d+.05),'#2C3340',x,fy+3.4,z)};
+      gp(.12,(rz-door/2)-sp.z0,sp.x0,(sp.z0+(rz-door/2))/2);gp(.12,sp.z1-(rz+door/2),sp.x0,((rz+door/2)+sp.z1)/2);gp(sp.x1-sp.x0,.12,rx,sp.z1);
     });
-    /* cantinho do café + sofá + plantas */
-    const kx=X0+5.5,kz=Z1-7.2;
-    add(G.box(3.4,1.1,1.0),'#8A6B4A',kx,fy+.55,kz);add(G.box(3.5,.08,1.1),'#E9E4DA',kx,fy+1.12,kz);add(G.box(.9,.8,.7),'#20242E',kx-.9,fy+1.55,kz);
-    const cL=ppl.length?lightOf(ppl[0]):{};person(kx+.8,fy,kz+1.7,Object.assign({},cL,{shirt:'#E07A5F'}),false,Math.PI);person(kx-.9,fy,kz+1.9,Object.assign({},cL,{shirt:'#3D5A80',gender:'F'}),false,Math.PI*.85);
-    add(G.cyl(.09,.08,.18,8),'#FFFFFF',kx+.8-.3,fy+1.45,kz+1.35);
-    const sx=X1-5.5;add(G.box(3.6,.55,1.5),'#5B6B8C',sx,fy+.4,Z1-5.6);add(G.box(3.6,1.0,.4),'#5B6B8C',sx,fy+.95,Z1-6.2);add(G.box(.4,.85,1.5),'#5B6B8C',sx-1.7,fy+.62,Z1-5.6);add(G.box(.4,.85,1.5),'#5B6B8C',sx+1.7,fy+.62,Z1-5.6);
-    add(G.cyl(1.0,1.0,.1,16),'#E9E4DA',sx,fy+.5,Z1-3.9);add(G.cyl(.12,.3,.5,8),'#2A2F3A',sx,fy+.25,Z1-3.9);
-    plantAt(X0+1.6,fy,Z1-1.8,1.4);plantAt(X1-1.6,fy,Z1-1.8,1.2);plantAt(X0+10,fy,Z1-1.8,1.0);
-    /* gente andando pelos corredores */
-    const nw=Math.min(3,Math.ceil(ppl.length/12));
-    for(let w=0;w<nw;w++){
-      const L=ppl.length?lightOf(ppl[(w*5+3)%ppl.length]):{};
-      const tmp=VB();const addT=(g,col,x,y,z,o)=>vAdd(tmp,g,tint(col),x,y,z,o);
-      const sh=L.shirt||'#5B8DEF',sk=L.skin||'#E8B896',hr=L.hair||'#3A2A1F',pn='#2D3445';
-      addT(G.cyl(.42,.5,.95,10),sh,0,1.4,0);addT(G.sph(.46,10,8),sh,0,1.82,0,{sy:.55,sx:1.05});addT(G.sph(.55,12,9),sk,0,2.66,0);addT(G.sph(.58,12,9),hr,0,2.8,-.07,{sy:.72});
-      addT(G.box(.3,1.0,.3),pn,-.2,.5,0);addT(G.box(.3,1.0,.3),pn,.2,.5,0);addT(G.box(.2,.95,.2),sh,-.58,1.4,0);addT(G.box(.2,.95,.2),sh,.58,1.4,0);
-      const m=vMesh(tmp,vm.m,false);if(!m)continue;
-      const z1=Z1-2.2-w*.7,xa=X0+4+w*3,xb=X1-9-w*2;
-      m.position.set(xa,fy,z1);root.add(m);
-      LOWK.push({m,a:{x:xa,z:z1},b:{x:xb,z:z1},fy,u:Math.random()*2,sp:1.5+w*.25,hold:0,dir:1,ph:Math.random()*6});
+    /* lounge: o sofá de descanso do andar e quem está nele */
+    const lp=L.p.lg0,lx=lp?lp.x:-14.5,lz=lp?lp.z:10.3;
+    add(G.cyl(3.0,3.0,.04,24),'#FFFFFF',lx,fy+.07,lz+.6);
+    add(G.box(4.9,.55,1.5),'#3A4150',lx,fy+.4,lz-.2);add(G.box(4.9,1.0,.4),'#3A4150',lx,fy+.95,lz-.8);add(G.box(.4,.85,1.5),'#3A4150',lx-2.25,fy+.62,lz-.2);add(G.box(.4,.85,1.5),'#3A4150',lx+2.25,fy+.62,lz-.2);
+    add(G.cyl(.9,.9,.12,16),'#FFFFFF',lx,fy+.55,lz+1.9);add(G.cyl(.12,.12,.55,8),'#C9CFDA',lx,fy+.28,lz+1.9);
+    /* a quem está de almoço no sofá ou esperando reunião no andar da sala */
+    const waiters=[];MEETM.forEach((mt,id)=>{if(!(mt.sofa||mt.wait))return;const r=ROOMS[mt.ri];if(r&&roomCfg(r).floor===f.id&&EMPS[id])waiters.push(EMPS[id])});
+    sofaIds.concat(waiters).slice(0,3).forEach((e,k)=>person(lx+[-1.3,0,1.3][k],fy+.17,lz-.15,lightOf(e),true,0));
+    /* recepção */
+    if(f.reception){
+      const rp=L.p.rec,bx=rp?rp.x:-5.4,bz=rp?rp.z:9.6;
+      add(G.box(6.6,.03,3.6),'#FFE9DC',bx,fy+.08,bz+.8);add(G.box(5.4,1.5,.5),'#FFFFFF',bx,fy+.75,bz+1.6);add(G.box(5.7,.12,1.3),'#FF6A1A',bx,fy+1.56,bz+1.35);add(G.box(.5,1.5,1.3),'#FFFFFF',bx-2.55,fy+.75,bz+.9);add(G.box(.5,1.5,1.3),'#FFFFFF',bx+2.55,fy+.75,bz+.9);
+      const rl=EMPS.filter(e=>isActive(e)&&/recep/i.test(e.cargo||''));person(bx,fy,bz-.2,rl.length?lightOf(rl[0]):{shirt:'#FF6A1A',gender:'F'},true,0);
     }
-  }
-  const mS=vMesh(B,vm.m,false);if(mS){mS.receiveShadow=false;root.add(mS)}
+    /* arquivo e elevador */
+    const cp=L.p.cab,cabx=cp?cp.x:-19.2,cabz=cp?cp.z:9.25;for(let i=0;i<3;i++)add(G.box(1.3,3.4,1.5),'#C4CCD8',cabx,fy+1.7,cabz+(i-1)*1.65);
+    /* poço do elevador (o mesmo em todos os andares): armação e vidro, a cabine passa por dentro */
+    {const es=ES||elevSpot(),rot=es.r%2===1,ew=rot?2.4:3.8,ed=rot?3.8:2.4;
+      for(const sx of[-1,1])for(const sz of[-1,1])add(G.box(.16,LVH-1.4,.16),'#B9BFCA',es.x+sx*(ew/2-.1),fy+(LVH-1.4)/2,es.z+sz*(ed/2-.1));
+      add(G.box(ew,.25,ed),'#4A505C',es.x,fy+LVH-1.5,es.z);
+      for(const [w2,d2,ox,oz] of [[ew,.05,0,ed/2],[ew,.05,0,-ed/2],[.05,ed,ew/2,0],[.05,ed,-ew/2,0]]){const m=new THREE.Mesh(G.box(w2,LVH-1.6,d2),glass);m.geometry.userData.own=true;m.position.set(es.x+ox,fy+(LVH-1.6)/2+.1,es.z+oz);m.renderOrder=3;g.add(m)}
+    }
+    /* itens extras e plantas do andar (os mesmos objetos do andar real) */
+    (L.x||[]).forEach(e=>{const T=XT[e.t];if(!T)return;try{const o=T.mk(e);o.position.set(e.x,fy,e.z);o.rotation.y=(e.r||0)*Math.PI/2;extras.push(o)}catch(_){}});
+    if(!(L.x||[]).length)[[-11.8,-12.2],[-.6,-12.2],[-17.2,12.2],[-9.5,11.8],[19,11.8],[7.6,-12.2]].forEach(a=>plantAt(a[0],a[1],1));
+  }finally{CUR=sv}
+  const mS=vMesh(B,vm.m,false);if(mS){mS.receiveShadow=false;g.add(mS)}
   if(!LBM){LBM=new THREE.MeshBasicMaterial({vertexColors:true});LBM.userData.keep=true}
-  const mL=vMesh(LB,LBM,false);if(mL)root.add(mL);
-  /* vidro por cima de tudo (transparente de verdade) */
-  for(let j=1;j<idx;j++){
-    const y0=-idx*LVH-1.2+j*LVH,h=LVH-.5,yc=y0+.5+h/2;
-    [[W,0,0,Z1,0],[W,0,0,Z0,0],[D,0,X0,0,Math.PI/2],[D,0,X1,0,Math.PI/2]].forEach(([len,,px,pz,ry],i)=>{
-      const g=new THREE.PlaneGeometry(len,h);g.userData.own=true;const m=new THREE.Mesh(g,glass);
-      if(i<2)m.position.set(cx,yc,pz);else m.position.set(px,yc,cz);m.rotation.y=ry;m.renderOrder=3;root.add(m);
-    });
-  }
-  BELOW=root;scene.add(root);
+  const mL=vMesh(LB,LBM,false);if(mL)g.add(mL);
+  extras.forEach(o=>g.add(o));
+  /* vidro da frente */
+  const h=LVH-1.4,gm=new THREE.Mesh(new THREE.PlaneGeometry(W,h),glass);gm.geometry.userData.own=true;gm.position.set(cx,fy+h/2,Z1);gm.renderOrder=3;g.add(gm);
+  return {g,fy};
 }
-function lowTick(dt,t){
-  for(const k of LOWK){
-    if(k.hold>0){k.hold-=dt;k.m.position.y=k.fy;continue}
-    const from=k.dir>0?k.a:k.b,to=k.dir>0?k.b:k.a,L=Math.hypot(to.x-from.x,to.z-from.z)||1;
-    k.u+=k.sp*dt/L;if(k.u>=1){k.u=0;k.dir*=-1;k.hold=1.5+Math.random()*3}
-    const x=from.x+(to.x-from.x)*k.u,z=from.z+(to.z-from.z)*k.u;
-    k.m.position.set(x,k.fy+Math.abs(Math.sin(t*5+k.ph))*.07,z);k.m.rotation.y=Math.atan2(to.x-from.x,to.z-from.z);
-  }
-}
+function lowTick(){}
+function sharpen(root){try{const mx=Math.min(8,renderer.capabilities.getMaxAnisotropy());root.traverse(o=>{const m=o.material;if(!m)return;(Array.isArray(m)?m:[m]).forEach(q=>{['map','bumpMap'].forEach(k=>{const t=q[k];if(t&&t.anisotropy<mx){t.anisotropy=mx;t.needsUpdate=true}})})})}catch(e){}}
 function buildWorld(){
-  if(!OK)return;
+  if(!OK)return;WORLD++;
   NAV=null;LSL=null;frame.n=0;disposeDyn();DPICK=[];TAGS=[];SIGNS=[];ISL.clear();PERS.clear();EG.clear();RM.length=0;ANIM.length=0;LEAVES.length=0;PART.length=0;WALK=[];CUPS=[];SLOCC.clear();CAFE=null;ELEV=null;MEETP=new Map();
   dyn=new THREE.Group();scene.add(dyn);
   ensureSurround();buildBelow();
@@ -1722,7 +1760,7 @@ function buildWorld(){
   RP.lounges.forEach((key,j)=>{const sp=RP.lspecs[j],po=LAY(CUR).p[key],bx=(sp.x0+sp.x1)/2,bz=(sp.z0+sp.z1)/2;let s=sp;if(po){const dx=po.x-bx,dz=po.z-bz;s={x0:sp.x0+dx,x1:sp.x1+dx,z0:sp.z0+dz,z1:sp.z1+dz}}buildLounge(s,key,{x:bx,z:bz})});
   if(fl.reception)buildReception();
   buildExtras();buildCabinet();buildElevator();
-  applyClock(true);drawScreen();lunchSync(true);applyLabelVis();edRefresh();
+  applyClock(true);drawScreen();lunchSync(true);applyLabelVis();edRefresh();sharpen(FLR||scene);
 }
 function emptySlot(sp){
   const cx=(sp.x0+sp.x1)/2,cz=(sp.z0+sp.z1)/2,g=new THREE.Group();dyn.add(g);
@@ -2473,11 +2511,11 @@ function ensureSurround(){
   const idx=Math.max(0,floorIdx(CUR)),key=idx+'|'+EXX+'|'+EXZ+'|'+(THEME().company||'')+'|'+CFG.floors.length;
   if(!SKY){
     const sk=new THREE.Mesh(new THREE.SphereGeometry(380,32,16),new THREE.MeshBasicMaterial({map:skyTex(),side:THREE.BackSide,fog:false,depthWrite:false}));
-    sk.renderOrder=-10;sk.frustumCulled=false;SKY=new THREE.Group();SKY.add(sk);scene.add(SKY);scene.fog=new THREE.Fog('#E3EBF1',170,400);
+    sk.renderOrder=-10;sk.frustumCulled=false;SKY=new THREE.Group();SKY.userData.sceneRoot=true;SKY.add(sk);scene.add(SKY);scene.fog=new THREE.Fog('#E3EBF1',170,400);
   }
   if(key===SURRK&&SURR)return;
   disposeSurr();SURRK=key;AMB.phase=0;AMB.state={m:'g',c:'r'};
-  try{SURR=buildSurround(idx);scene.add(SURR)}catch(e){console.error('surround',e);SURR=null}
+  try{SURR=buildSurround(idx);SURR.userData.sceneRoot=true;scene.add(SURR)}catch(e){console.error('surround',e);SURR=null}
 }
 function ambTick(dt,t){
   if(SKY)SKY.position.copy(camera.position);
@@ -2986,10 +3024,11 @@ let LASTIN=0;
 function frame(now){
   requestAnimationFrame(frame);
   /* cena parada (sem arrastar, sem câmera em movimento): 30 quadros por segundo bastam e metade do esforço da placa de vídeo */
-  const busy=!!tw||dragging||(now-LASTIN<900)||EDIT;
+  const busy=!!tw||!!FTR||dragging||(now-LASTIN<900)||EDIT;
   frame.cap=!busy;
   if(!busy&&now-(frame.lr||0)<30)return;
   frame.lr=now;
+  floorTransTick(now);
   if(tw){
     const k=ease(clamp((now-tw.t0)/tw.dur,0,1));
     for(const key in tw.to)cam[key]=tw.from[key]+(tw.to[key]-tw.from[key])*k;
@@ -3013,7 +3052,7 @@ function frame(now){
     /* resolução automática: se o aparelho não acompanha, diminui a resolução (e volta quando sobra folga) */
     const ft=(now-(frame.t0||now));frame.t0=now;const tgt=frame.cap?33.3:16.7;
     frame.ema=(frame.ema||1)*.94+Math.min(ft/tgt,4)*.06;
-    const base=Math.min(window.devicePixelRatio||1,1.25),pr=renderer.getPixelRatio();
+    const base=Math.min(window.devicePixelRatio||1,2),pr=renderer.getPixelRatio();
     if(n%45===0){
       if(frame.ema>1.45&&pr>.7){renderer.setPixelRatio(Math.max(.7,pr-.15));resize();frame.ema=1}
       else if(frame.ema<1.08&&pr<base-.01){renderer.setPixelRatio(Math.min(base,pr+.1));resize();frame.ema=1}
@@ -3343,14 +3382,40 @@ function railUI(){
   }).join('');
 }
 function fadeSwitch(id,cb){
-  const fd=$('#fade');
-  const go=()=>{
+  if(id===CUR){if(cb)cb();return}
+  const instant=()=>{
     CUR=id;buildWorld();railUI();greet();
     if(OK){const o=overviewCam();Object.assign(cam,{r:o.r*1.25,ph:.55,th:.42,tx:o.tx,ty:o.ty,tz:o.tz,sx:0,sy:0});tw=null}
-    fd.classList.remove('on');if(cb)cb();
+    if(cb)cb();
   };
-  if(REDUCED||!OK){go();return}
-  fd.classList.add('on');setTimeout(go,200);
+  if(REDUCED||!OK||FTR||!FLR){if(FTR)return;instant();return}
+  /* sem recarregar: a câmera sobe ou desce pelo prédio. Descendo, o andar de cima sai (o "teto" some);
+     subindo, os andares de cima descem e se encaixam (o teto é colocado) e a câmera sobe junto. */
+  const from=Math.max(0,floorIdx(CUR)),to=Math.max(0,floorIdx(id)),dir=to>from?1:-1,span=Math.abs(to-from);
+  tw=null;FTR={id,cb,from,to,dir,span,t0:performance.now(),dur:1300+span*450,ty0:cam.ty};
+  if(ABOVE){ABOVE.visible=true;FLS.forEach((fl,j)=>{if(j>from)fl.g.visible=dir>0&&j<=to});}
+  FLS.forEach((fl,j)=>{if(j<from)fl.g.visible=true});
+}
+function floorTransTick(now){
+  const F=FTR;if(!F)return;
+  const u=clamp((now-F.t0)/F.dur,0,1),e=ease(u);
+  cam.ty=F.ty0+F.dir*F.span*LVH*e;
+  if(F.dir<0){
+    const lift=(o,k)=>{const q=ease(clamp((u-k*.08)/.6,0,1));o.position.set(52*q,18*q,0);o.visible=q<.995};
+    lift(FLR,0);
+    for(let j=F.from-1;j>F.to;j--){const fl=FLS.get(j);if(fl)lift(fl.g,F.from-j)}
+  }else{
+    for(let j=F.from+1;j<=F.to;j++){const fl=FLS.get(j);if(!fl)continue;const q=ease(clamp((u-(j-F.from-1)*.1)/.62,0,1));fl.g.visible=true;fl.g.position.set(52*(1-q),18*(1-q),0)}
+  }
+  frame.sh=true;
+  if(u>=1)floorTransEnd();
+}
+function floorTransEnd(){
+  const F=FTR;FTR=null;
+  FLR.position.set(0,0,0);FLR.visible=true;
+  cam.ty=F.ty0;   /* o andar de destino passa a ser o andar do nível 0: a imagem não muda, só ganha todos os detalhes */
+  CUR=F.id;buildWorld();railUI();greet();
+  tw=null;if(F.cb)F.cb();
 }
 $('#rail').addEventListener('click',e=>{
   const b=e.target.closest('[data-floor]');if(!b)return;
@@ -4383,12 +4448,9 @@ function hairMat(color){
 
 /* ----- elevador: espelho, luz, display, viagem ----- */
 let ELD=null;
-function drawElevDisplay(mode,fr){
+function drawElevDisplay(txt,col){
   if(!ELD)return;const g=ELD.g;g.fillStyle='#07090D';g.fillRect(0,0,256,96);g.textAlign='center';g.textBaseline='middle';g.font='800 56px '+FONT;
-  if(mode==='open'){g.fillStyle='#3FE0A0';g.fillText('● '+fnum(CUR),128,50)}
-  else if(mode==='trip'){g.fillStyle='#FF6A1A';g.fillText(['▲','▲▲','▲▲▲','▲▲'][fr%4]+' '+fnum(CUR),128,50)}
-  else{g.fillStyle='#FF8A4C';g.fillText('▲ '+fnum(CUR),128,50)}
-  ELD.tex.needsUpdate=true;ELD.mode=mode;ELD.fr=fr;
+  g.fillStyle=col||'#3FE0A0';g.fillText(txt,128,50);ELD.tex.needsUpdate=true;ELD.mode=txt;
 }
 function buildElevator(){
   const sp0=elevSpot(),r=sp0.r,x=sp0.x,z=sp0.z;ELEVP={x,z,r};
@@ -4409,7 +4471,7 @@ function buildElevator(){
   for(const sx of[-1,1])parts.push(mesh(G.box(.64,3.9,.07),st,sx*1.36,2.05,1.1,{c:1}));
   parts.push(mesh(G.box(2.1,.34,.07),dk,0,3.95,1.1));
   const dtex=cvs(256,96);ELD={c:dtex,g:dtex.getContext('2d'),tex:new THREE.CanvasTexture(dtex),mode:'',fr:-1};
-  parts.push(mesh(G.plane(1.8,.28),new THREE.MeshBasicMaterial({map:ELD.tex}),0,3.95,1.15));drawElevDisplay('idle',0);
+  parts.push(mesh(G.plane(1.8,.28),new THREE.MeshBasicMaterial({map:ELD.tex}),0,3.95,1.15));drawElevDisplay('● '+fnum(CUR));
   const bm=t=>{const c=cvs(64,256),q=c.getContext('2d');q.fillStyle='#D5DAE3';q.fillRect(0,0,64,256);for(let i=0;i<64;i+=2){q.fillStyle='rgba(120,130,150,'+(Math.random()*.25)+')';q.fillRect(i,0,1,256)}return new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(c),metalness:1,roughness:.3,envMap:ENV||null,envMapIntensity:2.2})};
   const dm=bm(),dl=mesh(G.box(.9,3.5,.06),dm,-.46,1.8,1.06,{c:1}),dr=mesh(G.box(.9,3.5,.06),dm,.46,1.8,1.06,{c:1});
   const pn=mesh(G.box(.34,.74,.12),dk,2.05,1.5,1.0,{c:1}),b1=mesh(G.circ(.055),basic('#12A072'),2.05,1.72,1.07),b2=mesh(G.circ(.055),basic('#FF6A1A'),2.05,1.46,1.07);
@@ -4423,19 +4485,90 @@ function glowTex(){
   if(TX.glow)return TX.glow;const c=cvs(128,128),g=c.getContext('2d'),gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,240,200,.9)');gr.addColorStop(1,'rgba(255,240,200,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);
   return TX.glow=new THREE.CanvasTexture(c);
 }
-function elevOpen(sec){if(ELEV)ELEV.until=performance.now()+sec*1000}
-function elevTrip(sec){if(ELEV){const n=performance.now();ELEV.until=0;ELEV.tripStart=n;ELEV.tripEnd=n+sec*1000}}
+/* ----- elevador único do prédio: liga todos os andares, atende um chamado por vez e quem chega depois espera ----- */
+let WORLD=0;
+const EC={fl:0,state:'idle',a:0,b:0,t0:0,dur:0,phase:'pick',q:[],job:null,boarded:false,dropped:false,ej:0,dir:0,started:false};
+const floorsN=()=>Math.max(1,CFG.floors.length);
+const curIdx=()=>Math.max(0,floorIdx(CUR));
+const homeIdx=e=>Math.max(0,floorIdx(CFG.deptFloor[e.depto]));
+function otherFloor(){const n=floorsN(),c=curIdx();return c+1<n?c+1:Math.max(0,c-1)}
+function ecall(from,to,opt){const n=floorsN(),J=Object.assign({from:clamp(from,0,n-1),to:clamp(to,0,n-1),ready:true,w:WORLD,id:++EC.ej},opt||{});EC.q.push(J);if(!EC.started){EC.started=true;EC.fl=curIdx()}return J}
+function ecMove(b,now){EC.a=EC.fl;EC.b=b;EC.dur=Math.max(750,Math.abs(b-EC.fl)*1150);EC.t0=now;EC.state='moving';EC.dir=b>EC.fl?1:-1}
+function ecStep(now){
+  const J0=EC.job,live=!J0||J0.w==null||J0.w===WORLD,safe=f=>{try{f&&f()}catch(e){console.error('elev',e)}};
+  switch(EC.state){
+    case 'idle':{
+      const J=EC.q[0];if(!J)return;EC.job=J;EC.phase='pick';EC.boarded=EC.dropped=false;
+      if(J.from===J.to){EC.q.shift();EC.job=null;if(J.w===WORLD){safe(J.onBoard);safe(J.onDrop)}return}
+      if(Math.round(EC.fl)!==J.from)ecMove(J.from,now);else{EC.state='opening';EC.t0=now}
+      break}
+    case 'moving':{
+      const u=clamp((now-EC.t0)/EC.dur,0,1);EC.fl=EC.a+(EC.b-EC.a)*ease(u);
+      if(u>=1){EC.fl=EC.b;EC.state='opening';EC.t0=now}
+      break}
+    case 'opening':if(now-EC.t0>650){EC.state='open';EC.t0=now}break;
+    case 'open':{
+      if(EC.phase==='pick'){
+        if(J0.ready||!live||now-EC.t0>12000){EC.state='boarding';EC.t0=now;EC.boarded=false;if(live&&J0.board)safe(()=>J0.board(()=>{EC.boarded=true}));else EC.boarded=true}
+      }else if(!EC.dropped){EC.dropped=true;EC.t0=now;if(live)safe(J0.onDrop)}
+      else if(now-EC.t0>1700){EC.state='closing';EC.t0=now}
+      break}
+    case 'boarding':if(EC.boarded&&now-EC.t0>450){EC.state='closing';EC.t0=now}else if(now-EC.t0>9000)EC.boarded=true;break;
+    case 'closing':if(now-EC.t0>650){
+      if(EC.phase==='pick'){if(live)safe(J0.onBoard);EC.phase='drop';ecMove(J0.to,now)}
+      else{EC.q.shift();EC.job=null;EC.state='idle'}
+    }break;
+  }
+}
+/* quem sai deste andar: anda até a porta, espera o elevador chegar (se estiver ocupado, fica esperando) e entra quando a porta abre */
+function rideLeave(e,P,pts,destIdx,after){
+  const g=elevGeom(),J=ecall(curIdx(),destIdx,{ready:false,onBoard:after});
+  J.board=cb=>{
+    const k=J.wk;if(k){const i=WALK.indexOf(k);if(i>=0)WALK.splice(i,1);disposeWalker(k)}
+    startWalk({e,P,el:true,hold:.02,pts:[g.door,g.in],noRoute:true,done:kk=>{disposeWalker(kk);cb()}});
+  };
+  startWalk({e,P,el:true,hold:.05,pts:pts,done:k=>{const l=pts[pts.length-1];walkerIdle(k,l.x,l.z,k.ry);J.wk=k;J.ready=true}});
+  return J;
+}
+/* quem chega a este andar: o elevador busca a pessoa no andar de origem e a traz; a porta abre aqui e ela sai */
+function rideArrive(e,fromIdx,onDrop){return ecall(fromIdx,curIdx(),{ready:true,onDrop})}
+function elevOpen(){}
+function elevTrip(){}
+function ecIndicator(){
+  const n=EC.state==='moving'?Math.round(EC.fl):Math.round(EC.fl),f=CFG.floors[clamp(n,0,floorsN()-1)];
+  return f?fnum(f.id):'';
+}
 function elevTick(){
-  if(!ELEV)return;const n=performance.now(),trip=n<ELEV.tripEnd&&n>=ELEV.tripStart;
-  const tg=(!trip&&n<ELEV.until)?1:0;ELEV.open+=(tg-ELEV.open)*.12;
-  const o=ELEV.open,e=o*o*(3-2*o);
-  ELEV.dl.position.x=-.46-e*.82;ELEV.dr.position.x=.46+e*.82;
-  ELEV.spill.material.opacity=e*.55;
-  ELEV.ceil.material.emissiveIntensity=trip?(.7+Math.sin(n*.03)*.35):1.1;
-  ELEV.car.position.x=trip&&n-ELEV.tripStart>450?Math.sin(n*.09)*.012:0;
-  const mode=trip&&n-ELEV.tripStart>350?'trip':(o>.3?'open':'idle');
-  const fr=Math.floor(n/180)%4;
-  if(ELD&&(mode!==ELD.mode||(mode==='trip'&&fr!==ELD.fr)))drawElevDisplay(mode,fr);
+  const n=performance.now();ecStep(n);
+  const cur=curIdx(),here=Math.abs(EC.fl-cur)<.02&&(EC.state==='opening'||EC.state==='open'||EC.state==='boarding');
+  if(ELEV){
+    ELEV.open+=((here?1:0)-ELEV.open)*.12;
+    const o=ELEV.open,e=o*o*(3-2*o);
+    ELEV.dl.position.x=-.46-e*.82;ELEV.dr.position.x=.46+e*.82;
+    ELEV.spill.material.opacity=e*.55;
+    const mv=EC.state==='moving';
+    ELEV.ceil.material.emissiveIntensity=mv?(.7+Math.sin(n*.03)*.35):1.1;
+    let txt,col;
+    if(mv){const fr=Math.floor(n/220)%3;txt=(EC.dir>0?['▲','▲▲','▲▲▲'][fr]:['▼','▼▼','▼▼▼'][fr])+' '+ecIndicator();col='#FF6A1A'}
+    else if(here){txt='● '+fnum(CUR);col='#3FE0A0'}
+    else{txt=(EC.q.length?'… ':'')+ecIndicator();col='#FF8A4C'}
+    if(ELD&&txt!==ELD.mode)drawElevDisplay(txt,col);
+  }
+  /* a cabine passando pelos andares do prédio (quando não está neste andar) */
+  if(ECAB){
+    const away=Math.abs(EC.fl-cur)>=.02,vis=away&&!!ELEVP;ECAB.visible=vis;
+    if(vis){ECAB.position.set(ELEVP.x,(EC.fl-cur)*LVH,ELEVP.z);ECAB.rotation.y=(ELEVP.r||0)*Math.PI/2;
+      const open=(EC.state==='opening'||EC.state==='open'||EC.state==='boarding')?1:0;ECAB.userData.door.scale.x+=((open?.15:1)-ECAB.userData.door.scale.x)*.18}
+  }
+}
+let ECAB=null;
+function makeCab(){
+  const g=new THREE.Group(),body=new THREE.MeshStandardMaterial({color:0xE9EDF3,roughness:.4,metalness:.5}),lit=new THREE.MeshBasicMaterial({color:0xFFF2D6}),dk=new THREE.MeshStandardMaterial({color:0x1E232B,roughness:.5,metalness:.4});
+  const b=new THREE.Mesh(G.box(3.0,4.0,1.9),body);b.position.set(0,2.15,0);g.add(b);
+  const t=new THREE.Mesh(G.box(2.4,.06,1.4),lit);t.position.set(0,4.14,0);g.add(t);
+  const dr=new THREE.Mesh(G.box(1.6,3.3,.06),dk);dr.position.set(0,1.85,.97);g.add(dr);g.userData.door=dr;
+  const dsp=new THREE.Mesh(G.box(.9,.22,.06),new THREE.MeshBasicMaterial({color:0xFF6A1A}));dsp.position.set(0,3.8,.97);g.add(dsp);
+  g.traverse(o=>{if(o.isMesh)o.geometry.userData.own=true});g.userData.sceneRoot=true;g.renderOrder=2;return g;
 }
 
 /* ----- luz: feixes de sol pelas janelas e poeira ----- */
@@ -5050,10 +5183,15 @@ function clearAlt(P){
 }
 function pathTo(P,slot,rev,mt){
   const home={x:P.hx,z:P.hz};let pts;
-  if(slot&&mt)pts=[home].concat(roomPts(mt.ri,slot));
+  if(slot&&mt&&mt.wait)pts=[home,{x:slot.x,z:slot.z}];
+  else if(slot&&mt)pts=[home].concat(roomPts(mt.ri,slot));
   else if(slot)pts=[home,{x:slot.x,z:slot.z}];
   else{const g=elevGeom();pts=[home,g.out,g.door,g.in]}
   return rev?pts.slice().reverse():pts;
+}
+function awayIdx(mt){
+  if(mt){const r=ROOMS[mt.ri],i=r?floorIdx(roomCfg(r).floor):-1;if(i>=0&&i!==curIdx())return i;return otherFloor()}
+  const L=LN(),i=L.dest==='sofa'?-1:floorIdx(L.dest);return (i>=0&&i!==curIdx())?i:otherFloor();
 }
 function goAway(P,imm,mt){
   const slot=mt?meetSlot(mt):awaySlot(P);P.away=true;P.slot=slot;P.mt=mt||null;
@@ -5061,11 +5199,15 @@ function goAway(P,imm,mt){
   if(!mt)showCup(P,true);P.lead=lookOf(P.e).lead;
   if(imm){P.model.visible=false;if(slot)placeAway(P,slot);else{P.cx=P.hx;P.cz=P.hz;P.cy=0}return}
   P.busy=true;P.model.visible=false;
-  startWalk({e:P.e,P,el:!slot,hold:slot?0:1.1,pts:pathTo(P,slot,false,mt),done:k=>{
-    disposeWalker(k);P.busy=false;if(!slot)elevTrip(1.6);
-    if(slot)placeAway(P,slot);else{P.cx=P.hx;P.cz=P.hz;P.cy=0}
-    setTimeout(()=>lunchSync(false),0);
-  }});
+  if(slot){
+    startWalk({e:P.e,P,el:false,hold:0,pts:pathTo(P,slot,false,mt),done:k=>{
+      disposeWalker(k);P.busy=false;placeAway(P,slot);setTimeout(()=>lunchSync(false),0);
+    }});
+    return;
+  }
+  /* sem lugar neste andar: vai até o elevador, espera ele chegar, entra e sobe/desce até o andar do destino */
+  const dest=awayIdx(mt),g=elevGeom();P.destIdx=dest;
+  rideLeave(P.e,P,[{x:P.hx,z:P.hz},g.out,g.door],dest,()=>{P.busy=false;P.cx=P.hx;P.cz=P.hz;P.cy=0;setTimeout(()=>lunchSync(false),0)});
 }
 function goBack(P,imm){
   const slot=P.slot,mt=P.mt;
@@ -5075,7 +5217,7 @@ function goBack(P,imm){
     disposeWalker(k);P.busy=false;P.model.visible=true;P.x=P.hx;P.z=P.hz;showCup(P,false);
     setTimeout(()=>lunchSync(false),0);
   }});
-  if(slot)go();else{elevTrip(1.1);setTimeout(()=>{elevOpen(2.4);go()},1200)}
+  if(slot)go();else rideArrive(P.e,P.destIdx!=null?P.destIdx:otherFloor(),go);
 }
 function lunchSync(imm){
   if(!OK||!dyn)return;
@@ -5111,15 +5253,15 @@ function cafeArrive(e,s,imm){
   const P={e,dept:null,rec:false,caf:true,x:s.x,z:s.z,head:pr.head,ph:e._i%6,pg,model:pr.g,picks:pr.pick,pT,seat:s,lead:lookOf(e).lead,cx:s.x,cz:s.z,cy:0};
   PERS.set(e._i,P);CAFE.people.set(e._i,P);showCup(P,true);
   if(imm)return;
-  pg.visible=false;P.busy=true;const g=elevGeom();elevOpen(1.5);P.cup.visible=false;
-  startWalk({e,P,el:true,pts:[g.in,g.door,g.out,{x:s.x,z:s.z}],done:k=>{disposeWalker(k);pg.visible=true;P.busy=false;P.cup.visible=true;P.cx=s.x;P.cz=s.z;setTimeout(()=>cafeSync(false),0)}});
+  pg.visible=false;P.busy=true;P.cup.visible=false;
+  rideArrive(e,homeIdx(e),()=>{const g=elevGeom();startWalk({e,P,el:true,pts:[g.in,g.door,g.out,{x:s.x,z:s.z}],done:k=>{disposeWalker(k);pg.visible=true;P.busy=false;P.cup.visible=true;P.cx=s.x;P.cz=s.z;setTimeout(()=>cafeSync(false),0)}})});
 }
 function cafeLeave(P,id,imm){
   const cleanup=()=>{dyn.remove(P.pg);P.pg.traverse(o=>{if(o.isMesh&&o.geometry.userData.baked)o.geometry.dispose()});DPICK=DPICK.filter(o=>!P.picks.includes(o));const i=ANIM.indexOf(P.head);if(i>=0)ANIM.splice(i,1);
     PERS.delete(id);CAFE.people.delete(id);CAFE.occ.delete(P.seat);showCup(P,false);const ci=CUPS.indexOf(P);if(ci>=0)CUPS.splice(ci,1);if(P.cup){dyn.remove(P.cup);P.cup=null}};
   if(imm){cleanup();return}
-  P.busy=true;P.pg.visible=false;P.cup.visible=false;const g=elevGeom();elevOpen(2);
-  startWalk({e:P.e,P,el:true,hold:.7,pts:[{x:P.seat.x,z:P.seat.z},g.out,g.door,g.in],done:k=>{disposeWalker(k);cleanup();setTimeout(()=>{cafeSync(false);meetSync(false)},0)}});
+  P.busy=true;P.pg.visible=false;P.cup.visible=false;const g=elevGeom();
+  rideLeave(P.e,P,[{x:P.seat.x,z:P.seat.z},g.out,g.door],homeIdx(P.e),()=>{cleanup();setTimeout(()=>{cafeSync(false);meetSync(false)},0)});
 }
 
 /* =================== REUNIÕES COM OS MESMOS BONECOS =================== */
@@ -5156,22 +5298,20 @@ function meetCompute(){
     const S=seatCount(room),ids=pplMatch(st.cur.ppl).slice(0,S),T=clamp(Math.max(Math.round(st.cur.n||0),ids.length),1,S);
     ids.forEach((id,k)=>{if(!MEETM.has(id)){MEETM.set(id,{ri,k,T,key:ri+'|'+room.meets.indexOf(st.cur)});used[ri].add(Math.floor(k*S/T))}});
   });
-  /* status "Em reunião" sem reunião marcada agora (ou antes da hora): a pessoa vai para a sala e espera sentada.
-     Vai para a sala da próxima reunião dela hoje; sem agenda, para a primeira sala com lugar livre. */
+  /* status "Em reunião" sem reunião marcada agora (ou fora do horário): a pessoa NÃO entra em sala nenhuma.
+     Ela vai de elevador ao andar da sala (a da próxima reunião dela hoje, ou a primeira sala) e espera no sofá de descanso desse andar. */
   if(!ROOMS.length)return;
   const cache=new Map(),ids=m=>{let v=cache.get(m);if(!v){v=pplMatch(m.ppl||[]);cache.set(m,v)}return v};
   EMPS.forEach(e=>{
     if(MEETM.has(e._i)||!isActive(e)||!isMeetSt(e))return;
     let ri=-1,best=1e9;
     ROOMS.forEach((room,r)=>room.meets.forEach(m=>{if(m.ini>=CLOCK.min&&m.ini<best&&ids(m).includes(e._i)){best=m.ini;ri=r}}));
-    const free=r=>{const S=seatCount(ROOMS[r]);for(let i=0;i<S;i++)if(!used[r].has(i))return i;return -1};
-    if(ri<0||free(ri)<0){ri=-1;for(let r=0;r<ROOMS.length;r++)if(free(r)>=0){ri=r;break}}
-    if(ri<0)return;
-    const idx=free(ri);used[ri].add(idx);
-    MEETM.set(e._i,{ri,k:idx,T:seatCount(ROOMS[ri]),key:'w'+ri,wait:true});
+    if(ri<0)ri=0;
+    MEETM.set(e._i,{ri,k:0,T:1,key:'w'+ri,wait:true,id:e._i});
   });
 }
 function meetSlot(mt){
+  if(mt.wait){const r0=ROOMS[mt.ri];if(!r0||roomCfg(r0).floor!==CUR)return null;return slotAlloc(loungeSlots(),mt.id)}
   const R=RM[mt.ri],room=ROOMS[mt.ri];if(!R||!room||roomCfg(room).floor!==CUR)return null;
   const S=R.seats.length,s=R.seats[Math.floor(mt.k*S/mt.T)]||R.seats[0];
   return {x:R.cx+s.x,z:R.cz+s.z,y:0,ry:s.ry,seated:true,key:'m'+mt.ri+'_'+mt.k};
@@ -5199,22 +5339,28 @@ function meetSync(imm){
   MEETP.forEach((p,id)=>{if(!p.busy&&(!want.has(id)||want.get(id).mt.key!==p.mkey))meetLeave(p,id,imm)});
   want.forEach((w,id)=>{if(!MEETP.has(id)&&!PERS.has(id))meetArrive(w,imm)});
 }
+function meetPlace(P,slot){
+  /* espera no sofá: sentado nos 3 lugares do sofá, em pé nos demais */
+  if(P.mwait&&!slot.seated){P.pg.visible=false;const k2=startWalk({e:P.e,pts:[{x:slot.x,z:slot.z},{x:slot.x,z:slot.z}],pT:P.pT});walkerIdle(k2,slot.x,slot.z,slot.ry);P.alt={walker:k2}}
+  else P.pg.visible=true;
+}
 function meetArrive(w,imm){
-  const {e,mt,slot}=w;
-  const pT={kind:'person',id:e._i,tipT:e.nome||'Colaborador',tipS:(e.cargo||e.depto)+' · em reunião',foot:{type:'ring',x:slot.x,z:slot.z+.3,r:1.25}};
-  const pr=makePerson(lookOf(e)),pg=new THREE.Group();pg.add(pr.g);pg.position.set(slot.x,0,slot.z);pg.rotation.y=slot.ry;dyn.add(pg);
+  const {e,mt,slot}=w,wait=!!mt.wait;
+  const pT={kind:'person',id:e._i,tipT:e.nome||'Colaborador',tipS:(e.cargo||e.depto)+(wait?' · aguardando reunião no sofá':' · em reunião'),foot:{type:'ring',x:slot.x,z:slot.z+.3,r:1.25}};
+  const pr=makePerson(lookOf(e)),pg=new THREE.Group();pg.add(pr.g);pg.position.set(slot.x,slot.y||0,slot.z);pg.rotation.y=slot.ry||0;dyn.add(pg);
   regMeshes(pr.pick,pT,DPICK);ANIM.push(pr.head);pr.head.userData.ph=(e._i%6);
-  const P={e,dept:null,rec:false,caf:true,meet:true,mkey:mt.key,mri:mt.ri,slot,x:slot.x,z:slot.z,head:pr.head,ph:e._i%6,pg,model:pr.g,picks:pr.pick,pT,lead:lookOf(e).lead,cx:slot.x,cz:slot.z,cy:0};
+  const P={e,dept:null,rec:false,caf:true,meet:true,mwait:wait,mkey:mt.key,mri:mt.ri,slot,x:slot.x,z:slot.z,head:pr.head,ph:e._i%6,pg,model:pr.g,picks:pr.pick,pT,lead:lookOf(e).lead,cx:slot.x,cz:slot.z,cy:slot.y||0};
   PERS.set(e._i,P);MEETP.set(e._i,P);
-  if(imm)return;
-  pg.visible=false;P.busy=true;const g=elevGeom();elevOpen(1.5);
-  startWalk({e,P,el:true,pts:[g.in,g.door,g.out].concat(roomPts(mt.ri,slot)),done:k=>{disposeWalker(k);pg.visible=true;P.busy=false;P.cx=slot.x;P.cz=slot.z;setTimeout(()=>meetSync(false),0)}});
+  if(imm){meetPlace(P,slot);return}
+  pg.visible=false;P.busy=true;
+  rideArrive(e,homeIdx(e),()=>{const g=elevGeom();startWalk({e,P,el:true,pts:[g.in,g.door,g.out].concat(wait?[{x:slot.x,z:slot.z}]:roomPts(mt.ri,slot)),done:k=>{disposeWalker(k);P.busy=false;P.cx=slot.x;P.cz=slot.z;meetPlace(P,slot);setTimeout(()=>meetSync(false),0)}})});
 }
 function meetLeave(P,id,imm){
-  const cleanup=()=>{dyn.remove(P.pg);P.pg.traverse(o=>{if(o.isMesh&&o.geometry.userData.baked)o.geometry.dispose()});DPICK=DPICK.filter(o=>!P.picks.includes(o));const i=ANIM.indexOf(P.head);if(i>=0)ANIM.splice(i,1);PERS.delete(id);MEETP.delete(id)};
-  if(imm||!RM[P.mri]){cleanup();return}
-  P.busy=true;P.pg.visible=false;const g=elevGeom();elevOpen(2);
-  startWalk({e:P.e,P,el:true,hold:.7,pts:roomPts(P.mri,P.slot).slice().reverse().concat([g.out,g.door,g.in]),done:k=>{disposeWalker(k);cleanup();setTimeout(()=>meetSync(false),0)}});
+  const cleanup=()=>{clearAlt(P);slotFree(id);dyn.remove(P.pg);P.pg.traverse(o=>{if(o.isMesh&&o.geometry.userData.baked)o.geometry.dispose()});DPICK=DPICK.filter(o=>!P.picks.includes(o));const i=ANIM.indexOf(P.head);if(i>=0)ANIM.splice(i,1);PERS.delete(id);MEETP.delete(id)};
+  if(imm||(!P.mwait&&!RM[P.mri])){cleanup();return}
+  P.busy=true;clearAlt(P);P.pg.visible=false;const g=elevGeom();
+  const pts=P.mwait?[{x:P.slot.x,z:P.slot.z}]:roomPts(P.mri,P.slot).slice().reverse();
+  rideLeave(P.e,P,pts.concat([g.out,g.door]),homeIdx(P.e),()=>{cleanup();setTimeout(()=>meetSync(false),0)});
 }
 
 /* ----- aba Almoço ----- */
@@ -5989,8 +6135,14 @@ async function boot(){
   try{
     renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
     renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.25));renderer.shadowMap.autoUpdate=false;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.shadowMap.autoUpdate=false;
     scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(35,1,.5,400);
+    {/* o andar ativo inteiro (paredes, piso, mesas, pessoas) fica num grupo só: dá para subir, descer e tirar o teto sem reconstruir nada */
+      const _add=scene.add.bind(scene),_rm=scene.remove.bind(scene);
+      FLR=new THREE.Group();FLR.userData.sceneRoot=true;_add(FLR);
+      scene.add=function(){for(const o of arguments){if(!o)continue;if(o.isLight||(o.userData&&o.userData.sceneRoot)||(typeof SUN!=='undefined'&&SUN&&o===SUN.target))_add(o);else FLR.add(o)}return scene};
+      scene.remove=function(){for(const o of arguments){if(o&&o.parent&&o.parent!==scene)o.parent.remove(o);else _rm(o)}return scene};
+    }
     OK=true;buildStatic();ewvProgress(80,'Posicionando as pessoas nos andares…');await ewvYield();applyTheme(true);
   }catch(e){OK=false;fail('Este navegador não conseguiu iniciar o 3D. Os painéis continuam disponíveis pelo menu.');greet();return}
   new ResizeObserver(resize).observe(stageEl);resize();
