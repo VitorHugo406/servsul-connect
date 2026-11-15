@@ -85,3 +85,14 @@
 .dk-pg .dk-mm{background:#fff;min-width:0;display:flex;flex-direction:column}
 @media (max-width:1180px){.dk-pg.dk-mg{grid-template-columns:1fr}.dk-pg .dk-sec{grid-template-columns:1fr;gap:12px}}
 .dk-pg.dk-mg{height:100%;overflow:hidden}.dk-pg .dk-mm{height:100%;min-height:0;overflow:hidden}.dk-pg .dk-ml{height:100%;overflow:hidden}
+
+/* abas retas com sublinhado que desliza */
+.dk-pg .dk-nav{position:sticky}
+.dk-pg .dk-nav button,.dk-pg .dk-tb button{border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important}
+.dk-pg .dk-tb{position:relative}
+.dk-pg .dk-ind{position:absolute;left:0;bottom:0;height:2px;background:#171A21;border-radius:0!important;transition:transform .32s cubic-bezier(.4,0,.2,1),width .32s cubic-bezier(.4,0,.2,1);pointer-events:none;display:block}
+.dk-pg .dk-nav .dk-ind{bottom:-1px}
+.dk-pg .dk-nav button{padding:12px 0}
+@keyframes dkfade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.dk-pg .dk-fade{animation:dkfade .28s ease both}
+.dk-pg .dk-mav,.dk-pg .dk-bav{overflow:hidden}.dk-pg .dk-mav img,.dk-pg .dk-bav img{width:100%;height:100%;object-fit:cover}

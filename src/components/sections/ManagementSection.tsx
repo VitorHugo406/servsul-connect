@@ -1,6 +1,6 @@
 // Gerenciamento: lista de colaboradores à esquerda e ficha completa à direita (dados pessoais, contato, profissional,
 // bancário, acesso e permissões). Dados sensíveis ficam criptografados (employee_records) e só o administrador grava.
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Eye, EyeOff, Shield } from 'lucide-react';
 import { passwordError } from '@/lib/passwordPolicy';
 import { PasswordChecklist } from '@/components/common/PasswordChecklist';
@@ -15,14 +15,13 @@ import { limitErrorMessage } from '@/lib/planAccess';
 import { getEmployeeRecord, saveEmployeeRecord, type EmployeeRecord } from '@/lib/employeeRecord';
 import { UserRegistrationDialog } from '@/components/management/UserRegistrationDialog';
 
-interface Profile { id: string; user_id: string; name: string; email: string; phone: string | null; address?: string | null; company: string | null; registration_number: string | null; profile_type: string; is_active: boolean; sector_id: string | null; birth_date: string | null; autonomy_level: string; last_seen_at?: string | null }
+interface Profile { avatar_url?: string | null; id: string; user_id: string; name: string; email: string; phone: string | null; address?: string | null; company: string | null; registration_number: string | null; profile_type: string; is_active: boolean; sector_id: string | null; birth_date: string | null; autonomy_level: string; last_seen_at?: string | null }
 interface Sector { id: string; name: string; color: string }
 interface Permission { user_id: string; can_post_announcements: boolean; can_delete_messages: boolean; can_access_management: boolean; can_access_password_change: boolean; can_create_war_room: boolean; can_access_orbs?: boolean; can_access_meeting_rooms?: boolean; can_access_dash?: boolean }
 interface Role { user_id: string; role: string }
 const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
 const LEVELS: [string, string][] = [['colaborador', 'Colaborador'], ['supervisor', 'Supervisor'], ['gerente', 'Gerente'], ['diretoria', 'Diretoria']];
 const DAYS: [string, string][] = [['seg', 'Seg'], ['ter', 'Ter'], ['qua', 'Qua'], ['qui', 'Qui'], ['sex', 'Sex'], ['sab', 'Sáb'], ['dom', 'Dom']];
-const BANKS = ['Banco do Brasil (001)', 'Bradesco (237)', 'Caixa Econômica Federal (104)', 'Itaú Unibanco (341)', 'Santander (033)', 'Nubank (260)', 'Inter (077)', 'C6 Bank (336)', 'Sicoob (756)', 'Sicredi (748)'];
 const PERMS: { key: keyof Permission; label: string }[] = [
   { key: 'can_post_announcements', label: 'Postar avisos' }, { key: 'can_access_password_change', label: 'Alterar senhas' },
   { key: 'can_create_war_room', label: 'Criar War Room' }, { key: 'can_access_dash', label: 'Dash' },
@@ -30,13 +29,38 @@ const PERMS: { key: keyof Permission; label: string }[] = [
   { key: 'can_access_management', label: 'Gerenciamento' },
 ];
 
-function Masked({ label, value, onChange, disabled, prefix }: { label: string; value: string; onChange: (v: string) => void; disabled?: boolean; prefix?: string }) {
+const digits = (v: string, max = 30) => v.replace(/\D/g, '').slice(0, max);
+const mask = {
+  cpf: (v: string) => { const d = digits(v, 11); return d.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1-$2'); },
+  rg: (v: string) => { const d = v.replace(/[^0-9xX]/g, '').toUpperCase().slice(0, 9); return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})([0-9X])$/, '.$1-$2'); },
+  pis: (v: string) => { const d = digits(v, 11); return d.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{5})(\d)/, '$1.$2.$3').replace(/\.(\d{5})\.(\d{2})(\d)/, '.$1.$2-$3'); },
+  cep: (v: string) => digits(v, 8).replace(/^(\d{5})(\d)/, '$1-$2'),
+  phone: (v: string) => { const d = digits(v, 11); if (d.length <= 2) return d ? `(${d}` : ''; if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`; if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`; return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`; },
+  money: (v: string) => { const d = digits(v, 12).replace(/^0+/, ''); if (!d) return ''; const c = d.padStart(3, '0'); return `${c.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${c.slice(-2)}`; },
+  num: (v: string) => digits(v, 9),
+  uf: (v: string) => v.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 2),
+  upper: (v: string) => v.toUpperCase().slice(0, 12),
+};
+type MaskKey = keyof typeof mask;
+
+/** Sublinhado reto que desliza até a aba ativa. */
+function useIndicator(active: string, deps: unknown[] = []) {
+  const ref = useRef<HTMLElement | null>(null);
+  const [pos, setPos] = useState({ x: 0, w: 0 });
+  useLayoutEffect(() => {
+    const el = ref.current?.querySelector(`[data-tab="${active}"]`) as HTMLElement | null;
+    if (el) setPos({ x: el.offsetLeft, w: el.offsetWidth });
+  }, [active, ...deps]); // eslint-disable-line react-hooks/exhaustive-deps
+  return { ref, style: { transform: `translateX(${pos.x}px)`, width: pos.w } as React.CSSProperties };
+}
+
+function Masked({ label, value, onChange, disabled, prefix, numeric }: { label: string; value: string; onChange: (v: string) => void; disabled?: boolean; prefix?: string; numeric?: boolean }) {
   const [show, setShow] = useState(false);
   return (
     <>
       <label>{label}</label>
       <div className="dk-mk">
-        <input type={show ? 'text' : 'password'} autoComplete="off" data-lpignore="true" value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} placeholder={prefix} />
+        <input type={show ? 'text' : 'password'} inputMode={numeric ? 'numeric' : undefined} autoComplete="off" data-lpignore="true" value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} placeholder={prefix} />
         <button type="button" className="dk-mo" onClick={() => setShow((v) => !v)}>{show ? 'Ocultar' : 'Mostrar'}</button>
       </div>
     </>
@@ -65,6 +89,8 @@ export function ManagementSection() {
   const [f, setF] = useState({ name: '', phone: '', birth: '', sector: '', level: 'colaborador', active: true });
   const [section, setSection] = useState('personal');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const navInd = useIndicator(section, [selId, loading]);
+  const tabInd = useIndicator(filter, [users.length]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -73,7 +99,13 @@ export function ManagementSection() {
         supabase.rpc('admin_list_profiles_full'), supabase.from('sectors').select('*').order('name'), supabase.from('user_permissions').select('*'), supabase.from('user_roles').select('*'),
       ]);
       if (ue) throw ue; if (se) throw se;
-      setUsers((u as any[]) || []); setSectors(s || []);
+      let list = ((u as any[]) || []) as Profile[];
+      if (list.length && !list.some((x) => 'avatar_url' in x)) {
+        const { data: av } = await supabase.from('profiles').select('user_id, avatar_url');
+        const am = new Map((av || []).map((x: any) => [x.user_id, x.avatar_url]));
+        list = list.map((x) => ({ ...x, avatar_url: (am.get(x.user_id) as string | null) ?? null }));
+      }
+      setUsers(list); setSectors(s || []);
       const pm: Record<string, Permission> = {}; (p || []).forEach((x: any) => { pm[x.user_id] = x; }); setPermissions(pm);
       const rm: Record<string, Role> = {}; (r || []).forEach((x: any) => { rm[x.user_id] = x; }); setRoles(rm);
     } catch (e) { console.error(e); toast.error('Erro ao carregar usuários e configurações.'); } finally { setLoading(false); }
@@ -149,15 +181,7 @@ export function ManagementSection() {
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Erro ao excluir usuário.'); } finally { setSaving(false); }
   };
 
-  const goTo = (id: string) => { setSection(id); const el = scrollRef.current?.querySelector(`[data-sec="${id}"]`) as HTMLElement | null; if (el && scrollRef.current) scrollRef.current.scrollTo({ top: el.offsetTop - 52, behavior: 'smooth' }); };
-  const onScroll = () => {
-    const c = scrollRef.current; if (!c) return;
-    const secs = Array.from(c.querySelectorAll('[data-sec]')) as HTMLElement[];
-    let cur = secs[0]?.dataset.sec || 'personal';
-    secs.forEach((s) => { if (s.offsetTop - 80 <= c.scrollTop) cur = s.dataset.sec || cur; });
-    if (c.scrollTop + c.clientHeight >= c.scrollHeight - 4 && secs.length) cur = secs[secs.length - 1].dataset.sec || cur;
-    if (cur !== section) setSection(cur);
-  };
+  const goTo = (id: string) => { setSection(id); scrollRef.current?.scrollTo({ top: 0 }); };
 
   if (!hasManagementAccess) return <div className="dk-pg"><div className="dk-empty"><Shield className="mx-auto mb-3 h-10 w-10" style={{ color: '#6B7482' }} /><b>Acesso restrito</b><div className="dk-sub" style={{ marginTop: 6 }}>Você não tem permissão para acessar o gerenciamento.</div></div></div>;
 
@@ -171,21 +195,21 @@ export function ManagementSection() {
   const p = (sel && permissions[sel.user_id]) || ({} as Permission);
 
   const field = (span: number, label: string, node: React.ReactNode) => <div className="dk-f" style={{ gridColumn: `span ${span}` }}>{label ? <label>{label}</label> : null}{node}</div>;
-  const text = (span: number, label: string, k: keyof EmployeeRecord, type = 'text') => field(span, label, <input type={type} value={r(k)} disabled={ro} maxLength={120} onChange={(e) => setR(k)(e.target.value)} />);
+  const text = (span: number, label: string, k: keyof EmployeeRecord, type = 'text', m?: MaskKey) => field(span, label, <input type={type} inputMode={m && m !== 'upper' && m !== 'uf' ? 'numeric' : undefined} value={r(k)} disabled={ro} maxLength={120} onChange={(e) => setR(k)(m ? mask[m](e.target.value) : e.target.value)} />);
   const select = (span: number, label: string, k: keyof EmployeeRecord, opts: string[]) => field(span, label, <select value={r(k)} disabled={ro} onChange={(e) => setR(k)(e.target.value)}><option value="">Selecione</option>{opts.map((o) => <option key={o} value={o}>{o}</option>)}</select>);
-  const masked = (span: number, label: string, k: keyof EmployeeRecord) => <div className="dk-f" style={{ gridColumn: `span ${span}` }}><Masked label={label} value={r(k)} disabled={ro} onChange={setR(k)} /></div>;
+  const masked = (span: number, label: string, k: keyof EmployeeRecord, m?: MaskKey) => <div className="dk-f" style={{ gridColumn: `span ${span}` }}><Masked label={label} value={r(k)} disabled={ro} onChange={(v) => setR(k)(m ? mask[m](v) : v)} numeric={!!m} /></div>;
 
   return (
     <div className="dk-pg dk-mg">
       <aside className="dk-ml">
         <div className="sh">
           <div className="srow"><input className="dk-srch" placeholder="Buscar usuário..." value={search} onChange={(e) => setSearch(e.target.value)} /><button className="dk-b2 pri" onClick={() => setCreateOpen(true)}>+ Novo</button></div>
-          <div className="dk-tb" role="group" aria-label="Situação">{([['all', 'Todos'], ['on', 'Ativos'], ['off', 'Inativos']] as const).map(([k, l]) => <button key={k} aria-pressed={filter === k} className={filter === k ? 'on' : ''} onClick={() => setFilter(k)}>{l}<span>{counts[k]}</span></button>)}</div>
+          <div className="dk-tb" role="group" aria-label="Situação" ref={tabInd.ref as React.RefObject<HTMLDivElement>}>{([['all', 'Todos'], ['on', 'Ativos'], ['off', 'Inativos']] as const).map(([k, l]) => <button key={k} data-tab={k} aria-pressed={filter === k} className={filter === k ? 'on' : ''} onClick={() => setFilter(k)}>{l}<span>{counts[k]}</span></button>)}<i className="dk-ind" style={tabInd.style} /></div>
         </div>
         <div style={{ overflowY: 'auto', flex: 1 }}>
           {loading ? <div className="dk-cnt">Carregando...</div> : filtered.map((u) => (
             <button key={u.user_id} className={`dk-li${u.user_id === selId ? ' sel' : ''}`} onClick={() => selectUser(u)}>
-              <span className="dk-mav">{(u.name || '?')[0].toUpperCase()}</span>
+              <span className="dk-mav">{u.avatar_url ? <img src={u.avatar_url} alt="" /> : (u.name || '?')[0].toUpperCase()}</span>
               <span className="dk-lt"><span className="ti">{u.name}</span><span className="su">{u.email} • {sectorName(u)}</span><span className="dk-bd"><em>{roleOf(u)}</em><span className={u.is_active ? 'dk-s1' : 'dk-s0'} style={{ color: u.is_active ? '#0A6B3D' : undefined }}>{u.is_active ? 'Ativo' : 'Inativo'}</span></span></span>
             </button>
           ))}
@@ -195,9 +219,9 @@ export function ManagementSection() {
 
       <main className="dk-mm">
         {!sel ? <div className="dk-empty">Selecione um colaborador na lista.</div> : (
-          <div ref={scrollRef} onScroll={onScroll} style={{ overflowY: 'auto', flex: 1, position: 'relative' }}>
+          <div ref={scrollRef} style={{ overflowY: 'auto', flex: 1, position: 'relative' }}>
             <div className="dk-dh">
-              <div className="dk-bav">{(sel.name || '?')[0].toUpperCase()}</div>
+              <div className="dk-bav">{sel.avatar_url ? <img src={sel.avatar_url} alt="" /> : (sel.name || '?')[0].toUpperCase()}</div>
               <div>
                 <h2>{sel.name}</h2>
                 <div className="su" style={{ color: '#4A5563' }}>{sel.email} • {roleOf(sel) === 'admin' ? 'Admin' : sectorName(sel)}</div>
@@ -210,60 +234,54 @@ export function ManagementSection() {
                 <button className="dk-b2 pri" onClick={save} disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</button>
               </div>
             </div>
-            <nav className="dk-nav">{[['personal', 'Dados pessoais'], ['contact', 'Contato'], ['work', 'Profissional'], ['bank', 'Bancário'], ['access', 'Acesso'], ['perms', 'Permissões']].map(([id, l]) => <button key={id} className={section === id ? 'on' : ''} onClick={() => goTo(id)}>{l}</button>)}</nav>
+            <nav className="dk-nav" ref={navInd.ref as React.RefObject<HTMLElement & HTMLDivElement>}>{[['personal', 'Dados pessoais'], ['contact', 'Contato'], ['work', 'Profissional'], ['access', 'Acesso'], ['perms', 'Permissões']].map(([id, l]) => <button key={id} data-tab={id} className={section === id ? 'on' : ''} onClick={() => goTo(id)}>{l}</button>)}<span className="dk-ind" style={navInd.style} /></nav>
 
-            <section className="dk-sec" data-sec="personal"><div><h3>Dados pessoais</h3><div className="hp">Identificação e documentos do colaborador.</div></div>
+            {section === 'personal' && <section key="personal" className="dk-sec dk-fade" data-sec="personal"><div><h3>Dados pessoais</h3><div className="hp">Identificação e documentos do colaborador.</div></div>
               <div className="dk-gr6">
                 {field(4, 'Nome completo', <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />)}
                 {text(2, 'Nome social', 'social_name')}
                 {field(2, 'Data de nascimento', <input type="date" value={f.birth} onChange={(e) => setF({ ...f, birth: e.target.value })} />)}
                 {select(2, 'Estado civil', 'marital_status', ['Solteiro(a)', 'Casado(a)', 'União estável', 'Divorciado(a)', 'Viúvo(a)'])}
                 {select(2, 'Escolaridade', 'education', ['Fundamental completo', 'Médio completo', 'Superior incompleto', 'Superior completo', 'Pós-graduação'])}
-                {masked(2, 'CPF', 'cpf')}{masked(2, 'RG', 'rg')}{text(2, 'Órgão emissor', 'rg_issuer')}
-                {masked(3, 'PIS/NIS', 'pis')}
+                {masked(2, 'CPF', 'cpf', 'cpf')}{masked(2, 'RG', 'rg', 'rg')}{text(2, 'Órgão emissor', 'rg_issuer', 'text', 'upper')}
+                {masked(3, 'PIS/NIS', 'pis', 'pis')}
                 <div className="dk-f" style={{ gridColumn: 'span 3' }}><span className="lab">Sexo</span><div className="dk-opts">{[['M', 'Masculino'], ['F', 'Feminino'], ['O', 'Outro']].map(([v, l]) => <label key={v}><input type="radio" name="sex" disabled={ro} checked={r('sex') === v} onChange={() => setR('sex')(v)} />{l}</label>)}</div></div>
-              </div></section>
+              </div></section>}
 
-            <section className="dk-sec" data-sec="contact"><div><h3>Contato e endereço</h3><div className="hp">Como falar com o colaborador e com um contato de emergência.</div></div>
+            {section === 'contact' && <section key="contact" className="dk-sec dk-fade" data-sec="contact"><div><h3>Contato e endereço</h3><div className="hp">Como falar com o colaborador e com um contato de emergência.</div></div>
               <div className="dk-gr6">
-                {field(2, 'Celular', <input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />)}{text(2, 'Telefone fixo', 'phone_alt')}{text(2, 'E-mail pessoal', 'personal_email', 'email')}
-                {text(2, 'Contato de emergência', 'emergency_name')}{text(2, 'Parentesco', 'emergency_relation')}{text(2, 'Telefone do contato', 'emergency_phone')}
-                {text(2, 'CEP', 'zip')}{text(3, 'Logradouro', 'street')}{text(1, 'Número', 'number')}
-                {text(2, 'Complemento', 'complement')}{text(2, 'Bairro', 'district')}{text(1, 'Cidade', 'city')}{text(1, 'UF', 'state')}
-              </div></section>
+                {field(2, 'Celular', <input inputMode="numeric" placeholder="(11) 90000-0000" value={f.phone} onChange={(e) => setF({ ...f, phone: mask.phone(e.target.value) })} />)}{text(2, 'Telefone fixo', 'phone_alt', 'text', 'phone')}{text(2, 'E-mail pessoal', 'personal_email', 'email')}
+                {text(2, 'Contato de emergência', 'emergency_name')}{text(2, 'Parentesco', 'emergency_relation')}{text(2, 'Telefone do contato', 'emergency_phone', 'text', 'phone')}
+                {text(2, 'CEP', 'zip', 'text', 'cep')}{text(3, 'Logradouro', 'street')}{text(1, 'Número', 'number', 'text', 'num')}
+                {text(2, 'Complemento', 'complement')}{text(2, 'Bairro', 'district')}{text(1, 'Cidade', 'city')}{text(1, 'UF', 'state', 'text', 'uf')}
+              </div></section>}
 
-            <section className="dk-sec" data-sec="work"><div><h3>Dados profissionais</h3><div className="hp">Cargo, contrato, remuneração e jornada.</div></div>
+            {section === 'work' && <section key="work" className="dk-sec dk-fade" data-sec="work"><div><h3>Dados profissionais</h3><div className="hp">Cargo, contrato, remuneração e jornada.</div></div>
               <div className="dk-gr6">
-                {text(1, 'Matrícula', 'registration')}{text(3, 'Cargo', 'job_title')}
+                {text(1, 'Matrícula', 'registration', 'text', 'num')}{text(3, 'Cargo', 'job_title')}
                 {field(2, 'Setor', <select value={f.sector} onChange={(e) => setF({ ...f, sector: e.target.value })}><option value="">Sem setor</option>{sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>)}
                 {text(2, 'Unidade', 'unit')}{text(2, 'Gestor direto', 'manager_name')}{text(2, 'Data de admissão', 'admission_date', 'date')}
-                {select(2, 'Tipo de contrato', 'contract_type', ['CLT', 'PJ', 'Estágio', 'Temporário', 'Aprendiz'])}{masked(2, 'Salário', 'salary')}{text(1, 'Entrada', 'work_start', 'time')}{text(1, 'Saída', 'work_end', 'time')}
-                {text(1, 'Intervalo', 'break_time', 'time')}{text(2, 'Jornada semanal', 'weekly_hours')}
+                {select(2, 'Tipo de contrato', 'contract_type', ['CLT', 'PJ', 'Estágio', 'Temporário', 'Aprendiz'])}{masked(2, 'Salário (R$)', 'salary', 'money')}{text(1, 'Entrada', 'work_start', 'time')}{text(1, 'Saída', 'work_end', 'time')}
+                {text(1, 'Intervalo', 'break_time', 'time')}{text(2, 'Jornada semanal (horas)', 'weekly_hours', 'text', 'num')}
                 <div className="dk-f" style={{ gridColumn: 'span 3' }}><span className="lab">Dias de trabalho</span><div className="dk-opts">{DAYS.map(([v, l]) => <label key={v}><input type="checkbox" disabled={ro} checked={days.has(v)} onChange={() => toggleDay(v)} />{l}</label>)}</div></div>
-              </div></section>
+              </div></section>}
 
-            <section className="dk-sec" data-sec="bank"><div><h3>Dados bancários</h3><div className="hp">Conta para pagamento de salário.</div></div>
-              <div className="dk-gr6">
-                {field(3, 'Banco', <select value={r('bank')} disabled={ro} onChange={(e) => setR('bank')(e.target.value)}><option value="">Selecione</option>{BANKS.map((b) => <option key={b} value={b}>{b}</option>)}</select>)}
-                {text(1, 'Agência', 'agency')}{masked(2, 'Conta', 'account')}
-                {select(2, 'Tipo de conta', 'account_type', ['Corrente', 'Poupança', 'Salário'])}{select(2, 'Tipo de chave PIX', 'pix_type', ['CPF', 'CNPJ', 'E-mail', 'Celular', 'Aleatória'])}{masked(2, 'Chave PIX', 'pix_key')}
-              </div></section>
 
-            <section className="dk-sec" data-sec="access"><div><h3>Acesso</h3><div className="hp">Login e situação da conta no sistema.</div></div>
+            {section === 'access' && <section key="access" className="dk-sec dk-fade" data-sec="access"><div><h3>Acesso</h3><div className="hp">Login e situação da conta no sistema.</div></div>
               <div className="dk-gr6">
                 {field(3, 'E-mail de login', <input value={sel.email} disabled readOnly />)}
                 {field(2, 'Perfil', <select value={selAdmin ? 'admin' : f.level} disabled={!isAdmin || selAdmin} onChange={(e) => setF({ ...f, level: e.target.value })}>{selAdmin ? <option value="admin">Administrador</option> : null}{LEVELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>)}
                 {field(1, 'Situação', <select value={f.active ? '1' : '0'} onChange={(e) => setF({ ...f, active: e.target.value === '1' })}><option value="1">Ativo</option><option value="0">Inativo</option></select>)}
                 <div className="dk-pwr">{canChangePasswords && <button className="dk-b2" onClick={() => setPasswordUser(sel)}>Definir nova senha</button>}{lastSeen ? <span>Último acesso: {lastSeen}</span> : <span>Sem acesso registrado</span>}</div>
-              </div></section>
+              </div></section>}
 
-            <section className="dk-sec" data-sec="perms" style={{ borderBottom: 0 }}><div><h3>Permissões</h3><div className="hp">Configure os acessos individualmente, sem exigir que o colaborador seja administrador.</div></div>
+            {section === 'perms' && <section key="perms" className="dk-sec dk-fade" data-sec="perms" style={{ borderBottom: 0 }}><div><h3>Permissões</h3><div className="hp">Configure os acessos individualmente, sem exigir que o colaborador seja administrador.</div></div>
               <div className="dk-pg2">
                 {PERMS.map(({ key, label }) => {
                   const on = selAdmin || !!p[key];
                   return <div key={key} className="dk-pm"><span>{label}</span><button type="button" className={`dk-sw${on ? ' on' : ''}`} role="switch" aria-checked={on} aria-label={label} disabled={selAdmin} onClick={() => updatePermission(sel.user_id, key, !on)}><i /></button></div>;
                 })}
-              </div></section>
+              </div></section>}
             <div className="dk-ftb"><button className="dk-b2" onClick={() => selectUser(sel)}>Cancelar</button><button className="dk-b2 pri" onClick={save} disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</button></div>
           </div>
         )}
