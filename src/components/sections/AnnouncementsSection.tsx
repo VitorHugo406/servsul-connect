@@ -132,6 +132,8 @@ export function AnnouncementsSection() {
     e.preventDefault();
     if (!title.trim() || !content.trim()) { toast.error('Preencha o título e o conteúdo'); return; }
     if (!startAt) { toast.error('Data de início é obrigatória'); return; }
+    if (expireAt && new Date(expireAt) <= new Date()) { toast.error('A data de término já passou: o aviso nasceria expirado e ninguém o veria. Escolha uma data futura ou deixe em branco.'); return; }
+    if (expireAt && new Date(expireAt) <= new Date(startAt)) { toast.error('O término precisa ser depois do início.'); return; }
     setFormLoading(true);
     const start = new Date(startAt).toISOString(), end = expireAt ? new Date(expireAt).toISOString() : null;
     const { error } = editingId
