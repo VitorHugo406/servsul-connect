@@ -72,7 +72,10 @@ final class Notifier {
                 .setSmallIcon(R.drawable.ic_stat).setContentTitle(title).setContentText(body).setCategory(NotificationCompat.CATEGORY_CALL)
                 .setPriority(NotificationCompat.PRIORITY_MAX).setOngoing(true).setAutoCancel(false).setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setFullScreenIntent(ring, true).setContentIntent(ring).setColor(0xFF16A34A)
-                .addAction(0, "Atender", answer).addAction(0, "Recusar", dp);
+                ;
+        // War Room alert: "Ciente" confirms without opening the app (same endpoint as "Recusar"; the server recognises the wr- id), "Visualizar" opens the room.
+        if (callId.startsWith("wr-")) b.addAction(0, "Ciente", dp).addAction(0, "Visualizar", answer);
+        else b.addAction(0, "Atender", answer).addAction(0, "Recusar", dp);
         Bitmap bm = fetch(icon); if (bm != null) b.setLargeIcon(bm);
         ((NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE)).notify(callId.hashCode(), b.build());
     }

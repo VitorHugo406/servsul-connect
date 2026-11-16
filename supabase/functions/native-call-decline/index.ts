@@ -10,9 +10,15 @@ const sha = async (s: string) => [...new Uint8Array(await crypto.subtle.digest('
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: { ...H, 'Access-Control-Allow-Headers': '*' } })
   const { secret, callId } = await req.json().catch(() => ({})) as { secret?: string; callId?: string }
-  if (!secret || secret.length < 20 || !callId || !/^[0-9a-f-]{36}$/.test(callId)) return json({ error: 'bad request' }, 400)
+  const wr = callId ? /^wr-([0-9a-f-]{36})-\d+$/.exec(callId) : null   // War Room alert: "Ciente" on the notification
+  if (!secret || secret.length < 20 || !callId || !(wr || /^[0-9a-f-]{36}$/.test(callId))) return json({ error: 'bad request' }, 400)
   const { data: dev } = await admin.from('native_devices').select('profile_id').eq('secret_hash', await sha(secret)).maybeSingle()
   if (!dev) return json({ error: 'unauthorized' }, 401)
+  if (wr) {
+    // Only the convened person's own device may acknowledge (the DB trigger then stops the ring everywhere).
+    await admin.from('war_room_members').update({ has_acknowledged: true, acknowledged_at: new Date().toISOString() }).eq('id', wr[1]).eq('profile_id', dev.profile_id).eq('has_acknowledged', false)
+    return json({ ok: true })
+  }
   const { data: me } = await admin.from('profiles').select('id, company_id, name').eq('id', dev.profile_id).maybeSingle()
   const { data: call } = await admin.from('chat_calls').select('id, company_id, caller_id, conv, status').eq('id', callId).maybeSingle()
   if (!me || !call || call.company_id !== me.company_id || call.caller_id === me.id) return json({ ok: false })
