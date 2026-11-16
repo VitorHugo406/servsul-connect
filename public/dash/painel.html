@@ -5173,7 +5173,7 @@ function applySize(){
   if(!OK||!scene||!floorMatG)return;
   const sx=(40+EXX)/40,sz=(26+EXZ)/26;
   if(!SZC){
-    SZC=[];scene.children.forEach(m=>{if(!m.isMesh)return;const bb=new THREE.Box3().setFromObject(m),w=bb.max.x-bb.min.x,d=bb.max.z-bb.min.z,ax=w>=39.5,az=d>=25.5;if(ax||az)SZC.push({m,ax,az,p:m.position.clone(),s:m.scale.clone(),flat:Math.abs(m.rotation.x)>.1})});
+    SZC=[];[...scene.children,...(FLR?FLR.children:[])].forEach(m=>{if(!m.isMesh)return;const bb=new THREE.Box3().setFromObject(m),w=bb.max.x-bb.min.x,d=bb.max.z-bb.min.z,ax=w>=39.5,az=d>=25.5;if(ax||az)SZC.push({m,ax,az,p:m.position.clone(),s:m.scale.clone(),flat:Math.abs(m.rotation.x)>.1})});
     [27.6,49.6].forEach(wx=>{const w=mkWindow(wx);scene.add(w);SZW.push({w,wx})});
   }
   SZC.forEach(o=>{
