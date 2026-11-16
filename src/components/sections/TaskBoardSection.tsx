@@ -216,7 +216,13 @@ export function TaskBoardSection() {
           toast.success('Mural criado!');
           return true;
         }}
-        onEdit={(board) => setEditingBoard({ id: board.id, name: board.name, description: board.description || '' })}
+        onSave={async (id, name, description, cover) => {
+          const { error } = await updateBoard(id, { name, description: description || null, background_image: cover });
+          if (error) { toast.error('Não foi possível salvar o mural'); return false; }
+          void refetchBoards();
+          toast.success('Mural atualizado!');
+          return true;
+        }}
         onDelete={(id) => void handleDeleteBoard(id)}
       />
 
@@ -1144,7 +1150,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       {/* Search is now inline in header */}
 
       {/* Header */}
-      <div className={cn("flex items-center gap-2 p-3 border-b border-border backdrop-blur-sm relative z-10", isDarkBg ? "bg-black/50 text-white" : "bg-background/80")}>
+      <div className={cn("flex items-center gap-2 p-3 border-b border-border backdrop-blur-sm relative z-10", isDarkBg ? "bv-dark bg-black/50 text-white" : "bg-background/80")}>
         <Button variant="ghost" size="icon" onClick={onBack} className={isDarkBg ? "text-white hover:bg-white/20" : ""}><ArrowLeft className="h-5 w-5" /></Button>
         <div className="flex-1 min-w-0">
           <h2 className={cn("font-semibold truncate", isDarkBg ? "text-white" : "text-foreground")}>{board.name}</h2>
@@ -2672,13 +2678,15 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                     key={bg.id}
                     onClick={() => handleChangeBg(bg.id)}
                     className={cn(
-                      'h-16 rounded-lg border-2 transition-all overflow-hidden',
+                      'relative h-16 rounded-lg border-2 transition-all overflow-hidden',
                       bg.preview || '',
                       board.background_image === bg.id ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/50'
                     )}
                     style={bg.id.startsWith('http') ? { backgroundImage: `url(${bg.id})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
                   >
-                    <span className="text-[9px] text-foreground/70">{bg.name}</span>
+                    {bg.id.startsWith('http')
+                      ? <span className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-[10px] font-medium text-white truncate">{bg.name}</span>
+                      : <span className="text-[10px] font-medium text-foreground/70">{bg.name}</span>}
                   </button>
                 ))}
               </div>

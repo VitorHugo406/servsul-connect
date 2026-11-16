@@ -31,12 +31,12 @@ function Cover({ board }: { board: Board }) {
   return <div className="tm-cover" />;
 }
 
-export function MuralList({ boards, userId, onOpen, onCreate, onEdit, onDelete }: {
+export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete }: {
   boards: Board[];
   userId: string | undefined;
   onOpen: (b: Board) => void;
   onCreate: (name: string, description: string, cover: string) => Promise<boolean>;
-  onEdit: (b: Board) => void;
+  onSave: (id: string, name: string, description: string, cover: string | null) => Promise<boolean>;
   onDelete: (id: string) => void;
 }) {
   const [q, setQ] = useState('');
@@ -48,6 +48,8 @@ export function MuralList({ boards, userId, onOpen, onCreate, onEdit, onDelete }
   const [members, setMembers] = useState<Record<string, Member[]>>({});
   // new mural form
   const [showNew, setShowNew] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const formRef = useRef<HTMLDivElement>(null);
   const [nName, setNName] = useState(''); const [nDesc, setNDesc] = useState(''); const [nCover, setNCover] = useState('cover-navy');
   const [creating, setCreating] = useState(false);
   const { uploadFile, uploading } = useFileUpload();
@@ -105,13 +107,15 @@ export function MuralList({ boards, userId, onOpen, onCreate, onEdit, onDelete }
     setDragIdx(i);
   };
 
-  const openNew = () => { setShowNew(true); setNName(''); setNDesc(''); setNCover('cover-navy'); window.setTimeout(() => nameRef.current?.focus(), 50); };
+  const openNew = () => { setEditId(null); setShowNew(true); setNName(''); setNDesc(''); setNCover('cover-navy'); window.setTimeout(() => { formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); nameRef.current?.focus(); }, 60); };
+  const openEdit = (b: Board) => { setEditId(b.id); setShowNew(true); setNName(b.name); setNDesc(b.description || ''); setNCover(b.background_image || ''); window.setTimeout(() => { formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); nameRef.current?.focus(); }, 60); };
+  const closeForm = () => { setShowNew(false); setEditId(null); };
   const submit = async () => {
     if (!nName.trim()) { toast.error('Informe o nome do mural.'); nameRef.current?.focus(); return; }
     setCreating(true);
-    const ok = await onCreate(nName.trim(), nDesc.trim(), nCover);
+    const ok = editId ? await onSave(editId, nName.trim(), nDesc.trim(), nCover || null) : await onCreate(nName.trim(), nDesc.trim(), nCover);
     setCreating(false);
-    if (ok) setShowNew(false);
+    if (ok) closeForm();
   };
   const upload = async (f: File) => {
     if (!f.type.startsWith('image/')) { toast.error('Selecione uma imagem.'); return; }
@@ -119,6 +123,34 @@ export function MuralList({ boards, userId, onOpen, onCreate, onEdit, onDelete }
     if (r?.url) setNCover(r.url);
   };
   const preview = muralCover(nCover);
+  const renderForm = () => (
+
+            <div className="tm-nw" ref={formRef}>
+              <div className="tm-fm">
+                <div><h3>{editId ? 'Editar mural' : 'Novo mural'}</h3><div className="tm-hp">{editId ? 'Altere o nome, a descrição e a capa do mural. As colunas e os membros ficam como estão.' : 'Crie um mural individual de tarefas. Você poderá ajustar colunas e membros depois.'}</div></div>
+                <div className="tm-f"><label htmlFor="tm-nn">Nome *</label><input id="tm-nn" ref={nameRef} className="tm-in" placeholder="Nome do mural" value={nName} maxLength={80} onChange={(e) => setNName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void submit(); }} /></div>
+                <div className="tm-f"><label htmlFor="tm-nd">Descrição</label><textarea id="tm-nd" className="tm-in tm-ta" placeholder="Descrição opcional" value={nDesc} maxLength={300} onChange={(e) => setNDesc(e.target.value)} /></div>
+              </div>
+              <div className="tm-fm">
+                <div className="tm-f">
+                  <span className="tm-lab">Capa</span>
+                  <div className="tm-pv" style={preview ? { ['--a' as string]: preview.a, ['--b' as string]: preview.b } : undefined}>
+                    {!preview ? (() => { const src = nCover || (editId ? effectiveBoardBg({ id: editId, background_image: null }) : ''); return src ? (isPrivateStorageUrl(src) ? <SignedStorageImage url={src} alt="" /> : <img src={src} alt="" />) : null; })() : null}
+                    <span>{nName.trim() || 'Prévia da capa'}</span>
+                  </div>
+                </div>
+                <div className="tm-sws" role="radiogroup" aria-label="Capa do mural">
+                  {MURAL_COVERS.map((c) => <span key={c.id} role="radio" tabIndex={0} aria-checked={nCover === c.id} title={c.name} aria-label={'Capa ' + c.name} className={'tm-sw' + (nCover === c.id ? ' tm-on' : '')} style={{ backgroundImage: `linear-gradient(135deg,${c.a},${c.b})` }} onClick={() => setNCover(c.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setNCover(c.id); } }} />)}
+                  <button type="button" className="tm-btn" style={{ height: 34, padding: '0 14px' }} disabled={uploading} onClick={() => fileRef.current?.click()}>{uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}Enviar imagem</button>
+                  <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void upload(f); }} />
+                </div>
+                <div className="tm-ac">
+                  <button type="button" className="tm-btn" onClick={closeForm} disabled={creating}>Cancelar</button>
+                  <button type="button" className="tm-btn tm-pri" onClick={() => void submit()} disabled={creating}>{creating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{editId ? 'Salvar alterações' : 'Criar mural'}</button>
+                </div>
+              </div>
+            </div>
+  );
 
   return (
     <div className="dk-pg tm-pg">
@@ -145,11 +177,13 @@ export function MuralList({ boards, userId, onOpen, onCreate, onEdit, onDelete }
         <div className="tm-empty"><b style={{ display: 'block', fontSize: 16, color: '#1C2430', marginBottom: 4 }}>Nenhum mural ainda</b>Crie o primeiro mural de tarefas da sua equipe.<div style={{ marginTop: 16 }}><button type="button" className="tm-btn tm-pri" onClick={openNew}><Plus className="h-4 w-4" />Novo mural</button></div></div>
       ) : (
         <div className="tm-gd">
+          {showNew && editId && !shown.some((x) => x.id === editId) ? renderForm() : null}
           {shown.map((b, i) => {
             const s = stats[b.id] || { total: 0, done: 0, late: 0 };
             const pct = s.total ? Math.round((s.done / s.total) * 100) : 0;
             const mem = members[b.id] || [];
             const owner = b.owner_id === userId;
+            if (showNew && editId === b.id) return <div key={b.id} style={{ display: 'contents' }}>{renderForm()}</div>;
             return (
               <div key={b.id} role="button" tabIndex={0} className={'tm-mc' + (dragIdx === i ? ' tm-drag' : '')}
                 onClick={() => onOpen(b)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(b); }}
@@ -160,7 +194,7 @@ export function MuralList({ boards, userId, onOpen, onCreate, onEdit, onDelete }
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><button type="button" className="tm-kb" aria-label="Opções do mural"><MoreVertical className="h-4 w-4" /></button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuItem onClick={() => onEdit(b)}><Edit className="h-4 w-4 mr-2" /> Editar mural</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openEdit(b)}><Edit className="h-4 w-4 mr-2" /> Editar mural</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => onDelete(b.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Excluir mural</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -185,34 +219,8 @@ export function MuralList({ boards, userId, onOpen, onCreate, onEdit, onDelete }
             );
           })}
           {!shown.length && boards.length ? <div className="tm-empty" style={{ gridColumn: '1 / -1' }}>Nenhum mural encontrado.</div> : null}
+          {showNew && !editId ? renderForm() : null}
 
-          {showNew ? (
-            <div className="tm-nw">
-              <div className="tm-fm">
-                <div><h3>Novo mural</h3><div className="tm-hp">Crie um mural individual de tarefas. Você poderá ajustar colunas e membros depois.</div></div>
-                <div className="tm-f"><label htmlFor="tm-nn">Nome *</label><input id="tm-nn" ref={nameRef} className="tm-in" placeholder="Nome do mural" value={nName} maxLength={80} onChange={(e) => setNName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void submit(); }} /></div>
-                <div className="tm-f"><label htmlFor="tm-nd">Descrição</label><textarea id="tm-nd" className="tm-in tm-ta" placeholder="Descrição opcional" value={nDesc} maxLength={300} onChange={(e) => setNDesc(e.target.value)} /></div>
-              </div>
-              <div className="tm-fm">
-                <div className="tm-f">
-                  <span className="tm-lab">Capa</span>
-                  <div className="tm-pv" style={preview ? { ['--a' as string]: preview.a, ['--b' as string]: preview.b } : undefined}>
-                    {!preview && nCover ? (isPrivateStorageUrl(nCover) ? <SignedStorageImage url={nCover} alt="" /> : <img src={nCover} alt="" />) : null}
-                    <span>{nName.trim() || 'Prévia da capa'}</span>
-                  </div>
-                </div>
-                <div className="tm-sws" role="radiogroup" aria-label="Capa do mural">
-                  {MURAL_COVERS.map((c) => <span key={c.id} role="radio" tabIndex={0} aria-checked={nCover === c.id} title={c.name} aria-label={'Capa ' + c.name} className={'tm-sw' + (nCover === c.id ? ' tm-on' : '')} style={{ backgroundImage: `linear-gradient(135deg,${c.a},${c.b})` }} onClick={() => setNCover(c.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setNCover(c.id); } }} />)}
-                  <button type="button" className="tm-btn" style={{ height: 34, padding: '0 14px' }} disabled={uploading} onClick={() => fileRef.current?.click()}>{uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}Enviar imagem</button>
-                  <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void upload(f); }} />
-                </div>
-                <div className="tm-ac">
-                  <button type="button" className="tm-btn" onClick={() => setShowNew(false)} disabled={creating}>Cancelar</button>
-                  <button type="button" className="tm-btn tm-pri" onClick={() => void submit()} disabled={creating}>{creating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}Criar mural</button>
-                </div>
-              </div>
-            </div>
-          ) : null}
         </div>
       )}
     </div>

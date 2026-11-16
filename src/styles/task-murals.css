@@ -56,3 +56,7 @@
 .tm-pg .tm-empty{background:#fff;border:1px solid #D3D8E0;border-radius:18px;padding:40px;text-align:center;color:#4A5563}
 @media (max-width:1180px){.tm-pg .tm-gd{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:767px){.tm-pg{padding:16px}.dk-pg.tm-pg.tm-pg:first-child{padding:16px!important}.tm-pg .tm-gd{grid-template-columns:1fr}.tm-pg .tm-nw{grid-column:span 1;grid-template-columns:1fr}.tm-pg .tm-srch{width:100%}}
+/* Open board header on a dark/photo background: toolbar icons turn white so they stay visible (colored ones like Score/Operação keep their color). */
+.bv-dark button:not(.text-orange-500):not(.text-yellow-500):not(.bg-primary):not([role="combobox"]){color:#fff!important}
+.bv-dark button:not(.bg-primary):hover{background-color:rgba(255,255,255,.18)!important}
+.bv-dark button svg{opacity:1}
