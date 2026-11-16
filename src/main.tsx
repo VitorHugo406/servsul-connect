@@ -15,6 +15,7 @@ import "./styles/warroom.css";
 import "./styles/sectors.css";
 import "./styles/billing.css";
 import "./styles/companies.css";
+import "./styles/task-murals.css";
 import "./chat-life.css";
 import "./focus-mode.css";
 

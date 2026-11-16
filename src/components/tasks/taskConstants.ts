@@ -104,6 +104,8 @@ export function getBoardBg(bg: string) {
 }
 
 export function getBoardBgStyle(bg: string): React.CSSProperties {
+  const mc = muralCoverCss(bg);
+  if (mc) return { background: mc };
   if (isBgImage(bg)) {
     return { backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' };
   }
@@ -118,7 +120,7 @@ export function isBoardBgDark(bg: string | null): boolean {
   if (!bg) return false;
   if (bg === 'gradient-dark') return true;
   // Image backgrounds get an overlay, so they need light text
-  if (isBgImage(bg)) return true;
+  if (isBgImage(bg) || bg.startsWith('cover-')) return true;
   return false;
 }
 
@@ -155,3 +157,18 @@ export function effectiveBoardBg(board: { id: string; background_image?: string 
 export function isBgImage(bg?: string | null): boolean {
   return !!bg && (bg.startsWith('http') || bg.startsWith('/covers/'));
 }
+
+/** Built-in mural covers from the "Tarefas - murais" design (gradient + dot pattern). Stored in task_boards.background_image as the id. */
+export const MURAL_COVERS: { id: string; name: string; a: string; b: string }[] = [
+  { id: 'cover-navy', name: 'Azul-marinho', a: '#0F1B3D', b: '#34509A' },
+  { id: 'cover-green', name: 'Verde', a: '#0E7356', b: '#3FB58C' },
+  { id: 'cover-orange', name: 'Laranja', a: '#C2410C', b: '#F0A33C' },
+  { id: 'cover-purple', name: 'Roxo', a: '#4F46C8', b: '#9B8CEB' },
+];
+export const muralCover = (bg?: string | null) => MURAL_COVERS.find((c) => c.id === bg) || null;
+export function muralCoverCss(bg?: string | null): string {
+  const c = muralCover(bg); if (!c) return '';
+  return `radial-gradient(circle at 85% 20%,rgba(255,255,255,.22) 0,rgba(255,255,255,0) 38%),radial-gradient(rgba(255,255,255,.16) 1px,transparent 1.5px) 0 0/16px 16px,linear-gradient(135deg,${c.a},${c.b})`;
+}
+/** Images uploaded to the private `attachments` bucket need a signed URL to be shown. */
+export const isPrivateStorageUrl = (u?: string | null) => !!u && u.includes('/storage/v1/object/public/attachments/');

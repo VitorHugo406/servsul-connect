@@ -48,9 +48,11 @@ import { logTaskActivity } from '@/hooks/useTaskActivities';
 import { useBoardScores } from '@/hooks/useBoardScores';
 import { ScorePanel } from '@/components/tasks/ScorePanel';
 import { SignedStorageImage } from '@/components/common/SignedStorageMedia';
+import { MuralList } from '@/components/tasks/MuralList';
+import { useCachedMedia } from '@/lib/mediaCache';
 import {
   PRIORITIES, BACKGROUND_IMAGES, BACKGROUND_GROUPS, CARD_COVERS,
-  getBoardBg, getBoardBgStyle, effectiveBoardBg, isBgImage, getInitials, getCoverDisplay, isBoardBgDark,
+  getBoardBg, getBoardBgStyle, effectiveBoardBg, isBgImage, isPrivateStorageUrl, getInitials, getCoverDisplay, isBoardBgDark,
 } from '@/components/tasks/taskConstants';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -64,7 +66,7 @@ export function TaskBoardSection() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { boards, loading: boardsLoading, createBoard, updateBoard, deleteBoard } = useTaskBoards();
+  const { boards, loading: boardsLoading, createBoard, updateBoard, deleteBoard, refetch: refetchBoards } = useTaskBoards();
   const isMobile = useIsMobile();
   const boardSlugFromPath = location.pathname.match(/^\/tarefas\/([^/]+)$/)?.[1] || null;
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
@@ -201,126 +203,22 @@ export function TaskBoardSection() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="clean-section board-selection flex flex-col h-full">
-      <div className="p-4 pb-0"><PageHeader eyebrow="Produtividade" icon={<ListTodo />} title="Gestão de Tarefas" subtitle={`${boards.length} ${boards.length === 1 ? 'mural' : 'murais'}`} actions={<Button onClick={() => setShowCreateBoard(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Novo Mural</span>
-        </Button>} /></div>
-
-      <ScrollArea className="flex-1 p-4">
-        {boards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="mb-4 rounded-full bg-muted p-4">
-              <ListTodo className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h4 className="font-display text-lg font-semibold text-foreground">Nenhum mural ainda</h4>
-            <p className="text-sm text-muted-foreground mb-4">Crie seu primeiro mural de tarefas</p>
-            <Button onClick={() => setShowCreateBoard(true)} className="gap-2">
-              <Plus className="h-4 w-4" /> Criar Mural
-            </Button>
-          </div>
-        ) : (
-          <div className={cn('grid gap-4', isMobile ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-3')}>
-            {orderedBoards.map((board, index) => {
-              const textColor = 'text-foreground';
-              const subTextColor = 'text-muted-foreground';
-              const metaColor = 'text-muted-foreground';
-              return (
-              <Card
-                key={board.id}
-                className={cn(
-                  'board-selection-item cursor-pointer transition-all overflow-hidden hover:border-primary/30',
-                  draggedBoardIdx === index && 'opacity-50 ring-2 ring-primary',
-                )}
-                onClick={() => { setSelectedBoardId(board.id); navigate('/tarefas/' + slugifyBoardName(board.name) + '-' + board.id); }}
-                draggable
-                onDragStart={(e) => handleBoardDragStart(e, index)}
-                onDragOver={(e) => handleBoardDragOver(e, index)}
-                onDragEnd={handleBoardDragEnd}
-              >
-                {(() => { const bg = effectiveBoardBg(board); return (
-                  <div className={cn('board-cover relative h-24 w-full overflow-hidden', !isBgImage(bg) && getBoardBg(bg))}>
-                    {isBgImage(bg) ? <img src={bg} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}
-                    <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
-                  </div>
-                ); })()}
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-2 flex-1 min-w-0">
-                      <GripVertical className={cn("h-4 w-4 mt-1 flex-shrink-0 cursor-grab active:cursor-grabbing", "text-muted-foreground/50")} />
-                      <div className="flex-1 min-w-0">
-                        <h3 className={cn("font-semibold truncate", textColor)}>{board.name}</h3>
-                        {board.description && (
-                          <p className={cn("text-sm line-clamp-2 mt-1", subTextColor)}>{board.description}</p>
-                        )}
-                        <p className={cn("text-xs mt-2", metaColor)}>
-                          {new Date(board.created_at).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        {board.owner_id === user?.id && (
-                          <DropdownMenuItem onClick={() => {
-                            setEditingBoard({
-                              id: board.id,
-                              name: board.name,
-                              description: board.description || '',
-                            });
-                          }}>
-                            <Edit className="h-4 w-4 mr-2" /> Editar Mural
-                          </DropdownMenuItem>
-                        )}
-                        {board.owner_id === user?.id && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleDeleteBoard(board.id)} className="text-destructive">
-                              <Trash2 className="h-4 w-4 mr-2" /> Excluir Mural
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardContent>
-              </Card>
-              );
-            })}
-          </div>
-        )}
-      </ScrollArea>
-
-      {/* Create Board Dialog */}
-      <Dialog open={showCreateBoard} onOpenChange={setShowCreateBoard}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Novo Mural</DialogTitle>
-            <DialogDescription>Crie um mural individual de tarefas</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nome *</Label>
-              <Input value={boardName} onChange={(e) => setBoardName(e.target.value)} placeholder="Nome do mural" />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <Textarea value={boardDesc} onChange={(e) => setBoardDesc(e.target.value)} placeholder="Descrição opcional" rows={2} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateBoard(false)}>Cancelar</Button>
-            <Button onClick={handleCreateBoard} disabled={creating}>
-              {creating && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Criar Mural
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    <>
+      <MuralList
+        boards={boards as never}
+        userId={user?.id}
+        onOpen={(board) => { setSelectedBoardId(board.id); navigate('/tarefas/' + slugifyBoardName(board.name) + '-' + board.id); }}
+        onCreate={async (name, description, cover) => {
+          const { data, error } = await createBoard(name, description);
+          if (error || !data) { toast.error('Erro ao criar mural'); return false; }
+          if (cover) await updateBoard((data as { id: string }).id, { background_image: cover });
+          void refetchBoards();
+          toast.success('Mural criado!');
+          return true;
+        }}
+        onEdit={(board) => setEditingBoard({ id: board.id, name: board.name, description: board.description || '' })}
+        onDelete={(id) => void handleDeleteBoard(id)}
+      />
 
       {/* Edit Board Dialog */}
       <Dialog open={!!editingBoard} onOpenChange={(open) => !open && setEditingBoard(null)}>
@@ -354,7 +252,7 @@ export function TaskBoardSection() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </motion.div>
+    </>
   );
 }
 
@@ -369,6 +267,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   currentUserId: string;
 }) {
   const { profile } = useAuth();
+  // Uploaded mural images live in the private attachments bucket: resolve a signed copy for the background.
+  const privBgUrl = isPrivateStorageUrl(effectiveBoardBg(board)) ? effectiveBoardBg(board) : null;
+  const { src: privBgSrc } = useCachedMedia(privBgUrl);
   const [searchParams, setSearchParams] = useSearchParams();
   const restrictedTaskId = searchParams.get('task');
   // Full screen: the board covers the whole window (sidebar and top bar hidden) and the browser goes
@@ -1210,7 +1111,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
   const effBg = effectiveBoardBg(board);
   const boardBg = getBoardBg(effBg);
-  const boardBgStyle = getBoardBgStyle(effBg);
+  const boardBgStyle = privBgUrl ? (privBgSrc ? { backgroundImage: `url(${privBgSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}) : getBoardBgStyle(effBg);
   const isDarkBg = isBoardBgDark(effBg);
 
   // Drag-to-scroll handlers for desktop board
