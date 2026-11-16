@@ -1,724 +1,570 @@
-import { PageHeader } from '@/components/common/PageHeader';
-import { SignupsPanel } from '@/components/companies/SignupsPanel';
-import { passwordError as passwordRuleError } from '@/lib/passwordPolicy';
-import { PasswordChecklist } from '@/components/common/PasswordChecklist';
-import { useEffect, useState } from 'react';
-import {
-  Building2,
-  Plus,
-  Loader2,
-  Palette,
-  Image as ImageIcon,
-  ShieldAlert,
-  Users,
-  ShieldCheck,
-  Save,
-  UserPlus,
-  BarChart3,
-  Briefcase,
-  FileSpreadsheet,
-  ExternalLink,
-  MessageSquare,
-  Bell,
-  ListTodo,
-  Calendar as CalIcon,
-  StickyNote,
-  Cake,
-  Award,
-  Siren,
-  Users2,
-  LayoutDashboard,
-  Trash2,
-} from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+// Empresas (super admin only) — faithful port of the owner's design "Empresas - gestão" and
+// "Empresas - assinaturas pelo site" (Tela_de_Avisos_8). CSS in src/styles/companies.css (prefix ce-, scope .ce-pg).
+// The design's "Logs" tab / "Ver logs" were deliberately left out (each company's logs are confidential);
+// "Atividade recente" shows only payment and subscription events.
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Loader2, RefreshCw, ShieldAlert } from 'lucide-react';
 import { FunctionsHttpError } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { getCompanyLogoPath } from '@/lib/companyLogo';
 import { optimizeImageFile } from '@/lib/imageOptimization';
 import { CompanyLogo } from '@/components/common/CompanyLogo';
 import { CompanyPlanPanel } from '@/components/companies/CompanyPlanPanel';
-import { CreditCard } from 'lucide-react';
 import { Sel } from '@/components/ui/Sel';
+import { appConfirm } from '@/lib/appDialog';
+import { passwordError as passwordRuleError } from '@/lib/passwordPolicy';
+import { PasswordChecklist } from '@/components/common/PasswordChecklist';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
 
 interface CompanyStats {
-  id: string;
-  name: string;
-  slug: string;
-  logo_url: string | null;
-  primary_color: string;
-  secondary_color: string;
-  is_active: boolean;
-  is_system: boolean;
-  enabled_modules: string[];
-  total_users: number;
-  active_users: number;
-  admins: number;
-  supervisors: number;
-  colaboradores: number;
+  id: string; name: string; slug: string; logo_url: string | null; primary_color: string; secondary_color: string;
+  is_active: boolean; is_system: boolean; enabled_modules: string[];
+  total_users: number; active_users: number; admins: number; supervisors: number; colaboradores: number;
 }
+interface CompanyUser { profile_id: string; user_id: string; name: string; display_name: string | null; email: string; autonomy_level: string; is_active: boolean; roles: string[] }
+interface Sub { company_id: string; plan_id: string | null; status: string; current_period_end: string | null; trial_ends_at: string | null; billing_cycle: string | null }
+interface PlanRow { id: string; name: string; price_cents: number; annual_price_cents: number | null; features: string[] }
+interface Payment { id: string; company_id: string; kind: string; description: string | null; amount_cents: number; paid_at: string; status: string; provider_payment_id: string | null; receipt_number: number | null }
+interface Signup { id: string; status: string; plan_id: string; amount_cents: number; company_name: string; admin_email: string; admin_name: string | null; error: string | null; attempts: number; created_at: string; activated_at: string | null; company_id: string | null; billing_cycle: string | null; paid_at: string | null }
 
-interface CompanyUser {
-  profile_id: string;
-  user_id: string;
-  name: string;
-  display_name: string | null;
-  email: string;
-  autonomy_level: string;
-  is_active: boolean;
-  roles: string[];
-}
-
-const MODULES: { id: string; label: string; icon: any; group: 'core' | 'shortcut' }[] = [
-  { id: 'chat', label: 'Chat', icon: MessageSquare, group: 'core' },
-  { id: 'announcements', label: 'Avisos', icon: Bell, group: 'core' },
-  { id: 'tasks', label: 'Tarefas', icon: ListTodo, group: 'core' },
-  { id: 'calendar', label: 'Calendário', icon: CalIcon, group: 'core' },
-  { id: 'notes', label: 'Anotações', icon: StickyNote, group: 'core' },
-  { id: 'birthdays', label: 'Aniversários', icon: Cake, group: 'core' },
-  { id: 'evaluations', label: 'Avaliações', icon: Award, group: 'core' },
-  { id: 'war_room', label: 'War Room', icon: Siren, group: 'core' },
-  { id: 'teams', label: 'Equipes', icon: Users2, group: 'core' },
-  { id: 'my_dashboard', label: 'Meu Painel', icon: LayoutDashboard, group: 'core' },
-  { id: 'orbs', label: 'Orbs', icon: ExternalLink, group: 'shortcut' },
+/** Modules the super admin can switch on/off; `feature` is the plan feature that unlocks it ("Fora do plano" otherwise). */
+const MODULES: { id: string; label: string; feature?: string }[] = [
+  { id: 'chat', label: 'Chat', feature: 'chat' },
+  { id: 'announcements', label: 'Avisos', feature: 'announcements' },
+  { id: 'tasks', label: 'Quadros de tarefas', feature: 'tasks' },
+  { id: 'notes', label: 'Anotações', feature: 'notes' },
+  { id: 'war_room', label: 'War Room', feature: 'war_room' },
+  { id: 'calendar', label: 'Calendário', feature: 'calendar' },
+  { id: 'evaluations', label: 'Avaliações', feature: 'evaluations' },
+  { id: 'birthdays', label: 'Aniversariantes', feature: 'birthdays' },
+  { id: 'teams', label: 'Equipes' },
+  { id: 'my_dashboard', label: 'Meu Painel' },
+  { id: 'orbs', label: 'Orbs (atalho externo)' },
 ];
+const SUB_LABEL: Record<string, [string, string]> = {
+  pending: ['Aguardando', 'ce-c-e'], trialing: ['Em teste', 'ce-c-i'], active: ['Ativa', 'ce-c-a'], past_due: ['Pagamento atrasado', 'ce-c-r'],
+  canceled: ['Cancelada', 'ce-c-c'], free: ['Gratuita', 'ce-c-i'], exempt: ['Isenta', 'ce-c-s'],
+};
+const SIGNUP_LABEL: Record<string, [string, string]> = {
+  pending_payment: ['Aguardando pagamento', 'ce-c-e'], provisioning: ['Criando empresa', 'ce-c-i'], active: ['Ativa', 'ce-c-a'],
+  failed: ['Com erro', 'ce-c-r'], expired: ['Expirada sem pagamento', 'ce-c-e'], canceled: ['Cancelada', 'ce-c-c'],
+};
+const PAY_LABEL: Record<string, string> = { approved: 'Pagamento confirmado', paid: 'Pagamento confirmado', confirmed: 'Pagamento confirmado', refunded: 'Pagamento estornado', charged_back: 'Contestação de pagamento', pending: 'Pagamento pendente', rejected: 'Pagamento recusado' };
+const brl = (c: number) => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const dShort = (s: string) => new Date(s).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+const dLong = (s: string) => new Date(s).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const dDay = (s: string) => new Date(s).toLocaleDateString('pt-BR');
+const recNo = (n: number | null) => (n ? 'REC-' + String(n).padStart(6, '0') : '');
+const initial = (s: string) => (s.trim()[0] || '?').toUpperCase();
+/** Light background -> dark text, dark background -> white text. */
+const ink = (hex: string) => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return '#fff';
+  const n = parseInt(m[1], 16); const l = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return l > 0.62 ? '#1C2430' : '#fff';
+};
+const plural = (n: number, a: string, b: string) => `${n} ${n === 1 ? a : b}`;
+
+async function fnError(error: unknown, data: unknown, fallback: string) {
+  let msg = (data as { error?: string })?.error || (error as Error)?.message || fallback;
+  if (error instanceof FunctionsHttpError) { try { const b = await error.context.json(); msg = b?.error || msg; } catch { /* keep */ } }
+  return msg;
+}
+
+function Switch({ on, onClick, label, disabled }: { on: boolean; onClick?: () => void; label: string; disabled?: boolean }) {
+  return <button type="button" className={'ce-sw' + (on ? ' ce-on' : '')} role="switch" aria-checked={on} aria-label={label} disabled={disabled} onClick={onClick}><i /></button>;
+}
 
 export function CompaniesManagementSection() {
   const { roles } = useAuth();
-  const isSuperAdmin = roles.some((r: any) => (r.role as string) === 'super_admin');
+  const isSuperAdmin = roles.some((r: { role: string }) => (r.role as string) === 'super_admin');
 
+  const [tab, setTab] = useState<'emp' | 'ass'>('emp');
   const [companies, setCompanies] = useState<CompanyStats[]>([]);
+  const [subs, setSubs] = useState<Record<string, Sub>>({});
+  const [plans, setPlans] = useState<PlanRow[]>([]);
+  const [signups, setSignups] = useState<Signup[]>([]);
+  const [created, setCreated] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<CompanyStats | null>(null);
+
+  const [q, setQ] = useState('');
+  const [flt, setFlt] = useState<'all' | 'on' | 'off'>('all');
+  const [selId, setSelId] = useState<string | null>(null);
+  const [form, setForm] = useState<CompanyStats | null>(null);
   const [users, setUsers] = useState<CompanyUser[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  // New company modal
-  const [creating, setCreating] = useState(false);
+  // dialogs
   const [openNew, setOpenNew] = useState(false);
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [primary, setPrimary] = useState('#2E5AAC');
-  const [secondary, setSecondary] = useState('#FF6B00');
-  const [trialOn, setTrialOn] = useState(false);
-  const [trialUntil, setTrialUntil] = useState('');
-  const [trialPlan, setTrialPlan] = useState('empresarial');
-
-  // New admin modal
-  const [openNewAdmin, setOpenNewAdmin] = useState(false);
-  const [adminName, setAdminName] = useState('');
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
+  const [nName, setNName] = useState(''); const [nSlug, setNSlug] = useState('');
+  const [nPrimary, setNPrimary] = useState('#2E5AAC'); const [nSecondary, setNSecondary] = useState('#FF6B00');
+  const [trialOn, setTrialOn] = useState(false); const [trialUntil, setTrialUntil] = useState(''); const [trialPlan, setTrialPlan] = useState('empresarial');
+  const [creating, setCreating] = useState(false);
+  const [openAdmin, setOpenAdmin] = useState(false);
+  const [aName, setAName] = useState(''); const [aEmail, setAEmail] = useState(''); const [aPass, setAPass] = useState('');
   const [creatingAdmin, setCreatingAdmin] = useState(false);
+  const [openPlan, setOpenPlan] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false); const [deleteName, setDeleteName] = useState(''); const [deleting, setDeleting] = useState(false);
+  const [sigFlt, setSigFlt] = useState<'all' | 'active' | 'canceled' | 'expired' | 'error'>('all');
+  const [sigDetail, setSigDetail] = useState<Signup | null>(null);
 
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteName, setDeleteName] = useState('');
-  const [deleting, setDeleting] = useState(false);
-  const load = async () => {
-    setLoading(true);
-    const { data, error } = await (supabase as any).rpc('list_companies_with_stats');
-    if (error) {
-      console.error('list_companies_with_stats error', error);
-      toast.error('Erro ao carregar empresas: ' + error.message);
-      setCompanies([]);
-    } else if (data) {
-      setCompanies((data as any[]).map((c) => ({ ...c, enabled_modules: c.enabled_modules ?? [] })) as CompanyStats[]);
-    }
+  const load = useCallback(async () => {
+    const [c, s, p, g, cr] = await Promise.all([
+      db.rpc('list_companies_with_stats'),
+      db.from('company_subscriptions').select('company_id,plan_id,status,current_period_end,trial_ends_at,billing_cycle'),
+      db.from('subscription_plans').select('id,name,price_cents,annual_price_cents,features'),
+      db.from('company_signups').select('id,status,plan_id,amount_cents,company_name,admin_email,admin_name,error,attempts,created_at,activated_at,company_id,billing_cycle,paid_at').order('created_at', { ascending: false }).limit(200),
+      db.from('companies').select('id,created_at'),
+    ]);
+    if (c.error) toast.error('Não foi possível carregar as empresas.');
+    const list = ((c.data || []) as CompanyStats[]).map((x) => ({ ...x, enabled_modules: x.enabled_modules ?? [] }));
+    setCompanies(list);
+    setSubs(Object.fromEntries(((s.data || []) as Sub[]).map((x) => [x.company_id, x])));
+    setPlans((p.data || []) as PlanRow[]);
+    setSignups((g.data || []) as Signup[]);
+    setCreated(Object.fromEntries(((cr.data || []) as { id: string; created_at: string }[]).map((x) => [x.id, x.created_at])));
     setLoading(false);
-  };
+    return list;
+  }, []);
+  useEffect(() => { if (isSuperAdmin) void load(); }, [isSuperAdmin, load]);
 
-  useEffect(() => {
-    if (isSuperAdmin) load();
-  }, [isSuperAdmin]);
-
-  useEffect(() => {
-    if (!selected) {
-      setUsers([]);
-      return;
-    }
-    (async () => {
-      setLoadingUsers(true);
-      const { data, error } = await (supabase as any).rpc('list_company_users', {
-        _company_id: selected.id,
-      });
-      if (!error && data) setUsers(data as CompanyUser[]);
-      setLoadingUsers(false);
-    })();
-  }, [selected]);
+  const sel = useMemo(() => companies.find((c) => c.id === selId) || null, [companies, selId]);
+  useEffect(() => { if (!selId && companies.length) setSelId((companies.find((c) => !c.is_system) || companies[0]).id); }, [companies, selId]);
+  useEffect(() => { setForm(sel ? { ...sel, enabled_modules: [...sel.enabled_modules] } : null); }, [sel]);
+  const loadDetail = useCallback(async (id: string) => {
+    const [u, pay] = await Promise.all([
+      db.rpc('list_company_users', { _company_id: id }),
+      db.from('company_payments').select('id,company_id,kind,description,amount_cents,paid_at,status,provider_payment_id,receipt_number').eq('company_id', id).order('paid_at', { ascending: false }).limit(20),
+    ]);
+    setUsers((u.data || []) as CompanyUser[]); setPayments((pay.data || []) as Payment[]);
+  }, []);
+  useEffect(() => { setUsers([]); setPayments([]); if (selId) void loadDetail(selId); }, [selId, loadDetail]);
 
   if (!isSuperAdmin) {
-    return (
-      <div className="p-8 max-w-xl mx-auto">
-        <Card>
-          <CardContent className="p-8 text-center space-y-3">
-            <ShieldAlert className="w-10 h-10 mx-auto text-destructive" />
-            <p className="text-lg font-semibold">Acesso restrito</p>
-            <p className="text-sm text-muted-foreground">
-              Esta área é exclusiva do super-administrador do sistema.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <div className="p-8 max-w-xl mx-auto text-center space-y-3"><ShieldAlert className="w-10 h-10 mx-auto text-destructive" /><p className="text-lg font-semibold">Acesso restrito</p><p className="text-sm text-muted-foreground">Esta área é exclusiva do super-administrador do sistema.</p></div>;
   }
 
+  const shown = companies.filter((c) => (flt === 'all' || (flt === 'on' ? c.is_active : !c.is_active)) && (!q.trim() || (c.name + ' ' + c.slug).toLowerCase().includes(q.trim().toLowerCase())));
+  const activeSubs = Object.values(subs).filter((s) => s.status === 'active').length;
+  const sub = sel ? subs[sel.id] : undefined;
+  const plan = sub?.plan_id ? plans.find((p) => p.id === sub.plan_id) : undefined;
+  const admins = users.filter((u) => u.roles.includes('admin'));
+  const dirty = !!(form && sel) && (form.name !== sel.name || form.primary_color !== sel.primary_color || form.secondary_color !== sel.secondary_color || form.logo_url !== sel.logo_url || form.enabled_modules.slice().sort().join() !== sel.enabled_modules.slice().sort().join());
+  const set = (patch: Partial<CompanyStats>) => setForm((f) => (f ? { ...f, ...patch } : f));
+
+  const save = async () => {
+    if (!form) return;
+    if (!form.name.trim()) { toast.error('Informe o nome da empresa.'); return; }
+    setSaving(true);
+    const { error } = await db.from('companies').update({ name: form.name.trim(), primary_color: form.primary_color, secondary_color: form.secondary_color, logo_url: form.logo_url, enabled_modules: form.enabled_modules }).eq('id', form.id);
+    setSaving(false);
+    if (error) { toast.error('Não foi possível salvar a empresa.'); return; }
+    toast.success('Empresa atualizada'); void load();
+  };
+  const toggleActive = async () => {
+    if (!sel || sel.is_system) return;
+    if (sel.is_active && !(await appConfirm({ title: `Desativar ${sel.name}?`, message: 'Os usuários desta empresa deixam de acessar o sistema até você ativar de novo. Nenhum dado é apagado.', confirmText: 'Desativar', danger: true }))) return;
+    const { error } = await db.from('companies').update({ is_active: !sel.is_active }).eq('id', sel.id);
+    if (error) toast.error('Não foi possível mudar a situação da empresa.'); else { toast.success(sel.is_active ? 'Empresa desativada' : 'Empresa ativada'); void load(); }
+  };
+  const uploadLogo = async (file: File) => {
+    if (!form) return;
+    if (!file.type.startsWith('image/')) { toast.error('Selecione uma imagem.'); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error('A imagem deve ter no máximo 10 MB.'); return; }
+    const opt = await optimizeImageFile(file, 1024);
+    if (opt.size > 1024 * 1024) { toast.error('A logo deve ter no máximo 1 MB depois de otimizada.'); return; }
+    const path = getCompanyLogoPath(form.slug, opt);
+    const { error } = await supabase.storage.from('company-logos').upload(path, opt, { upsert: true, contentType: opt.type || 'image/png', cacheControl: '3600' });
+    if (error) { toast.error('Não foi possível enviar a logo.'); return; }
+    set({ logo_url: path }); toast.success('Logo enviada. Clique em Salvar alterações para aplicar.');
+  };
+  const removeAdmin = async (u: CompanyUser) => {
+    if (!sel) return;
+    if (admins.length <= 1) { toast.error('A empresa precisa ter pelo menos um administrador.'); return; }
+    if (!(await appConfirm({ title: `Remover ${u.display_name || u.name} dos administradores?`, message: 'A pessoa continua na empresa como colaborador, só perde o acesso de administrador.', confirmText: 'Remover', danger: true }))) return;
+    setBusy('adm:' + u.user_id);
+    const { error } = await db.from('user_roles').delete().eq('user_id', u.user_id).eq('role', 'admin');
+    if (!error && !u.roles.includes('colaborador')) await db.from('user_roles').insert({ user_id: u.user_id, role: 'colaborador' });
+    setBusy(null);
+    if (error) { toast.error('Não foi possível remover o administrador.'); return; }
+    toast.success('Administrador removido'); void loadDetail(sel.id); void load();
+  };
+  const downloadReceipt = async (p: Payment) => {
+    setBusy('rec:' + p.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('receipt', { body: { download: true, payment_id: p.id } });
+      const b64 = (data as { base64?: string })?.base64;
+      if (error || !b64) { toast.error(await fnError(error, data, 'Não foi possível gerar o recibo agora.')); return; }
+      const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      const a = document.createElement('a'); a.href = url; a.download = (data as { filename?: string }).filename || 'recibo.pdf'; document.body.appendChild(a); a.click(); a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } finally { setBusy(null); }
+  };
+  const reconcile = async () => {
+    setBusy('rec-all');
+    const { error } = await supabase.functions.invoke('billing/reconcile', { body: {} });
+    setBusy(null);
+    if (error) { toast.error('Não foi possível conferir os pagamentos agora.'); return; }
+    toast.success('Pagamentos conferidos com o Mercado Pago.'); void load();
+  };
   const handleCreate = async () => {
-    if (!name.trim() || !slug.trim()) {
-      toast.error('Nome e slug são obrigatórios');
-      return;
-    }
-    if (trialOn && (!trialUntil || new Date(trialUntil + 'T23:59:59').getTime() <= Date.now())) {
-      toast.error('Informe uma data futura para o fim da avaliação');
-      return;
-    }
+    if (!nName.trim() || !nSlug.trim()) { toast.error('Nome e identificador são obrigatórios.'); return; }
+    if (trialOn && (!trialUntil || new Date(trialUntil + 'T23:59:59').getTime() <= Date.now())) { toast.error('Informe uma data futura para o fim da avaliação.'); return; }
     setCreating(true);
-    const { data: created, error } = await (supabase as any).from('companies').insert({
-      name: name.trim(),
-      slug: slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-'),
-      primary_color: primary,
-      secondary_color: secondary,
-      is_active: true,
-      is_system: false,
-    }).select('id').single();
-    if (!error && trialOn && created?.id) {
-      // The subscription row is created by a trigger ("pending"): turn it into a trial that ends on the chosen date.
-      const { error: subErr } = await (supabase as any).from('company_subscriptions').update({
-        status: 'trialing', plan_id: trialPlan, trial_ends_at: new Date(trialUntil + 'T23:59:59').toISOString(),
-        notes: 'Período de avaliação até ' + new Date(trialUntil + 'T12:00:00').toLocaleDateString('pt-BR'),
-      }).eq('company_id', created.id);
-      if (subErr) toast.error('Empresa criada, mas não foi possível definir a avaliação: ' + subErr.message);
+    const { data: c, error } = await db.from('companies').insert({ name: nName.trim(), slug: nSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-'), primary_color: nPrimary, secondary_color: nSecondary, is_active: true, is_system: false }).select('id').single();
+    if (!error && trialOn && c?.id) {
+      const { error: e2 } = await db.from('company_subscriptions').update({ status: 'trialing', plan_id: trialPlan, trial_ends_at: new Date(trialUntil + 'T23:59:59').toISOString(), notes: 'Período de avaliação até ' + new Date(trialUntil + 'T12:00:00').toLocaleDateString('pt-BR') }).eq('company_id', c.id);
+      if (e2) toast.error('Empresa criada, mas não foi possível definir a avaliação.');
     }
     setCreating(false);
-    if (error) {
-      toast.error('Erro ao criar empresa: ' + error.message);
-      return;
-    }
+    if (error) { toast.error('Não foi possível criar a empresa (o identificador pode já estar em uso).'); return; }
     toast.success('Empresa criada');
-    setName(''); setSlug(''); setPrimary('#2E5AAC'); setSecondary('#FF6B00'); setTrialOn(false); setTrialUntil(''); setTrialPlan('empresarial');
-    setOpenNew(false);
-    load();
+    setNName(''); setNSlug(''); setNPrimary('#2E5AAC'); setNSecondary('#FF6B00'); setTrialOn(false); setTrialUntil(''); setTrialPlan('empresarial'); setOpenNew(false);
+    await load(); if (c?.id) setSelId(c.id);
   };
-
-  const toggleActive = async (c: CompanyStats) => {
-    const { error } = await (supabase as any)
-      .from('companies')
-      .update({ is_active: !c.is_active })
-      .eq('id', c.id);
-    if (error) toast.error(error.message);
-    else load();
-  };
-
-  const updateSelected = (patch: Partial<CompanyStats>) => {
-    if (!selected) return;
-    setSelected({ ...selected, ...patch });
-  };
-
-  const toggleModule = (mod: string) => {
-    if (!selected) return;
-    const has = selected.enabled_modules.includes(mod);
-    const next = has
-      ? selected.enabled_modules.filter((m) => m !== mod)
-      : [...selected.enabled_modules, mod];
-    updateSelected({ enabled_modules: next });
-  };
-
-  const saveSelected = async () => {
-    if (!selected) return;
-    setSaving(true);
-    const { error } = await (supabase as any)
-      .from('companies')
-      .update({
-        primary_color: selected.primary_color,
-        secondary_color: selected.secondary_color,
-        logo_url: selected.logo_url,
-        enabled_modules: selected.enabled_modules,
-      })
-      .eq('id', selected.id);
-    setSaving(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success('Empresa atualizada');
-    load();
-  };
-
-  const handleUploadLogo = async (file: File) => {
-    if (!selected) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Selecione um arquivo de imagem válido');
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('A imagem original deve ter no máximo 10MB.');
-      return;
-    }
-    const optimizedFile = await optimizeImageFile(file, 1024);
-    if (optimizedFile.size > 1024 * 1024) {
-      toast.error('A logo deve ter no máximo 1MB após a otimização.');
-      return;
-    }
-    const path = getCompanyLogoPath(selected.slug, optimizedFile);
-    const { error: upErr } = await supabase.storage
-      .from('company-logos')
-      .upload(path, optimizedFile, {
-        upsert: true,
-        contentType: optimizedFile.type || 'image/png',
-        cacheControl: '3600',
-      });
-    if (upErr) {
-      toast.error('Erro no upload: ' + upErr.message);
-      return;
-    }
-    // Guardamos apenas o caminho: o bucket é privado e a URL é assinada na leitura.
-    updateSelected({ logo_url: path });
-    toast.success('Logo enviada — salve para aplicar');
-  };
-
   const handleCreateAdmin = async () => {
-    if (!selected) return;
-    if (!adminName.trim() || !adminEmail.trim()) {
-      toast.error('Preencha nome e e-mail do administrador');
-      return;
-    }
-    { const pe = passwordRuleError(adminPassword); if (pe) { toast.error(pe); return; } }
+    if (!sel) return;
+    if (!aName.trim() || !aEmail.trim()) { toast.error('Preencha nome e e-mail do administrador.'); return; }
+    { const pe = passwordRuleError(aPass); if (pe) { toast.error(pe); return; } }
     setCreatingAdmin(true);
-    const { data, error } = await supabase.functions.invoke('create-company-admin', {
-      body: {
-        company_id: selected.id,
-        email: adminEmail.trim().toLowerCase(),
-        password: adminPassword,
-        name: adminName.trim(),
-      },
-    });
+    const { data, error } = await supabase.functions.invoke('create-company-admin', { body: { company_id: sel.id, email: aEmail.trim().toLowerCase(), password: aPass, name: aName.trim() } });
     setCreatingAdmin(false);
-    if (error || (data as any)?.error) {
-      let details = (data as any)?.error || error?.message || 'Falha ao criar administrador';
-      if (error instanceof FunctionsHttpError) {
-        try {
-          const body = await error.context.json();
-          details = body?.error || details;
-        } catch {
-          // Keep the SDK fallback when the function did not return JSON.
-        }
-      }
-      toast.error('Erro: ' + details);
-      return;
-    }
-    toast.success('Admin criado com sucesso');
-    setAdminName(''); setAdminEmail(''); setAdminPassword('');
-    setOpenNewAdmin(false);
-    load();
-    // reload users
-    const { data: u } = await (supabase as any).rpc('list_company_users', { _company_id: selected.id });
-    if (u) setUsers(u as CompanyUser[]);
+    if (error || (data as { error?: string })?.error) { toast.error(await fnError(error, data, 'Não foi possível criar o administrador.')); return; }
+    toast.success('Administrador criado'); setAName(''); setAEmail(''); setAPass(''); setOpenAdmin(false);
+    void loadDetail(sel.id); void load();
   };
+
+  // "Atividade recente": only payment / subscription events (no logs).
+  const events = useMemo(() => {
+    if (!sel) return [] as { t: string; title: string; sub: string }[];
+    const ev: { t: string; title: string; sub: string }[] = [];
+    for (const p of payments) ev.push({ t: p.paid_at, title: PAY_LABEL[p.status] || 'Pagamento', sub: ['Mercado Pago', brl(p.amount_cents), p.receipt_number ? 'Recibo ' + recNo(p.receipt_number) : p.description].filter(Boolean).join(' · ') });
+    for (const g of signups.filter((x) => x.company_id === sel.id)) ev.push({ t: g.created_at, title: 'Assinatura criada pelo site', sub: `Plano ${g.plan_id} · ${brl(g.amount_cents)}${g.billing_cycle === 'annual' ? '/ano' : '/mês'}` });
+    if (created[sel.id]) ev.push({ t: created[sel.id], title: 'Empresa criada', sub: 'Sistema · identificador ' + sel.slug });
+    return ev.sort((a, b) => b.t.localeCompare(a.t)).slice(0, 6);
+  }, [sel, payments, signups, created]);
+
+  const lastPay = payments.find((p) => ['approved', 'paid', 'confirmed'].includes(p.status)) || payments[0];
+  const lastRec = payments.find((p) => p.receipt_number);
+  const cycle = sub?.billing_cycle === 'annual' ? 'ano' : 'mês';
+  const planPrice = plan ? (sub?.billing_cycle === 'annual' && plan.annual_price_cents ? plan.annual_price_cents : plan.price_cents) : 0;
+
+  // signups tab
+  const sigCount = {
+    all: signups.length, active: signups.filter((s) => s.status === 'active').length, canceled: signups.filter((s) => s.status === 'canceled').length,
+    expired: signups.filter((s) => s.status === 'expired').length, error: signups.filter((s) => s.status === 'failed' || (!!s.error && s.status !== 'active' && s.status !== 'canceled' && s.status !== 'expired')).length,
+  };
+  const monthly = signups.filter((s) => s.status === 'active').reduce((t, s) => t + (s.billing_cycle === 'annual' ? Math.round(s.amount_cents / 12) : s.amount_cents), 0);
+  const sigShown = signups.filter((s) => sigFlt === 'all' || (sigFlt === 'error' ? (s.status === 'failed' || (!!s.error && !['active', 'canceled', 'expired'].includes(s.status))) : s.status === sigFlt));
+  const openCompany = (id: string) => { setSelId(id); setTab('emp'); };
 
   return (
-    <div className="p-6 md:p-8 space-y-6">
-      <PageHeader eyebrow="Sistema" icon={<Building2 />} title="Empresas" subtitle="Metadados, cores, módulos habilitados e administradores por empresa." actions={<Dialog open={openNew} onOpenChange={setOpenNew}>
-          <DialogTrigger asChild>
-            <Button><Plus className="w-4 h-4 mr-2" /> Nova empresa</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Nova empresa</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Nome</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Nuvexa" />
-              </div>
-              <div>
-                <Label>Slug (identificador)</Label>
-                <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="grupo-servsul" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="flex items-center gap-1"><Palette className="w-3 h-3" /> Primária</Label>
-                  <div className="flex gap-2">
-                    <input type="color" value={primary} onChange={(e) => setPrimary(e.target.value)} className="w-12 h-10 rounded border" />
-                    <Input value={primary} onChange={(e) => setPrimary(e.target.value)} />
-                  </div>
-                </div>
-                <div>
-                  <Label className="flex items-center gap-1"><Palette className="w-3 h-3" /> Secundária</Label>
-                  <div className="flex gap-2">
-                    <input type="color" value={secondary} onChange={(e) => setSecondary(e.target.value)} className="w-12 h-10 rounded border" />
-                    <Input value={secondary} onChange={(e) => setSecondary(e.target.value)} />
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-3 rounded-xl border p-3">
-                <label className="flex items-center gap-2 text-sm font-medium">
-                  <input type="checkbox" checked={trialOn} onChange={(e) => setTrialOn(e.target.checked)} /> Período de avaliação
-                </label>
-                {trialOn ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>Avaliação até</Label>
-                      <Input type="date" value={trialUntil} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setTrialUntil(e.target.value)} />
-                    </div>
-                    <div>
-                      <Label>Plano em teste</Label>
-                      <Sel className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={trialPlan} onChange={(e) => setTrialPlan(e.target.value)}>
-                        <option value="essencial">Essencial</option><option value="profissional">Profissional</option><option value="empresarial">Empresarial</option>
-                      </Sel>
-                    </div>
-                    <p className="col-span-2 text-xs text-muted-foreground">A empresa fica ativa até essa data. O administrador é avisado 7 dias antes e no vencimento (com 30 dias para assinar); depois disso, você decide no chat Comunicados se os dados serão excluídos.</p>
-                  </div>
-                ) : null}
-              </div>
-              <Button className="w-full" onClick={handleCreate} disabled={creating}>
-                {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Criar empresa
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>} />
-      <SignupsPanel />
+    <div className="dk-pg ce-pg">
+      <div className="ce-top">
+        <div className="ce-tb">
+          <button type="button" className={tab === 'emp' ? 'ce-on' : ''} onClick={() => setTab('emp')}>Empresas <em>{companies.length}</em></button>
+          <button type="button" className={tab === 'ass' ? 'ce-on' : ''} onClick={() => setTab('ass')}>Assinaturas pelo site <em>{signups.length}</em></button>
+        </div>
+        <div className="ce-rt">
+          {tab === 'emp'
+            ? <button type="button" className="ce-btn ce-pri" onClick={() => setOpenNew(true)}>+ Nova empresa</button>
+            : <button type="button" className="ce-btn" onClick={() => void reconcile()} disabled={busy === 'rec-all'}><RefreshCw className={'h-4 w-4' + (busy === 'rec-all' ? ' animate-spin' : '')} />Conferir agora</button>}
+        </div>
+      </div>
 
-      {loading ? (
-        <div className="py-12 flex justify-center">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {companies.map((c) => (
-            <Card key={c.id} className={`cursor-pointer hover:shadow-md transition ${c.is_active ? '' : 'opacity-60'}`} onClick={() => setSelected(c)}>
-              <CardHeader className="flex flex-row items-center gap-3 pb-3">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-white overflow-hidden"
-                  style={{ background: `linear-gradient(140deg, ${c.primary_color}, ${c.secondary_color})` }}
-                >
-                  {c.logo_url ? (
-                    <CompanyLogo value={c.logo_url} alt={c.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <ImageIcon className="w-5 h-5" />
-                  )}
+      {loading ? <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div> : tab === 'emp' ? (
+        <>
+          <div className="ce-panel ce-kp">
+            <div className="ce-k"><span>Empresas ativas</span><b>{companies.filter((c) => c.is_active).length} <small>de {companies.length}</small></b></div>
+            <div className="ce-k"><span>Usuários ativos</span><b>{companies.reduce((t, c) => t + (c.active_users || 0), 0)}</b></div>
+            <div className="ce-k"><span>Administradores</span><b>{companies.reduce((t, c) => t + (c.admins || 0), 0)}</b></div>
+            <div className="ce-k"><span>Assinaturas ativas</span><b>{activeSubs}</b></div>
+          </div>
+          <div className="ce-main">
+            <aside className="ce-panel" aria-label="Empresas">
+              <div className="ce-sh2"><input className="ce-in" type="text" placeholder="Buscar empresa..." aria-label="Buscar empresa" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+              <div className="ce-sh2" style={{ paddingTop: 0 }}>
+                <div className="ce-fl">
+                  {([['all', 'Todas'], ['on', 'Ativas'], ['off', 'Inativas']] as const).map(([k, l]) => <button key={k} type="button" className={flt === k ? 'ce-on' : ''} onClick={() => setFlt(k)}>{l}</button>)}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-base truncate">{c.name}</CardTitle>
-                  <p className="text-xs text-muted-foreground truncate">{c.slug}</p>
-                </div>
-                {c.is_system && (
-                  <Badge variant="secondary" className="text-[10px] uppercase">Sistema</Badge>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex gap-2">
-                  <div className="flex-1 h-6 rounded" style={{ background: c.primary_color }} />
-                  <div className="flex-1 h-6 rounded" style={{ background: c.secondary_color }} />
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <Stat label="Ativos" value={c.active_users} />
-                  <Stat label="Total" value={c.total_users} />
-                  <Stat label="Admins" value={c.admins} />
-                </div>
-                {!c.is_system && (
-                  <div className="flex items-center justify-between pt-1" onClick={(e) => e.stopPropagation()}>
-                    <span className="text-sm text-muted-foreground">Ativa</span>
-                    <Switch checked={c.is_active} onCheckedChange={() => toggleActive(c)} />
+              </div>
+              {shown.map((c) => (
+                <button key={c.id} type="button" className={'ce-li' + (c.id === selId ? ' ce-sel' : '')} onClick={() => setSelId(c.id)}>
+                  <span className="ce-tl" style={c.is_active ? { background: c.primary_color, color: ink(c.primary_color) } : { background: '#8A94A3', color: '#fff' }}>{initial(c.name)}</span>
+                  <span className="ce-lt">
+                    <span className="ce-ti">{c.name} {c.is_system ? <span className="ce-chip ce-c-s">Sistema</span> : !c.is_active ? <span className="ce-chip ce-c-c">Inativa</span> : null}</span>
+                    <span className="ce-su">{c.slug} · {c.active_users} {c.active_users === 1 ? 'ativo' : 'ativos'} de {c.total_users}</span>
+                  </span>
+                </button>
+              ))}
+              <div className="ce-cnt">{plural(shown.length, 'empresa', 'empresas')}</div>
+            </aside>
+
+            {form && sel ? (
+              <main className="ce-panel" aria-label="Dados da empresa">
+                <div className="ce-dh">
+                  <div className="ce-big" style={{ background: sel.primary_color, color: ink(sel.primary_color) }}>{sel.logo_url ? <CompanyLogo value={sel.logo_url} alt={sel.name} /> : initial(sel.name)}</div>
+                  <div>
+                    <h2>{sel.name} {sel.is_system ? <span className="ce-chip ce-c-s">Sistema</span> : <span className={'ce-chip ' + (sel.is_active ? 'ce-c-a' : 'ce-c-c')}>{sel.is_active ? 'Ativa' : 'Inativa'}</span>}</h2>
+                    <div className="ce-su">{sel.slug} · {plural(sel.active_users, 'usuário ativo', 'usuários ativos')} · {sel.total_users} total · {plural(sel.admins, 'administrador', 'administradores')}</div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  <div className="ce-acts">
+                    {!sel.is_system ? <label className="ce-ac">Empresa ativa <Switch on={sel.is_active} label="Empresa ativa" onClick={() => void toggleActive()} /></label> : null}
+                    <button type="button" className="ce-btn ce-pri" onClick={() => void save()} disabled={saving || !dirty}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}Salvar alterações</button>
+                  </div>
+                </div>
+
+                <section className="ce-sc">
+                  <div><h3>Dados da empresa</h3><div className="ce-hp">Nome, identificador e logo exibidos para os usuários.</div></div>
+                  <div className="ce-gr">
+                    <div className="ce-f"><label htmlFor="ce-n">Nome da empresa</label><input id="ce-n" className="ce-in" type="text" value={form.name} onChange={(e) => set({ name: e.target.value })} /></div>
+                    <div className="ce-f"><label htmlFor="ce-s">Identificador (slug)</label><input id="ce-s" className="ce-in" type="text" value={form.slug} disabled title="O identificador não muda depois de criado, para não quebrar o acesso dos usuários." /></div>
+                    <div className="ce-f" style={{ gridColumn: 'span 2' }}>
+                      <label>Logo</label>
+                      <div className="ce-lg">
+                        <div className="ce-lgb">{form.logo_url ? <CompanyLogo value={form.logo_url} alt={form.name} /> : <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="M21 16l-5-5-8 9" /></svg>}</div>
+                        <div>
+                          <button type="button" className="ce-btn" onClick={() => fileRef.current?.click()}>Enviar logo</button>
+                          <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void uploadLogo(f); }} />
+                          <div className="ce-su" style={{ marginTop: 6 }}>PNG ou SVG com fundo transparente.</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="ce-sc">
+                  <div><h3>Aparência</h3><div className="ce-hp">Cores da empresa usadas no sistema.</div></div>
+                  <div className="ce-gr">
+                    {(['primary_color', 'secondary_color'] as const).map((k, i) => (
+                      <div className="ce-f" key={k}>
+                        <label htmlFor={'ce-' + k}>{i ? 'Cor secundária' : 'Cor primária'}</label>
+                        <div className="ce-cl">
+                          <label className="ce-sq" style={{ background: form[k] }} aria-label={i ? 'Escolher cor secundária' : 'Escolher cor primária'}><input type="color" value={/^#[0-9a-f]{6}$/i.test(form[k]) ? form[k] : '#000000'} onChange={(e) => set({ [k]: e.target.value.toUpperCase() } as Partial<CompanyStats>)} /></label>
+                          <input id={'ce-' + k} className="ce-in" type="text" value={form[k]} onChange={(e) => set({ [k]: e.target.value } as Partial<CompanyStats>)} />
+                        </div>
+                      </div>
+                    ))}
+                    <div className="ce-pv"><div style={{ background: form.primary_color }} /><div style={{ background: form.secondary_color }} /></div>
+                  </div>
+                </section>
+
+                <section className="ce-sc">
+                  <div><h3>Módulos habilitados</h3><div className="ce-hp">O que a empresa pode usar. Módulos fora do plano ficam bloqueados.</div></div>
+                  <div className="ce-mg">
+                    {MODULES.map((m) => {
+                      const on = form.enabled_modules.includes(m.id);
+                      const out = !sel.is_system && !!plan && !!m.feature && !plan.features.includes(m.feature);
+                      return (
+                        <div className="ce-md" key={m.id}>
+                          <span>{m.label} {out ? <span className="ce-mt">Fora do plano</span> : null}</span>
+                          <Switch on={on} label={m.label} onClick={() => set({ enabled_modules: on ? form.enabled_modules.filter((x) => x !== m.id) : [...form.enabled_modules, m.id] })} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section className="ce-sc">
+                  <div><h3>Administradores</h3><div className="ce-hp">Quem gerencia esta empresa.</div></div>
+                  <div>
+                    {admins.map((u) => (
+                      <div className="ce-ad" key={u.profile_id}>
+                        <span className="ce-mav">{initial(u.display_name || u.name)}</span>
+                        <div><div className="ce-tt">{u.display_name || u.name}</div><div className="ce-su">{u.email}</div></div>
+                        {!sel.is_system ? <button type="button" className="ce-lk" disabled={busy === 'adm:' + u.user_id || admins.length <= 1} title={admins.length <= 1 ? 'A empresa precisa ter pelo menos um administrador' : undefined} onClick={() => void removeAdmin(u)}>Remover</button> : null}
+                      </div>
+                    ))}
+                    {!admins.length ? <div className="ce-su" style={{ marginBottom: 10 }}>Nenhum administrador cadastrado.</div> : null}
+                    {!sel.is_system ? <button type="button" className="ce-btn" onClick={() => setOpenAdmin(true)}>+ Adicionar administrador</button> : null}
+                  </div>
+                </section>
+
+                <section className="ce-sc">
+                  <div><h3>Assinatura</h3><div className="ce-hp">Plano contratado pela empresa.</div></div>
+                  {sel.is_system ? <div className="ce-kv"><span>Situação</span><b><span className="ce-chip ce-c-s">Empresa do sistema: isenta</span></b></div> : (
+                    <div>
+                      <div className="ce-kv">
+                        <span>Plano</span><b>{plan ? `${plan.name} · ${brl(planPrice)}/${cycle}` : 'Sem plano definido'}</b>
+                        <span>Situação</span><b>{sub ? <span className={'ce-chip ' + (SUB_LABEL[sub.status]?.[1] || 'ce-c-c')}>{SUB_LABEL[sub.status]?.[0] || sub.status}</span> : '—'}</b>
+                        <span>Válido até</span><b>{sub?.status === 'trialing' && sub.trial_ends_at ? dDay(sub.trial_ends_at) : sub?.current_period_end ? dDay(sub.current_period_end) : '—'}</b>
+                        <span>Último pagamento</span><b>{lastPay ? `${dLong(lastPay.paid_at)} · Mercado Pago${lastPay.provider_payment_id ? ' · ID ' + lastPay.provider_payment_id : ''}` : 'Nenhum pagamento registrado'}</b>
+                        <span>Recibo</span><b>{lastRec ? <button type="button" className="ce-lk" style={{ padding: 0 }} disabled={busy === 'rec:' + lastRec.id} onClick={() => void downloadReceipt(lastRec)}>{busy === 'rec:' + lastRec.id ? 'Gerando…' : recNo(lastRec.receipt_number)}</button> : '—'}</b>
+                      </div>
+                      <button type="button" className="ce-btn" style={{ marginTop: 14 }} onClick={() => setOpenPlan(true)}>Editar plano e situação</button>
+                    </div>
+                  )}
+                </section>
+
+                <section className="ce-sc">
+                  <div><h3>Atividade recente</h3><div className="ce-hp">Pagamentos e assinatura desta empresa.</div></div>
+                  <div>
+                    {events.length ? events.map((e, i) => (
+                      <div className="ce-ev" key={i}><span className="ce-dt" /><div><b>{e.title}</b><div className="ce-su">{e.sub}</div></div><span className="ce-su">{dShort(e.t)}</span></div>
+                    )) : <div className="ce-su">Nenhum pagamento ou assinatura registrado ainda.</div>}
+                  </div>
+                </section>
+
+                {!sel.is_system ? (
+                  <section className="ce-sc" style={{ borderBottom: 0 }}>
+                    <div><h3>Excluir empresa</h3><div className="ce-hp">Apaga para sempre todos os dados da empresa. Não dá para desfazer.</div></div>
+                    <div><button type="button" className="ce-btn ce-red" onClick={() => { setDeleteName(''); setDeleteOpen(true); }}>Excluir empresa</button></div>
+                  </section>
+                ) : null}
+
+                <div className="ce-ff">
+                  <button type="button" className="ce-btn" disabled={!dirty || saving} onClick={() => setForm({ ...sel, enabled_modules: [...sel.enabled_modules] })}>Cancelar</button>
+                  <button type="button" className="ce-btn ce-pri" disabled={!dirty || saving} onClick={() => void save()}>Salvar alterações</button>
+                </div>
+              </main>
+            ) : <main className="ce-panel ce-empty">Selecione uma empresa.</main>}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="ce-panel ce-kp">
+            <div className="ce-k"><span>Ativas</span><b>{sigCount.active}</b></div>
+            <div className="ce-k"><span>Canceladas</span><b>{sigCount.canceled}</b></div>
+            <div className="ce-k"><span>Expiradas sem pagamento</span><b>{sigCount.expired}</b></div>
+            <div className="ce-k"><span>Receita mensal ativa</span><b>{brl(monthly)}</b></div>
+          </div>
+          <div className="ce-panel">
+            <div className="ce-sh">
+              <div><b>Assinaturas pelo site</b><p>Empresas que assinaram em /assinar. A conferência com o Mercado Pago também roda sozinha a cada 5 minutos.</p></div>
+              <div className="ce-fl">
+                {([['all', 'Todas'], ['active', 'Ativas'], ['canceled', 'Canceladas'], ['expired', 'Expiradas'], ['error', 'Com erro']] as const).map(([k, l]) => <button key={k} type="button" className={sigFlt === k ? 'ce-on' : ''} onClick={() => setSigFlt(k)}>{l} {sigCount[k]}</button>)}
+              </div>
+            </div>
+            {!sigShown.length ? <div className="ce-empty">Nenhuma assinatura neste filtro.</div> : (
+              <div className="ce-tw">
+                <table>
+                  <thead><tr><th>Empresa</th><th>Plano</th><th>Valor</th><th>Data e hora</th><th>Situação</th><th>Observação</th><th /></tr></thead>
+                  <tbody>
+                    {sigShown.map((s) => {
+                      const [lab, tone] = SIGNUP_LABEL[s.status] || [s.status, 'ce-c-c'];
+                      const canOpen = s.status === 'active' && !!s.company_id && companies.some((c) => c.id === s.company_id);
+                      return (
+                        <tr key={s.id}>
+                          <td><div className="ce-tt">{s.company_name}</div><div className="ce-su">{s.admin_email}</div></td>
+                          <td>{s.plan_id}</td>
+                          <td>{brl(s.amount_cents)}/{s.billing_cycle === 'annual' ? 'ano' : 'mês'}</td>
+                          <td>{dShort(s.created_at)}</td>
+                          <td><span className={'ce-chip ' + tone}>{lab}</span></td>
+                          <td>{s.error && s.status !== 'active' ? <span className="ce-er" style={{ marginTop: 0, display: 'block' }}>{s.error}</span> : '—'}</td>
+                          <td style={{ textAlign: 'right' }}>{canOpen ? <button type="button" className="ce-lk" onClick={() => openCompany(s.company_id!)}>Abrir empresa</button> : <button type="button" className="ce-lk" onClick={() => setSigDetail(s)}>Detalhes</button>}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
-      {/* Company details dialog */}
-      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          {selected && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden"
-                    style={{ background: `linear-gradient(140deg, ${selected.primary_color}, ${selected.secondary_color})` }}
-                  >
-                    {selected.logo_url ? (
-                      <CompanyLogo value={selected.logo_url} alt={selected.name} className="w-full h-full object-contain" />
-                    ) : (
-                      <Building2 className="w-5 h-5 text-white" />
-                    )}
-                  </div>
-                  <div>
-                    <div>{selected.name}</div>
-                    <div className="text-xs font-normal text-muted-foreground">{selected.slug}</div>
-                  </div>
-                </DialogTitle>
-              </DialogHeader>
-
-              <Tabs defaultValue="branding" className="mt-2">
-                <TabsList className="grid grid-cols-4 w-full">
-                  <TabsTrigger value="branding"><Palette className="w-4 h-4 mr-1.5" /> Marca</TabsTrigger>
-                  <TabsTrigger value="modules"><ShieldCheck className="w-4 h-4 mr-1.5" /> Módulos</TabsTrigger>
-                  <TabsTrigger value="users"><Users className="w-4 h-4 mr-1.5" /> Usuários</TabsTrigger>
-                  <TabsTrigger value="plan"><CreditCard className="w-4 h-4 mr-1.5" /> Plano</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="branding" className="space-y-4 pt-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>Cor primária</Label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={selected.primary_color}
-                          onChange={(e) => updateSelected({ primary_color: e.target.value })}
-                          className="w-12 h-10 rounded border"
-                        />
-                        <Input
-                          value={selected.primary_color}
-                          onChange={(e) => updateSelected({ primary_color: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Cor secundária</Label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={selected.secondary_color}
-                          onChange={(e) => updateSelected({ secondary_color: e.target.value })}
-                          className="w-12 h-10 rounded border"
-                        />
-                        <Input
-                          value={selected.secondary_color}
-                          onChange={(e) => updateSelected({ secondary_color: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Logo</Label>
-                    <div className="flex items-center gap-3 mt-1">
-                      <div
-                        className="w-16 h-16 rounded-xl overflow-hidden border flex items-center justify-center"
-                        style={{ background: `linear-gradient(140deg, ${selected.primary_color}, ${selected.secondary_color})` }}
-                      >
-                        {selected.logo_url ? (
-                          <CompanyLogo value={selected.logo_url} alt={selected.name} className="w-full h-full object-contain" />
-                        ) : (
-                          <ImageIcon className="w-6 h-6 text-white" />
-                        )}
-                      </div>
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => e.target.files?.[0] && handleUploadLogo(e.target.files[0])}
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="modules" className="pt-4 space-y-4">
-                  <div>
-                    <p className="text-sm font-semibold mb-2">Módulos principais</p>
-                    <div className="grid sm:grid-cols-2 gap-2">
-                      {MODULES.filter((m) => m.group === 'core').map((m) => {
-                        const Icon = m.icon;
-                        const enabled = selected.enabled_modules.includes(m.id);
-                        return (
-                          <button
-                            key={m.id}
-                            onClick={() => toggleModule(m.id)}
-                            className={`flex items-center justify-between px-3 py-2.5 rounded-lg border transition ${
-                              enabled
-                                ? 'border-primary bg-primary/5'
-                                : 'border-border hover:border-muted-foreground'
-                            }`}
-                          >
-                            <span className="flex items-center gap-2 text-sm">
-                              <Icon className="w-4 h-4" /> {m.label}
-                            </span>
-                            <Switch checked={enabled} />
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold mb-2">Atalhos externos</p>
-                    <div className="grid sm:grid-cols-2 gap-2">
-                      {MODULES.filter((m) => m.group === 'shortcut').map((m) => {
-                        const Icon = m.icon;
-                        const enabled = selected.enabled_modules.includes(m.id);
-                        return (
-                          <button
-                            key={m.id}
-                            onClick={() => toggleModule(m.id)}
-                            className={`flex items-center justify-between px-3 py-2.5 rounded-lg border transition ${
-                              enabled
-                                ? 'border-primary bg-primary/5'
-                                : 'border-border hover:border-muted-foreground'
-                            }`}
-                          >
-                            <span className="flex items-center gap-2 text-sm">
-                              <Icon className="w-4 h-4" /> {m.label}
-                            </span>
-                            <Switch checked={enabled} />
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="plan" className="pt-4">
-                  <CompanyPlanPanel companyId={selected.id} isSystem={selected.is_system} userCount={selected.active_users} />
-                </TabsContent>
-
-                <TabsContent value="users" className="pt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm text-muted-foreground">
-                      {users.length} usuário{users.length === 1 ? '' : 's'}
-                    </p>
-                    {!selected.is_system && (
-                      <Button size="sm" onClick={() => setOpenNewAdmin(true)}>
-                        <UserPlus className="w-4 h-4 mr-1.5" /> Criar admin
-                      </Button>
-                    )}
-                  </div>
-                  {loadingUsers ? (
-                    <div className="py-10 flex justify-center">
-                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : users.length === 0 ? (
-                    <p className="text-center text-sm text-muted-foreground py-8">
-                      Nenhum usuário nesta empresa
-                    </p>
-                  ) : (
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                      {users.map((u) => (
-                        <div key={u.profile_id} className="flex items-center gap-3 p-2.5 rounded-lg border">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {u.display_name || u.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">{u.email}</p>
-                          </div>
-                          <div className="flex flex-wrap gap-1 justify-end">
-                            {u.roles.length > 0 ? (
-                              u.roles.map((r) => (
-                                <Badge key={r} variant={r === 'super_admin' ? 'default' : r === 'admin' ? 'secondary' : 'outline'} className="text-[10px]">
-                                  {r}
-                                </Badge>
-                              ))
-                            ) : (
-                              <Badge variant="outline" className="text-[10px]">{u.autonomy_level}</Badge>
-                            )}
-                            {!u.is_active && <Badge variant="destructive" className="text-[10px]">inativo</Badge>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-
-              {!selected.is_system ? (
-                <div className="mt-5 rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
-                  <p className="text-sm font-semibold text-destructive">Zona de perigo</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Excluir a empresa apaga para sempre todos os dados dela: colaboradores e seus acessos, setores, conversas, tarefas, avisos, avaliações, salas e tudo mais. Não dá para desfazer.</p>
-                  <Button variant="destructive" size="sm" className="mt-3" onClick={() => { setDeleteName(''); setDeleteOpen(true); }}>
-                    <Trash2 className="mr-1.5 h-4 w-4" /> Excluir empresa
-                  </Button>
+      {/* Nova empresa */}
+      <Dialog open={openNew} onOpenChange={setOpenNew}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Nova empresa</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Nome</Label><Input value={nName} onChange={(e) => setNName(e.target.value)} placeholder="Ex.: Nuvexa" /></div>
+            <div><Label>Identificador (slug)</Label><Input value={nSlug} onChange={(e) => setNSlug(e.target.value)} placeholder="grupo-servsul" /></div>
+            <div className="grid grid-cols-2 gap-3">
+              {([['Primária', nPrimary, setNPrimary], ['Secundária', nSecondary, setNSecondary]] as const).map(([l, v, fn]) => (
+                <div key={l}><Label>{l}</Label><div className="flex gap-2"><input type="color" value={v} onChange={(e) => fn(e.target.value)} className="w-12 h-10 rounded border" /><Input value={v} onChange={(e) => fn(e.target.value)} /></div></div>
+              ))}
+            </div>
+            <div className="space-y-3 rounded-xl border p-3">
+              <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={trialOn} onChange={(e) => setTrialOn(e.target.checked)} /> Período de avaliação</label>
+              {trialOn ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Avaliação até</Label><Input type="date" value={trialUntil} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setTrialUntil(e.target.value)} /></div>
+                  <div><Label>Plano em teste</Label><Sel className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={trialPlan} onChange={(e) => setTrialPlan(e.target.value)}><option value="essencial">Essencial</option><option value="profissional">Profissional</option><option value="empresarial">Empresarial</option></Sel></div>
+                  <p className="col-span-2 text-xs text-muted-foreground">A empresa fica ativa até essa data. O administrador é avisado 7 dias antes e no vencimento (com 30 dias para assinar); depois disso, você decide no chat Comunicados se os dados serão excluídos.</p>
                 </div>
               ) : null}
-
-              <DialogFooter className="pt-4">
-                <Button variant="outline" onClick={() => setSelected(null)}>Fechar</Button>
-                <Button onClick={saveSelected} disabled={saving}>
-                  {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                  Salvar alterações
-                </Button>
-              </DialogFooter>
-            </>
-          )}
+            </div>
+            <Button className="w-full" onClick={() => void handleCreate()} disabled={creating}>{creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Criar empresa</Button>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Delete company (super admin) */}
+      {/* Novo administrador */}
+      <Dialog open={openAdmin} onOpenChange={setOpenAdmin}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Adicionar administrador{sel ? ' · ' + sel.name : ''}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Nome</Label><Input value={aName} onChange={(e) => setAName(e.target.value)} /></div>
+            <div><Label>E-mail</Label><Input type="email" value={aEmail} onChange={(e) => setAEmail(e.target.value)} /></div>
+            <div><Label>Senha</Label><Input type="password" autoComplete="new-password" maxLength={72} value={aPass} onChange={(e) => setAPass(e.target.value)} /><PasswordChecklist value={aPass} className="mt-2" /></div>
+            <Button className="w-full" onClick={() => void handleCreateAdmin()} disabled={creatingAdmin}>{creatingAdmin && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Criar administrador</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Editar plano */}
+      <Dialog open={openPlan} onOpenChange={(o) => { setOpenPlan(o); if (!o) void load(); }}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Plano e situação{sel ? ' · ' + sel.name : ''}</DialogTitle></DialogHeader>
+          {sel ? <CompanyPlanPanel companyId={sel.id} isSystem={sel.is_system} userCount={sel.active_users} /> : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* Detalhes da assinatura pelo site */}
+      <Dialog open={!!sigDetail} onOpenChange={(o) => { if (!o) setSigDetail(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>{sigDetail?.company_name}</DialogTitle></DialogHeader>
+          {sigDetail ? (
+            <div className="grid grid-cols-[150px_1fr] gap-x-3 gap-y-2 text-sm">
+              <span className="text-muted-foreground">Situação</span><b className="font-medium">{(SIGNUP_LABEL[sigDetail.status] || [sigDetail.status])[0]}</b>
+              <span className="text-muted-foreground">Administrador</span><b className="font-medium">{sigDetail.admin_name || '—'} · {sigDetail.admin_email}</b>
+              <span className="text-muted-foreground">Plano</span><b className="font-medium">{sigDetail.plan_id} · {brl(sigDetail.amount_cents)}/{sigDetail.billing_cycle === 'annual' ? 'ano' : 'mês'}</b>
+              <span className="text-muted-foreground">Criada em</span><b className="font-medium">{dLong(sigDetail.created_at)}</b>
+              <span className="text-muted-foreground">Pagamento</span><b className="font-medium">{sigDetail.paid_at ? dLong(sigDetail.paid_at) : 'Não confirmado'}</b>
+              <span className="text-muted-foreground">Ativada em</span><b className="font-medium">{sigDetail.activated_at ? dLong(sigDetail.activated_at) : '—'}</b>
+              <span className="text-muted-foreground">Tentativas</span><b className="font-medium">{sigDetail.attempts}</b>
+              {sigDetail.error ? <><span className="text-muted-foreground">Observação</span><b className="font-medium text-destructive">{sigDetail.error}</b></> : null}
+            </div>
+          ) : null}
+          <DialogFooter>{sigDetail?.company_id && companies.some((c) => c.id === sigDetail.company_id) ? <Button onClick={() => { const id = sigDetail.company_id!; setSigDetail(null); openCompany(id); }}>Abrir empresa</Button> : null}<Button variant="outline" onClick={() => setSigDetail(null)}>Fechar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Excluir empresa */}
       <Dialog open={deleteOpen} onOpenChange={(o) => { if (!deleting) setDeleteOpen(o); }}>
         <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-destructive">Excluir “{selected?.name}”?</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle className="text-destructive">Excluir “{sel?.name}”?</DialogTitle></DialogHeader>
           <div className="space-y-3 text-sm">
             <p>Isso apaga <b>definitivamente</b> a empresa e tudo ligado a ela: todos os colaboradores (e o login deles), setores, conversas, grupos, tarefas e murais, avisos, avaliações, salas de reunião, chamados e configurações.</p>
-            <p>Para confirmar, digite o nome da empresa: <b>{selected?.name}</b></p>
-            <Input value={deleteName} onChange={(e) => setDeleteName(e.target.value)} placeholder={selected?.name} autoFocus />
+            <p>Para confirmar, digite o nome da empresa: <b>{sel?.name}</b></p>
+            <Input value={deleteName} onChange={(e) => setDeleteName(e.target.value)} placeholder={sel?.name} autoFocus />
           </div>
           <DialogFooter>
             <Button variant="outline" disabled={deleting} onClick={() => setDeleteOpen(false)}>Cancelar</Button>
-            <Button variant="destructive" disabled={deleting || !selected || deleteName.trim() !== selected.name.trim()} onClick={async () => {
-              if (!selected) return;
+            <Button variant="destructive" disabled={deleting || !sel || deleteName.trim() !== sel.name.trim()} onClick={async () => {
+              if (!sel) return;
               setDeleting(true);
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const { data, error } = await (supabase as any).rpc('super_admin_delete_company', { _company_id: selected.id, _confirm_name: deleteName.trim() });
+              const { data, error } = await db.rpc('super_admin_delete_company', { _company_id: sel.id, _confirm_name: deleteName.trim() });
               setDeleting(false);
-              if (error) { toast.error(error.message || 'Não foi possível excluir a empresa'); return; }
+              if (error) { toast.error('Não foi possível excluir a empresa.'); return; }
               toast.success(`Empresa excluída (${data?.people ?? 0} colaboradores removidos)`);
-              setDeleteOpen(false); setSelected(null); void load();
-            }}>
-              {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}Excluir definitivamente
-            </Button>
+              setDeleteOpen(false); setSelId(null); void load();
+            }}>{deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Excluir definitivamente</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* New admin dialog */}
-      <Dialog open={openNewAdmin} onOpenChange={setOpenNewAdmin}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Criar admin da empresa</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Nome</Label>
-              <Input value={adminName} onChange={(e) => setAdminName(e.target.value)} />
-            </div>
-            <div>
-              <Label>E-mail</Label>
-              <Input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} />
-            </div>
-            <div>
-              <Label>Senha</Label>
-              <Input type="password" autoComplete="new-password" maxLength={72} value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} /><PasswordChecklist value={adminPassword} className="mt-2" />
-            </div>
-            <Button className="w-full" onClick={handleCreateAdmin} disabled={creatingAdmin}>
-              {creatingAdmin && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Criar admin
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-lg bg-muted/50 py-1.5">
-      <p className="text-base font-bold leading-none">{value}</p>
-      <p className="text-[10px] uppercase text-muted-foreground mt-0.5">{label}</p>
     </div>
   );
 }

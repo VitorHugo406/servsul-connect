@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useState, useCallback } from 'react';
 import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -245,21 +246,26 @@ export function SeasonalEffectsButton({ collapsed }: { collapsed?: boolean }) {
         )}
       </Button>
 
-      <AnimatePresence>
-        {showMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="fixed bottom-6 left-1/2 z-[10000] w-[min(90vw,420px)] -translate-x-1/2 pointer-events-none"
-          >
-            <div role="status" aria-live="polite" className="pointer-events-auto rounded-3xl border border-slate-200 bg-white p-5 text-center shadow-2xl">
-              <h3 className="text-lg font-bold text-foreground mb-1">{theme.label}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{theme.message}</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {typeof document !== 'undefined' ? createPortal(
+        <div className="pointer-events-none fixed inset-x-0 z-[10000] flex justify-center px-4" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
+          <AnimatePresence>
+            {showMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                className="w-[min(90vw,420px)]"
+              >
+                <div role="status" aria-live="polite" className="pointer-events-auto rounded-3xl border border-slate-200 bg-white p-5 text-center shadow-2xl">
+                  <h3 className="text-lg font-bold text-foreground mb-1">{theme.label}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{theme.message}</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>,
+        document.body,
+      ) : null}
     </>
   );
 }
