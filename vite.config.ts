@@ -15,8 +15,10 @@ export default defineConfig(() => ({
   plugins: [react()],
   resolve: {
     dedupe: ["react", "react-dom"],
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+    alias: [
+      // Todos os `toast` do sonner viram a bolinha de avisos (embaixo, no centro).
+      { find: /^sonner$/, replacement: path.resolve(__dirname, "./src/lib/pillToast.tsx") },
+      { find: "@", replacement: path.resolve(__dirname, "./src") },
+    ],
   },
 }));

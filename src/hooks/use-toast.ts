@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
+import { toast as pillToast } from "@/lib/pillToast";
 
 const TOAST_LIMIT = 1;
 const TOAST_REMOVE_DELAY = 1000000;
@@ -136,31 +137,11 @@ type Toast = Omit<ToasterToast, "id">;
 
 function toast({ ...props }: Toast) {
   const id = genId();
-
-  const update = (props: ToasterToast) =>
-    dispatch({
-      type: "UPDATE_TOAST",
-      toast: { ...props, id },
-    });
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
-
-  dispatch({
-    type: "ADD_TOAST",
-    toast: {
-      ...props,
-      id,
-      open: true,
-      onOpenChange: (open) => {
-        if (!open) dismiss();
-      },
-    },
-  });
-
-  return {
-    id: id,
-    dismiss,
-    update,
-  };
+  const text = (props as any).title ?? (props as any).description;
+  const desc = (props as any).title ? (props as any).description : undefined;
+  const kind = (props as any).variant === "destructive" ? "error" : "success";
+  (pillToast as any)[kind](typeof text === "string" ? text : "", { description: typeof desc === "string" ? desc : undefined });
+  return { id, dismiss: () => pillToast.dismiss(), update: (_p: ToasterToast) => {} };
 }
 
 function useToast() {
