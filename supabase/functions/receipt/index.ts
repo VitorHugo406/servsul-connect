@@ -3,7 +3,7 @@
 // that retries the ones not delivered. Auth: the billing cron secret header (Vault).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { esc, layout, mailerConfigured, sendMail } from './mailer.ts';
-import { brl, buildReceiptPdf } from './receipt-pdf.ts';
+import { brl, buildReceiptPdf, type ReceiptFonts } from './receipt-pdf.ts';
 
 const SITE_URL = (Deno.env.get('SITE_URL') || 'https://ewvon.vercel.app').replace(/\/+$/, '');
 const ISSUER = { brand: 'ewvon', owner: 'Vitor Hugo Almeida Santos', place: 'São Paulo/SP', email: 'ewvonsuporte@gmail.com' };
@@ -14,6 +14,20 @@ const fmtCnpj = (v: string) => v.replace(/\D/g, '').replace(/^(\d{2})(\d{3})(\d{
 const fmtCep = (v: string) => v.replace(/\D/g, '').replace(/^(\d{5})(\d{3})$/, '$1-$2');
 const fmtPhone = (v: string) => { const d = v.replace(/\D/g, ''); return d.length === 11 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}` : d.length === 10 ? `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}` : v; };
 
+const PLEX = 'https://cdn.jsdelivr.net/gh/IBM/plex@master/packages';
+const grab = async (url: string): Promise<Uint8Array | null> => { try { const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000); const r = await fetch(url, { signal: ctl.signal }); clearTimeout(t); return r.ok ? new Uint8Array(await r.arrayBuffer()) : null; } catch { return null; } };
+let fontsCache: ReceiptFonts | undefined;
+async function loadFonts(): Promise<ReceiptFonts> {
+  if (fontsCache) return fontsCache;
+  const [sansR, sansM, sansS, sansB, serifR, serifS] = await Promise.all([
+    grab(`${PLEX}/plex-sans/fonts/complete/ttf/IBMPlexSans-Regular.ttf`), grab(`${PLEX}/plex-sans/fonts/complete/ttf/IBMPlexSans-Medium.ttf`),
+    grab(`${PLEX}/plex-sans/fonts/complete/ttf/IBMPlexSans-SemiBold.ttf`), grab(`${PLEX}/plex-sans/fonts/complete/ttf/IBMPlexSans-Bold.ttf`),
+    grab(`${PLEX}/plex-serif/fonts/complete/ttf/IBMPlexSerif-Regular.ttf`), grab(`${PLEX}/plex-serif/fonts/complete/ttf/IBMPlexSerif-SemiBold.ttf`),
+  ]);
+  const f = { sansR, sansM, sansS, sansB, serifR, serifS };
+  if (Object.values(f).every(Boolean)) fontsCache = f;   // only cache a complete set
+  return f;
+}
 let logo: Uint8Array | null | undefined;
 async function loadLogo() {
   if (logo !== undefined) return logo;
@@ -46,11 +60,11 @@ async function sendReceipt(paymentId: string): Promise<string> {
     data.city ? `${data.city}${data.state ? '/' + data.state : ''}${data.zip ? ' - CEP ' + fmtCep(data.zip) : ''}` : '',
     data.phone ? 'Tel. ' + fmtPhone(data.phone) : '',
   ].filter(Boolean);
-  const customer = { name: company.name, legalName: data.legal_name || company.name, cnpj: data.cnpj ? fmtCnpj(data.cnpj) : '', lines: addr, adminEmail: to };
+  const customer = { name: company.name, legalName: data.legal_name || company.name, cnpj: data.cnpj ? fmtCnpj(data.cnpj) : '', lines: addr, adminEmail: to };   // cnpj/lines feed the e-mail body only; the PDF prints no CPF/CNPJ
   const pdf = await buildReceiptPdf({
     number, paidAt: new Date(pay.paid_at), paymentId: pay.provider_payment_id || '',
     items: [{ description: pay.description || 'Serviço ewvon', qty: 1, unitCents: pay.amount_cents }],
-    customer, issuer: ISSUER, logoPng: await loadLogo(),
+    customer: { name: customer.name, legalName: customer.legalName, adminEmail: customer.adminEmail }, issuer: ISSUER, logoPng: await loadLogo(), fonts: await loadFonts(),
   });
 
   const row = (k: string, v: string) => v ? `<tr><td style="padding:5px 0;color:#71717a;font-size:13px;width:150px;vertical-align:top">${esc(k)}</td><td style="padding:5px 0;font-size:13px;font-weight:600;color:#18181b">${esc(v)}</td></tr>` : '';
