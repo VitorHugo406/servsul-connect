@@ -12,6 +12,7 @@ import "./chat-ewwon.css";
 import "./chat-pro.css";
 import "./styles/design-kit.css";
 import "./styles/warroom.css";
+import "./styles/sectors.css";
 import "./chat-life.css";
 import "./focus-mode.css";
 

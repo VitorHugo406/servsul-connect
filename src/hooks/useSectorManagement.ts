@@ -7,6 +7,9 @@
    name: string;
    color: string;
    icon: string | null;
+   description?: string | null;
+   manager_id?: string | null;
+   is_general?: boolean | null;
    created_at: string;
  }
  
@@ -34,11 +37,11 @@
      fetchSectors();
    }, [fetchSectors]);
  
-   const createSector = async (name: string, color: string) => {
+   const createSector = async (name: string, color: string, extra: Partial<Pick<Sector, 'icon' | 'description' | 'manager_id'>> = {}) => {
      try {
        const { data, error } = await supabase
          .from('sectors')
-         .insert(withCompany({ name, color }))
+         .insert(withCompany({ name, color, ...extra }) as any)  // description/manager_id are newer than the generated types
          .select()
          .single();
  
@@ -55,7 +58,7 @@
      try {
        const { error } = await supabase
          .from('sectors')
-         .update(updates)
+         .update(updates as any)
          .eq('id', id);
  
        if (error) throw error;
