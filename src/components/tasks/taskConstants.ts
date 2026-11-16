@@ -137,3 +137,10 @@ export function getCoverDisplay(cover: string | null): { type: 'none' | 'color' 
   const found = CARD_COVERS.find(c => c.id === cover);
   return found ? { type: 'color', value: found.color } : { type: 'none', value: '' };
 }
+
+/** Default cover for boards without a background: one of 6 abstract images, picked from the board id. */
+export function defaultBoardCover(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return `/covers/board-${(h % 6) + 1}.webp`;
+}

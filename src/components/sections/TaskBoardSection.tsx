@@ -50,7 +50,7 @@ import { ScorePanel } from '@/components/tasks/ScorePanel';
 import { SignedStorageImage } from '@/components/common/SignedStorageMedia';
 import {
   PRIORITIES, BACKGROUND_IMAGES, BACKGROUND_GROUPS, CARD_COVERS,
-  getBoardBg, getBoardBgStyle, getInitials, getCoverDisplay, isBoardBgDark,
+  getBoardBg, getBoardBgStyle, defaultBoardCover, getInitials, getCoverDisplay, isBoardBgDark,
 } from '@/components/tasks/taskConstants';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -243,7 +243,11 @@ export function TaskBoardSection() {
                     {board.background_image.startsWith('http') ? <img src={board.background_image} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}
                     <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
                   </div>
-                ) : null}
+                ) : (
+                  <div className="board-cover relative h-24 w-full overflow-hidden">
+                    <img src={defaultBoardCover(board.id)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  </div>
+                )}
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -2370,7 +2374,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 {boards.filter(b => b.id !== board.id).map(b => (
                   <DropdownMenuItem key={b.id} onClick={() => onSelectBoard(b.id)} className="flex items-center gap-3 p-2">
                     <div className={cn("w-12 h-8 rounded flex-shrink-0 overflow-hidden border border-border", !b.background_image?.startsWith('http') && getBoardBg(b.background_image))}>
-                      {b.background_image?.startsWith('http') ? <img src={b.background_image} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}
+                      {b.background_image?.startsWith('http') ? <img src={b.background_image} alt="" loading="lazy" className="h-full w-full object-cover" /> : !b.background_image ? <img src={defaultBoardCover(b.id)} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}
                     </div>
                     <span className="text-sm font-medium truncate">{b.name}</span>
                   </DropdownMenuItem>
