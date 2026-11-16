@@ -67,13 +67,30 @@ async function loadAssets() {
   const [regular, medium, semibold, logo] = await Promise.all([grab(PLEX + 'Regular.ttf'), grab(PLEX + 'Medium.ttf'), grab(PLEX + 'SemiBold.ttf'), grab(`${SITE_URL}/ewwon/img/receipt-logo.png`)])
   return (assetsCache = { regular, medium, semibold, logo })
 }
-/** Profile photo as PNG/JPEG bytes (WebP is not supported by the PDF library: the initials are drawn instead). */
+/** Profile photo as PNG/JPEG bytes. WebP (what the app uploads) is decoded and re-encoded as a small PNG. */
 async function loadAvatar(url: string | null): Promise<Uint8Array | null> {
   if (!url || !/^https:\/\//.test(url)) return null
   const b = await grab(url, 4000)
-  if (!b || b.length < 8) return null
-  const png = b[0] === 0x89 && b[1] === 0x50, jpg = b[0] === 0xff && b[1] === 0xd8
-  return png || jpg ? b : null
+  if (!b || b.length < 12) return null
+  if (b[0] === 0x89 && b[1] === 0x50) return b
+  if (b[0] === 0xff && b[1] === 0xd8) return b
+  const isWebp = b[0] === 0x52 && b[1] === 0x49 && b[8] === 0x57 && b[9] === 0x45
+  if (!isWebp) return null
+  try {
+    const { default: decode } = await import('npm:@jsquash/webp@1.4.0/decode.js')
+    const { encode } = await import('npm:fast-png@6.2.0')
+    const img = await decode(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength))
+    const side = Math.min(img.width, img.height), sx0 = Math.floor((img.width - side) / 2), sy0 = Math.floor((img.height - side) / 2)
+    const out = Math.min(192, side), f = side / out, data = new Uint8Array(out * out * 4)
+    for (let y = 0; y < out; y++) for (let x = 0; x < out; x++) {
+      let r = 0, g = 0, bl = 0, a = 0, n = 0
+      for (let yy = Math.floor(y * f); yy < Math.max(Math.floor(y * f) + 1, Math.floor((y + 1) * f)); yy++) for (let xx = Math.floor(x * f); xx < Math.max(Math.floor(x * f) + 1, Math.floor((x + 1) * f)); xx++) {
+        const i = ((sy0 + yy) * img.width + (sx0 + xx)) * 4; r += img.data[i]; g += img.data[i + 1]; bl += img.data[i + 2]; a += img.data[i + 3]; n++
+      }
+      const o = (y * out + x) * 4; data[o] = r / n; data[o + 1] = g / n; data[o + 2] = bl / n; data[o + 3] = a / n
+    }
+    return encode({ width: out, height: out, data, channels: 4, depth: 8 })
+  } catch (e) { console.error('webp avatar decode failed', e); return null }
 }
 const initialsOf = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || '?'
 
