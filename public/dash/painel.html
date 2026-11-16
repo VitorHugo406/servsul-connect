@@ -1638,7 +1638,7 @@ function ensureStack(){
     disposeStack();STACKSIG=sig;
     STACK=new THREE.Group();STACK.userData.sceneRoot=true;
     const ES=elevSpot();
-    for(let j=1;j<CFG.floors.length;j++){   /* o térreo (recepção) é o prédio de baixo do cenário */
+    for(let j=0;j<CFG.floors.length;j++){   /* o térreo (recepção) só aparece no passeio: fora dele é o prédio de baixo do cenário */
       const fl=lowFloor(j,j*LVH,ES);fl.sig=liveSig(j);STACK.add(fl.g);FLS.set(j,fl);
     }
     scene.add(STACK);
@@ -1649,7 +1649,7 @@ function ensureStack(){
 function placeStack(){
   if(!STACK)return;const cur=curIdx(),ES=elevSpot();ELEVP={x:ES.x,z:ES.z,r:ES.r};
   STACK.position.y=-cur*LVH;
-  FLS.forEach((fl,j)=>{fl.g.position.set(0,0,0);fl.g.visible=FPON?j!==cur:j<cur});
+  FLS.forEach((fl,j)=>{fl.g.position.set(0,0,0);fl.g.visible=FPON?j!==cur:(j<cur&&j>0)});
   if(CEILL){const X0=-20.3,W=40.6+EXX,Z0=-13.3,D=26.6+EXZ;CEILL.visible=cur>0;CEILL.children.forEach(m=>{m.position.set(X0+W*(m.userData.ca+.5)/4,-1.3,Z0+D*(m.userData.cb+.5)/3)})}
   /* poço do elevador: só do térreo até o andar em que estamos, nada acima */
   if(SHAFT){disposeFloorObj(SHAFT);SHAFT=null}
@@ -3091,7 +3091,7 @@ let LASTIN=0;
 ['pointerdown','pointermove','wheel','keydown','touchstart'].forEach(ev=>stageEl.addEventListener(ev,()=>{LASTIN=performance.now()},{passive:true}));
 /* =================== PASSEIO EM 1ª PESSOA: andar pelo prédio, pegar o elevador, ver onde cada pessoa está =================== */
 const FP={on:false,x:0,z:0,yaw:0,pitch:0,keys:new Set(),jx:0,jy:0,ride:false,busy:false,lock:false,ty0:0,t:0,card:'',cardT:0,cur:null};
-const FPH=3.0,FPR=.45,FPRUN=1.8,FPSPD=5.2;
+const FPH=3.0,FPR=.45,FPRUN=1.9,FPSPD=8.6;
 function fpCss(){
   const st=document.createElement('style');st.textContent=`
 body.fp #panel,body.fp #rail,body.fp .ctrls,body.fp .clock,body.fp #hello,body.fp #msg3d{display:none!important}
@@ -3127,8 +3127,10 @@ body.fp #panel,body.fp #rail,body.fp .ctrls,body.fp .clock,body.fp #hello,body.f
 }
 let FPC=null;
 function fpCeiling(){
+  const key=EXX+','+EXZ;
+  if(FPC&&FPC.userData.k!==key){FPC.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose()});scene.remove(FPC);FPC=null}
   if(FPC)return FPC;
-  const g=new THREE.Group(),W=40.6+EXX,D=26.6+EXZ;g.userData.sceneRoot=true;
+  const g=new THREE.Group(),W=40.6+EXX,D=26.6+EXZ;g.userData.sceneRoot=true;g.userData.k=key;
   const pl=new THREE.Mesh(new THREE.PlaneGeometry(W,D),new THREE.MeshBasicMaterial({color:0xE9EDF2}));pl.rotation.x=Math.PI/2;pl.position.set(-20.3+W/2,LVH-1.2,-13.3+D/2);g.add(pl);
   const lm=new THREE.MeshBasicMaterial({color:0xFFF3D6});
   for(let a=0;a<4;a++)for(let b=0;b<3;b++){const m=new THREE.Mesh(new THREE.BoxGeometry(2.6,.08,1.1),lm);m.position.set(-20.3+W*(a+.5)/4,LVH-1.28,-13.3+D*(b+.5)/3);g.add(m)}
@@ -3184,7 +3186,7 @@ function fpBlocked(R,x,z){
 function fpFace(fx,fz){return Math.atan2(-fx,-fz)}
 function fpEnter(){
   if(FP.on||!OK||EDIT)return;
-  FP.on=true;FPON=true;FP.ride=false;FP.busy=false;FP.R=null;FP.rideY=0;FP.snap=null;FP.noEnter=0;tw=null;document.body.classList.add('fp');placeStack();fpLights(true);
+  FP.on=true;FPON=true;FP.dk=EXX+','+EXZ;FP.ride=false;FP.busy=false;FP.R=null;FP.rideY=0;FP.snap=null;FP.noEnter=0;tw=null;document.body.classList.add('fp');placeStack();fpLights(true);
   FP.ty0=cam.ty;FP.fov0=camera.fov;FP.near0=camera.near;camera.fov=68;camera.near=.2;camera.updateProjectionMatrix();camera.clearViewOffset();
   const g=elevGeom();FP.x=g.out.x;FP.z=g.out.z;FP.yaw=fpFace(g.out.x-ELEVP.x,g.out.z-ELEVP.z);FP.pitch=0;
   const hud=$('#fpHud');hud.hidden=false;$('#fpElev').hidden=true;$('#fpPeopleP').hidden=true;fpCeiling().visible=true;fpShell().visible=true;if(FPCAB)FPCAB.visible=false;
@@ -3224,7 +3226,7 @@ function fpRide(id,after){
   FP.x=ELEVP.x-(g.out.x-ELEVP.x)*.05;FP.z=ELEVP.z-(g.out.z-ELEVP.z)*.05;FP.yaw=fpFace(g.out.x-ELEVP.x,g.out.z-ELEVP.z);FP.pitch=0;
   cab.position.set(ELEVP.x,0,ELEVP.z);cab.rotation.y=(ELEVP.r||0)*Math.PI/2;fpDoors(0);cab.visible=true;
   const box=$('#fpElev');if(box){box.hidden=false;box.classList.add('busy')}
-  FP.R={C,T,n,id,after,t0:performance.now(),dur:Math.min(7000,1500+750*Math.abs(n)),ph:'close'};
+  FP.R={C,T,n,id,after,t0:performance.now(),dur:Math.min(4800,1000+480*Math.abs(n)),ph:'close'};
 }
 function fpRideTick(now){
   const R=FP.R;if(!R)return;
@@ -3313,6 +3315,8 @@ function fpCardFor(t){
 function fpTick(dt){
   const ceil=fpCeiling();ceil.visible=!FTR&&!FP.busy&&curIdx()>=floorsN()-1;   /* nos outros andares o teto é a laje do andar de cima */
   const nowT=performance.now();
+  /* o tamanho do andar mudou com o passeio ligado: refaz a casca, o teto e as luzes e mantém você dentro do andar */
+  {const dk=EXX+','+EXZ;if(FP.dk!==dk){FP.dk=dk;fpShell().visible=true;fpLights(true);FP.x=clamp(FP.x,-20.3+FPR,20.3+EXX-FPR);FP.z=clamp(FP.z,-13.3+FPR,13.3+EXZ-FPR);FP.rideY=0}}
   if(FP.busy)fpRideTick(nowT);
   /* movimento */
   const k=FP.keys;let f=(k.has('w')||k.has('arrowup')?1:0)-(k.has('s')||k.has('arrowdown')?1:0)-FP.jy,r=(k.has('d')?1:0)-(k.has('a')?1:0)+FP.jx;
@@ -3335,7 +3339,7 @@ function fpTick(dt){
     }
     if(f>.5&&nowT-(FP.rideT||0)>800)fpOutElev();   /* andar para frente = sair da cabine */
   }
-  camera.position.set(FP.x,FPH+(cam.ty-FP.ty0)+(FP.rideY||0),FP.z);
+  camera.position.set(FP.x,FPH+(FP.rideY||0),FP.z);
   camera.rotation.order='YXZ';camera.rotation.set(FP.pitch,FP.yaw,0);
   /* o que está na mira + botão do elevador */
   const now=performance.now();
@@ -3400,9 +3404,10 @@ function frame(now){
   frame.lr=now;
   floorTransTick(now);liveStack(now);
   if(!FTR){   /* fora da troca de andar, nada fica acima do andar ativo e o andar ativo nunca fica deslocado */
-    if(STACK){const c=curIdx();FLS.forEach((fl,j)=>{const v=FPON?j!==c:j<c;if(fl.g.visible!==v)fl.g.visible=v;if(fl.g.position.y!==0)fl.g.position.y=0})}
+    if(STACK){const c=curIdx();FLS.forEach((fl,j)=>{const v=FPON?j!==c:(j<c&&j>0);if(fl.g.visible!==v)fl.g.visible=v;if(fl.g.position.y!==0)fl.g.position.y=0})}
     if(FLR&&(FLR.position.y!==0||!FLR.visible)){FLR.position.set(0,0,0);FLR.visible=true}
   }
+  if(tw&&FP.on)tw=null;
   if(tw){
     const k=ease(clamp((now-tw.t0)/tw.dur,0,1));
     for(const key in tw.to)cam[key]=tw.from[key]+(tw.to[key]-tw.from[key])*k;
@@ -3815,6 +3820,7 @@ function fadeSwitch(id,cb,opt){
     if(dir<0&&j>to&&j<from)keep(fl.g);
   });
   if(dir>0){const k=keep(FLR);if(k)k.set(0)}
+  {const f0=FLS.get(0);if(f0&&!FPON)f0.g.visible=false}
   FLR.position.set(0,dir>0?60:0,0);
 }
 function floorTransTick(now){
