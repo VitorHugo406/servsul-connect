@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1'
+import { buildReportPdf, type ReportData } from './report-pdf.ts'
 
 // "Comunicados": system sender of automations (migration 20261109030000_system_sender).
 const SYSTEM_SENDER_ID = '00000000-0000-0000-0000-0000000000c1'
@@ -37,6 +37,46 @@ const SAO_PAULO_OFFSET_HOURS = 3
  * full calendar month in America/Sao_Paulo local time, plus a display label.
  * e.g. if run on any day of August, returns July 1st 00:00:00 -> July 31st 23:59:59 (SP time).
  */
+
+const SITE_URL = (Deno.env.get('SITE_URL') || 'https://ewvon.vercel.app').replace(/\/+$/, '')
+const PLEX = 'https://cdn.jsdelivr.net/gh/IBM/plex@master/packages/plex-sans/fonts/complete/ttf/IBMPlexSans-'
+const monthNameLower = (i: number) => MONTH_NAMES_DISPLAY[i].toLowerCase()
+const ROLE_LABEL: Record<string, string> = { admin: 'Administrador', gestor: 'Gestor', gerente: 'Gerente', supervisor: 'Supervisor', diretoria: 'Diretoria', colaborador: 'Colaborador' }
+const pad2 = (n: number) => String(n).padStart(2, '0')
+
+/** Range (UTC ISO) of the calendar month `back` months before the current one, in Sao Paulo time. */
+function monthRangeBack(brNow: Date, back: number) {
+  const idx = brNow.getMonth() - back
+  const y = brNow.getFullYear() + Math.floor(idx / 12), m = ((idx % 12) + 12) % 12
+  const start = new Date(Date.UTC(y, m, 1, SAO_PAULO_OFFSET_HOURS, 0, 0))
+  const end = new Date(Date.UTC(y, m + 1, 1, SAO_PAULO_OFFSET_HOURS - 1, 59, 59, 999))
+  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
+  return { y, m, startIso: start.toISOString(), endIso: end.toISOString(), lastDay }
+}
+
+async function grab(url: string, ms = 5000): Promise<Uint8Array | null> {
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), ms)
+    const r = await fetch(url, { signal: ctl.signal }); clearTimeout(t)
+    return r.ok ? new Uint8Array(await r.arrayBuffer()) : null
+  } catch { return null }
+}
+let assetsCache: { regular: Uint8Array | null; medium: Uint8Array | null; semibold: Uint8Array | null; logo: Uint8Array | null } | null = null
+async function loadAssets() {
+  if (assetsCache) return assetsCache
+  const [regular, medium, semibold, logo] = await Promise.all([grab(PLEX + 'Regular.ttf'), grab(PLEX + 'Medium.ttf'), grab(PLEX + 'SemiBold.ttf'), grab(`${SITE_URL}/ewwon/img/receipt-logo.png`)])
+  return (assetsCache = { regular, medium, semibold, logo })
+}
+/** Profile photo as PNG/JPEG bytes (WebP is not supported by the PDF library: the initials are drawn instead). */
+async function loadAvatar(url: string | null): Promise<Uint8Array | null> {
+  if (!url || !/^https:\/\//.test(url)) return null
+  const b = await grab(url, 4000)
+  if (!b || b.length < 8) return null
+  const png = b[0] === 0x89 && b[1] === 0x50, jpg = b[0] === 0xff && b[1] === 0xd8
+  return png || jpg ? b : null
+}
+const initialsOf = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || '?'
+
 function getPreviousMonthRangeSaoPaulo(brNow: Date): { startIso: string; endIso: string; monthLabel: string } {
   const currentYear = brNow.getFullYear()
   const currentMonth = brNow.getMonth() // 0-indexed, month of "now" in SP time
@@ -110,199 +150,6 @@ function buildChatMessage(displayName: string, stats: any, recommendations: stri
   return msg
 }
 
-function drawRoundedRect(page: any, x: number, y: number, w: number, h: number, r: number, color: any, borderColor?: any) {
-  // Draw filled rectangle with rounded corners approximation
-  // pdf-lib doesn't natively support rounded rectangles, so we use overlapping rects + circles
-  const cr = Math.min(r, w / 2, h / 2)
-  
-  // Main body (without corners)
-  page.drawRectangle({ x: x + cr, y, width: w - 2 * cr, height: h, color })
-  page.drawRectangle({ x, y: y + cr, width: w, height: h - 2 * cr, color })
-  
-  // Corner circles
-  page.drawCircle({ x: x + cr, y: y + cr, size: cr, color })
-  page.drawCircle({ x: x + w - cr, y: y + cr, size: cr, color })
-  page.drawCircle({ x: x + cr, y: y + h - cr, size: cr, color })
-  page.drawCircle({ x: x + w - cr, y: y + h - cr, size: cr, color })
-  
-  if (borderColor) {
-    // Draw border lines
-    page.drawLine({ start: { x: x + cr, y }, end: { x: x + w - cr, y }, thickness: 1, color: borderColor })
-    page.drawLine({ start: { x: x + cr, y: y + h }, end: { x: x + w - cr, y: y + h }, thickness: 1, color: borderColor })
-    page.drawLine({ start: { x, y: y + cr }, end: { x, y: y + h - cr }, thickness: 1, color: borderColor })
-    page.drawLine({ start: { x: x + w, y: y + cr }, end: { x: x + w, y: y + h - cr }, thickness: 1, color: borderColor })
-  }
-}
-
-async function generatePdf(displayName: string, stats: any, recommendations: string[], currentMonth: string, companyName: string, dateStr: string): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.create()
-  const page = pdfDoc.addPage([595, 842]) // A4
-  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica)
-  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-  const { width, height } = page.getSize()
-
-  const rate = stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0
-  const name = sanitize(displayName)
-  const month = sanitize(currentMonth)
-  const company = sanitize(companyName)
-
-  // Colors
-  const headerBlue = rgb(0.09, 0.12, 0.38)
-  const accentBlue = rgb(0.24, 0.35, 0.85)
-  const white = rgb(1, 1, 1)
-  const lightGray = rgb(0.96, 0.97, 0.98)
-  const borderGray = rgb(0.88, 0.90, 0.93)
-  const darkText = rgb(0.12, 0.14, 0.18)
-  const medText = rgb(0.30, 0.34, 0.40)
-  const lightText = rgb(0.55, 0.60, 0.68)
-
-  // === HEADER with rounded top ===
-  drawRoundedRect(page, 30, height - 140, width - 60, 110, 12, headerBlue)
-
-  // Header content - centered
-  const titleText = 'ewvon'
-  const titleWidth = helveticaBold.widthOfTextAtSize(titleText, 30)
-  page.drawText(titleText, { x: (width - titleWidth) / 2, y: height - 60, size: 30, font: helveticaBold, color: white })
-
-  const companyText = company
-  const companyWidth = helvetica.widthOfTextAtSize(companyText, 12)
-  page.drawText(companyText, { x: (width - companyWidth) / 2, y: height - 78, size: 12, font: helvetica, color: rgb(0.7, 0.75, 0.9) })
-
-  const reportTitle = `Relatorio Mensal - ${month}`
-  const reportWidth = helveticaBold.widthOfTextAtSize(reportTitle, 14)
-  page.drawText(reportTitle, { x: (width - reportWidth) / 2, y: height - 105, size: 14, font: helveticaBold, color: rgb(0.85, 0.88, 1) })
-
-  const dateText = `Gerado em: ${dateStr}`
-  const dateWidth = helvetica.widthOfTextAtSize(dateText, 9)
-  page.drawText(dateText, { x: (width - dateWidth) / 2, y: height - 122, size: 9, font: helvetica, color: rgb(0.65, 0.7, 0.85) })
-
-  let y = height - 175
-
-  // === COLLABORATOR NAME ===
-  const collabText = `Colaborador: ${name}`
-  const collabWidth = helveticaBold.widthOfTextAtSize(collabText, 14)
-  page.drawText(collabText, { x: (width - collabWidth) / 2, y, size: 14, font: helveticaBold, color: darkText })
-  y -= 10
-
-  // Decorative line under name
-  const lineW = 120
-  page.drawRectangle({ x: (width - lineW) / 2, y, width: lineW, height: 2, color: accentBlue })
-  y -= 30
-
-  // === STAT CARDS - 4 cards in a row ===
-  const cardW = 115
-  const cardH = 65
-  const cardGap = 12
-  const totalCardsWidth = 4 * cardW + 3 * cardGap
-  const startX = (width - totalCardsWidth) / 2
-
-  const statCards = [
-    { value: String(stats.totalMessages), label: 'Mensagens', bg: rgb(0.94, 0.99, 0.96), accent: rgb(0.08, 0.55, 0.24), border: rgb(0.73, 0.97, 0.83) },
-    { value: `${stats.completedTasks}/${stats.totalTasks}`, label: 'Concluidas', bg: rgb(0.94, 0.96, 1), accent: rgb(0.15, 0.39, 0.92), border: rgb(0.75, 0.86, 0.99) },
-    { value: String(stats.lateTasks), label: 'Com Atraso', bg: rgb(1, 0.97, 0.93), accent: rgb(0.85, 0.46, 0.02), border: rgb(0.99, 0.84, 0.67) },
-    { value: String(stats.overdueTasks), label: 'Pendentes', bg: rgb(1, 0.95, 0.95), accent: rgb(0.86, 0.15, 0.15), border: rgb(0.99, 0.79, 0.79) },
-  ]
-
-  statCards.forEach((card, i) => {
-    const cx = startX + i * (cardW + cardGap)
-    drawRoundedRect(page, cx, y - cardH, cardW, cardH, 8, card.bg, card.border)
-    
-    const valWidth = helveticaBold.widthOfTextAtSize(card.value, 24)
-    page.drawText(card.value, { x: cx + (cardW - valWidth) / 2, y: y - 28, size: 24, font: helveticaBold, color: card.accent })
-    
-    const lblWidth = helvetica.widthOfTextAtSize(card.label, 9)
-    page.drawText(card.label, { x: cx + (cardW - lblWidth) / 2, y: y - cardH + 12, size: 9, font: helvetica, color: medText })
-  })
-
-  y -= cardH + 30
-
-  // === PROGRESS BAR ===
-  const progressTitle = 'Taxa de Conclusao'
-  const ptWidth = helveticaBold.widthOfTextAtSize(progressTitle, 13)
-  page.drawText(progressTitle, { x: (width - ptWidth) / 2, y, size: 13, font: helveticaBold, color: darkText })
-  y -= 22
-
-  const barX = 50
-  const barW = width - 100
-  const barH = 18
-  // Bar background
-  drawRoundedRect(page, barX, y, barW, barH, 9, rgb(0.90, 0.92, 0.95))
-  // Bar fill
-  const fillW = (barW * Math.min(rate, 100)) / 100
-  if (fillW > 0) {
-    drawRoundedRect(page, barX, y, Math.max(fillW, 18), barH, 9, rgb(0.15, 0.68, 0.38))
-  }
-  // Percentage text centered
-  const pctText = `${rate}%`
-  const pctWidth = helveticaBold.widthOfTextAtSize(pctText, 10)
-  page.drawText(pctText, { x: barX + (barW - pctWidth) / 2, y: y + 4, size: 10, font: helveticaBold, color: fillW > barW / 2 ? white : darkText })
-
-  y -= 40
-
-  // === ACTIVITY SUMMARY ===
-  const summTitle = 'Resumo de Atividades'
-  const stWidth = helveticaBold.widthOfTextAtSize(summTitle, 13)
-  page.drawText(summTitle, { x: (width - stWidth) / 2, y, size: 13, font: helveticaBold, color: darkText })
-  y -= 10
-
-  const summaryLines = [
-    `Mensagens enviadas no mes: ${stats.totalMessages}`,
-    `Tarefas concluidas: ${stats.completedTasks} de ${stats.totalTasks} (${rate}%)`,
-    `Entregas realizadas com atraso: ${stats.lateTasks}`,
-    `Tarefas pendentes e atrasadas: ${stats.overdueTasks}`,
-  ]
-  
-  const boxH = summaryLines.length * 20 + 20
-  drawRoundedRect(page, 40, y - boxH, width - 80, boxH, 10, lightGray, borderGray)
-  y -= 18
-  for (const line of summaryLines) {
-    const lw = helvetica.widthOfTextAtSize(line, 11)
-    page.drawText(line, { x: (width - lw) / 2, y, size: 11, font: helvetica, color: medText })
-    y -= 20
-  }
-
-  y -= 25
-
-  // === RECOMMENDATIONS ===
-  if (recommendations.length > 0) {
-    const recTitle = 'Recomendacoes Personalizadas'
-    const rtWidth = helveticaBold.widthOfTextAtSize(recTitle, 13)
-    page.drawText(recTitle, { x: (width - rtWidth) / 2, y, size: 13, font: helveticaBold, color: darkText })
-    y -= 22
-
-    for (const rec of recommendations) {
-      const cleanRec = sanitize(rec)
-      const maxChars = 80
-      const lines: string[] = []
-      for (let i = 0; i < cleanRec.length; i += maxChars) {
-        lines.push(cleanRec.substring(i, i + maxChars))
-      }
-      
-      // Draw a small accent dot
-      for (let li = 0; li < lines.length; li++) {
-        if (y < 60) break
-        const prefix = li === 0 ? '  >  ' : '     '
-        const lineText = prefix + lines[li]
-        const lineW2 = helvetica.widthOfTextAtSize(lineText, 10)
-        page.drawText(lineText, { x: (width - lineW2) / 2, y, size: 10, font: helvetica, color: medText })
-        y -= 16
-      }
-      y -= 6
-    }
-  }
-
-  // === FOOTER ===
-  const footerText = `Relatorio gerado automaticamente pelo ewvon em ${dateStr}`
-  const fWidth = helvetica.widthOfTextAtSize(footerText, 8)
-  page.drawText(footerText, { x: (width - fWidth) / 2, y: 40, size: 8, font: helvetica, color: lightText })
-
-  const copyrightText = `2026 ${company} - Todos os direitos reservados`
-  const cWidth = helvetica.widthOfTextAtSize(copyrightText, 8)
-  page.drawText(copyrightText, { x: (width - cWidth) / 2, y: 28, size: 8, font: helvetica, color: lightText })
-
-  return await pdfDoc.save()
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -361,7 +208,7 @@ Deno.serve(async (req) => {
     if (type === 'individual' && targetUserId) {
       const { data, error: profileError } = await supabase
         .from('profiles')
-        .select('id, user_id, name, display_name, email, company_id')
+        .select('id, user_id, name, display_name, email, company_id, avatar_url, autonomy_level, sector_id')
         .eq('id', targetUserId)
         .single()
       if (profileError || (adminCompanyId && data?.company_id !== adminCompanyId)) {
@@ -371,7 +218,7 @@ Deno.serve(async (req) => {
     } else if (type === 'all') {
       let q = supabase
         .from('profiles')
-        .select('id, user_id, name, display_name, email, company_id')
+        .select('id, user_id, name, display_name, email, company_id, avatar_url, autonomy_level, sector_id')
         .eq('is_active', true)
         .not('profile_type', 'in', '(bot,system)')
       if (adminCompanyId) q = q.eq('company_id', adminCompanyId)
@@ -420,47 +267,83 @@ Deno.serve(async (req) => {
         if (alreadySent.has(profile.id)) { console.log(`Skipping ${profile.name}: feedback already sent for ${currentMonth}`); continue }
         const senderProfileId = await resolveSender(profile.company_id ?? null)
         if (!senderProfileId) { errors.push(`Sem remetente para ${profile.name}`); continue }
-        const { count: sectorMsgCount } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('author_id', profile.id)
-          .gte('created_at', startOfMonth)
-          .lte('created_at', endOfMonth)
+        const countMsgs = async (from: string, to: string) => {
+          const { count: c1 } = await supabase.from('messages').select('*', { count: 'exact', head: true }).eq('author_id', profile.id).gte('created_at', from).lte('created_at', to)
+          const { count: c2 } = await supabase.from('direct_messages').select('*', { count: 'exact', head: true }).eq('sender_id', profile.id).gte('created_at', from).lte('created_at', to)
+          return (c1 || 0) + (c2 || 0)
+        }
+        const prev = monthRangeBack(brNow, 2)   // the month before the reference month (comparison)
+        const ref = monthRangeBack(brNow, 1)
+        const prevMessages = await countMsgs(prev.startIso, prev.endIso)
 
-        const { count: dmCount } = await supabase
-          .from('direct_messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('sender_id', profile.id)
-          .gte('created_at', startOfMonth)
-          .lte('created_at', endOfMonth)
+        const taskCols = 'id, completed_at, completed_late, due_date, created_at'
+        const { data: tasksData } = await supabase.from('tasks').select(taskCols).eq('assigned_to', profile.id).gte('created_at', startOfMonth).lte('created_at', endOfMonth)
+        const { data: prevTasks } = await supabase.from('tasks').select(taskCols).eq('assigned_to', profile.id).gte('created_at', prev.startIso).lte('created_at', prev.endIso)
+        const T = (tasksData || []) as any[]
+        const totalTasks = T.length
+        const completedTasks = T.filter(t => t.completed_at).length
+        const lateTasks = T.filter(t => t.completed_late === true).length
+        const overdueTasks = T.filter(t => !t.completed_at && t.due_date && new Date(t.due_date) < referenceMonthEnd).length
+        const pendingTasks = totalTasks - completedTasks
+        const prevDone = ((prevTasks || []) as any[]).filter(t => t.completed_at).length
+        const prevLate = ((prevTasks || []) as any[]).filter(t => t.completed_late === true).length
 
-        const { data: tasksData } = await supabase
-          .from('tasks')
-          .select('id, status, completed_at, completed_late, due_date')
-          .eq('assigned_to', profile.id)
-          .gte('created_at', startOfMonth)
-          .lte('created_at', endOfMonth)
+        // weekly evolution: tasks assigned in each week and how many of them were completed
+        const ranges: [number, number][] = [[1, 7], [8, 14], [15, 21], [22, 28]]
+        if (ref.lastDay > 28) ranges.push([29, ref.lastDay])
+        const dayOf = (iso: string) => new Date(new Date(iso).getTime() - SAO_PAULO_OFFSET_HOURS * 3600e3).getUTCDate()
+        const weeks = ranges.map(([from, to]) => {
+          const inWeek = T.filter(t => { const dd = dayOf(t.created_at); return dd >= from && dd <= to })
+          return { label: `${pad2(from)}–${pad2(to)}`, assigned: inWeek.length, done: inWeek.filter(t => t.completed_at).length }
+        })
 
-        const totalTasks = tasksData?.length || 0
-        const completedTasks = tasksData?.filter((t: any) => t.completed_at)?.length || 0
-        const lateTasks = tasksData?.filter((t: any) => t.completed_late === true)?.length || 0
-        const overdueTasks = tasksData?.filter((t: any) => {
-          if (t.completed_at) return false
-          if (!t.due_date) return false
-          return new Date(t.due_date) < referenceMonthEnd
-        })?.length || 0
+        // meetings attended and war rooms answered in the month
+        let meetings = 0
+        const { data: parts } = await supabase.from('meeting_booking_participants').select('booking_id').eq('profile_id', profile.id)
+        const bookingIds = ((parts || []) as any[]).map(p => p.booking_id)
+        if (bookingIds.length) {
+          const { count: mc } = await supabase.from('meeting_bookings').select('id', { count: 'exact', head: true }).in('id', bookingIds).gte('starts_at', startOfMonth).lte('starts_at', endOfMonth)
+          meetings = mc || 0
+        }
+        const { count: warRooms } = await supabase.from('war_room_members').select('id', { count: 'exact', head: true }).eq('profile_id', profile.id).eq('has_acknowledged', true).gte('joined_at', startOfMonth).lte('joined_at', endOfMonth)
 
-        const totalMessages = (sectorMsgCount || 0) + (dmCount || 0)
+        const totalMessages = await countMsgs(startOfMonth, endOfMonth)
         const displayName = sanitize(profile.display_name || profile.name)
-
         const stats = { totalMessages, completedTasks, totalTasks, lateTasks, overdueTasks }
         const recommendations = generateRecommendations(stats)
+
+        const rate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+        const recs: { tone: 'warn' | 'good'; text: string }[] = []
+        if (overdueTasks > 0) recs.push({ tone: 'warn', text: `${overdueTasks === 1 ? 'Uma tarefa está atrasada' : overdueTasks + ' tarefas estão atrasadas'}. Reorganize os prazos com seu supervisor.` })
+        const weekRates = weeks.filter(w => w.assigned > 0).map(w => ({ w, r: Math.round((w.done / w.assigned) * 100), n: weeks.indexOf(w) + 1 }))
+        if (weekRates.length > 1) { const worst = weekRates.reduce((x, y) => (y.r < x.r ? y : x)); if (worst.r < 70 && worst.r < rate) recs.push({ tone: 'warn', text: `A conclusão caiu na ${worst.n}ª semana (${worst.r}%). Avalie a carga de trabalho do período.` }) }
+        if (totalTasks === 0) recs.push({ tone: 'warn', text: 'Nenhuma tarefa atribuída neste mês. Verifique com seu supervisor.' })
+        else if (rate < 60) recs.push({ tone: 'warn', text: 'Sua taxa de conclusão está abaixo do ideal. Revise suas prioridades.' })
+        else if (rate >= 90) recs.push({ tone: 'good', text: 'Parabéns! Sua taxa de conclusão de tarefas está excelente.' })
+        if (lateTasks > 0 && overdueTasks === 0) recs.push({ tone: 'warn', text: `Você teve ${lateTasks} entrega(s) com atraso. Planeje melhor os prazos.` })
+        if (totalMessages < 5) recs.push({ tone: 'warn', text: 'Sua participação nas conversas foi baixa. Tente interagir mais com a equipe.' })
+        else if (prevMessages > 0 && totalMessages >= prevMessages * 1.05) recs.push({ tone: 'good', text: `Sua participação nas conversas cresceu ${Math.round(((totalMessages - prevMessages) / prevMessages) * 100)}%. Continue interagindo com a equipe.` })
+        else if (totalMessages > 50) recs.push({ tone: 'good', text: 'Excelente nível de comunicação! Continue mantendo esse engajamento.' })
+        if (lateTasks === 0 && overdueTasks === 0 && totalTasks > 0) recs.push({ tone: 'good', text: 'Nenhuma tarefa atrasada. Ótima gestão de tempo!' })
+
+        let sectorName = 'Sem setor'
+        if (profile.sector_id) { const { data: sec } = await supabase.from('sectors').select('name').eq('id', profile.sector_id).maybeSingle(); if (sec?.name) sectorName = sec.name }
+        const assets = await loadAssets()
+        const avatar = await loadAvatar(profile.avatar_url ?? null)
+        const report: ReportData = {
+          name: displayName, roleLabel: ROLE_LABEL[profile.autonomy_level || ''] || 'Colaborador', sectorName, initials: initialsOf(displayName), avatar,
+          monthLabel: currentMonth, prevMonthName: monthNameLower(prev.m),
+          periodText: `01/${pad2(ref.m + 1)}/${ref.y} a ${pad2(ref.lastDay)}/${pad2(ref.m + 1)}/${ref.y}`,
+          generatedAt: dateStr.replace(' ', ' às '),
+          messages: totalMessages, prevMessages, tasksTotal: totalTasks, tasksDone: completedTasks, prevDone, late: lateTasks, prevLate,
+          pending: pendingTasks, overdue: overdueTasks, weeks, meetings, warRooms: warRooms || 0, recommendations: recs.slice(0, 4), goal: 80,
+        }
 
         // Generate real PDF using pdf-lib
         let pdfUrl: string | undefined
         let pdfBytes: Uint8Array | null = null
         try {
-          pdfBytes = await generatePdf(displayName, stats, recommendations, currentMonth, companyName, dateStr)
+          pdfBytes = await buildReportPdf(report, assets)
           const monthSlug = currentMonth.replace(/\s+/g, '-').toLowerCase()
           const fileName = `feedback/${monthSlug}/${profile.id}.pdf`
 
