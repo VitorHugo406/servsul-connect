@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-export function useWarRoomAlarm() {
+export function useWarRoomAlarm(opts?: { silent?: boolean }) {
   const { user } = useAuth();
   const [pendingWarRoomId, setPendingWarRoomId] = useState<string | null>(null);
   const [isAlarming, setIsAlarming] = useState(false);
@@ -58,7 +58,7 @@ export function useWarRoomAlarm() {
 
   // Alarm sound + vibration
   useEffect(() => {
-    if (isAlarming) {
+    if (isAlarming && !opts?.silent) {
       // Create alarm sound using oscillator
       const playAlarm = () => {
         try {

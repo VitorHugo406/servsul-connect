@@ -22,6 +22,7 @@ import * as N from './notify';
 import { I, Chev } from './icons';
 import { ST, StatusKey, fitTextarea, fmtTime, hm, safeStore } from './util';
 import { runTour, type TourController } from './tour';
+import { WarRoomRing } from './WarRoomRing';
 import { EwwonPage, type PageSpec } from './pages';
 import { TicketsDesk } from './tickets';
 import { EwwonLoader } from '@/components/common/EwwonLoader';
@@ -1023,7 +1024,7 @@ export default function EwwonApp() {
   return (
     <>
     <div className="ew ewx-root" data-theme={themeAttr} data-rm={prefs.red ? '' : undefined} ref={rootRef} data-tour={tourOn ? '1' : undefined}>
-      <div id="phone" ref={phoneRef} className={tourOn ? 'tour' : ''}>
+      <div id="phone" ref={phoneRef} className={tourOn ? 'tour' : ''}><WarRoomRing />
         {permGate && boot ? <PermissionGate onDone={() => setPermGate(false)} /> : null}
         <aside id="panel" ref={panelRef}>
           <div className={'pf' + (me.photo ? ' ewx-pf-photo' : '')} style={{ ['--sc' as string]: ST[me.st][1], backgroundImage: me.photo ? `url("${me.photo}")` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>{me.photo ? '' : me.i}<i className="pfd" /></div>
