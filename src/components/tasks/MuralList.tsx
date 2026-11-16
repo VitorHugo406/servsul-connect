@@ -170,8 +170,8 @@ export function MuralList({ boards, userId, onOpen, onCreate, onEdit, onDelete }
                 <div className="tm-bd">
                   <div className="tm-nm">{b.name}</div>
                   <div className="tm-dt">Criado em {new Date(b.created_at).toLocaleDateString('pt-BR')}</div>
-                  <div className="tm-ds">{b.description || ''}</div>
-                  <div className="tm-pl"><span>{s.done} de {s.total} {s.total === 1 ? 'card' : 'cards'}</span><b>{pct}%</b></div>
+                  {b.description ? <div className="tm-ds">{b.description}</div> : null}
+                  <div className="tm-pl"><span>{s.done}/{s.total} {s.done === 1 ? 'concluído' : 'concluídos'}</span><b>{pct}% concluído</b></div>
                   <div className="tm-br"><i style={{ width: pct + '%' }} /></div>
                   <div className="tm-ft">
                     <div className="tm-avs">
