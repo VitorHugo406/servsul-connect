@@ -1,5 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { sendMail, mailerConfigured, esc } from '../_shared/mailer.ts'
 import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1'
 
 // "Comunicados": system sender of automations (migration 20261109030000_system_sender).
@@ -111,18 +110,6 @@ function buildChatMessage(displayName: string, stats: any, recommendations: stri
   return msg
 }
 
-function buildEmailHtml(displayName: string, stats: any, recommendations: string[], currentMonth: string, companyName: string): string {
-  const rate = stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0
-  const tile = (v: string | number, l: string, c: string) => `<td width="25%" style="padding:4px"><div style="background:#f4f4f5;border-radius:14px;padding:14px 8px;text-align:center"><div style="font-size:22px;font-weight:800;color:${c}">${v}</div><div style="font-size:11px;color:#71717a;margin-top:2px">${l}</div></div></td>`
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border-radius:20px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
-<tr><td style="background:#0b0b0e;padding:26px 28px"><div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#a1a1aa;font-weight:700">${esc(companyName)} · Feedback mensal</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:8px">${esc(currentMonth)}</div></td></tr>
-<tr><td style="padding:24px 28px 8px;color:#3f3f46;font-size:15px;line-height:1.6">Olá, <b style="color:#09090b">${esc(displayName)}</b>! Aqui está o resumo da sua atividade no mês. O relatório completo segue em PDF anexo.</td></tr>
-<tr><td style="padding:8px 24px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>${tile(stats.totalMessages, 'mensagens', '#18181b')}${tile(`${rate}%`, `${stats.completedTasks}/${stats.totalTasks} tarefas`, '#16a34a')}${tile(stats.lateTasks, 'com atraso', '#d97706')}${tile(stats.overdueTasks, 'pendentes', '#dc2626')}</tr></table></td></tr>
-${recommendations.length ? `<tr><td style="padding:16px 28px 26px"><div style="font-size:13px;font-weight:700;color:#09090b;margin-bottom:8px">Recomendações</div>${recommendations.map((r) => `<div style="font-size:14px;color:#3f3f46;line-height:1.55;padding:8px 12px;border-left:3px solid #18181b;background:#fafafa;border-radius:0 10px 10px 0;margin-bottom:6px">${esc(r)}</div>`).join('')}</td></tr>` : ''}
-</table>`
-}
-
-// Helper to draw rounded rectangle
 function drawRoundedRect(page: any, x: number, y: number, w: number, h: number, r: number, color: any, borderColor?: any) {
   // Draw filled rectangle with rounded corners approximation
   // pdf-lib doesn't natively support rounded rectangles, so we use overlapping rects + circles
@@ -322,7 +309,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const canEmail = mailerConfigured()
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
@@ -425,7 +411,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    let sentEmailCount = 0
     let sentDmCount = 0
     let sentPdfCount = 0
     const errors: string[] = []
@@ -519,24 +504,6 @@ Deno.serve(async (req) => {
           console.error(`DM exception for ${profile.name}:`, e)
         }
 
-        // Send email
-        if (canEmail && profile.email) {
-          try {
-            const emailHtml = buildEmailHtml(displayName, stats, recommendations, currentMonth, companyName)
-            await sendMail({
-              to: profile.email,
-              subject: `Feedback mensal · ${currentMonth}`,
-              html: emailHtml,
-              attachments: pdfBytes ? [{ filename: `feedback-${currentMonth.replace(/\s+/g, '-').toLowerCase()}.pdf`, content: pdfBytes, contentType: 'application/pdf' }] : [],
-            })
-            sentEmailCount++
-          } catch (e) {
-            console.error(`Email exception for ${profile.name}:`, e)
-            errors.push(`E-mail para ${profile.name}: ${e instanceof Error ? e.message : 'falha no envio'}`)
-          }
-        } else if (!canEmail && profile.email) {
-          if (!errors.includes('E-mail desativado: configure GMAIL_APP_PASSWORD')) errors.push('E-mail desativado: configure GMAIL_APP_PASSWORD')
-        }
       } catch (profileError) {
         console.error(`Error processing ${profile.name}:`, profileError)
         errors.push(`${profile.name}: ${profileError instanceof Error ? profileError.message : 'Unknown error'}`)
@@ -545,8 +512,8 @@ Deno.serve(async (req) => {
 
     const response = {
       success: true,
-      message: `Feedback enviado! Chat: ${sentDmCount}, E-mails: ${sentEmailCount}, PDFs: ${sentPdfCount}`,
-      details: { sentDmCount, sentEmailCount, sentPdfCount, totalRecipients: targetProfiles.length },
+      message: `Feedback enviado pelo chat de Comunicados! Mensagens: ${sentDmCount}, PDFs: ${sentPdfCount}`,
+      details: { sentDmCount, sentPdfCount, totalRecipients: targetProfiles.length },
       errors: errors.length > 0 ? errors : undefined,
     }
 

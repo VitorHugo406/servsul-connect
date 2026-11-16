@@ -27,7 +27,6 @@ const DataManagementSection = lazyWithRetry(() => import('@/components/sections/
 const SectorManagementSection = lazyWithRetry(() => import('@/components/sections/SectorManagementSection').then((module) => ({ default: module.SectorManagementSection })));
 const TaskBoardSection = lazyWithRetry(() => import('@/components/sections/TaskBoardSection').then((module) => ({ default: module.TaskBoardSection })));
 const PeopleManagementSection = lazyWithRetry(() => import('@/components/sections/PeopleManagementSection').then((module) => ({ default: module.PeopleManagementSection })));
-const FeedbackEmailSection = lazyWithRetry(() => import('@/components/sections/FeedbackEmailSection').then((module) => ({ default: module.FeedbackEmailSection })));
 const LogsSection = lazyWithRetry(() => import('@/components/sections/LogsSection').then((module) => ({ default: module.LogsSection })));
 const StorageMonitoringSection = lazyWithRetry(() => import('@/components/sections/StorageMonitoringSection').then((module) => ({ default: module.StorageMonitoringSection })));
 const EventHistorySection = lazyWithRetry(() => import('@/components/sections/EventHistorySection').then((module) => ({ default: module.EventHistorySection })));
@@ -72,7 +71,6 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   sectors: { title: 'Gestão de Setores', subtitle: 'Departamentos da empresa' },
   tasks: { title: 'Gestão de Tarefas', subtitle: 'Quadro de atividades' },
   'people-management': { title: 'Gestão de Pessoas', subtitle: 'Equipe e relatórios' },
-  'feedback-email': { title: 'Disparo de Feedback', subtitle: 'E-mails de feedback mensal' },
   calendar: { title: 'Calendário', subtitle: 'Reuniões, lembretes e prazos' },
   'system-logs': { title: 'Logs do Sistema', subtitle: 'Auditoria e relatórios' },
   storage: { title: 'Armazenamento', subtitle: 'Monitoramento do banco de dados' },
@@ -95,7 +93,7 @@ const sectionPaths: Record<string, string> = {
   birthdays: '/aniversariantes', management: '/gerenciamento', shortcuts: '/atalhos',
   'data-management': '/gestao-de-dados', sectors: '/setores',
   tasks: '/tarefas',
-  'people-management': '/gestao-de-pessoas', 'feedback-email': '/disparo-de-feedback',
+  'people-management': '/gestao-de-pessoas',
   calendar: '/calendario', 'system-logs': '/logs-do-sistema', storage: '/armazenamento',
   'event-history': '/eventos-mensais', documentation: '/documentacao', 'war-room': '/war-room',
   'api-management': '/integracoes-api', evaluations: '/avaliacoes', notes: '/anotacoes',
@@ -112,7 +110,7 @@ const sectionIntroIcons = {
   announcements: Bell, birthdays: Cake, management: Settings, shortcuts: LinkIcon,
   'data-management': Trash2, sectors: Building2,
   tasks: ListTodo, 'people-management': UsersRound,
-  'feedback-email': Mail, calendar: CalendarDays, 'system-logs': FileText,
+  calendar: CalendarDays, 'system-logs': FileText,
   storage: HardDrive, documentation: BookOpen, 'war-room': Shield,
   'api-management': Plug, evaluations: ClipboardCheck, notes: StickyNote,
   companies: Building2, 'system-broadcasts': Megaphone, 'event-history': Sparkles, billing: CreditCard, 'dashboard-3d': LayoutDashboard, integrations: Plug,
@@ -278,7 +276,6 @@ const Index = () => {
       case 'sectors': return <SectorManagementSection />;
       case 'tasks': return <TaskBoardSection />;
       case 'people-management': return <PeopleManagementSection />;
-      case 'feedback-email': return <FeedbackEmailSection />;
       case 'calendar': return <CalendarSection />;
       case 'system-logs': return <LogsSection />;
       case 'storage': return <StorageMonitoringSection />;

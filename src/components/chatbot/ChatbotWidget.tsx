@@ -247,8 +247,8 @@ export function ChatbotWidget({ isHomePage = false }: ChatbotWidgetProps) {
           supabase.functions.invoke('send-feedback-email', {
             body: { type: 'all' },
           }).then(res => {
-            if (res.error) console.error('Auto feedback email error:', res.error);
-            else console.log('Monthly feedback email sent automatically');
+            if (res.error) console.error('Auto feedback error:', res.error);
+            else console.log('Monthly feedback sent automatically (Comunicados)');
           });
         }
       }

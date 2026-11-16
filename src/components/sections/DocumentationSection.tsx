@@ -287,7 +287,7 @@ function generateDocumentationPDF() {
     'Mural de aniversariantes e eventos sazonais',
     'Controle de acesso por níveis de autonomia (admin, gerente, gestor, diretoria, supervisor, colaborador)',
     'Calendário integrado com reuniões e lembretes',
-    'Disparo de e-mails de feedback via Resend API',
+    'Feedback mensal pelo chat de Comunicados',
   ]);
 
   // =============================================
@@ -435,7 +435,6 @@ function generateDocumentationPDF() {
     ['🏢 Gestão de Setores', 'SectorManagementSection.tsx', 'CRUD setores com ícones e cores, membros por setor, setores adicionais'],
     ['⭐ Comunicados', 'ImportantAnnouncementsSection.tsx', 'Modal obrigatório, estilos de borda, agendamento, controle de leitura'],
     ['📅 Calendário', 'CalendarSection.tsx', 'Eventos, reuniões com confirmação, links de reunião, participantes'],
-    ['📧 Feedback', 'FeedbackEmailSection.tsx', 'Disparo de e-mails mensais via Resend API com templates'],
     ['🗑️ Exclusão de Dados', 'DataManagementSection.tsx', 'Exclusão controlada com auditoria automática em audit_logs'],
     ['📄 Logs do Sistema', 'LogsSection.tsx', 'Audit logs com filtros por ação, tabela, data, usuário (admin)'],
     ['💾 Armazenamento', 'StorageMonitoringSection.tsx', 'Monitoramento de buckets e uso de espaço (admin)'],
@@ -487,7 +486,7 @@ function generateDocumentationPDF() {
     ['functions/update-user-permissions/', 'Edge Fn', 'Atualiza permissões granulares do usuário'],
     ['functions/delete-data/', 'Edge Fn', 'Exclusão controlada com registro em audit_logs'],
     ['functions/send-announcement-email/', 'Edge Fn', 'Disparo de e-mail de aviso via Gmail SMTP (ewvonsuporte@gmail.com)'],
-    ['functions/send-feedback-email/', 'Edge Fn', 'Disparo de e-mail de feedback via Gmail SMTP (ewvonsuporte@gmail.com)'],
+    ['functions/send-feedback-email/', 'Edge Fn', 'Feedback mensal enviado pelo chat de Comunicados (com PDF)'],
     ['functions/process-automations/', 'Edge Fn', 'Executa regras SE→ENTÃO nos quadros Kanban'],
     ['functions/duplicate-scheduled-cards/', 'Edge Fn', 'Duplica cards agendados (diário/semanal/mensal)'],
     ['functions/api-integrations/', 'Edge Fn', 'API REST externa: métricas, dados de usuários, equipes'],
@@ -561,7 +560,7 @@ function generateDocumentationPDF() {
     ['get-public-sectors', 'GET', 'Retorna lista de setores para exibição na tela de login'],
     ['delete-data', 'POST', 'Exclusão controlada de registros com log em audit_logs'],
     ['send-announcement-email', 'POST', 'Envia e-mail de aviso para os usuários ativos da empresa via Gmail SMTP'],
-    ['send-feedback-email', 'POST', 'Envia e-mail de feedback personalizado (com PDF) via Gmail SMTP'],
+    ['send-feedback-email', 'POST', 'Envia o feedback mensal pelo chat de Comunicados (com PDF)'],
     ['process-automations', 'POST', 'Executa regras de automação do quadro ao mover cards'],
     ['duplicate-scheduled-cards', 'POST', 'Duplica cards com subtarefas conforme agendamento (cron)'],
   ], [42, 14, contentW - 56]);
@@ -835,7 +834,7 @@ export function DocumentationSection() {
                 <InfoCard icon={Bell} title="Avisos" value="Comunicados oficiais com controle de leitura" />
                 <InfoCard icon={Shield} title="Segurança" value="RLS, roles" />
                 <InfoCard icon={CalendarDays} title="Calendário" value="Reuniões, lembretes, prazos integrados" />
-                <InfoCard icon={Mail} title="E-mails" value="Feedback mensal via Resend API" />
+                <InfoCard icon={Mail} title="E-mails" value="Feedback mensal pelo chat de Comunicados" />
                 <InfoCard icon={Cake} title="Aniversariantes" value="Mural com celebração animada" />
                 <InfoCard icon={Eye} title="Presença" value="Status online/offline em tempo real" />
                 <InfoCard icon={Smartphone} title="PWA" value="Instalável, funciona offline" />
@@ -1010,7 +1009,7 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                 <InfoCard icon={Building2} title="Gestão de Setores" value="CRUD setores com ícones, cores e membros" />
                 <InfoCard icon={Sparkles} title="Comunicados Importantes" value="Modal obrigatório, estilos customizáveis, agendamento" />
                 <InfoCard icon={CalendarDays} title="Calendário" value="Eventos, reuniões com confirmação, links de reunião" />
-                <InfoCard icon={Mail} title="Disparo de Feedback" value="E-mails mensais via Resend API" />
+                <InfoCard icon={Mail} title="Feedback mensal" value="Enviado pelo chat de Comunicados" />
                 <InfoCard icon={Trash2} title="Exclusão de Dados" value="Exclusão controlada com auditoria automática" />
                 <InfoCard icon={FileText} title="Logs do Sistema" value="Audit logs com filtros (admin principal)" />
                 <InfoCard icon={HardDrive} title="Armazenamento" value="Monitoramento de storage (admin principal)" />
@@ -1127,7 +1126,7 @@ isAdmin // verifica role 'admin' na tabela user_roles`}</CodeBlock>
                   <TableRow label="get-public-sectors" value="Setores para tela pública" />
                   <TableRow label="delete-data" value="Exclusão + audit log" />
                   <TableRow label="send-announcement-email" value="E-mail de aviso (Gmail SMTP)" />
-                  <TableRow label="send-feedback-email" value="E-mail de feedback (Gmail SMTP)" />
+                  <TableRow label="send-feedback-email" value="Feedback mensal pelo chat de Comunicados" />
                   <TableRow label="process-automations" value="Motor de automações" />
                   <TableRow label="duplicate-scheduled-cards" value="Duplicação agendada" />
                   <TableRow label="api-integrations" value="API REST externa (métricas, usuários)" />

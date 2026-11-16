@@ -18,7 +18,6 @@ export const menuItems = [
   { id: 'system-broadcasts', icon: Megaphone, label: 'Comunicados Globais', superAdminOnly: true },
   { id: 'sectors', icon: Building2, label: 'Gestão de Setores', adminOnly: true },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },
-  { id: 'feedback-email', icon: Mail, label: 'Disparo de Feedback', adminOnly: true },
   { id: 'evaluations', icon: ClipboardCheck, label: 'Avaliações' },
   { id: 'calendar', icon: CalendarDays, label: 'Calendário' },
   { id: 'system-logs', icon: FileText, label: 'Logs do Sistema', mainAdminOnly: true },
