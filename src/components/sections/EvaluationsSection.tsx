@@ -25,6 +25,7 @@ import { downloadEvaluationPdf } from '@/lib/evalDocument';
 import { CriteriaModelPanel } from '@/components/evaluations/CriteriaModelPanel';
 import { FORM_TYPES, formTypeLabel, type FormType } from '@/lib/evalPresets';
 import { brDate, contractDates, daysSinceAdmission, getEmployeeRecord, type EmployeeRecord } from '@/lib/employeeRecord';
+import { Sel } from '@/components/ui/Sel';
 
 const MANAGER_LEVELS = ['admin', 'gerente', 'supervisor', 'diretoria'];
 const FILTERS: { id: 'all' | EvalStatus; label: string }[] = [
@@ -148,7 +149,7 @@ export function EvaluationsSection() {
             </div>
             <div className="dk-flt">
               <input type="text" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar pessoa ou período" aria-label="Buscar pessoa ou período" />
-              <select aria-label="Período" value={periodF} onChange={(e) => setPeriodF(e.target.value)}><option value="all">Período: todos</option>{periods.map((p) => <option key={p} value={p}>{p}</option>)}</select>
+              <Sel aria-label="Período" value={periodF} onChange={(e) => setPeriodF(e.target.value)}><option value="all">Período: todos</option>{periods.map((p) => <option key={p} value={p}>{p}</option>)}</Sel>
             </div>
           </div>
           {loading ? <div style={{ padding: 24 }}><Skeleton className="h-14 w-full" /><Skeleton className="mt-3 h-14 w-full" /><Skeleton className="mt-3 h-14 w-full" /></div>

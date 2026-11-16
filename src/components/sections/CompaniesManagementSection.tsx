@@ -54,6 +54,7 @@ import { optimizeImageFile } from '@/lib/imageOptimization';
 import { CompanyLogo } from '@/components/common/CompanyLogo';
 import { CompanyPlanPanel } from '@/components/companies/CompanyPlanPanel';
 import { CreditCard } from 'lucide-react';
+import { Sel } from '@/components/ui/Sel';
 
 interface CompanyStats {
   id: string;
@@ -374,9 +375,9 @@ export function CompaniesManagementSection() {
                     </div>
                     <div>
                       <Label>Plano em teste</Label>
-                      <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={trialPlan} onChange={(e) => setTrialPlan(e.target.value)}>
+                      <Sel className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={trialPlan} onChange={(e) => setTrialPlan(e.target.value)}>
                         <option value="essencial">Essencial</option><option value="profissional">Profissional</option><option value="empresarial">Empresarial</option>
-                      </select>
+                      </Sel>
                     </div>
                     <p className="col-span-2 text-xs text-muted-foreground">A empresa fica ativa até essa data. O administrador é avisado 7 dias antes e no vencimento (com 30 dias para assinar); depois disso, você decide no chat Comunicados se os dados serão excluídos.</p>
                   </div>

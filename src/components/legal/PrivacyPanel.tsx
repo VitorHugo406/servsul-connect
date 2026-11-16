@@ -5,6 +5,7 @@ import { Download, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { LEGAL, LEGAL_DOCS, LEGAL_PATH, type LegalDocId } from '@/lib/legal';
+import { Sel } from '@/components/ui/Sel';
 
 const db = supabase as any;
 const KINDS = [
@@ -42,7 +43,7 @@ export function PrivacyPanel() {
       <button type="button" onClick={() => void download()} disabled={busy} className="inline-flex h-9 items-center gap-2 rounded-lg border px-3 font-medium">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}Baixar uma cópia dos meus dados</button>
       <div className="space-y-2 rounded-xl border p-3">
         <p className="font-medium">Fazer um pedido</p>
-        <select className="h-9 w-full rounded-md border bg-background px-2" value={kind} onChange={(e) => setKind(e.target.value)}>{KINDS.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}</select>
+        <Sel className="h-9 w-full rounded-md border bg-background px-2" value={kind} onChange={(e) => setKind(e.target.value)}>{KINDS.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}</Sel>
         <textarea className="min-h-[70px] w-full rounded-md border bg-background p-2" placeholder="Detalhes (opcional)" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} />
         <button type="button" onClick={() => void send()} disabled={sending} className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 font-semibold text-primary-foreground">{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Enviar pedido</button>
       </div>

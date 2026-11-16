@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { limitErrorMessage } from '@/lib/planAccess';
 import { getEmployeeRecord, saveEmployeeRecord, type EmployeeRecord } from '@/lib/employeeRecord';
 import { UserRegistrationDialog } from '@/components/management/UserRegistrationDialog';
+import { Sel } from '@/components/ui/Sel';
 
 interface Profile { avatar_url?: string | null; id: string; user_id: string; name: string; email: string; phone: string | null; address?: string | null; company: string | null; registration_number: string | null; profile_type: string; is_active: boolean; sector_id: string | null; birth_date: string | null; autonomy_level: string; last_seen_at?: string | null }
 interface Sector { id: string; name: string; color: string }
@@ -196,7 +197,7 @@ export function ManagementSection() {
 
   const field = (span: number, label: string, node: React.ReactNode) => <div className="dk-f" style={{ gridColumn: `span ${span}` }}>{label ? <label>{label}</label> : null}{node}</div>;
   const text = (span: number, label: string, k: keyof EmployeeRecord, type = 'text', m?: MaskKey) => field(span, label, <input type={type} inputMode={m && m !== 'upper' && m !== 'uf' ? 'numeric' : undefined} value={r(k)} disabled={ro} maxLength={120} onChange={(e) => setR(k)(m ? mask[m](e.target.value) : e.target.value)} />);
-  const select = (span: number, label: string, k: keyof EmployeeRecord, opts: string[]) => field(span, label, <select value={r(k)} disabled={ro} onChange={(e) => setR(k)(e.target.value)}><option value="">Selecione</option>{opts.map((o) => <option key={o} value={o}>{o}</option>)}</select>);
+  const select = (span: number, label: string, k: keyof EmployeeRecord, opts: string[]) => field(span, label, <Sel value={r(k)} disabled={ro} onChange={(e) => setR(k)(e.target.value)}><option value="">Selecione</option>{opts.map((o) => <option key={o} value={o}>{o}</option>)}</Sel>);
   const masked = (span: number, label: string, k: keyof EmployeeRecord, m?: MaskKey) => <div className="dk-f" style={{ gridColumn: `span ${span}` }}><Masked label={label} value={r(k)} disabled={ro} onChange={(v) => setR(k)(m ? mask[m](v) : v)} numeric={!!m} /></div>;
 
   return (
@@ -261,7 +262,7 @@ export function ManagementSection() {
             {section === 'work' && <section key="work" className="dk-sec dk-fade" data-sec="work"><div><h3>Dados profissionais</h3><div className="hp">Cargo, contrato, remuneração e jornada.</div></div>
               <div className="dk-gr6">
                 {text(1, 'Matrícula', 'registration', 'text', 'num')}{text(3, 'Cargo', 'job_title')}
-                {field(2, 'Setor', <select value={f.sector} onChange={(e) => setF({ ...f, sector: e.target.value })}><option value="">Sem setor</option>{sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>)}
+                {field(2, 'Setor', <Sel value={f.sector} onChange={(e) => setF({ ...f, sector: e.target.value })}><option value="">Sem setor</option>{sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Sel>)}
                 {text(2, 'Unidade', 'unit')}{text(2, 'Gestor direto', 'manager_name')}{text(2, 'Data de admissão', 'admission_date', 'date')}
                 {select(2, 'Tipo de contrato', 'contract_type', ['CLT', 'PJ', 'Estágio', 'Temporário', 'Aprendiz'])}{masked(2, 'Salário (R$)', 'salary', 'money')}{text(1, 'Entrada', 'work_start', 'time')}{text(1, 'Saída', 'work_end', 'time')}
                 {text(1, 'Intervalo', 'break_time', 'time')}{text(2, 'Jornada semanal (horas)', 'weekly_hours', 'text', 'num')}
@@ -272,8 +273,8 @@ export function ManagementSection() {
             {section === 'access' && <section key="access" className="dk-sec dk-fade" data-sec="access"><div><h3>Acesso</h3><div className="hp">Login e situação da conta no sistema.</div></div>
               <div className="dk-gr6">
                 {field(3, 'E-mail de login', <input value={sel.email} disabled readOnly />)}
-                {field(2, 'Perfil', <select value={selAdmin ? 'admin' : f.level} disabled={!isAdmin || selAdmin} onChange={(e) => setF({ ...f, level: e.target.value })}>{selAdmin ? <option value="admin">Administrador</option> : null}{LEVELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>)}
-                {field(1, 'Situação', <select value={f.active ? '1' : '0'} onChange={(e) => setF({ ...f, active: e.target.value === '1' })}><option value="1">Ativo</option><option value="0">Inativo</option></select>)}
+                {field(2, 'Perfil', <Sel value={selAdmin ? 'admin' : f.level} disabled={!isAdmin || selAdmin} onChange={(e) => setF({ ...f, level: e.target.value })}>{selAdmin ? <option value="admin">Administrador</option> : null}{LEVELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Sel>)}
+                {field(1, 'Situação', <Sel value={f.active ? '1' : '0'} onChange={(e) => setF({ ...f, active: e.target.value === '1' })}><option value="1">Ativo</option><option value="0">Inativo</option></Sel>)}
                 <div className="dk-pwr">{canChangePasswords && <button className="dk-b2" onClick={() => setPasswordUser(sel)}>Definir nova senha</button>}{lastSeen ? <span>Último acesso: {lastSeen}</span> : <span>Sem acesso registrado</span>}</div>
               </div></section>}
 

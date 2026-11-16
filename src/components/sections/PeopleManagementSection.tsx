@@ -28,6 +28,7 @@ import {
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import { appConfirm, appPrompt } from '@/lib/appDialog';
+import { Sel } from '@/components/ui/Sel';
 
 const CHART_COLORS = [
   'hsl(var(--primary))',
@@ -185,13 +186,13 @@ export function PeopleManagementSection() {
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {teams.length > 0 && (
-              <select
+              <Sel
                 value={selectedTeamId || ''}
                 onChange={e => setSelectedTeamId(e.target.value)}
                 className="h-8 rounded-lg border border-input bg-background px-3 text-sm text-foreground"
               >
                 {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
+              </Sel>
             )}
             <Button size="sm" variant="outline" className="h-8 text-xs" onClick={async () => {
               const name = await appPrompt({ title: 'Nova equipe', message: 'Dê um nome para a equipe. Depois você adiciona os membros.', label: 'Nome da equipe', placeholder: 'Ex.: Equipe Comercial', maxLength: 60, confirmText: 'Criar equipe', validate: (v) => v.length < 2 ? 'Use pelo menos 2 caracteres.' : teams.some((t) => t.name.trim().toLowerCase() === v.toLowerCase()) ? 'Já existe uma equipe com esse nome.' : null });

@@ -11,6 +11,7 @@ import { GERAL_SECTOR_ID, formatShortDate } from '@/lib/birthdayUtils';
 import { toast } from 'sonner';
 import { withCompany } from '@/lib/companyScope';
 import { canManageBirthdayPresentation, upcomingBirthdayPeople } from '@/lib/birthdayPresentation';
+import { Sel } from '@/components/ui/Sel';
 
 
 type BirthdayPerson = ReturnType<typeof useBirthdays>['birthdayPeople'][number];
@@ -127,7 +128,7 @@ export function BirthdaysSection() {
           </div>
           <div className="dk-flt">
             <input type="text" placeholder="Buscar colaborador" aria-label="Buscar colaborador" value={q} onChange={e => setQ(e.target.value)} />
-            <select aria-label="Setor" value={sectorF} onChange={e => setSectorF(e.target.value)}><option value="all">Setor: todos</option>{sectors.map(s => <option key={s} value={s}>{s}</option>)}</select>
+            <Sel aria-label="Setor" value={sectorF} onChange={e => setSectorF(e.target.value)}><option value="all">Setor: todos</option>{sectors.map(s => <option key={s} value={s}>{s}</option>)}</Sel>
             <button className="dk-btn" onClick={generateMonthlyPdf} disabled={generatingPdf || birthdayPeople.length === 0}><Download size={15} />{generatingPdf ? 'Gerando...' : 'Baixar PDF'}</button>
           </div>
         </div>

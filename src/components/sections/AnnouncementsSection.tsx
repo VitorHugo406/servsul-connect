@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { appConfirm } from '@/lib/appDialog';
+import { Sel } from '@/components/ui/Sel';
 
 type Priority = 'normal' | 'important' | 'urgent';
 type Status = 'active' | 'scheduled' | 'expired';
@@ -219,9 +220,9 @@ export function AnnouncementsSection() {
           ) : <div className="dk-ti" style={{ fontSize: 16 }}>Avisos da empresa</div>}
           <div className="dk-flt">
             <input type="text" placeholder="Buscar por título" aria-label="Buscar por título" value={q} onChange={e => setQ(e.target.value)} />
-            <select aria-label="Tipo" value={typeF} onChange={e => setTypeF(e.target.value)}>
+            <Sel aria-label="Tipo" value={typeF} onChange={e => setTypeF(e.target.value)}>
               <option value="all">Tipo: todos</option><option value="normal">Geral</option><option value="important">Importante</option><option value="urgent">Urgente</option>
-            </select>
+            </Sel>
             {canManageAnnouncements && <button className="dk-btn" onClick={exportCsv}>Exportar</button>}
             {canManageAnnouncements && <button className="dk-btn pri" onClick={openNew}>+ Novo aviso</button>}
           </div>

@@ -13,6 +13,7 @@ import { passwordError } from '@/lib/passwordPolicy';
 import { optimizeImageFile } from '@/lib/imageOptimization';
 import { EwwonLogo } from '@/components/common/EwwonLoader';
 import { cn } from '@/lib/utils';
+import { Sel } from '@/components/ui/Sel';
 
 const FN = 'https://scslfueixmuolkmgdslk.supabase.co/functions/v1/billing';
 const PENDING_KEY = 'ewvon:signup:pending';
@@ -299,7 +300,7 @@ function Wizard() {
                     <div className="space-y-1.5"><Label htmlFor="cb">Bairro</Label><Input id="cb" maxLength={80} value={co.district} onChange={(e) => setCo({ ...co, district: e.target.value })} /></div>
                     <div className="space-y-1.5"><Label htmlFor="cc">Cidade</Label><Input id="cc" maxLength={80} value={co.city} onChange={(e) => setCo({ ...co, city: e.target.value })} /></div>
                     <div className="space-y-1.5"><Label htmlFor="cf">UF</Label>
-                      <select id="cf" value={co.uf} onChange={(e) => setCo({ ...co, uf: e.target.value })} className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm"><option value="">--</option>{UFS.map((u) => <option key={u} value={u}>{u}</option>)}</select></div>
+                      <Sel id="cf" value={co.uf} onChange={(e) => setCo({ ...co, uf: e.target.value })} className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm"><option value="">--</option>{UFS.map((u) => <option key={u} value={u}>{u}</option>)}</Sel></div>
                   </div>
                 </div>
             </div>

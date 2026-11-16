@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Check, Loader2, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Sel } from '@/components/ui/Sel';
 
 export interface Plan {
   id: string; name: string; description: string | null; price_cents: number; max_users: number; max_sectors: number; storage_gb: number; features: string[];
@@ -109,9 +110,9 @@ export function CompanyPlanPanel({ companyId, isSystem, userCount }: { companyId
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label>Situação</Label>
-          <select className="mt-1.5 h-10 w-full rounded-xl border bg-background px-3 text-sm" value={sub.status} onChange={(e) => set({ status: e.target.value as Status })}>
+          <Sel className="mt-1.5 h-10 w-full rounded-xl border bg-background px-3 text-sm" value={sub.status} onChange={(e) => set({ status: e.target.value as Status })}>
             {STATUS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-          </select>
+          </Sel>
           <p className="mt-1 text-xs text-muted-foreground">{STATUS.find((s) => s.id === sub.status)?.hint}</p>
         </div>
         <div>

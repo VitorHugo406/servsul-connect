@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format, addMinutes, differenceInMinutes, isSameDay } from 'date-fns';
 import { appConfirm } from '@/lib/appDialog';
+import { Sel } from '@/components/ui/Sel';
 
 /* Telas fiéis ao design "Tela_de_Avisos_2.html" (estilos em src/styles/warroom.css; prefixos wd- sala, wl- lista, wn- nova). */
 
@@ -140,16 +141,16 @@ function CardPickerModal({ initialBoard, initialColumn, confirmText, onClose, on
         <h3>Card emergencial</h3>
         <div className="wx-bd">
           <label>Quadro
-            <select value={board} onChange={e => { setBoard(e.target.value); setColumn(''); }}>
+            <Sel value={board} onChange={e => { setBoard(e.target.value); setColumn(''); }}>
               <option value="">Selecione o quadro</option>
               {boards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
+            </Sel>
           </label>
           <label>Coluna
-            <select value={column} disabled={!board} onChange={e => setColumn(e.target.value)}>
+            <Sel value={column} disabled={!board} onChange={e => setColumn(e.target.value)}>
               <option value="">Selecione a coluna</option>
               {cols.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            </Sel>
           </label>
           <p>Só o quadro e a coluna. Título, descrição e data de entrega vêm da sala, e as subtarefas são a timeline. O card não pode ser alterado enquanto a sala estiver ativa e vai para Concluída quando ela for encerrada.</p>
         </div>
@@ -268,10 +269,10 @@ function NewWarRoomForm({ onCancel, onCreated }: { onCancel: () => void; onCreat
           <div className={n('addr')}>
             <input className={n('in')} type="text" placeholder="Ex: Isolar serviço X e validar logs" aria-label="Nova ação" value={draft.title}
               onChange={e => setDraft({ ...draft, title: e.target.value })} onKeyDown={e => e.key === 'Enter' && add()} />
-            <select className={n('in')} style={{ width: 150 }} aria-label="Responsável" value={draft.assigned_to || ''} onChange={e => setDraft({ ...draft, assigned_to: e.target.value || null })}>
+            <Sel className={n('in')} style={{ width: 150 }} aria-label="Responsável" value={draft.assigned_to || ''} onChange={e => setDraft({ ...draft, assigned_to: e.target.value || null })}>
               <option value="">Responsável</option>
               {profiles.map(p => <option key={p.id} value={p.id}>{nameOf(p)}</option>)}
-            </select>
+            </Sel>
             <input className={n('in')} type="text" inputMode="numeric" placeholder="min" style={{ width: 70 }} aria-label="Duração em minutos" value={draftMin}
               onChange={e => setDraftMin(e.target.value.replace(/\D/g, ''))} onKeyDown={e => e.key === 'Enter' && add()} />
             <button type="button" className={n('btn sq')} aria-label="Adicionar ação" onClick={add}>+</button>
@@ -287,10 +288,10 @@ function NewWarRoomForm({ onCancel, onCreated }: { onCancel: () => void; onCreat
                     <>
                       <div className={n('edit')}>
                         <input style={{ flex: 1 }} value={editDraft.title} onChange={e => setEditDraft({ ...editDraft, title: e.target.value })} />
-                        <select style={{ width: 130 }} value={editDraft.assigned_to || ''} onChange={e => setEditDraft({ ...editDraft, assigned_to: e.target.value || null })}>
+                        <Sel style={{ width: 130 }} value={editDraft.assigned_to || ''} onChange={e => setEditDraft({ ...editDraft, assigned_to: e.target.value || null })}>
                           <option value="">Sem responsável</option>
                           {profiles.map(p => <option key={p.id} value={p.id}>{nameOf(p)}</option>)}
-                        </select>
+                        </Sel>
                         <input style={{ width: 60 }} value={editDraft.duration_min} inputMode="numeric"
                           onChange={e => setEditDraft({ ...editDraft, duration_min: Math.max(1, parseInt(e.target.value.replace(/\D/g, ''), 10) || 1) })} />
                       </div>
@@ -520,6 +521,10 @@ function WarRoomDetail({ room: initial, onBack }: { room: WarRoom; onBack: () =>
           <div className={d('sub')}>Aberta em {format(new Date(room.created_at), 'dd/MM/yyyy')} às {hhmm(new Date(room.created_at))}{creator ? ` por ${nameOf(creator)}` : ''}</div>
         </div>
         <div className={d('acts')}>
+          <button type="button" className={d('btn')} aria-expanded={cvOpen} onClick={e => { e.stopPropagation(); setCvOpen(o => !o); }}>
+            Informações
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: cvOpen ? 'rotate(180deg)' : undefined }}><path d="M6 9l6 6 6-6" /></svg>
+          </button>
           {isRoomCreator && isActive && (
             <button type="button" className={d('btn')} onClick={async () => {
               if (await appConfirm({ title: 'Excluir todo o histórico desta War Room?', message: 'Mensagens e registros serão apagados.', confirmText: 'Excluir histórico', danger: true })) clearHistory();
@@ -529,6 +534,24 @@ function WarRoomDetail({ room: initial, onBack }: { room: WarRoom; onBack: () =>
           {room.task_id && <button type="button" className={d('btn')} onClick={openCard}><Ico name="card" size={15} />Abrir card</button>}
           {canManage && <button type="button" className={d('btn dg')} onClick={close}><Ico name="xcircle" size={15} />Encerrar</button>}
         </div>
+        {cvOpen && (
+          <div className={d('info')} onClick={e => e.stopPropagation()}>
+            <div className={d('lab')}>Descrição</div>
+            <p>{room.description || 'Sem descrição.'}</p>
+            <div className={d('lab')} style={{ marginTop: 12 }}>Convocados · {confirmed} de {members.length} confirmaram</div>
+            <div className={d('infl')}>
+              {members.map((m: WarRoomMember) => (
+                <div key={m.id} className={d('pp')}>
+                  <Av p={d} person={{ ...(m.profile || {}), autonomy_level: person(m.profile_id)?.autonomy_level }} />
+                  <span className={d('n')}>{nameOf(m.profile)}</span>
+                  {m.has_acknowledged
+                    ? <span className={d('z ok')}><Ico name="check" size={13} /> Confirmou</span>
+                    : <span className={d('z no')}>Pendente</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </header>
 
       <div className={d('main')}>
@@ -544,29 +567,6 @@ function WarRoomDetail({ room: initial, onBack }: { room: WarRoom; onBack: () =>
               {ms ? <div className={d('s')} style={ms.cls === 'ok' ? { color: '#0A6B3D', fontWeight: 600 } : ms.cls === 'late' || ms.cls === 'bad' ? { color: '#B3261E', fontWeight: 600 } : undefined}>{ms.text}</div>
                 : <div className={d('s')}>Sem meta definida</div>}</div>
           </div>
-          <div className={d('inf')}>
-            <div><div className={d('lab')}>Descrição</div><p>{room.description || 'Sem descrição.'}</p></div>
-            <div className={d('cvw')}><div className={d('lab')}>Convocados</div>
-              <button type="button" className={d('cvb')} aria-expanded={cvOpen} onClick={e => { e.stopPropagation(); setCvOpen(o => !o); }}>
-                <span><b>{members.length}</b> {members.length === 1 ? 'convocado' : 'convocados'} · {confirmed} {confirmed === 1 ? 'confirmou' : 'confirmaram'}</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: cvOpen ? 'rotate(180deg)' : undefined }}><path d="M6 9l6 6 6-6" /></svg>
-              </button>
-              {cvOpen && (
-                <div className={d('cvl')} onClick={e => e.stopPropagation()}>
-                  {members.map((m: WarRoomMember) => (
-                    <div key={m.id} className={d('pp')}>
-                      <Av p={d} person={{ ...(m.profile || {}), autonomy_level: person(m.profile_id)?.autonomy_level }} />
-                      <span className={d('n')}>{nameOf(m.profile)}</span>
-                      {m.has_acknowledged
-                        ? <span className={d('z ok')}><Ico name="check" size={13} /> Confirmou</span>
-                        : <span className={d('z no')}>Pendente</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className={d('chh')}>Chat<span>{members.length} {members.length === 1 ? 'convocado' : 'convocados'}</span></div>
           <div className={d('msgs')}>
             {feed.length === 0 && <span className={d('sy')}>Nenhuma mensagem ainda</span>}
             {feed.map(it => it.kind === 'sys' ? (
@@ -622,12 +622,12 @@ function WarRoomDetail({ room: initial, onBack }: { room: WarRoom; onBack: () =>
                   <button type="button" className={filter === 'open' ? d('on') : ''} onClick={() => setFilter('open')}>Em aberto {sorted.length - doneCount}</button>
                   <button type="button" className={filter === 'done' ? d('on') : ''} onClick={() => setFilter('done')}>Concluídas {doneCount}</button>
                 </div>
-                <select aria-label="Ordenação" value={sort} onChange={e => setSort(e.target.value as SortMode)}>
+                <Sel aria-label="Ordenação" value={sort} onChange={e => setSort(e.target.value as SortMode)}>
                   <option value="manual">Ordem: manual (arrastar)</option>
                   <option value="time">Por horário</option>
                   <option value="status">Por status</option>
                   <option value="owner">Por responsável</option>
-                </select>
+                </Sel>
               </div>
 
               <div className={d('tlist')}>
@@ -668,10 +668,10 @@ function WarRoomDetail({ room: initial, onBack }: { room: WarRoom; onBack: () =>
                           <div className={d('edt')}>
                             <div className={d('f full')}><label htmlFor="wd-e1">Ação</label><input id="wd-e1" className={d('in')} type="text" value={ed.title} onChange={e => setEd({ ...ed, title: e.target.value })} /></div>
                             <div className={d('f')}><label htmlFor="wd-e2">Responsável</label>
-                              <select id="wd-e2" className={d('in')} value={ed.who} onChange={e => setEd({ ...ed, who: e.target.value })}>
+                              <Sel id="wd-e2" className={d('in')} value={ed.who} onChange={e => setEd({ ...ed, who: e.target.value })}>
                                 <option value="">Sem responsável</option>
                                 {profiles.map(p => <option key={p.id} value={p.id}>{nameOf(p)}</option>)}
-                              </select></div>
+                              </Sel></div>
                             <div className={d('f')}><label htmlFor="wd-e3">Início previsto</label><input id="wd-e3" className={d('in')} type="text" disabled value={sch ? hhmm(sch.start) : '—'} /></div>
                             <div className={d('f')}><label htmlFor="wd-e4">Duração (min)</label><input id="wd-e4" className={d('in')} type="text" inputMode="numeric" value={ed.min} onChange={e => setEd({ ...ed, min: e.target.value.replace(/\D/g, '') })} /></div>
                             <div className={d('eb')}>
@@ -709,10 +709,10 @@ function WarRoomDetail({ room: initial, onBack }: { room: WarRoom; onBack: () =>
                 <div className={d('add')}>
                   <input className={d('in')} type="text" placeholder="Adicionar ação na timeline..." aria-label="Nova ação" value={draft.title}
                     onChange={e => setDraft({ ...draft, title: e.target.value })} onKeyDown={e => e.key === 'Enter' && addNew()} />
-                  <select className={d('in')} aria-label="Responsável" style={{ width: 130 }} value={draft.who} onChange={e => setDraft({ ...draft, who: e.target.value })}>
+                  <Sel className={d('in')} aria-label="Responsável" style={{ width: 130 }} value={draft.who} onChange={e => setDraft({ ...draft, who: e.target.value })}>
                     <option value="">Responsável</option>
                     {profiles.map(p => <option key={p.id} value={p.id}>{nameOf(p)}</option>)}
-                  </select>
+                  </Sel>
                   <input className={d('in')} type="text" inputMode="numeric" placeholder="min" aria-label="Duração" style={{ width: 64 }} value={draft.min}
                     onChange={e => setDraft({ ...draft, min: e.target.value.replace(/\D/g, '') })} onKeyDown={e => e.key === 'Enter' && addNew()} />
                   <button type="button" className={d('btn pri')} onClick={addNew}>Adicionar</button>

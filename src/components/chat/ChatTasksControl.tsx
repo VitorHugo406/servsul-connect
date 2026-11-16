@@ -15,6 +15,7 @@ import { getActiveCompanyId } from '@/lib/companyScope';
 import * as CT from '@/lib/chatTasks';
 import type { ChatBoard, ChatColumn, ChatTask } from '@/lib/chatTasks';
 import { cn } from '@/lib/utils';
+import { Sel } from '@/components/ui/Sel';
 
 export function ChatTasksControl({ kind, chatId, onPost, className }: { kind: 'sector' | 'dm' | 'group'; chatId: string | null | undefined; onPost: (text: string) => Promise<unknown> | void; className?: string }) {
   const { profile } = useAuth();
@@ -138,9 +139,9 @@ function TasksPanel({ onPost, onDone }: { onPost: (text: string) => Promise<unkn
           <Input value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} placeholder="Título da tarefa" />
           <Textarea value={desc} maxLength={1000} onChange={(e) => setDesc(e.target.value)} placeholder="Descrição (opcional)" rows={2} />
           <div className="grid grid-cols-2 gap-2">
-            <select value={prio} onChange={(e) => setPrio(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+            <Sel value={prio} onChange={(e) => setPrio(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
               {Object.entries(CT.PRIORITY_LABEL).map(([k, v]) => <option key={k} value={k}>Prioridade {v}</option>)}
-            </select>
+            </Sel>
             <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
           </div>
           <Button className="w-full" disabled={busy || title.trim().length < 2 || !colId} onClick={() => void create()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Criar e enviar no chat'}</Button>
