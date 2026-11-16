@@ -125,7 +125,7 @@ export function EvaluationsSection() {
 
       {tab !== 'criteria' ? (
         <div className="dk-kp">
-          <div className="dk-k"><i className="dk-dt" style={{ background: '#0F4C81' }} /><span className="l">{tab === 'mine' ? 'Recebidas' : 'Avaliações'}</span><span className="v">{base.length}</span></div>
+          <div className="dk-k"><i className="dk-dt" style={{ background: 'hsl(var(--primary))' }} /><span className="l">{tab === 'mine' ? 'Recebidas' : 'Avaliações'}</span><span className="v">{base.length}</span></div>
           <div className="dk-k"><i className="dk-dt" style={{ background: '#B7791F' }} /><span className="l">Aguardando ciência</span><span className="v">{base.filter((e) => e.status === 'sent').length}</span></div>
           <div className="dk-k"><i className="dk-dt" style={{ background: '#0A6B3D' }} /><span className="l">Concluídas</span><span className="v">{base.filter((e) => e.status === 'finalized').length}</span></div>
           <div className="dk-k"><span className="l">Nota média</span><span className="v">{E.fmtScore(avg)}</span>{avg != null ? <span className="s">{E.scaleLabel(avg)}</span> : null}</div>

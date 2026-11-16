@@ -135,7 +135,7 @@ export function BirthdaysSection() {
         {birthdayPeople.length === 0 ? <div className="dk-empty"><b>Nenhum aniversariante</b><div className="dk-sub" style={{ marginTop: 6 }}>Não há aniversariantes neste mês com data cadastrada.</div></div>
           : nothing ? <div className="dk-empty">Nenhum colaborador encontrado.</div> : <>
             {show.past && group('Já passaram', '#5A6472', passados, 'past')}
-            {show.today && group(`Hoje · ${todayLabel}`, '#0F4C81', hoje, 'today')}
+            {show.today && group(`Hoje · ${todayLabel}`, 'hsl(var(--primary))', hoje, 'today')}
             {show.next && group('Próximos', '#0A6B3D', proximos, 'next')}
           </>}
         <div className="dk-ft"><span>Quando o aniversário cai em fim de semana ou feriado, a mensagem é antecipada.</span><span>{birthdayPeople.length} no mês</span></div>

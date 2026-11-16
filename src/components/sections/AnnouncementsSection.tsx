@@ -28,7 +28,7 @@ const PRIORITY: Record<string, { label: string; cls: string }> = {
 };
 const STATUS: Record<Status, { label: string; cls: string; dot: string; group: string }> = {
   active: { label: 'Ativo', cls: 'dk-s1', dot: '#0A6B3D', group: 'Ativos' },
-  scheduled: { label: 'Agendado', cls: 'dk-s2', dot: '#0F4C81', group: 'Agendados' },
+  scheduled: { label: 'Agendado', cls: 'dk-s2', dot: 'hsl(var(--primary))', group: 'Agendados' },
   expired: { label: 'Expirado', cls: 'dk-s3', dot: '#5A6472', group: 'Expirados' },
 };
 const DAY = 86400000;
@@ -160,7 +160,7 @@ export function AnnouncementsSection() {
     return (
       <tr key={a.id} className={status === 'expired' ? 'dk-exp' : undefined}>
         {canManageAnnouncements && <td><input type="checkbox" aria-label="Selecionar" checked={sel.has(a.id)} onChange={() => setSel(prev => { const n = new Set(prev); n.has(a.id) ? n.delete(a.id) : n.add(a.id); return n; })} /></td>}
-        <td><div className="dk-ti">{a.is_pinned && <Pin className="mr-1.5 inline h-3.5 w-3.5 text-[#0F4C81]" aria-label="Fixado" />}{a.title}</div><div className="dk-su" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.content}</div></td>
+        <td><div className="dk-ti">{a.is_pinned && <Pin className="mr-1.5 inline h-3.5 w-3.5 text-primary" aria-label="Fixado" />}{a.title}</div><div className="dk-su" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.content}</div></td>
         <td><span className={`dk-ty ${PRIORITY[a.priority]?.cls || 'dk-gy'}`}>{PRIORITY[a.priority]?.label || 'Geral'}</span></td>
         {canManageAnnouncements && <td>Todos os usuários</td>}
         <td>{v.main}<div className="dk-sub">{v.sub}</div></td>
@@ -200,7 +200,7 @@ export function AnnouncementsSection() {
                     <Select value={priority} onValueChange={v => setPriority(v as Priority)}><SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="normal">Normal</SelectItem><SelectItem value="important">Importante</SelectItem><SelectItem value="urgent">Urgente</SelectItem></SelectContent></Select></div>
                   <div className="flex items-center gap-3 pt-0 sm:pt-6"><Switch id="pinned" checked={isPinned} onCheckedChange={setIsPinned} /><Label htmlFor="pinned" className="cursor-pointer"><Pin className="mr-1 inline h-4 w-4" />Fixar no topo</Label></div>
                 </div>
-                <Button type="submit" disabled={formLoading} className="h-11 w-full gap-2 rounded-full" style={{ background: '#0F4C81' }}>
+                <Button type="submit" disabled={formLoading} className="h-11 w-full gap-2 rounded-full" style={{ background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}>
                   {formLoading ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <><Send className="h-4 w-4" />{editingId ? 'Salvar alterações' : startAt && new Date(startAt) > new Date() ? 'Agendar aviso' : 'Publicar aviso'}</>}
                 </Button>
               </form>
