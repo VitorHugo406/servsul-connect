@@ -72,3 +72,5 @@
 .sg-pg .sg-list{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto}
 .sg-pg .sg-body{flex:1 1 auto;min-height:0;overflow-y:auto}
 .sg-pg .sg-body .sg-sc:last-child{border-bottom:0}
+/* A página ocupa só a área de conteúdo (não cobre o menu nem a barra do topo). */
+.ewvon-main:has(> .sg-pg){position:relative;overflow:hidden!important}
