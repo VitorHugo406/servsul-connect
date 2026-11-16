@@ -3162,7 +3162,7 @@ function fpCabBuild(){
   const glass=new THREE.MeshStandardMaterial({color:0xD5EAF5,transparent:true,opacity:.2,roughness:.05,metalness:.3,side:THREE.BackSide,depthWrite:false});glass.userData.keep=true;
   const mats=[glass,glass,new THREE.MeshBasicMaterial({color:0xFFF4DA,side:THREE.BackSide}),new THREE.MeshStandardMaterial({color:0x2A2F38,roughness:.6,side:THREE.BackSide}),glass,glass];
   const box=new THREE.Mesh(new THREE.BoxGeometry(3.0,4.0,2.0),mats);box.position.y=2.0;box.renderOrder=3;g.add(box);
-  const fr=new THREE.MeshStandardMaterial({color:0xB9BFCA,metalness:.7,roughness:.35}),dk=new THREE.MeshStandardMaterial({color:0x2B313B,roughness:.4,metalness:.5,transparent:true,opacity:.5,depthWrite:false});
+  const fr=new THREE.MeshStandardMaterial({color:0xB9BFCA,metalness:.7,roughness:.35}),dk=new THREE.MeshStandardMaterial({color:0xB8CCD8,roughness:.2,metalness:.3,transparent:true,opacity:.14,depthWrite:false});
   for(const sx of[-1,1])for(const sz of[-1,1]){const p=new THREE.Mesh(new THREE.BoxGeometry(.12,4.0,.12),fr);p.position.set(sx*1.5,2,sz*1.0);g.add(p)}
   const r1=new THREE.Mesh(new THREE.BoxGeometry(3.0,.08,.1),fr);r1.position.set(0,1.1,-.94);g.add(r1);
   for(const sx of[-1,1]){const r=new THREE.Mesh(new THREE.BoxGeometry(.1,.08,2.0),fr);r.position.set(sx*1.44,1.1,0);g.add(r)}
@@ -3197,7 +3197,7 @@ function fpExit(){
   if(document.pointerLockElement)document.exitPointerLock();
   FP.on=false;FPON=false;FP.keys.clear();FP.jx=FP.jy=0;document.body.classList.remove('fp');fpLights(false);placeStack();
   camera.fov=FP.fov0||35;camera.near=FP.near0||.5;camera.updateProjectionMatrix();
-  $('#fpHud').hidden=true;if(FPC)FPC.visible=false;if(FPS)FPS.visible=false;if(FPCAB)FPCAB.visible=false;FP.R=null;FP.rideY=0;FP.busy=false;FP.ride=false;
+  $('#fpHud').hidden=true;if(FPC)FPC.visible=false;if(FPS)FPS.visible=false;if(FPCAB)FPCAB.visible=false;if(ELEV&&ELEV.car)ELEV.car.visible=true;FP.R=null;FP.rideY=0;FP.busy=false;FP.ride=false;
   resize();
 }
 function hideTip(){try{tipEl.hidden=true}catch(e){}}
@@ -3318,6 +3318,10 @@ function fpTick(dt){
   /* o tamanho do andar mudou com o passeio ligado: refaz a casca, o teto e as luzes e mantém você dentro do andar */
   {const dk=EXX+','+EXZ;if(FP.dk!==dk){FP.dk=dk;fpShell().visible=true;fpLights(true);FP.x=clamp(FP.x,-20.3+FPR,20.3+EXX-FPR);FP.z=clamp(FP.z,-13.3+FPR,13.3+EXZ-FPR);FP.rideY=0}}
   if(FP.busy)fpRideTick(nowT);
+  /* dentro da cabine, a cabine real (paredes brancas e portas pesadas) sai de cena e fica só a de vidro: nada de tela cinza */
+  {const inCab=FP.ride||FP.busy;if(ELEV&&ELEV.car)ELEV.car.visible=!inCab;
+   const cb=fpCabBuild();cb.visible=inCab;
+   if(inCab&&!FP.busy){cb.position.set(ELEVP.x,0,ELEVP.z);cb.rotation.y=(ELEVP.r||0)*Math.PI/2;fpDoors(0)}}
   /* movimento */
   const k=FP.keys;let f=(k.has('w')||k.has('arrowup')?1:0)-(k.has('s')||k.has('arrowdown')?1:0)-FP.jy,r=(k.has('d')?1:0)-(k.has('a')?1:0)+FP.jx;
   if(k.has('arrowleft'))FP.yaw+=1.8*dt;if(k.has('arrowright'))FP.yaw-=1.8*dt;
@@ -5001,7 +5005,7 @@ function ecIndicator(){
 }
 function elevTick(){
   const n=performance.now();ecStep(n);
-  const cur=curIdx(),here=(Math.abs(EC.fl-cur)<.02&&(EC.state==='opening'||EC.state==='open'||EC.state==='boarding'))||(FP.on&&FP.ride&&!FP.busy);   /* no passeio, a porta abre quando você está na cabine */
+  const cur=curIdx(),here=(Math.abs(EC.fl-cur)<.02&&(EC.state==='opening'||EC.state==='open'||EC.state==='boarding'))||(FP.on&&(FP.ride||FP.busy));   /* no passeio, a porta abre quando você está na cabine */
   if(ELEV){
     ELEV.open+=((here?1:0)-ELEV.open)*.12;
     const o=ELEV.open,e=o*o*(3-2*o);
