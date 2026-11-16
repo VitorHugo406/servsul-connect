@@ -35,7 +35,7 @@ final class Icons {
         if (p.getString("secret", "").isEmpty()) return;   // signed out on this phone
         String name = p.getString("birthday_name", "");
         Notifier.show(c, "notice", "\uD83C\uDF82 Feliz anivers\u00e1rio" + (name.isEmpty() ? "" : ", " + name) + "!",
-                "Hoje o dia \u00e9 seu! A equipe ewvon deseja um dia incr\u00edvel, cheio de alegria e conquistas. \uD83C\uDF89", "bday-" + today, "/", null);
+                "Hoje \u00e9 o seu dia! \uD83C\uDF89\n\nToda a equipe ewvon agradece por fazer parte da nossa hist\u00f3ria e deseja um dia cheio de alegria, sa\u00fade, paz e muitas conquistas.\n\nQue este novo ciclo traga ainda mais realiza\u00e7\u00f5es, bons momentos ao lado de quem voc\u00ea ama e muito sucesso na sua jornada.\n\nAproveite cada instante, voc\u00ea merece! \uD83E\uDD73\uD83C\uDF88", "bday-" + today, "/", null);
         p.edit().putString("bday_greeted", today).apply();
     }
 
