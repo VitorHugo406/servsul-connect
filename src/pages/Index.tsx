@@ -51,6 +51,7 @@ import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
+import { DesktopTour } from '@/components/onboarding/DesktopTour';
 import { BirthdayCelebrationModal } from '@/components/birthday/BirthdayCelebrationModal';
 import { BoardJoinDialog } from '@/components/tasks/BoardJoinDialog';
 import { useWarRoomAlarm } from '@/hooks/useWarRoomAlarm';
@@ -254,9 +255,11 @@ const Index = () => {
   const handleOpenWarRoom = () => { handleSectionChange('war-room'); dismissAlarm(); };
   usePresence(); useMeetingStatus();
   useEffect(() => { const timer = requestAnimationFrame(() => setIsReady(true)); return () => cancelAnimationFrame(timer); }, []);
+  const [tourOn, setTourOn] = useState(false);
+  useEffect(() => { const open = () => { if (!isMobile) setTourOn(true); }; window.addEventListener('ewvon:start-tour', open); return () => window.removeEventListener('ewvon:start-tour', open); }, [isMobile]);
   const handleNavigateToChat = () => handleSectionChange('chat'); const handleNavigateToAnnouncements = () => handleSectionChange('announcements');
 
-  if (showOnboarding && profile && !isMobile) return <OnboardingScreen userName={profile.display_name || profile.name} onComplete={completeOnboarding} />;
+  if (showOnboarding && profile && !isMobile) return <OnboardingScreen userName={profile.display_name || profile.name} onComplete={() => { completeOnboarding(); setTourOn(true); }} />;
   if (!isReady) return <EwwonLoader />;
 
   const renderSection = () => {
@@ -306,6 +309,6 @@ const Index = () => {
   if (activeSection === 'dashboard-3d' && !sectionLock('dashboard-3d', companyPlan, isSuperAdminUser) && (isAdmin || canAccess('can_access_dash'))) {
     return <><ModeTransitionHost /><FocusModeController /><Dashboard3DSection onExit={() => handleSectionChange('home')} /></>;
   }
-  return <><ModeTransitionHost /><FocusModeController /><div className="flex h-screen overflow-hidden bg-background"><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><VideoCallHost /><FocusTabSwitcher activeSection={activeSection} onSectionChange={handleSectionChange} /><Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} /><div className="flex flex-1 flex-col overflow-hidden"><Header title={currentSection.title} subtitle={currentSection.subtitle} activeSection={activeSection} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} /><main data-section={activeSection} className={`ewvon-main min-w-0 flex-1 overflow-auto bg-card ${['chat', 'calendar', 'tasks', 'war-room'].includes(activeSection) ? '' : 'clean-section'} ${['home', 'chat'].includes(activeSection) || boardOpen ? '' : 'pro-section'}`}><SectionBoundary resetKey={activeSection}><Suspense fallback={<div className="ewvon-section-loading flex h-full min-h-[60vh] items-center justify-center text-foreground" role="status" aria-label="Carregando seção"><EwwonLogo size={76} /></div>}>{renderSection()}</Suspense></SectionBoundary></main></div><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} />{isHomePage && <GlobalBroadcastOrb />}<BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} /><BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow /></div></>;
+  return <><ModeTransitionHost /><FocusModeController /><div className="flex h-screen overflow-hidden bg-background"><WarRoomAlarmOverlay isAlarming={isAlarming} pendingWarRoomId={pendingWarRoomId} onOpenWarRoom={handleOpenWarRoom} /><OfflineIndicator /><VideoCallHost /><FocusTabSwitcher activeSection={activeSection} onSectionChange={handleSectionChange} /><Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} /><div className="flex flex-1 flex-col overflow-hidden"><Header title={currentSection.title} subtitle={currentSection.subtitle} activeSection={activeSection} searchQuery={globalSearch} onSearchChange={setGlobalSearch} onNavigateToSection={handleSectionChange} /><main data-section={activeSection} className={`ewvon-main min-w-0 flex-1 overflow-auto bg-card ${['chat', 'calendar', 'tasks', 'war-room'].includes(activeSection) ? '' : 'clean-section'} ${['home', 'chat'].includes(activeSection) || boardOpen ? '' : 'pro-section'}`}><SectionBoundary resetKey={activeSection}><Suspense fallback={<div className="ewvon-section-loading flex h-full min-h-[60vh] items-center justify-center text-foreground" role="status" aria-label="Carregando seção"><EwwonLogo size={76} /></div>}>{renderSection()}</Suspense></SectionBoundary></main></div><InstallPrompt /><ChatbotWidget isHomePage={isHomePage} />{isHomePage && <GlobalBroadcastOrb />}<BirthdayCelebrationModal isOpen={showCelebration} onClose={closeCelebration} userName={userName} /><BoardJoinDialog token={joinToken} onClose={handleCloseJoinDialog} onNavigateToTasks={handleNavigateToTasks} /><FloatingNoteWindow />{tourOn && !isMobile && <DesktopTour onNavigate={handleSectionChange} onEnd={() => { setTourOn(false); handleSectionChange('home'); }} />}</div></>;
 };
 export default Index;

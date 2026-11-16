@@ -2,7 +2,7 @@ import { AssistantButton } from '@/components/chatbot/AssistantButton';
 import { useCompanyPlan } from '@/hooks/useCompanyPlan';
 import { sectionLock } from '@/lib/planAccess';
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Box, Search, Bell, ExternalLink, Construction, Plus, Palette, LayoutDashboard, StickyNote, ListTodo, UsersRound, LogOut } from 'lucide-react';
+import { Box, Search, Bell, ExternalLink, Construction, Plus, Palette, HelpCircle, LayoutDashboard, StickyNote, ListTodo, UsersRound, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -112,6 +112,7 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
           {title === 'Início' && <SystemShortcutBar onManage={() => onNavigateToSection?.('shortcuts')} />}
           {showOrbsButton && <Button variant="outline" size="sm" className="hidden gap-1.5 rounded-full md:flex" asChild><a href="https://sync-synergy-flow.vercel.app/" target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />Orbs</a></Button>}
           <TeamHeaderButton />
+          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-slate-500 hover:bg-slate-100" onClick={() => window.dispatchEvent(new CustomEvent('ewvon:start-tour'))} title="Ver tutorial" aria-label="Ver tutorial"><HelpCircle className="h-[18px] w-[18px]" /></Button>
           <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-slate-500 hover:bg-slate-100" onClick={() => setShowAppearance(true)} title="Personalizar visual"><Palette className="h-[18px] w-[18px]" /></Button>
           <AssistantButton />
           {!hideNotifications && <Popover open={showNotifications} onOpenChange={setShowNotifications}>

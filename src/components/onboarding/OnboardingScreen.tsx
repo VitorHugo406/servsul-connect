@@ -1,35 +1,53 @@
 import { useState } from 'react';
 import { passwordError as passwordRuleError } from '@/lib/passwordPolicy';
 import { PasswordChecklist } from '@/components/common/PasswordChecklist';
-import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Users, Bell, Calendar, BarChart3, Shield, Camera, ChevronRight, ChevronLeft, Sparkles, ArrowRight, Lock, CheckCircle2 } from 'lucide-react';
+import { Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-interface OnboardingScreenProps { userName:string; onComplete:()=>void }
-const features=[
- {icon:MessageSquare,title:'Chat por Setores',description:'Converse com sua equipe em tempo real. Mensagens com status de envio (✓) e confirmação (✓✓).',color:'bg-primary/10 text-primary'},
- {icon:Users,title:'Mensagens Diretas',description:'Envie mensagens privadas para qualquer colaborador da empresa com total privacidade.',color:'bg-secondary/10 text-secondary'},
- {icon:Bell,title:'Avisos Gerais',description:'Fique por dentro de todos os comunicados oficiais da empresa em um só lugar.',color:'bg-warning/10 text-warning'},
- {icon:Calendar,title:'Aniversariantes',description:'Celebre com seus colegas! Veja quem faz aniversário no mês e não esqueça de parabenizar.',color:'bg-accent/10 text-accent-foreground'},
- {icon:BarChart3,title:'Formatação de Texto',description:'Use *texto* para negrito, _texto_ para itálico, ~texto~ para riscado e [texto](url) para links nas mensagens.',color:'bg-primary/10 text-primary'},
- {icon:Shield,title:'Feedback Mensal com PDF',description:'Receba relatórios mensais com resumo de atividades, gráficos e recomendações em PDF para download.',color:'bg-destructive/10 text-destructive'},
-];
-
-export function OnboardingScreen({userName,onComplete}:OnboardingScreenProps){
- const[currentStep,setCurrentStep]=useState(0); const[password,setPassword]=useState(''); const[confirmPassword,setConfirmPassword]=useState(''); const[savingPassword,setSavingPassword]=useState(false); const[passwordError,setPasswordError]=useState(''); const isMobile=useIsMobile(); const totalSteps=isMobile?4:3; const firstName=userName.split(' ')[0];
- const nextStep=()=>{if(currentStep<totalSteps-1)setCurrentStep(currentStep+1)}; const prevStep=()=>{if(currentStep>0)setCurrentStep(currentStep-1)};
- const featuresPage1=features.slice(0,3),featuresPage2=features.slice(3); const isFeatureStep=isMobile?(currentStep===1||currentStep===2):currentStep===1; const isFinishStep=currentStep===totalSteps-1; const currentFeatures=isMobile?(currentStep===1?featuresPage1:featuresPage2):features; const featurePageLabel=isMobile?(currentStep===1?'1/2':'2/2'):'';
- const handlePasswordUpdate=async()=>{setPasswordError('');const ruleError=passwordRuleError(password);if(ruleError){setPasswordError(ruleError);return;}if(password!==confirmPassword){setPasswordError('As senhas não coincidem.');return;}setSavingPassword(true);try{const{error}=await supabase.auth.updateUser({password});if(error)throw error;toast.success('Senha atualizada com sucesso!');onComplete();}catch(error){console.error(error);setPasswordError(error instanceof Error?error.message:'Não foi possível atualizar a senha.');}finally{setSavingPassword(false);}};
- return <div className="fixed inset-0 z-50 flex items-center justify-center bg-background"><div className="absolute inset-0 gradient-hero opacity-90"/><div className="absolute inset-0 overflow-hidden">{[...Array(6)].map((_,i)=><motion.div key={i} className="absolute rounded-full bg-white/5" style={{width:Math.random()*300+100,height:Math.random()*300+100,left:`${Math.random()*100}%`,top:`${Math.random()*100}%`}} animate={{x:[0,Math.random()*100-50],y:[0,Math.random()*100-50],scale:[1,1.1,1]}} transition={{duration:Math.random()*10+10,repeat:Infinity,repeatType:'reverse'}}/>)}</div><div className="relative z-10 w-full max-w-2xl px-4 max-h-[95vh] overflow-y-auto"><AnimatePresence mode="wait">
- {currentStep===0&&<motion.div key="welcome" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}} className="py-8 text-center text-white"><motion.div initial={{scale:0}} animate={{scale:1}} transition={{delay:.2,type:'spring',stiffness:200}} className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-3xl gradient-secondary shadow-glow"><MessageSquare className="h-12 w-12"/></motion.div><h1 className="font-display mb-4 text-3xl font-bold md:text-4xl">Bem-vindo ao Ewvor!</h1><p className="mb-2 text-xl text-white/80 md:text-2xl">Olá, <span className="font-semibold text-secondary">{firstName}</span>! 👋</p><p className="mx-auto max-w-md leading-relaxed text-white/70">Estamos muito felizes em ter você aqui. Vamos fazer um tour rápido para você conhecer todas as funcionalidades disponíveis.</p><div className="mt-12"><Button size="lg" onClick={nextStep} className="gap-2 rounded-xl bg-white px-8 py-6 text-lg text-primary hover:bg-white/90 shadow-lg">Começar Tour<ChevronRight className="h-5 w-5"/></Button></div></motion.div>}
- {isFeatureStep&&!isFinishStep&&<motion.div key={`features-${currentStep}`} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}} className="py-4"><div className="mb-6 text-center text-white"><h2 className="font-display mb-2 text-2xl font-bold md:text-3xl">O que você pode fazer {featurePageLabel&&`(${featurePageLabel})`}</h2><p className="text-white/70">Conheça as principais funcionalidades do Ewvor</p></div><div className={cn('grid gap-3',isMobile?'grid-cols-1':'grid-cols-2')}>{currentFeatures.map((feature,index)=><motion.div key={feature.title} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:index*.1}}><Card className="border-white/20 bg-white/10 p-4 backdrop-blur-sm transition-colors hover:bg-white/15"><div className="flex items-start gap-3"><div className={cn('flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl',feature.color)}><feature.icon className="h-5 w-5"/></div><div className="min-w-0"><h3 className="text-sm font-semibold text-white">{feature.title}</h3><p className="mt-0.5 text-xs leading-relaxed text-white/70">{feature.description}</p></div></div></Card></motion.div>)}</div><div className="mt-8 flex justify-between"><Button variant="ghost" onClick={prevStep} className="gap-1 text-white hover:bg-white/10"><ChevronLeft className="h-4 w-4"/>Voltar</Button><Button onClick={nextStep} className="gap-2 bg-white text-primary hover:bg-white/90">Continuar<ChevronRight className="h-4 w-4"/></Button></div></motion.div>}
- {isFinishStep&&<motion.div key="finish" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}} className="py-4 text-center text-white"><motion.div initial={{scale:0}} animate={{scale:1}} transition={{type:'spring',stiffness:200}} className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-secondary/20"><Lock className="h-8 w-8 text-secondary"/></motion.div><h2 className="font-display mb-3 text-2xl font-bold md:text-3xl">Última etapa: proteja sua conta</h2><p className="mx-auto mb-5 max-w-lg text-sm leading-relaxed text-white/75">Antes de entrar no Ewvor pela primeira vez, defina uma nova senha pessoal com <strong className="text-white">no mínimo 6 caracteres</strong>, incluindo letra maiúscula, número e caractere especial. Confirme a senha para continuar.</p><Card className="mx-auto max-w-md border-white/20 bg-white/10 p-5 text-left backdrop-blur-sm"><div className="space-y-4"><div className="space-y-2"><Label className="text-white">Nova senha</Label><Input autoComplete="new-password" type="password" maxLength={72} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Sua nova senha" className="h-12 border-white/20 bg-white/10 text-white placeholder:text-white/30"/><PasswordChecklist value={password} tone="onDark"/></div><div className="space-y-2"><Label className="text-white">Confirmar senha</Label><Input autoComplete="new-password" type="password" maxLength={72} value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} placeholder="Repita a nova senha" className="h-12 border-white/20 bg-white/10 text-white placeholder:text-white/30"/></div>{passwordError&&<p className="text-sm text-red-200">{passwordError}</p>}<div className="flex items-center gap-2 text-xs text-white/65"><CheckCircle2 className="h-4 w-4 text-secondary"/>A senha será usada nos próximos acessos.</div><Button size="lg" onClick={handlePasswordUpdate} disabled={savingPassword} className="w-full gap-2 rounded-xl bg-white py-6 text-lg text-primary hover:bg-white/90">{savingPassword?'Atualizando...':'Atualizar senha e entrar'}<ArrowRight className="h-5 w-5"/></Button></div></Card><button onClick={prevStep} className="mt-4 block w-full text-sm text-white/60 transition-colors hover:text-white">Voltar ao tour</button></motion.div>}
- </AnimatePresence><div className="mt-6 flex justify-center gap-2 pb-4">{[...Array(totalSteps)].map((_,i)=><motion.div key={i} className={cn('h-2 rounded-full transition-all duration-300',i===currentStep?'w-8 bg-white':'w-2 bg-white/30')} animate={{scale:i===currentStep?1:.8}}/>)}</div></div></div>;
+/** Primeiro acesso no PC: só a troca de senha obrigatória. O passo a passo das abas é o DesktopTour. */
+export function OnboardingScreen({ userName, onComplete }: { userName: string; onComplete: () => void }) {
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const first = userName.split(' ')[0];
+  const save = async () => {
+    setError('');
+    const rule = passwordRuleError(password);
+    if (rule) { setError(rule); return; }
+    if (password !== confirm) { setError('As senhas não coincidem.'); return; }
+    setSaving(true);
+    try {
+      const { error: e } = await supabase.auth.updateUser({ password });
+      if (e) throw e;
+      toast.success('Senha atualizada com sucesso!');
+      onComplete();
+    } catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível atualizar a senha.'); }
+    finally { setSaving(false); }
+  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#EDEFF2] p-4">
+      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-7 shadow-xl">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"><Lock className="h-6 w-6" /></div>
+        <h1 className="text-center text-xl font-semibold text-slate-900">Olá, {first}! Proteja sua conta</h1>
+        <p className="mt-2 text-center text-sm leading-relaxed text-slate-500">Antes de começar, defina uma nova senha pessoal. Depois eu te mostro, aba por aba, o que o seu perfil pode usar.</p>
+        <div className="mt-5 space-y-4">
+          <div className="space-y-1.5"><Label>Nova senha</Label>
+            <Input autoComplete="new-password" type="password" maxLength={72} value={password} onChange={e => setPassword(e.target.value)} placeholder="Sua nova senha" className="h-11" />
+            <PasswordChecklist value={password} />
+          </div>
+          <div className="space-y-1.5"><Label>Confirmar senha</Label>
+            <Input autoComplete="new-password" type="password" maxLength={72} value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repita a nova senha" className="h-11" />
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 className="h-4 w-4 text-primary" />A senha será usada nos próximos acessos.</div>
+          <Button size="lg" onClick={save} disabled={saving} className="w-full gap-2 rounded-xl">{saving ? 'Atualizando...' : 'Atualizar senha e começar'}<ArrowRight className="h-4 w-4" /></Button>
+        </div>
+      </div>
+    </div>
+  );
 }
