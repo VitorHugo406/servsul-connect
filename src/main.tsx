@@ -13,6 +13,7 @@ import "./chat-pro.css";
 import "./styles/design-kit.css";
 import "./styles/warroom.css";
 import "./styles/sectors.css";
+import "./styles/billing.css";
 import "./chat-life.css";
 import "./focus-mode.css";
 

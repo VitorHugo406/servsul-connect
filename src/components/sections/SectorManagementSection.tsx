@@ -173,6 +173,7 @@ export function SectorManagementSection() {
           <div><h2>{headTitle}</h2><div className="sg-su">{headSub}</div></div>
         </div>
 
+        <div className="sg-body">
         <section className="sg-sc"><div><h3>Identificação</h3><div className="sg-hp">Nome e informações do departamento.</div></div>
           <div>
             <div className="sg-fl"><label htmlFor="sg-n1">Nome do setor</label><input id="sg-n1" className="sg-in" type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Recursos Humanos" disabled={locked} maxLength={80} autoFocus={creating} /></div>
@@ -236,6 +237,8 @@ export function SectorManagementSection() {
             )}
           </div>
         </section>
+
+        </div>
 
         {!locked && (
           <div className="sg-ft">

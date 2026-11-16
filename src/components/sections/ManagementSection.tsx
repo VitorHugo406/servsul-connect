@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompanyPlan } from '@/hooks/useCompanyPlan';
+import { planHasFeature } from '@/lib/planAccess';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { limitErrorMessage } from '@/lib/planAccess';
@@ -23,10 +25,11 @@ interface Role { user_id: string; role: string }
 const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
 const LEVELS: [string, string][] = [['colaborador', 'Colaborador'], ['supervisor', 'Supervisor'], ['gerente', 'Gerente'], ['diretoria', 'Diretoria']];
 const DAYS: [string, string][] = [['seg', 'Seg'], ['ter', 'Ter'], ['qua', 'Qua'], ['qui', 'Qui'], ['sex', 'Sex'], ['sab', 'Sáb'], ['dom', 'Dom']];
-const PERMS: { key: keyof Permission; label: string }[] = [
-  { key: 'can_post_announcements', label: 'Postar avisos' }, { key: 'can_access_password_change', label: 'Alterar senhas' },
-  { key: 'can_create_war_room', label: 'Criar War Room' }, { key: 'can_access_dash', label: 'Dash' },
-  { key: 'can_access_meeting_rooms', label: 'Sala de Reunião' }, { key: 'can_delete_messages', label: 'Excluir mensagens' },
+// `feature` = recurso do plano necessário; sem ele a empresa não tem acesso à aba, então o interruptor não aparece.
+const PERMS: { key: keyof Permission; label: string; feature?: string }[] = [
+  { key: 'can_post_announcements', label: 'Postar avisos', feature: 'announcements' }, { key: 'can_access_password_change', label: 'Alterar senhas' },
+  { key: 'can_create_war_room', label: 'Criar War Room', feature: 'war_room' }, { key: 'can_access_dash', label: 'Dash', feature: 'dashboard_3d' },
+  { key: 'can_access_meeting_rooms', label: 'Sala de Reunião', feature: 'meeting_rooms' }, { key: 'can_delete_messages', label: 'Excluir mensagens', feature: 'chat' },
   { key: 'can_access_management', label: 'Gerenciamento' },
 ];
 
@@ -70,6 +73,7 @@ function Masked({ label, value, onChange, disabled, prefix, numeric }: { label: 
 
 export function ManagementSection() {
   const { isAdmin, canAccess, profile, refreshPermissions } = useAuth();
+  const { plan: companyPlan } = useCompanyPlan();
   const hasManagementAccess = isAdmin || ['diretoria', 'gerente', 'supervisor', 'gestor'].includes(profile?.autonomy_level || '') || canAccess('can_access_management');
   const canChangePasswords = hasManagementAccess || canAccess('can_access_password_change');
   const [users, setUsers] = useState<Profile[]>([]);
@@ -280,7 +284,7 @@ export function ManagementSection() {
 
             {section === 'perms' && <section key="perms" className="dk-sec dk-fade" data-sec="perms" style={{ borderBottom: 0 }}><div><h3>Permissões</h3><div className="hp">Configure os acessos individualmente, sem exigir que o colaborador seja administrador.</div></div>
               <div className="dk-pg2">
-                {PERMS.map(({ key, label }) => {
+                {PERMS.filter(({ feature }) => !feature || planHasFeature(companyPlan, feature)).map(({ key, label }) => {
                   const on = selAdmin || !!p[key];
                   return <div key={key} className="dk-pm"><span>{label}</span><button type="button" className={`dk-sw${on ? ' on' : ''}`} role="switch" aria-checked={on} aria-label={label} disabled={selAdmin} onClick={() => updatePermission(sel.user_id, key, !on)}><i /></button></div>;
                 })}

@@ -62,3 +62,13 @@
 .sg-pg .sg-pick button:hover{background:#F6F7F9}
 @media (max-width:1100px){.sg-pg{grid-template-columns:1fr}.sg-pg .sg-sc{grid-template-columns:1fr;gap:14px}}
 .dk-pg.sg-pg.sg-pg:first-child{padding:24px 32px!important}
+
+/* Rolagem interna: a página não rola; a lista de setores e a configuração rolam cada uma no seu painel. */
+.sg-pg{position:absolute;inset:0;height:100%;min-height:0;overflow:hidden;grid-template-rows:minmax(0,1fr);align-items:stretch}
+.sg-pg .sg-panel{min-height:0;display:flex;flex-direction:column}
+.sg-pg > aside.sg-panel{align-self:start;max-height:100%}
+.sg-pg > main.sg-panel{height:100%}
+.sg-pg .sg-sh,.sg-pg .sg-cnt,.sg-pg .sg-dh,.sg-pg .sg-ft{flex:none}
+.sg-pg .sg-list{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto}
+.sg-pg .sg-body{flex:1 1 auto;min-height:0;overflow-y:auto}
+.sg-pg .sg-body .sg-sc:last-child{border-bottom:0}

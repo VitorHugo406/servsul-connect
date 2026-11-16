@@ -8,7 +8,8 @@ import { brl, buildReceiptPdf, type ReceiptFonts } from './receipt-pdf.ts';
 const SITE_URL = (Deno.env.get('SITE_URL') || 'https://ewvon.vercel.app').replace(/\/+$/, '');
 const ISSUER = { brand: 'ewvon', owner: 'Vitor Hugo Almeida Santos', place: 'São Paulo/SP', email: 'ewvonsuporte@gmail.com' };
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false, autoRefreshToken: false } });
-const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { 'Content-Type': 'application/json' } });
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-billing-cron' };
+const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { 'Content-Type': 'application/json', ...CORS } });
 
 const fmtCnpj = (v: string) => v.replace(/\D/g, '').replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
 const fmtCep = (v: string) => v.replace(/\D/g, '').replace(/^(\d{5})(\d{3})$/, '$1-$2');
@@ -35,14 +36,10 @@ async function loadLogo() {
   return logo;
 }
 
-async function sendReceipt(paymentId: string): Promise<string> {
-  const { data: pay } = await admin.from('company_payments').select('*').eq('id', paymentId).maybeSingle();
-  if (!pay) return 'pagamento não encontrado';
-  if (pay.receipt_sent_at) return 'já enviado';
-  if ((pay.receipt_attempts || 0) >= 5) return 'tentativas esgotadas';
-  await admin.from('company_payments').update({ receipt_attempts: (pay.receipt_attempts || 0) + 1 }).eq('id', pay.id);
+/** Loads everything the receipt needs for a payment and builds the PDF (same layout for the e-mail and the in-app download). */
+async function buildForPayment(pay: any) {
   const { data: company } = await admin.from('companies').select('id, name, slug, billing_data').eq('id', pay.company_id).maybeSingle();
-  if (!company) return 'empresa não encontrada';
+  if (!company) throw new Error('empresa não encontrada');
   const { data: signup } = await admin.from('company_signups').select('admin_email, admin_name, company_data, plan_id').eq('company_id', company.id).order('created_at', { ascending: true }).limit(1).maybeSingle();
   const data = (company.billing_data || signup?.company_data || {}) as Record<string, string>;
   let to = signup?.admin_email || '';
@@ -50,9 +47,6 @@ async function sendReceipt(paymentId: string): Promise<string> {
     const { data: admins } = await admin.from('profiles').select('email, user_id').eq('company_id', company.id).eq('autonomy_level', 'admin').eq('is_active', true).limit(1);
     to = admins?.[0]?.email || '';
   }
-  if (!to) return 'sem destinatário';
-  if (!mailerConfigured()) return 'e-mail não configurado';
-
   const number = 'REC-' + String(pay.receipt_number || 0).padStart(6, '0');
   const addr = [
     data.street ? `${data.street}, ${data.number || 's/n'}${data.complement ? ' - ' + data.complement : ''}` : '',
@@ -66,6 +60,36 @@ async function sendReceipt(paymentId: string): Promise<string> {
     items: [{ description: pay.description || 'Serviço ewvon', qty: 1, unitCents: pay.amount_cents }],
     customer: { name: customer.name, legalName: customer.legalName, adminEmail: customer.adminEmail }, issuer: ISSUER, logoPng: await loadLogo(), fonts: await loadFonts(),
   });
+  return { pdf, number, company, signup, customer, addr, to };
+}
+
+/** In-app download: only an admin of the payment's own company gets the PDF (as base64). */
+async function downloadFor(req: Request, paymentId: string): Promise<Response> {
+  const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!token) return json({ error: 'Não autorizado' }, 401);
+  const { data: { user } } = await admin.auth.getUser(token);
+  if (!user) return json({ error: 'Não autorizado' }, 401);
+  const { data: pay } = await admin.from('company_payments').select('*').eq('id', paymentId).maybeSingle();
+  if (!pay || !pay.receipt_number) return json({ error: 'Recibo não encontrado' }, 404);
+  const { data: me } = await admin.from('profiles').select('company_id, autonomy_level').eq('user_id', user.id).maybeSingle();
+  const { data: sa } = await admin.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'super_admin').maybeSingle();
+  if (!(sa || (me && me.company_id === pay.company_id && me.autonomy_level === 'admin'))) return json({ error: 'Somente o administrador da empresa pode baixar o recibo' }, 403);
+  const { pdf, number } = await buildForPayment(pay);
+  let bin = ''; for (let i = 0; i < pdf.length; i += 0x8000) bin += String.fromCharCode(...pdf.subarray(i, i + 0x8000));
+  return json({ filename: `Recibo-ewvon-${number}.pdf`, base64: btoa(bin) });
+}
+
+async function sendReceipt(paymentId: string): Promise<string> {
+  const { data: pay } = await admin.from('company_payments').select('*').eq('id', paymentId).maybeSingle();
+  if (!pay) return 'pagamento não encontrado';
+  if (pay.receipt_sent_at) return 'já enviado';
+  if ((pay.receipt_attempts || 0) >= 5) return 'tentativas esgotadas';
+  await admin.from('company_payments').update({ receipt_attempts: (pay.receipt_attempts || 0) + 1 }).eq('id', pay.id);
+  let built;
+  try { built = await buildForPayment(pay); } catch (e) { return e instanceof Error ? e.message : String(e); }
+  const { pdf, number, company, signup, customer, addr, to } = built;
+  if (!to) return 'sem destinatário';
+  if (!mailerConfigured()) return 'e-mail não configurado';
 
   const row = (k: string, v: string) => v ? `<tr><td style="padding:5px 0;color:#71717a;font-size:13px;width:150px;vertical-align:top">${esc(k)}</td><td style="padding:5px 0;font-size:13px;font-weight:600;color:#18181b">${esc(v)}</td></tr>` : '';
   const isSignup = pay.kind === 'signup';
@@ -90,11 +114,13 @@ async function sendReceipt(paymentId: string): Promise<string> {
 }
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
-  const { data: ok } = await admin.rpc('billing_cron_secret_ok', { _secret: req.headers.get('x-billing-cron') || '' });
-  if (ok !== true) return json({ error: 'Unauthorized' }, 401);
   const body = await req.json().catch(() => ({}));
   try {
+    if (body.download === true && typeof body.payment_id === 'string') return await downloadFor(req, body.payment_id);
+    const { data: ok } = await admin.rpc('billing_cron_secret_ok', { _secret: req.headers.get('x-billing-cron') || '' });
+    if (ok !== true) return json({ error: 'Unauthorized' }, 401);
     if (typeof body.payment_id === 'string') return json({ result: await sendReceipt(body.payment_id) });
     if (body.sweep) {
       const { data: list } = await admin.from('company_payments').select('id').is('receipt_sent_at', null).lt('receipt_attempts', 5)
