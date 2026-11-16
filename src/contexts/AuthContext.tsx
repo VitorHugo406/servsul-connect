@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { ensureNativeDevice, clearNativeDevice } from '@/lib/nativeBridge';
+import { ensureNativeDevice, clearNativeDevice, syncNativeBirthday } from '@/lib/nativeBridge';
 import { setActiveCompanyId } from '@/lib/companyScope';
 import { applyBrand } from '@/lib/branding';
 
@@ -54,6 +54,7 @@ export function AuthProvider({children}:{children:ReactNode}){
   if(event==='SIGNED_OUT'){try{localStorage.removeItem(RT_KEY);}catch{}}
   manualOut.current=false;apply(session0);});supabase.auth.getSession().then(async({data:{session}})=>{setSession(session);setUser(session?.user??null);if(session?.user){await hydrateCachedProfile(session.user.id);await fetchProfileSafe(session.user.id);setLoading(false);}else setLoading(false);});return()=>subscription.unsubscribe();},[]);
  useEffect(()=>{if(profile?.id)void ensureNativeDevice(profile.id);},[profile?.id]);
+ useEffect(()=>{if(profile?.id)syncNativeBirthday(profile.birth_date);},[profile?.id,profile?.birth_date]);
  /* Coming back to the tab/app or regaining internet: reload the data if the last load failed or is old. */
  useEffect(()=>{if(!user)return;const heal=async()=>{
    if(document.hidden){hiddenAt.current=hiddenAt.current||Date.now();return;}
@@ -80,7 +81,7 @@ export function AuthProvider({children}:{children:ReactNode}){
   return()=>{evs.forEach(ev=>window.removeEventListener(ev,mark));window.removeEventListener('message',onMsg);window.clearInterval(t);};},[user?.id]);
  useEffect(()=>{if(!user)return;const channel=supabase.channel(`auth-sync-${user.id}`).on('postgres_changes',{event:'*',schema:'public',table:'user_permissions',filter:`user_id=eq.${user.id}`},()=>fetchPermissions(user.id)).on('postgres_changes',{event:'*',schema:'public',table:'user_roles',filter:`user_id=eq.${user.id}`},()=>fetchProfile(user.id)).subscribe();return()=>{supabase.removeChannel(channel);};},[user]);
  const signIn=async(email:string,password:string)=>{const{data,error}=await supabase.auth.signInWithPassword({email,password});if(error)return{error:error as Error|null};if(data.user){const{data:profileData,error:profileError}=await supabase.from('profiles').select('is_active').eq('user_id',data.user.id).maybeSingle();if(profileError){console.error('Error checking user status:',profileError);await supabase.auth.signOut({ scope: 'local' });return{error:new Error('Erro ao verificar status do usuário')};}if(profileData&&!profileData.is_active){await supabase.auth.signOut({ scope: 'local' });return{error:new Error('Usuário inativo. Entre em contato com o administrador.')}}}return{error:null};};
- const signOut=async()=>{manualOut.current=true;window.clearTimeout(retryTimer.current);void clearNativeDevice();setProfile(null);setActiveCompanyId(null);setSector(null);setAdditionalSectors([]);setRoles([]);setPermissions(null);await supabase.auth.signOut({ scope: 'local' });};
+ const signOut=async()=>{manualOut.current=true;window.clearTimeout(retryTimer.current);void clearNativeDevice();syncNativeBirthday(null);setProfile(null);setActiveCompanyId(null);setSector(null);setAdditionalSectors([]);setRoles([]);setPermissions(null);await supabase.auth.signOut({ scope: 'local' });};
  return <AuthContext.Provider value={{user,session,profile,sector,additionalSectors,allAccessibleSectorIds,roles,permissions,isAdmin,geralSectorId:GERAL_SECTOR_ID,loading,verifying,setVerifying,signIn,signOut,refreshProfile,refreshPermissions,canAccess,hasSectorAccess}}>{children}</AuthContext.Provider>;
 }
 export function useAuth(){const context=useContext(AuthContext);if(context===undefined)throw new Error('useAuth must be used within AuthProvider');return context;}

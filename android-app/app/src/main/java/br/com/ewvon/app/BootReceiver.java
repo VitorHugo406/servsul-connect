@@ -11,7 +11,7 @@ import android.os.SystemClock;
 public class BootReceiver extends BroadcastReceiver {
     static final String WATCHDOG = "br.com.ewvon.app.WATCHDOG";
 
-    @Override public void onReceive(Context c, Intent i) { PollService.start(c); arm(c); }
+    @Override public void onReceive(Context c, Intent i) { PollService.start(c); arm(c); Icons.apply(c); }
 
     /** Exact alarm that survives Doze; each run re-arms the next one. */
     static void arm(Context c) {

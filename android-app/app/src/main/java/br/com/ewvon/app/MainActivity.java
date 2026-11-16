@@ -201,7 +201,7 @@ public class MainActivity extends Activity {
         if (i.hasExtra("url")) web.loadUrl(urlFrom(i));
         CallRinger.stopAll(this);
     }
-    @Override protected void onResume() { super.onResume(); visible = true; CallRinger.stopAll(this); web.onResume(); PollService.start(this); BootReceiver.arm(this); askBattery(); askFullScreen(); web.postDelayed(this::makerGuide, 4000); }
+    @Override protected void onResume() { super.onResume(); visible = true; Icons.apply(this); CallRinger.stopAll(this); web.onResume(); PollService.start(this); BootReceiver.arm(this); askBattery(); askFullScreen(); web.postDelayed(this::makerGuide, 4000); }
     @Override protected void onPause() { visible = false; web.onPause(); super.onPause(); }
     @Override protected void onSaveInstanceState(Bundle b) { super.onSaveInstanceState(b); web.saveState(b); }
     @Override public void onBackPressed() { if (web.canGoBack()) web.goBack(); else super.onBackPressed(); }
@@ -223,6 +223,7 @@ public class MainActivity extends Activity {
         private SharedPreferences p() { return getSharedPreferences("ewvon", MODE_PRIVATE); }
         @JavascriptInterface public boolean isNative() { return true; }
         @JavascriptInterface public String getDevice() { return p().getString("secret", ""); }
+        @JavascriptInterface public void setBirthday(String mmdd) { Icons.setBirthday(getApplicationContext(), mmdd); }
         @JavascriptInterface public String getDeviceProfile() { return p().getString("profile", ""); }
         @JavascriptInterface public void setDevice(String secret, String profileId) {
             p().edit().putString("secret", secret).putString("profile", profileId).putLong("last", -1).apply();

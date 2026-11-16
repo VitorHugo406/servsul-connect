@@ -2,7 +2,7 @@
 // signed-in person, so the app's background service can deliver messages and ring calls without Chrome or Firebase.
 import { supabase } from '@/integrations/supabase/client';
 
-type Native = { isNative(): boolean; getDevice(): string; getDeviceProfile(): string; setDevice(secret: string, profileId: string): void; clearDevice(): void };
+type Native = { isNative(): boolean; getDevice(): string; getDeviceProfile(): string; setDevice(secret: string, profileId: string): void; clearDevice(): void; setBirthday?(mmdd: string): void };
 const native = (): Native | null => (typeof window !== 'undefined' ? ((window as unknown as { EwvonNative?: Native }).EwvonNative ?? null) : null);
 export const isNativeApp = () => !!native();
 
@@ -21,4 +21,10 @@ export async function clearNativeDevice() {
   const n = native(); if (!n) return;
   try { const cur = n.getDevice(); if (cur) await (supabase as any).rpc('native_unregister', { _secret: cur }); } catch { /* ignore */ }
   n.clearDevice();
+}
+
+/** Tells the app the signed-in person's birthday (MM-DD, no year) so the launcher icon can celebrate it on that day. */
+export function syncNativeBirthday(birthDate: string | null | undefined) {
+  const n = native(); if (!n || typeof n.setBirthday !== 'function') return;
+  try { n.setBirthday(birthDate && /^\d{4}-\d{2}-\d{2}/.test(birthDate) ? birthDate.slice(5, 10) : ''); } catch { /* older app */ }
 }

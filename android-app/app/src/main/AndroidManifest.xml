@@ -27,15 +27,61 @@
         android:usesCleartextTraffic="false"
         android:theme="@style/Theme.Ewvon">
 
-        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask"
+        <activity android:name=".AppActivity" android:exported="true" android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode"
             android:windowSoftInputMode="adjustResize" android:showWhenLocked="true" android:turnScreenOn="true">
-            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" /><category android:name="android.intent.category.DEFAULT" /><category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="ewvon.vercel.app" />
             </intent-filter>
         </activity>
+
+        <!-- Launcher entries. ".MainActivity" is the default (graphite) icon and keeps the old component name so existing shortcuts survive.
+             The others are seasonal icons switched by Icons.java (one enabled at a time). -->
+        <activity-alias android:name=".MainActivity" android:targetActivity=".AppActivity" android:exported="true" android:enabled="true"
+            android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:label="@string/app_name">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconAniversario" android:targetActivity=".AppActivity" android:exported="true" android:enabled="false"
+            android:icon="@mipmap/ic_aniversario" android:roundIcon="@mipmap/ic_aniversario" android:label="@string/app_name">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconNatal" android:targetActivity=".AppActivity" android:exported="true" android:enabled="false"
+            android:icon="@mipmap/ic_natal" android:roundIcon="@mipmap/ic_natal" android:label="@string/app_name">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconAnoNovo" android:targetActivity=".AppActivity" android:exported="true" android:enabled="false"
+            android:icon="@mipmap/ic_anonovo" android:roundIcon="@mipmap/ic_anonovo" android:label="@string/app_name">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconCarnaval" android:targetActivity=".AppActivity" android:exported="true" android:enabled="false"
+            android:icon="@mipmap/ic_carnaval" android:roundIcon="@mipmap/ic_carnaval" android:label="@string/app_name">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconPascoa" android:targetActivity=".AppActivity" android:exported="true" android:enabled="false"
+            android:icon="@mipmap/ic_pascoa" android:roundIcon="@mipmap/ic_pascoa" android:label="@string/app_name">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconMaes" android:targetActivity=".AppActivity" android:exported="true" android:enabled="false"
+            android:icon="@mipmap/ic_maes" android:roundIcon="@mipmap/ic_maes" android:label="@string/app_name">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconNamorados" android:targetActivity=".AppActivity" android:exported="true" android:enabled="false"
+            android:icon="@mipmap/ic_namorados" android:roundIcon="@mipmap/ic_namorados" android:label="@string/app_name">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconJunina" android:targetActivity=".AppActivity" android:exported="true" android:enabled="false"
+            android:icon="@mipmap/ic_junina" android:roundIcon="@mipmap/ic_junina" android:label="@string/app_name">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconCriancas" android:targetActivity=".AppActivity" android:exported="true" android:enabled="false"
+            android:icon="@mipmap/ic_criancas" android:roundIcon="@mipmap/ic_criancas" android:label="@string/app_name">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconHalloween" android:targetActivity=".AppActivity" android:exported="true" android:enabled="false"
+            android:icon="@mipmap/ic_halloween" android:roundIcon="@mipmap/ic_halloween" android:label="@string/app_name">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
 
         <service android:name=".PollService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Mantém a conexão com o servidor para entregar mensagens e ligações do ewvon" />

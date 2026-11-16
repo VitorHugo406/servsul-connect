@@ -1,0 +1,70 @@
+package br.com.ewvon.app;
+
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import java.util.Calendar;
+
+/**
+ * Seasonal launcher icon. Every theme is an activity-alias in the manifest (all bundled in the APK); exactly one is enabled.
+ * The default alias keeps the old component name (.MainActivity) so shortcuts created by earlier versions keep working.
+ * The birthday icon shows on the signed-in person's birthday (MM-DD sent by the site through the bridge).
+ */
+final class Icons {
+    private Icons() { }
+
+    /** Alias names, in the order they are checked is decided by choose(). ".MainActivity" is the default (graphite) icon. */
+    private static final String[] ALIASES = {".MainActivity", ".IconAniversario", ".IconNatal", ".IconAnoNovo", ".IconCarnaval", ".IconPascoa",
+            ".IconMaes", ".IconNamorados", ".IconJunina", ".IconCriancas", ".IconHalloween"};
+
+    static void setBirthday(Context c, String mmdd) {
+        c.getSharedPreferences("ewvon", Context.MODE_PRIVATE).edit().putString("birthday", mmdd == null ? "" : mmdd).apply();
+        apply(c);
+    }
+
+    private static int doy(Calendar x) { return x.get(Calendar.DAY_OF_YEAR); }
+    private static boolean between(Calendar t, Calendar a, Calendar b) { return doy(t) >= doy(a) && doy(t) <= doy(b); }
+    private static Calendar day(int year, int month, int d) { Calendar c = Calendar.getInstance(); c.clear(); c.set(year, month, d, 12, 0); return c; }
+    private static Calendar shift(Calendar c, int days) { Calendar r = (Calendar) c.clone(); r.add(Calendar.DAY_OF_MONTH, days); return r; }
+
+    /** Easter Sunday (Gregorian, Meeus/Jones/Butcher). */
+    static Calendar easter(int y) {
+        int a = y % 19, b = y / 100, c = y % 100, d = b / 4, e = b % 4, f = (b + 8) / 25, g = (b - f + 1) / 3;
+        int h = (19 * a + b - d - g + 15) % 30, i = c / 4, k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = (a + 11 * h + 22 * l) / 451;
+        int month = (h + l - 7 * m + 114) / 31, dd = ((h + l - 7 * m + 114) % 31) + 1;
+        return day(y, month - 1, dd);
+    }
+
+    /** Which alias should be on today. */
+    static String choose(Calendar t, String birthday) {
+        int y = t.get(Calendar.YEAR), mo = t.get(Calendar.MONTH) + 1, d = t.get(Calendar.DAY_OF_MONTH);
+        if (birthday != null && birthday.length() == 5 && birthday.equals(String.format("%02d-%02d", mo, d))) return ".IconAniversario";
+        Calendar easter = easter(y);
+        if (between(t, shift(easter, -52), shift(easter, -46))) return ".IconCarnaval";                       // the week before Carnival until Ash Wednesday
+        if (between(t, shift(easter, -7), easter)) return ".IconPascoa";
+        Calendar mothers = day(y, Calendar.MAY, 1); while (mothers.get(Calendar.DAY_OF_WEEK) != Calendar.SUNDAY) mothers.add(Calendar.DAY_OF_MONTH, 1); mothers.add(Calendar.DAY_OF_MONTH, 7);
+        if (between(t, shift(mothers, -7), mothers)) return ".IconMaes";
+        if (mo == 12 && d >= 26 || mo == 1 && d <= 2) return ".IconAnoNovo";
+        if (mo == 12) return ".IconNatal";                                                                  // Dec 1 - Dec 25
+        if (mo == 6 && d >= 7 && d <= 12) return ".IconNamorados";
+        if (mo == 6 && d >= 13) return ".IconJunina";
+        if (mo == 10 && d >= 8 && d <= 12) return ".IconCriancas";
+        if (mo == 10 && d >= 24) return ".IconHalloween";
+        return ".MainActivity";
+    }
+
+    /** Enables the wanted alias first, then disables the others (never leaves the app without a launcher icon). */
+    static void apply(Context ctx) {
+        try {
+            Context c = ctx.getApplicationContext();
+            SharedPreferences p = c.getSharedPreferences("ewvon", Context.MODE_PRIVATE);
+            String want = choose(Calendar.getInstance(), p.getString("birthday", ""));
+            if (want.equals(p.getString("icon", ".MainActivity")) && c.getPackageManager().getComponentEnabledSetting(new ComponentName(c, "br.com.ewvon.app" + want)) != PackageManager.COMPONENT_ENABLED_STATE_DISABLED) return;
+            PackageManager pm = c.getPackageManager();
+            pm.setComponentEnabledSetting(new ComponentName(c, "br.com.ewvon.app" + want), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
+            for (String a : ALIASES) if (!a.equals(want)) pm.setComponentEnabledSetting(new ComponentName(c, "br.com.ewvon.app" + a), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+            p.edit().putString("icon", want).apply();
+        } catch (Exception ignored) { }
+    }
+}
