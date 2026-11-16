@@ -103,6 +103,26 @@ export function BillingSection() {
     window.location.assign((data as any).checkout_url);
   };
 
+  /** Avulso -> mensal/anual automático (ou mensal <-> anual), no mesmo plano: o cartão é cadastrado agora e a 1ª cobrança é no vencimento. */
+  const changeCycle = async (cycle: 'monthly' | 'annual') => {
+    setBusy('cycle:' + cycle);
+    const { data: q, error } = await supabase.functions.invoke('billing-cycle', { body: { action: 'preview', billing_cycle: cycle } });
+    setBusy(null);
+    if (error || (q as any)?.error || !q) { toast.error((q as any)?.error || await readError(error) || 'Não foi possível calcular agora.'); return; }
+    const first = new Date((q as any).first_charge_at).toLocaleDateString('pt-BR');
+    const ok = await appConfirm({
+      title: `Passar para cobrança ${cycle === 'annual' ? 'anual' : 'mensal'} automática?`,
+      message: `Você cadastra o cartão no Mercado Pago agora e não paga nada hoje. A primeira cobrança automática de ${brl((q as any).amount_cents)}${cycle === 'annual' ? ' por ano' : ' por mês'} acontece em ${first}${(q as any).days_left > 0 ? ', quando acaba o período que você já pagou' : ''}. Depois disso a renovação é automática; dá para cancelar quando quiser.`,
+      confirmText: 'Cadastrar cartão',
+    });
+    if (!ok) return;
+    setBusy('cycle:' + cycle);
+    const { data, error: e2 } = await supabase.functions.invoke('billing-cycle', { body: { action: 'start', billing_cycle: cycle } });
+    setBusy(null);
+    if (e2 || !(data as any)?.checkout_url) { toast.error((data as any)?.error || await readError(e2) || 'Não foi possível abrir o cadastro do cartão agora.'); return; }
+    window.location.assign((data as any).checkout_url);
+  };
+
   const loadPayments = useCallback(async () => {
     const { data } = await (supabase as any).from('company_payments').select('id, kind, description, amount_cents, paid_at, status, provider_payment_id, receipt_number').order('paid_at', { ascending: false }).limit(50);
     setPayments((data || []) as Payment[]);
@@ -111,9 +131,22 @@ export function BillingSection() {
   useEffect(() => { void loadPayments(); }, [loadPayments]);
   useEffect(() => {
     // Back from the Mercado Pago checkout: refresh a few times while the payment is confirmed.
-    if (!new URLSearchParams(window.location.search).get('pedido')) return;
-    let n = 0;
-    const t = window.setInterval(() => { n++; void reload(); void loadPayments(); window.dispatchEvent(new Event(COMPANY_PLAN_CHANGED)); if (n >= 12) window.clearInterval(t); }, 5000);
+    const pedido = new URLSearchParams(window.location.search).get('pedido');
+    if (!pedido) return;
+    let n = 0, cycleDone = false;
+    const tick = async () => {
+      n++;
+      // Troca da forma de cobrança: confirma no Mercado Pago (não depende só do aviso automático).
+      if (!cycleDone) {
+        const { data } = await supabase.functions.invoke('billing-cycle', { body: { action: 'check', order_id: pedido } });
+        const st = (data as any)?.status;
+        if (st === 'aplicado') { cycleDone = true; toast.success('Forma de cobrança alterada. A cobrança passa a ser automática.'); }
+        else if (st === 'nao_e_troca' || st === 'cancelado') cycleDone = true;
+      }
+      void reload(); void loadPayments(); window.dispatchEvent(new Event(COMPANY_PLAN_CHANGED));
+    };
+    void tick();
+    const t = window.setInterval(() => { void tick(); if (n >= 12) window.clearInterval(t); }, 5000);
     return () => window.clearInterval(t);
   }, [reload, loadPayments]);
 
@@ -218,6 +251,36 @@ export function BillingSection() {
           <Meter icon={<IcDisk />} label="Armazenamento" used={plan.usage.storage_bytes} limit={plan.limits.storage_bytes} fmt={fmtBytes} />
         </div>
       </section>
+
+      {paidPlan ? (() => {
+        const monthly = (plan.price_cents ?? 0) + extrasMonthly;
+        const annual = (plan.annual_price_cents ?? Math.round((plan.price_cents ?? 0) * 12 * 0.92)) + extrasMonthly * 12;
+        const opts: { id: 'once' | 'monthly' | 'annual'; name: string; price: string; desc: string }[] = [
+          { id: 'once', name: 'Avulso', price: `${brl(monthly)}/mês`, desc: 'Você paga cada mês quando quiser (Pix, boleto ou cartão). Sem cobrança automática.' },
+          { id: 'monthly', name: 'Mensal automático', price: `${brl(monthly)}/mês`, desc: 'Cobrado no cartão todo mês, sem você precisar lembrar.' },
+          { id: 'annual', name: 'Anual automático', price: `${brl(annual)}/ano`, desc: `Cobrado no cartão uma vez por ano${annual < monthly * 12 ? ` · economia de ${brl(monthly * 12 - annual)} por ano` : ''}.` },
+        ];
+        return (
+          <section className="bl-panel" aria-label="Forma de cobrança">
+            <div className="bl-sh">Forma de cobrança<span>Mude quando quiser: o período que você já pagou é respeitado.</span></div>
+            <div className="bl-pl2" style={{ gridTemplateColumns: 'repeat(3,minmax(0,1fr))' }}>
+              {opts.map((o) => {
+                const cur = plan.billing_cycle === o.id;
+                return (
+                  <div key={o.id} className={`bl-it${cur ? ' bl-cur' : ''}`}>
+                    <b>{o.name}</b>
+                    <div className="bl-v" style={{ fontSize: 20, fontWeight: 600 }}>{o.price}</div>
+                    <span className="bl-d">{o.desc}</span>
+                    {cur ? <span className="bl-d" style={{ fontWeight: 600, color: '#1C2430' }}>Forma atual</span>
+                      : o.id === 'once' ? <span className="bl-d">Para voltar ao avulso, fale com o suporte.</span>
+                      : <button className="bl-btn bl-pri" disabled={busy !== null} onClick={() => void changeCycle(o.id as 'monthly' | 'annual')}>{busy === 'cycle:' + o.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null}Mudar para {o.id === 'annual' ? 'anual' : 'mensal'}</button>}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })() : null}
 
       {paidPlan && plans.length > 1 ? (
         <section className="bl-panel" aria-label="Mudar de plano">
