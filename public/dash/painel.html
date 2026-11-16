@@ -3106,14 +3106,15 @@ body.fp #panel,body.fp #rail,body.fp .ctrls,body.fp .clock,body.fp #hello,body.f
 .fpcard b{display:block;font-size:15px;color:#12151C}.fpcard span{display:block;font-size:12.5px;color:#4B5565;margin-top:2px}
 .fpuse{position:absolute;left:50%;bottom:150px;transform:translateX(-50%)}
 .fphelp{position:absolute;left:14px;bottom:14px;font-size:12px;color:#fff;background:rgba(18,21,28,.62);border-radius:10px;padding:7px 11px}
-.fpelev{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(340px,92vw);background:rgba(255,255,255,.97);border-radius:20px;padding:16px;box-shadow:0 10px 40px rgba(16,24,40,.35)}
-.fpelev h3{margin:0 0 4px;font-size:16px;color:#12151C}.fpelev p{margin:0 0 12px;font-size:12.5px;color:#4B5565}
-.fpelev .fl{display:flex;flex-direction:column;gap:6px;max-height:46vh;overflow:auto}
-.fpelev .fl button{display:flex;align-items:center;gap:12px;text-align:left;border:0;border-radius:12px;background:#EEF1F5;padding:10px 12px;cursor:pointer;font:600 13.5px inherit;color:#12151C}
+.fpelev{position:absolute;left:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:7px;padding:10px 8px;width:60px;background:rgba(255,255,255,.88);border-radius:22px;box-shadow:0 4px 18px rgba(16,24,40,.2)}
+.fpelev .fpd{font:800 19px inherit;color:#12151C;min-height:24px;line-height:24px}
+.fpelev .fl{display:flex;flex-direction:column;gap:5px;max-height:44vh;overflow:auto;scrollbar-width:none}
+.fpelev .fl::-webkit-scrollbar{display:none}
+.fpelev .fl button{width:38px;height:38px;border-radius:50%;border:0;background:#EEF1F5;color:#12151C;font:700 14px inherit;cursor:pointer;padding:0}
 .fpelev .fl button.on{background:#12151C;color:#fff}
-.fpelev .fl button i{font-style:normal;width:28px;height:28px;border-radius:50%;background:#fff;color:#12151C;display:flex;align-items:center;justify-content:center;font-weight:800}
-.fpelev .fl button small{display:block;font-weight:500;opacity:.7;font-size:11.5px}
-.fpelev .ex{margin-top:10px;width:100%}
+.fpelev .fpn{font:500 10px/1.2 inherit;color:#4B5565;text-align:center;max-width:54px}
+.fpelev .fpout{border:0;background:transparent;font:600 11px inherit;color:#4B5565;cursor:pointer;padding:2px 4px}
+.fpelev.busy .fl button,.fpelev.busy .fpout{pointer-events:none;opacity:.45}
 .fppeople{position:absolute;top:62px;right:14px;width:min(330px,92vw);max-height:68vh;background:rgba(255,255,255,.97);border-radius:18px;padding:12px;box-shadow:0 10px 36px rgba(16,24,40,.3);display:flex;flex-direction:column;gap:8px}
 .fppeople input{height:38px;border:1px solid #CBD2DC;border-radius:999px;padding:0 14px;font:inherit}
 .fplist{overflow:auto;display:flex;flex-direction:column;gap:4px}
@@ -3133,6 +3134,40 @@ function fpCeiling(){
   for(let a=0;a<4;a++)for(let b=0;b<3;b++){const m=new THREE.Mesh(new THREE.BoxGeometry(2.6,.08,1.1),lm);m.position.set(-20.3+W*(a+.5)/4,LVH-1.28,-13.3+D*(b+.5)/3);g.add(m)}
   g.visible=false;scene.add(g);return FPC=g;
 }
+let FPCAB=null,FPS=null,FPGL=null;
+/* casca do andar no passeio: parede direita, fechamento da fresta no topo e vidro frontal de verdade (esquadria, brilho e reflexo) */
+function fpShell(){
+  if(FPS){FPS.traverse(o=>{if(o.isMesh&&o.geometry&&o.geometry.userData.own)o.geometry.dispose()});scene.remove(FPS)}
+  const X0=-20.3,X1=20.3+EXX,Z0=-13.3,Z1=13.3+EXZ,W=X1-X0,D=Z1-Z0,cx=(X0+X1)/2,cz=(Z0+Z1)/2,H=LVH-1.2,gap=H-9;
+  const g=new THREE.Group();g.userData.sceneRoot=true;
+  g.add(mesh(G.box(.6,H,D),wallFaces(wallMat,0),X1,H/2,cz,{c:1,r:1}));                       /* parede direita */
+  const crown=mat('#F7F8FA');g.add(mesh(G.box(W+.6,gap,.6),crown,cx,9+gap/2,Z0));              /* fresta no topo do fundo */
+  g.add(mesh(G.box(.6,gap,D),crown,X0,9+gap/2,cz));                 /* fresta no topo da esquerda */
+  for(const wz of[cz-5.5,cz+5.5]){g.add(mesh(G.box(.1,4.4,3.2),mat('#2B3140'),X1-.36,5.6,wz));g.add(mesh(G.box(.05,4.1,2.9),basic('#D3EAF8'),X1-.42,5.6,wz))}
+  if(!FPGL){FPGL=new THREE.MeshStandardMaterial({color:0xBFDDF0,transparent:true,opacity:.22,roughness:.04,metalness:.3,side:THREE.DoubleSide,depthWrite:false});FPGL.userData.keep=true}
+  if(ENV&&!FPGL.envMap){FPGL.envMap=ENV;FPGL.envMapIntensity=1.6;FPGL.needsUpdate=true}
+  const gm=new THREE.Mesh(new THREE.PlaneGeometry(W,H),FPGL);gm.geometry.userData.own=true;gm.position.set(cx,H/2,Z1);gm.renderOrder=3;g.add(gm);
+  const gl=glintMesh(W,H);gl.rotation.y=Math.PI;gl.position.set(cx,H/2,Z1-.02);gl.renderOrder=4;g.add(gl);
+  const fr=mat('#52606E',{metalness:.5,roughness:.4});
+  for(let x=X0;x<=X1+.01;x+=W/8)g.add(mesh(G.box(.24,H,.24),fr,x,H/2,Z1));
+  g.add(mesh(G.box(W,.22,.3),fr,cx,.11,Z1));g.add(mesh(G.box(W,.22,.3),fr,cx,H-.11,Z1));g.add(mesh(G.box(W,.1,.1),fr,cx,1.1,Z1-.05));g.add(mesh(G.box(W,.1,.1),fr,cx,5.2,Z1));
+  g.visible=false;scene.add(g);return FPS=g;
+}
+/* cabine do passeio: vidro em volta, porta que fecha e sobe junto com você */
+function fpCabBuild(){
+  if(FPCAB)return FPCAB;
+  const g=new THREE.Group();g.userData.sceneRoot=true;
+  const glass=new THREE.MeshStandardMaterial({color:0xD5EAF5,transparent:true,opacity:.2,roughness:.05,metalness:.3,side:THREE.BackSide,depthWrite:false});glass.userData.keep=true;
+  const mats=[glass,glass,new THREE.MeshBasicMaterial({color:0xFFF4DA,side:THREE.BackSide}),new THREE.MeshStandardMaterial({color:0x2A2F38,roughness:.6,side:THREE.BackSide}),glass,glass];
+  const box=new THREE.Mesh(new THREE.BoxGeometry(3.0,4.0,2.0),mats);box.position.y=2.0;box.renderOrder=3;g.add(box);
+  const fr=new THREE.MeshStandardMaterial({color:0xB9BFCA,metalness:.7,roughness:.35}),dk=new THREE.MeshStandardMaterial({color:0x2B313B,roughness:.4,metalness:.5,transparent:true,opacity:.5,depthWrite:false});
+  for(const sx of[-1,1])for(const sz of[-1,1]){const p=new THREE.Mesh(new THREE.BoxGeometry(.12,4.0,.12),fr);p.position.set(sx*1.5,2,sz*1.0);g.add(p)}
+  const r1=new THREE.Mesh(new THREE.BoxGeometry(3.0,.08,.1),fr);r1.position.set(0,1.1,-.94);g.add(r1);
+  for(const sx of[-1,1]){const r=new THREE.Mesh(new THREE.BoxGeometry(.1,.08,2.0),fr);r.position.set(sx*1.44,1.1,0);g.add(r)}
+  const dl=new THREE.Mesh(new THREE.BoxGeometry(.78,3.4,.06),dk),dr=new THREE.Mesh(new THREE.BoxGeometry(.78,3.4,.06),dk);dl.position.set(-1.1,1.75,.97);dr.position.set(1.1,1.75,.97);g.add(dl);g.add(dr);
+  g.userData.dl=dl;g.userData.dr=dr;g.visible=false;scene.add(g);return FPCAB=g;
+}
+function fpDoors(k){const c=FPCAB;if(!c)return;const x=1.1-(1.1-.39)*k;c.userData.dl.position.x=-x;c.userData.dr.position.x=x}
 function fpRects(){
   if(!NAV)navBuild();
   const E=ELEVP,out=NAV.rects.filter(r=>!(E.x>=r.x0&&E.x<=r.x1&&E.z>=r.z0&&E.z<=r.z1));
@@ -3149,10 +3184,10 @@ function fpBlocked(R,x,z){
 function fpFace(fx,fz){return Math.atan2(-fx,-fz)}
 function fpEnter(){
   if(FP.on||!OK||EDIT)return;
-  FP.on=true;FPON=true;FP.ride=false;FP.busy=false;tw=null;document.body.classList.add('fp');placeStack();fpLights(true);
+  FP.on=true;FPON=true;FP.ride=false;FP.busy=false;FP.R=null;FP.rideY=0;FP.snap=null;FP.noEnter=0;tw=null;document.body.classList.add('fp');placeStack();fpLights(true);
   FP.ty0=cam.ty;FP.fov0=camera.fov;FP.near0=camera.near;camera.fov=68;camera.near=.2;camera.updateProjectionMatrix();camera.clearViewOffset();
   const g=elevGeom();FP.x=g.out.x;FP.z=g.out.z;FP.yaw=fpFace(g.out.x-ELEVP.x,g.out.z-ELEVP.z);FP.pitch=0;
-  const hud=$('#fpHud');hud.hidden=false;$('#fpElev').hidden=true;$('#fpPeopleP').hidden=true;fpCeiling().visible=true;
+  const hud=$('#fpHud');hud.hidden=false;$('#fpElev').hidden=true;$('#fpPeopleP').hidden=true;fpCeiling().visible=true;fpShell().visible=true;if(FPCAB)FPCAB.visible=false;
   hideTip&&hideTip();
 }
 function fpExit(){
@@ -3160,34 +3195,60 @@ function fpExit(){
   if(document.pointerLockElement)document.exitPointerLock();
   FP.on=false;FPON=false;FP.keys.clear();FP.jx=FP.jy=0;document.body.classList.remove('fp');fpLights(false);placeStack();
   camera.fov=FP.fov0||35;camera.near=FP.near0||.5;camera.updateProjectionMatrix();
-  $('#fpHud').hidden=true;if(FPC)FPC.visible=false;
+  $('#fpHud').hidden=true;if(FPC)FPC.visible=false;if(FPS)FPS.visible=false;if(FPCAB)FPCAB.visible=false;FP.R=null;FP.rideY=0;FP.busy=false;FP.ride=false;
   resize();
 }
 function hideTip(){try{tipEl.hidden=true}catch(e){}}
-function fpUse(){
-  if(!FP.on||FP.busy)return;
-  if(FP.ride){return}
-  const g=elevGeom(),d=Math.hypot(FP.x-g.out.x,FP.z-g.out.z);
-  if(d<3.2){   /* entra no elevador e escolhe o andar */
-    FP.ride=true;FP.x=ELEVP.x-(g.out.x-ELEVP.x)*.05;FP.z=ELEVP.z-(g.out.z-ELEVP.z)*.05;FP.yaw=fpFace(g.out.x-ELEVP.x,g.out.z-ELEVP.z);FP.pitch=0;
-    fpElevUI();
-  }
+function fpEnterCab(){
+  if(!FP.on||FP.busy||FP.ride)return;
+  const g=elevGeom();FP.ride=true;FP.rideT=performance.now();
+  FP.snap={x:ELEVP.x-(g.out.x-ELEVP.x)*.05,z:ELEVP.z-(g.out.z-ELEVP.z)*.05,yaw:fpFace(g.out.x-ELEVP.x,g.out.z-ELEVP.z),until:performance.now()+700};
+  fpElevUI();
 }
+function fpUse(){
+  if(!FP.on||FP.busy||FP.ride)return;
+  const g=elevGeom();if(Math.hypot(FP.x-g.out.x,FP.z-g.out.z)<3.2)fpEnterCab();
+}
+const FPHINT='digite';
 function fpElevUI(msg){
-  const box=$('#fpElev');box.hidden=false;
-  const fl=CFG.floors.map(f=>{const n=fnum(f.id),nm=fname(f);return '<button type="button" data-f="'+esc(f.id)+'" class="'+(f.id===CUR?'on':'')+'"><i>'+n+'</i><span>Andar '+n+(nm?'<small>'+esc(nm)+'</small>':'')+'</span></button>'}).reverse().join('');
-  box.innerHTML='<h3>Elevador</h3><p>'+(msg||'Digite o número do andar no teclado (ou toque):')+'</p><div id="fpNum" style="font:800 34px inherit;text-align:center;margin:-4px 0 10px;letter-spacing:.06em">—</div><div class="fl">'+fl+'</div><button type="button" class="fpbtn ex" id="fpOut">Sair do elevador</button>';
+  const box=$('#fpElev');box.hidden=false;box.classList.remove('busy');
+  const fl=CFG.floors.map(f=>{const n=fnum(f.id),nm=fname(f);return '<button type="button" data-f="'+esc(f.id)+'" title="'+esc('Andar '+n+(nm?' · '+nm:''))+'" class="'+(f.id===CUR?'on':'')+'">'+n+'</button>'}).reverse().join('');
+  box.innerHTML='<div class="fpd" id="fpDisp">'+esc(String(fnum(CUR)))+'</div><div class="fl">'+fl+'</div><div class="fpn" id="fpNum">'+esc(msg||FPHINT)+'</div><button type="button" class="fpout" id="fpOut" title="Sair do elevador (W)">Sair</button>';
 }
 function fpFade(to,ms){const f=$('#fpFade');if(f){f.style.transition='opacity '+ms+'ms';f.style.opacity=to?'1':'0'}}
 function fpRide(id,after){
   if(id===CUR||FP.busy)return;
-  /* em 1ª pessoa não há animação de andar saindo ou entrando: escurece um instante e já aparece o andar escolhido */
-  FP.busy=true;$('#fpElev').hidden=true;fpFade(1,260);
-  setTimeout(()=>{
-    fadeSwitch(id,null,{instant:true});
-    fpLights(true);
-    setTimeout(()=>{fpFade(0,320);FP.busy=false;if(after)after();else{FP.ride=true;fpElevUI('Andar '+fnum(CUR)+'. Digite outro número ou saia.')}},120);
-  },300);
+  /* a cabine de vidro fecha a porta e sobe (ou desce) com você, passando pelos andares, e abre no destino */
+  const C=curIdx(),T=Math.max(0,floorIdx(id)),n=T-C,g=elevGeom(),cab=fpCabBuild();
+  FP.busy=true;FP.keys.clear();FP.snap=null;
+  FP.x=ELEVP.x-(g.out.x-ELEVP.x)*.05;FP.z=ELEVP.z-(g.out.z-ELEVP.z)*.05;FP.yaw=fpFace(g.out.x-ELEVP.x,g.out.z-ELEVP.z);FP.pitch=0;
+  cab.position.set(ELEVP.x,0,ELEVP.z);cab.rotation.y=(ELEVP.r||0)*Math.PI/2;fpDoors(0);cab.visible=true;
+  const box=$('#fpElev');if(box){box.hidden=false;box.classList.add('busy')}
+  FP.R={C,T,n,id,after,t0:performance.now(),dur:Math.min(7000,1500+750*Math.abs(n)),ph:'close'};
+}
+function fpRideTick(now){
+  const R=FP.R;if(!R)return;
+  if(R.ph==='close'){
+    const u=clamp((now-R.t0)/450,0,1);fpDoors(u);
+    if(u>=1){R.ph='move';R.t0=now}
+  }else if(R.ph==='move'){
+    const u=clamp((now-R.t0)/R.dur,0,1),e=ease(u);FP.rideY=R.n*LVH*e;
+    if(FPCAB)FPCAB.position.y=FP.rideY;
+    const idx=clamp(Math.round(R.C+R.n*e),0,floorsN()-1),f=CFG.floors[idx],d=$('#fpDisp');
+    if(d&&f)d.textContent=(R.n>0?'▲ ':'▼ ')+fnum(f.id);
+    if(u>=1){
+      FP.rideY=0;fadeSwitch(R.id,null,{instant:true});fpLights(true);
+      if(FPCAB){FPCAB.position.set(ELEVP.x,0,ELEVP.z);FPCAB.rotation.y=(ELEVP.r||0)*Math.PI/2}
+      R.ph='open';R.t0=now;
+    }
+  }else if(R.ph==='open'){
+    const u=clamp((now-R.t0)/450,0,1);fpDoors(1-u);
+    if(u>=1){
+      if(FPCAB)FPCAB.visible=false;
+      const after=R.after;FP.R=null;FP.busy=false;
+      if(after)after();else{FP.ride=true;FP.rideT=now;fpElevUI('andar '+fnum(CUR))}
+    }
+  }
 }
 /* pontos de luz dentro do andar (só no passeio) */
 let FPL=null;
@@ -3205,7 +3266,7 @@ function fpDigit(k){
   if(k==='backspace'){FPN=FPN.slice(0,-1)}
   else if(k==='enter'){fpCommit();return}
   else{FPN=(FPN+k).slice(0,3)}
-  clearTimeout(FPNT);const el=$('#fpNum');if(el)el.textContent=FPN||'—';
+  clearTimeout(FPNT);const el=$('#fpNum');if(el)el.textContent=FPN||FPHINT;
   const hit=CFG.floors.filter(f=>String(fnum(f.id))===FPN);
   const more=CFG.floors.some(f=>String(fnum(f.id)).startsWith(FPN)&&String(fnum(f.id))!==FPN);
   if(FPN&&hit.length&&!more){fpCommit();return}   /* número completo: vai direto */
@@ -3214,11 +3275,12 @@ function fpDigit(k){
 function fpCommit(){
   clearTimeout(FPNT);const n=FPN;FPN='';const el=$('#fpNum');
   const f=CFG.floors.find(x=>String(fnum(x.id))===n);
-  if(el)el.textContent='—';
-  if(f)fpRide(f.id);else if(n){const p=$('#fpElev p');if(p)p.textContent='Não existe o andar '+n+'.'}
+  if(el)el.textContent=FPHINT;
+  if(f)fpRide(f.id);else if(n&&el)el.textContent='sem andar '+n;
 }
 function fpOutElev(){
-  const g=elevGeom();FP.ride=false;FP.x=g.out.x;FP.z=g.out.z;FP.yaw=fpFace(g.out.x-ELEVP.x,g.out.z-ELEVP.z);$('#fpElev').hidden=true;
+  if(FP.busy)return;
+  const g=elevGeom();FP.ride=false;FP.snap=null;FP.noEnter=performance.now()+1500;FP.x=g.out.x;FP.z=g.out.z;FP.yaw=fpFace(g.out.x-ELEVP.x,g.out.z-ELEVP.z);$('#fpElev').hidden=true;
 }
 function fpGoTo(e){   /* leva você até a pessoa: troca de andar pelo elevador se preciso */
   const idx=homeIdx(e),f=CFG.floors[idx];if(!f)return;
@@ -3240,7 +3302,7 @@ function fpPeopleUI(q){
 }
 function fpCardFor(t){
   if(!t)return '';
-  if(t.kind==='elevator')return '<b>Elevador</b><span>Chegue perto da porta e aperte E (ou toque no botão) para escolher o andar</span>';
+  if(t.kind==='elevator')return '<b>Elevador</b><span>Entre na cabine para escolher o andar</span>';
   if(t.kind==='person'){
     const P=PERS.get(t.id),e=P&&P.e;if(!e)return '<b>'+esc(t.tipT||'')+'</b><span>'+esc(t.tipS||'')+'</span>';
     const mt=MEETM.get&&MEETM.get(e._i),room=mt&&ROOMS[mt.ri];
@@ -3249,11 +3311,13 @@ function fpCardFor(t){
   return '<b>'+esc(t.tipT||'')+'</b><span>'+esc((t.tipS||'').replace(/clique.*$/i,'').replace(/ · $/,''))+'</span>';
 }
 function fpTick(dt){
-  const ceil=fpCeiling();ceil.visible=!FTR&&!FP.busy&&curIdx()>=floorsN()-1;
+  const ceil=fpCeiling();ceil.visible=!FTR&&!FP.busy&&curIdx()>=floorsN()-1;   /* nos outros andares o teto é a laje do andar de cima */
+  const nowT=performance.now();
+  if(FP.busy)fpRideTick(nowT);
   /* movimento */
+  const k=FP.keys;let f=(k.has('w')||k.has('arrowup')?1:0)-(k.has('s')||k.has('arrowdown')?1:0)-FP.jy,r=(k.has('d')?1:0)-(k.has('a')?1:0)+FP.jx;
+  if(k.has('arrowleft'))FP.yaw+=1.8*dt;if(k.has('arrowright'))FP.yaw-=1.8*dt;
   if(!FP.ride&&!FP.busy){
-    const k=FP.keys;let f=(k.has('w')||k.has('arrowup')?1:0)-(k.has('s')||k.has('arrowdown')?1:0)-FP.jy,r=(k.has('d')?1:0)-(k.has('a')?1:0)+FP.jx;
-    if(k.has('arrowleft'))FP.yaw+=1.8*dt;if(k.has('arrowright'))FP.yaw-=1.8*dt;
     const n=Math.hypot(f,r);
     if(n>.01){
       if(n>1){f/=n;r/=n}
@@ -3262,8 +3326,16 @@ function fpTick(dt){
       if(stuck||!fpBlocked(R,FP.x+dx,FP.z))FP.x+=dx;
       if(stuck||!fpBlocked(R,FP.x,FP.z+dz))FP.z+=dz;
     }
+    /* entrou na cabine: já detecta, sem apertar nada */
+    if(nowT>(FP.noEnter||0)){const ex=FP.x-ELEVP.x,ez=FP.z-ELEVP.z;if(ex*ex+ez*ez<1.7)fpEnterCab()}
+  }else if(FP.ride&&!FP.busy){
+    if(FP.snap){
+      if(nowT>FP.snap.until)FP.snap=null;
+      else{const a=Math.min(1,dt*7);FP.x+=(FP.snap.x-FP.x)*a;FP.z+=(FP.snap.z-FP.z)*a;let dy=FP.snap.yaw-FP.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));FP.yaw+=dy*a;FP.pitch+=(0-FP.pitch)*a}
+    }
+    if(f>.5&&nowT-(FP.rideT||0)>800)fpOutElev();   /* andar para frente = sair da cabine */
   }
-  camera.position.set(FP.x,FPH+(cam.ty-FP.ty0),FP.z);
+  camera.position.set(FP.x,FPH+(cam.ty-FP.ty0)+(FP.rideY||0),FP.z);
   camera.rotation.order='YXZ';camera.rotation.set(FP.pitch,FP.yaw,0);
   /* o que está na mira + botão do elevador */
   const now=performance.now();
@@ -3276,21 +3348,19 @@ function fpTick(dt){
       if(h&&h.object.userData.t)html=fpCardFor(h.object.userData.t);
     }
     if(html!==FP.card){FP.card=html;const c=$('#fpCard');c.innerHTML=html;c.hidden=!html}
-    const g=elevGeom(),near=!FP.ride&&!FP.busy&&Math.hypot(FP.x-g.out.x,FP.z-g.out.z)<3.2;
-    $('#fpUse').hidden=!near;
   }
 }
 function fpInit(){
   fpCss();
   const hud=document.createElement('div');hud.className='fphud';hud.id='fpHud';hud.hidden=true;
   hud.innerHTML='<div class="fptop"><button type="button" class="fpbtn" id="fpPeopleB">Pessoas</button><button type="button" class="fpbtn pri" id="fpExit">Sair do passeio</button></div>'
-   +'<div class="fpcross"></div><div class="fpcard" id="fpCard" hidden></div><button type="button" class="fpbtn pri fpuse" id="fpUse" hidden>Entrar no elevador (E)</button>'
-   +'<div class="fphelp">W A S D mover · mouse olhar (clique para travar) · Shift correr · E elevador · Esc sair</div>'
+   +'<div class="fpcross"></div><div class="fpcard" id="fpCard" hidden></div>'
+   +'<div class="fphelp">W A S D mover · mouse olhar (clique para travar) · Shift correr · entre na cabine do elevador · Esc sair</div>'
    +'<div id="fpFade" style="position:absolute;inset:0;background:#000;opacity:0;pointer-events:none"></div><div class="fpelev" id="fpElev" hidden></div><div class="fppeople" id="fpPeopleP" hidden></div><div class="fpjoy" id="fpJoy"><i></i></div>';
   stageEl.appendChild(hud);
   const b=document.createElement('button');b.type='button';b.className='w';b.id='bWalk';b.textContent='Passear';b.title='Passear pelo prédio em 1ª pessoa';$('.ctrls').appendChild(b);
   b.addEventListener('click',()=>{if(!FP.on)fpEnter()});
-  $('#fpExit').addEventListener('click',fpExit);$('#fpUse').addEventListener('click',fpUse);
+  $('#fpExit').addEventListener('click',fpExit);
   $('#fpElev').addEventListener('click',e=>{const bt=e.target.closest('button');if(!bt)return;if(bt.id==='fpOut'){fpOutElev();return}if(bt.dataset.f)fpRide(bt.dataset.f)});
   $('#fpPeopleB').addEventListener('click',()=>{const p=$('#fpPeopleP');p.hidden=!p.hidden;if(!p.hidden){fpPeopleUI('');setTimeout(()=>{const q=$('#fpQ');q&&q.focus()},50)}});
   $('#fpPeopleP').addEventListener('input',e=>{if(e.target.id==='fpQ')fpPeopleUI(e.target.value)});
@@ -4925,7 +4995,7 @@ function ecIndicator(){
 }
 function elevTick(){
   const n=performance.now();ecStep(n);
-  const cur=curIdx(),here=Math.abs(EC.fl-cur)<.02&&(EC.state==='opening'||EC.state==='open'||EC.state==='boarding');
+  const cur=curIdx(),here=(Math.abs(EC.fl-cur)<.02&&(EC.state==='opening'||EC.state==='open'||EC.state==='boarding'))||(FP.on&&FP.ride&&!FP.busy);   /* no passeio, a porta abre quando você está na cabine */
   if(ELEV){
     ELEV.open+=((here?1:0)-ELEV.open)*.12;
     const o=ELEV.open,e=o*o*(3-2*o);
