@@ -54,7 +54,7 @@ export function AuthProvider({children}:{children:ReactNode}){
   if(event==='SIGNED_OUT'){try{localStorage.removeItem(RT_KEY);}catch{}}
   manualOut.current=false;apply(session0);});supabase.auth.getSession().then(async({data:{session}})=>{setSession(session);setUser(session?.user??null);if(session?.user){await hydrateCachedProfile(session.user.id);await fetchProfileSafe(session.user.id);setLoading(false);}else setLoading(false);});return()=>subscription.unsubscribe();},[]);
  useEffect(()=>{if(profile?.id)void ensureNativeDevice(profile.id);},[profile?.id]);
- useEffect(()=>{if(profile?.id)syncNativeBirthday(profile.birth_date);},[profile?.id,profile?.birth_date]);
+ useEffect(()=>{if(profile?.id)syncNativeBirthday(profile.birth_date,profile.display_name||profile.name);},[profile?.id,profile?.birth_date,profile?.display_name,profile?.name]);
  /* Coming back to the tab/app or regaining internet: reload the data if the last load failed or is old. */
  useEffect(()=>{if(!user)return;const heal=async()=>{
    if(document.hidden){hiddenAt.current=hiddenAt.current||Date.now();return;}

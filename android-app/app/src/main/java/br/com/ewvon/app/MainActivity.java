@@ -224,6 +224,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public boolean isNative() { return true; }
         @JavascriptInterface public String getDevice() { return p().getString("secret", ""); }
         @JavascriptInterface public void setBirthday(String mmdd) { Icons.setBirthday(getApplicationContext(), mmdd); }
+        @JavascriptInterface public void setBirthdayInfo(String mmdd, String firstName) { Icons.setBirthday(getApplicationContext(), mmdd, firstName); }
         @JavascriptInterface public String getDeviceProfile() { return p().getString("profile", ""); }
         @JavascriptInterface public void setDevice(String secret, String profileId) {
             p().edit().putString("secret", secret).putString("profile", profileId).putLong("last", -1).apply();

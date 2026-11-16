@@ -18,9 +18,25 @@ final class Icons {
     private static final String[] ALIASES = {".MainActivity", ".IconAniversario", ".IconNatal", ".IconAnoNovo", ".IconCarnaval", ".IconPascoa",
             ".IconMaes", ".IconNamorados", ".IconJunina", ".IconCriancas", ".IconHalloween"};
 
-    static void setBirthday(Context c, String mmdd) {
-        c.getSharedPreferences("ewvon", Context.MODE_PRIVATE).edit().putString("birthday", mmdd == null ? "" : mmdd).apply();
+    static void setBirthday(Context c, String mmdd) { setBirthday(c, mmdd, null); }
+
+    static void setBirthday(Context c, String mmdd, String firstName) {
+        SharedPreferences.Editor e = c.getSharedPreferences("ewvon", Context.MODE_PRIVATE).edit().putString("birthday", mmdd == null ? "" : mmdd);
+        if (firstName != null) e.putString("birthday_name", firstName);
+        e.apply();
         apply(c);
+    }
+
+    /** One "Feliz aniversario" notification per birthday, from 08:00 on (this runs on app open and on the watchdog alarm, so the app need not be open). */
+    private static void greet(Context c, SharedPreferences p, Calendar t) {
+        String bd = p.getString("birthday", "");
+        String today = String.format("%04d-%02d-%02d", t.get(Calendar.YEAR), t.get(Calendar.MONTH) + 1, t.get(Calendar.DAY_OF_MONTH));
+        if (bd.length() != 5 || !bd.equals(today.substring(5)) || t.get(Calendar.HOUR_OF_DAY) < 8 || today.equals(p.getString("bday_greeted", ""))) return;
+        if (p.getString("secret", "").isEmpty()) return;   // signed out on this phone
+        String name = p.getString("birthday_name", "");
+        Notifier.show(c, "notice", "\uD83C\uDF82 Feliz anivers\u00e1rio" + (name.isEmpty() ? "" : ", " + name) + "!",
+                "Hoje o dia \u00e9 seu! A equipe ewvon deseja um dia incr\u00edvel, cheio de alegria e conquistas. \uD83C\uDF89", "bday-" + today, "/", null);
+        p.edit().putString("bday_greeted", today).apply();
     }
 
     private static int doy(Calendar x) { return x.get(Calendar.DAY_OF_YEAR); }
@@ -59,6 +75,7 @@ final class Icons {
         try {
             Context c = ctx.getApplicationContext();
             SharedPreferences p = c.getSharedPreferences("ewvon", Context.MODE_PRIVATE);
+            greet(c, p, Calendar.getInstance());
             String want = choose(Calendar.getInstance(), p.getString("birthday", ""));
             if (want.equals(p.getString("icon", ".MainActivity")) && c.getPackageManager().getComponentEnabledSetting(new ComponentName(c, "br.com.ewvon.app" + want)) != PackageManager.COMPONENT_ENABLED_STATE_DISABLED) return;
             PackageManager pm = c.getPackageManager();
