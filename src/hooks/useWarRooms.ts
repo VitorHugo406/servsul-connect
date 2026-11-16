@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -285,11 +285,13 @@ export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) 
   const { toast } = useToast();
 
   const isRoomCreator = Boolean(user?.id && roomCreatorId && user.id === roomCreatorId);
+  const loadedRoom = useRef<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     if (!roomId) return;
 
-    setLoading(true);
+    // Só mostra o carregamento na primeira abertura da sala; depois as atualizações são silenciosas.
+    if (loadedRoom.current !== roomId) setLoading(true);
 
     const [membersRes, timelineRes, messagesRes, actionsRes] = await Promise.all([
       supabase
@@ -339,6 +341,7 @@ export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) 
 
     if (messagesRes.data) setMessages(messagesRes.data as unknown as WarRoomMessage[]);
 
+    loadedRoom.current = roomId;
     setLoading(false);
   }, [roomId]);
 
@@ -475,9 +478,11 @@ export function useWarRoomDetail(roomId: string | null, roomCreatorId?: string) 
   };
 
   const setActionDone = async (id: string, done: boolean) => {
+    const before = actions;
+    setActions(prev => prev.map(a => a.id === id ? { ...a, status: done ? 'done' : 'pending' } as WarRoomAction : a));
     const { error } = await supabase.rpc('war_room_set_action' as any, { _action: id, _done: done });
-    if (error) { fail('Não foi possível atualizar a ação', error.message); return false; }
-    await fetchAll();
+    if (error) { setActions(before); fail('Não foi possível atualizar a ação', error.message); return false; }
+    fetchAll();
     return true;
   };
 
