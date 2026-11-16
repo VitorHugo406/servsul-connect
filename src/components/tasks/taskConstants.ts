@@ -104,7 +104,7 @@ export function getBoardBg(bg: string) {
 }
 
 export function getBoardBgStyle(bg: string): React.CSSProperties {
-  if (bg && bg.startsWith('http')) {
+  if (isBgImage(bg)) {
     return { backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' };
   }
   return {};
@@ -118,7 +118,7 @@ export function isBoardBgDark(bg: string | null): boolean {
   if (!bg) return false;
   if (bg === 'gradient-dark') return true;
   // Image backgrounds get an overlay, so they need light text
-  if (bg.startsWith('http')) return true;
+  if (isBgImage(bg)) return true;
   return false;
 }
 
@@ -138,9 +138,20 @@ export function getCoverDisplay(cover: string | null): { type: 'none' | 'color' 
   return found ? { type: 'color', value: found.color } : { type: 'none', value: '' };
 }
 
-/** Default cover for boards without a background: one of 6 abstract images, picked from the board id. */
+/** Built-in corporate background for boards without one: six office/architecture photos
+ * (Unsplash licence, hosted in public/covers), picked from the board id. Display only. */
 export function defaultBoardCover(id: string): string {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return `/covers/board-${(h % 6) + 1}.webp`;
+  return `/covers/corp-${(h % 6) + 1}.webp`;
+}
+
+/** Background actually shown for a board: its own image, or the built-in corporate one. */
+export function effectiveBoardBg(board: { id: string; background_image?: string | null }): string {
+  return board.background_image || defaultBoardCover(board.id);
+}
+
+/** True for values that are an image URL (remote or a built-in /covers file). */
+export function isBgImage(bg?: string | null): boolean {
+  return !!bg && (bg.startsWith('http') || bg.startsWith('/covers/'));
 }
