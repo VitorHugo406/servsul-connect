@@ -1,0 +1,21 @@
+/* ONE button shape on every desktop tab (owner's request): the task-mural button — square with slightly rounded
+   corners (10px), never pill. Applies to text buttons, icon buttons, filter chips/tabs and toolbar search fields.
+   Loaded LAST; `html:not(#_)` raises specificity above the per-screen sheets. The mobile Ewwon app (.ew) and the shell
+   navigation (side menu, top bar groups — rules in chat-pro.css) are untouched.
+   Not buttons-as-shapes: list rows, cards, tiles, swatches, switches, calendar cells and chat bubbles keep their own form. */
+html:not(#_) :is(
+  .ui-btn, .ui-chip,
+  .dk-btn, .dk-b2, .dk-tab, .dk-pl, .dk-cp, .dk-lk, .dk-mo, .dk-err button, .dk-ic, .dk-seg, .dk-seg button,
+  .tm-btn, .tm-kb, .tm-tog, .tm-fl button,
+  .sg-btn, .sg-lk,
+  .bl-btn,
+  .ce-btn, .ce-lk,
+  .wd-btn, .wl-btn, .wn-btn, .wd-bk, .wn-bk, .wl-tab, .wd-sd, .wd-ic, .wn-ic, .wl-del, .wx-md button,
+  .mr-btn, .mr-tab, .mr-ed, .mx-btn, .mx-back, .mx-ic,
+  .ce-srch, .dk-srch, .mr-srch, .sg-srch, .tm-srch, .wl-srch, .dk-flt input, .dk-flt .sel-btn, .nt-side-hd input
+):not(.ew *) { border-radius: 10px !important; }
+/* the shell navigation stays round */
+html:not(#_) :is(.ewvon-sidebar, .ewvon-quick-nav, .ewvon-actions, .ewvon-brand) .ui-btn:not(.ew *),
+html:not(#_) .ewvon-dash-flag.ui-btn:not(.ew *) { border-radius: 9999px !important; }
+/* avatar-only buttons stay round */
+html:not(#_) .ui-btn.rounded-full:is(:has(> img:only-child), :has(> span.rounded-full:only-child)):not(.ew *) { border-radius: 9999px !important; }

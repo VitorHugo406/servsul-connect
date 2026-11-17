@@ -19,6 +19,7 @@ import "./styles/task-murals.css";
 import "./styles/notes.css";
 import "./chat-life.css";
 import "./focus-mode.css";
+import "./styles/buttons.css";
 
 if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
 const registerServiceWorker = async () => {
