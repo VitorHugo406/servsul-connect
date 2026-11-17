@@ -1,4 +1,4 @@
-import { openReport, priorityLabel, priorityTone } from '@/lib/reports';
+import { openDayReport } from '@/lib/designReports';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar as CalendarIcon, Plus, Trash2, Clock, Bell, ListTodo, Edit, X, Users, Link2, ChevronLeft, ChevronRight, Video, ArrowLeft, Check, FileDown, ExternalLink, MonitorPlay } from 'lucide-react';
@@ -349,33 +349,45 @@ export function CalendarSection() {
 
   const generateDailyReport = async (date: Date) => {
     try {
-      const dateStr = format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-      const dayEvents = getEventsForDate(date);
-      const dayTasks = getTasksForDate(date);
-
+      const sb = supabase as any;
       const typeLabel = (t: string) => ALL_EVENT_TYPES.find(et => et.id === t)?.label || t;
-      const w = openReport({
-        eyebrow: 'Agenda',
-        title: 'Relatório do dia',
-        subtitle: dateStr,
-        fileName: `Relatório do dia ${format(date, 'dd-MM-yyyy')}`,
-        blocks: [
-          { type: 'kpis', items: [
-            { label: 'Eventos e reuniões', value: dayEvents.length, tone: 'info' },
-            { label: 'Tarefas com prazo', value: dayTasks.length, tone: dayTasks.length ? 'warn' : 'neutral' },
-            { label: 'Total de itens', value: dayEvents.length + dayTasks.length },
-          ] },
-          ...(dayEvents.length ? [{ type: 'table' as const, title: 'Eventos e reuniões', headers: ['Horário', 'Título', 'Tipo', 'Participantes'], widths: ['14%', '38%', '16%', '32%'], rows: dayEvents.map(e => [
-            e.all_day ? 'Dia inteiro' : `${format(new Date(e.start_date), 'HH:mm')}${e.end_date ? ' – ' + format(new Date(e.end_date), 'HH:mm') : ''}`,
-            { text: e.title, strong: true, sub: e.description || undefined },
-            typeLabel(e.event_type),
-            e.participants?.map(p => p.profile?.display_name || p.profile?.name || '-').join(', ') || '—',
-          ]) }] : []),
-          ...(dayTasks.length ? [{ type: 'table' as const, title: 'Tarefas com prazo', headers: ['#', 'Título', 'Prioridade', 'Horário'], widths: ['10%', '56%', '18%', '16%'], rows: dayTasks.map(t => [String(t.task_number), { text: t.title, strong: true }, { text: priorityLabel(t.priority), tone: priorityTone(t.priority) }, format(new Date(t.due_date), 'HH:mm')]) }] : []),
-          ...(!dayEvents.length && !dayTasks.length ? [{ type: 'empty' as const, text: 'Nenhum evento ou tarefa para este dia.' }] : []),
-        ],
+      const dayEvents = getEventsForDate(date).slice().sort((x, y) => new Date(x.start_date).getTime() - new Date(y.start_date).getTime());
+      // tasks due that day (also the completed ones, so the report shows what was done)
+      const d0 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const d1 = new Date(d0.getTime() + 864e5);
+      const { data: tRows } = await sb.from('tasks')
+        .select('id, title, priority, completed_at, status, board_id, assigned_to, due_date, is_template, is_archived')
+        .gte('due_date', d0.toISOString()).lt('due_date', d1.toISOString())
+        .or(`assigned_to.eq.${profile!.id},created_by.eq.${profile!.id}`)
+        .order('due_date', { ascending: true });
+      const tasks = ((tRows || []) as any[]).filter(t => !t.is_template && !t.is_archived);
+      const boardIds = [...new Set(tasks.map(t => t.board_id).filter(Boolean))];
+      const ownerIds = [...new Set(tasks.map(t => t.assigned_to).filter(Boolean))];
+      const [{ data: boards }, { data: owners }, { data: cols }] = await Promise.all([
+        boardIds.length ? sb.from('task_boards').select('id, name').in('id', boardIds) : Promise.resolve({ data: [] }),
+        ownerIds.length ? sb.from('profiles').select('id, name, display_name').in('id', ownerIds) : Promise.resolve({ data: [] }),
+        boardIds.length ? sb.from('task_board_columns').select('id, title, board_id').in('board_id', boardIds) : Promise.resolve({ data: [] }),
+      ]);
+      const boardName = (id: string) => (boards || []).find((x: any) => x.id === id)?.name;
+      const ownerName = (id: string) => { const p = (owners || []).find((x: any) => x.id === id); return p ? (p.display_name || p.name) : ''; };
+      const colTitle = (id: string) => (cols || []).find((x: any) => x.id === id)?.title || id || '';
+      const ok = openDayReport({
+        date,
+        person: { name: profile?.display_name || profile?.name || 'Usuário', avatar: profile?.avatar_url },
+        events: dayEvents.map(e => ({
+          start: new Date(e.start_date), end: e.end_date ? new Date(e.end_date) : null, allDay: e.all_day, title: e.title,
+          sub: [e.description?.split('\n')[0], typeLabel(e.event_type), e.meeting_link || (e as any).video_room ? 'Online' : null].filter(Boolean).slice(0, 2).join(' · '),
+          people: (e.participants?.length || 0) + 1,
+        })),
+        tasks: tasks.map(t => ({
+          title: t.title, sub: boardName(t.board_id) ? `Mural ${boardName(t.board_id)}` : undefined,
+          owner: ownerName(t.assigned_to), priority: t.priority, done: !!t.completed_at,
+          doing: /andamento|progresso|fazendo|doing|revis/i.test(colTitle(t.status)),
+        })),
+        generatedBy: profile?.display_name || profile?.name || 'ewvon',
       });
-      toast.success('Relatório gerado!');
+      if (!ok) toast.error('Permita pop-ups para gerar o relatório');
+      else toast.success('Relatório aberto para salvar em PDF');
     } catch (e) {
       console.error(e);
       toast.error('Erro ao gerar relatório');
