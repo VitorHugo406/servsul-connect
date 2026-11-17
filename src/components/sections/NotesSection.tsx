@@ -1,6 +1,6 @@
 import { htmlToText } from '@/lib/safeHtml';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Note, useNotes, useMyNotePermission } from '@/hooks/useNotes';
+import { Note, useNotes } from '@/hooks/useNotes';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +47,8 @@ import { NoteShareDialog } from '@/components/notes/NoteShareDialog';
 import { useFloatingNote } from '@/contexts/FloatingNoteContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { appConfirm } from '@/lib/appDialog';
+import { mergeNoteHtml } from '@/lib/noteMerge';
+import { Eye } from 'lucide-react';
 
 function stripHtml(html: string) {
   return htmlToText(html);
@@ -55,7 +57,7 @@ function stripHtml(html: string) {
 export function NotesSection() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  const { notes, loading, createNote, updateNote, deleteNote } = useNotes();
+  const { notes, loading, createNote, updateNote, saveContent, deleteNote } = useNotes();
   const { floatingNote, openFloating, closeFloating } = useFloatingNote();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -101,13 +103,10 @@ export function NotesSection() {
 
   return (
     <TooltipProvider>
-      <div className="flex h-full overflow-hidden">
+      <div className="dk-pg nt-pg">
         {/* Sidebar de notas */}
-        <aside className={cn(
-          'flex w-80 flex-col border-r border-border bg-muted/30',
-          isMobile && selected && 'hidden',
-        )}>
-          <div className="border-b border-border p-3 space-y-2">
+        <aside className={cn('nt-side', isMobile && selected && 'hidden')}>
+          <div className="nt-side-hd">
             <Button onClick={handleCreate} className="w-full gap-2">
               <Plus className="h-4 w-4" /> Nova anotação
             </Button>
@@ -155,10 +154,7 @@ export function NotesSection() {
                   <button
                     key={n.id}
                     onClick={() => setSelectedId(n.id)}
-                    className={cn(
-                      'w-full text-left rounded-lg border p-3 transition-all hover:shadow-md',
-                      selectedId === n.id ? 'border-primary ring-2 ring-primary/30' : 'border-border',
-                    )}
+                    className={cn('nt-item', selectedId === n.id && 'nt-sel')}
                     style={{
                       background: n.background_color,
                       backgroundImage: bgImage,
@@ -168,7 +164,7 @@ export function NotesSection() {
                     <div className="flex items-center gap-1 mb-1">
                       {n.is_pinned && <Pin className="h-3 w-3 text-foreground/70" />}
                       <p className="font-semibold text-sm text-foreground/90 truncate flex-1">{n.title}</p>
-                      {isShared && <Users className="h-3 w-3 text-foreground/60" />}
+                      {isShared && <span className="nt-badge" title={n.my_permission === 'read' ? 'Compartilhada com você · só visualização' : 'Compartilhada com você · pode editar'}>{n.my_permission === 'read' ? <Eye className="h-3 w-3" /> : <Users className="h-3 w-3" />}</span>}
                     </div>
                     <p className="text-xs text-foreground/60 line-clamp-2">
                       {stripHtml(n.content) || 'Sem conteúdo'}
@@ -181,7 +177,7 @@ export function NotesSection() {
         </aside>
 
         {/* Editor principal */}
-        <main className={cn('flex-1 flex flex-col overflow-hidden', isMobile && !selected && 'hidden')}>
+        <main className={cn('nt-main', isMobile && !selected && 'hidden')}>
           {!selected ? (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
               <p>Selecione ou crie uma anotação</p>
@@ -204,7 +200,8 @@ export function NotesSection() {
             <NoteEditor
               note={selected}
               isOwner={isOwner}
-              onChange={(patch) => updateNote(selected.id, patch)}
+              onChange={(patch) => { void updateNote(selected.id, patch); }}
+              saveContent={saveContent}
               onDelete={() => {
                 deleteNote(selected.id);
                 setSelectedId(null);
@@ -228,6 +225,7 @@ interface EditorProps {
   note: Note;
   isOwner: boolean;
   onChange: (patch: Partial<Note>) => void;
+  saveContent: (id: string, base: string, local: string) => Promise<string | null>;
   onDelete: () => void;
   onShare: () => void;
   onOpenFloating: (preferred: 'internal' | 'pip') => void;
@@ -235,50 +233,65 @@ interface EditorProps {
   onBack: () => void;
 }
 
-function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating, isMobile, onBack }: EditorProps) {
-  const permission = useMyNotePermission(note);
-  const canEdit = permission === 'owner' || permission === 'edit';
+function NoteEditor({ note, isOwner, onChange, saveContent, onDelete, onShare, onOpenFloating, isMobile, onBack }: EditorProps) {
+  // Permission comes with the note list (refreshed in realtime when the owner changes it).
+  const canEdit = note.my_permission ? note.my_permission !== 'read' : isOwner;
 
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
-  const contentTimer = useRef<number | null>(null);
-  const pendingContent = useRef<string | null>(null);
+  const [syncKey, setSyncKey] = useState(0);
+  const contentRef = useRef(note.content);      // what the editor shows now
+  const baseRef = useRef(note.content);         // last server text the local copy is based on
+  const pendingRef = useRef(false);             // local changes not saved yet
+  const savingRef = useRef(false);
+  const timer = useRef<number | null>(null);
+  const noteIdRef = useRef(note.id);
+
+  const show = (html: string) => { contentRef.current = html; setContent(html); setSyncKey((k) => k + 1); };
 
   useEffect(() => setTitle(note.title), [note.id, note.title]);
-  useEffect(() => { setContent(note.content); pendingContent.current = null; }, [note.id]);
+  // Another note opened: start from its server text.
+  useEffect(() => { noteIdRef.current = note.id; baseRef.current = note.content; pendingRef.current = false; show(note.content); }, [note.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A co-author saved: apply it right away when I'm not in the middle of an unsaved edit (my next save merges otherwise).
+  useEffect(() => {
+    if (note.content === baseRef.current || note.content === contentRef.current) { baseRef.current = note.content; return; }
+    if (!pendingRef.current && !savingRef.current) { baseRef.current = note.content; show(note.content); }
+  }, [note.content]);
 
-  const flushRef = useRef<() => void>(() => {});
-  flushRef.current = () => {
-    if (contentTimer.current) { window.clearTimeout(contentTimer.current); contentTimer.current = null; }
-    if (pendingContent.current !== null) {
-      onChange({ content: pendingContent.current });
-      pendingContent.current = null;
+  const doSave = async () => {
+    if (!canEdit || savingRef.current || !pendingRef.current) return;
+    if (timer.current) { window.clearTimeout(timer.current); timer.current = null; }
+    savingRef.current = true; pendingRef.current = false;
+    const id = noteIdRef.current, sent = contentRef.current;
+    const stored = await saveContent(id, baseRef.current, sent);
+    savingRef.current = false;
+    if (noteIdRef.current !== id) return;
+    if (stored === null) { pendingRef.current = true; return; }
+    const now = contentRef.current;
+    baseRef.current = stored;
+    if (now === sent) { if (stored !== sent) show(stored); }
+    else {
+      // I kept typing while it saved: fold my newest edits onto what was stored.
+      const merged = mergeNoteHtml(sent, now, stored);
+      if (merged !== now) show(merged);
+      if (merged !== stored) { pendingRef.current = true; schedule(); }
     }
   };
+  const saveRef = useRef(doSave); saveRef.current = doSave;
+  const schedule = () => { if (timer.current) window.clearTimeout(timer.current); timer.current = window.setTimeout(() => { void saveRef.current(); }, 600); };
 
   const handleContentChange = (html: string) => {
-    setContent(html);
-    pendingContent.current = html;
-    if (contentTimer.current) window.clearTimeout(contentTimer.current);
-    contentTimer.current = window.setTimeout(() => {
-      if (pendingContent.current !== null) {
-        onChange({ content: pendingContent.current });
-        pendingContent.current = null;
-      }
-    }, 500);
+    if (!canEdit) return;
+    contentRef.current = html; setContent(html); pendingRef.current = true; schedule();
   };
 
-  // Flush on unmount, on note change, on tab hide, on beforeunload
-  useEffect(() => () => { flushRef.current(); }, []);
-  useEffect(() => () => { flushRef.current(); }, [note.id]);
+  // Save on note change / unmount / tab hide / page unload.
+  useEffect(() => () => { void saveRef.current(); }, [note.id]);
   useEffect(() => {
-    const onHide = () => flushRef.current();
+    const onHide = () => { void saveRef.current(); };
     window.addEventListener('beforeunload', onHide);
     document.addEventListener('visibilitychange', onHide);
-    return () => {
-      window.removeEventListener('beforeunload', onHide);
-      document.removeEventListener('visibilitychange', onHide);
-    };
+    return () => { window.removeEventListener('beforeunload', onHide); document.removeEventListener('visibilitychange', onHide); };
   }, []);
 
   const bgImage = [getImageCss(note.background_image), getTextureCss(note.background_texture)].filter(Boolean).join(', ');
@@ -286,25 +299,28 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
 
   return (
     <div
-      className="flex flex-col h-full overflow-hidden"
+      className="nt-ed"
       style={{
         background: note.background_color,
         backgroundImage: bgImage,
         backgroundSize: note.background_texture ? getTextureSize(note.background_texture) : 'cover',
       }}
     >
-      <div className="flex items-center gap-2 border-b border-border/40 bg-background/60 backdrop-blur p-2 flex-wrap">
+      <div className="nt-bar">
         {isMobile && (
           <Button size="sm" variant="ghost" onClick={onBack}>Voltar</Button>
         )}
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          onBlur={() => title !== note.title && onChange({ title: title || 'Sem título' })}
+          onBlur={() => canEdit && title !== note.title && onChange({ title: title || 'Sem título' })}
+          readOnly={!canEdit}
           placeholder="Título"
-          className="flex-1 min-w-[180px] border-0 bg-transparent text-base font-semibold focus-visible:ring-0"
+          className="nt-title flex-1 min-w-[180px] text-base font-semibold focus-visible:ring-0"
         />
+        {!canEdit ? <span className="nt-ro"><Eye className="h-3.5 w-3.5" /> Somente visualização</span> : null}
 
+        {canEdit ? (<>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button size="icon" variant="ghost" onClick={() => onChange({ is_pinned: !note.is_pinned })}>
@@ -375,6 +391,8 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
           </PopoverContent>
         </Popover>
 
+        </>) : null}
+
         {/* Janela flutuante (só desktop) */}
         {!isMobile && (
           <DropdownMenu>
@@ -438,15 +456,12 @@ function NoteEditor({ note, isOwner, onChange, onDelete, onShare, onOpenFloating
         )}
       </div>
 
-      <div className="flex-1 overflow-auto p-4">
+      <div className="nt-body">
         <RichTextEditor
           value={content}
+          syncKey={syncKey}
           onChange={handleContentChange}
-          onImmediateSave={(html) => {
-            if (contentTimer.current) { window.clearTimeout(contentTimer.current); contentTimer.current = null; }
-            pendingContent.current = null;
-            onChange({ content: html });
-          }}
+          onImmediateSave={(html) => { if (!canEdit) return; contentRef.current = html; pendingRef.current = true; void saveRef.current(); }}
           placeholder="Escreva sua anotação..."
           readOnly={!canEdit}
         />

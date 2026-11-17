@@ -20,11 +20,31 @@ interface RichTextEditorProps {
   readOnly?: boolean;
   className?: string;
   placeholder?: string;
+  /** Bump to force `value` into the editor even while it has focus (keeps the caret). */
+  syncKey?: number;
 }
 
 const TEXT_COLORS = ['#000000', '#DC2626', '#EA580C', '#CA8A04', '#16A34A', '#2563EB', '#7C3AED', '#DB2777'];
 
-export function RichTextEditor({ value, onChange, onImmediateSave, readOnly, className, placeholder }: RichTextEditorProps) {
+/** Caret position as a character offset inside `root` (so it survives an innerHTML swap). */
+function caretOffset(root: HTMLElement): number | null {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount || !root.contains(sel.anchorNode)) return null;
+  const r = sel.getRangeAt(0).cloneRange();
+  r.selectNodeContents(root); r.setEnd(sel.getRangeAt(0).endContainer, sel.getRangeAt(0).endOffset);
+  return r.toString().length;
+}
+function placeCaret(root: HTMLElement, offset: number) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let left = offset; let node: Node | null = walker.nextNode();
+  while (node) {
+    const len = (node.textContent || '').length;
+    if (left <= len) { const r = document.createRange(); r.setStart(node, left); r.collapse(true); const sel = window.getSelection(); sel?.removeAllRanges(); sel?.addRange(r); return; }
+    left -= len; node = walker.nextNode();
+  }
+}
+
+export function RichTextEditor({ value, onChange, onImmediateSave, readOnly, className, placeholder, syncKey }: RichTextEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef<string>('');
   const savedRange = useRef<Range | null>(null);
@@ -53,15 +73,20 @@ export function RichTextEditor({ value, onChange, onImmediateSave, readOnly, cla
     }
   };
 
+  const lastSync = useRef(syncKey);
   useEffect(() => {
     if (!ref.current) return;
     const incoming = sanitizeHtml(value || '');
-    if (document.activeElement === ref.current) return;
+    const forced = syncKey !== lastSync.current;   // parent says: apply this text even while focused (a co-author's change)
+    lastSync.current = syncKey;
+    if (document.activeElement === ref.current && !forced) return;
     if (ref.current.innerHTML !== incoming) {
+      const at = document.activeElement === ref.current ? caretOffset(ref.current) : null;
       ref.current.innerHTML = incoming;
+      if (at !== null) placeCaret(ref.current, at);
     }
     lastEmitted.current = incoming;
-  }, [value]);
+  }, [value, syncKey]);
 
   const exec = (cmd: string, arg?: string) => {
     if (readOnly) return;
