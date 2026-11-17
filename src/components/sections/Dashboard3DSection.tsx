@@ -29,6 +29,10 @@ async function loadCompanyData(companyId: string, company: { name: string; logo:
     db.from('meeting_booking_participants').select('booking_id,profile_id'),
     db.from('user_presence').select('user_id,is_online,last_heartbeat'),
   ]);
+  // Real admission dates from the employee record (Gerenciamento). Without one the person still counts in the headcount,
+  // but never as an admission (turnover/tempo de casa) — the date the user was created in ewvon is NOT an admission date.
+  const admRes = await db.rpc('dash_admission_dates');
+  const admOf = new Map<string, string>(((admRes.data || []) as any[]).map((x) => [x.profile_id, x.admission_date]));
   prog(0.6);
   const people: any[] = pr.data || [];
   const sectors = new Map<string, string>(((sc.data || []) as any[]).map((x) => [x.id, x.name]));
@@ -39,7 +43,7 @@ async function loadCompanyData(companyId: string, company: { name: string; logo:
     id: p.id, nome: nameOf(p), depto: sectors.get(p.sector_id) || 'Sem setor', cargo: ROLE[p.autonomy_level] || 'Colaborador',
     st: online.has(p.user_id) ? (STATUS[p.user_status || 'available'] || 'Online') : 'Offline',
     lunch: online.has(p.user_id) && p.user_status === 'lunch',
-    adm: day(p.created_at), dem: p.is_active ? null : day(p.updated_at), nasc: day(p.birth_date),
+    adm: admOf.get(p.id) || '*', dem: p.is_active ? null : day(p.updated_at), nasc: day(p.birth_date),
   }));
   const parts = new Map<string, string[]>();
   ((pt.data || []) as any[]).forEach((x) => { if (byId.has(x.profile_id)) parts.set(x.booking_id, [...(parts.get(x.booking_id) || []), x.profile_id]); });

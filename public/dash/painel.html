@@ -83,6 +83,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .tvz{display:flex;flex-direction:column;gap:10px}
 .tvz h5{margin:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800}
+/* "?" discreto: como o dado é calculado */
+.hlp{display:inline-block;margin-left:6px;vertical-align:middle;text-transform:none;letter-spacing:0}.hlp>summary{list-style:none;cursor:pointer;width:16px;height:16px;border-radius:50%;border:1px solid var(--line);color:var(--muted);font-size:10px;font-weight:700;line-height:14px;text-align:center;opacity:.75}.hlp>summary::-webkit-details-marker{display:none}.hlp>summary:hover,.hlp[open]>summary{opacity:1;color:var(--ink);border-color:var(--muted)}
+.tvz{position:relative}.hlpbox{position:absolute;left:0;right:0;z-index:6;box-shadow:0 10px 30px -12px rgba(16,24,40,.35);margin-top:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card,#fff);font-size:12px;font-weight:500;line-height:1.5;color:var(--ink);letter-spacing:0;text-transform:none}.hlpbox p{margin:0 0 6px}.hlpbox p:last-child{margin:0;color:var(--muted)}
 .tvz+.tvz{border-top:1px solid var(--line);padding-top:20px;margin-top:8px}
 .tvz .seg.chips{gap:8px}
 .tvbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -1210,24 +1213,55 @@ function redistribute(){
 
 /* =================== ESTATÍSTICAS =================== */
 let WIN=12,MONTHS=[],S=null,DEPT=[],DMAP=new Map();
+/* turnover precisa das duas pontas: admissões E desligamentos */
+const TURNOK=()=>!!(HAS.adm&&HAS.dem);
 function monthsOf(n){
   const out=[];
   for(let i=n-1;i>=0;i--){const d=new Date(today.getFullYear(),today.getMonth()-i,1);const end=new Date(d.getFullYear(),d.getMonth()+1,0);out.push({y:d.getFullYear(),m:d.getMonth(),start:d,end:end>today?today:end})}
   return out;
 }
+/* Dias úteis (seg–sex, sem feriados nacionais) entre a e b, inclusive */
+const HOLI={};
+function holidays(y){
+  if(HOLI[y])return HOLI[y];
+  const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),dy=((h+l-7*m+114)%31)+1;
+  const easter=new Date(y,mo-1,dy),gf=new Date(easter);gf.setDate(gf.getDate()-2);
+  const set=new Set(['1-1','4-21','5-1','9-7','10-12','11-2','11-15','11-20','12-25'].map(x=>y+'-'+x));set.add(y+'-'+(gf.getMonth()+1)+'-'+gf.getDate());
+  return HOLI[y]=set;
+}
+function workDays(a,b){
+  let n=0;const d=new Date(a.getFullYear(),a.getMonth(),a.getDate()),E=new Date(b.getFullYear(),b.getMonth(),b.getDate());
+  while(d<=E){const w=d.getDay();if(w&&w<6&&!holidays(d.getFullYear()).has(d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()))n++;d.setDate(d.getDate()+1)}
+  return n;
+}
+/* Fórmulas (padrão de RH):
+   - Turnover (Chiavenato) = ((admissões + desligamentos) / 2) / efetivo médio × 100, efetivo médio do mês = (quadro no 1º dia + quadro no último dia) / 2;
+     a janela é somada mês a mês e anualizada (× 12 / meses).
+   - Absenteísmo = dias de falta / dias úteis previstos × 100; os dias previstos de cada pessoa são os dias úteis do mês corrente
+     (seg–sex, sem feriados nacionais) em que ela estava contratada.
+   Pessoas sem data de admissão real (marcadas com "*") contam no quadro desde sempre e nunca como admissão. */
 function stats(list,months){
-  const mo=months.map(m=>({y:m.y,m:m.m,adm:0,des:0,hc:0}));
+  const inAt=(e,d)=>(e.afk||e.adm<=d)&&(!e.dem||e.dem>d);
+  const mo=months.map(m=>({y:m.y,m:m.m,adm:0,des:0,hc:0,hc0:0,rate:0}));
   for(const e of list)for(let k=0;k<months.length;k++){
-    const M=months[k],o=mo[k];
-    if(e.adm>=M.start&&e.adm<=M.end)o.adm++;
+    const M=months[k],o=mo[k],d0=new Date(M.start.getTime()-1);
+    if(!e.afk&&e.adm>=M.start&&e.adm<=M.end)o.adm++;
     if(e.dem&&e.dem>=M.start&&e.dem<=M.end)o.des++;
-    if(e.adm<=M.end&&(!e.dem||e.dem>M.end))o.hc++;
+    if(inAt(e,M.end))o.hc++;
+    if(inAt(e,d0))o.hc0++;
   }
-  let active=0,folha=0,salN=0,faltas=0,he=0;
-  for(const e of list)if(isActive(e)){active++;if(isFinite(e.sal)){folha+=e.sal;salN++}faltas+=e.faltas||0;he+=e.he||0}
-  const adm=mo.reduce((a,o)=>a+o.adm,0),des=mo.reduce((a,o)=>a+o.des,0),avg=mo.reduce((a,o)=>a+o.hc,0)/(mo.length||1);
-  const turnover=avg?((adm+des)/2)/avg*100:0;
-  return {mo,active,folha,salN,faltas,he,adm,des,avg,turnover,turnYear:turnover*12/months.length,abs:active?faltas/(active*22)*100:0};
+  mo.forEach(o=>{const ef=(o.hc0+o.hc)/2;o.ef=ef;o.rate=ef?((o.adm+o.des)/2)/ef*100:0});
+  let active=0,folha=0,salN=0,faltas=0,he=0,plan=0,lost=0;
+  const ms=new Date(today.getFullYear(),today.getMonth(),1),me=new Date(today.getFullYear(),today.getMonth()+1,0);
+  for(const e of list){
+    if(isActive(e)){active++;if(isFinite(e.sal)){folha+=e.sal;salN++}faltas+=e.faltas||0;he+=e.he||0}
+    /* dias úteis previstos no mês para quem esteve contratado em algum dia dele */
+    const a=(!e.afk&&e.adm>ms)?e.adm:ms,bEnd=e.dem?new Date(e.dem.getTime()-864e5):me,b=bEnd<me?bEnd:me;
+    if(a<=b&&(isActive(e)||(e.dem&&e.dem>=ms))){const wd=workDays(a,b);plan+=wd;lost+=Math.min(e.faltas||0,wd)}
+  }
+  const adm=mo.reduce((a,o)=>a+o.adm,0),des=mo.reduce((a,o)=>a+o.des,0),avg=mo.reduce((a,o)=>a+o.ef,0)/(mo.length||1);
+  const turnover=mo.reduce((a,o)=>a+o.rate,0);
+  return {mo,active,folha,salN,faltas,he,adm,des,avg,turnover,turnYear:turnover*12/(months.length||1),abs:plan?lost/plan*100:0,plan};
 }
 function recalc(){
   MONTHS=monthsOf(WIN);S=stats(EMPS,MONTHS);
@@ -1979,9 +2013,10 @@ function screenData(m){
     return {kind:'rank',title,big,sub,labels:a.map(d=>d.name),values:a.map(d=>d[key]),fmt};
   };
   if(m==='abs'){if(!HAS.faltas)return {na:'A fonte conectada não informa a coluna Faltas.',title:'Absenteísmo'};
-    return top(DEPT,'abs',fmtPct,'Absenteísmo por departamento',fmtPct(S.abs),fmtInt(S.faltas)+' faltas no mês · '+fmtInt(S.active)+' ativos')}
+    return top(DEPT,'abs',fmtPct,'Absenteísmo por departamento',fmtPct(S.abs),fmtInt(S.faltas)+' dias de falta ÷ '+fmtInt(S.plan)+' dias úteis previstos no mês')}
   if(m==='turn'&&!HAS.adm)return {na:'A fonte conectada não informa a data de admissão.',title:'Turnover'};
-  if(m==='turn')return top(DEPT,'turnYear',fmtPct,'Turnover anualizado por departamento',fmtPct(S.turnYear),'Janela de '+WIN+' meses · '+S.adm+' admissões e '+S.des+' desligamentos');
+  if(m==='turn'&&!HAS.dem)return {na:'A fonte conectada não informa a data de desligamento.',title:'Turnover'};
+  if(m==='turn')return top(DEPT,'turnYear',fmtPct,'Turnover anualizado por departamento',fmtPct(S.turnYear),S.adm+' admissões e '+S.des+' desligamentos em '+WIN+' meses · efetivo médio '+fmtInt(Math.round(S.avg)));
   if(m==='he'){if(!HAS.he)return {na:'A fonte conectada não informa a coluna Horas Extras.',title:'Horas extras'};
     const arr=DEPT.map(d=>({name:d.name,v:d.active?d.he/d.active:0}));
     const a=arr.sort((x,y)=>y.v-x.v).slice(0,8);
@@ -2011,7 +2046,7 @@ function drawScreen(){
     const sg=g.measureText(d.big).width;
     T(d.sub,74,302,30,'#71717a',600,'left',700);
     // cartões de indicadores
-    const cards=[['ATIVOS',fmtInt(S.active),'#18181b'],['ABSENTEÍSMO',HAS.faltas?fmtPct(S.abs):'—','#52525b'],['TURNOVER/ANO',HAS.adm?fmtPct(S.turnYear):'—','#52525b']],cw=210,ch=132,cx0=W-70-(cw*3+36);
+    const cards=[['ATIVOS',fmtInt(S.active),'#18181b'],['ABSENTEÍSMO',HAS.faltas?fmtPct(S.abs):'—','#52525b'],['TURNOVER/ANO',TURNOK()?fmtPct(S.turnYear):'—','#52525b']],cw=210,ch=132,cx0=W-70-(cw*3+36);
     cards.forEach((c,i)=>{const x=cx0+i*(cw+18),y=120;
       const cg=g.createLinearGradient(x,y,x,y+ch);cg.addColorStop(0,'#FFFFFF');cg.addColorStop(1,'#FFFFFF');
       g.fillStyle=cg;rr(g,x,y,cw,ch,22);g.fill();g.strokeStyle='#e4e4e7';g.lineWidth=2;rr(g,x,y,cw,ch,22);g.stroke();
@@ -2743,7 +2778,7 @@ function repBuild0(){
   if(REP.f.sum){
     kpis.push(['Colaboradores ativos',fmtInt(S.active)]);
     if(HAS.faltas)kpis.push(['Absenteísmo',fmtPct(S.abs)]);
-    if(HAS.adm){kpis.push(['Turnover anualizado',fmtPct(S.turnYear)]);kpis.push(['Admissões / Desligamentos',S.adm+' / '+S.des])}
+    if(HAS.adm){if(TURNOK())kpis.push(['Turnover anualizado',fmtPct(S.turnYear)]);kpis.push(['Admissões / Desligamentos',S.adm+' / '+S.des])}
     if(HAS.he)kpis.push(['Horas extras no mês',fmtInt(S.he)+' h']);
     if(sal&&S.salN){kpis.push(['Folha mensal',fmtBRLk(S.folha)]);kpis.push(['Salário médio',fmtBRL(S.folha/S.salN)])}
     const rows=kpis.map(k=>[{v:k[0],f:k[0]},{v:k[1],f:k[1]}]);
@@ -2755,7 +2790,7 @@ function repBuild0(){
       const r=[{v:d.name,f:d.name},{v:d.active,f:fmtInt(d.active)}];
       if(HAS.faltas){r.push({v:d.faltas,f:fmtInt(d.faltas)});r.push({v:+d.abs.toFixed(2),f:fmtPct(d.abs)})}
       if(HAS.he)r.push({v:Math.round(d.he),f:fmtInt(d.he)+' h'});
-      if(HAS.adm)r.push({v:+d.turnYear.toFixed(2),f:fmtPct(d.turnYear)});
+      if(HAS.adm)r.push(TURNOK()?{v:+d.turnYear.toFixed(2),f:fmtPct(d.turnYear)}:{v:0,f:'—'});
       if(sal)r.push({v:Math.round(d.folha),f:fmtBRLk(d.folha)});
       return r;
     });
@@ -3534,10 +3569,30 @@ function colsHtml(d){
   const mx=Math.max(1,...d.values);
   return '<div class="cols">'+d.values.map((v,i)=>'<div title="'+esc(d.labels[i])+': '+v+'"><span class="h" style="height:'+Math.max(3,v/mx*100)+'%"></span></div>').join('')+'</div><div class="colt"><span>'+d.labels[0]+'</span><span>'+d.labels[d.labels.length-1]+'</span></div>';
 }
+const HELPM={
+  abs:'Absenteísmo = dias de falta ÷ dias úteis previstos × 100. Os dias previstos são os dias úteis do mês atual (segunda a sexta, sem feriados nacionais) em que cada pessoa estava contratada. Usa a coluna Faltas da fonte, em dias.',
+  hc:'Headcount = pessoas contratadas no último dia de cada mês (admitidas até esse dia e sem desligamento antes dele). O número grande é o quadro ativo hoje.',
+  mov:'Admissões e desligamentos contados pelo mês da data de admissão e da data de desligamento de cada pessoa.',
+  turn:'Turnover = ((admissões + desligamentos) ÷ 2) ÷ efetivo médio × 100, calculado mês a mês, somado no período escolhido e convertido para 12 meses (× 12 ÷ meses). Efetivo médio do mês = (quadro no 1º dia + quadro no último dia) ÷ 2. Quem não tem data de admissão cadastrada conta no quadro, mas nunca como admissão.',
+  he:'Horas extras = soma da coluna Horas extras da fonte no mês; a média é o total ÷ pessoas ativas.',
+  bat:'Batidas ímpares = pessoas com número ímpar de marcações hoje (entrada sem saída ou o contrário), que precisam de ajuste no ponto.',
+  atr:'Atraso médio = minutos de atraso no mês ÷ pessoas com essa informação.',
+  bh:'Banco de horas = soma dos saldos positivos; os negativos aparecem à parte e o saldo líquido é a soma dos dois.',
+  age:'Idade = (hoje − data de nascimento) em anos; a média considera só quem tem nascimento informado.',
+  ten:'Tempo de casa = anos completos desde a admissão, só para quem tem a data de admissão real.',
+  ctr:'Pessoas ativas agrupadas pelo tipo de contrato informado.',
+  fer:'Pessoas com dias de férias vencidas maiores que zero; o total soma esses dias.',
+  gen:'Percentual de mulheres = pessoas ativas do sexo feminino ÷ pessoas ativas × 100.',
+  sal:'Salário médio = soma dos salários ÷ pessoas ativas com salário informado.'
+};
+function helpHtml(m){
+  const src=SOURCE==='ewvon'?'Dados do ewvon: a admissão é a data cadastrada em Gerenciamento (ficha do colaborador) e o desligamento é a data em que o usuário foi desativado.':SOURCE==='exemplo'?'Você está vendo dados de exemplo.':'Dados da fonte conectada: '+SOURCE+'.';
+  return '<details class="hlp"><summary aria-label="Como este dado é calculado" title="Como este dado é calculado">?</summary><div class="hlpbox"><p>'+esc(HELPM[m]||'')+'</p><p>'+esc(src)+' Período: últimos '+WIN+' meses.</p></div></details>';
+}
 function pScreen(){
   const d=screenData(SMETRIC);
   const ic=(p)=>'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>';
-  let h='<div class="tvz"><h5>Informações</h5><div class="tvsel"><label><span>Dado</span><select data-metricsel="1" aria-label="Dados do telão">'+SM.map(s=>'<option value="'+s[0]+'"'+(s[0]===SMETRIC?' selected':'')+'>'+s[1]+'</option>').join('')+'</select></label>'+
+  let h='<div class="tvz"><h5>Informações'+helpHtml(SMETRIC)+'</h5><div class="tvsel"><label><span>Dado</span><select data-metricsel="1" aria-label="Dados do telão">'+SM.map(s=>'<option value="'+s[0]+'"'+(s[0]===SMETRIC?' selected':'')+'>'+s[1]+'</option>').join('')+'</select></label>'+
     '<label><span>Período</span><select data-winsel="1" aria-label="Período dos dados">'+[6,12,24].map(n=>'<option value="'+n+'"'+(n===WIN?' selected':'')+'>'+n+' meses</option>').join('')+'</select></label></div></div>'+
     '<div class="tvz"><h5>Ações</h5><div class="tvbtns"><button type="button" data-tvfull="1">'+ic('<path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>')+'Tela cheia</button>'+
     '<button type="button" data-reptog="1" aria-expanded="'+REP.open+'" aria-pressed="'+REP.open+'">'+ic('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>')+'Gerar relatório</button></div></div>'+repHtml();
@@ -3562,7 +3617,7 @@ function pDept(name){
     '<div class="k"><small>Folha mensal</small><b>'+(HAS.sal?fmtBRLk(d.folha):'—')+'</b></div>'+
     '<div class="k"><small>Admissões · '+WIN+'m</small><b>'+(HAS.adm?d.adm:'—')+'</b></div>'+
     '<div class="k"><small>Desligamentos · '+WIN+'m</small><b>'+d.des+'</b></div>'+
-    '<div class="k"><small>Turnover ao ano</small><b>'+(HAS.adm?fmtPct(d.turnYear):'—')+'</b></div>'+
+    '<div class="k"><small>Turnover ao ano</small><b>'+(TURNOK()?fmtPct(d.turnYear):'—')+'</b></div>'+
     '<div class="k"><small>Absenteísmo</small><b>'+(HAS.faltas?fmtPct(d.abs):'—')+'</b></div></div>'+
     (HAS.adm?'<div class="sec"><h3>Headcount nos últimos '+WIN+' meses</h3>'+colsHtml({kind:'series',labels:d.mo.map(mesAno),values:d.mo.map(o=>o.hc)})+'</div>':'')+
     leadSec(d)+'<div class="sec"><h3>Pessoas ('+d.act.length+')</h3><div class="rows">'+d.act.slice().sort((a,b)=>(b.faltas||0)-(a.faltas||0)||String(a.nome).localeCompare(String(b.nome),'pt-BR')).slice(0,80).map(e=>
@@ -3618,7 +3673,7 @@ function pRooms(){
 }
 function pDepts(){
   const mx=Math.max(1,...DEPT.map(d=>d.active));
-  const h='<div class="rows">'+DEPT.map(d=>'<button type="button" class="row" data-dept="'+esc(d.name)+'"><span class="av" style="background:'+avc(d.name)+'">'+esc(ini(d.name))+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(d.name)+'</span><span class="s" style="display:block">'+esc(floorLabel(CFG.deptFloor[d.name]))+' · '+fmtInt(d.active)+' ativos · turnover '+fmtPct(d.turnYear)+(HAS.faltas?' · abs. '+fmtPct(d.abs):'')+'</span></span><span></span></button>').join('')+'</div>';
+  const h='<div class="rows">'+DEPT.map(d=>'<button type="button" class="row" data-dept="'+esc(d.name)+'"><span class="av" style="background:'+avc(d.name)+'">'+esc(ini(d.name))+'</span><span style="min-width:0"><span class="t" style="display:block">'+esc(d.name)+'</span><span class="s" style="display:block">'+esc(floorLabel(CFG.deptFloor[d.name]))+' · '+fmtInt(d.active)+' ativos'+(TURNOK()?' · turnover '+fmtPct(d.turnYear):'')+(HAS.faltas?' · abs. '+fmtPct(d.abs):'')+'</span></span><span></span></button>').join('')+'</div>';
   return {title:'Departamentos',sub:DEPT.length+' departamentos com pessoas ativas',html:h,back:null};
 }
 function pReception(){
@@ -4675,7 +4730,7 @@ function tvTexture(){
   const bg=g.createLinearGradient(0,0,W,H);bg.addColorStop(0,'#0B1020');bg.addColorStop(1,'#16223D');g.fillStyle=bg;g.fillRect(0,0,W,H);
   g.fillStyle='#8B95A8';g.font='700 20px '+FONT;g.textBaseline='alphabetic';g.fillText('PAINEL DP · '+(floorObj(CUR)?'ANDAR '+fnum(CUR):''),26,38);
   g.textAlign='right';g.fillText(hhmm(CLOCK.min),W-26,38);g.textAlign='left';
-  const k=[['ATIVOS',fmtInt(S.active),'#FFFFFF'],['ABSENTEÍSMO',HAS.faltas?fmtPct(S.abs):'—','#9DB8F5'],['TURNOVER/ANO',HAS.adm?fmtPct(S.turnYear):'—','#7FD1AE'],['FOLHA',HAS.sal?fmtBRLk(S.folha):'—','#8FB3FF']];
+  const k=[['ATIVOS',fmtInt(S.active),'#FFFFFF'],['ABSENTEÍSMO',HAS.faltas?fmtPct(S.abs):'—','#9DB8F5'],['TURNOVER/ANO',TURNOK()?fmtPct(S.turnYear):'—','#7FD1AE'],['FOLHA',HAS.sal?fmtBRLk(S.folha):'—','#8FB3FF']];
   k.forEach((q,i)=>{const x=26+i*150;g.fillStyle='rgba(255,255,255,.07)';rr(g,x,56,140,86,12);g.fill();g.fillStyle='#8B95A8';g.font='700 13px '+FONT;g.fillText(q[0],x+12,80);g.fillStyle=q[2];g.font='800 30px '+FONT;g.fillText(q[1],x+12,122,120)});
   const mo=(S.mo||[]),mx=Math.max(1,...mo.map(o=>o.hc)),n=mo.length||1,bw=(W-52)/n;
   mo.forEach((o,i)=>{const hh=(o.hc/mx)*130,x=26+i*bw;const gr=g.createLinearGradient(0,H-40-hh,0,H-40);gr.addColorStop(0,i===n-1?'#2358C3':'#4B6CB7');gr.addColorStop(1,i===n-1?'#5C8AE6':'#2A3B6B');g.fillStyle=gr;rr(g,x+3,H-40-hh,bw-8,hh,5);g.fill();g.fillStyle='#8B95A8';g.font='600 13px '+FONT;g.textAlign='center';g.fillText(o.m!=null?mesAno(o):'',x+bw/2-1,H-18);g.textAlign='left'});
@@ -5432,7 +5487,7 @@ function screenDataX(m){
     const B=[['até 24',0,24],['25–34',25,34],['35–44',35,44],['45–54',45,54],['55+',55,200]],ages=act.filter(e=>e.nasc).map(e=>(today-e.nasc)/(365.25*864e5)),avg=ages.length?ages.reduce((a,b)=>a+b,0)/ages.length:0;
     return rk(B.map(b=>({name:b[0],v:ages.filter(a=>a>=b[1]&&a<b[2]+1).length})),'Pessoas por faixa etária',avg.toLocaleString('pt-BR',{maximumFractionDigits:1})+' anos','idade média · '+fmtInt(ages.length)+' pessoas com nascimento informado',fmtInt,true)}
   if(m==='ten'){if(!HAS.adm)return na('Tempo de casa','Sua fonte não traz a data de admissão.');
-    const B=[['< 1 ano',0,1],['1–2 anos',1,3],['3–5 anos',3,6],['6–10 anos',6,11],['10+ anos',11,99]],t=act.map(e=>(today-e.adm)/(365.25*864e5)),avg=t.length?t.reduce((a,b)=>a+b,0)/t.length:0;
+    const B=[['< 1 ano',0,1],['1–2 anos',1,3],['3–5 anos',3,6],['6–10 anos',6,11],['11+ anos',11,99]],t=act.filter(e=>!e.afk).map(e=>(today-e.adm)/(365.25*864e5)),avg=t.length?t.reduce((a,b)=>a+b,0)/t.length:0;
     return rk(B.map(b=>({name:b[0],v:t.filter(a=>a>=b[1]&&a<b[2]).length})),'Pessoas por tempo de casa',avg.toLocaleString('pt-BR',{maximumFractionDigits:1})+' anos','tempo médio de casa · '+fmtInt(t.filter(a=>a<1).length)+' com menos de 1 ano',fmtInt,true)}
   if(m==='ctr'){if(!HAS.ctr)return na('Contratos','Sua fonte não traz o tipo de contrato.');
     const c=new Map();act.forEach(e=>{const k=e.ctr||'Não informado';c.set(k,(c.get(k)||0)+1)});const a=[...c].map(([name,v])=>({name,v})).sort((x,y)=>y.v-x.v);
@@ -6627,7 +6682,7 @@ function ewvDone(){const l=document.getElementById('ewvLoad');if(!l)return;l.cla
 function ewvMsg(t,sub){const l=document.getElementById('ewvLoad');if(l)l.innerHTML='<div style="text-align:center;max-width:420px;padding:0 20px"><div style="font-size:18px;color:#12151C;margin-bottom:6px">'+t+'</div><div style="font-weight:500;font-size:13px">'+sub+'</div></div>'}
 /* converte o que veio do banco para o formato do painel; devolve false se não há pessoas */
 function ewvConv(p){
-  const list=(p.emps||[]).map(a=>({xid:String(a.id||''),nome:a.nome,depto:a.depto||'Sem setor',cargo:a.cargo||'',st:a.st||'',sal:NaN,adm:toDate(a.adm),dem:toDate(a.dem),faltas:0,he:0,sexo:'',cc:'',alm:a.lunch?true:null,almIni:null,almFim:null,bat:null,atr:null,bh:null,nasc:toDate(a.nasc),ctr:'',fv:null})).filter(e=>e.adm);
+  const list=(p.emps||[]).map(a=>({xid:String(a.id||''),nome:a.nome,depto:a.depto||'Sem setor',cargo:a.cargo||'',st:a.st||'',sal:NaN,adm:toDate(a.adm),dem:toDate(a.dem),faltas:0,he:0,sexo:'',cc:'',alm:a.lunch?true:null,almIni:null,almFim:null,bat:null,atr:null,bh:null,nasc:toDate(a.nasc),ctr:'',fv:null,afk:a.adm==='*'?true:null})).map(e=>{if(e.afk)e.adm=new Date(today.getFullYear(),0,1);return e}).filter(e=>e.adm);
   const rooms=(p.rooms||[]).map(r=>({name:r.name,cap:r.cap||6,type:r.cap>8?'long':r.cap>5?'round':'small',meets:(r.meets||[]).map(m=>({ini:m.ini,fim:m.fim,assunto:m.assunto||'',desc:m.desc||'',resp:m.resp||'',n:m.n||0,ppl:(m.ppl||[]).map(id=>({x:String(id)}))}))}));
   return {list,rooms,co:(p.company&&p.company.name)||'',logo:(p.company&&p.company.logo)||''};
 }
