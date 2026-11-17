@@ -79,15 +79,31 @@ async function downloadFor(req: Request, paymentId: string): Promise<Response> {
   return json({ filename: `Recibo-ewvon-${number}.pdf`, base64: btoa(bin) });
 }
 
-async function sendReceipt(paymentId: string): Promise<string> {
+/** Super admin only: e-mails a receipt again (to the company's registered address or to another e-mail). */
+async function resendFor(req: Request, paymentId: string, to: string): Promise<Response> {
+  const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!token) return json({ error: 'Não autorizado' }, 401);
+  const { data: { user } } = await admin.auth.getUser(token);
+  if (!user) return json({ error: 'Não autorizado' }, 401);
+  const { data: sa } = await admin.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'super_admin').maybeSingle();
+  if (!sa) return json({ error: 'Somente o administrador do sistema pode reenviar recibos' }, 403);
+  if (to && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(to)) return json({ error: 'E-mail inválido' }, 400);
+  const result = await sendReceipt(paymentId, { force: true, to: to || undefined });
+  return result === 'enviado' ? json({ ok: true }) : json({ error: 'Não foi possível reenviar: ' + result }, 400);
+}
+
+async function sendReceipt(paymentId: string, opts: { force?: boolean; to?: string } = {}): Promise<string> {
   const { data: pay } = await admin.from('company_payments').select('*').eq('id', paymentId).maybeSingle();
   if (!pay) return 'pagamento não encontrado';
-  if (pay.receipt_sent_at) return 'já enviado';
-  if ((pay.receipt_attempts || 0) >= 5) return 'tentativas esgotadas';
-  await admin.from('company_payments').update({ receipt_attempts: (pay.receipt_attempts || 0) + 1 }).eq('id', pay.id);
+  if (!opts.force) {
+    if (pay.receipt_sent_at) return 'já enviado';
+    if ((pay.receipt_attempts || 0) >= 5) return 'tentativas esgotadas';
+    await admin.from('company_payments').update({ receipt_attempts: (pay.receipt_attempts || 0) + 1 }).eq('id', pay.id);
+  } else if (!pay.receipt_number) return 'recibo não encontrado';
   let built;
   try { built = await buildForPayment(pay); } catch (e) { return e instanceof Error ? e.message : String(e); }
-  const { pdf, number, company, signup, customer, addr, to } = built;
+  const { pdf, number, company, signup, customer, addr } = built;
+  const to = opts.to || built.to;
   if (!to) return 'sem destinatário';
   if (!mailerConfigured()) return 'e-mail não configurado';
 
@@ -109,7 +125,7 @@ async function sendReceipt(paymentId: string): Promise<string> {
   </div>`, `Recibo ${number} · ${brl(pay.amount_cents)}`);
 
   await sendMail({ to, subject: `ewvon · Recibo ${number} · pagamento confirmado`, html, attachments: [{ filename: `Recibo-ewvon-${number}.pdf`, content: pdf, contentType: 'application/pdf' }] });
-  await admin.from('company_payments').update({ receipt_sent_at: new Date().toISOString() }).eq('id', pay.id);
+  if (!opts.force || !pay.receipt_sent_at) await admin.from('company_payments').update({ receipt_sent_at: new Date().toISOString() }).eq('id', pay.id);
   return 'enviado';
 }
 
@@ -119,6 +135,7 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   try {
     if (body.download === true && typeof body.payment_id === 'string') return await downloadFor(req, body.payment_id);
+    if (body.resend === true && typeof body.payment_id === 'string') return await resendFor(req, body.payment_id, typeof body.to === 'string' ? body.to.trim().toLowerCase() : '');
     const { data: ok } = await admin.rpc('billing_cron_secret_ok', { _secret: req.headers.get('x-billing-cron') || '' });
     if (ok !== true) return json({ error: 'Unauthorized' }, 401);
     if (typeof body.payment_id === 'string') return json({ result: await sendReceipt(body.payment_id) });

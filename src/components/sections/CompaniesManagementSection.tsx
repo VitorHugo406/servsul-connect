@@ -3,7 +3,7 @@
 // The design's "Logs" tab / "Ver logs" were deliberately left out (each company's logs are confidential);
 // "Atividade recente" shows only payment and subscription events.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Download, Loader2, RefreshCw, Send, ShieldAlert } from 'lucide-react';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,7 +17,7 @@ import { optimizeImageFile } from '@/lib/imageOptimization';
 import { CompanyLogo } from '@/components/common/CompanyLogo';
 import { CompanyPlanPanel } from '@/components/companies/CompanyPlanPanel';
 import { Sel } from '@/components/ui/Sel';
-import { appConfirm } from '@/lib/appDialog';
+import { appConfirm, appPrompt } from '@/lib/appDialog';
 import { passwordError as passwordRuleError } from '@/lib/passwordPolicy';
 import { PasswordChecklist } from '@/components/common/PasswordChecklist';
 
@@ -33,6 +33,7 @@ interface CompanyUser { profile_id: string; user_id: string; name: string; displ
 interface Sub { company_id: string; plan_id: string | null; status: string; current_period_end: string | null; trial_ends_at: string | null; billing_cycle: string | null }
 interface PlanRow { id: string; name: string; price_cents: number; annual_price_cents: number | null; features: string[] }
 interface Payment { id: string; company_id: string; kind: string; description: string | null; amount_cents: number; paid_at: string; status: string; provider_payment_id: string | null; receipt_number: number | null }
+interface Receipt { id: string; company_id: string; kind: string; description: string | null; amount_cents: number; paid_at: string; status: string; provider_payment_id: string | null; receipt_number: number | null; receipt_sent_at: string | null }
 interface Signup { id: string; status: string; plan_id: string; amount_cents: number; company_name: string; admin_email: string; admin_name: string | null; error: string | null; attempts: number; created_at: string; activated_at: string | null; company_id: string | null; billing_cycle: string | null; paid_at: string | null }
 
 /** Modules the super admin can switch on/off; `feature` is the plan feature that unlocks it ("Fora do plano" otherwise). */
@@ -86,7 +87,10 @@ export function CompaniesManagementSection() {
   const { roles } = useAuth();
   const isSuperAdmin = roles.some((r: { role: string }) => (r.role as string) === 'super_admin');
 
-  const [tab, setTab] = useState<'emp' | 'ass'>('emp');
+  const [tab, setTab] = useState<'emp' | 'ass' | 'rec'>('emp');
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [recQ, setRecQ] = useState('');
+  const [recPer, setRecPer] = useState<'all' | 'month' | '90' | 'unsent'>('all');
   const [companies, setCompanies] = useState<CompanyStats[]>([]);
   const [subs, setSubs] = useState<Record<string, Sub>>({});
   const [plans, setPlans] = useState<PlanRow[]>([]);
@@ -119,12 +123,13 @@ export function CompaniesManagementSection() {
   const [sigDetail, setSigDetail] = useState<Signup | null>(null);
 
   const load = useCallback(async () => {
-    const [c, s, p, g, cr] = await Promise.all([
+    const [c, s, p, g, cr, rc] = await Promise.all([
       db.rpc('list_companies_with_stats'),
       db.from('company_subscriptions').select('company_id,plan_id,status,current_period_end,trial_ends_at,billing_cycle'),
       db.from('subscription_plans').select('id,name,price_cents,annual_price_cents,features'),
       db.from('company_signups').select('id,status,plan_id,amount_cents,company_name,admin_email,admin_name,error,attempts,created_at,activated_at,company_id,billing_cycle,paid_at').order('created_at', { ascending: false }).limit(200),
       db.from('companies').select('id,created_at'),
+      db.from('company_payments').select('id,company_id,kind,description,amount_cents,paid_at,status,provider_payment_id,receipt_number,receipt_sent_at').not('receipt_number', 'is', null).order('receipt_number', { ascending: false }).limit(1000),
     ]);
     if (c.error) toast.error('Não foi possível carregar as empresas.');
     const list = ((c.data || []) as CompanyStats[]).map((x) => ({ ...x, enabled_modules: x.enabled_modules ?? [] }));
@@ -132,6 +137,7 @@ export function CompaniesManagementSection() {
     setSubs(Object.fromEntries(((s.data || []) as Sub[]).map((x) => [x.company_id, x])));
     setPlans((p.data || []) as PlanRow[]);
     setSignups((g.data || []) as Signup[]);
+    setReceipts((rc.data || []) as Receipt[]);
     setCreated(Object.fromEntries(((cr.data || []) as { id: string; created_at: string }[]).map((x) => [x.id, x.created_at])));
     setLoading(false);
     return list;
@@ -199,7 +205,7 @@ export function CompaniesManagementSection() {
     if (error) { toast.error('Não foi possível remover o administrador.'); return; }
     toast.success('Administrador removido'); void loadDetail(sel.id); void load();
   };
-  const downloadReceipt = async (p: Payment) => {
+  const downloadReceipt = async (p: Payment | Receipt) => {
     setBusy('rec:' + p.id);
     try {
       const { data, error } = await supabase.functions.invoke('receipt', { body: { download: true, payment_id: p.id } });
@@ -210,6 +216,23 @@ export function CompaniesManagementSection() {
       const a = document.createElement('a'); a.href = url; a.download = (data as { filename?: string }).filename || 'recibo.pdf'; document.body.appendChild(a); a.click(); a.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 4000);
     } finally { setBusy(null); }
+  };
+  const resendReceipt = async (p: Receipt) => {
+    const sg = signups.find((x) => x.company_id === p.company_id);
+    const to = await appPrompt({ title: `Reenviar ${recNo(p.receipt_number)}`, message: 'O recibo em PDF vai por e-mail. Deixe o e-mail do administrador da empresa ou digite outro.', label: 'E-mail de destino', defaultValue: sg?.admin_email || '', placeholder: 'nome@empresa.com', confirmText: 'Reenviar', validate: (v) => (!v.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) ? null : 'Digite um e-mail válido.') });
+    if (to === null) return;
+    setBusy('snd:' + p.id);
+    const { data, error } = await supabase.functions.invoke('receipt', { body: { resend: true, payment_id: p.id, to: to.trim() } });
+    setBusy(null);
+    if (error || !(data as { ok?: boolean })?.ok) { toast.error(await fnError(error, data, 'Não foi possível reenviar o recibo.')); return; }
+    toast.success(`Recibo ${recNo(p.receipt_number)} reenviado`); void load();
+  };
+  const exportReceipts = (rows: Receipt[]) => {
+    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const nm = (id: string) => companies.find((c) => c.id === id)?.name || '';
+    const lines = [['Recibo', 'Empresa', 'Descrição', 'Data', 'Valor', 'Forma', 'ID do pagamento', 'Envio'], ...rows.map((r) => [recNo(r.receipt_number), nm(r.company_id), r.description || '', dLong(r.paid_at), (r.amount_cents / 100).toFixed(2).replace('.', ','), 'Mercado Pago', r.provider_payment_id || '', r.receipt_sent_at ? 'Enviado ' + dLong(r.receipt_sent_at) : 'Não enviado'])];
+    const blob = new Blob(['\ufeff' + lines.map((l) => l.map(esc).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'recibos-ewvon.csv'; document.body.appendChild(a); a.click(); a.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 4000);
   };
   const reconcile = async () => {
     setBusy('rec-all');
@@ -268,6 +291,17 @@ export function CompaniesManagementSection() {
   const monthly = signups.filter((s) => s.status === 'active').reduce((t, s) => t + (s.billing_cycle === 'annual' ? Math.round(s.amount_cents / 12) : s.amount_cents), 0);
   const sigShown = signups.filter((s) => sigFlt === 'all' || (sigFlt === 'error' ? (s.status === 'failed' || (!!s.error && !['active', 'canceled', 'expired'].includes(s.status))) : s.status === sigFlt));
   const openCompany = (id: string) => { setSelId(id); setTab('emp'); };
+  const compName = (id: string) => companies.find((c) => c.id === id)?.name || 'Empresa excluída';
+  const nowD = new Date(); const monthStart = new Date(nowD.getFullYear(), nowD.getMonth(), 1).getTime();
+  const PAID = ['approved', 'paid', 'confirmed'];
+  const recShown = receipts.filter((r) => {
+    const t = new Date(r.paid_at).getTime();
+    if (recPer === 'month' && t < monthStart) return false;
+    if (recPer === '90' && t < Date.now() - 90 * 864e5) return false;
+    if (recPer === 'unsent' && r.receipt_sent_at) return false;
+    const q2 = recQ.trim().toLowerCase();
+    return !q2 || [recNo(r.receipt_number), compName(r.company_id), r.description || '', r.provider_payment_id || ''].join(' ').toLowerCase().includes(q2);
+  });
 
   return (
     <div className="dk-pg ce-pg">
@@ -275,15 +309,62 @@ export function CompaniesManagementSection() {
         <div className="ce-tb">
           <button type="button" className={tab === 'emp' ? 'ce-on' : ''} onClick={() => setTab('emp')}>Empresas <em>{companies.length}</em></button>
           <button type="button" className={tab === 'ass' ? 'ce-on' : ''} onClick={() => setTab('ass')}>Assinaturas pelo site <em>{signups.length}</em></button>
+          <button type="button" className={tab === 'rec' ? 'ce-on' : ''} onClick={() => setTab('rec')}>Recibos <em>{receipts.length}</em></button>
         </div>
         <div className="ce-rt">
           {tab === 'emp'
             ? <button type="button" className="ce-btn ce-pri" onClick={() => setOpenNew(true)}>+ Nova empresa</button>
+            : tab === 'rec' ? <button type="button" className="ce-btn" onClick={() => exportReceipts(recShown)} disabled={!recShown.length}><Download className="h-4 w-4" />Exportar CSV</button>
             : <button type="button" className="ce-btn" onClick={() => void reconcile()} disabled={busy === 'rec-all'}><RefreshCw className={'h-4 w-4' + (busy === 'rec-all' ? ' animate-spin' : '')} />Conferir agora</button>}
         </div>
       </div>
 
-      {loading ? <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div> : tab === 'emp' ? (
+      {loading ? <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div> : tab === 'rec' ? (
+        <>
+          <div className="ce-panel ce-kp">
+            <div className="ce-k"><span>Recibos emitidos</span><b>{receipts.length}</b></div>
+            <div className="ce-k"><span>Total recebido</span><b>{brl(receipts.filter((r) => PAID.includes(r.status)).reduce((t, r) => t + r.amount_cents, 0))}</b></div>
+            <div className="ce-k"><span>Neste mês</span><b>{brl(receipts.filter((r) => PAID.includes(r.status) && new Date(r.paid_at).getTime() >= monthStart).reduce((t, r) => t + r.amount_cents, 0))}</b></div>
+            <div className="ce-k"><span>Não enviados</span><b>{receipts.filter((r) => !r.receipt_sent_at).length}</b></div>
+          </div>
+          <div className="ce-panel">
+            <div className="ce-sh">
+              <div><b>Recibos</b><p>Todos os recibos emitidos pelo ewvon. Baixe o PDF ou reenvie por e-mail quando precisar.</p></div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <input className="ce-srch" placeholder="Buscar recibo, empresa ou ID…" value={recQ} onChange={(e) => setRecQ(e.target.value)} aria-label="Buscar recibo" />
+                <div className="ce-fl">
+                  {([['all', 'Todos'], ['month', 'Este mês'], ['90', '90 dias'], ['unsent', 'Não enviados']] as const).map(([k, l]) => <button key={k} type="button" className={recPer === k ? 'ce-on' : ''} onClick={() => setRecPer(k)}>{l}</button>)}
+                </div>
+              </div>
+            </div>
+            {!recShown.length ? <div className="ce-empty">{receipts.length ? 'Nenhum recibo neste filtro.' : 'Nenhum recibo emitido ainda.'}</div> : (
+              <div className="ce-tw">
+                <table>
+                  <thead><tr><th>Recibo</th><th>Empresa</th><th>Data e hora</th><th>Valor</th><th>Pagamento</th><th>Envio por e-mail</th><th /></tr></thead>
+                  <tbody>
+                    {recShown.map((r) => (
+                      <tr key={r.id}>
+                        <td><span className="ce-mono">{recNo(r.receipt_number)}</span></td>
+                        <td><div className="ce-tt">{compName(r.company_id)}</div><div className="ce-su">{r.description || 'Pagamento'}</div></td>
+                        <td>{dLong(r.paid_at)}</td>
+                        <td><b style={{ fontWeight: 600 }}>{brl(r.amount_cents)}</b>{!PAID.includes(r.status) ? <div className="ce-er">{PAY_LABEL[r.status] || r.status}</div> : null}</td>
+                        <td><div>Mercado Pago</div><div className="ce-su">{r.provider_payment_id ? 'ID ' + r.provider_payment_id : '—'}</div></td>
+                        <td>{r.receipt_sent_at ? <span className="ce-chip ce-c-a">Enviado {dShort(r.receipt_sent_at)}</span> : <span className="ce-chip ce-c-e">Não enviado</span>}</td>
+                        <td>
+                          <div className="ce-acts2">
+                            <button type="button" className="ce-lk" disabled={busy === 'rec:' + r.id} onClick={() => void downloadReceipt(r)} title="Baixar PDF">{busy === 'rec:' + r.id ? <Loader2 className="inline h-4 w-4 animate-spin" /> : <Download className="inline h-4 w-4" />} Baixar</button>
+                            <button type="button" className="ce-lk" disabled={busy === 'snd:' + r.id} onClick={() => void resendReceipt(r)} title="Reenviar por e-mail">{busy === 'snd:' + r.id ? <Loader2 className="inline h-4 w-4 animate-spin" /> : <Send className="inline h-4 w-4" />} Reenviar</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      ) : tab === 'emp' ? (
         <>
           <div className="ce-panel ce-kp">
             <div className="ce-k"><span>Empresas ativas</span><b>{companies.filter((c) => c.is_active).length} <small>de {companies.length}</small></b></div>

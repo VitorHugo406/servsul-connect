@@ -20,7 +20,7 @@ export interface ReceiptData {
 const hex = (h: string) => { const n = parseInt(h.slice(1), 16); return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255); };
 const C = { navy: hex('#0E1A3A'), ink: hex('#1C2430'), gray: hex('#4A5563'), text3: hex('#3C4756'), line: hex('#C5CBD5'), soft: hex('#E3E6EB'), ok: hex('#0A6B3D'), foot: hex('#5A6472') };
 
-export const brl = (c: number) => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace(/ /g, ' ');
+export const brl = (c: number) => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace(/\u00a0/g, ' ');
 const brDate = (d: Date) => new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
 const longDate = (d: Date) => new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: 'numeric', month: 'long', year: 'numeric' }).format(d).replace(/ de /g, ' de ');
 
@@ -77,7 +77,7 @@ export async function buildReceiptPdf(d: ReceiptData): Promise<Uint8Array> {
     sansR = await pdf.embedFont(StandardFonts.Helvetica); sansM = sansR; sansS = await pdf.embedFont(StandardFonts.HelveticaBold); sansB = sansS;
     serifR = await pdf.embedFont(StandardFonts.TimesRoman); serifS = await pdf.embedFont(StandardFonts.TimesRomanBold);
   }
-  const clean = (s: string) => (std ? s.replace(/[^\u0009\u000a -~ -ÿ—–]/g, '') : s);
+  const clean = (s: string) => (std ? s.replace(/[^\u0009\u000a -~\u00a0-\u00ff\u2014\u2013]/g, '') : s);
 
   // design px (top-left origin) -> pt
   const X = (x: number) => x * S, Y = (y: number) => H - y * S;
