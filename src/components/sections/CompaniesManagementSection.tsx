@@ -382,7 +382,9 @@ export function CompaniesManagementSection() {
               </div>
               {shown.map((c) => (
                 <button key={c.id} type="button" className={'ce-li' + (c.id === selId ? ' ce-sel' : '')} onClick={() => setSelId(c.id)}>
-                  <span className="ce-tl" style={c.is_active ? { background: c.primary_color, color: ink(c.primary_color) } : { background: '#8A94A3', color: '#fff' }}>{initial(c.name)}</span>
+                  {c.logo_url
+                    ? <span className={'ce-tl ce-tl-logo' + (c.is_active ? '' : ' ce-tl-off')}><CompanyLogo value={c.logo_url} alt={c.name} fallback={<span className="ce-tl-ini" style={{ background: c.primary_color, color: ink(c.primary_color) }}>{initial(c.name)}</span>} /></span>
+                    : <span className="ce-tl" style={c.is_active ? { background: c.primary_color, color: ink(c.primary_color) } : { background: '#8A94A3', color: '#fff' }}>{initial(c.name)}</span>}
                   <span className="ce-lt">
                     <span className="ce-ti">{c.name} {c.is_system ? <span className="ce-chip ce-c-s">Sistema</span> : !c.is_active ? <span className="ce-chip ce-c-c">Inativa</span> : null}</span>
                     <span className="ce-su">{c.slug} · {c.active_users} {c.active_users === 1 ? 'ativo' : 'ativos'} de {c.total_users}</span>
@@ -395,7 +397,7 @@ export function CompaniesManagementSection() {
             {form && sel ? (
               <main className="ce-panel" aria-label="Dados da empresa">
                 <div className="ce-dh">
-                  <div className="ce-big" style={{ background: sel.primary_color, color: ink(sel.primary_color) }}>{sel.logo_url ? <CompanyLogo value={sel.logo_url} alt={sel.name} /> : initial(sel.name)}</div>
+                  <div className="ce-big" style={sel.logo_url ? { background: '#fff', border: '1px solid #E3E6EB', padding: 6 } : { background: sel.primary_color, color: ink(sel.primary_color) }}>{sel.logo_url ? <CompanyLogo value={sel.logo_url} alt={sel.name} fallback={<>{initial(sel.name)}</>} /> : initial(sel.name)}</div>
                   <div>
                     <h2>{sel.name} {sel.is_system ? <span className="ce-chip ce-c-s">Sistema</span> : <span className={'ce-chip ' + (sel.is_active ? 'ce-c-a' : 'ce-c-c')}>{sel.is_active ? 'Ativa' : 'Inativa'}</span>}</h2>
                     <div className="ce-su">{sel.slug} · {plural(sel.active_users, 'usuário ativo', 'usuários ativos')} · {sel.total_users} total · {plural(sel.admins, 'administrador', 'administradores')}</div>
