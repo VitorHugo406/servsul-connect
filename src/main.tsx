@@ -17,6 +17,7 @@ import "./styles/billing.css";
 import "./styles/companies.css";
 import "./styles/task-murals.css";
 import "./styles/notes.css";
+import "./styles/people.css";
 import "./chat-life.css";
 import "./focus-mode.css";
 import "./styles/buttons.css";

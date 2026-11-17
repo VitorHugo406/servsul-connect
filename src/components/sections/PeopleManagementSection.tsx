@@ -1,634 +1,237 @@
-import { Switch } from "@/components/ui/switch";
-import { TabMark3D } from '@/components/common/TabMark3D';
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Users, UserPlus, Trash2, BarChart3, MessageSquare, ListTodo, Award, Search, CalendarDays, AlertTriangle, Bell, X, Trophy, CheckCheck, Filter, Edit2, Save, Clock, Plus, BellRing, BellOff } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CardGridSkeleton, StatsSkeleton, ChartSkeleton, ListSkeleton } from '@/components/ui/skeletons';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useEffect, useMemo, useState } from 'react';
+import { Users, UserPlus, Trash2, Search, CalendarDays, AlertTriangle, Bell, X, CheckCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ListSkeleton } from '@/components/ui/skeletons';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupervisorTeam } from '@/hooks/useSupervisorTeam';
-import { useTeamAnalytics } from '@/hooks/useTeamAnalytics';
 import { useWorkloadAlerts } from '@/hooks/useWorkloadAlerts';
 import { useTeams } from '@/hooks/useTeams';
+import { usePeopleStats, type PersonStats } from '@/hooks/usePeopleStats';
+import { useGlobalScores } from '@/hooks/useBoardScores';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import { useGlobalScores } from '@/hooks/useBoardScores';
-import type { MemberScore, MonthlyScoreEntry } from '@/hooks/useBoardScores';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-} from 'recharts';
-import { appConfirm, appPrompt } from '@/lib/appDialog';
+import { appConfirm } from '@/lib/appDialog';
 import { Sel } from '@/components/ui/Sel';
 
-const CHART_COLORS = [
-  'hsl(var(--primary))',
-  'hsl(var(--secondary))',
-  'hsl(142, 76%, 36%)',
-  'hsl(38, 92%, 50%)',
-  'hsl(0, 72%, 51%)',
-  'hsl(270, 76%, 55%)',
+/* Gestão de Pessoas — port of the owner's design "Gestão de pessoas" (Tela_de_Avisos_10): teams on the left, the selected
+   team's data on the right (header, KPIs, Equipe / Alertas / Relatórios / Atividades / Score). Atividades keeps its
+   day-by-day timeline. CSS: src/styles/people.css (prefix gp-). */
+
+const sb = supabase as any;
+type Tab = 'team' | 'alerts' | 'reports' | 'activities' | 'score';
+const ALERT_TYPES: { key: string; t: string; d: string }[] = [
+  { key: 'late_task', t: 'Tarefas atrasadas', d: 'Cards com prazo vencido.' },
+  { key: 'deadline_risk', t: 'Prazos nos próximos 2 dias', d: 'Avisa antes do vencimento.' },
+  { key: 'stuck_task', t: 'Cards parados', d: 'Sem nenhuma alteração há 3 dias ou mais.' },
+  { key: 'overloaded', t: 'Sobrecarga', d: 'Pessoa com 5 ou mais cards em aberto.' },
 ];
+const DAYS: [number, string][] = [[1, 'Seg'], [2, 'Ter'], [3, 'Qua'], [4, 'Qui'], [5, 'Sex'], [6, 'Sáb'], [0, 'Dom']];
+const SLOTS = Array.from({ length: 48 }, (_, i) => `${String(Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`);
+const DONUT = ['#2F6FD1', '#6C5CE7', '#1B2340', '#0A8F7A', '#C77700', '#B3261E', '#5A6472', '#8E44AD'];
+const ini = (n: string) => (n || '?').trim().charAt(0).toUpperCase();
+const first = (n: string) => (n || '').split(' ')[0];
+const fmtWhen = (iso: string | null) => {
+  if (!iso) return '—';
+  const d = new Date(iso), now = new Date();
+  const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const hm = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const diff = (day(now) - day(d)) / 864e5;
+  if (diff === 0) return `hoje, ${hm}`;
+  if (diff === 1) return `ontem, ${hm}`;
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', ...(d.getFullYear() !== now.getFullYear() ? { year: '2-digit' } : {}) });
+};
+
+function Sw({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
+  return <button type="button" role="switch" aria-checked={on} aria-label={label} className={'gp-sw' + (on ? ' gp-on' : '')} onClick={() => onChange(!on)}><i /></button>;
+}
+function Av({ name, url, size, dark }: { name: string; url?: string | null; size?: number; dark?: boolean }) {
+  const st = size ? { width: size, height: size, ...(dark ? { background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' } : {}) } : undefined;
+  return <span className="gp-av" style={st}>{url ? <img src={url} alt="" /> : ini(name)}</span>;
+}
 
 export function PeopleManagementSection() {
   const { profile, user } = useAuth();
-  const isMobile = useIsMobile();
-  const { teams, selectedTeam, selectedTeamId, setSelectedTeamId, createTeam, updateTeam, deleteTeam } = useTeams();
+  const { teams, selectedTeam, selectedTeamId, setSelectedTeamId, createTeam, updateTeam, deleteTeam, refreshTeams } = useTeams();
   const { members, loading, addMember, removeMember } = useSupervisorTeam(selectedTeamId);
-  const memberIds = members.map(m => m.member_profile_id);
-  const { analytics, loading: analyticsLoading } = useTeamAnalytics(memberIds);
-  const [alertsEnabled, setAlertsEnabled] = useState<boolean>(!!(profile as any)?.team_alerts_enabled);
-  const [alertTimes, setAlertTimes] = useState<string[]>((profile as any)?.team_alert_times || ["09:00"]);
-  const updateAlertTimes = async (times: string[]) => { setAlertTimes(times); if (profile) await supabase.from("profiles").update({ team_alert_times: times } as any).eq("id", profile.id); };
-  useEffect(() => { if (!profile?.id) return; supabase.from('profiles').select('team_alerts_enabled, team_alert_times').eq('id', profile.id).maybeSingle().then(({ data }: any) => { if (data) { setAlertsEnabled(!!data.team_alerts_enabled); if (data.team_alert_times?.length) setAlertTimes(data.team_alert_times); } }); }, [profile?.id]);
-  const toggleAlerts = async (v: boolean) => {
-    setAlertsEnabled(v);
-    if (profile) await supabase.from('profiles').update({ team_alerts_enabled: v } as any).eq('id', profile.id);
-  };
-  const { alerts, unreadCount, markAsRead, dismissAlert } = useWorkloadAlerts(alertsEnabled ? memberIds : []);
-  const { scores: globalScores, monthlyHistory: globalScoreHistory, loading: globalScoresLoading } = useGlobalScores(memberIds);
-  
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [allProfiles, setAllProfiles] = useState<any[]>([]);
-  const [profilesLoading, setProfilesLoading] = useState(false);
-  const [teamName, setTeamName] = useState('');
-  const [editingTeamName, setEditingTeamName] = useState(false);
-  const [savingTeamName, setSavingTeamName] = useState(false);
+  const memberIds = useMemo(() => members.map((m) => m.member_profile_id), [members]);
+  const [tab, setTab] = useState<Tab>('team');
+  const [days, setDays] = useState(30);
+  const [who, setWho] = useState('');
+  const { stats, loading: statsLoading } = usePeopleStats(memberIds, days);
+  const { scores, loading: scoresLoading } = useGlobalScores(memberIds);
+  const { alerts, unreadCount, markAsRead, dismissAlert } = useWorkloadAlerts(memberIds);
 
-  const saveTeamName = async () => {
-    if (!selectedTeam || !teamName.trim()) return;
-    setSavingTeamName(true);
-    await updateTeam(selectedTeam.id, { name: teamName.trim() });
-    setEditingTeamName(false);
-    setSavingTeamName(false);
-  };
-
-  const getInitials = (name: string) =>
-    name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-
-  const fetchAvailableProfiles = async () => {
-    setProfilesLoading(true);
-    try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, name, display_name, avatar_url, email, autonomy_level')
-        .eq('is_active', true)
-        .order('name');
-      setAllProfiles(data || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setProfilesLoading(false);
-    }
+  // left list: search, inline "Nova equipe", member counts per team
+  const [q, setQ] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const ids = teams.map((t) => t.id);
+    if (!ids.length) { setCounts({}); return; }
+    sb.from('supervisor_team_members').select('team_id').in('team_id', ids).then(({ data }: any) => {
+      const c: Record<string, number> = {}; (data || []).forEach((r: any) => { c[r.team_id] = (c[r.team_id] || 0) + 1; }); setCounts(c);
+    });
+  }, [teams, members.length]);
+  const shown = teams.filter((t) => t.name.toLowerCase().includes(q.trim().toLowerCase()));
+  const doCreate = async () => {
+    const n = newName.trim();
+    if (n.length < 2) { toast({ title: 'Use pelo menos 2 caracteres no nome.' }); return; }
+    if (teams.some((t) => t.name.trim().toLowerCase() === n.toLowerCase())) { toast({ title: 'Já existe uma equipe com esse nome.' }); return; }
+    const t = await createTeam(n);
+    if (t) { setSelectedTeamId(t.id); setCreating(false); setNewName(''); }
   };
 
-  const handleAddMember = async (profileId: string) => {
-    const result = await addMember(profileId);
-    if (result?.error) {
-      toast({ title: 'Erro', description: 'Não foi possível adicionar o colaborador.', variant: 'destructive' });
-    } else {
-      toast({ title: 'Colaborador adicionado à sua equipe.' });
-    }
+  // header: rename / delete
+  const [renaming, setRenaming] = useState(false);
+  const [ren, setRen] = useState('');
+  const saveRename = async () => { if (selectedTeam && ren.trim().length >= 2) await updateTeam(selectedTeam.id, { name: ren.trim() }); setRenaming(false); };
+  useEffect(() => { setRenaming(false); setWho(''); }, [selectedTeamId]);
+
+  // team alert settings (stored on the team; the scheduler sends them at the chosen hours/days)
+  const T: any = selectedTeam || {};
+  const alertsOn = T.alerts_enabled !== false;
+  const saveTeam = async (patch: Record<string, unknown>) => {
+    if (!selectedTeam) return;
+    const { error } = await sb.from('teams').update(patch).eq('id', selectedTeam.id);
+    if (error) { toast({ title: 'Não foi possível salvar.', variant: 'destructive' }); return; }
+    await refreshTeams();
   };
 
-  const handleRemoveMember = async (id: string) => {
-    const result = await removeMember(id);
-    if (result?.error) {
-      toast({ title: 'Erro', description: 'Não foi possível remover o colaborador.', variant: 'destructive' });
-    } else {
-      toast({ title: 'Colaborador removido da equipe.' });
-    }
-  };
-
-  const openAddDialog = () => {
+  // add-member dialog
+  const [showAdd, setShowAdd] = useState(false);
+  const [search, setSearch] = useState('');
+  const [all, setAll] = useState<any[]>([]);
+  const [allLoading, setAllLoading] = useState(false);
+  const openAdd = async () => {
     if (!selectedTeamId) { toast({ title: 'Crie uma equipe primeiro', description: 'Use o botão "+ Nova equipe".' }); return; }
-    setShowAddDialog(true);
-    fetchAvailableProfiles();
+    setShowAdd(true); setAllLoading(true);
+    const { data } = await sb.from('profiles').select('id, name, display_name, avatar_url, email, autonomy_level').eq('is_active', true).order('name');
+    setAll(data || []); setAllLoading(false);
   };
+  const candidates = all.filter((p) => !memberIds.includes(p.id) && p.id !== profile?.id && `${p.name || ''} ${p.display_name || ''} ${p.email || ''}`.toLowerCase().includes(search.toLowerCase()));
 
-  const filteredProfiles = allProfiles.filter(p => {
-    if (members.some(m => m.member_profile_id === p.id)) return false;
-    if (p.id === profile?.id) return false;
-    const query = searchQuery.toLowerCase();
-    return (p.name?.toLowerCase().includes(query) || p.display_name?.toLowerCase().includes(query) || p.email?.toLowerCase().includes(query));
-  });
-
-  // Chart data
-  const taskChartData = analytics
-    .sort((a, b) => b.taskCount - a.taskCount)
-    .map(a => ({
-      name: a.displayName || a.name.split(' ')[0],
-      tarefas: a.taskCount,
-      concluídas: a.completedTasks,
-    }));
-
-  const messageChartData = analytics
-    .sort((a, b) => b.messageCount - a.messageCount)
-    .map(a => ({
-      name: a.displayName || a.name.split(' ')[0],
-      mensagens: a.messageCount,
-    }));
-
-  const interactionData = analytics.map(a => ({
-    name: a.displayName || a.name.split(' ')[0],
-    value: a.messageCount + a.taskCount + a.announcementComments,
-  })).filter(d => d.value > 0);
-
-  const totalTasks = analytics.reduce((sum, a) => sum + a.taskCount, 0);
-  const totalCompleted = analytics.reduce((sum, a) => sum + a.completedTasks, 0);
-  const totalMessages = analytics.reduce((sum, a) => sum + a.messageCount, 0);
-  const totalInteractions = analytics.reduce((sum, a) => sum + a.messageCount + a.taskCount + a.announcementComments, 0);
+  // numbers
+  const S = (id: string) => stats.find((s) => s.profileId === id);
+  const tot = stats.reduce((a, s) => ({ tasks: a.tasks + s.tasks, done: a.done + s.completed, msgs: a.msgs + s.messages, inter: a.inter + s.messages + s.tasks + s.comments }), { tasks: 0, done: 0, msgs: 0, inter: 0 });
+  const scoreOf = (id: string) => scores.find((s) => s.profileId === id)?.score;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-6 space-y-6">
-      <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <TabMark3D icon={<Users />} /><h1 className="text-[22px] font-semibold leading-7 text-foreground">Gestão de Pessoas</h1>
-            {editingTeamName ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  value={teamName}
-                  onChange={e => setTeamName(e.target.value)}
-                  placeholder="Nome da equipe..."
-                  className="h-8 w-48 text-sm"
-                  onKeyDown={e => e.key === 'Enter' && saveTeamName()}
-                />
-                <Button size="icon" className="h-8 w-8" onClick={saveTeamName} disabled={savingTeamName}>
-                  <Save className="h-3.5 w-3.5" />
-                </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamName(false)}>
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ) : selectedTeam ? (
-              <Button size="sm" variant="ghost" className="gap-1.5 text-xs text-muted-foreground" onClick={() => { setTeamName(selectedTeam.name); setEditingTeamName(true); }}>
-                <Edit2 className="h-3 w-3" />
-                Renomear
-              </Button>
-            ) : null}
-            {selectedTeam && !editingTeamName && (
-              <Button size="sm" variant="ghost" className="gap-1.5 text-xs text-destructive" onClick={async () => { if (await appConfirm({ title: `Excluir a equipe "${selectedTeam.name}"?`, message: 'Os membros serão desvinculados da equipe.', confirmText: 'Excluir equipe', danger: true })) await deleteTeam(selectedTeam.id); }}>
-                <Trash2 className="h-3 w-3" />
-                Excluir
-              </Button>
-            )}
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            {teams.length > 0 && (
-              <Sel
-                value={selectedTeamId || ''}
-                onChange={e => setSelectedTeamId(e.target.value)}
-                className="h-8 rounded-lg border border-input bg-background px-3 text-sm text-foreground"
-              >
-                {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </Sel>
-            )}
-            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={async () => {
-              const name = await appPrompt({ title: 'Nova equipe', message: 'Dê um nome para a equipe. Depois você adiciona os membros.', label: 'Nome da equipe', placeholder: 'Ex.: Equipe Comercial', maxLength: 60, confirmText: 'Criar equipe', validate: (v) => v.length < 2 ? 'Use pelo menos 2 caracteres.' : teams.some((t) => t.name.trim().toLowerCase() === v.toLowerCase()) ? 'Já existe uma equipe com esse nome.' : null });
-              if (name?.trim()) { const t = await createTeam(name.trim()); if (t) setSelectedTeamId(t.id); }
-            }}>+ Nova equipe</Button>
-            <div className="flex items-center gap-4">
-              <div className="flex h-8 items-center gap-2 rounded-lg border border-border bg-background px-3">
-                {alertsEnabled ? <BellRing className="h-3.5 w-3.5 text-primary" /> : <BellOff className="h-3.5 w-3.5 text-muted-foreground" />}
-                <span className="text-xs font-medium">{alertsEnabled ? "Alertas Ativos" : "Alertas Inativos"}</span>
-                <Switch checked={alertsEnabled} onCheckedChange={toggleAlerts} className="scale-75" />
-              </div>
-              
-              {alertsEnabled && (
-                <div className="flex items-center gap-2">
-                  {alertTimes.map((time, idx) => (
-                    <div key={idx} className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded-md text-[10px] font-bold">
-                      <Clock className="h-3 w-3" />
-                      <input 
-                        type="time" 
-                        value={time} 
-                        onChange={(e) => {
-                          const newTimes = [...alertTimes];
-                          newTimes[idx] = e.target.value;
-                          updateAlertTimes(newTimes);
-                        }}
-                        className="bg-transparent border-none p-0 w-[45px] focus:ring-0"
-                      />
-                      {alertTimes.length > 1 && (
-                        <button onClick={() => updateAlertTimes(alertTimes.filter((_, i) => i !== idx))} className="hover:text-destructive">
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  {alertTimes.length < 3 && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full bg-muted" onClick={() => updateAlertTimes([...alertTimes, "09:00"])}>
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+    <div className="dk-pg gp-pg">
+      {/* ---------- equipes ---------- */}
+      <aside className="gp-panel gp-side">
+        <div className="gp-sh">
+          <input className="gp-srch" placeholder="Buscar equipe..." aria-label="Buscar equipe" value={q} onChange={(e) => setQ(e.target.value)} />
+          <button type="button" className="gp-btn gp-pri" onClick={() => setCreating(true)}>+ Nova equipe</button>
         </div>
-        <Button onClick={openAddDialog} className="gap-2">
-          <UserPlus className="h-4 w-4" />
-          Adicionar Colaborador
-        </Button>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-l-4 border-l-primary">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Equipe</p>
-            <p className="font-display text-2xl font-bold text-foreground">{members.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-secondary">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Total de Tarefas</p>
-            <p className="font-display text-2xl font-bold text-foreground">{totalTasks}</p>
-            <p className="text-xs text-muted-foreground">{totalCompleted} concluídas</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4" style={{ borderLeftColor: 'hsl(142, 76%, 36%)' }}>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Mensagens Enviadas</p>
-            <p className="font-display text-2xl font-bold text-foreground">{totalMessages}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4" style={{ borderLeftColor: 'hsl(38, 92%, 50%)' }}>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Interações Totais</p>
-            <p className="font-display text-2xl font-bold text-foreground">{totalInteractions}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="team" className="w-full">
-        <TabsList className={cn("flex-wrap", isMobile && "grid grid-cols-3 h-auto gap-1")}>
-          <TabsTrigger value="team" className={cn("gap-1.5", isMobile && "text-[11px] px-2 py-1.5")}><Users className={cn(isMobile ? "h-3 w-3" : "h-4 w-4")} /> Equipe</TabsTrigger>
-          <TabsTrigger value="alerts" className={cn("gap-1.5 relative", isMobile && "text-[11px] px-2 py-1.5")}>
-            <AlertTriangle className={cn(isMobile ? "h-3 w-3" : "h-4 w-4")} /> Alertas
-            {unreadCount > 0 && (
-              <Badge className="ml-0.5 h-4 w-4 p-0 flex items-center justify-center text-[8px] bg-destructive text-destructive-foreground">
-                {unreadCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="reports" className={cn("gap-1.5", isMobile && "text-[11px] px-2 py-1.5")}><BarChart3 className={cn(isMobile ? "h-3 w-3" : "h-4 w-4")} /> Relatórios</TabsTrigger>
-          <TabsTrigger value="activities" className={cn("gap-1.5", isMobile && "text-[11px] px-2 py-1.5")}><CalendarDays className={cn(isMobile ? "h-3 w-3" : "h-4 w-4")} /> Atividades</TabsTrigger>
-          <TabsTrigger value="score" className={cn("gap-1.5", isMobile && "text-[11px] px-2 py-1.5")}><Trophy className={cn(isMobile ? "h-3 w-3" : "h-4 w-4")} /> Score</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="team" className="mt-4">
-          {loading ? (
-            <CardGridSkeleton count={6} cardHeight="h-20" />
-          ) : members.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                <h4 className="text-lg font-semibold">Nenhum colaborador adicionado</h4>
-                <p className="text-muted-foreground mt-1">Adicione membros da sua equipe para acompanhar métricas.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {members.map(member => {
-                const a = analytics.find(an => an.profileId === member.member_profile_id);
-                return (
-                  <motion.div key={member.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                    <Card className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={member.profile.avatar_url || ''} />
-                              <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                                {getInitials(member.profile.display_name || member.profile.name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium text-foreground text-sm">
-                                {member.profile.display_name || member.profile.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">{member.profile.email}</p>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => handleRemoveMember(member.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        {a && (
-                          <div className="mt-3 grid grid-cols-3 gap-2">
-                            <div className="flex items-center gap-1 text-xs">
-                              <ListTodo className="h-3 w-3 text-primary" />
-                              <span>{a.taskCount} tarefas</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-xs">
-                              <MessageSquare className="h-3 w-3 text-secondary" />
-                              <span>{a.messageCount} msgs</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-xs">
-                              <Award className="h-3 w-3 text-green-500" />
-                              <span>{a.completedTasks} feitas</span>
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
+        <div className="gp-list">
+          {creating && (
+            <div className="gp-nw">
+              <div className="gp-lab">Nova equipe</div>
+              <input className="gp-in gp-fc" autoFocus placeholder="Nome da equipe" maxLength={60} value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void doCreate(); if (e.key === 'Escape') setCreating(false); }} />
+              <div className="gp-nb">
+                <button type="button" className="gp-btn gp-sm" onClick={() => { setCreating(false); setNewName(''); }}>Cancelar</button>
+                <button type="button" className="gp-btn gp-sm gp-pri" onClick={() => void doCreate()}>Criar equipe</button>
+              </div>
             </div>
           )}
-        </TabsContent>
+          {shown.map((t: any) => (
+            <button type="button" key={t.id} className={'gp-li' + (t.id === selectedTeamId ? ' gp-sel' : '')} onClick={() => setSelectedTeamId(t.id)}>
+              <span className="gp-tl">{ini(t.name)}</span>
+              <span className="gp-lt"><span className="gp-ti">{t.name}</span><span className="gp-su">{counts[t.id] || 0} colaborador{(counts[t.id] || 0) === 1 ? '' : 'es'} · Alertas {t.alerts_enabled === false ? 'inativos' : 'ativos'}</span></span>
+            </button>
+          ))}
+          {!teams.length && !creating && <div className="gp-empty"><b>Nenhuma equipe ainda</b>Crie a primeira em “+ Nova equipe”.</div>}
+        </div>
+        <div className="gp-cnt">{teams.length} equipe{teams.length === 1 ? '' : 's'}</div>
+      </aside>
 
-        <TabsContent value="alerts" className="mt-4">
-          {alerts.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Bell className="h-12 w-12 text-muted-foreground mb-4" />
-                <h4 className="text-lg font-semibold">Nenhum alerta</h4>
-                <p className="text-muted-foreground mt-1">Alertas de sobrecarga, atrasos e cards parados aparecerão aqui.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {/* Bulk actions */}
-              <div className={cn("flex gap-2", isMobile ? "flex-col" : "flex-row items-center justify-between")}>
-                <p className="text-sm text-muted-foreground">{alerts.length} alerta(s) • {unreadCount} não lido(s)</p>
-                <div className="flex gap-2">
-                  {unreadCount > 0 && (
-                    <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
-                      alerts.filter(a => !a.is_read).forEach(a => markAsRead(a.id));
-                    }}>
-                      <CheckCheck className="h-3.5 w-3.5" /> Ler tudo
-                    </Button>
-                  )}
-                  <Button variant="outline" size="sm" className="gap-1.5 text-xs text-destructive hover:text-destructive" onClick={async () => {
-                    if (await appConfirm({ title: `Excluir todos os ${alerts.length} alertas?`, confirmText: 'Excluir tudo', danger: true })) {
-                      alerts.forEach(a => dismissAlert(a.id));
-                    }
-                  }}>
-                    <Trash2 className="h-3.5 w-3.5" /> Excluir tudo
-                  </Button>
-                </div>
-              </div>
+      {/* ---------- dados da equipe ---------- */}
+      <main className="gp-panel gp-main">
+        {!selectedTeam ? (
+          <div className="gp-empty" style={{ margin: 'auto' }}><b>Selecione ou crie uma equipe</b>As métricas da equipe aparecem aqui.</div>
+        ) : (<>
+          <div className="gp-dh">
+            <span className="gp-big"><Users className="h-6 w-6" /></span>
+            <h2>
+              {renaming
+                ? <input className="gp-in gp-ren" autoFocus value={ren} maxLength={60} onChange={(e) => setRen(e.target.value)} onBlur={() => void saveRename()} onKeyDown={(e) => { if (e.key === 'Enter') void saveRename(); if (e.key === 'Escape') setRenaming(false); }} />
+                : selectedTeam.name}
+              <span className={alertsOn ? 'gp-ok' : 'gp-off'}>Alertas {alertsOn ? 'ativos' : 'inativos'}</span>
+            </h2>
+            <button type="button" className="gp-lk" onClick={() => { setRen(selectedTeam.name); setRenaming(true); }}>Renomear</button>
+            <button type="button" className="gp-lk gp-dg" onClick={async () => { if (await appConfirm({ title: `Excluir a equipe "${selectedTeam.name}"?`, message: 'Os membros serão desvinculados da equipe.', confirmText: 'Excluir equipe', danger: true })) await deleteTeam(selectedTeam.id); }}>Excluir</button>
+            <div className="gp-acts"><button type="button" className="gp-btn gp-pri" onClick={() => void openAdd()}><UserPlus className="h-4 w-4" /> Adicionar colaborador</button></div>
+          </div>
+          <div className="gp-kp">
+            <div className="gp-k"><span>Equipe</span><b>{members.length}</b></div>
+            <div className="gp-k"><span>Total de tarefas</span><b>{tot.tasks}</b><small>{tot.done} concluídas</small></div>
+            <div className="gp-k"><span>Taxa de conclusão</span><b>{tot.tasks ? Math.round((tot.done / tot.tasks) * 100) : 0}%</b></div>
+            <div className="gp-k"><span>Mensagens enviadas</span><b>{tot.msgs}</b></div>
+            <div className="gp-k"><span>Interações totais</span><b>{tot.inter}</b></div>
+          </div>
+          <nav className="gp-nav" aria-label="Seções">
+            {([['team', 'Equipe'], ['alerts', 'Alertas'], ['reports', 'Relatórios'], ['activities', 'Atividades'], ['score', 'Score']] as [Tab, string][]).map(([k, l]) => (
+              <button type="button" key={k} className={tab === k ? 'gp-on' : ''} onClick={() => setTab(k)}>{l}{k === 'alerts' && unreadCount > 0 ? ` (${unreadCount})` : ''}</button>
+            ))}
+          </nav>
 
-              <div className="space-y-2">
-                {alerts.map(alert => {
-                  const member = analytics.find(a => a.profileId === alert.profile_id);
+          {tab === 'team' && (loading || statsLoading ? <div className="gp-act"><ListSkeleton rows={5} /></div> : !members.length ? (
+            <div className="gp-empty"><b>Nenhum colaborador nesta equipe</b>Use “Adicionar colaborador” para acompanhar as métricas.</div>
+          ) : (<>
+            <table>
+              <thead><tr><th>Colaborador</th><th>Tarefas</th><th>Concluídas</th><th>Mensagens</th><th>Interações</th><th>Score</th><th>Última atividade</th><th /></tr></thead>
+              <tbody>
+                {members.map((m) => {
+                  const s = S(m.member_profile_id); const name = m.profile.display_name || m.profile.name;
+                  const pct = s && s.tasks ? Math.round((s.completed / s.tasks) * 100) : 0;
                   return (
-                    <Card key={alert.id} className={alert.is_read ? 'opacity-60' : ''}>
-                      <CardContent className={cn("flex items-start gap-3", isMobile ? "p-2" : "p-3")}>
-                        <div className={`mt-0.5 rounded-full p-1.5 flex-shrink-0 ${
-                          alert.alert_type === 'overloaded' ? 'bg-destructive/10 text-destructive' :
-                          alert.alert_type === 'deadline_risk' ? 'bg-orange-500/10 text-orange-500' :
-                          'bg-yellow-500/10 text-yellow-500'
-                        }`}>
-                          <AlertTriangle className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                            <Badge variant="outline" className="text-[10px]">
-                              {alert.alert_type === 'overloaded' ? 'Sobrecarga' :
-                               alert.alert_type === 'deadline_risk' ? 'Prazo' :
-                               alert.alert_type === 'stuck_task' ? 'Parado' : 'Atraso'}
-                            </Badge>
-                            {member && <span className="text-xs text-muted-foreground">{member.displayName || member.name}</span>}
-                          </div>
-                          <p className="text-sm">{alert.message}</p>
-                          <p className="text-[10px] text-muted-foreground mt-1">
-                            {new Date(alert.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                        <div className="flex gap-1 flex-shrink-0">
-                          {!alert.is_read && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => markAsRead(alert.id)} title="Marcar como lido">
-                              <Bell className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => dismissAlert(alert.id)} title="Dispensar">
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <tr key={m.id}>
+                      <td><div className="gp-pe"><Av name={name} url={m.profile.avatar_url} /><div><div className="gp-ti">{name}</div><div className="gp-su">{m.profile.email}</div></div></div></td>
+                      <td>{s?.tasks ?? 0}</td>
+                      <td><div className="gp-mb">{s?.completed ?? 0}<i style={{ ['--p' as any]: pct + '%' }} /></div></td>
+                      <td>{s?.messages ?? 0}</td>
+                      <td>{s ? s.messages + s.tasks + s.comments : 0}</td>
+                      <td><b>{scoreOf(m.member_profile_id) ?? '—'}</b></td>
+                      <td>{fmtWhen(s?.lastActivity ?? null)}</td>
+                      <td className="gp-r"><button type="button" className="gp-ic" title="Remover da equipe" aria-label={`Remover ${name} da equipe`} onClick={async () => { if (await appConfirm({ title: `Remover ${name} da equipe?`, confirmText: 'Remover', danger: true })) { const r = await removeMember(m.id); toast({ title: r?.error ? 'Não foi possível remover o colaborador.' : 'Colaborador removido da equipe.' }); } }}><Trash2 className="h-4 w-4" /></button></td>
+                    </tr>
                   );
                 })}
-              </div>
-            </div>
-          )}
-        </TabsContent>
+              </tbody>
+            </table>
+            <div className="gp-ft"><span>{members.length} colaborador{members.length === 1 ? '' : 'es'}</span><span>Interações = mensagens + tarefas + comentários em avisos</span></div>
+          </>))}
 
-        <TabsContent value="reports" className="mt-4 space-y-6">
-          {analyticsLoading ? (
-            <div className="space-y-4 py-2">
-              <StatsSkeleton count={4} />
-              <ChartSkeleton />
-            </div>
-          ) : members.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                Adicione colaboradores para ver relatórios.
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {/* Tasks chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <ListTodo className="h-5 w-5 text-primary" />
-                    Tarefas por Colaborador
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={taskChartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                        <YAxis stroke="hsl(var(--muted-foreground))" />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px',
-                          }}
-                        />
-                        <Bar dataKey="tarefas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="concluídas" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
+          {tab === 'alerts' && <AlertsTab team={T} on={alertsOn} save={saveTeam} alerts={alerts} unread={unreadCount} markAsRead={markAsRead} dismiss={dismissAlert} nameOf={(id) => S(id)?.name || members.find((m) => m.member_profile_id === id)?.profile.name || ''} />}
 
-              {/* Messages chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <MessageSquare className="h-5 w-5 text-secondary" />
-                    Mensagens por Colaborador
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={messageChartData} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis type="number" stroke="hsl(var(--muted-foreground))" />
-                        <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} width={80} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px',
-                          }}
-                        />
-                        <Bar dataKey="mensagens" fill="hsl(var(--secondary))" radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
+          {tab === 'reports' && <ReportsTab team={selectedTeam.name} stats={stats} loading={statsLoading} days={days} setDays={setDays} who={who} setWho={setWho} />}
 
-              {/* Interaction pie chart */}
-              {interactionData.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Award className="h-5 w-5 text-yellow-500" />
-                      Distribuição de Interações
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-72">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={interactionData}
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={100}
-                            dataKey="value"
-                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                          >
-                            {interactionData.map((_, i) => (
-                              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+          {tab === 'activities' && <div className="gp-act"><ActivitiesTab memberIds={memberIds} members={members} /></div>}
 
-              {/* Ranking table */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Ranking de Atividade</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {analytics
-                      .sort((a, b) => (b.messageCount + b.taskCount + b.announcementComments) - (a.messageCount + a.taskCount + a.announcementComments))
-                      .map((a, i) => (
-                        <div key={a.profileId} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                          <span className="font-bold text-lg text-muted-foreground w-6 text-center">{i + 1}</span>
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={a.avatarUrl || ''} />
-                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                              {getInitials(a.displayName || a.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{a.displayName || a.name}</p>
-                          </div>
-                          <div className="flex gap-3 text-xs text-muted-foreground">
-                            <span>{a.taskCount} tarefas</span>
-                            <span>{a.messageCount} msgs</span>
-                            <span>{a.announcementComments} comentários</span>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-        )}
-        </TabsContent>
+          {tab === 'score' && <ScoreTab scores={scores} loading={scoresLoading} />}
+        </>)}
+      </main>
 
-        <TabsContent value="activities" className="mt-4">
-          <ActivitiesTab memberIds={memberIds} members={members} />
-        </TabsContent>
-
-        <TabsContent value="score" className="mt-4">
-          <ScoreTabContent
-            scores={globalScores}
-            monthlyHistory={globalScoreHistory}
-            loading={globalScoresLoading}
-          />
-        </TabsContent>
-      </Tabs>
-
-      {/* Add Member Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+      <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Adicionar Colaborador</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Adicionar colaborador</DialogTitle></DialogHeader>
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome ou email..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
+            <Input placeholder="Buscar por nome ou e-mail..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
           <ScrollArea className="max-h-[400px]">
-            {profilesLoading ? (
-              <div className="flex justify-center py-6">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              </div>
-            ) : filteredProfiles.length === 0 ? (
-              <p className="text-center py-6 text-muted-foreground text-sm">Nenhum colaborador encontrado.</p>
-            ) : (
+            {allLoading ? <ListSkeleton rows={4} /> : !candidates.length ? <p className="py-6 text-center text-sm text-muted-foreground">Nenhum colaborador encontrado.</p> : (
               <div className="space-y-1 pr-4">
-                {filteredProfiles.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => handleAddMember(p.id)}
-                    className="flex w-full items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-left"
-                  >
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={p.avatar_url || ''} />
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                        {getInitials(p.display_name || p.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{p.display_name || p.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{p.email}</p>
-                    </div>
+                {candidates.map((p) => (
+                  <button type="button" key={p.id} className="flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-muted" onClick={async () => { const r = await addMember(p.id); toast({ title: r?.error ? 'Não foi possível adicionar o colaborador.' : 'Colaborador adicionado à equipe.' }); }}>
+                    <Avatar className="h-9 w-9"><AvatarImage src={p.avatar_url || ''} /><AvatarFallback className="bg-primary text-xs text-primary-foreground">{ini(p.display_name || p.name)}</AvatarFallback></Avatar>
+                    <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{p.display_name || p.name}</p><p className="truncate text-xs text-muted-foreground">{p.email}</p></div>
                     <Badge variant="outline" className="text-xs">{p.autonomy_level}</Badge>
                   </button>
                 ))}
@@ -637,274 +240,213 @@ export function PeopleManagementSection() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
-    </motion.div>
-  );
-}
-
-// Score Tab Content
-function ScoreTabContent({ scores, monthlyHistory, loading }: {
-  scores: MemberScore[];
-  monthlyHistory: MonthlyScoreEntry[];
-  loading: boolean;
-}) {
-  const isMobile = useIsMobile();
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [startMonth, setStartMonth] = useState('');
-  const [endMonth, setEndMonth] = useState('');
-
-  const MONTH_LABELS: Record<string, string> = {
-    '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr',
-    '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago',
-    '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez',
-  };
-
-  const LINE_COLORS = [
-    'hsl(var(--primary))',
-    'hsl(38, 92%, 50%)',
-    'hsl(142, 76%, 36%)',
-    'hsl(270, 76%, 55%)',
-    'hsl(0, 72%, 51%)',
-    'hsl(200, 80%, 50%)',
-  ];
-
-  const getScoreColor = (score: number) => {
-    if (score >= 800) return 'text-green-500';
-    if (score >= 600) return 'text-yellow-500';
-    if (score >= 400) return 'text-orange-500';
-    return 'text-destructive';
-  };
-
-  const getInitials = (name: string) =>
-    name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-
-  const allUniqueMonths = [...new Set(monthlyHistory.map(h => h.yearMonth))].sort();
-  const uniqueProfiles = [...new Set(monthlyHistory.map(h => h.profileId))];
-  const profileNames: Record<string, string> = {};
-  monthlyHistory.forEach(h => { profileNames[h.profileId] = h.name; });
-
-  // Filter months by period
-  const uniqueMonths = allUniqueMonths.filter(ym => {
-    if (startMonth && ym < startMonth) return false;
-    if (endMonth && ym > endMonth) return false;
-    return true;
-  });
-
-  // Filter profiles for chart
-  const filteredProfiles = selectedMembers.length > 0 ? uniqueProfiles.filter(p => selectedMembers.includes(p)) : uniqueProfiles;
-
-  const chartData = uniqueMonths.map(ym => {
-    const [year, month] = ym.split('-');
-    const entry: any = { month: `${MONTH_LABELS[month]}/${year.slice(2)}` };
-    filteredProfiles.forEach(pid => {
-      const record = monthlyHistory.find(h => h.yearMonth === ym && h.profileId === pid);
-      entry[pid] = record?.score || 0;
-    });
-    return entry;
-  });
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <StatsSkeleton count={4} />
-        <ChartSkeleton />
-      </div>
-    );
-  }
-
-  if (scores.length === 0) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Trophy className="h-12 w-12 text-muted-foreground mb-4" />
-          <h4 className="text-lg font-semibold">Sem dados de score</h4>
-          <p className="text-muted-foreground mt-1">Adicione membros com tarefas para ver scores.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const top3 = scores.slice(0, 3);
-  const toggleMemberFilter = (pid: string) => {
-    setSelectedMembers(prev => prev.includes(pid) ? prev.filter(p => p !== pid) : [...prev, pid]);
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Top row: Podium + Ranking side by side on desktop */}
-      <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "grid-cols-2")}>
-        {/* Podium */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Award className="h-5 w-5 text-yellow-500" />
-              Pódio - Score Global
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={cn("flex items-end justify-center gap-3 pt-4", isMobile && "gap-2")}>
-              {top3.length >= 2 && (
-                <div className={cn("flex flex-col items-center gap-2", isMobile ? "w-16" : "w-20")}>
-                  <Avatar className={cn("border-2 border-gray-400", isMobile ? "h-8 w-8" : "h-10 w-10")}>
-                    <AvatarImage src={top3[1].avatarUrl || ''} />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">{getInitials(top3[1].displayName || top3[1].name)}</AvatarFallback>
-                  </Avatar>
-                  <p className="text-[10px] font-medium text-center truncate w-full">{(top3[1].displayName || top3[1].name).split(' ')[0]}</p>
-                  <div className="w-full h-16 rounded-t-lg bg-muted flex items-end justify-center pb-2">
-                    <span className={cn("text-xs font-bold", getScoreColor(top3[1].score))}>{top3[1].score}</span>
-                  </div>
-                </div>
-              )}
-              {top3.length >= 1 && (
-                <div className={cn("flex flex-col items-center gap-2", isMobile ? "w-18" : "w-20")}>
-                  <Avatar className={cn("border-2 border-yellow-500", isMobile ? "h-10 w-10" : "h-12 w-12")}>
-                    <AvatarImage src={top3[0].avatarUrl || ''} />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-sm">{getInitials(top3[0].displayName || top3[0].name)}</AvatarFallback>
-                  </Avatar>
-                  <p className="text-[10px] font-medium text-center truncate w-full">{(top3[0].displayName || top3[0].name).split(' ')[0]}</p>
-                  <div className="w-full h-24 rounded-t-lg bg-yellow-500/10 flex items-end justify-center pb-2">
-                    <span className={cn("text-sm font-bold", getScoreColor(top3[0].score))}>{top3[0].score}</span>
-                  </div>
-                </div>
-              )}
-              {top3.length >= 3 && (
-                <div className={cn("flex flex-col items-center gap-2", isMobile ? "w-16" : "w-20")}>
-                  <Avatar className={cn("border-2 border-amber-700", isMobile ? "h-8 w-8" : "h-10 w-10")}>
-                    <AvatarImage src={top3[2].avatarUrl || ''} />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">{getInitials(top3[2].displayName || top3[2].name)}</AvatarFallback>
-                  </Avatar>
-                  <p className="text-[10px] font-medium text-center truncate w-full">{(top3[2].displayName || top3[2].name).split(' ')[0]}</p>
-                  <div className="w-full h-12 rounded-t-lg bg-amber-700/10 flex items-end justify-center pb-2">
-                    <span className={cn("text-xs font-bold", getScoreColor(top3[2].score))}>{top3[2].score}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Monthly chart */}
-        {chartData.length > 0 && filteredProfiles.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                Evolução Mensal
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Member filter chips */}
-              <div className="flex flex-wrap gap-1 mb-2">
-                {scores.map((s, i) => (
-                  <button
-                    key={s.profileId}
-                    onClick={() => toggleMemberFilter(s.profileId)}
-                    className={cn(
-                      "text-[10px] px-2 py-0.5 rounded-full border transition-colors",
-                      selectedMembers.length === 0 || selectedMembers.includes(s.profileId)
-                        ? "bg-primary/10 border-primary/30 text-foreground"
-                        : "bg-muted/30 border-transparent text-muted-foreground"
-                    )}
-                  >
-                    {(s.displayName || s.name).split(' ')[0]}
-                  </button>
-                ))}
-                {selectedMembers.length > 0 && (
-                  <button onClick={() => setSelectedMembers([])} className="text-[10px] px-2 py-0.5 rounded-full border border-dashed text-muted-foreground hover:text-foreground">
-                    Limpar filtro
-                  </button>
-                )}
-              </div>
-              {/* Period filter */}
-              <div className="flex items-center gap-2 mb-3 flex-wrap">
-                <span className="text-[10px] text-muted-foreground font-medium">Período:</span>
-                <input
-                  type="month"
-                  value={startMonth}
-                  onChange={(e) => setStartMonth(e.target.value)}
-                  className="h-7 text-[10px] px-2 rounded-md border border-input bg-background"
-                  placeholder="De"
-                />
-                <span className="text-[10px] text-muted-foreground">até</span>
-                <input
-                  type="month"
-                  value={endMonth}
-                  onChange={(e) => setEndMonth(e.target.value)}
-                  className="h-7 text-[10px] px-2 rounded-md border border-input bg-background"
-                  placeholder="Até"
-                />
-                {(startMonth || endMonth) && (
-                  <button
-                    onClick={() => { setStartMonth(''); setEndMonth(''); }}
-                    className="text-[10px] px-2 py-0.5 rounded-full border border-dashed text-muted-foreground hover:text-foreground"
-                  >
-                    Limpar
-                  </button>
-                )}
-              </div>
-              <div className={cn(isMobile ? "h-48" : "h-56")}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} />
-                    <YAxis domain={[0, 1000]} stroke="hsl(var(--muted-foreground))" fontSize={10} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        fontSize: '11px',
-                      }}
-                    />
-                    <Legend wrapperStyle={{ fontSize: '10px' }} />
-                    {filteredProfiles.slice(0, 6).map((pid, i) => (
-                      <Bar
-                        key={pid}
-                        dataKey={pid}
-                        name={profileNames[pid] || 'Usuário'}
-                        fill={LINE_COLORS[i % LINE_COLORS.length]}
-                        radius={[4, 4, 0, 0]}
-                      />
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Ranking */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Ranking Completo</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {scores.map((member, i) => (
-            <div key={member.profileId} className={cn("flex items-center gap-2 rounded-lg bg-muted/50", isMobile ? "p-2 gap-2" : "p-2 gap-3")}>
-              <span className="font-bold text-lg text-muted-foreground w-6 text-center">{i + 1}</span>
-              <Avatar className={cn(isMobile ? "h-7 w-7" : "h-8 w-8")}>
-                <AvatarImage src={member.avatarUrl || ''} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-xs">{getInitials(member.displayName || member.name)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className={cn("font-medium truncate", isMobile ? "text-xs" : "text-sm")}>{member.displayName || member.name}</p>
-                <div className={cn("flex gap-2 text-muted-foreground", isMobile ? "text-[9px]" : "text-[10px]")}>
-                  <span>{member.totalTasks} tarefas</span>
-                  <span>•</span>
-                  <span>{member.completedTasks} ok</span>
-                  <span>•</span>
-                  <span>{member.lateTasks} atraso</span>
-                </div>
-              </div>
-              <span className={cn("font-bold", isMobile ? "text-xs" : "text-sm", getScoreColor(member.score))}>{member.score}/1000</span>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
     </div>
   );
 }
 
+/* ---------- Alertas: team settings (design) + the alerts already generated ---------- */
+function AlertsTab({ team, on, save, alerts, unread, markAsRead, dismiss, nameOf }: { team: any; on: boolean; save: (p: Record<string, unknown>) => Promise<void>; alerts: any[]; unread: number; markAsRead: (id: string) => void; dismiss: (id: string) => void; nameOf: (id: string) => string }) {
+  const times: string[] = team.alert_times || ['09:00'];
+  const daysOn: number[] = team.alert_days || [1, 2, 3, 4, 5];
+  const types: string[] = team.alert_types || ALERT_TYPES.map((t) => t.key);
+  const TAG: Record<string, [string, string]> = { late_task: ['Atraso', 'gp-t-c'], deadline_risk: ['Prazo', 'gp-t-a'], stuck_task: ['Parado', 'gp-t-d'], overloaded: ['Sobrecarga', 'gp-t-c'] };
+  return (<>
+    <div className="gp-sc">
+      <div><h3>Alertas automáticos</h3><div className="gp-hp">Lembretes enviados à equipe nos horários definidos.</div></div>
+      <div className="gp-pm"><span>Enviar alertas para esta equipe<span>Quando desligado, nenhum alerta é disparado.</span></span><Sw on={on} label="Enviar alertas para esta equipe" onChange={(v) => void save({ alerts_enabled: v })} /></div>
+    </div>
+    <div className="gp-sc">
+      <div><h3>Horários de envio</h3><div className="gp-hp">Os alertas saem nestes horários (de Brasília), nos dias escolhidos.</div></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="gp-chs">
+          {times.map((t) => (
+            <span className="gp-ch" key={t}>{t}{times.length > 1 && <button type="button" aria-label={`Remover ${t}`} onClick={() => void save({ alert_times: times.filter((x) => x !== t) })}><X className="h-3 w-3" /></button>}</span>
+          ))}
+          {times.length < 6 && (
+            <Sel className="gp-ad" value="" aria-label="Adicionar horário" onChange={(e) => { const v = e.target.value; if (v && !times.includes(v)) void save({ alert_times: [...times, v].sort() }); }}>
+              <option value="">+ Adicionar horário</option>
+              {SLOTS.filter((s) => !times.includes(s)).map((s) => <option key={s} value={s}>{s}</option>)}
+            </Sel>
+          )}
+        </div>
+        <div className="gp-opts">
+          {DAYS.map(([d, l]) => (
+            <label className="gp-ck" key={d}><input type="checkbox" checked={daysOn.includes(d)} onChange={(e) => void save({ alert_days: e.target.checked ? [...daysOn, d] : daysOn.filter((x) => x !== d) })} />{l}</label>
+          ))}
+        </div>
+      </div>
+    </div>
+    <div className="gp-sc">
+      <div><h3>Tipos de alerta</h3><div className="gp-hp">O que o sistema avisa sobre a equipe.</div></div>
+      <div>
+        {ALERT_TYPES.map((a) => (
+          <div className="gp-pm" key={a.key}><span>{a.t}<span>{a.d}</span></span><Sw on={types.includes(a.key)} label={a.t} onChange={(v) => void save({ alert_types: v ? [...types, a.key] : types.filter((x) => x !== a.key) })} /></div>
+        ))}
+      </div>
+    </div>
+    <div className="gp-sc">
+      <div><h3>Canais</h3><div className="gp-hp">Onde o alerta aparece. Todos ficam também na lista abaixo.</div></div>
+      <div>
+        <div className="gp-pm"><span>Chat do ewvon<span>Você recebe um resumo em Comunicados quando houver alertas novos.</span></span><Sw on={team.alert_chat !== false} label="Chat do ewvon" onChange={(v) => void save({ alert_chat: v })} /></div>
+      </div>
+    </div>
+    <div className="gp-sc" style={{ borderBottom: 0 }}>
+      <div><h3>Alertas recebidos</h3><div className="gp-hp">{alerts.length} alerta(s) · {unread} não lido(s).</div>
+        {alerts.length > 0 && <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          {unread > 0 && <button type="button" className="gp-btn gp-sm" onClick={() => alerts.filter((a) => !a.is_read).forEach((a) => markAsRead(a.id))}><CheckCheck className="h-4 w-4" /> Ler tudo</button>}
+          <button type="button" className="gp-btn gp-sm" style={{ color: '#B3261E' }} onClick={async () => { if (await appConfirm({ title: `Excluir todos os ${alerts.length} alertas?`, confirmText: 'Excluir tudo', danger: true })) alerts.forEach((a) => dismiss(a.id)); }}><Trash2 className="h-4 w-4" /> Excluir tudo</button>
+        </div>}
+      </div>
+      <div>
+        {!alerts.length ? <div className="gp-hp" style={{ padding: '10px 0' }}>Nenhum alerta por enquanto.</div> : alerts.map((a) => {
+          const tg = TAG[a.alert_type] || ['Alerta', 'gp-t-d'];
+          return (
+            <div key={a.id} className={'gp-ev' + (a.is_read ? ' gp-read' : '')} style={{ padding: '12px 0', gridTemplateColumns: '36px 1fr auto auto' }}>
+              <Av name={nameOf(a.profile_id)} />
+              <div><b>{nameOf(a.profile_id) || 'Colaborador'}</b><div className="gp-su">{a.message} · {fmtWhen(a.created_at)}</div></div>
+              <span className={'gp-tg ' + tg[1]}>{tg[0]}</span>
+              <span className="gp-evx">
+                {!a.is_read && <button type="button" className="gp-ic" title="Marcar como lido" onClick={() => markAsRead(a.id)}><Bell className="h-4 w-4" /></button>}
+                <button type="button" className="gp-ic" title="Dispensar" onClick={() => dismiss(a.id)}><X className="h-4 w-4" /></button>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </>);
+}
+
+/* ---------- Relatórios ---------- */
+function ReportsTab({ team, stats, loading, days, setDays, who, setWho }: { team: string; stats: PersonStats[]; loading: boolean; days: number; setDays: (n: number) => void; who: string; setWho: (s: string) => void }) {
+  const list = who ? stats.filter((s) => s.profileId === who) : stats;
+  const byMsg = [...list].sort((a, b) => b.pMessages - a.pMessages);
+  const max = Math.max(1, ...byMsg.map((s) => s.pMessages));
+  const inter = list.map((s) => ({ s, v: s.messages + s.tasks + s.comments })).filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
+  const interTot = inter.reduce((a, x) => a + x.v, 0);
+  const C = 2 * Math.PI * 60;
+  let off = 0;
+  const sum = (k: keyof PersonStats) => list.reduce((a, s) => a + (s[k] as number), 0);
+  const msgs = sum('pMessages'), prevMsgs = sum('pPrevMessages'), done = sum('pCompleted'), prevDone = sum('pPrevCompleted'), late = sum('overdue');
+  const active = list.filter((s) => s.pMessages > 0 || s.pCompleted > 0).length;
+  const pctChg = prevMsgs ? Math.round(((msgs - prevMsgs) / prevMsgs) * 100) : null;
+  const Delta = ({ v, pct, goodUp = true }: { v: number | null; pct?: boolean; goodUp?: boolean }) => v === null || v === 0 ? null : <small style={{ color: (v > 0) === goodUp ? '#0A6B3D' : '#B3261E' }}>{v > 0 ? '▲' : '▼'} {Math.abs(v)}{pct ? '%' : ''}</small>;
+
+  const exportPdf = async () => {
+    const { jsPDF } = await import('jspdf');
+    const autoTable = (await import('jspdf-autotable')).default;
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text(`Relatório da equipe ${team}`, 40, 50);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+    doc.text(`Últimos ${days} dias · gerado em ${new Date().toLocaleString('pt-BR')}${who ? ' · ' + (list[0]?.name || '') : ''}`, 40, 68);
+    autoTable(doc, { startY: 86, head: [['Resumo do período', 'Valor', `${days} dias anteriores`]], body: [
+      ['Mensagens enviadas', String(msgs), String(prevMsgs)], ['Tarefas concluídas', String(done), String(prevDone)],
+      ['Tarefas atrasadas (agora)', String(late), '—'], ['Colaboradores ativos', `${active} de ${list.length}`, '—'],
+    ], styles: { fontSize: 9 }, headStyles: { fillColor: [27, 35, 64] } });
+    autoTable(doc, { startY: (doc as any).lastAutoTable.finalY + 18, head: [['Colaborador', 'Mensagens', 'Concluídas', 'Em aberto', 'Taxa', 'Interações']], body: list.map((s) => {
+      const tot = s.pCompleted + s.pOpen;
+      return [s.name, String(s.pMessages), String(s.pCompleted), String(s.pOpen), tot ? Math.round((s.pCompleted / tot) * 100) + '%' : '—', interTot ? Math.round(((s.messages + s.tasks + s.comments) / interTot) * 100) + '%' : '—'];
+    }), styles: { fontSize: 9 }, headStyles: { fillColor: [27, 35, 64] } });
+    doc.save(`relatorio-${team.toLowerCase().replace(/[^a-z0-9]+/gi, '-')}.pdf`);
+  };
+
+  return (<>
+    <div className="gp-fb">
+      <Sel value={String(days)} aria-label="Período" onChange={(e) => setDays(Number(e.target.value))}>
+        <option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option>
+      </Sel>
+      <Sel value={who} aria-label="Colaborador" onChange={(e) => setWho(e.target.value)}>
+        <option value="">Todos os colaboradores</option>
+        {stats.map((s) => <option key={s.profileId} value={s.profileId}>{s.name}</option>)}
+      </Sel>
+      <span style={{ marginLeft: 'auto' }} />
+      <button type="button" className="gp-btn gp-sm" disabled={loading || !list.length} onClick={() => void exportPdf()}>Exportar PDF</button>
+    </div>
+    {loading ? <div className="gp-act"><ListSkeleton rows={5} /></div> : !list.length ? <div className="gp-empty"><b>Sem dados</b>Adicione colaboradores para ver os relatórios.</div> : (<>
+      <div className="gp-cg">
+        <div className="gp-cb">
+          <h4>Mensagens por colaborador</h4><div className="gp-hp">Total de mensagens enviadas no período (setores, grupos e conversas diretas).</div>
+          {byMsg.map((s, i) => (
+            <div className="gp-bar-row" key={s.profileId}><span title={s.name}>{first(s.name)}</span><i className={i === 0 && s.pMessages > 0 ? 'gp-top' : ''} style={{ width: `${Math.max(2, (s.pMessages / max) * 100)}%` }} /><b>{s.pMessages}</b></div>
+          ))}
+        </div>
+        <div className="gp-cb">
+          <h4>Distribuição de interações</h4><div className="gp-hp">Participação de cada pessoa no total de {interTot}.</div>
+          {!interTot ? <div className="gp-hp" style={{ marginTop: 14 }}>Ainda sem interações.</div> : (
+            <div style={{ display: 'flex', gap: 24, alignItems: 'center', marginTop: 14 }}>
+              <svg width="170" height="170" viewBox="0 0 160 160" role="img" aria-label="Distribuição de interações">
+                <g transform="rotate(-90 80 80)" fill="none" strokeWidth="28">
+                  {inter.map((x, i) => { const len = (x.v / interTot) * C; const el = <circle key={x.s.profileId} cx="80" cy="80" r="60" stroke={DONUT[i % DONUT.length]} strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-off} />; off += len; return el; })}
+                </g>
+              </svg>
+              <div className="gp-lg" style={{ flex: 1 }}>
+                {inter.map((x, i) => <div key={x.s.profileId}><i style={{ background: DONUT[i % DONUT.length] }} /><span>{first(x.s.name)}</span><b>{Math.round((x.v / interTot) * 100)}%</b></div>)}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="gp-cg" style={{ borderTop: '1px solid #E3E6EB' }}>
+        <div className="gp-cb">
+          <h4>Tarefas por colaborador</h4><div className="gp-hp">Concluídas no período e em aberto agora.</div>
+          <table style={{ marginTop: 10 }}>
+            <thead><tr><th style={{ paddingLeft: 0 }}>Colaborador</th><th>Concluídas</th><th>Em aberto</th><th className="gp-r" style={{ paddingRight: 0 }}>Taxa</th></tr></thead>
+            <tbody>
+              {[...list].sort((a, b) => b.pCompleted - a.pCompleted).map((s) => { const t = s.pCompleted + s.pOpen; return (
+                <tr key={s.profileId}><td style={{ paddingLeft: 0 }}>{s.name}</td><td>{s.pCompleted}</td><td>{s.pOpen}</td><td className="gp-r" style={{ paddingRight: 0 }}>{t ? Math.round((s.pCompleted / t) * 100) + '%' : '—'}</td></tr>
+              ); })}
+            </tbody>
+          </table>
+        </div>
+        <div className="gp-cb">
+          <h4>Resumo do período</h4><div className="gp-hp">Comparado aos {days} dias anteriores.</div>
+          <div className="gp-pm" style={{ marginTop: 8 }}><span>Mensagens enviadas</span><b>{msgs} <Delta v={pctChg} pct /></b></div>
+          <div className="gp-pm"><span>Tarefas concluídas</span><b>{done} <Delta v={done - prevDone} /></b></div>
+          <div className="gp-pm"><span>Tarefas atrasadas agora</span><b>{late}</b></div>
+          <div className="gp-pm"><span>Colaboradores ativos</span><b>{active} de {list.length}</b></div>
+        </div>
+      </div>
+    </>)}
+  </>);
+}
+
+/* ---------- Score ---------- */
+function ScoreTab({ scores, loading }: { scores: any[]; loading: boolean }) {
+  if (loading) return <div className="gp-act"><ListSkeleton rows={5} /></div>;
+  if (!scores.length) return <div className="gp-empty"><b>Sem dados de score</b>Adicione membros com tarefas para ver o pódio.</div>;
+  const [a, b, c] = scores;
+  const Pod = ({ s, pos, h, bg, big }: { s: any; pos: number; h: number; bg: string; big?: boolean }) => (
+    <div className="gp-pc">
+      <Av name={s.displayName || s.name} url={s.avatarUrl} size={big ? 60 : 52} dark={big} />
+      <div className="gp-nm">{s.displayName || s.name}</div><div className="gp-pt">{s.score} pontos</div>
+      <div className="gp-st" style={{ height: h, background: bg }}>{pos}</div>
+    </div>
+  );
+  return (<>
+    <div style={{ padding: '28px 28px 6px' }}><div className="gp-lab">Pódio · Score global</div></div>
+    <div className="gp-pod">
+      {b && <Pod s={b} pos={2} h={110} bg="#6B7482" />}
+      {a && <Pod s={a} pos={1} h={150} bg="hsl(var(--primary))" big />}
+      {c && <Pod s={c} pos={3} h={84} bg="#8A94A3" />}
+    </div>
+    <table style={{ borderTop: '1px solid #D3D8E0' }}>
+      <thead><tr><th>Posição</th><th>Colaborador</th><th>Tarefas</th><th>Concluídas no prazo</th><th>Com atraso</th><th className="gp-r">Score</th></tr></thead>
+      <tbody>
+        {scores.map((s, i) => (
+          <tr key={s.profileId}>
+            <td><b>{i + 1}º</b></td>
+            <td><div className="gp-pe"><Av name={s.displayName || s.name} url={s.avatarUrl} /><div className="gp-ti">{s.displayName || s.name}</div></div></td>
+            <td>{s.totalTasks}</td><td>{s.onTimeTasks}</td><td>{s.lateTasks}</td>
+            <td className="gp-r"><b>{s.score}</b></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+    <div className="gp-ft"><span>Score (0 a 1000) = tarefas concluídas no prazo valem 100%, com atraso 60%, não concluídas 0</span><span>Atualizado {fmtWhen(new Date().toISOString())}</span></div>
+  </>);
+}
+
+/* ---------- Atividades: unchanged day-by-day timeline (owner asked to keep it) ---------- */
 // Activities Tab Component
 function ActivitiesTab({ memberIds, members }: { memberIds: string[]; members: any[] }) {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -1002,7 +544,7 @@ function ActivitiesTab({ memberIds, members }: { memberIds: string[]; members: a
   }
 
   return (
-    <ScrollArea className="h-[calc(100vh-400px)]">
+    <div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {Object.entries(sortedTasksByMember).map(([memberId, sortedDateGroups]) => (
           <Card key={memberId} className="flex flex-col">
@@ -1062,6 +604,6 @@ function ActivitiesTab({ memberIds, members }: { memberIds: string[]; members: a
           </Card>
         )}
       </div>
-    </ScrollArea>
+    </div>
   );
 }
