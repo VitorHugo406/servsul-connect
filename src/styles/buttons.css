@@ -19,3 +19,14 @@ html:not(#_) :is(.ewvon-sidebar, .ewvon-quick-nav, .ewvon-actions, .ewvon-brand)
 html:not(#_) .ewvon-dash-flag.ui-btn:not(.ew *) { border-radius: 9999px !important; }
 /* avatar-only buttons stay round */
 html:not(#_) .ui-btn.rounded-full:is(:has(> img:only-child), :has(> span.rounded-full:only-child)):not(.ew *) { border-radius: 9999px !important; }
+/* Underlined tab bars (Gestão de Pessoas, Gerenciamento, Avaliações, War Room, Empresas…): the selected tab is marked by ONE
+   straight 2px bar in the company colour. The buttons' rounded corners used to bend the old border-bottom into a curve. */
+html:not(#_) :is(.gp-nav button, .dk-tb button, .dk-nav button, .wd-tabs button, .ce-tb button):not(.ew *) {
+  border-radius: 0 !important; border-bottom-color: transparent !important; position: relative; box-shadow: none !important;
+}
+html:not(#_) :is(.gp-nav button, .dk-tb button, .dk-nav button, .wd-tabs button, .ce-tb button):not(.ew *)::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 0; background: transparent;
+}
+html:not(#_) :is(.gp-nav button.gp-on, .dk-tb button.on, .dk-nav button.on, .wd-tabs button.wd-on, .ce-tb button.ce-on):not(.ew *)::after {
+  background: hsl(var(--primary));
+}
