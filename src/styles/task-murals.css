@@ -82,3 +82,7 @@
 .tm-pg .tm-kv b.tm-red{color:#B3261E}
 .tm-pg .tm-mem{display:flex;flex-direction:column;gap:8px}
 .tm-pg .tm-sum .tm-ft{margin-top:0;padding-top:12px}
+/* summary numbers read like a light table: thin divider between rows */
+.tm-pg .tm-kv{gap:0 12px}
+.tm-pg .tm-kv span,.tm-pg .tm-kv b{padding:5px 0;border-bottom:.5px solid #E6E9EE}
+.tm-pg .tm-kv span:nth-last-child(2),.tm-pg .tm-kv b:last-child{border-bottom:0}
