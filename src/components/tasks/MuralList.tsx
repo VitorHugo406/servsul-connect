@@ -15,7 +15,7 @@ import { MURAL_COVERS, effectiveBoardBg, isBgImage, isPrivateStorageUrl, muralCo
 const db = supabase as any;
 
 type Board = { id: string; name: string; description: string | null; owner_id: string; background_image: string | null; created_at: string };
-type Stat = { total: number; done: number; late: number };
+type Stat = { total: number; done: number; late: number; nodue: number };
 type Member = { id: string; name: string; avatar: string | null };
 type Sort = 'recent' | 'old' | 'name' | 'custom';
 const SORT_LABEL: Record<Sort, string> = { recent: 'Mais recentes', old: 'Mais antigos', name: 'Nome (A–Z)', custom: 'Minha ordem' };
@@ -45,6 +45,8 @@ export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete }
   const [order, setOrder] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(ORDER_KEY) || '[]'); } catch { return []; } });
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [stats, setStats] = useState<Record<string, Stat>>({});
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => setOpen((o) => { const n = new Set(o); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const [members, setMembers] = useState<Record<string, Member[]>>({});
   // new mural form
   const [showNew, setShowNew] = useState(false);
@@ -70,8 +72,9 @@ export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete }
       const now = Date.now(); const st: Record<string, Stat> = {};
       for (const r of (t.data || []) as { board_id: string; completed_at: string | null; due_date: string | null; is_template: boolean | null; is_archived: boolean | null }[]) {
         if (r.is_template || r.is_archived) continue;
-        const s = (st[r.board_id] ||= { total: 0, done: 0, late: 0 });
+        const s = (st[r.board_id] ||= { total: 0, done: 0, late: 0, nodue: 0 });
         s.total++;
+        if (!r.due_date) s.nodue++;
         if (r.completed_at) s.done++; else if (r.due_date && new Date(r.due_date).getTime() < now) s.late++;
       }
       setStats(st);
@@ -179,7 +182,8 @@ export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete }
         <div className="tm-gd">
           {showNew && editId && !shown.some((x) => x.id === editId) ? renderForm() : null}
           {shown.map((b, i) => {
-            const s = stats[b.id] || { total: 0, done: 0, late: 0 };
+            const s = stats[b.id] || { total: 0, done: 0, late: 0, nodue: 0 };
+            const isOpen = open.has(b.id);
             const pct = s.total ? Math.round((s.done / s.total) * 100) : 0;
             const mem = members[b.id] || [];
             const owner = b.owner_id === userId;
@@ -202,18 +206,39 @@ export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete }
                   ) : null}
                 </div>
                 <div className="tm-bd">
-                  <div className="tm-nm">{b.name}</div>
-                  <div className="tm-dt">Criado em {new Date(b.created_at).toLocaleDateString('pt-BR')}</div>
-                  {b.description ? <div className="tm-ds">{b.description}</div> : null}
-                  <div className="tm-pl"><span>{s.done}/{s.total} {s.done === 1 ? 'concluído' : 'concluídos'}</span><b>{pct}% concluído</b></div>
-                  <div className="tm-br"><i style={{ width: pct + '%' }} /></div>
-                  <div className="tm-ft">
-                    <div className="tm-avs">
-                      {mem.slice(0, 3).map((m, k) => <span key={m.id} className={'tm-av ' + AV_TONES[k % AV_TONES.length]} title={m.name}>{m.avatar ? <img src={m.avatar} alt="" loading="lazy" /> : initials(m.name)}</span>)}
-                      {mem.length > 3 ? <span className="tm-av tm-more" title={mem.slice(3).map((m) => m.name).join(', ')}>+{mem.length - 3}</span> : null}
+                  <div className="tm-hd">
+                    <div className="tm-tx">
+                      <div className="tm-nm">{b.name}</div>
+                      {b.description ? <div className="tm-ds" title={b.description}>{b.description}</div> : <div className="tm-dt">Criado em {new Date(b.created_at).toLocaleDateString('pt-BR')}</div>}
                     </div>
-                    {s.late > 0 ? <span className="tm-tg tm-rd">{s.late} atrasado(s)</span> : s.total > 0 && s.done === s.total ? <span className="tm-tg tm-gn">Concluído</span> : s.total > 0 ? <span className="tm-tg tm-gn">Em dia</span> : <span className="tm-tg tm-gy">Sem cards</span>}
+                    <button type="button" className={'tm-tog' + (isOpen ? ' tm-on' : '')} aria-expanded={isOpen} aria-label={isOpen ? 'Ocultar resumo do mural' : 'Ver resumo do mural'} title={isOpen ? 'Ocultar resumo' : 'Ver resumo'} onClick={(e) => { e.stopPropagation(); toggle(b.id); }}><ChevronDown className="h-4 w-4" /></button>
                   </div>
+                  {isOpen ? (
+                    <div className="tm-sum" onClick={(e) => e.stopPropagation()}>
+                      <div className="tm-sg">
+                        <div className="tm-ring" style={{ background: `conic-gradient(#0A6B3D ${pct * 3.6}deg, #E4E7EC 0)` }} aria-label={pct + '% concluído'}><span>{pct}%</span></div>
+                        <div className="tm-kv">
+                          <span>Cards</span><b>{s.total}</b>
+                          <span>Concluídos</span><b>{s.done}</b>
+                          <span>Em aberto</span><b>{s.total - s.done}</b>
+                          <span>Atrasados</span><b className={s.late ? 'tm-red' : ''}>{s.late}</b>
+                          <span>Sem prazo</span><b>{s.nodue}</b>
+                        </div>
+                      </div>
+                      <div className="tm-mem">
+                        <span className="tm-lab">Membros ({mem.length})</span>
+                        <div className="tm-avs">
+                          {mem.slice(0, 8).map((m, k) => <span key={m.id} className={'tm-av ' + AV_TONES[k % AV_TONES.length]} title={m.name}>{m.avatar ? <img src={m.avatar} alt="" loading="lazy" /> : initials(m.name)}</span>)}
+                          {mem.length > 8 ? <span className="tm-av tm-more" title={mem.slice(8).map((m) => m.name).join(', ')}>+{mem.length - 8}</span> : null}
+                          {!mem.length ? <span className="tm-dt">Ninguém ainda</span> : null}
+                        </div>
+                      </div>
+                      <div className="tm-ft">
+                        <span className="tm-dt">Criado em {new Date(b.created_at).toLocaleDateString('pt-BR')}</span>
+                        {s.late > 0 ? <span className="tm-tg tm-rd">{s.late} atrasado(s)</span> : s.total > 0 && s.done === s.total ? <span className="tm-tg tm-gn">Concluído</span> : s.total > 0 ? <span className="tm-tg tm-gn">Em dia</span> : <span className="tm-tg tm-gy">Sem cards</span>}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             );
