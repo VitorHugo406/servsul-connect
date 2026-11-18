@@ -35,7 +35,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { applyBrand, resetBrand, BRAND_PRIMARY, BRAND_SECONDARY } from '@/lib/branding';
-import { createCompanyLogoUrl, useCompanyLogoUrl } from '@/lib/companyLogo';
+import { createCompanyLogoUrl, useCompanyLogoUrl, setRoundedFavicon } from '@/lib/companyLogo';
 import { setActiveCompanyId } from '@/lib/companyScope';
 
 const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
@@ -136,9 +136,8 @@ const Auth = () => {
   useEffect(() => {
     const logoUrl = companyLogoUrl;
     document.title = companyBrand?.name ? `${companyBrand.name} | ewvon` : 'ewvon - Comunicação Empresarial';
-    document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
-      link.href = logoUrl ?? '';
-    });
+    if (logoUrl) setRoundedFavicon(logoUrl);
+    else document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach((link) => { link.href = ''; });
   }, [companyBrand, companyLogoUrl]);
 
   // Fetch sectors using edge function (bypasses RLS)

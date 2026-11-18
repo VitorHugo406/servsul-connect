@@ -2611,7 +2611,7 @@ function lampSet(){
 }
 function ensureSurround(){
   if(!OK)return;
-  const idx=Math.max(0,floorIdx(CUR)),key=(idx===0?0:1)+'|'+EXX+'|'+EXZ+'|'+(THEME().company||'')+'|'+CFG.floors.length;
+  const idx=Math.max(0,floorIdx(CUR)),key=(idx===0?0:1)+'|'+EXX+'|'+EXZ+'|'+coName()+'|'+CFG.floors.length;
   if(!SKY){
     const sk=new THREE.Mesh(new THREE.SphereGeometry(380,32,16),new THREE.MeshBasicMaterial({map:skyTex(),side:THREE.BackSide,fog:false,depthWrite:false}));
     sk.renderOrder=-10;sk.frustumCulled=false;SKY=new THREE.Group();SKY.userData.sceneRoot=true;SKY.add(sk);scene.add(SKY);scene.fog=new THREE.Fog('#E3EBF1',170,400);
@@ -2742,7 +2742,7 @@ function repHtml(){
     (REP.f.emp?'<div><h4>Lista de colaboradores</h4></div><div class="seg" role="group" aria-label="Situação">'+Object.keys(REPST).map(k=>'<button type="button" data-repst="'+k+'" aria-pressed="'+(REP.st===k)+'">'+REPST[k]+'</button>').join('')+'</div>'+
     '<div class="seg" role="group" aria-label="Ordenar por">'+Object.keys(REPOR).map(k=>'<button type="button" data-repord="'+k+'" aria-pressed="'+(REP.ord===k)+'">Por '+REPOR[k].toLowerCase()+'</button>').join('')+'</div>':'')+
     '<div><h4>Formato</h4></div><div class="seg" role="group" aria-label="Formato do relatório"><button type="button" data-repfmt="pdf" aria-pressed="'+(REP.fmt==='pdf')+'">PDF</button><button type="button" data-repfmt="xlsx" aria-pressed="'+(REP.fmt==='xlsx')+'">Excel</button></div>'+
-    '<p class="sub">'+(REP.fmt==='pdf'?'PDF com logo da empresa'+(THEME().logo?'':' (cadastre a logo nas configurações para aparecer)')+', gráficos em preto e branco e tabelas compactas.':'Planilha com uma aba por seção, com barras em preto e branco ao lado dos números.')+' Janela: '+WIN+' meses.</p>'+
+    '<p class="sub">'+(REP.fmt==='pdf'?'PDF com logo da empresa'+(coLogo()?'':' (cadastre a logo da empresa para aparecer)')+', gráficos em preto e branco e tabelas compactas.':'Planilha com uma aba por seção, com barras em preto e branco ao lado dos números.')+' Janela: '+WIN+' meses.</p>'+
     '<button type="button" class="go" data-repgo="1"'+(REP.busy?' disabled':'')+'>'+'Gerar e baixar'+'</button></div>';
   return h;
 }
@@ -2848,9 +2848,9 @@ function repLoad(url,test){
 const REPJS={pdf:'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',at:'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js'};
 function repLogo(){
   return new Promise(res=>{
-    const lg=THEME().logo;if(!lg)return res(null);
+    const lg=coLogo();if(!lg)return res(null);
     const im=new Image();im.onload=()=>{const c=document.createElement('canvas'),w=im.naturalWidth||1,h=im.naturalHeight||1,s=Math.min(1,600/Math.max(w,h));c.width=Math.round(w*s);c.height=Math.round(h*s);const g=c.getContext('2d');g.drawImage(im,0,0,c.width,c.height);res({d:c.toDataURL('image/png'),w:c.width,h:c.height})};
-    im.onerror=()=>res(null);im.src=lg;
+    im.onerror=()=>res(null);corsImg(im,lg);im.src=lg;
   });
 }
 async function repPdf(R){
@@ -4218,14 +4218,17 @@ function deskMat(){
 const THEME=()=>CFG.theme||(CFG.theme={});
 const wallColor=id=>{const t=THEME();return (t.byFloor&&t.byFloor[id])||t.wall||WALLS[Math.max(0,floorIdx(id))%8]};
 let LOGO={tex:null,aspect:1,url:null},thScope='all';
+/* logo/nome: o que foi escolhido aqui vale; sem isso, usa automaticamente o cadastro da empresa no ewvon */
+const coLogo=()=>THEME().logo||EWV_LOGO||'';const coName=()=>(THEME().company||EWV_CO||'').trim();
+const corsImg=(im,u)=>{if(/^https?:/i.test(u))im.crossOrigin='anonymous'};
 function loadLogo(cb){
-  const u=THEME().logo;
+  const u=coLogo();
   if(!u||typeof THREE==='undefined'){LOGO={tex:null,aspect:1,url:null};cb&&cb();return}
   if(LOGO.url===u&&LOGO.tex){cb&&cb();return}
   const im=new Image();
   im.onload=()=>{const t=new THREE.Texture(im);t.needsUpdate=true;t.anisotropy=8;LOGO={tex:t,aspect:(im.naturalWidth||1)/(im.naturalHeight||1),url:u};cb&&cb()};
   im.onerror=()=>{LOGO={tex:null,aspect:1,url:null};cb&&cb()};
-  im.src=u;
+  corsImg(im,u);im.src=u;
 }
 function logoMesh(maxW,maxH){
   const a=LOGO.aspect,w=Math.min(maxW,maxH*a),h=w/a,m=new THREE.Mesh(G.plane(1,1),new THREE.MeshBasicMaterial({map:LOGO.tex,transparent:true}));
@@ -4246,7 +4249,7 @@ function applyTheme(rebuild){
   applySize();
   if(CUR&&floorObj(CUR))wallMat.color.set(wallColor(CUR));
   applyWallTex();
-  loadLogo(()=>{updateWallLogo();if(rebuild&&t.logo&&OK&&dyn)buildWorld()});
+  loadLogo(()=>{updateWallLogo();if(rebuild&&coLogo()&&OK&&dyn)buildWorld()});
 }
 function buildDecor(){
   const trim=mat('#FFFFFF',{roughness:.6});
@@ -4270,9 +4273,9 @@ function fileToLogo(file,cb){
 }
 function cfgLook(){
   const t=THEME(),sw=['#D6E6E1','#DCE4F0','#EDE3D3','#E4DCEE','#F0E2E4','#DAEBD8','#F5F1E8','#FFFFFF','#E8D8C4','#C9D6EA','#2F3A4A','#FF6A1A','#FFD84D','#F6C445','#FFE9A8','#F2B134','#E8A317','#FFF3C4','#C9E4C5','#F4B6A6','#B7C9A8','#D9C2E9'],cur=wallColor(CUR);
-  return '<div class="sec"><h3>Empresa</h3><div class="frow"><input class="fin" type="text" id="thCompany" maxlength="28" placeholder="Nome da empresa" value="'+esc(t.company||'')+'" aria-label="Nome da empresa"></div>'+
-    '<div class="frow" style="margin-top:8px"><label class="btn sm" for="thLogo" style="cursor:pointer">Escolher logo</label><input id="thLogo" type="file" accept="image/*" hidden><button class="btn sm" type="button" data-thact="logoDel"'+(t.logo?'':' disabled')+'>Remover logo</button>'+(t.logo?'<img src="'+t.logo+'" alt="Logo atual" style="height:34px;max-width:140px;object-fit:contain;border:1px solid var(--line);border-radius:8px;padding:3px;background:#fff">':'')+'</div>'+
-    '<p class="note">O logo aparece na parede do fundo, no balcão da recepção, no totem e no topo da página. PNG com fundo transparente fica melhor.</p></div>'+
+  return '<div class="sec"><h3>Empresa</h3><div class="frow"><input class="fin" type="text" id="thCompany" maxlength="28" placeholder="Nome da empresa" value="'+esc(t.company||EWV_CO||'')+'" aria-label="Nome da empresa"></div>'+
+    '<div class="frow" style="margin-top:8px"><label class="btn sm" for="thLogo" style="cursor:pointer">'+(t.logo?'Trocar logo':'Usar outra logo')+'</label><input id="thLogo" type="file" accept="image/*" hidden>'+(t.logo&&EWV_LOGO?'<button class="btn sm" type="button" data-thact="logoDel">Voltar à logo da empresa</button>':t.logo?'<button class="btn sm" type="button" data-thact="logoDel">Remover logo</button>':'')+(coLogo()?'<img src="'+esc(coLogo())+'" alt="Logo atual" style="height:34px;max-width:140px;object-fit:contain;border:1px solid var(--line);border-radius:8px;padding:3px;background:#fff">':'')+'</div>'+
+    '<p class="note">'+(t.logo?'Usando uma logo escolhida aqui.':EWV_LOGO?'Usando automaticamente a logo cadastrada da empresa.':'A empresa ainda não tem logo cadastrada; escolha uma aqui ou cadastre no sistema.')+' Ela aparece na parede do fundo, no balcão da recepção, no totem e no topo da página.</p></div>'+
     '<div class="sec"><h3>Cor da parede</h3><div class="swr">'+sw.map(c=>'<button type="button" class="sw" data-thwall="'+c+'" style="background:'+c+'" aria-label="Cor '+c+'"></button>').join('')+'<input type="color" id="thWallPick" value="'+cur+'" aria-label="Outra cor" style="width:34px;height:30px;border:0;padding:0;background:none"></div>'+
     '<div class="seg" style="margin-top:8px" role="group" aria-label="Onde aplicar"><button type="button" data-thscope="all" aria-pressed="'+(thScope==='all')+'">Todos os andares</button><button type="button" data-thscope="one" aria-pressed="'+(thScope==='one')+'">Só o andar '+fnum(CUR)+'</button></div>'+
     '<div style="margin-top:8px"><button class="btn sm" type="button" data-thact="wallReset">Voltar às cores automáticas</button></div></div>'+
@@ -4302,7 +4305,7 @@ cfgM.addEventListener('change',e=>{
 });
 cfgM.addEventListener('input',e=>{
   const t=e.target;
-  if(t.id==='thCompany'){THEME().company=t.value.slice(0,28);saveCfg();applyTheme()}
+  if(t.id==='thCompany'){const v=t.value.slice(0,28);THEME().company=(v.trim()===EWV_CO.trim()?'':v);saveCfg();applyTheme()}
   else if(t.id==='thWallPick'){setWall(t.value)}
 });
 cfgM.addEventListener('change',e=>{if(e.target.id==='thWallPick'&&OK){buildWorld();cfgRender()}});
@@ -4383,7 +4386,7 @@ Object.assign(XT,{
     const g=new THREE.Group();g.add(mesh(G.box(1.8,.2,.8),mat('#3A4150'),0,.1,0,{c:1,r:1}));
     g.add(mesh(G.box(1.6,3.4,.26),mat('#FFFFFF',{roughness:.4}),0,1.9,0,{c:1}));
     if(LOGO.tex){const lm=logoMesh(1.3,1.3);lm.position.set(0,2.6,.14);g.add(lm)}
-    const co=(THEME().company||'').trim()||'Sua empresa',c=cvs(256,64),x=c.getContext('2d');x.fillStyle='#12151C';x.font='800 34px '+FONT;x.textAlign='center';x.textBaseline='middle';x.fillText(co,128,34,240);
+    const co=coName()||'Sua empresa',c=cvs(256,64),x=c.getContext('2d');x.fillStyle='#12151C';x.font='800 34px '+FONT;x.textAlign='center';x.textBaseline='middle';x.fillText(co,128,34,240);
     const pl=mesh(G.plane(1.4,.35),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true}),0,1.5,.14);g.add(pl);
     return g}}
 });

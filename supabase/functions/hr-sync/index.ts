@@ -429,6 +429,20 @@ const byName = (a: Person, b: Person) => a.name.localeCompare(b.name, 'pt-BR', {
 async function importPlan(companyId: string, row: any) {
   const cfg = cleanConfig(row.config); if (typeof cfg === 'string') throw new Error(cfg);
   const people = mapPeople(await fetchRecords(cfg, await open(row.secret_enc)));
+  // Fill what the list lacks with the details already synced for the Dash (Convenia's list has no job/sex/contract),
+  // and never import someone the synced data marks as dismissed.
+  const { data: synced } = await admin.from('hr_employees').select('ext_key,cargo,sexo,ctr,adm,nasc,depto,dem').eq('source_id', row.id).limit(MAX_EMPLOYEES);
+  const sy = new Map<string, any>((synced || []).map((r: any) => [String(r.ext_key), r]));
+  for (const p of people) {
+    const c = sy.get(p.key); if (!c) continue;
+    if (c.dem && !p.dem) p.dem = c.dem;
+    if (!p.rec.job_title && c.cargo) p.rec.job_title = String(c.cargo).slice(0, 120);
+    const sx = String(c.sexo || '').toUpperCase().charAt(0); if (!p.rec.sex && (sx === 'M' || sx === 'F')) p.rec.sex = sx;
+    if (!p.rec.contract_type && c.ctr) { const ct = pick(String(c.ctr), CONTRACT); if (ct) p.rec.contract_type = ct; }
+    if (!p.rec.admission_date && c.adm) p.rec.admission_date = String(c.adm).slice(0, 10);
+    if (!p.birth && c.nasc) p.birth = String(c.nasc).slice(0, 10);
+    if (!p.depto && c.depto) p.depto = String(c.depto).slice(0, 80);
+  }
   const active = people.filter((p) => !p.dem);
   const withEmail = active.filter((p) => p.email);
   const taken = new Set<string>();

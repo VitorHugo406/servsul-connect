@@ -83,3 +83,28 @@ export function getCompanyLogoPath(slug: string, file: File): string {
   const extension = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
   return `${slug}/logo-${Date.now()}.${extension}`;
 }
+
+/** Puts the company logo in the browser tab with rounded corners (white tile, logo fitted inside, 22% radius). */
+export function setRoundedFavicon(url: string | null | undefined): void {
+  const links = () => document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"]');
+  if (!url) return;
+  const img = new Image();
+  if (/^https?:/i.test(url)) img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    let href = url;
+    try {
+      const s = 64, r = Math.round(s * 0.22), c = document.createElement('canvas'); c.width = s; c.height = s;
+      const g = c.getContext('2d');
+      if (g) {
+        g.beginPath(); g.moveTo(r, 0); g.arcTo(s, 0, s, s, r); g.arcTo(s, s, 0, s, r); g.arcTo(0, s, 0, 0, r); g.arcTo(0, 0, s, 0, r); g.closePath(); g.clip();
+        g.fillStyle = '#fff'; g.fillRect(0, 0, s, s);
+        const w = img.naturalWidth || s, h = img.naturalHeight || s, k = Math.min(s / w, s / h), dw = w * k, dh = h * k;
+        g.drawImage(img, (s - dw) / 2, (s - dh) / 2, dw, dh);
+        href = c.toDataURL('image/png');
+      }
+    } catch { /* image without CORS: keep the plain logo */ }
+    links().forEach((l) => { l.href = href; });
+  };
+  img.onerror = () => links().forEach((l) => { l.href = url; });
+  img.src = url;
+}
