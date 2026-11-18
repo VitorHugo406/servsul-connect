@@ -112,7 +112,7 @@ export function CompaniesManagementSection() {
   const [openNew, setOpenNew] = useState(false);
   const [nName, setNName] = useState(''); const [nSlug, setNSlug] = useState('');
   const [nPrimary, setNPrimary] = useState('#2E5AAC'); const [nSecondary, setNSecondary] = useState('#FF6B00');
-  const [trialOn, setTrialOn] = useState(false); const [trialUntil, setTrialUntil] = useState(''); const [trialPlan, setTrialPlan] = useState('empresarial');
+  const [trialOn, setTrialOn] = useState(false); const [trialUntil, setTrialUntil] = useState(''); const [trialPlan, setTrialPlan] = useState('empresarial'); const [trialGb, setTrialGb] = useState('1');
   const [creating, setCreating] = useState(false);
   const [openAdmin, setOpenAdmin] = useState(false);
   const [aName, setAName] = useState(''); const [aEmail, setAEmail] = useState(''); const [aPass, setAPass] = useState('');
@@ -244,16 +244,18 @@ export function CompaniesManagementSection() {
   const handleCreate = async () => {
     if (!nName.trim() || !nSlug.trim()) { toast.error('Nome e identificador são obrigatórios.'); return; }
     if (trialOn && (!trialUntil || new Date(trialUntil + 'T23:59:59').getTime() <= Date.now())) { toast.error('Informe uma data futura para o fim da avaliação.'); return; }
+    const gb = Math.floor(Number(trialGb));
+    if (trialOn && !(gb >= 1 && gb <= 100000)) { toast.error('Informe o armazenamento em GB (1 ou mais).'); return; }
     setCreating(true);
     const { data: c, error } = await db.from('companies').insert({ name: nName.trim(), slug: nSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-'), primary_color: nPrimary, secondary_color: nSecondary, is_active: true, is_system: false }).select('id').single();
     if (!error && trialOn && c?.id) {
-      const { error: e2 } = await db.from('company_subscriptions').update({ status: 'trialing', plan_id: trialPlan, trial_ends_at: new Date(trialUntil + 'T23:59:59').toISOString(), notes: 'Período de avaliação até ' + new Date(trialUntil + 'T12:00:00').toLocaleDateString('pt-BR') }).eq('company_id', c.id);
+      const { error: e2 } = await db.from('company_subscriptions').update({ status: 'trialing', plan_id: trialPlan, storage_gb_override: gb, trial_ends_at: new Date(trialUntil + 'T23:59:59').toISOString(), notes: 'Período de avaliação até ' + new Date(trialUntil + 'T12:00:00').toLocaleDateString('pt-BR') }).eq('company_id', c.id);
       if (e2) toast.error('Empresa criada, mas não foi possível definir a avaliação.');
     }
     setCreating(false);
     if (error) { toast.error('Não foi possível criar a empresa (o identificador pode já estar em uso).'); return; }
     toast.success('Empresa criada');
-    setNName(''); setNSlug(''); setNPrimary('#2E5AAC'); setNSecondary('#FF6B00'); setTrialOn(false); setTrialUntil(''); setTrialPlan('empresarial'); setOpenNew(false);
+    setNName(''); setNSlug(''); setNPrimary('#2E5AAC'); setNSecondary('#FF6B00'); setTrialOn(false); setTrialUntil(''); setTrialPlan('empresarial'); setTrialGb('1'); setOpenNew(false);
     await load(); if (c?.id) setSelId(c.id);
   };
   const handleCreateAdmin = async () => {
@@ -575,6 +577,8 @@ export function CompaniesManagementSection() {
                 <div className="grid grid-cols-2 gap-3">
                   <div><Label>Avaliação até</Label><Input type="date" value={trialUntil} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setTrialUntil(e.target.value)} /></div>
                   <div><Label>Plano em teste</Label><Sel className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={trialPlan} onChange={(e) => setTrialPlan(e.target.value)}><option value="essencial">Essencial</option><option value="profissional">Profissional</option><option value="empresarial">Empresarial</option></Sel></div>
+                  <div><Label>Armazenamento liberado (GB)</Label><Input type="number" min={1} max={100000} value={trialGb} onChange={(e) => setTrialGb(e.target.value)} /></div>
+                  <p className="col-span-2 text-xs text-muted-foreground">Padrão dos termos: 1 GB. Você pode liberar quanto quiser; dá para mudar depois em “Editar plano e situação”.</p>
                   <p className="col-span-2 text-xs text-muted-foreground">A empresa fica ativa até essa data. O administrador é avisado 7 dias antes e no vencimento (com 30 dias para assinar); depois disso, você decide no chat Comunicados se os dados serão excluídos.</p>
                 </div>
               ) : null}

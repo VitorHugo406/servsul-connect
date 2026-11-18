@@ -17,7 +17,7 @@ export interface Plan {
   id: string; name: string; description: string | null; price_cents: number; max_users: number; max_sectors: number; storage_gb: number; features: string[];
 }
 type Status = 'pending' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'free' | 'exempt';
-interface Sub { company_id: string; plan_id: string | null; status: Status; free_seats: number; trial_ends_at: string | null; notes: string | null }
+interface Sub { company_id: string; plan_id: string | null; status: Status; free_seats: number; trial_ends_at: string | null; notes: string | null; storage_gb_override: number | null }
 
 // The new tables are not in the generated Supabase types yet.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,11 +50,11 @@ export function CompanyPlanPanel({ companyId, isSystem, userCount }: { companyId
     setLoading(true);
     void Promise.all([
       db.from('subscription_plans').select('id,name,description,price_cents,max_users,max_sectors,storage_gb,features').eq('is_active', true).order('sort_order'),
-      db.from('company_subscriptions').select('company_id,plan_id,status,free_seats,trial_ends_at,notes').eq('company_id', companyId).maybeSingle(),
+      db.from('company_subscriptions').select('company_id,plan_id,status,free_seats,trial_ends_at,notes,storage_gb_override').eq('company_id', companyId).maybeSingle(),
     ]).then(([p, s]) => {
       if (!alive) return;
       setPlans((p.data as Plan[]) || []);
-      setSub((s.data as Sub) || { company_id: companyId, plan_id: null, status: isSystem ? 'exempt' : 'pending', free_seats: 0, trial_ends_at: null, notes: null });
+      setSub((s.data as Sub) || { company_id: companyId, plan_id: null, status: isSystem ? 'exempt' : 'pending', free_seats: 0, trial_ends_at: null, notes: null, storage_gb_override: null });
       setLoading(false);
     });
     return () => { alive = false; };
@@ -82,6 +82,7 @@ export function CompanyPlanPanel({ companyId, isSystem, userCount }: { companyId
     const { error } = await db.from('company_subscriptions').upsert({
       company_id: companyId, plan_id: sub.plan_id, status: sub.status, free_seats: Math.max(0, Math.floor(sub.free_seats || 0)),
       trial_ends_at: sub.status === 'trialing' ? sub.trial_ends_at : null, notes: sub.notes?.trim() || null,
+      storage_gb_override: sub.storage_gb_override && sub.storage_gb_override >= 1 ? Math.floor(sub.storage_gb_override) : null,
     }, { onConflict: 'company_id' });
     setSaving(false);
     if (error) { toast.error('Não foi possível salvar o plano.'); console.error(error); return; }
@@ -120,6 +121,11 @@ export function CompanyPlanPanel({ companyId, isSystem, userCount }: { companyId
           <Input className="mt-1.5" type="number" min={0} max={10000} value={sub.free_seats} onChange={(e) => set({ free_seats: Number(e.target.value) || 0 })} />
           <p className="mt-1 text-xs text-muted-foreground">Usuários a mais, sem cobrança, além do limite do plano.</p>
         </div>
+        <div>
+          <Label>Armazenamento liberado (GB)</Label>
+          <Input className="mt-1.5" type="number" min={1} max={100000} placeholder={plan ? `${plan.storage_gb} (do plano)` : 'do plano'} value={sub.storage_gb_override ?? ''} onChange={(e) => set({ storage_gb_override: e.target.value ? Number(e.target.value) : null })} />
+          <p className="mt-1 text-xs text-muted-foreground">Vazio = o do plano. Preenchido, vale este valor (liberação manual, sem cobrança).</p>
+        </div>
         {sub.status === 'trialing' ? (
           <div>
             <Label>Teste até</Label>
@@ -132,6 +138,7 @@ export function CompanyPlanPanel({ companyId, isSystem, userCount }: { companyId
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-semibold">Capacidade:</span>
           <span>{plan ? `${plan.max_users} do plano` : 'sem plano'}{sub.free_seats ? ` + ${sub.free_seats} gratuitos` : ''} = <b>{seats}</b> usuários</span>
+          {plan ? <span>· <b>{sub.storage_gb_override ?? plan.storage_gb} GB</b> de armazenamento{sub.storage_gb_override ? ' (liberado manualmente)' : ''}</span> : null}
           <Badge variant={userCount > seats ? 'destructive' : 'secondary'}>{userCount} em uso</Badge>
         </div>
         {plan ? <div className="mt-2 flex flex-wrap gap-1.5">{plan.features.map((f) => <span key={f} className="rounded-full border px-2 py-0.5 text-xs">{FEATURE_LABEL[f] || f}</span>)}</div> : null}
