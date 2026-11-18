@@ -232,6 +232,7 @@ export function HrCard({ view = 'sistema' }: { view?: 'sistema' | 'dash' }) {
   const [form, setForm] = useState<'new' | string | null>(null);
   const [importing, setImporting] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [counts, setCounts] = useState<Record<string, { on: number; off: number }>>({});
   const [, tick] = useState(0);
   useEffect(() => { const t = window.setInterval(() => tick((n) => n + 1), 30000); return () => window.clearInterval(t); }, []);
 
@@ -239,6 +240,15 @@ export function HrCard({ view = 'sistema' }: { view?: 'sistema' | 'dash' }) {
     const { data, error } = await (supabase as any).from('hr_sources').select('id,label,preset,config,enabled,last_status,last_error,last_used_at,last_count').order('created_at');
     if (error) { setListErr(error.message || 'Não foi possível carregar os sistemas.'); return; }
     setListErr(''); setSources((data || []) as Source[]);
+    // The stored count includes people dismissed in the last years (kept for turnover in the Dash), so the card
+    // shows active and dismissed separately, read from the synced rows.
+    const counts: Record<string, { on: number; off: number }> = {};
+    await Promise.all(((data || []) as Source[]).filter((x) => x.enabled).map(async (x) => {
+      const q = () => (supabase as any).from('hr_employees').select('ext_key', { count: 'exact', head: true }).eq('source_id', x.id);
+      const [on, off] = await Promise.all([q().is('dem', null), q().not('dem', 'is', null)]);
+      if (!on.error && !off.error) counts[x.id] = { on: on.count ?? 0, off: off.count ?? 0 };
+    }));
+    setCounts(counts);
   }, []);
   const loadPresets = useCallback(async () => {
     setPresetErr('');
@@ -249,7 +259,7 @@ export function HrCard({ view = 'sistema' }: { view?: 'sistema' | 'dash' }) {
 
   const nameOf = (s: Source) => presets?.find((p) => p.id === s.preset)?.name || s.preset;
   const run = async (key: string, fn: () => Promise<void>) => { setBusy(key); try { await fn(); } catch (e) { toast.error((e as Error).message); await load(); } finally { setBusy(null); } };
-  const sync = (s: Source) => run('sync' + s.id, async () => { const r = await call('sync', { id: s.id }); toast.success(`Atualizado: ${r.total ?? 0} colaboradores.`); await load(); });
+  const sync = (s: Source) => run('sync' + s.id, async () => { const r = await call('sync', { id: s.id }); toast.success(`Atualizado: ${(r.total ?? 0) - (r.dismissed ?? 0)} ativos${r.dismissed ? ` e ${r.dismissed} desligados (histórico)` : ''}.`); await load(); });
   const toggle = (s: Source, on: boolean) => run('tg' + s.id, async () => { await call('toggle', { id: s.id, enabled: on }); await load(); });
   const remove = async (s: Source) => {
     if (!(await appConfirm({ title: `Remover ${s.label || nameOf(s)}?`, message: 'A chave e os colaboradores importados deste sistema são apagados e o Dash 3D deixa de usá-los.', confirmText: 'Remover', danger: true }))) return;
@@ -292,7 +302,7 @@ export function HrCard({ view = 'sistema' }: { view?: 'sistema' | 'dash' }) {
                     <p className="truncate text-[14px] font-semibold">{s.label || nameOf(s)}</p>
                     <p className="flex flex-wrap items-center gap-x-1.5 text-[12px] text-muted-foreground">
                       {failed ? <AlertCircle className="h-3.5 w-3.5 text-destructive" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
-                      {s.last_count ?? 0} colaboradores · {s.last_used_at ? `atualizado ${ago(s.last_used_at)}` : 'ainda sem atualização'}
+                      {counts[s.id] ? <>{counts[s.id].on} ativos{counts[s.id].off ? ` · ${counts[s.id].off} desligados (histórico)` : ''}</> : <>{s.last_count ?? 0} colaboradores</>} · {s.last_used_at ? `atualizado ${ago(s.last_used_at)}` : 'ainda sem atualização'}
                     </p>
                     </div>
                   </div>
