@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { ChatTypographyControls } from './ChatTypographyControls';
+import { useAuth } from '@/contexts/AuthContext';
+import { BUBBLE_COLORS, BUBBLE_LABELS, chatKeyOf, saveBubbleColor, useChatBubbleColor } from '@/hooks/useChatBubbleColor';
 
 export const CHAT_BACKGROUND_KEY_PREFIX = 'nuvexa:chat-background:';
 
@@ -23,6 +25,14 @@ interface ChatPersonalizationDialogProps {
 export function ChatPersonalizationDialog({ open, onOpenChange, chatId, chatName }: ChatPersonalizationDialogProps) {
   const [background, setBackground] = useState('');
   const [url, setUrl] = useState('');
+  const { profile } = useAuth();
+  const chatKey = chatKeyOf(chatId);
+  const bubble = useChatBubbleColor(chatKey);
+  const pickBubble = async (i: number) => {
+    if (!profile?.id || !profile.company_id || !chatKey) return;
+    const { error } = await saveBubbleColor(profile.id, profile.company_id, chatKey, i);
+    if (error) toast.error('Não foi possível salvar a cor.'); else toast.success('Cor do balão atualizada.');
+  };
 
   useEffect(() => {
     if (!open || !chatId) return;
@@ -86,6 +96,7 @@ export function ChatPersonalizationDialog({ open, onOpenChange, chatId, chatName
         ) : (
           <div className="space-y-5">
             <div className="rounded-xl border border-border bg-muted/30 p-3"><p className="text-sm font-medium text-foreground">{chatName || 'Conversa individual'}</p><p className="text-xs text-muted-foreground">A personalização é exclusiva desta conversa.</p></div>
+            <div className="space-y-2"><Label>Cor do meu balão</Label><div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cor do meu balão">{BUBBLE_COLORS.map((c, i) => <button key={i} type="button" role="radio" aria-checked={bubble === i} title={BUBBLE_LABELS[i]} aria-label={BUBBLE_LABELS[i]} onClick={() => pickBubble(i)} className={`h-9 w-9 rounded-full border-2 ${bubble === i ? 'border-foreground ring-2 ring-offset-2 ring-foreground/30' : 'border-border'}`} style={{ background: c || 'hsl(var(--primary) / .18)' }} />)}</div><p className="text-xs text-muted-foreground">Vale só para você e só nesta conversa, no computador e no celular.</p></div>
             <div className="space-y-2"><Label htmlFor="chat-background-upload">Imagem de fundo</Label><label htmlFor="chat-background-upload" className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-5 text-sm font-medium transition-colors hover:bg-muted/60"><Upload className="h-4 w-4" /> Escolher imagem do computador</label><Input id="chat-background-upload" type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e.target.files?.[0])} /></div>
             <div className="space-y-2"><Label htmlFor="chat-background-url">Ou usar uma URL de imagem</Label><div className="flex gap-2"><Input id="chat-background-url" placeholder="https://..." value={url} onChange={(e) => setUrl(e.target.value)} /><Button type="button" onClick={handleUrl}>Aplicar</Button></div></div>
             {background && <div className="overflow-hidden rounded-xl border border-border"><div className="flex h-32 items-center justify-center bg-cover bg-center" style={{ backgroundImage: `url(${background})` }}><div className="rounded-full bg-background/80 px-3 py-1 text-xs font-medium backdrop-blur">Pré-visualização</div></div></div>}

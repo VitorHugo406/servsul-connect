@@ -40,6 +40,19 @@ const gr = (h: number) => `hsl(${h} 30% 30%)`;
 export const avStyle = (p: { photo: string | null; hue: number }) => (p.photo ? { background: `url("${p.photo}") center/cover` } : { background: gr(p.hue) });
 export const covStyle = (p: { cover: string | null; hue: number }) => (p.cover ? { background: `url("${p.cover}") center/cover` } : { background: `hsl(${p.hue} 32% 24%)` });
 
+/** "@" picker in the composer: the people of the conversation, filtered while typing (accents/case ignored). */
+function MentionPicker({ q, ids, people, onPick }: { q: string; ids: string[]; people: Record<string, Person>; onPick: (name: string) => void }) {
+  const f = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const qq = f(q.trim());
+  const list = [...new Set(ids)].map((id) => people[id]).filter((p): p is Person => !!p && !p.sys && (!qq || f(p.n).split(/\s+/).some((w) => w.startsWith(qq)) || f(p.n).startsWith(qq))).sort((a, b) => a.n.localeCompare(b.n, 'pt-BR')).slice(0, 8);
+  const ai = !qq || 'ewvonai'.startsWith(qq.replace(/\s/g, ''));
+  if (!list.length && !ai) return null;
+  return <div className="ewx-ment" role="listbox" aria-label="Mencionar">
+    {list.map((p) => <button key={p.id} type="button" role="option" aria-selected="false" onMouseDown={(e) => e.preventDefault()} onClick={() => onPick(p.n)}><Av p={p} /><span><b>{p.n}</b><small>{p.dept || p.role || ''}</small></span></button>)}
+    {ai ? <button type="button" role="option" aria-selected="false" onMouseDown={(e) => e.preventDefault()} onClick={() => onPick('ewvonai')}><span className="ewx-ment-ai">AI</span><span><b>EwvonAI</b><small>Assistente</small></span></button> : null}
+  </div>;
+}
+
 export function Av({ p, cls = '', onClick, st }: { p: { id?: string; photo: string | null; hue: number; i: string; sys?: boolean }; cls?: string; onClick?: (e: React.MouseEvent) => void; st?: StatusKey | null }) {
   if (p.sys || isSystemSender(p.id) || p.id === AI_SENDER_ID) return <div className={`av ewx-sysav${cls ? ' ' + cls : ''}`} data-p={p.id || ''}><CosmicBlob size={48} label={p.id === AI_SENDER_ID ? 'EwvonAI' : undefined} /></div>;
   return (
@@ -114,6 +127,7 @@ export default function EwwonApp() {
   const [toastOn, setToastOn] = useState(false);
   const [ban, setBan] = useState<{ title: string; body: string; data: Record<string, string>; av?: Chat | null } | null>(null);
   const [draft, setDraft] = useState('');
+  const [ment, setMent] = useState<{ q: string; at: number } | null>(null);   // open @ picker: query and where the @ is
   const [pickFor, setPickFor] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [cfl, setCfl] = useState<'all' | 'un' | 'set' | 'p'>('all');
@@ -527,6 +541,7 @@ export default function EwwonApp() {
   const doSend = async () => {
     const v = draft.trim();
     if (!v && !pending.length) return;
+    setMent(null);
     if (!pending.length) { setDraft(''); void send(v); inpRef.current?.focus(); return; }
     setSending(true);
     const lines: string[] = [];
@@ -779,8 +794,9 @@ export default function EwwonApp() {
         });
         if (isOpen) { void D.markRead(c, meId).catch(() => undefined); return; }
         const who = ps[from];
-        const title = c.g ? `${who?.n || 'Alguém'} · ${c.n}` : c.n;
-        void N.deliver({ type: 'message', chat: c, title, body: m.t, data: { type: 'message', chatId: key } }).then((r) => {
+        const mention = N.mentionsName(m.t, [ps[meId]?.n]);
+        const title = mention ? `${who?.n || 'Alguém'} mencionou você${c.g ? ` · ${c.n}` : ''}` : c.g ? `${who?.n || 'Alguém'} · ${c.n}` : c.n;
+        void N.deliver({ type: 'message', chat: c, title, body: m.t, mention, data: { type: 'message', chatId: key } }).then((r) => {
           if (r.mode === 'banner') showBanner({ title, body: stateRef.current.prefs.prev === 0 ? 'Nova mensagem' : m.t, data: { type: 'message', chatId: key }, av: c });
         });
       },
@@ -1365,9 +1381,9 @@ export default function EwwonApp() {
                   ] : [
                     <button key="plus" className={'plus' + (attOn && attOn !== 'sticker' ? ' on' : '')} aria-label="Anexar" onClick={() => setAttOn(attOn && attOn !== 'sticker' ? false : 'menu')}><I n={attOn && attOn !== 'sticker' ? 'x' : 'plus'} /></button>,
                     <button key="stk" className={'ewx-stkbtn' + (attOn === 'sticker' ? ' on' : '')} aria-label="Figurinhas" onClick={() => setAttOn(attOn === 'sticker' ? false : 'sticker')}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h7l7-7V7a4 4 0 0 0-4-4h-3" /><path d="M14 21v-3a4 4 0 0 1 4-4h3" /><path d="M8.5 10h.01M15.5 10h.01M8.5 14.5c1.8 1.6 5.2 1.6 7 0" /></svg></button>,
-                    <div key="inp" className="ewx-inpw"><div className="ewx-mirror" aria-hidden="true" ref={mirRef}><ComposerMirror text={draft} /></div><textarea id="inp" ref={inpRef} rows={1} name="ew-message" placeholder={pending.length ? 'Adicione uma legenda' : 'Escreva uma mensagem'} autoComplete="off" autoCorrect="on" autoCapitalize="sentences" spellCheck enterKeyHint={prefs.enter !== 0 ? 'send' : 'enter'} value={draft} maxLength={4000}
+                    <div key="inp" className="ewx-inpw">{ment && cur ? <MentionPicker q={ment.q} ids={(cur.kind === 'dm' ? [cur.id] : cur.mem).filter((id) => id !== meId)} people={people} onPick={(name) => { const before = draft.slice(0, ment.at), after = draft.slice(ment.at + 1 + ment.q.length); const next = `${before}@${name} ${after.replace(/^ /, '')}`; setDraft(next); setMent(null); requestAnimationFrame(() => { const el = inpRef.current; if (el) { const c = before.length + name.length + 2; el.focus(); el.setSelectionRange(c, c); fitTextarea(el); } }); }} /> : null}<div className="ewx-mirror" aria-hidden="true" ref={mirRef}><ComposerMirror text={draft} /></div><textarea id="inp" ref={inpRef} rows={1} name="ew-message" placeholder={pending.length ? 'Adicione uma legenda' : 'Escreva uma mensagem'} autoComplete="off" autoCorrect="on" autoCapitalize="sentences" spellCheck enterKeyHint={prefs.enter !== 0 ? 'send' : 'enter'} value={draft} maxLength={4000}
                       onFocus={() => setAttOn((a) => (a === 'menu' ? false : a))} onSelect={onComposerSelect} onBlur={() => setFmtSel(false)}
-                      onChange={(e) => { setDraft(e.target.value); fitTextarea(e.target); sendTyping(); syncMirror(); }} onScroll={syncMirror} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); void doSend(); } }} /></div>,
+                      onChange={(e) => { setDraft(e.target.value); fitTextarea(e.target); sendTyping(); syncMirror(); const pos = e.target.selectionStart ?? e.target.value.length; const mm = /(?:^|\s)@([^\n@]{0,30})$/.exec(e.target.value.slice(0, pos)); setMent(mm ? { q: mm[1], at: pos - mm[1].length - 1 } : null); }} onScroll={syncMirror} onKeyDown={(e) => { if (e.key === 'Enter' && (prefs.enter !== 0 || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); void doSend(); } }} /></div>,
                   ]}
                   {recOn && lockMode
                     ? <button key="sndL" className="snd" id="snd" aria-label="Enviar áudio" onClick={() => void sendVoiceNote()}><I n="send" /></button>

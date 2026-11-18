@@ -21,7 +21,7 @@ export const CHANNELS = [
 const CH_OF: Record<string, string> = { message: 'mensagens', notice: 'avisos', meeting: 'reunioes', birthday: 'aniversarios' };
 
 export type NotifyType = 'message' | 'notice' | 'meeting' | 'birthday';
-export interface NotifyEvent { type: NotifyType; chat?: Chat | null; urgent?: boolean; title: string; body: string; data?: Record<string, string>; id?: number }
+export interface NotifyEvent { type: NotifyType; chat?: Chat | null; urgent?: boolean; mention?: boolean; title: string; body: string; data?: Record<string, string>; id?: number }
 
 interface Ctx { prefs: () => Prefs; me: () => Person | null; open: (d: Record<string, string>) => void; chat: (id: string) => Chat | null; banner: (o: { title: string; body: string; data: Record<string, string> }) => void; onToken?: (t: string) => void; savePush?: (s: { endpoint: string; p256dh: string; auth: string }) => Promise<void> }
 let ctx: Ctx = { prefs: () => ({}), me: () => null, open: () => undefined, chat: () => null, banner: () => undefined };
@@ -30,6 +30,13 @@ let perm: 'granted' | 'denied' | 'prompt' | 'unknown' = 'unknown';
 
 const hash = (s: string) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h) % 2147483000; };
 const hm2min = (s: string) => { const a = String(s || '0:0').split(':'); return +a[0] * 60 + (+a[1] || 0); };
+
+const fold = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+/** True when the text has "@<name>" for any of the given names (accents and case ignored). */
+export function mentionsName(text: string, names: (string | null | undefined)[]) {
+  const t = fold(String(text || ''));
+  return names.some((n) => { const v = fold(String(n || '').trim()); return v.length > 1 && new RegExp(`(^|[^\\w@])@${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w])`).test(t); });
+}
 
 export function isChatMuted(chat?: Chat | null) {
   const s = chat?.set;
@@ -48,6 +55,8 @@ export function withinWorkHours(me: Person | null, d = new Date()) {
 export function shouldNotify(evt: NotifyEvent): { allow: boolean; reason?: string } {
   const p = ctx.prefs() || {};
   const me = ctx.me();
+  // Being @mentioned always notifies, even with message notifications off, the chat muted or "não incomodar".
+  if (evt.type === 'message' && evt.mention) return { allow: true };
   if (evt.type === 'message') {
     const c = evt.chat;
     if (p.nm === 0) return { allow: false, reason: 'mensagens desativadas' };

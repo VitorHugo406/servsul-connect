@@ -24,6 +24,7 @@ import { DirectMessageList } from '@/components/chat/DirectMessageList';
 import { DirectMessageChat } from '@/components/chat/DirectMessageChat';
 import { PrivateGroupList } from '@/components/chat/PrivateGroupList';
 import { NewGroupDialog } from '@/components/chat/NewGroupDialog';
+import { bubbleStyle, useChatBubbleColor } from '@/hooks/useChatBubbleColor';
 import { PrivateGroupChat } from '@/components/chat/PrivateGroupChat';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { ScheduledSummaryConfig } from '@/components/chat/ScheduledSummaryConfig';
@@ -125,6 +126,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
 
   const accessibleSectors = isAdmin ? sectors : sectors.filter(s => allAccessibleSectorIds.includes(s.id));
   const effectiveSector = activeSector || profile?.sector_id || geralSectorId;
+  const sectorBubble = useChatBubbleColor(effectiveSector ? `sector:${effectiveSector}` : null);
   const { typingUsers, sendTyping } = useTypingIndicator(`sector-${effectiveSector || 'none'}`);
   const { messages, loading: messagesLoading, sendMessage, canSendMessages } = useMessages(effectiveSector);
   const { reactions, toggleReaction } = useMessageReactions(messages.map(m => m.id));
@@ -416,7 +418,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
         </ScrollArea>}
         <NewGroupDialog open={showNewGroup} onOpenChange={setShowNewGroup} onCreated={(id) => { void refetchGroups(); setChatMode('groups'); setSelectedGroupId(id); setSelectedUserId(null); }} />
       </aside>
-      <div className="chat-thread flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden !border-0 !rounded-none !shadow-none">
+      <div className="chat-thread flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden !border-0 !rounded-none !shadow-none" {...(chatMode === 'sectors' ? bubbleStyle(sectorBubble) : {})}>
     {chatMode === 'sectors' && !currentSector && !isMobile ? <ChatEmptyState kind="select" title="Selecione uma conversa" text="Escolha uma conversa na lista ou comece uma nova." actionLabel="Nova conversa" onAction={focusConversationSearch} /> : chatMode === 'sectors' ? <>
 
       <div className={cn('chat-thread-header flex items-center gap-3 shrink-0', isMobile ? 'hidden' : 'px-4 py-3')}>

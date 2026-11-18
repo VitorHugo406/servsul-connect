@@ -1,4 +1,4 @@
-// Web Push for the installed app (PWA). Called by the enqueue_web_push() trigger
+// Web Push for the installed app (PWA) + event queue for the native Android app. Called by the enqueue_web_push() trigger
 // (pg_net) for every new DM, sector message, group message and notice. Picks the
 // recipients, skips the author and muted chats, and sends a WhatsApp-like payload:
 // title = person / group / sector, body = message preview, icon = photo.
@@ -124,11 +124,37 @@ Deno.serve(async (req) => {
   recipients = [...new Set(recipients)].filter((id) => id && id !== author)
   if (!recipients.length) return json({ sent: 0 })
 
-  // Respect muted conversations (chat_member_prefs).
+  // People @mentioned in a message always get it (even in a muted chat), with their own "mencionou você" title.
+  let mentioned: string[] = []
+  if (payload.kind === 'message' && String(r.content || '').includes('@')) {
+    const fold = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    const text = fold(String(r.content))
+    const has = (n: unknown) => { const v = fold(String(n || '').trim()); return v.length > 1 && new RegExp(`(^|[^\\w@])@${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w])`).test(text) }
+    for (let i = 0; i < recipients.length; i += 200) {
+      const { data: ps } = await admin.from('profiles').select('id, name, display_name').in('id', recipients.slice(i, i + 200))
+      for (const p of ps || []) if (has(p.display_name) || has(p.name)) mentioned.push(p.id)
+    }
+  }
+
+  // Respect muted conversations (chat_member_prefs), except for whoever was mentioned.
   if (payload.kind === 'message' || payload.kind === 'call') {
     const { data: prefs } = await admin.from('chat_member_prefs').select('profile_id, chat_key, muted, muted_until').in('profile_id', recipients).eq('muted', true)
     const muted = new Set((prefs || []).filter((p: Row) => !p.muted_until || new Date(p.muted_until).getTime() > Date.now()).filter((p: Row) => p.chat_key === chatKey(p.profile_id)).map((p: Row) => p.profile_id))
-    recipients = recipients.filter((id) => !muted.has(id))
+    recipients = recipients.filter((id) => !muted.has(id) || mentioned.includes(id))
+  }
+  if (mentioned.length) {
+    const who = String(payload.sender || payload.title || 'Alguém')
+    const mp = { ...payload, mention: true, title: `📣 ${who} mencionou você`, body: table === 'direct_messages' ? preview(r.content) : `${payload.title}: ${preview(r.content)}`, tag: `${payload.tag}:mention:${r.id}` }
+    const { data: msubs } = await admin.from('web_push_subscriptions').select('endpoint, p256dh, auth, profile_id').in('profile_id', mentioned)
+    await Promise.all((msubs || []).map(async (s: Row) => {
+      try { await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify({ ...mp, ring: 0, badge: BADGE, at: Date.now() }), { TTL: 60 * 60 * 24, urgency: 'high' }) }
+      catch (e) { const code = (e as { statusCode?: number }).statusCode; if (code === 404 || code === 410) await admin.from('web_push_subscriptions').delete().eq('endpoint', s.endpoint) }
+    }))
+    const { data: devs } = await admin.from('native_devices').select('profile_id').in('profile_id', mentioned)
+    const nids = [...new Set((devs || []).map((d: Row) => d.profile_id))]
+    if (nids.length) await admin.from('native_events').insert(nids.map((pid) => ({ profile_id: pid, payload: { ...mp, at: Date.now() } })))
+    recipients = recipients.filter((id) => !mentioned.includes(id))   // they already got the mention version
+    if (!recipients.length) return json({ sent: 0, mentioned: mentioned.length })
   }
 
   const { data: subs } = await admin.from('web_push_subscriptions').select('endpoint, p256dh, auth, profile_id').in('profile_id', recipients)

@@ -137,3 +137,9 @@ aside[aria-label^="Detalhes da conversa"] > div:first-child > div { border-radiu
   66% { box-shadow: 0 0 16px 2px rgba(76, 141, 255, .45); }
 }
 @media (prefers-reduced-motion: reduce) { .chat-composer-box.ai-glow, .ew .cmp.ai-glow, .chat-composer-box.ai-glow::before, .ew .cmp.ai-glow::before { animation: none; } }
+
+/* Own-bubble colour chosen per conversation (Personalização do chat; shared with the mobile app): solid colour, white text */
+.chat-thread[data-bubble] .chat-bubble-outgoing { background: var(--chat-own-solid) !important; border-color: transparent !important; color: #fff !important; }
+.chat-thread[data-bubble] .chat-bubble-outgoing :is(.chat-message-text, .chat-message-text *, p, span):not(.chat-mention) { color: #fff !important; }
+.chat-thread[data-bubble] .chat-bubble-outgoing .chat-message-meta, .chat-thread[data-bubble] .chat-bubble-outgoing .chat-message-meta * { color: rgba(255,255,255,.82) !important; }
+.chat-thread[data-bubble] .chat-bubble-outgoing a { color: #fff !important; text-decoration: underline; }

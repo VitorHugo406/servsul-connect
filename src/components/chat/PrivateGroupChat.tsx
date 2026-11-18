@@ -44,10 +44,12 @@ import { SignedStorageImage, SignedStorageLink } from '@/components/common/Signe
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ChatPersonalizationDialog, getChatBackgroundKey } from '@/components/chat/ChatPersonalizationDialog';
+import { bubbleStyle, useChatBubbleColor } from '@/hooks/useChatBubbleColor';
 
 interface PrivateGroupChatProps { group: PrivateGroup | null; }
 
 export function PrivateGroupChat({ group }: PrivateGroupChatProps) {
+  const bubbleColor = useChatBubbleColor(group?.id ? `group:${group.id}` : null);
   const { className: typographyClass } = useChatTypography();
   const { profile, user } = useAuth();
   const { messages, loading, sendMessage } = useGroupMessages(group?.id || null);
@@ -111,7 +113,7 @@ export function PrivateGroupChat({ group }: PrivateGroupChatProps) {
 
   if (!group) return <div className="chat-thread flex h-full flex-col items-center justify-center"><ChatEmptyState kind="group" title="Selecione um grupo" text="Escolha um grupo na lista ao lado para conversar com a equipe." actionLabel="Procurar grupo" onAction={focusConversationSearch} /></div>;
 
-  return <div className={cn("chat-thread flex h-full w-full min-w-0 flex-1 flex-col min-h-0", typographyClass)}>
+  return <div className={cn("chat-thread flex h-full w-full min-w-0 flex-1 flex-col min-h-0", typographyClass)} {...bubbleStyle(bubbleColor)}>
     <div className="chat-thread-header flex shrink-0 items-center justify-between gap-3 px-3 py-3 sm:px-5">
       <div className="chat-head-avatar flex items-center gap-3 min-w-0"><Avatar className="h-10 w-10 shrink-0"><AvatarImage src={group.avatar_url || ''} /><AvatarFallback className="bg-primary text-primary-foreground">{getInitials(group.name)}</AvatarFallback></Avatar><div className="min-w-0"><h3 className="font-display font-semibold text-foreground truncate">{group.name}</h3><ChatFavoriteStar conversationKey={'group:' + group.id} /><p className="chat-head-status text-xs text-muted-foreground">{members.length} membros</p></div></div>
       <div className="chat-head-actions flex items-center gap-1 shrink-0">
