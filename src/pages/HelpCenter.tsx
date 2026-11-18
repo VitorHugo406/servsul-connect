@@ -24,6 +24,7 @@ const HELP: { cat: string; items: Q[] }[] = [
   { cat: 'Tarefas e murais', items: [
     { q: 'Como crio um mural?', a: 'Em Tarefas, clique em "Novo mural", dê nome, descrição e escolha uma capa. As colunas padrão (A Fazer, Em Progresso, Em Revisão, Concluído) são criadas e podem ser renomeadas.' },
     { q: 'Como trago meus quadros do Trello, ClickUp ou Asana?', a: 'Em Tarefas, clique em "Importar". No Trello, exporte o quadro como JSON (Menu › Imprimir, exportar e compartilhar › Exportar como JSON). No ClickUp e no Asana, exporte em CSV. O ewvon cria um mural novo com colunas, cards, etiquetas, prazos, checklists e comentários.' },
+    { q: 'Posso mostrar um mural para um cliente?', a: 'Sim. No mural, clique em Compartilhar e crie o "Link para convidados". Quem tiver o link vê as colunas e os cards (título, prazo, etiquetas e progresso) sem precisar de login. Descrições, comentários, anexos e pessoas não aparecem, e você pode desativar o link quando quiser.' },
     { q: 'Posso ver os cards em lista ou em calendário?', a: 'Sim. Dentro do mural, no topo, escolha Quadro, Lista ou Calendário. A Lista pode ser ordenada clicando nos títulos das colunas; o Calendário mostra os cards no dia do prazo.' },
     { q: 'Como anexo documentos a um card?', a: 'Abra o card e use a área de anexos para enviar arquivos e imagens. Os anexos de tarefas ficam guardados e não são apagados automaticamente.' },
     { q: 'O que é a coluna de conclusão?', a: 'É a coluna que marca o card como concluído. Ao mover um card para ela, o sistema registra a data e se foi entregue no prazo ou com atraso, o que alimenta os relatórios e o score da equipe.' },
@@ -36,6 +37,7 @@ const HELP: { cat: string; items: Q[] }[] = [
   { cat: 'Administração e privacidade', items: [
     { q: 'Como cadastro colaboradores?', a: 'Em Gerenciamento, adicione a pessoa com nome, e-mail e setor. Se a empresa usa um sistema de RH conectado em Integrações, é possível importar os colaboradores ativos de uma vez.' },
     { q: 'Como exporto os meus dados?', a: 'No seu perfil, abra "Meus dados e privacidade" para baixar uma cópia dos seus dados ou fazer um pedido de correção ou exclusão, conforme a LGPD.' },
+    { q: 'Como ligo o ewvon a outros sistemas (Zapier, Make)?', a: 'Em Integrações › Webhooks, cole o endereço https que o Zapier, Make ou o seu sistema forneceu e escolha os eventos (card criado, mudou de coluna, concluído). Use "Enviar teste" para conferir. Cada envio é assinado com a chave secreta mostrada ali.' },
     { q: 'As chaves das integrações ficam seguras?', a: 'Sim. As chaves de API são guardadas criptografadas (AES-256) e só são abertas no servidor, no momento da sincronização. Nenhuma tela mostra a chave depois de salva.' },
   ] },
 ];

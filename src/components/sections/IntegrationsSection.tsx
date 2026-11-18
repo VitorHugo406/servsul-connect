@@ -1,3 +1,4 @@
+import { WebhooksCard } from '@/components/integrations/WebhooksCard';
 // Company admin: connect Slack, Microsoft Teams and WhatsApp.
 // Secrets go straight to the `integrations` edge function, which encrypts them; this screen never reads them back.
 import { useCallback, useEffect, useState } from 'react';
@@ -119,7 +120,7 @@ export function IntegrationsSection() {
   const [rows, setRows] = useState<Row[]>([]);
   const [log, setLog] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'sistema' | 'dash' | 'ia' | 'msg'>('sistema');
+  const [tab, setTab] = useState<'sistema' | 'dash' | 'ia' | 'msg' | 'hooks'>('sistema');
   const load = useCallback(async () => {
     const [{ data: r }, { data: d }] = await Promise.all([
       (supabase as any).from('company_integrations').select('provider, enabled, events, config, last_status, last_error, last_used_at'),
@@ -135,12 +136,13 @@ export function IntegrationsSection() {
       {loading ? <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div> : (
         <>
           <div className="dk-seg" role="group" aria-label="Integrações" style={{ alignSelf: 'flex-start' }}>
-            {([['sistema', 'Sistema de RH'], ['dash', 'Dash 3D'], ['ia', 'IA'], ['msg', 'Mensagens']] as const).map(([id, label]) => (
+            {([['sistema', 'Sistema de RH'], ['dash', 'Dash 3D'], ['ia', 'IA'], ['msg', 'Mensagens'], ['hooks', 'Webhooks']] as const).map(([id, label]) => (
               <button key={id} type="button" aria-pressed={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{label}</button>
             ))}
           </div>
           {tab === 'sistema' ? <HrCard view="sistema" /> : null}
           {tab === 'dash' ? <HrCard view="dash" /> : null}
+          {tab === 'hooks' ? <WebhooksCard /> : null}
           {tab === 'ia' ? <AiCard row={rows.find((r) => (r.provider as string) === 'claude') as unknown as AiRow | undefined} onChanged={() => void load()} /> : null}
           {tab === 'msg' ? (
             <>
