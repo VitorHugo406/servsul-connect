@@ -3,7 +3,7 @@
 // Per mural: cards done / total (templates and archived cards excluded; cards without a due date count),
 // overdue cards (not done, due date in the past), members' photos (up to 3 + "+N").
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Edit, Image as ImageIcon, Loader2, MoreVertical, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, Edit, Image as ImageIcon, Loader2, MoreVertical, Plus, Trash2 , FileUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { SignedStorageImage } from '@/components/common/SignedStorageMedia';
@@ -31,7 +31,8 @@ function Cover({ board }: { board: Board }) {
   return <div className="tm-cover" />;
 }
 
-export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete }: {
+export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete, onImport }: {
+  onImport?: () => void;
   boards: Board[];
   userId: string | undefined;
   onOpen: (b: Board) => void;
@@ -172,7 +173,7 @@ export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete }
               {(Object.keys(SORT_LABEL) as Sort[]).map((s) => <DropdownMenuItem key={s} onClick={() => setSortP(s)}>{SORT_LABEL[s]}{s === 'custom' ? ' (arrastar)' : ''}</DropdownMenuItem>)}
             </DropdownMenuContent>
           </DropdownMenu>
-          <button type="button" className="tm-btn tm-pri" onClick={openNew}><Plus className="h-4 w-4" />Novo mural</button>
+          {onImport ? <button type="button" className="tm-btn" onClick={onImport} title="Importar do Trello, ClickUp, Asana ou planilha"><FileUp className="h-4 w-4" />Importar</button> : null}<button type="button" className="tm-btn tm-pri" onClick={openNew}><Plus className="h-4 w-4" />Novo mural</button>
         </div>
       </div>
 

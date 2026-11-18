@@ -1,3 +1,4 @@
+import { ImportBoardDialog } from '@/components/tasks/ImportBoardDialog';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useWarRoomLockedTasks } from '@/hooks/useWarRooms';
 import { useState, useRef, useEffect, useMemo } from 'react';
@@ -67,6 +68,7 @@ export function TaskBoardSection() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { boards, loading: boardsLoading, createBoard, updateBoard, deleteBoard, refetch: refetchBoards } = useTaskBoards();
+  const [showImport, setShowImport] = useState(false);
   const isMobile = useIsMobile();
   const boardSlugFromPath = location.pathname.match(/^\/tarefas\/([^/]+)$/)?.[1] || null;
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
@@ -204,7 +206,9 @@ export function TaskBoardSection() {
 
   return (
     <>
+      <ImportBoardDialog open={showImport} onOpenChange={setShowImport} onDone={(id) => { void refetchBoards(); setSelectedBoardId(id); }} />
       <MuralList
+        onImport={() => setShowImport(true)}
         boards={boards as never}
         userId={user?.id}
         onOpen={(board) => { setSelectedBoardId(board.id); navigate('/tarefas/' + slugifyBoardName(board.name) + '-' + board.id); }}
