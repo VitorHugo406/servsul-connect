@@ -1,3 +1,4 @@
+import { PublicLinkSection } from '@/components/tasks/PublicLinkSection';
 import { BoardAltView, type BoardViewMode } from '@/components/tasks/BoardAltViews';
 import { List as ListIcon, CalendarDays as CalDaysIcon } from 'lucide-react';
 import { ImportBoardDialog } from '@/components/tasks/ImportBoardDialog';
@@ -3171,6 +3172,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             <p className="text-xs text-muted-foreground">
               Pessoas que acessarem o link poderão solicitar participação. Você precisará aprovar cada solicitação.
             </p>
+            <PublicLinkSection boardId={board.id} canManage={isAdminOrOwner} />
           </div>
         </DialogContent>
       </Dialog>
