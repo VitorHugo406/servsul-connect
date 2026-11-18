@@ -14,7 +14,7 @@ export const LEGAL = {
   forum: 'São Paulo/SP',
 };
 
-export type LegalDocId = 'termos' | 'privacidade' | 'cookies' | 'dpa';
+export type LegalDocId = 'termos' | 'privacidade' | 'cookies' | 'dpa' | 'reembolso' | 'acessibilidade';
 export interface LegalSection { h: string; p: (string | string[])[] }   // string[] = bullet list
 export interface LegalDoc { id: LegalDocId; title: string; intro: string; sections: LegalSection[] }
 
@@ -83,8 +83,29 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
       { h: '9. Responsabilidade e vigência', p: ['A responsabilidade das partes segue a LGPD e os Termos de Uso. Este Acordo vigora enquanto o ewvon tratar dados em nome da Controladora e prevalece sobre os Termos em matéria de proteção de dados.'] },
     ],
   },
+  reembolso: {
+    id: 'reembolso', title: 'Política de Cancelamento e Reembolso',
+    intro: `Esta Política explica como funcionam o cancelamento, o direito de arrependimento e os reembolsos dos planos do ${L.brand}, oferecido por ${L.owner}, ${L.document}. Ela complementa os Termos de Uso e segue o Código de Defesa do Consumidor (Lei nº 8.078/1990) e o Decreto nº 7.962/2013, quando aplicáveis.`,
+    sections: [
+      { h: '1. Situação atual', p: ['As assinaturas pagas ainda não estão abertas ao público e não têm data de lançamento definida. Hoje o acesso acontece por liberação manual e gratuita (por exemplo, no programa de testes), sem nenhuma cobrança. Esta Política vale para qualquer pagamento que venha a ser feito.'] },
+      { h: '2. Direito de arrependimento (7 dias)', p: ['Na contratação feita pela internet, você pode desistir em até 7 (sete) dias corridos, contados da contratação ou do primeiro pagamento, sem precisar justificar (art. 49 do CDC).', 'Nesse caso, devolvemos 100% do valor pago, pelo mesmo meio de pagamento usado (estorno no cartão ou devolução do Pix), em até 10 dias úteis após o pedido. O prazo para o valor aparecer na fatura do cartão depende da operadora.'] },
+      { h: '3. Cancelamento depois dos 7 dias', p: ['Você pode cancelar a qualquer momento, sem multa. O cancelamento interrompe as próximas cobranças.', ['Plano mensal: o acesso continua até o fim do período já pago; não há devolução proporcional do mês em curso.', 'Plano anual: o acesso continua até o fim do período já pago. Se houver desconto anual, pedidos de devolução proporcional dos meses não usados são analisados caso a caso, descontado o benefício do desconto concedido.', 'Pagamento avulso: vale pelo período comprado.']] },
+      { h: '4. Cobrança indevida ou falha do serviço', p: ['Se você for cobrado em duplicidade, por valor errado ou por algo que não contratou, devolvemos o valor cobrado a mais assim que confirmado (art. 42 do CDC). Se o serviço ficar indisponível por falha nossa por período relevante, você pode pedir abatimento proporcional.'] },
+      { h: '5. Como pedir', p: [`Envie um e-mail para ${contact} com o nome da empresa, o e-mail de login do administrador e, se possível, o número do recibo. Confirmamos o recebimento do pedido de cancelamento ou arrependimento de imediato, como exige o Decreto nº 7.962/2013 (art. 5º), e respondemos em até 5 dias úteis.`] },
+      { h: '6. Seus dados após o cancelamento', p: ['Após o cancelamento ou o fim do período pago, os dados da empresa ficam guardados por até 30 dias para exportação ou reativação e depois podem ser excluídos, conforme os Termos de Uso e a Política de Privacidade.'] },
+    ],
+  },
+  acessibilidade: {
+    id: 'acessibilidade', title: 'Declaração de Acessibilidade',
+    intro: `O ${L.brand} quer que todas as pessoas consigam usar o site e a plataforma, inclusive pessoas com deficiência, em linha com a Lei Brasileira de Inclusão (Lei nº 13.146/2015, art. 63) e as diretrizes WCAG 2.1 nível AA como referência.`,
+    sections: [
+      { h: '1. O que já fazemos', p: [['páginas em português marcadas com o idioma correto, para leitores de tela;', 'imagens com texto alternativo e ícones decorativos ocultos dos leitores de tela;', 'navegação por teclado com indicador de foco visível e link "Pular para o conteúdo";', 'campos de formulário com rótulos e mensagens de erro em texto;', 'contraste de texto revisado nos temas claro e escuro;', 'animações reduzidas ou desativadas quando o aparelho pede "reduzir movimento", e a abertura animada da página inicial pode ser pulada.']] },
+      { h: '2. Limitações conhecidas', p: ['Algumas partes ainda não são totalmente acessíveis: o Dash 3D (visualização tridimensional do escritório) depende de visão e mouse ou toque; o mesmo conteúdo de pessoas e indicadores está disponível nas outras abas do sistema. Vídeos de divulgação podem não ter legendas.'] },
+      { h: '3. Fale com a gente', p: [`Encontrou uma barreira? Escreva para ${contact} contando a página e o que aconteceu. Respondemos em até 5 dias úteis e, quando possível, oferecemos uma alternativa enquanto corrigimos.`] },
+    ],
+  },
 };
 
 /** Documents each person must accept; company admins also accept the DPA on behalf of the company. */
 export const requiredDocs = (isAdmin: boolean): LegalDocId[] => (isAdmin ? ['termos', 'privacidade', 'dpa'] : ['termos', 'privacidade']);
-export const LEGAL_PATH: Record<LegalDocId, string> = { termos: '/termos', privacidade: '/privacidade', cookies: '/cookies', dpa: '/dpa' };
+export const LEGAL_PATH: Record<LegalDocId, string> = { termos: '/termos', privacidade: '/privacidade', cookies: '/cookies', dpa: '/dpa', reembolso: '/reembolso', acessibilidade: '/acessibilidade' };

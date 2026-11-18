@@ -2,7 +2,7 @@
 import { Link } from 'react-router-dom';
 import { LEGAL, LEGAL_DOCS, LEGAL_PATH, type LegalDocId } from '@/lib/legal';
 
-const ORDER: LegalDocId[] = ['termos', 'privacidade', 'cookies', 'dpa'];
+const ORDER: LegalDocId[] = ['termos', 'privacidade', 'cookies', 'reembolso', 'dpa', 'acessibilidade'];
 
 /** Renders "[campo a preencher]" placeholders highlighted so they are not missed before publishing. */
 export function LegalText({ text }: { text: string }) {
@@ -36,7 +36,7 @@ export default function Legal({ doc }: { doc: LegalDocId }) {
         <nav>{ORDER.map((d) => <Link key={d} to={LEGAL_PATH[d]} className={d === doc ? 'on' : ''}>{LEGAL_DOCS[d].title.split(' (')[0]}</Link>)}</nav>
       </header>
       <main><LegalDocView id={doc} /></main>
-      <footer className="legal-foot">© {new Date().getFullYear()} ewvon · Contato e Encarregado (DPO): {LEGAL.email}</footer>
+      <footer className="legal-foot">© {new Date().getFullYear()} ewvon · Responsável: {LEGAL.owner} (pessoa física), {LEGAL.forum} · Contato e Encarregado (DPO): {LEGAL.email}</footer>
     </div>
   );
 }
