@@ -271,7 +271,7 @@ export function BillingSection() {
                     <b>{o.name}</b>
                     <div className="bl-v" style={{ fontSize: 20, fontWeight: 600 }}>{o.price}</div>
                     <span className="bl-d">{o.desc}</span>
-                    {cur ? <span className="bl-d" style={{ fontWeight: 600, color: '#1C2430' }}>Forma atual</span>
+                    {cur ? <span className="bl-d" style={{ fontWeight: 600, color: 'var(--dkx-tx-1c2430,#1C2430)' }}>Forma atual</span>
                       : o.id === 'once' ? <span className="bl-d">Para voltar ao avulso, fale com o suporte.</span>
                       : <button className="bl-btn bl-pri" disabled={busy !== null} onClick={() => void changeCycle(o.id as 'monthly' | 'annual')}>{busy === 'cycle:' + o.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null}Mudar para {o.id === 'annual' ? 'anual' : 'mensal'}</button>}
                   </div>
@@ -294,7 +294,7 @@ export function BillingSection() {
                   <b>{p.name}</b>
                   <div className="bl-v" style={{ fontSize: 20, fontWeight: 600 }}>{brl(price)}<small style={{ fontSize: 12.5, fontWeight: 400, color: '#4A5563' }}>{plan.billing_cycle === 'annual' ? '/ano' : '/mês'}</small></div>
                   <span className="bl-d">{p.max_users} usuários · {p.max_sectors} setores · {p.storage_gb} GB</span>
-                  {current ? <span className="bl-d" style={{ fontWeight: 600, color: '#1C2430' }}>Plano atual</span>
+                  {current ? <span className="bl-d" style={{ fontWeight: 600, color: 'var(--dkx-tx-1c2430,#1C2430)' }}>Plano atual</span>
                     : <button className="bl-btn" disabled={busy !== null} onClick={() => void changePlan(p)}>{busy === 'plan:' + p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{(p.price_cents > (plan.price_cents ?? 0)) ? 'Subir para este' : 'Mudar para este'}</button>}
                 </div>
               );

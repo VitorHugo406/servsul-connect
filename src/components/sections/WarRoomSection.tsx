@@ -832,7 +832,7 @@ export function WarRoomSection() {
           <div className={l('empty')}>Carregando...</div>
         ) : showActive.length + showClosed.length === 0 ? (
           <div className={l('empty')}>
-            <b style={{ display: 'block', color: '#1C2430', marginBottom: 4 }}>Nenhuma War Room encontrada</b>
+            <b style={{ display: 'block', color: 'var(--dkx-tx-1c2430,#1C2430)', marginBottom: 4 }}>Nenhuma War Room encontrada</b>
             {canCreateWarRoom ? 'Crie uma War Room quando houver um incidente crítico.' : 'As War Rooms aparecerão aqui quando forem criadas.'}
           </div>
         ) : (

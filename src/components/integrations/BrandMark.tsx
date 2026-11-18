@@ -11,7 +11,7 @@ const colorOf = (s: string) => PALETTE[[...s].reduce((a, c) => a + c.charCodeAt(
 export function BrandTile({ id, name, size = 44, color, letter }: { id: string; name?: string; size?: number; color?: string; letter?: string }) {
   const b = BRANDS[ALIAS[id] ?? id];
   const bg = color || b?.hex || colorOf(id);
-  if (IMG.has(id)) return <img src={`/brands/${id}.png`} alt="" aria-hidden="true" width={size} height={size} loading="lazy" style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), flex: 'none', objectFit: 'cover', background: '#fff' }} />;
+  if (IMG.has(id)) return <img src={`/brands/${id}.png`} alt="" aria-hidden="true" width={size} height={size} loading="lazy" style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), flex: 'none', objectFit: 'cover', background: 'var(--dkx-bg-ffffff,#fff)' }} />;
   const L = (letter || name || id).trim().charAt(0).toUpperCase();
   return (
     <span aria-hidden="true" className="dk-tile" style={{ width: size, height: size, background: bg, borderRadius: Math.round(size * 0.3), flex: 'none' }}>

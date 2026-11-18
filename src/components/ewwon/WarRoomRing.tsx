@@ -72,7 +72,7 @@ export function WarRoomRing() {
       {room?.description && <div style={{ fontSize: 14, opacity: .9, maxWidth: 340, lineHeight: 1.4 }}>{room.description}</div>}
       {room?.by && <div style={{ fontSize: 13, opacity: .8 }}>Convocado por {room.by}</div>}
       <button type="button" onClick={ack} disabled={busy}
-        style={{ marginTop: 18, height: 60, minWidth: 220, borderRadius: 999, border: 0, background: '#fff', color: '#B3261E', font: '700 18px inherit', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,.28)' }}>
+        style={{ marginTop: 18, height: 60, minWidth: 220, borderRadius: 999, border: 0, background: 'var(--dkx-bg-ffffff,#fff)', color: '#B3261E', font: '700 18px inherit', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,.28)' }}>
         {busy ? 'Confirmando...' : 'Ciente'}
       </button>
       <div style={{ fontSize: 12, opacity: .75 }}>O toque só para quando você confirmar.</div>

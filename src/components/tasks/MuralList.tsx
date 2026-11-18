@@ -177,7 +177,7 @@ export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete }
       </div>
 
       {!boards.length && !showNew ? (
-        <div className="tm-empty"><b style={{ display: 'block', fontSize: 16, color: '#1C2430', marginBottom: 4 }}>Nenhum mural ainda</b>Crie o primeiro mural de tarefas da sua equipe.<div style={{ marginTop: 16 }}><button type="button" className="tm-btn tm-pri" onClick={openNew}><Plus className="h-4 w-4" />Novo mural</button></div></div>
+        <div className="tm-empty"><b style={{ display: 'block', fontSize: 16, color: 'var(--dkx-tx-1c2430,#1C2430)', marginBottom: 4 }}>Nenhum mural ainda</b>Crie o primeiro mural de tarefas da sua equipe.<div style={{ marginTop: 16 }}><button type="button" className="tm-btn tm-pri" onClick={openNew}><Plus className="h-4 w-4" />Novo mural</button></div></div>
       ) : (
         <div className="tm-gd">
           {showNew && editId && !shown.some((x) => x.id === editId) ? renderForm() : null}

@@ -1,10 +1,10 @@
 /* Anotações: rounded panels like the other desktop tabs. Prefix nt-, root `dk-pg nt-pg`. */
 .ewvon-main:has(> .nt-pg){position:relative;overflow:hidden!important}
-.nt-pg{position:absolute;inset:0;display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px;padding:22px 28px;background:#EDEFF2;box-sizing:border-box;overflow:hidden}
+.nt-pg{position:absolute;inset:0;display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px;padding:22px 28px;background:var(--dkx-bg-edeff2,#EDEFF2);box-sizing:border-box;overflow:hidden}
 .dk-pg.nt-pg.nt-pg:first-child{padding:22px 28px!important}
 .dark .nt-pg{background:hsl(var(--background))}
 .nt-pg *{box-sizing:border-box}
-.nt-pg .nt-side{display:flex;flex-direction:column;min-height:0;background:hsl(var(--card));border:1px solid #D3D8E0;border-radius:18px;overflow:hidden}
+.nt-pg .nt-side{display:flex;flex-direction:column;min-height:0;background:hsl(var(--card));border:1px solid var(--dkx-bg-d3d8e0,#D3D8E0);border-radius:18px;overflow:hidden}
 .dark .nt-pg .nt-side,.dark .nt-pg .nt-main{border-color:hsl(var(--border))}
 .nt-pg .nt-side-hd{display:flex;flex-direction:column;gap:10px;padding:16px;border-bottom:1px solid hsl(var(--border))}
 .nt-pg .nt-side-hd input{border-radius:10px}
@@ -14,11 +14,11 @@
 .nt-pg .nt-item + .nt-item{margin-top:6px}
 @keyframes ntIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 .nt-pg .nt-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:rgba(0,0,0,.08);color:rgba(0,0,0,.65)}
-.nt-pg .nt-main{display:flex;flex-direction:column;min-height:0;min-width:0;background:hsl(var(--card));border:1px solid #D3D8E0;border-radius:18px;overflow:hidden}
+.nt-pg .nt-main{display:flex;flex-direction:column;min-height:0;min-width:0;background:hsl(var(--card));border:1px solid var(--dkx-bg-d3d8e0,#D3D8E0);border-radius:18px;overflow:hidden}
 .nt-pg .nt-ed{display:flex;flex-direction:column;height:100%;min-height:0;border-radius:18px;overflow:hidden}
 .nt-pg .nt-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:12px 12px 0;padding:6px 8px;border-radius:14px;background:rgba(255,255,255,.72);border:1px solid rgba(0,0,0,.06)}
 .dark .nt-pg .nt-bar{background:rgba(0,0,0,.35);border-color:rgba(255,255,255,.08)}
 .nt-pg .nt-title{border:0!important;background:transparent!important;border-radius:10px;box-shadow:none!important}
-.nt-pg .nt-ro{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:999px;background:#FFF4E5;color:#8A4B00;border:1px solid #F3C98B;font-size:12px;font-weight:600;white-space:nowrap}
+.nt-pg .nt-ro{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:999px;background:var(--dkx-bg-fff4e5,#FFF4E5);color:var(--dkx-tx-8a4b00,#8A4B00);border:1px solid #F3C98B;font-size:12px;font-weight:600;white-space:nowrap}
 .nt-pg .nt-body{flex:1;min-height:0;overflow:auto;padding:16px 20px}
 @media (max-width:900px){.nt-pg{grid-template-columns:1fr;padding:12px}.dk-pg.nt-pg.nt-pg:first-child{padding:12px!important}}

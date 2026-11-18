@@ -399,7 +399,7 @@ export function CompaniesManagementSection() {
             {form && sel ? (
               <main className="ce-panel" aria-label="Dados da empresa">
                 <div className="ce-dh">
-                  <div className="ce-big" style={sel.logo_url ? { background: '#fff', border: '1px solid #E3E6EB', padding: 6 } : { background: sel.primary_color, color: ink(sel.primary_color) }}>{sel.logo_url ? <CompanyLogo value={sel.logo_url} alt={sel.name} fallback={<>{initial(sel.name)}</>} /> : initial(sel.name)}</div>
+                  <div className="ce-big" style={sel.logo_url ? { background: 'var(--dkx-bg-ffffff,#fff)', border: '1px solid #E3E6EB', padding: 6 } : { background: sel.primary_color, color: ink(sel.primary_color) }}>{sel.logo_url ? <CompanyLogo value={sel.logo_url} alt={sel.name} fallback={<>{initial(sel.name)}</>} /> : initial(sel.name)}</div>
                   <div>
                     <h2>{sel.name} {sel.is_system ? <span className="ce-chip ce-c-s">Sistema</span> : <span className={'ce-chip ' + (sel.is_active ? 'ce-c-a' : 'ce-c-c')}>{sel.is_active ? 'Ativa' : 'Inativa'}</span>}</h2>
                     <div className="ce-su">{sel.slug} · {plural(sel.active_users, 'usuário ativo', 'usuários ativos')} · {sel.total_users} total · {plural(sel.admins, 'administrador', 'administradores')}</div>

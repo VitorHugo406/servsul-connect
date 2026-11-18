@@ -169,7 +169,7 @@ function SourceForm({ presets, source, onChanged, onClose }: { presets: Preset[]
                       <button key={p.id} type="button" aria-pressed={on} onClick={() => choose(p)} title={p.name}
                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '7px 4px 6px', border: 0, borderRadius: 16, background: on ? '#DCE8F7' : 'transparent', cursor: 'pointer', font: 'inherit' }}>
                         <BrandTile id={p.id} name={p.name} size={44} />
-                        <span style={{ fontSize: 11.5, lineHeight: 1.2, fontWeight: on ? 600 : 500, color: '#1C2430', textAlign: 'center', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</span>
+                        <span style={{ fontSize: 11.5, lineHeight: 1.2, fontWeight: on ? 600 : 500, color: 'var(--dkx-tx-1c2430,#1C2430)', textAlign: 'center', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</span>
                       </button>
                     );
                   })}

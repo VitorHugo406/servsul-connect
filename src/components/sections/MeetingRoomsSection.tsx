@@ -339,7 +339,7 @@ export function MeetingRoomsSection() {
           </div>
         </article>;
       })}</div> : <div className="mr-panel mr-empty">
-        <b style={{ display: 'block', color: '#1C2430', marginBottom: 4 }}>{rooms.length ? 'Nenhuma sala encontrada' : 'Nenhuma sala cadastrada'}</b>
+        <b style={{ display: 'block', color: 'var(--dkx-tx-1c2430,#1C2430)', marginBottom: 4 }}>{rooms.length ? 'Nenhuma sala encontrada' : 'Nenhuma sala cadastrada'}</b>
         {rooms.length ? 'Ajuste o filtro ou a busca.' : 'Adicione uma sala para começar a organizar as reuniões.'}
       </div>}
       <section className="mr-panel"><div className="mr-sh">Próximas reuniões</div>

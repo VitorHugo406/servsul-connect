@@ -354,6 +354,13 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   };
   const favEls = [...dmList.filter(c => favorites.includes('dm:'+c.partnerId)).map(renderDmItem), ...sectorList.filter((sec:any) => favorites.includes('sector:'+sec.id)).map(renderSectorItem), ...groupList.filter(g => favorites.includes('group:'+g.id)).map(renderGroupItem)];
   const dmEls = dmList.filter(c => !favorites.includes('dm:'+c.partnerId)).map(renderDmItem);
+  // "Nova conversa": while the search is open, colleagues without a conversation yet are listed too, so a chat can start
+  const withChat = new Set(conversations.map(c => c.partnerId));
+  const newPeople = showListSearch && !showCalls ? callPeople.filter(u => !withChat.has(u.id) && (u.display_name || u.name || '').toLowerCase().includes(searchTerm)).slice(0, 60) : [];
+  const peopleEls = newPeople.map(u => { const title = u.display_name || u.name; const sec = sectors.find((x: any) => x.id === u.sector_id); return <Button key={'np-'+u.id} variant="ghost" onClick={() => { setChatMode('direct'); setSelectedUserId(u.id); setSelectedGroupId(null); setShowListSearch(false); setConversationSearch(''); }} className="chat-conversation-row flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/70">
+      <div className="relative shrink-0"><ChatSenderAvatar name={title} avatarUrl={u.avatar_url} /></div>
+      <div className="min-w-0 flex-1"><span className="chat-conv-name block truncate text-sm font-medium text-foreground">{title}</span><p className="truncate text-xs text-muted-foreground">{sec?.name ? `${sec.name} · ` : ''}Iniciar conversa</p></div>
+    </Button>; });
   const sectorEls = sectorList.filter((sec:any) => !favorites.includes('sector:'+sec.id)).map(renderSectorItem);
   const groupEls = groupList.filter(g => !favorites.includes('group:'+g.id)).map(renderGroupItem);
   const railActive: ChatRailView = showCalls ? 'calls' : conversationFilter === 'direct' || conversationFilter === 'groups' || conversationFilter === 'sectors' || conversationFilter === 'favorites' ? conversationFilter : 'all';
@@ -394,12 +401,13 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
             </div>
           </div>
           {!showCalls ? <div className="chat-pills" role="group" aria-label="Filtrar conversas">{(['unread', 'favorites'] as const).map(filter => <button key={filter} type="button" className="chat-pill" aria-pressed={conversationFilter === filter} onClick={() => setConversationFilter(conversationFilter === filter ? 'all' : filter)}>{{unread:'Não lidas',favorites:'Favoritas'}[filter]}</button>)}</div> : null}
-          {showListSearch && !showCalls ? <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/><Input value={conversationSearch} onChange={e => setConversationSearch(e.target.value)} aria-label="Buscar conversas" placeholder="Buscar" autoFocus className="chat-list-search h-8 pl-9 text-sm"/></div> : null}
+          {showListSearch && !showCalls ? <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/><Input value={conversationSearch} onChange={e => setConversationSearch(e.target.value)} aria-label="Buscar conversas" placeholder="Buscar conversa ou pessoa" autoFocus className="chat-list-search h-8 pl-9 text-sm"/></div> : null}
         </div>
         {showCalls ? <ScrollArea className="chat-calls-scroll min-h-0 flex-1"><div className="chat-list-body"><ChatCallsList meId={profile!.id} companyId={profile?.company_id} people={callPeopleList} sectors={accessibleSectors.map((x: any) => ({ id: x.id, name: x.name, color: x.color }))} groups={groups.map(g => ({ id: g.id, name: g.name }))} canCall={!!callPlan && planHasFeature(callPlan, 'video_calls')} onOpen={openCallConversation} onCall={(conv, target, audio) => startChatCall(conv, target, audio)} /></div></ScrollArea> : <ScrollArea className="min-h-0 flex-1">
           <div className="chat-list-body">
             {favEls.length > 0 ? <ChatListSection id="favorites" label="Favoritos" count={favEls.length}>{favEls}</ChatListSection> : null}
             {dmEls.length > 0 ? <ChatListSection id="direct" label="Chats" count={dmEls.length}>{dmEls}</ChatListSection> : null}
+            {peopleEls.length > 0 ? <ChatListSection id="people" label="Pessoas" count={peopleEls.length}>{peopleEls}</ChatListSection> : null}
             {sectorEls.length > 0 ? <ChatListSection id="sectors" label="Setores" count={sectorEls.length}>{sectorEls}</ChatListSection> : null}
             {groupEls.length > 0 ? <ChatListSection id="groups" label="Grupos" count={groupEls.length}>{groupEls}</ChatListSection> : null}
           </div>
