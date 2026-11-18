@@ -23,6 +23,7 @@ import { SectorTabs } from '@/components/chat/SectorTabs';
 import { DirectMessageList } from '@/components/chat/DirectMessageList';
 import { DirectMessageChat } from '@/components/chat/DirectMessageChat';
 import { PrivateGroupList } from '@/components/chat/PrivateGroupList';
+import { NewGroupDialog } from '@/components/chat/NewGroupDialog';
 import { PrivateGroupChat } from '@/components/chat/PrivateGroupChat';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { ScheduledSummaryConfig } from '@/components/chat/ScheduledSummaryConfig';
@@ -78,6 +79,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const [conversationSearch, setConversationSearch] = useState('');
   const [conversationFilter, setConversationFilter] = useState<ChatListFilter>('all');
   const [showListSearch, setShowListSearch] = useState(false);
+  const [showNewGroup, setShowNewGroup] = useState(false);
   const [showCalls, setShowCalls] = useState(false);
   const { users: callPeople } = useActiveUsers();
   const { plan: callPlan } = useCompanyPlan();
@@ -385,7 +387,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
         {chatMode === 'sectors' && effectiveSector ? <ChatTasksControl kind="sector" chatId={effectiveSector} onPost={(t) => sendMessage(t)} className="border border-border/60 bg-background/65 shadow-sm" /> : null}
         <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full border border-border/60 bg-background/65 shadow-sm"><Settings className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-64 rounded-2xl border-border/60 bg-popover/95 p-2 shadow-2xl backdrop-blur-2xl"><DropdownMenuLabel>Opções da conversa</DropdownMenuLabel><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => setChatMode('direct')}><MessageSquare className="mr-2 h-4 w-4" /> Individuais</DropdownMenuItem><DropdownMenuItem onSelect={() => setChatMode('groups')}><UsersRound className="mr-2 h-4 w-4" /> Grupos</DropdownMenuItem><DropdownMenuItem onSelect={() => setChatMode('sectors')}><Users className="mr-2 h-4 w-4" /> Canais da empresa</DropdownMenuItem>{chatMode === 'sectors' && <><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => setShowSectorUsers(true)}><Eye className="mr-2 h-4 w-4" /> Usuários do canal</DropdownMenuItem><DropdownMenuItem onSelect={() => setShowSearch(true)}><Search className="mr-2 h-4 w-4" /> Pesquisar mensagens</DropdownMenuItem>{effectiveSector && effectiveSector !== geralSectorId && <DropdownMenuItem onSelect={() => setShowMobileMedia(true)}><FolderOpen className="mr-2 h-4 w-4" /> Mídia e arquivos</DropdownMenuItem>}{isAdmin && effectiveSector && effectiveSector !== geralSectorId && <DropdownMenuItem onSelect={() => setShowMobileAutomation(true)}><Bot className="mr-2 h-4 w-4" /> Automações de resumo</DropdownMenuItem>}<DropdownMenuItem onSelect={() => setShowSectorPersonalization(true)}><Palette className="mr-2 h-4 w-4" /> Personalizar fundo</DropdownMenuItem></>}</DropdownMenuContent></DropdownMenu>
       </div>
-      {chatMode === 'groups' && <button onClick={() => { const b = Array.from(document.querySelectorAll('button')).find(x => x.textContent?.trim().startsWith('Novo')); (b as HTMLButtonElement | undefined)?.click(); }} className="mx-3 mt-2 flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 text-sm font-medium text-primary hover:bg-primary/10"><UsersRound className="h-4 w-4" /> Criar novo grupo</button>}
+      {chatMode === 'groups' && !isMobile && <button onClick={() => setShowNewGroup(true)} className="mx-3 mt-2 flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 text-sm font-medium text-primary hover:bg-primary/10"><UsersRound className="h-4 w-4" /> Criar novo grupo</button>}
       <Sheet open={showMobileAutomation} onOpenChange={setShowMobileAutomation}><SheetContent><SheetHeader><SheetTitle>Automações - {currentSector?.name}</SheetTitle></SheetHeader>{effectiveSector && <div className="mt-6"><ScheduledSummaryConfig targetType="sector" targetId={effectiveSector} targetName={currentSector?.name || 'Setor'} /></div>}</SheetContent></Sheet>
       <Sheet open={showMobileMedia} onOpenChange={setShowMobileMedia}><SheetContent><SheetHeader><SheetTitle>Mídia e Arquivos - {currentSector?.name}</SheetTitle></SheetHeader>{effectiveSector && <div className="mt-6"><ChatMediaFilter chatType="sector" chatId={effectiveSector} /></div>}</SheetContent></Sheet>
     </>}
@@ -397,7 +399,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
           <div className="chat-list-top"><h3 className="chat-list-title">{showCalls ? 'Chamadas' : 'Chat'}</h3>
             <div className="chat-list-tools">
               {!showCalls ? <Button variant="ghost" size="icon" className="chat-list-tool" title="Buscar conversas" aria-label="Buscar conversas" aria-pressed={showListSearch} onClick={() => { const next = !showListSearch; setShowListSearch(next); if (!next) setConversationSearch(''); }}><Search className="h-[18px] w-[18px]"/></Button> : null}
-              <Button variant="ghost" size="icon" className="chat-list-tool" title="Nova conversa" aria-label="Nova conversa" onClick={() => window.dispatchEvent(new Event(OPEN_LIST_SEARCH_EVENT))}><SquarePen className="h-[18px] w-[18px]"/></Button>
+              <Button variant="ghost" size="icon" className="chat-list-tool" title="Novo grupo" aria-label="Novo grupo" onClick={() => setShowNewGroup(true)}><UsersRound className="h-4 w-4"/></Button><Button variant="ghost" size="icon" className="chat-list-tool" title="Nova conversa" aria-label="Nova conversa" onClick={() => window.dispatchEvent(new Event(OPEN_LIST_SEARCH_EVENT))}><SquarePen className="h-[18px] w-[18px]"/></Button>
             </div>
           </div>
           {!showCalls ? <div className="chat-pills" role="group" aria-label="Filtrar conversas">{(['unread', 'favorites'] as const).map(filter => <button key={filter} type="button" className="chat-pill" aria-pressed={conversationFilter === filter} onClick={() => setConversationFilter(conversationFilter === filter ? 'all' : filter)}>{{unread:'Não lidas',favorites:'Favoritas'}[filter]}</button>)}</div> : null}
@@ -412,6 +414,7 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
             {groupEls.length > 0 ? <ChatListSection id="groups" label="Grupos" count={groupEls.length}>{groupEls}</ChatListSection> : null}
           </div>
         </ScrollArea>}
+        <NewGroupDialog open={showNewGroup} onOpenChange={setShowNewGroup} onCreated={(id) => { void refetchGroups(); setChatMode('groups'); setSelectedGroupId(id); setSelectedUserId(null); }} />
       </aside>
       <div className="chat-thread flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden !border-0 !rounded-none !shadow-none">
     {chatMode === 'sectors' && !currentSector && !isMobile ? <ChatEmptyState kind="select" title="Selecione uma conversa" text="Escolha uma conversa na lista ou comece uma nova." actionLabel="Nova conversa" onAction={focusConversationSearch} /> : chatMode === 'sectors' ? <>
