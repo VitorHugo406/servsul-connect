@@ -44,12 +44,12 @@ export const covStyle = (p: { cover: string | null; hue: number }) => (p.cover ?
 function MentionPicker({ q, ids, people, onPick }: { q: string; ids: string[]; people: Record<string, Person>; onPick: (name: string) => void }) {
   const f = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const qq = f(q.trim());
-  const list = [...new Set(ids)].map((id) => people[id]).filter((p): p is Person => !!p && !p.sys && (!qq || f(p.n).split(/\s+/).some((w) => w.startsWith(qq)) || f(p.n).startsWith(qq))).sort((a, b) => a.n.localeCompare(b.n, 'pt-BR')).slice(0, 8);
+  const list = [...new Set(ids)].map((id) => people[id]).filter((p): p is Person => !!p && !p.sys && (!qq || f(p.n).split(/\s+/).some((w) => w.startsWith(qq)) || f(p.n).startsWith(qq))).sort((a, b) => a.n.localeCompare(b.n, 'pt-BR')).slice(0, 50);
   const ai = !qq || 'ewvonai'.startsWith(qq.replace(/\s/g, ''));
   if (!list.length && !ai) return null;
   return <div className="ewx-ment" role="listbox" aria-label="Mencionar">
     {list.map((p) => <button key={p.id} type="button" role="option" aria-selected="false" onMouseDown={(e) => e.preventDefault()} onClick={() => onPick(p.n)}><Av p={p} /><span><b>{p.n}</b><small>{p.dept || p.role || ''}</small></span></button>)}
-    {ai ? <button type="button" role="option" aria-selected="false" onMouseDown={(e) => e.preventDefault()} onClick={() => onPick('ewvonai')}><span className="ewx-ment-ai">AI</span><span><b>EwvonAI</b><small>Assistente</small></span></button> : null}
+    {ai ? <button type="button" role="option" aria-selected="false" onMouseDown={(e) => e.preventDefault()} onClick={() => onPick('ewvonai')}><Av p={{ id: AI_SENDER_ID, photo: null, hue: 0, i: 'AI' }} /><span><b>EwvonAI</b><small>Assistente</small></span></button> : null}
   </div>;
 }
 
