@@ -651,11 +651,13 @@
 .ew .ewx-callbtns svg { width: 18px; height: 18px; }
 .ew .ewx-callbtns i { width: 1px; height: 16px; background: var(--bd); }
 
-/* "@" picker above the composer: people of the conversation, filtered while typing */
-.ew .ewx-ment { position: absolute; left: 0; right: 0; bottom: calc(100% + 12px); min-width: 240px; max-height: 280px; overflow-y: auto; z-index: 40; background: var(--card); border: 1px solid var(--bd); border-radius: 16px; box-shadow: 0 18px 40px -18px rgba(0,0,0,.35); padding: 6px; }
-.ew .ewx-ment button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: 12px; text-align: left; background: transparent; color: var(--tx); }
+/* "@" picker: full-width panel right above the composer bar (WhatsApp style), one row per person */
+.ew .cmp { position: relative; }
+.ew .ewx-ment { position: absolute; left: -1px; right: -1px; bottom: calc(100% + 8px); max-height: min(46vh, 340px); overflow-y: auto; z-index: 40; background: var(--card); border: 1px solid var(--bd); border-radius: 22px; box-shadow: 0 -10px 30px -18px rgba(0,0,0,.45); padding: 6px 0; }
+.ew .ewx-ment button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 16px; text-align: left; background: transparent; color: var(--tx); border-radius: 0; }
+.ew .ewx-ment button + button { border-top: 1px solid var(--bd); }
 .ew .ewx-ment button:active, .ew .ewx-ment button:hover { background: var(--c2); }
-.ew .ewx-ment button > span:last-child { display: flex; flex-direction: column; min-width: 0; }
-.ew .ewx-ment b { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ew .ewx-ment small { font-size: 12px; color: var(--mu); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ew .ewx-ment .ewx-ment-ai { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #2358C3, #8b5cf6); }
+.ew .ewx-ment button > span:last-child { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.ew .ewx-ment b { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ew .ewx-ment small { font-size: 12.5px; color: var(--mu); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ew .ewx-ment .ewx-ment-ai { width: 40px; height: 40px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #2358C3, #8b5cf6); }
