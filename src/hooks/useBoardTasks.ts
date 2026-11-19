@@ -205,6 +205,17 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       const { error } = await supabase.from('tasks').update(updates as any).eq('id', id);
       if (error) throw error;
       if (boardId) triggerAutomations(boardId);
+      // the card shows `assignee` (photo/name), not only assigned_to: refresh it so a new responsible appears at once
+      if ('assigned_to' in updates) {
+        const pid = updates.assigned_to as string | null;
+        let assignee: BoardTask['assignee'] = undefined;
+        if (pid) { const { data } = await supabase.from('profiles').select('id, name, display_name, avatar_url').eq('id', pid).maybeSingle(); assignee = (data as BoardTask['assignee']) || undefined; }
+        setAllTasks((prev) => {
+          const next = prev.map((t) => (t.id === id && t.assigned_to === pid ? { ...t, assignee } : t));
+          if (boardId) boardTaskCache.set(boardId, next);
+          return next;
+        });
+      }
       return { error: null };
     } catch (error) {
       setAllTasks(previous);
