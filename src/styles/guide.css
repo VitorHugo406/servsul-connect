@@ -1,0 +1,65 @@
+/* Public guide center (/guia). Prefix gd-, light page with its own colours (public page, not themed). */
+.gd { min-height: 100vh; background: #fff; color: #1e1f21; font-family: 'Inter', system-ui, sans-serif; }
+.gd a { color: inherit; }
+.gd-in { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+.gd-top { position: sticky; top: 0; z-index: 20; background: #fff; border-bottom: 1px solid #e8e8ec; }
+.gd-top .gd-in { display: flex; align-items: center; gap: 20px; height: 64px; }
+.gd-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; text-decoration: none; }
+.gd-brand img { height: 26px; }
+.gd-brand span { padding-left: 10px; border-left: 1px solid #d9d9df; font-size: 16px; color: #5b5d63; font-weight: 600; }
+.gd-srch { flex: 1; max-width: 480px; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid #d9d9df; border-radius: 10px; color: #6d6e75; }
+.gd-srch:focus-within { border-color: #2f6fed; box-shadow: 0 0 0 3px rgba(47,111,237,.15); }
+.gd-srch input { flex: 1; border: 0; outline: 0; font-size: 14px; color: #1e1f21; background: none; }
+.gd-nav { margin-left: auto; display: flex; align-items: center; gap: 18px; font-size: 14px; color: #5b5d63; }
+.gd-nav a { text-decoration: none; } .gd-nav a:hover { color: #1e1f21; }
+.gd-cta { background: #1e1f21; color: #fff !important; padding: 8px 14px; border-radius: 10px; font-weight: 600; }
+.gd-hero { background: linear-gradient(180deg, #f3f6fd, #fff); padding: 56px 0 36px; text-align: center; }
+.gd-hero h1 { font-size: 38px; font-weight: 700; letter-spacing: -.02em; }
+.gd-hero p { margin-top: 8px; color: #5b5d63; font-size: 16px; }
+.gd-cats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding-bottom: 56px; }
+.gd-cat { border: 1px solid #e8e8ec; border-radius: 14px; padding: 20px 22px; }
+.gd-cat h2 { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+.gd-cat li { margin: 7px 0; font-size: 14px; } .gd-cat li a { color: #2f5bd3; text-decoration: none; } .gd-cat li a:hover { text-decoration: underline; }
+.gd-res { padding: 28px 0 56px; max-width: 760px; }
+.gd-mut { color: #6d6e75; font-size: 14px; margin-bottom: 14px; }
+.gd-ri { display: block; padding: 14px 0; border-bottom: 1px solid #ececf0; text-decoration: none; }
+.gd-ri b { font-size: 16px; color: #2f5bd3; } .gd-ri span { margin-left: 8px; font-size: 12px; color: #6d6e75; } .gd-ri p { margin-top: 4px; font-size: 14px; color: #45464c; }
+.gd-art { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 48px; padding-top: 28px; padding-bottom: 64px; }
+.gd-side { position: sticky; top: 88px; align-self: start; max-height: calc(100vh - 110px); overflow: auto; font-size: 13.5px; }
+.gd-sc { margin: 16px 0 6px; font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #8a8b92; }
+.gd-sc:first-child { margin-top: 0; }
+.gd-side a { display: block; padding: 6px 10px; border-radius: 8px; color: #45464c; text-decoration: none; }
+.gd-side a:hover { background: #f3f4f7; } .gd-side a.on { background: #eef3ff; color: #2f5bd3; font-weight: 600; }
+.gd-body { max-width: 780px; }
+.gd-bc { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6d6e75; } .gd-bc a { color: #2f5bd3; text-decoration: none; }
+.gd-body h1 { margin-top: 10px; font-size: 32px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
+.gd-sum { margin-top: 10px; font-size: 17px; color: #45464c; line-height: 1.55; }
+.gd-toc { margin: 22px 0 8px; padding: 16px 20px; background: #f7f8fa; border-radius: 12px; font-size: 14px; }
+.gd-toc ol { margin: 8px 0 0 18px; list-style: decimal; } .gd-toc li { margin: 4px 0; } .gd-toc a { color: #2f5bd3; text-decoration: none; }
+.gd-step { margin-top: 34px; scroll-margin-top: 90px; }
+.gd-step h2 { display: flex; align-items: center; gap: 12px; font-size: 21px; font-weight: 700; }
+.gd-step h2 span { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 50%; background: #1e1f21; color: #fff; font-size: 14px; }
+.gd-step p { margin-top: 8px; font-size: 15.5px; line-height: 1.65; color: #2d2e33; }
+.gd-step figure { margin-top: 14px; }
+.gd-step figure button { display: block; width: 100%; padding: 0; border: 1px solid #e3e4e8; border-radius: 12px; overflow: hidden; box-shadow: 0 12px 30px -18px rgba(0,0,0,.35); cursor: zoom-in; background: #fff; }
+.gd-step figure img { display: block; width: 100%; height: auto; }
+.gd-step figcaption { margin-top: 6px; font-size: 12px; color: #8a8b92; }
+.gd-tip { display: flex; gap: 12px; margin-top: 34px; padding: 16px 18px; border-radius: 12px; background: #fff8e6; color: #6b4d00; font-size: 14.5px; }
+.gd-tip ul { margin: 6px 0 0 18px; list-style: disc; } .gd-tip li { margin: 3px 0; }
+.gd-vote { display: flex; align-items: center; gap: 10px; margin-top: 40px; padding-top: 22px; border-top: 1px solid #ececf0; font-size: 14px; color: #45464c; }
+.gd-vote button { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px solid #d9d9df; border-radius: 9px; background: #fff; }
+.gd-vote button:hover { background: #f3f4f7; }
+.gd-rel { margin-top: 28px; display: grid; gap: 10px; }
+.gd-rel b { font-size: 16px; }
+.gd-rel a { display: block; padding: 14px 16px; border: 1px solid #e8e8ec; border-radius: 12px; text-decoration: none; color: #2f5bd3; font-weight: 600; }
+.gd-rel a span { display: block; margin-top: 3px; font-weight: 400; font-size: 13.5px; color: #5b5d63; }
+.gd-rel a:hover { border-color: #c9d6f7; background: #fafbff; }
+.gd-zoom { position: fixed; inset: 0; z-index: 50; background: rgba(15,16,20,.82); display: grid; place-items: center; padding: 24px; cursor: zoom-out; }
+.gd-zoom img { max-width: 100%; max-height: 100%; border-radius: 10px; }
+.gd-foot { border-top: 1px solid #ececf0; padding: 22px 0; font-size: 13px; color: #6d6e75; }
+.gd-foot .gd-in { display: flex; gap: 18px; }
+@media (max-width: 900px) {
+  .gd-art { grid-template-columns: 1fr; } .gd-side { display: none; }
+  .gd-cats { grid-template-columns: 1fr; } .gd-nav a:not(.gd-cta) { display: none; }
+  .gd-hero h1 { font-size: 28px; } .gd-body h1 { font-size: 26px; }
+}

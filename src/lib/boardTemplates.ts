@@ -4,7 +4,7 @@
 // companies: the template only exists in this file.
 import type { ImpBoard, ImpCard } from '@/lib/boardImport';
 
-type C = { t: string; d?: string; col: number; due?: number; p?: ImpCard['priority']; l?: number[]; ck?: [string, string[]][] };
+type C = { t: string; d?: string; col: number; due?: number; st?: number; p?: ImpCard['priority']; l?: number[]; ck?: [string, string[]][] };
 export type BoardTemplate = { id: string; name: string; desc: string; emoji: string; color: string; cover: string; columns: [string, string][]; labels: [string, string][]; cards: C[] };
 
 const day = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); d.setHours(18, 0, 0, 0); return d.toISOString(); };
@@ -77,11 +77,11 @@ export const BOARD_TEMPLATES: BoardTemplate[] = [
     columns: [['A fazer', '#6b7280'], ['Em andamento', '#3b82f6'], ['Em revisão', '#eab308'], ['Concluído', '#22c55e']],
     labels: [['Planejamento', '#8b5cf6'], ['Execução', '#3b82f6'], ['Entrega', '#22c55e'], ['Risco', '#ef4444']],
     cards: [
-      { t: 'Reunião de início (kick-off)', col: 0, due: 1, p: 'high', l: [0], ck: [['Pauta', ['Objetivo', 'Escopo', 'Responsáveis', 'Datas']]] },
-      { t: 'Levantamento de requisitos', col: 0, due: 4, l: [0] },
-      { t: 'Execução — fase 1', col: 0, due: 10, l: [1] },
-      { t: 'Revisão com o cliente', col: 0, due: 14, l: [1, 3] },
-      { t: 'Entrega e encerramento', col: 0, due: 18, p: 'high', l: [2] },
+      { t: 'Reunião de início (kick-off)', col: 1, st: 0, due: 1, p: 'high', l: [0], ck: [['Pauta', ['Objetivo', 'Escopo', 'Responsáveis', 'Datas']]] },
+      { t: 'Levantamento de requisitos', col: 0, st: 2, due: 5, l: [0] },
+      { t: 'Execução — fase 1', col: 0, st: 6, due: 12, l: [1] },
+      { t: 'Revisão com o cliente', col: 0, st: 13, due: 15, l: [1, 3] },
+      { t: 'Entrega e encerramento', col: 0, st: 16, due: 18, p: 'high', l: [2] },
     ],
   },
 ];
@@ -91,6 +91,6 @@ export function templateToBoard(t: BoardTemplate): ImpBoard {
     source: 'modelo', name: t.name, desc: t.desc,
     columns: t.columns.map(([title, color]) => ({ title, color })),
     labels: t.labels.map(([name, color]) => ({ name, color })),
-    cards: t.cards.map((c) => ({ title: c.t, desc: c.d || '', col: c.col, due: c.due != null ? day(c.due) : null, done: false, priority: c.p || 'medium', labels: c.l || [], checklists: (c.ck || []).map(([title, items]) => ({ title, items: items.map((x) => ({ t: x, done: false })) })), comments: [], people: [] })),
+    cards: t.cards.map((c) => ({ title: c.t, desc: c.d || '', col: c.col, due: c.due != null ? day(c.due) : null, start: c.st != null ? (() => { const d = new Date(day(c.st)); d.setHours(9); return d.toISOString(); })() : null, done: false, priority: c.p || 'medium', labels: c.l || [], checklists: (c.ck || []).map(([title, items]) => ({ title, items: items.map((x) => ({ t: x, done: false })) })), comments: [], people: [] })),
   };
 }

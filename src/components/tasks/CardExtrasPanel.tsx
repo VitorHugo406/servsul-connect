@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useBoardExtras, fieldText, type CustomField } from '@/hooks/useBoardExtras';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
+import { CardLinks } from './CardLinks';
 
 type Mini = { id: string; task_number: number | null; title: string; completed_at: string | null; status: string };
 const ymd = (d?: string | null) => { if (!d) return ''; const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
@@ -54,6 +55,7 @@ export function CardExtrasPanel({ task, boardId, readOnly, onUpdateTask, conclus
             ])}
           </div>
         </div>) : null}
+      <CardLinks taskId={task.id} readOnly={readOnly} />
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="text-muted-foreground">Início (linha do tempo)</span>
         <input type="date" disabled={readOnly || !onUpdateTask} className="h-8 rounded-md border border-border bg-background px-2 text-sm" value={ymd(task.start_date)}

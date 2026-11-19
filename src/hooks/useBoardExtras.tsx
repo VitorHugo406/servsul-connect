@@ -36,8 +36,11 @@ function useBoardExtrasState(boardId: string | null) {
       for (const r of vs || []) vmap.set(`${r.task_id}:${r.field_id}`, r.value);
     }
     setValues(vmap);
-    const { data: ds } = await db.from('task_dependencies').select('task_id,depends_on,t:tasks!task_dependencies_task_id_fkey!inner(board_id)').eq('t.board_id', boardId).limit(5000);
-    setDeps(((ds || []) as Dep[]).map((d) => ({ task_id: d.task_id, depends_on: d.depends_on })));
+    const { data: ts } = await db.from('tasks').select('id').eq('board_id', boardId).limit(5000);
+    const ids = ((ts || []) as { id: string }[]).map((t) => t.id);
+    const out: Dep[] = [];
+    for (let i = 0; i < ids.length; i += 300) { const { data: ds } = await db.from('task_dependencies').select('task_id,depends_on').in('task_id', ids.slice(i, i + 300)); out.push(...((ds || []) as Dep[])); }
+    setDeps(out);
   }, [boardId]);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {

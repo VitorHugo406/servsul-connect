@@ -172,6 +172,13 @@ export function TaskBoardSection() {
     setBoardName(''); setBoardDesc(''); setShowCreateBoard(false);
   };
 
+  /** after creating a mural from a template or an import: reload the list and open it by its slug URL */
+  const openNewBoard = async (id: string) => {
+    await refetchBoards();
+    const { data } = await supabase.from('task_boards').select('id,name').eq('id', id).maybeSingle();
+    if (data) navigate('/tarefas/' + slugifyBoardName((data as { name: string }).name) + '-' + id);
+  };
+
   const handleDeleteBoard = async (id: string) => {
     if (!(await appConfirm({ title: 'Excluir este mural?', message: 'O mural e todas as suas tarefas serão apagados. Esta ação não pode ser desfeita.', confirmText: 'Excluir mural', danger: true }))) return;
     const { error } = await deleteBoard(id);
@@ -222,8 +229,8 @@ export function TaskBoardSection() {
 
   return (
     <>
-      <TemplatesDialog open={showTemplates} onOpenChange={setShowTemplates} onDone={(id) => { void refetchBoards(); setSelectedBoardId(id); }} />
-      <ImportBoardDialog open={showImport} onOpenChange={setShowImport} onDone={(id) => { void refetchBoards(); setSelectedBoardId(id); }} />
+      <TemplatesDialog open={showTemplates} onOpenChange={setShowTemplates} onDone={(id) => void openNewBoard(id)} />
+      <ImportBoardDialog open={showImport} onOpenChange={setShowImport} onDone={(id) => void openNewBoard(id)} />
       <MuralList
         onImport={() => setShowImport(true)}
         onMyTasks={() => navigate('/tarefas/minhas-tarefas')}

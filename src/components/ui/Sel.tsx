@@ -89,7 +89,10 @@ export function Sel({ value, onChange, disabled, className, style, id, children,
         <svg className="sel-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
       </button>
       {open && pos && createPortal(
-        <div ref={list} className="sel-list" role="listbox" style={{ left: pos.left, top: pos.top, bottom: pos.bottom, minWidth: pos.width, maxHeight: pos.max }}>
+        // pointer-events:auto + stopPropagation: inside a Radix Dialog the body ignores the pointer and a click outside
+        // the dialog content would close it; the list lives in document.body, so it must opt back in.
+        <div ref={list} className="sel-list" role="listbox" style={{ left: pos.left, top: pos.top, bottom: pos.bottom, minWidth: pos.width, maxHeight: pos.max, pointerEvents: 'auto' }}
+          onPointerDown={e => e.stopPropagation()}>
           {opts.map((o, i) => (
             <div key={o.value + i} role="option" aria-selected={o.value === String(value ?? '')} data-hi={i === hi ? '1' : undefined}
               className={`sel-opt${o.value === String(value ?? '') ? ' on' : ''}${i === hi ? ' hi' : ''}${o.disabled ? ' off' : ''}`}

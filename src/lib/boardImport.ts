@@ -10,7 +10,7 @@ import { withCompany } from '@/lib/companyScope';
 
 export interface ImpItem { t: string; done: boolean }
 export interface ImpCard {
-  title: string; desc: string; col: number; due: string | null; done: boolean; priority: 'low' | 'medium' | 'high' | 'urgent';
+  title: string; desc: string; col: number; due: string | null; start?: string | null; done: boolean; priority: 'low' | 'medium' | 'high' | 'urgent';
   labels: number[]; checklists: { title: string; items: ImpItem[] }[]; comments: { who: string; text: string; at: string | null }[];
   people: string[];   // e-mails or names to match
 }
@@ -154,14 +154,14 @@ export async function importBoard(b: ImpBoard, me: { userId: string; profileId: 
   const rows = b.cards.map((c) => {
     const pos = perCol.get(c.col) || 0; perCol.set(c.col, pos + 1);
     const first = c.people.map(match).find(Boolean) || null;
-    return withCompany({ board_id: boardId, title: c.title, description: c.desc || null, status: colId[c.col], priority: c.priority, due_date: c.due, position: pos, created_by: me.profileId,
+    return withCompany({ board_id: boardId, title: c.title, description: c.desc || null, status: colId[c.col], priority: c.priority, due_date: c.due, ...(c.start ? { start_date: c.start } : {}), position: pos, created_by: me.profileId,
       assigned_to: first?.id || null, completed_at: c.done ? (c.due && c.due < now ? c.due : now) : null });
   });
   const ids: string[] = [];
   const parts = chunk(rows, 200);
   for (let i = 0; i < parts.length; i++) {
     onProgress(0.1 + 0.5 * (i / parts.length), `Criando cards (${Math.min((i + 1) * 200, rows.length)} de ${rows.length})`);
-    const { data, error: te } = await supabase.from('tasks').insert(parts[i]).select('id');
+    const { data, error: te } = await (supabase as any).from('tasks').insert(parts[i]).select('id');
     if (te || !data) throw new Error('Não foi possível criar os cards.');
     ids.push(...(data as { id: string }[]).map((x) => x.id));
   }

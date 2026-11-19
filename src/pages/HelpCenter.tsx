@@ -43,6 +43,8 @@ const HELP: { cat: string; items: Q[] }[] = [
     { q: 'Como vejo meus prazos no Google Agenda ou no iPhone?', a: 'Em Calendário, clique em "Agenda no celular" e assine o link pessoal no Google Agenda, Outlook ou iPhone. Seus cards com prazo e suas reuniões aparecem e se atualizam sozinhos. Não compartilhe o link; se precisar, gere um novo.' },
     { q: 'Como registro o tempo gasto em um card?', a: 'Abra o card e use "Tempo": Iniciar/Parar liga o cronômetro (só um por pessoa por vez) e o "+" registra um tempo manual (ex.: 1h30). O total e o tempo de cada pessoa aparecem no card.' },
     { q: 'Que automações posso criar no mural?', a: 'No ⚡ Automações do mural, crie regras SE → ENTÃO. Gatilhos instantâneos: card criado, card entrou numa coluna, card concluído, responsável definido. Gatilhos periódicos: prazo chegando, card parado, checklist completo, etiqueta urgente. Ações: notificar, definir responsável, adicionar etiqueta, definir prazo, mudar prioridade, mover de coluna e gerar alerta.' },
+    { q: 'Onde encontro o passo a passo com imagens?', a: 'No Guia (ewvon.com/guia): artigos com passo a passo e imagens para murais, cards, visualizações, campos personalizados, dependências, cronômetro, automações, formulário, convidados, importação e integrações.' },
+    { q: 'Clientes podem comentar no link do mural?', a: 'Sim, se o dono do mural marcar "Permitir que convidados comentem e aprovem cards" em Compartilhar › Link para convidados. O convidado clica no card e escolhe Comentar, Aprovar ou Pedir ajustes; a equipe vê o comentário dentro do card.' },
     { q: 'As chaves das integrações ficam seguras?', a: 'Sim. As chaves de API são guardadas criptografadas (AES-256) e só são abertas no servidor, no momento da sincronização. Nenhuma tela mostra a chave depois de salva.' },
   ] },
 ];
@@ -52,7 +54,7 @@ function Frame({ title, children }: { title: string; children: React.ReactNode }
   useEffect(() => { document.title = `${title} | ewvon`; }, [title]);
   return (
     <div className="legal-page">
-      <header className="legal-top"><Link to="/" className="legal-brand">ewvon</Link><nav><Link to="/ajuda">Ajuda</Link><Link to="/status">Status</Link><Link to="/termos">Termos</Link><Link to="/privacidade">Privacidade</Link></nav></header>
+      <header className="legal-top"><Link to="/" className="legal-brand">ewvon</Link><nav><Link to="/guia">Guia passo a passo</Link><Link to="/ajuda">Ajuda</Link><Link to="/status">Status</Link><Link to="/termos">Termos</Link><Link to="/privacidade">Privacidade</Link></nav></header>
       <main>{children}</main>
       <footer className="legal-foot">© {new Date().getFullYear()} ewvon · Dúvidas, sugestões e suporte: {LEGAL.email}</footer>
     </div>

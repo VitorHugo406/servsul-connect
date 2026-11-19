@@ -90,11 +90,11 @@ export function BoardFormSection({ boardId, boardName, canManage, columns }: { b
                 {f.questions.length < 15 ? <Button variant="outline" size="sm" onClick={() => setF({ ...f, questions: [...f.questions, { id: 'q' + Date.now().toString(36), label: 'Nova pergunta', type: 'text', required: false }] })}><Plus className="mr-1.5 h-4 w-4" />Adicionar pergunta</Button> : null}
               </div>
               <div className="grid gap-2 sm:grid-cols-3">
-                <label className="space-y-1 text-xs"><span className="text-muted-foreground">Coluna de entrada</span>
+                <label className="flex flex-col gap-1 text-xs"><span className="text-muted-foreground">Coluna de entrada</span>
                   <Sel value={f.column_id || ''} onChange={(e) => setF({ ...f, column_id: e.target.value || null })}><option value="">Primeira coluna</option>{columns.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</Sel></label>
-                <label className="space-y-1 text-xs"><span className="text-muted-foreground">Prioridade</span>
+                <label className="flex flex-col gap-1 text-xs"><span className="text-muted-foreground">Prioridade</span>
                   <Sel value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })}><option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option><option value="urgent">Urgente</option></Sel></label>
-                <label className="space-y-1 text-xs"><span className="text-muted-foreground">Prazo (dias após o envio)</span>
+                <label className="flex flex-col gap-1 text-xs"><span className="text-muted-foreground">Prazo (dias após o envio)</span>
                   <Input type="number" min={0} max={365} value={f.due_days ?? ''} onChange={(e) => setF({ ...f, due_days: e.target.value === '' ? null : Math.max(0, Math.min(365, +e.target.value)) })} placeholder="Sem prazo" className="h-9" /></label>
               </div>
               <Textarea value={f.thank_you || ''} onChange={(e) => setF({ ...f, thank_you: e.target.value })} maxLength={500} rows={2} placeholder="Mensagem depois do envio (opcional)" aria-label="Mensagem de agradecimento" />

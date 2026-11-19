@@ -12,20 +12,20 @@ import { appConfirm } from '@/lib/appDialog';
 
 const db = supabase as any;
 const FN = 'https://scslfueixmuolkmgdslk.supabase.co/functions/v1/cards-in';
-type Key = { id: string; token: string; enabled: boolean; column_id: string | null; uses: number; last_at: string | null };
+type Key = { id: string; token: string; enabled: boolean; column_id: string | null; uses: number; last_at: string | null; scope?: string };
 
 export function InboundKeySection({ boardId, canManage, columns }: { boardId: string; canManage: boolean; columns: { id: string; title: string }[] }) {
   const [k, setK] = useState<Key | null>(null);
   const [busy, setBusy] = useState(true);
   const [show, setShow] = useState<'' | 'curl' | 'form'>('');
-  const load = async () => { setBusy(true); const { data } = await db.from('board_inbound_keys').select('id,token,enabled,column_id,uses,last_at').eq('board_id', boardId).order('created_at', { ascending: false }).limit(1).maybeSingle(); setK(data || null); setBusy(false); };
+  const load = async () => { setBusy(true); const { data } = await db.from('board_inbound_keys').select('id,token,enabled,column_id,uses,last_at,scope').eq('board_id', boardId).order('created_at', { ascending: false }).limit(1).maybeSingle(); setK(data || null); setBusy(false); };
   useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [boardId]);
   if (!canManage && !k) return null;
   const create = async () => {
     if (k && !(await appConfirm({ title: 'Gerar nova chave?', message: 'A chave atual para de funcionar na hora. Atualize os formulários e automações que usam ela.', confirmText: 'Gerar nova', danger: true }))) return;
     setBusy(true);
     if (k) await db.from('board_inbound_keys').delete().eq('id', k.id);
-    const { data, error } = await db.from('board_inbound_keys').insert({ board_id: boardId, column_id: k?.column_id ?? null }).select('id,token,enabled,column_id,uses,last_at').single();
+    const { data, error } = await db.from('board_inbound_keys').insert({ board_id: boardId, column_id: k?.column_id ?? null }).select('id,token,enabled,column_id,uses,last_at,scope').single();
     setBusy(false);
     if (error) { toast.error('Só o dono ou administrador do mural pode criar a chave.'); return; }
     setK(data); toast.success('Chave criada');
@@ -37,7 +37,7 @@ export function InboundKeySection({ boardId, canManage, columns }: { boardId: st
   return (
     <div className="space-y-2 rounded-lg border border-border p-3">
       <div className="flex items-center gap-2 text-sm font-medium"><Inbox className="h-4 w-4" />Receber cards de fora (API e formulários)</div>
-      <p className="text-xs text-muted-foreground">Formulários do seu site, Zapier, Make, n8n ou o sistema da empresa podem criar cards neste mural com a chave abaixo. A chave só cria cards — não lê nem altera nada.</p>
+      <p className="text-xs text-muted-foreground">Formulários do seu site, Zapier, Make, n8n ou o sistema da empresa podem criar cards neste mural com a chave abaixo. Por padrão a chave só cria cards; com "API completa" ela também lista, lê e altera os cards deste mural.</p>
       {busy ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : k ? (
         <>
           <div className="flex gap-2"><Input readOnly value={k.token} className={`font-mono text-xs ${k.enabled ? '' : 'opacity-50 line-through'}`} aria-label="Chave do mural" />
@@ -47,6 +47,8 @@ export function InboundKeySection({ boardId, canManage, columns }: { boardId: st
               <option value="">Primeira coluna</option>{columns.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </Sel>
             <span className="ml-auto text-muted-foreground">{k.uses} card(s) recebidos</span></div>
+          {canManage ? <label className="flex items-start gap-2 text-xs"><input type="checkbox" className="mt-0.5" checked={k.scope === 'full'} onChange={(e) => void patch({ scope: e.target.checked ? 'full' : 'create' })} />
+            <span><b>API completa</b> — permitir que esta chave também liste, leia e altere (mova, conclua, mude prazo) os cards deste mural. <a href="/desenvolvedores" target="_blank" rel="noreferrer" className="underline">Ver documentação</a></span></label> : null}
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => setShow(show === 'curl' ? '' : 'curl')}>Exemplo para sistemas</Button>
             <Button variant="outline" size="sm" onClick={() => setShow(show === 'form' ? '' : 'form')}>Formulário HTML</Button>

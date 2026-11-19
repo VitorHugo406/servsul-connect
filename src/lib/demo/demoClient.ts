@@ -87,7 +87,7 @@ class Query implements PromiseLike<any> {
     const now = new Date().toISOString();
     const base: Row = { id: crypto.randomUUID(), created_at: now, updated_at: now };
     if (['profiles', 'sectors', 'task_boards', 'announcements', 'meeting_rooms', 'teams', 'war_rooms', 'notes'].includes(this.table)) base.company_id = this.s.companyId;
-    return { ...base, ...r };
+    return { ...base, ...demoDefaults(this.table, r), ...r };
   }
   private run(): { data: any; error: any; count?: number } {
     let rows = readTable(this.table);
@@ -124,6 +124,27 @@ class Query implements PromiseLike<any> {
   }
   then<T1 = any, T2 = never>(ok?: ((v: any) => T1 | PromiseLike<T1>) | null, fail?: ((e: any) => T2 | PromiseLike<T2>) | null): Promise<T1 | T2> {
     return Promise.resolve().then(() => this.run()).then(ok, fail);
+  }
+}
+
+const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+const uuid = () => crypto.randomUUID();
+/** server-side defaults of tables used by the competitive features, so test mode behaves like the database */
+const lastNum = new Map<string, number>();
+function demoDefaults(table: string, r: Row = {}): Row {
+  switch (table) {
+    case 'tasks': {
+      const base: Row = { is_archived: false, is_template: false };
+      if (r.task_number != null || !r.board_id) return base;
+      const b = String(r.board_id); const max = Math.max(lastNum.get(b) || 0, ...readTable('tasks').filter(t => t.board_id === b).map(t => Number(t.task_number) || 0));
+      lastNum.set(b, max + 1); return { ...base, task_number: max + 1 };
+    }
+    case 'board_forms': return { token: hex(24), enabled: true, title: 'Formulário', questions: [{ id: 'q1', label: 'Assunto', type: 'text', required: true }, { id: 'q2', label: 'Descreva o pedido', type: 'long', required: false }, { id: 'q3', label: 'Seu nome', type: 'text', required: true }, { id: 'q4', label: 'Seu e-mail', type: 'email', required: true }], priority: 'medium', submissions: 0 };
+    case 'board_public_links': return { token: hex(36), enabled: true, allow_comments: false };
+    case 'board_inbound_keys': return { token: 'ewv_' + hex(48), enabled: true, uses: 0, scope: 'create' };
+    case 'company_webhooks': return { secret: hex(48), enabled: true, format: 'json', events: ['task.created', 'task.moved', 'task.completed'] };
+    case 'board_custom_fields': return { options: [], show_on_card: true, position: 0 };
+    default: return {};
   }
 }
 
@@ -190,6 +211,42 @@ function rpc(s: DemoSession, name: string, args: Row = {}) {
       });
       writeTable('evaluations', rows); return { data: out, error: out ? null : { message: 'Esta avaliação não está aguardando sua ciência' } };
     }
+    // ── competitive features (test mode mirrors the database functions) ──
+    case 'my_calendar_feed': { const rows = readTable('calendar_feeds'); let f = rows.find(r => r.profile_id === me?.id); if (!f || args._regen) { f = { id: uuid(), profile_id: me?.id, token: hex(40) }; writeTable('calendar_feeds', [...rows.filter(r => r.profile_id !== me?.id), f]); } return { data: f.token, error: null }; }
+    case 'task_timer': {
+      const now = new Date().toISOString(); const rows = readTable('task_time_entries').map(e => (e.profile_id === me?.id && !e.ended_at ? { ...e, ended_at: now } : e));
+      let out: Row | null = null; if (args._action === 'start') { out = { id: uuid(), task_id: args._task, profile_id: me?.id, company_id: s.companyId, started_at: now, ended_at: null, created_at: now }; rows.push(out); }
+      writeTable('task_time_entries', rows); return { data: out, error: null };
+    }
+    case 'public_form_view': {
+      const f = readTable('board_forms').find(r => r.token === args._token && r.enabled); if (!f) return { data: null, error: null };
+      const b = readTable('task_boards').find(r => r.id === f.board_id); const c = readTable('companies').find(r => r.id === s.companyId);
+      return { data: { title: f.title, intro: f.intro, questions: f.questions, thank_you: f.thank_you, color: f.color || c?.primary_color || null, company: c?.name || 'Empresa Teste', logo: c?.logo_url || null, board: b?.name }, error: null };
+    }
+    case 'public_form_submit': {
+      const forms = readTable('board_forms'); const f = forms.find(r => r.token === args._token && r.enabled); if (!f) return { data: null, error: { message: 'FORM_CLOSED:Este formulário não está disponível.' } };
+      const a = args._answers || {}; let title = ''; let body = '';
+      for (const q of f.questions || []) { const v = String(a[q.id] || '').trim(); if (q.required && !v) return { data: null, error: { message: `FORM_REQUIRED:Preencha "${q.label}".` } }; if (!title) { title = v; continue; } if (v) body += `<p><b>${q.label}:</b> ${v.replace(/</g, '&lt;')}</p>`; }
+      const cols = readTable('task_board_columns').filter(c => c.board_id === f.board_id).sort((x, y) => x.position - y.position);
+      const col = cols.find(c => c.id === f.column_id) || cols.find(c => !c.is_conclusion) || cols[0];
+      const tasks = readTable('tasks'); const num = Math.max(0, ...tasks.filter(t => t.board_id === f.board_id).map(t => t.task_number || 0)) + 1;
+      tasks.push({ id: uuid(), task_number: num, title: title || f.title, description: body, status: col?.id, priority: f.priority || 'medium', board_id: f.board_id, company_id: s.companyId, created_by: me?.id, position: 0, is_archived: false, is_template: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      writeTable('tasks', tasks); writeTable('board_forms', forms.map(r => (r.id === f.id ? { ...r, submissions: (r.submissions || 0) + 1 } : r)));
+      return { data: { ok: true, number: num }, error: null };
+    }
+    case 'public_board_view': {
+      const l = readTable('board_public_links').find(r => r.token === args._token && r.enabled); if (!l) return { data: null, error: null };
+      const b = readTable('task_boards').find(r => r.id === l.board_id); const cols = readTable('task_board_columns').filter(c => c.board_id === l.board_id).sort((x, y) => x.position - y.position);
+      const gc = readTable('guest_comments');
+      const cards = readTable('tasks').filter(t => t.board_id === l.board_id && !t.is_archived && !t.is_template).sort((x, y) => (x.position || 0) - (y.position || 0)).map(t => ({ id: t.id, n: t.task_number, title: t.title, col: t.status, due: t.due_date, priority: t.priority, done: !!t.completed_at, labels: [], check: [0, 0], guest: gc.filter(g => g.task_id === t.id) }));
+      return { data: { name: b?.name, description: b?.description, company: 'Empresa Teste', allow_comments: !!l.allow_comments, columns: cols.map(c => ({ id: c.id, title: c.title, color: c.color, done: c.is_conclusion })), cards }, error: null };
+    }
+    case 'public_board_comment': {
+      const l = readTable('board_public_links').find(r => r.token === args._token && r.enabled && r.allow_comments); if (!l) return { data: null, error: { message: 'GUEST_CLOSED:Comentários não estão liberados neste link.' } };
+      const rows = readTable('guest_comments'); rows.push({ id: uuid(), link_id: l.id, task_id: args._task, name: args._name, text: args._text || '', kind: args._kind || 'comment', at: new Date().toISOString() }); writeTable('guest_comments', rows);
+      return { data: { ok: true }, error: null };
+    }
+    case 'send_test_webhook': return { data: true, error: null };
     default: return { data: null, error: null };
   }
 }
