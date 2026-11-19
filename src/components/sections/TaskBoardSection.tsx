@@ -2071,9 +2071,9 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                                 </span>
                               ) : null; })()}
                               {!isTaskCompleted && openBlocker(task.id) ? (
-                                <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300" title={`Bloqueado: depende do #${openBlocker(task.id)?.task_number}`}><LockIcon className="h-2.5 w-2.5" />Bloqueado</span>
+                                <span className="inline-flex items-center text-amber-600" title={`Bloqueado: espera o card #${openBlocker(task.id)?.task_number}`}><LockIcon className="h-3 w-3" /></span>
                               ) : null}
-                              {extras?.fields.filter((f) => f.show_on_card).map((f) => { const v = fieldText(f, extras.valueOf(task.id, f.id)); return v ? <span key={f.id} className="max-w-[140px] truncate rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground" title={`${f.name}: ${v}`}>{v}</span> : null; })}
+                              {extras?.fields.filter((f) => f.show_on_card).map((f) => ({ f, v: fieldText(f, extras.valueOf(task.id, f.id)) })).filter((x) => x.v).slice(0, 2).map(({ f, v }) => <span key={f.id} className="max-w-[110px] truncate text-[10px] text-muted-foreground" title={`${f.name}: ${v}`}>{v}</span>)}
                               <div className="flex-1" />
                               {/* Additional Assignees */}
                               {(() => {

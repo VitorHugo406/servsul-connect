@@ -63,7 +63,7 @@ function useBoardExtrasState(boardId: string | null) {
     if (error) { toast.error('Não foi possível salvar o campo.'); setValues((m) => { const n = new Map(m); if (prev === undefined) n.delete(k); else n.set(k, prev); return n; }); }
   }, [values]);
   const saveField = useCallback(async (f: Partial<CustomField> & { name: string; type: FieldType }) => {
-    const row = { board_id: boardId, name: f.name.trim().slice(0, 60), type: f.type, options: f.type === 'select' ? (f.options || []).map((o) => o.trim()).filter(Boolean) : [], show_on_card: f.show_on_card ?? true, position: f.position ?? fields.length };
+    const row = { board_id: boardId, name: f.name.trim().slice(0, 60), type: f.type, options: f.type === 'select' ? (f.options || []).map((o) => o.trim()).filter(Boolean) : [], show_on_card: f.show_on_card ?? false, position: f.position ?? fields.length };
     const { error } = f.id ? await db.from('board_custom_fields').update(row).eq('id', f.id) : await db.from('board_custom_fields').insert(row);
     if (error) { toast.error('Só o dono ou administrador do mural pode configurar campos.'); return false; }
     await load(); return true;

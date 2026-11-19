@@ -14,7 +14,7 @@ export interface ImpCard {
   labels: number[]; checklists: { title: string; items: ImpItem[] }[]; comments: { who: string; text: string; at: string | null }[];
   people: string[];   // e-mails or names to match
 }
-export interface ImpBoard { source: string; name: string; desc: string; columns: { title: string; color: string }[]; labels: { name: string; color: string }[]; cards: ImpCard[] }
+export interface ImpBoard { doneCol?: number; source: string; name: string; desc: string; columns: { title: string; color: string }[]; labels: { name: string; color: string }[]; cards: ImpCard[] }
 
 const TRELLO_COLORS: Record<string, string> = {
   green: '#22c55e', yellow: '#eab308', orange: '#f97316', red: '#ef4444', purple: '#8b5cf6', blue: '#3b82f6', sky: '#0ea5e9',
@@ -132,7 +132,7 @@ export async function importBoard(b: ImpBoard, me: { userId: string; profileId: 
   const boardId = (board as { id: string }).id;
   await supabase.from('task_board_members').insert({ board_id: boardId, user_id: me.userId, profile_id: me.profileId, role: 'owner' });
 
-  const lastDone = b.columns.map((c) => DONE_RE.test(c.title)).lastIndexOf(true);
+  const lastDone = b.doneCol ?? b.columns.map((c) => DONE_RE.test(c.title)).lastIndexOf(true);
   const { data: cols, error: ce } = await supabase.from('task_board_columns').insert(b.columns.map((c, i) => ({ board_id: boardId, title: c.title, color: c.color, position: i, is_conclusion: i === lastDone }))).select('id,position');
   if (ce || !cols) throw new Error('Não foi possível criar as colunas.');
   const colId = (cols as { id: string; position: number }[]).sort((x, y) => x.position - y.position).map((c) => c.id);

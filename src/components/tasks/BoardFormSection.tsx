@@ -79,7 +79,7 @@ export function BoardFormSection({ boardId, boardName, canManage, columns }: { b
                   <div key={q.id} className="space-y-1.5 rounded-md border border-border bg-background p-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <Input value={q.label} onChange={(e) => setQ(i, { label: e.target.value })} maxLength={120} className="h-8 min-w-0 flex-1 text-sm" aria-label="Pergunta" />
-                      <Sel value={q.type} onChange={(e) => setQ(i, { type: e.target.value })} className="min-w-[130px]">{TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Sel>
+                      <Sel value={q.type} onChange={(e) => setQ(i, { type: e.target.value })} className="ui-sel min-w-[130px]">{TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Sel>
                       <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={!!q.required} onChange={(e) => setQ(i, { required: e.target.checked })} />Obrigatória</label>
                       <button type="button" onClick={() => move(i, -1)} aria-label="Subir"><ArrowUp className="h-4 w-4" /></button>
                       <button type="button" onClick={() => move(i, 1)} aria-label="Descer"><ArrowDown className="h-4 w-4" /></button>
@@ -91,9 +91,9 @@ export function BoardFormSection({ boardId, boardName, canManage, columns }: { b
               </div>
               <div className="grid gap-2 sm:grid-cols-3">
                 <label className="flex flex-col gap-1 text-xs"><span className="text-muted-foreground">Coluna de entrada</span>
-                  <Sel value={f.column_id || ''} onChange={(e) => setF({ ...f, column_id: e.target.value || null })}><option value="">Primeira coluna</option>{columns.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</Sel></label>
+                  <Sel className="ui-sel" value={f.column_id || ''} onChange={(e) => setF({ ...f, column_id: e.target.value || null })}><option value="">Primeira coluna</option>{columns.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</Sel></label>
                 <label className="flex flex-col gap-1 text-xs"><span className="text-muted-foreground">Prioridade</span>
-                  <Sel value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })}><option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option><option value="urgent">Urgente</option></Sel></label>
+                  <Sel className="ui-sel" value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })}><option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option><option value="urgent">Urgente</option></Sel></label>
                 <label className="flex flex-col gap-1 text-xs"><span className="text-muted-foreground">Prazo (dias após o envio)</span>
                   <Input type="number" min={0} max={365} value={f.due_days ?? ''} onChange={(e) => setF({ ...f, due_days: e.target.value === '' ? null : Math.max(0, Math.min(365, +e.target.value)) })} placeholder="Sem prazo" className="h-9" /></label>
               </div>

@@ -30,3 +30,10 @@ html:not(#_) :is(.gp-nav button, .dk-tb button, .dk-nav button, .wd-tabs button,
 html:not(#_) :is(.gp-nav button.gp-on, .dk-tb button.on, .dk-nav button.on, .wd-tabs button.wd-on, .ce-tb button.ce-on):not(.ew *)::after {
   background: hsl(var(--primary));
 }
+
+/* Sel lists used by the newer screens (Minhas tarefas, formulário, chave do mural, webhooks, campos): same look as the
+   system inputs — 36px, 10px corners, inner padding, chevron at the right (the base :where(.sel-btn) loses to the
+   global button reset). */
+button.ui-sel.sel-btn { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; height: 36px; min-height: 36px; padding: 0 12px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--background)); color: hsl(var(--foreground)); font-size: 13px; font-weight: 500; text-align: left; box-shadow: none; }
+button.ui-sel.sel-btn:hover { background: hsl(var(--muted)); }
+button.ui-sel.sel-btn .sel-chev { color: hsl(var(--muted-foreground)); }

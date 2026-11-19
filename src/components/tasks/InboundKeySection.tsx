@@ -43,7 +43,7 @@ export function InboundKeySection({ boardId, canManage, columns }: { boardId: st
           <div className="flex gap-2"><Input readOnly value={k.token} className={`font-mono text-xs ${k.enabled ? '' : 'opacity-50 line-through'}`} aria-label="Chave do mural" />
             <Button variant="outline" size="icon" onClick={() => copy(k.token, 'Chave copiada')} aria-label="Copiar chave"><Copy className="h-4 w-4" /></Button></div>
           <div className="flex items-center gap-2 text-xs"><span className="text-muted-foreground">Cards entram em</span>
-            <Sel value={k.column_id || ''} onChange={(e) => void patch({ column_id: e.target.value || null })} disabled={!canManage} className="min-w-[160px]">
+            <Sel value={k.column_id || ''} onChange={(e) => void patch({ column_id: e.target.value || null })} disabled={!canManage} className="ui-sel min-w-[160px]">
               <option value="">Primeira coluna</option>{columns.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </Sel>
             <span className="ml-auto text-muted-foreground">{k.uses} card(s) recebidos</span></div>

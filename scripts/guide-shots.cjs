@@ -12,12 +12,12 @@ eval(require('fs').readFileSync(__dirname + '/guide-seed.cjs', 'utf8').replace(/
   const step = async (name, fn) => { try { await fn(); } catch (e) { console.log('FAIL', name, e.message.slice(0, 500).replace(/\n/g, ' | ')); } };
   await d.goto(U); await d.evaluate(seed); await d.goto(U + 'tarefas', { waitUntil: 'networkidle' }); await d.waitForTimeout(2500);
   await step('murais', async () => shot('murais'));
-  await step('modelos', async () => { await d.locator('button:has-text("Modelos")').click(); await d.waitForTimeout(700); await d.locator('button:has-text("Projeto com etapas")').click(); await d.waitForTimeout(300); await shot('modelos');
-    await d.locator('button:has-text("Criar mural")').click(); await d.waitForTimeout(3500); });
+  await step('modelos', async () => { await d.locator('button:has-text("Modelos")').click(); await d.waitForTimeout(700); await d.locator('button.tp-item:has-text("Projeto com etapas")').click(); await d.waitForTimeout(300); await shot('modelos');
+    await d.locator('button:has-text("Usar modelo")').click(); await d.waitForTimeout(4000); });
   await step('quadro', async () => shot('quadro'));
   await step('campos', async () => {
     await d.click('button[title="Campos personalizados"]'); await d.waitForTimeout(500);
-    for (const [name, type, opts] of [['Valor do contrato', 'Valor (R$)', ''], ['Cliente', 'Texto', ''], ['Fase', 'Lista de opções', 'Planejamento, Execução, Entrega']]) {
+    for (const [name, type, opts] of [['Valor do contrato', 'Valor (R$)', ''], ['Cliente', 'Texto', ''], ['Área', 'Lista de opções', 'Comercial, Operações, TI']]) {
       await d.locator('[role=dialog] button:has-text("Novo campo")').click(); await d.waitForTimeout(200);
       await d.locator('[role=dialog] input[aria-label="Nome do campo"]').fill(name);
       await d.locator('[role=dialog] .sel-btn').first().click(); await d.waitForTimeout(200); await d.locator(`.sel-list >> text="${type}"`).click(); await d.waitForTimeout(150);
@@ -28,17 +28,16 @@ eval(require('fs').readFileSync(__dirname + '/guide-seed.cjs', 'utf8').replace(/
   if (process.env.ONLY_CAMPOS) { await b.close(); return; }
   await step('card', async () => {
     await d.locator('h4:has-text("Levantamento de requisitos")').first().click(); await d.waitForTimeout(1200);
+    await d.locator('[role=dialog] button:has-text("Mais")').click(); await d.waitForTimeout(300);
+    await d.locator('[data-radix-popper-content-wrapper] button:has-text("Tempo")').click(); await d.waitForTimeout(400);
     await d.locator('[role=dialog] button:has-text("Iniciar")').click(); await d.waitForTimeout(2200);
     await shot('card');
   });
   await step('card-campos', async () => {
     const dlg = d.locator('[role=dialog]');
-    await dlg.locator('input[placeholder="0"]').first().fill('15000'); await dlg.locator('input[placeholder="0"]').first().press('Enter');
+    await dlg.locator('input[placeholder="0"]').nth(1).fill('15000'); await dlg.locator('input[placeholder="0"]').nth(1).press('Enter');
     await dlg.locator('input[placeholder="—"]').first().fill('Construtora Exemplo'); await dlg.locator('input[placeholder="—"]').first().press('Enter');
-    await dlg.locator('button:has-text("Execução")').first().click().catch(() => {});
-    await dlg.locator('button:has-text("Adicionar")').filter({ hasText: 'Adicionar' }).last().click(); await d.waitForTimeout(500);
-    await d.locator('input[placeholder="Buscar card deste mural"]').fill('kick'); await d.waitForTimeout(400);
-    await d.locator('[data-radix-popper-content-wrapper] button:has-text("Reunião de início")').click(); await d.waitForTimeout(600);
+    await d.waitForTimeout(600);
     await d.evaluate(() => { const el = [...document.querySelectorAll('[role=dialog] *')].find(e => e.textContent?.trim() === 'Dependências'); el?.scrollIntoView({ block: 'center' }); });
     await d.waitForTimeout(500); await shot('card-campos');
     await d.keyboard.press('Escape'); await d.waitForTimeout(600);

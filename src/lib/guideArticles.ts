@@ -12,13 +12,14 @@ export const GUIDE: GuideArticle[] = [
     steps: [
       { t: 'Abra Tarefas', d: 'No menu, clique no ícone de Tarefas. Você verá todos os murais que pode acessar, com capa, progresso e situação (em dia, atrasado ou concluído).', img: 'murais' },
       { t: 'Clique em "Novo mural"', d: 'Dê um nome, uma descrição opcional e escolha uma capa. O mural é criado com as colunas padrão, que você pode renomear depois.' },
-      { t: 'Ou comece por um modelo', d: 'Clique em "Modelos" para ver modelos prontos: Onboarding, Funil de vendas, Marketing, Suporte, Recrutamento e Projeto. Escolha um, ajuste o nome e clique em "Criar mural".', img: 'modelos' },
+      { t: 'Ou comece por um modelo', d: 'Clique em "Modelos" para ver 16 modelos prontos por área (RH, vendas e atendimento, marketing, operações, financeiro e projetos). Escolha um, ajuste o nome e clique em "Usar modelo".', img: 'modelos' },
     ], tips: ['Arraste os murais na lista (ordem "Minha ordem") para deixar os mais usados primeiro.', 'Já usa outra ferramenta? Veja "Importar do Trello, Asana ou ClickUp".'], rel: ['modelos', 'importar', 'cards'] },
-  { slug: 'modelos', cat: 'Primeiros passos', title: 'Modelos de mural prontos', sum: 'Comece com colunas, etiquetas, cards de exemplo e checklists já montados para o seu tipo de trabalho.',
+  { slug: 'modelos', cat: 'Primeiros passos', title: 'Modelos de mural prontos', sum: 'Comece com colunas, etiquetas, campos personalizados, automações, dependências, formulário e cards de exemplo já montados para a sua área.',
     steps: [
-      { t: 'Abra a galeria', d: 'Em Tarefas, clique em "Modelos". Cada modelo mostra as colunas, quantos cards de exemplo e etiquetas traz.', img: 'modelos' },
-      { t: 'Escolha e dê um nome', d: 'Clique no modelo, ajuste o nome do mural no rodapé e clique em "Criar mural". Os prazos dos exemplos são calculados a partir de hoje.' },
-      { t: 'Edite à vontade', d: 'O mural é seu: apague os cards de exemplo, renomeie colunas e crie suas etiquetas. Nada muda nos outros murais.', img: 'quadro' },
+      { t: 'Abra a galeria', d: 'Em Tarefas, clique em "Modelos". À esquerda ficam as áreas (Recursos Humanos, Vendas e atendimento, Marketing, Operações, Financeiro e compras, Projetos e tecnologia) e uma busca; no centro, os modelos; à direita, a prévia das colunas e tudo o que o modelo traz.', img: 'modelos' },
+      { t: 'Escolha e dê um nome', d: 'Clique no modelo, ajuste o nome do mural no rodapé e clique em "Usar modelo". Os prazos e datas de início dos exemplos são calculados a partir de hoje.' },
+      { t: 'O que já vem pronto', d: 'Conforme o modelo: campos personalizados (ex.: Valor, Origem e Probabilidade no funil de vendas) já preenchidos nos exemplos, automações (ex.: card novo ganha prazo, ao entrar em uma coluna vira prioridade Alta), dependências entre etapas (veja na Linha do tempo) e um formulário público (Trabalhe conosco, Abrir chamado, Pedido de compra, Pedido de manutenção...). O formulário começa pausado: revise e ative em Compartilhar › Formulário.' },
+      { t: 'Edite à vontade', d: 'O mural é seu: apague os cards de exemplo, renomeie colunas, ajuste campos (ícone de campos no topo) e automações (raio no topo). Nada muda nos outros murais.', img: 'quadro' },
     ], rel: ['criar-mural', 'cards'] },
   { slug: 'cards', cat: 'Murais e cards', title: 'Criar, mover e concluir cards', sum: 'Cada tarefa é um card. Ele guarda responsável, prazo, prioridade, etiquetas, checklist, comentários e anexos.',
     steps: [

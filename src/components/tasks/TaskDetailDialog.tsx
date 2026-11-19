@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import {
   ArrowRight, Calendar as CalendarIcon, CheckCircle2, CheckSquare, ChevronDown, ChevronRight,
   Eye, EyeOff, Image, Loader2, MessageSquare, Palette, Plus, Tag, Trash2, Users, X, Zap, Bell, Move, Copy, Layout,
-  Bold, Italic, Strikethrough, List, Type, Minus, Search, Upload, Siren, Signal
+  Bold, Italic, Strikethrough, List, Type, Minus, Search, Upload, Siren, Signal, MoreHorizontal, Timer, Link as LinkIcon2, Link2
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -248,6 +248,12 @@ interface TaskDetailDialogProps {
 
 export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskLabels, allLabels, onToggleLabel, onCreateLabel, onDeleteLabel, boardId, onOpenAutomation, columns, onDuplicateTemplate, onMakeTemplate, boardMembers, getTaskAssignees, onSetTaskAssignees, allUsers }: TaskDetailDialogProps) {
   const isMobile = useIsMobile();
+  // extras (tempo, links, dependências) stay hidden until they have content or the person opens them in "Mais"
+  const [extraOpen, setExtraOpen] = useState<Set<string>>(new Set());
+  const [moreOpen, setMoreOpen] = useState(false);
+  const extraTask = task?.id;
+  const [extraFor, setExtraFor] = useState<string | undefined>(extraTask);
+  if (extraFor !== extraTask) { setExtraFor(extraTask); setExtraOpen(new Set()); }
   const warLocks = useWarRoomLockedTasks();
   const warLocked = !!task && warLocks.has(task.id);
   const L = (node: React.ReactNode) => (warLocked ? <div className="wr-lock">{node}</div> : node);
@@ -659,6 +665,19 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
             </div>
             <div className="border-t border-border pt-3 space-y-1.5">
               <div className="flex items-center gap-2">
+                <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-xs font-medium">Data de início <span className="font-normal text-muted-foreground">(linha do tempo)</span></p>
+              </div>
+              <Input
+                key={`start-${task.id}-${(task as { start_date?: string | null }).start_date || ''}`}
+                type="date"
+                className="h-8 text-xs w-full"
+                defaultValue={(() => { const v = (task as { start_date?: string | null }).start_date; if (!v) return ''; const d = new Date(v); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })()}
+                onChange={async (e) => { const v = e.target.value; await onUpdateTask?.(task.id, { start_date: v ? new Date(`${v}T09:00:00`).toISOString() : null }); }}
+              />
+            </div>
+            <div className="border-t border-border pt-3 space-y-1.5">
+              <div className="flex items-center gap-2">
                 <Bell className="h-3.5 w-3.5 text-muted-foreground" />
                 <p className="text-xs font-medium">Definir lembrete</p>
               </div>
@@ -880,6 +899,18 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
           <CheckCircle2 className="h-3.5 w-3.5" />
           Decisões {decisions.length > 0 && `(${decisions.length})`}
         </Button>
+        {!task.is_template ? (
+          <Popover open={moreOpen} onOpenChange={setMoreOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs"><MoreHorizontal className="h-3.5 w-3.5" /> Mais</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-60 p-1" align="start">
+              {([['time', Timer, 'Tempo', 'Cronômetro e horas gastas'], ['links', LinkIcon2, 'Links e arquivos', 'Drive, OneDrive, Dropbox, Figma…'], ['deps', Link2, 'Dependências', 'Este card espera outro terminar']] as const).map(([k, Ic, l, h]) => (
+                <button key={k} type="button" className="flex w-full items-start gap-2.5 rounded-md px-2.5 py-2 text-left hover:bg-muted" onClick={() => { setExtraOpen((x) => new Set(x).add(k)); setMoreOpen(false); }}>
+                  <Ic className="mt-0.5 h-4 w-4 text-muted-foreground" /><span><span className="block text-sm font-medium">{l}</span><span className="block text-xs text-muted-foreground">{h}</span></span>
+                </button>))}
+            </PopoverContent>
+          </Popover>) : null}
       </div>
     </div>
   );
@@ -1249,8 +1280,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
             {!task.is_template && L(renderInfoRow())}
             {L(renderDescription())}
             {L(renderDecisions())}
-            {!task.is_template ? <TaskTimeTracker taskId={task.id} /> : null}
-            {!task.is_template && boardId ? <CardExtrasPanel task={task as never} boardId={boardId} readOnly={warLocked} onUpdateTask={onUpdateTask} conclusionIds={new Set((columns || []).filter((c) => (c as { is_conclusion?: boolean }).is_conclusion).map((c) => c.id))} /> : null}
+            {!task.is_template ? <TaskTimeTracker taskId={task.id} forceOpen={extraOpen.has('time')} /> : null}
+            {!task.is_template && boardId ? <CardExtrasPanel task={task as never} boardId={boardId} readOnly={warLocked} showLinks={extraOpen.has('links')} showDeps={extraOpen.has('deps')} conclusionIds={new Set((columns || []).filter((c) => (c as { is_conclusion?: boolean }).is_conclusion).map((c) => c.id))} /> : null}
             <div className="h-px bg-border mx-4" />
             {renderProgress()}
             {renderSubtasks()}
@@ -1284,8 +1315,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
               {!task.is_template && L(renderInfoRow())}
               {L(renderDescription())}
               {L(renderDecisions())}
-              {!task.is_template ? <TaskTimeTracker taskId={task.id} /> : null}
-              {!task.is_template && boardId ? <CardExtrasPanel task={task as never} boardId={boardId} readOnly={warLocked} onUpdateTask={onUpdateTask} conclusionIds={new Set((columns || []).filter((c) => (c as { is_conclusion?: boolean }).is_conclusion).map((c) => c.id))} /> : null}
+              {!task.is_template ? <TaskTimeTracker taskId={task.id} forceOpen={extraOpen.has('time')} /> : null}
+              {!task.is_template && boardId ? <CardExtrasPanel task={task as never} boardId={boardId} readOnly={warLocked} showLinks={extraOpen.has('links')} showDeps={extraOpen.has('deps')} conclusionIds={new Set((columns || []).filter((c) => (c as { is_conclusion?: boolean }).is_conclusion).map((c) => c.id))} /> : null}
               {renderProgress()}
               {renderSubtasks()}
               </div>

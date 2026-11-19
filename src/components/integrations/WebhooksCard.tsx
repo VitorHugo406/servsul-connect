@@ -59,7 +59,7 @@ export function WebhooksCard() {
     <div className="dk-panel dk-pad space-y-4">
       <div className="flex items-start gap-3"><Webhook className="mt-0.5 h-5 w-5" /><div><b>Webhooks e avisos em outros apps</b><p className="dk-hp" style={{ margin: 0 }}>Avise outros sistemas quando algo acontecer no ewvon: cards (criado, movido, concluído, responsável, prazo, excluído, comentário), colaborador cadastrado/desativado/reativado, aviso publicado, reunião agendada/cancelada e War Room aberta/encerrada. Funciona com Zapier, Make, n8n ou o sistema da sua empresa (receba em um endereço https). Cada envio é assinado: o cabeçalho <code>X-Ewvon-Signature</code> traz <code>sha256=</code> + HMAC-SHA256 do corpo com a chave secreta.</p></div></div>
       <div className="flex flex-wrap items-center gap-2 text-sm"><span className="text-muted-foreground">Enviar para</span>
-        <Sel value={format} onChange={(e) => setFormat(e.target.value)} className="min-w-[280px]">{FORMATS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}</Sel>
+        <Sel value={format} onChange={(e) => setFormat(e.target.value)} className="ui-sel min-w-[280px]">{FORMATS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}</Sel>
       </div>
       <p className="dk-hp" style={{ margin: 0 }}>{FORMATS.find((f) => f.id === format)?.help}</p>
       <div className="grid gap-2 sm:grid-cols-[1fr_220px]">

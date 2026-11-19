@@ -79,7 +79,7 @@ export function MyTasksView({ boards, onBack, onOpenTask }: { boards: { id: stri
           <span className="bvx-mut">{open} em aberto · {groups.late.length} atrasada(s)</span>
           <span className="bvx-sp" />
           <label className="mt-srch"><Search className="h-4 w-4" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar card ou mural" aria-label="Buscar" /></label>
-          <Sel value={board} onChange={(e) => setBoard(e.target.value)} className="min-w-[180px]"><option value="">Todos os murais</option>{boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Sel>
+          <Sel value={board} onChange={(e) => setBoard(e.target.value)} className="ui-sel min-w-[180px]"><option value="">Todos os murais</option>{boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Sel>
         </div>
         <div className="bvx-scroll">
           {loading ? <div className="bvx-empty"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div> : !rows.length ? (
