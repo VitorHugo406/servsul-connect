@@ -1652,7 +1652,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
         )}
         </AnimatePresence>
         {showBoard && !isMobile && boardView !== 'board' ? (
-          <div className="relative z-[1] flex-1 overflow-hidden p-3"><BoardAltView mode={boardView} boardName={board.name} tasks={filteredTasks as never} columns={columns as never} dark={isDarkBg} labelsOf={getTaskLabels as never}
+          <div className="bvx-full relative z-[1] flex-1 overflow-hidden"><BoardAltView mode={boardView} boardName={board.name} tasks={filteredTasks as never} columns={columns as never} dark={isDarkBg} labelsOf={getTaskLabels as never}
             locked={warLocks}
             onMove={(t, colId) => { const full = tasks.find((x) => x.id === t.id); if (full) moveToColumn(full, colId); }}
             onComplete={(t) => { const full = tasks.find((x) => x.id === t.id); if (full) void handleQuickComplete(full); }}
@@ -2346,8 +2346,8 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
 
       {/* Bottom bar: Planner / Board / Switch board, same look as the header pills and the mobile app tab bar */}
       {!isMobile && (
-        <div className="relative z-10 flex items-center justify-center pb-3 pt-1">
-          <div className="ewvon-segbar" role="toolbar" aria-label="Visualização do mural">
+        <div className={showBoard && boardView !== 'board' ? 'pointer-events-none absolute inset-x-0 bottom-3 z-20 flex items-center justify-center' : 'relative z-10 flex items-center justify-center pb-3 pt-1'}>
+          <div className="ewvon-segbar pointer-events-auto" role="toolbar" aria-label="Visualização do mural">
             <button type="button" onClick={togglePlanner} className="ewvon-segbar-item" data-on={showPlanner ? 'true' : undefined} aria-pressed={showPlanner}>
               <CalendarRange className="h-4 w-4" strokeWidth={1.9} />Planejador
             </button>

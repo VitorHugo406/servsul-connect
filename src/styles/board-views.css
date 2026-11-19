@@ -155,3 +155,7 @@ button.bvx-chk.on { background: #22a06b; cursor: default; }
 .in-bar { height: 10px; border-radius: 999px; background: hsl(var(--muted)); overflow: hidden; }
 .in-bar i { display: block; height: 100%; border-radius: 999px; }
 .tl-out { position: absolute; left: calc(100% + 6px); top: 3px; font-size: 11.5px; font-weight: 500; white-space: nowrap; color: hsl(var(--foreground)); pointer-events: none; }
+
+/* Lista / Calendário / Linha do tempo / Carga / Relatórios fill the whole mural area; the bottom bar floats over them. */
+.bvx-full > .bvx { border: 0; border-radius: 0; box-shadow: none; }
+.bvx-full .bvx-scroll, .bvx-full .bvx-cal, .bvx-full .tl-wrap { padding-bottom: 76px; }
