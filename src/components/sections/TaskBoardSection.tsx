@@ -1,6 +1,6 @@
 import { PublicLinkSection } from '@/components/tasks/PublicLinkSection';
 import { BoardAltView, type BoardViewMode } from '@/components/tasks/BoardAltViews';
-import { List as ListIcon, CalendarDays as CalDaysIcon } from 'lucide-react';
+import { List as ListIcon, CalendarDays as CalDaysIcon, Check } from 'lucide-react';
 import { ImportBoardDialog } from '@/components/tasks/ImportBoardDialog';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useWarRoomLockedTasks } from '@/hooks/useWarRooms';
@@ -1196,13 +1196,6 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         )}
 
         <div className="flex items-center gap-1">
-          {!isMobile ? <div className="mr-1 flex items-center gap-0.5 rounded-[10px] border border-border/70 bg-muted/40 p-0.5" role="group" aria-label="Forma de ver o mural">
-            {([['board', 'Quadro', Columns3], ['list', 'Lista', ListIcon], ['calendar', 'Calendário', CalDaysIcon]] as const).map(([v, label, Ic]) => (
-              <button key={v} type="button" onClick={() => setBoardView(v)} aria-pressed={boardView === v} title={label}
-                className={cn('flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium transition-colors', boardView === v ? 'bg-background text-foreground shadow-sm' : isDarkBg ? 'text-white/80 hover:text-white' : 'text-muted-foreground hover:text-foreground')}>
-                <Ic className="h-3.5 w-3.5" />{label}
-              </button>))}
-          </div> : null}
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -1594,7 +1587,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         )}
         </AnimatePresence>
         {showBoard && !isMobile && boardView !== 'board' ? (
-          <div className="relative z-[1] flex-1 overflow-hidden p-4"><BoardAltView mode={boardView} tasks={filteredTasks as never} columns={columns as never} dark={isDarkBg} onOpen={(t) => { const full = tasks.find((x) => x.id === t.id); if (full) { setSelectedTask(full); setShowTaskDetail(true); } }} /></div>
+          <div className="relative z-[1] flex-1 overflow-hidden p-3"><BoardAltView mode={boardView} tasks={filteredTasks as never} columns={columns as never} dark={isDarkBg} labelsOf={getTaskLabels as never} onOpen={(t) => { const full = tasks.find((x) => x.id === t.id); if (full) { setSelectedTask(full); setShowTaskDetail(true); } }} /></div>
         ) : null}
         {showBoard && (isMobile || boardView === 'board') && (
         <div className="flex-1 overflow-hidden">
@@ -2284,9 +2277,23 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             <button type="button" onClick={togglePlanner} className="ewvon-segbar-item" data-on={showPlanner ? 'true' : undefined} aria-pressed={showPlanner}>
               <CalendarRange className="h-4 w-4" strokeWidth={1.9} />Planejador
             </button>
-            <button type="button" onClick={toggleBoard} className="ewvon-segbar-item" data-on={showBoard ? 'true' : undefined} aria-pressed={showBoard}>
-              <Columns3 className="h-4 w-4" strokeWidth={1.9} />Quadro
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="ewvon-segbar-item" data-on={showBoard ? 'true' : undefined} aria-pressed={showBoard} title="Escolher como ver o mural">
+                  {boardView === 'list' ? <ListIcon className="h-4 w-4" strokeWidth={1.9} /> : boardView === 'calendar' ? <CalDaysIcon className="h-4 w-4" strokeWidth={1.9} /> : <Columns3 className="h-4 w-4" strokeWidth={1.9} />}
+                  {boardView === 'list' ? 'Lista' : boardView === 'calendar' ? 'Calendário' : 'Quadro'}<ChevronUp className="h-3.5 w-3.5 opacity-60" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="center" className="w-56">
+                {([['board', 'Quadro', 'Colunas com os cards', Columns3], ['list', 'Lista', 'Tabela por coluna, com prazos', ListIcon], ['calendar', 'Calendário', 'Cards no dia do prazo', CalDaysIcon]] as const).map(([v, label, hint, Ic]) => (
+                  <DropdownMenuItem key={v} onClick={() => { setBoardView(v); if (!showBoard) toggleBoard(); }} className="flex items-center gap-3 p-2">
+                    <Ic className="h-4 w-4 shrink-0" />
+                    <span className="flex min-w-0 flex-1 flex-col"><span className="text-sm font-medium">{label}</span><span className="text-xs text-muted-foreground">{hint}</span></span>
+                    {boardView === v ? <Check className="h-4 w-4 text-primary" /> : null}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <span className="ewvon-segbar-sep" aria-hidden="true" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

@@ -1,105 +1,133 @@
-// Other ways to see a mural (desktop): "Lista" (sortable table of the cards) and "Calendário" (cards on their due day).
-// Both use the board's already-filtered cards and open the same card dialog; nothing is saved here.
+// Other ways to see a mural (desktop), in a clean work-management style:
+//  - Lista: sections per column (collapsible), task rows with a round check, assignee avatar, due date, status pill,
+//    priority pill and labels; sortable headers; thin grid.
+//  - Calendário: month grid (weekdays wide, weekend narrow), cards as soft coloured bars with the assignee avatar.
+// Both use the board's already-filtered cards and open the normal card dialog; nothing is saved here.
 import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronRight as Caret } from 'lucide-react';
 import { useActiveUsers } from '@/hooks/useDirectMessages';
 import { useAuth } from '@/contexts/AuthContext';
+import '@/styles/board-views.css';
 
-type T = { id: string; title: string; status: string; priority?: string | null; due_date?: string | null; completed_at?: string | null; assigned_to?: string | null; task_number?: number | null; created_at?: string | null; is_archived?: boolean | null };
+type T = { id: string; title: string; status: string; priority?: string | null; due_date?: string | null; completed_at?: string | null; assigned_to?: string | null; task_number?: number | null; is_archived?: boolean | null };
 type C = { id: string; title: string; color?: string | null; is_conclusion?: boolean | null; position?: number | null };
+type L = { id?: string; name: string; color?: string | null };
+type P = { name: string; avatar: string | null };
 export type BoardViewMode = 'board' | 'list' | 'calendar';
 
-const PRIO: Record<string, [string, number, string]> = { urgent: ['Urgente', 0, '#dc2626'], high: ['Alta', 1, '#f97316'], medium: ['Média', 2, '#3b82f6'], low: ['Baixa', 3, '#6b7280'] };
+const PRIO: Record<string, [string, number, string]> = { urgent: ['Urgente', 0, '#e5484d'], high: ['Alta', 1, '#f76b15'], medium: ['Média', 2, '#d9a400'], low: ['Baixa', 3, '#30a46c'] };
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const dkey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+const ini = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+const hueOf = (s: string) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+/** soft pill: tinted background, strong text in the same hue */
+const pill = (hex?: string | null) => { const c = hex || '#8b93a7'; return { background: `color-mix(in srgb, ${c} 18%, hsl(var(--card)))`, color: `color-mix(in srgb, ${c} 78%, hsl(var(--foreground)))` }; };
 
-export function BoardAltView({ mode, tasks, columns, onOpen, dark }: { mode: BoardViewMode; tasks: T[]; columns: C[]; onOpen: (t: T) => void; dark?: boolean }) {
+function Av({ p, id }: { p: P | null; id?: string | null }) {
+  if (!p) return null;
+  return <span className="bvx-av" title={p.name} style={p.avatar ? { backgroundImage: `url(${p.avatar})` } : { background: `hsl(${hueOf(id || p.name)} 45% 52%)` }}>{p.avatar ? '' : ini(p.name)}</span>;
+}
+
+export function BoardAltView({ mode, tasks, columns, onOpen, labelsOf }: { mode: BoardViewMode; tasks: T[]; columns: C[]; onOpen: (t: T) => void; dark?: boolean; labelsOf?: (taskId: string) => L[] }) {
   const { users } = useActiveUsers(); const { profile } = useAuth();
-  const nameOf = (id?: string | null) => { if (!id) return ''; if (id === profile?.id) return profile?.display_name || profile?.name || 'Você'; const u = users.find((x) => x.id === id); return u ? (u.display_name || u.name) : ''; };
-  const col = useMemo(() => new Map(columns.map((c) => [c.id, c])), [columns]);
+  const person = (id?: string | null): P | null => {
+    if (!id) return null;
+    if (id === profile?.id) return { name: profile?.display_name || profile?.name || 'Você', avatar: profile?.avatar_url || null };
+    const u = users.find((x) => x.id === id); return u ? { name: u.display_name || u.name, avatar: u.avatar_url || null } : null;
+  };
+  const cols = useMemo(() => [...columns].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)), [columns]);
+  const col = useMemo(() => new Map(cols.map((c) => [c.id, c])), [cols]);
   const done = (t: T) => !!t.completed_at || !!col.get(t.status)?.is_conclusion;
   const late = (t: T) => !!t.due_date && !done(t) && new Date(t.due_date).getTime() < Date.now();
   const live = tasks.filter((t) => !t.is_archived);
-  const panel = `h-full overflow-auto rounded-2xl border border-border bg-background/95 ${dark ? 'shadow-2xl' : ''}`;
-  return mode === 'list' ? <ListView tasks={live} col={col} nameOf={nameOf} onOpen={onOpen} done={done} late={late} cls={panel} columns={columns} />
-    : <CalView tasks={live} col={col} onOpen={onOpen} done={done} late={late} cls={panel} />;
+  const ctx = { col, cols, person, onOpen, done, late, labelsOf: labelsOf || (() => []) };
+  return <div className="bvx">{mode === 'list' ? <ListView tasks={live} {...ctx} /> : <CalView tasks={live} {...ctx} />}</div>;
 }
 
-type K = 'num' | 'title' | 'col' | 'who' | 'due' | 'prio';
-function ListView({ tasks, col, columns, nameOf, onOpen, done, late, cls }: { tasks: T[]; col: Map<string, C>; columns: C[]; nameOf: (id?: string | null) => string; onOpen: (t: T) => void; done: (t: T) => boolean; late: (t: T) => boolean; cls: string }) {
-  const [sort, setSort] = useState<{ k: K; asc: boolean }>({ k: 'col', asc: true });
-  const colPos = new Map(columns.map((c, i) => [c.id, c.position ?? i]));
-  const rows = [...tasks].sort((a, b) => {
-    const v = (t: T): string | number => sort.k === 'num' ? t.task_number ?? 0 : sort.k === 'title' ? t.title.toLowerCase() : sort.k === 'col' ? colPos.get(t.status) ?? 99 : sort.k === 'who' ? nameOf(t.assigned_to).toLowerCase() || '~' : sort.k === 'due' ? (t.due_date ? new Date(t.due_date).getTime() : Infinity) : PRIO[t.priority || 'medium']?.[1] ?? 2;
-    const x = v(a), y = v(b); const r = x < y ? -1 : x > y ? 1 : 0; return sort.asc ? r : -r;
-  });
-  const H = ({ k, children, w }: { k: K; children: React.ReactNode; w?: string }) => (
-    <th className={`sticky top-0 z-10 bg-muted/90 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground ${w || ''}`}>
-      <button type="button" className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => setSort((s) => ({ k, asc: s.k === k ? !s.asc : true }))}>{children}{sort.k === k ? (sort.asc ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : null}</button>
-    </th>);
+type Ctx = { tasks: T[]; col: Map<string, C>; cols: C[]; person: (id?: string | null) => P | null; onOpen: (t: T) => void; done: (t: T) => boolean; late: (t: T) => boolean; labelsOf: (id: string) => L[] };
+type K = 'title' | 'who' | 'due' | 'prio';
+
+function ListView({ tasks, cols, person, onOpen, done, late, labelsOf }: Ctx) {
+  const [sort, setSort] = useState<{ k: K; asc: boolean } | null>(null);
+  const [closed, setClosed] = useState<Set<string>>(new Set());
+  const val = (t: T): string | number => !sort ? 0 : sort.k === 'title' ? t.title.toLowerCase() : sort.k === 'who' ? (person(t.assigned_to)?.name || '~').toLowerCase() : sort.k === 'due' ? (t.due_date ? new Date(t.due_date).getTime() : Infinity) : PRIO[t.priority || 'medium']?.[1] ?? 2;
+  const order = (a: T[]) => !sort ? a : [...a].sort((x, y) => { const p = val(x), q = val(y); const r = p < q ? -1 : p > q ? 1 : 0; return sort.asc ? r : -r; });
+  const H = ({ k, children, w }: { k?: K; children: React.ReactNode; w?: number }) => (
+    <th style={w ? { width: w } : undefined}>{k ? <button type="button" onClick={() => setSort((s) => (s?.k === k ? (s.asc ? { k, asc: false } : null) : { k, asc: true }))}>{children}{sort?.k === k ? (sort.asc ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : null}</button> : children}</th>);
+  const fmt = (d: string) => new Date(d).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', '');
   return (
-    <div className={cls}>
-      <table className="w-full border-collapse text-sm">
-        <thead><tr><H k="num" w="w-16">#</H><H k="title">Card</H><H k="col" w="w-44">Coluna</H><H k="who" w="w-44">Responsável</H><H k="due" w="w-36">Prazo</H><H k="prio" w="w-28">Prioridade</H></tr></thead>
-        <tbody>
-          {rows.length === 0 ? <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">Nenhum card neste mural (ou no filtro atual).</td></tr> : rows.map((t) => {
-            const c = col.get(t.status); const p = PRIO[t.priority || 'medium'] || PRIO.medium;
-            return (
-              <tr key={t.id} onClick={() => onOpen(t)} className="cursor-pointer border-t border-border hover:bg-muted/50">
-                <td className="px-3 py-2.5 text-xs text-muted-foreground">{t.task_number ? `#${t.task_number}` : ''}</td>
-                <td className={`px-3 py-2.5 font-medium ${done(t) ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{t.title}</td>
-                <td className="px-3 py-2.5"><span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: c?.color || '#9ca3af' }} />{c?.title || '—'}</span></td>
-                <td className="px-3 py-2.5 text-muted-foreground">{nameOf(t.assigned_to) || '—'}</td>
-                <td className={`px-3 py-2.5 ${late(t) ? 'font-medium text-red-600' : 'text-muted-foreground'}`}>{t.due_date ? new Date(t.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}{late(t) ? ' · atrasado' : ''}</td>
-                <td className="px-3 py-2.5"><span className="inline-flex items-center gap-1.5 text-xs"><span className="h-2 w-2 rounded-full" style={{ background: p[2] }} />{p[0]}</span></td>
-              </tr>);
-          })}
-        </tbody>
-      </table>
-    </div>
+    <>
+      <div className="bvx-bar"><b>Lista</b><span className="bvx-mut">{tasks.length} cards · {tasks.filter(done).length} concluídos</span><span className="bvx-sp" /><span className="bvx-mut">Clique no título de uma coluna para ordenar</span></div>
+      <div className="bvx-scroll">
+        <table className="bvx-tbl">
+          <thead><tr><H k="title">Nome do card</H><H k="who" w={190}>Responsável</H><H k="due" w={130}>Prazo</H><H w={160}>Status</H><H k="prio" w={110}>Prioridade</H><H w={200}>Etiquetas</H></tr></thead>
+          <tbody>
+            {cols.map((c) => {
+              const rows = order(tasks.filter((t) => t.status === c.id)); const isClosed = closed.has(c.id);
+              return [
+                <tr key={'s' + c.id} className="bvx-sec"><td colSpan={6}><button type="button" onClick={() => setClosed((s) => { const n = new Set(s); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); return n; })}>{isClosed ? <Caret className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}{c.title}<span className="bvx-n">{rows.length}</span></button></td></tr>,
+                ...(isClosed ? [] : rows.map((t) => {
+                  const p = PRIO[t.priority || 'medium'] || PRIO.medium; const who = person(t.assigned_to); const labs = labelsOf(t.id); const ok = done(t);
+                  return (
+                    <tr key={t.id} className={`bvx-row ${ok ? 'bvx-done' : ''}`} onClick={() => onOpen(t)}>
+                      <td><div className="bvx-name"><span className={`bvx-chk ${ok ? 'on' : ''}`}><Check className="h-3 w-3" strokeWidth={3} /></span>{t.task_number ? <span className="bvx-num">#{t.task_number}</span> : null}<span className="t">{t.title}</span></div></td>
+                      <td>{who ? <div className="bvx-who"><Av p={who} id={t.assigned_to} /><span className="t" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{who.name}</span></div> : <span className="bvx-mut">—</span>}</td>
+                      <td className={late(t) ? 'bvx-late' : ''}>{t.due_date ? fmt(t.due_date) : <span className="bvx-mut">—</span>}</td>
+                      <td><span className="bvx-pill" style={pill(c.color)}>{c.title}</span></td>
+                      <td><span className="bvx-pill" style={pill(p[2])}>{p[0]}</span></td>
+                      <td><div className="bvx-tags">{labs.length ? labs.slice(0, 3).map((l, i) => <span key={i} className="bvx-pill" style={pill(l.color)}>{l.name}</span>) : <span className="bvx-mut">—</span>}{labs.length > 3 ? <span className="bvx-mut">+{labs.length - 3}</span> : null}</div></td>
+                    </tr>);
+                })),
+              ];
+            })}
+            {!tasks.length ? <tr><td colSpan={6} className="bvx-empty" style={{ maxWidth: 'none' }}>Nenhum card neste mural (ou no filtro atual).</td></tr> : null}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
-function CalView({ tasks, col, onOpen, done, late, cls }: { tasks: T[]; col: Map<string, C>; onOpen: (t: T) => void; done: (t: T) => boolean; late: (t: T) => boolean; cls: string }) {
+function CalView({ tasks, col, person, onOpen, done, late }: Ctx) {
   const [m, setM] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [openDay, setOpenDay] = useState<string | null>(null);
   const byDay = useMemo(() => { const map = new Map<string, T[]>(); for (const t of tasks) if (t.due_date) { const k = dkey(new Date(t.due_date)); map.set(k, [...(map.get(k) || []), t]); } return map; }, [tasks]);
   const noDue = tasks.filter((t) => !t.due_date).length;
-  const start = new Date(m); start.setDate(1 - m.getDay());
-  const days = Array.from({ length: 42 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; });
+  const first = new Date(m); const off = (first.getDay() + 6) % 7;   // weeks start on Monday
+  const start = new Date(m); start.setDate(1 - off);
+  const weeks = Math.ceil((off + new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate()) / 7);
+  const days = Array.from({ length: weeks * 7 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; });
   const today = dkey(new Date());
+  const Ev = ({ t }: { t: T }) => { const c = col.get(t.status); const s = pill(late(t) ? '#e5484d' : c?.color); return (
+    <button type="button" className={`bvx-ev ${done(t) ? 'done' : ''}`} style={s} onClick={() => onOpen(t)} title={`${t.title} · ${c?.title || ''}`}><Av p={person(t.assigned_to)} id={t.assigned_to} /><span className="t">{t.title}</span></button>); };
   return (
-    <div className={`${cls} flex flex-col p-3`}>
-      <div className="mb-2 flex items-center gap-2">
-        <button type="button" className="rounded-lg border border-border p-1.5 hover:bg-muted" onClick={() => setM(new Date(m.getFullYear(), m.getMonth() - 1, 1))} aria-label="Mês anterior"><ChevronLeft className="h-4 w-4" /></button>
-        <b className="min-w-40 text-center">{MONTHS[m.getMonth()]} de {m.getFullYear()}</b>
-        <button type="button" className="rounded-lg border border-border p-1.5 hover:bg-muted" onClick={() => setM(new Date(m.getFullYear(), m.getMonth() + 1, 1))} aria-label="Próximo mês"><ChevronRight className="h-4 w-4" /></button>
-        <button type="button" className="ml-1 rounded-lg border border-border px-2.5 py-1 text-xs hover:bg-muted" onClick={() => { const d = new Date(); setM(new Date(d.getFullYear(), d.getMonth(), 1)); }}>Hoje</button>
-        <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" />{noDue ? `${noDue} card(s) sem prazo não aparecem aqui` : 'Todos os cards têm prazo'}</span>
+    <>
+      <div className="bvx-bar">
+        <button type="button" className="bvx-btn" onClick={() => { const d = new Date(); setM(new Date(d.getFullYear(), d.getMonth(), 1)); }}>Hoje</button>
+        <button type="button" className="bvx-btn bvx-ibtn" onClick={() => setM(new Date(m.getFullYear(), m.getMonth() - 1, 1))} aria-label="Mês anterior"><ChevronLeft className="h-4 w-4" /></button>
+        <button type="button" className="bvx-btn bvx-ibtn" onClick={() => setM(new Date(m.getFullYear(), m.getMonth() + 1, 1))} aria-label="Próximo mês"><ChevronRight className="h-4 w-4" /></button>
+        <b>{MONTHS[m.getMonth()]} de {m.getFullYear()}</b>
+        <span className="bvx-sp" />
+        <span className="bvx-mut">{noDue ? `${noDue} card(s) sem prazo não aparecem no calendário` : 'Todos os cards têm prazo'}</span>
       </div>
-      <div className="grid grid-cols-7 border-b border-border pb-1 text-center text-[11px] font-semibold uppercase text-muted-foreground">{['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((d) => <div key={d}>{d}</div>)}</div>
-      <div className="grid flex-1 grid-cols-7 grid-rows-6 gap-px rounded-lg bg-border">
+      <div className="bvx-cal" style={{ gridTemplateRows: `auto repeat(${weeks}, minmax(118px, 1fr))` }}>
+        {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((d) => <div key={d} className="bvx-dow">{d}</div>)}
         {days.map((d) => {
-          const k = dkey(d); const list = byDay.get(k) || []; const out = d.getMonth() !== m.getMonth();
+          const k = dkey(d); const list = byDay.get(k) || []; const out = d.getMonth() !== m.getMonth(); const we = d.getDay() === 0 || d.getDay() === 6;
+          const shown = list.length > 3 ? list.slice(0, 2) : list;
           return (
-            <div key={k} className={`relative flex min-h-[86px] flex-col gap-1 p-1.5 ${out ? 'bg-muted/40' : 'bg-background'}`}>
-              <span className={`self-start rounded-full px-1.5 text-xs ${k === today ? 'bg-primary font-bold text-primary-foreground' : out ? 'text-muted-foreground/60' : 'text-muted-foreground'}`}>{d.getDate()}</span>
-              <div className="flex min-h-0 flex-col gap-1">
-                {(openDay === k ? [] : list.slice(0, list.length > 3 ? 2 : 3)).map((t) => { const c = col.get(t.status); return (
-                  <button key={t.id} type="button" onClick={() => onOpen(t)} title={`${t.title} · ${c?.title || ''}`}
-                    className={`shrink-0 truncate rounded-md border-l-[3px] px-1.5 py-0.5 text-left text-[11.5px] ${done(t) ? 'bg-muted text-muted-foreground line-through' : late(t) ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300' : 'bg-muted/60 text-foreground hover:bg-muted'}`}
-                    style={{ borderLeftColor: c?.color || '#9ca3af', borderRadius: 6 }}>{t.title}</button>); })}
-                {list.length > 3 && openDay !== k ? <button type="button" onClick={() => setOpenDay(k)} className="shrink-0 rounded-md px-1.5 py-0.5 text-left text-[11px] font-medium text-primary hover:bg-muted">+{list.length - 2} mais</button> : null}
-              </div>
+            <div key={k} className={`bvx-day ${out ? 'out' : we ? 'we' : ''} ${k === today ? 'today' : ''}`}>
+              <span className="bvx-dnum">{d.getDate()}</span>
+              {shown.map((t) => <Ev key={t.id} t={t} />)}
+              {list.length > 3 ? <button type="button" className="bvx-more" onClick={() => setOpenDay(k)}>+{list.length - 2} mais</button> : null}
               {openDay === k ? (
-                <div className="absolute left-0 top-0 z-30 flex max-h-72 w-[min(260px,180%)] flex-col gap-1 overflow-y-auto rounded-xl border border-border bg-popover p-2 shadow-2xl">
-                  <div className="mb-1 flex items-center justify-between"><b className="text-xs">{d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })} · {list.length} cards</b><button type="button" className="rounded px-1 text-xs text-muted-foreground hover:bg-muted" onClick={() => setOpenDay(null)} aria-label="Fechar">✕</button></div>
-                  {list.map((t) => { const c = col.get(t.status); return (
-                    <button key={t.id} type="button" onClick={() => onOpen(t)} className={`shrink-0 truncate rounded-md border-l-[3px] px-2 py-1 text-left text-xs ${done(t) ? 'bg-muted text-muted-foreground line-through' : late(t) ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300' : 'bg-muted/60 hover:bg-muted'}`} style={{ borderLeftColor: c?.color || '#9ca3af', borderRadius: 6 }}>{t.title}</button>); })}
+                <div className="bvx-pop">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}><b style={{ fontSize: 12.5 }}>{d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })} · {list.length} cards</b><button type="button" className="bvx-btn bvx-ibtn" style={{ height: 24, width: 24 }} onClick={() => setOpenDay(null)} aria-label="Fechar">✕</button></div>
+                  {list.map((t) => <Ev key={t.id} t={t} />)}
                 </div>) : null}
             </div>);
         })}
       </div>
-    </div>
+    </>
   );
 }
