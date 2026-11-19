@@ -39,7 +39,9 @@ type Upd = Partial<Pick<T, 'priority' | 'due_date' | 'assigned_to'>> & { start_d
 type Acts = { onMove?: (t: T, colId: string) => void; onComplete?: (t: T) => void; onUpdate?: (t: T, u: Upd) => void | Promise<void>; locked?: { has: (id: string) => boolean } };
 
 export function BoardAltView({ mode, tasks, columns, onOpen, labelsOf, onMove, onComplete, onUpdate, locked, boardName }: { mode: BoardViewMode; tasks: T[]; columns: C[]; onOpen: (t: T) => void; dark?: boolean; labelsOf?: (taskId: string) => L[]; boardName?: string } & Acts) {
-  const { users } = useActiveUsers(); const { profile } = useAuth();
+  const { users: others } = useActiveUsers(); const { profile } = useAuth();
+  // include yourself, so you can take a card in the Lista (useActiveUsers leaves you out)
+  const users = useMemo(() => (profile && !others.some((u) => u.id === profile.id) ? [...others, { id: profile.id, name: profile.name, display_name: profile.display_name, avatar_url: profile.avatar_url } as (typeof others)[number]] : others), [others, profile]);
   const person = (id?: string | null): P | null => {
     if (!id) return null;
     if (id === profile?.id) return { name: profile?.display_name || profile?.name || 'Você', avatar: profile?.avatar_url || null };

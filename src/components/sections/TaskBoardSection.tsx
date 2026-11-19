@@ -359,7 +359,14 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
   } = useBoardTaskDetails(board.id);
   const { createDuplication, deleteDuplication, getTaskDuplication } = useCardDuplications(board.id);
   const { rules: workflowRules, canMoveToColumn } = useWorkflowRules(board.id);
-  const { users: allUsers } = useActiveUsers();
+  const { users: otherUsers } = useActiveUsers();
+  // people who can be put on a card: everyone in the company INCLUDING the person using the screen (useActiveUsers
+  // leaves yourself out for the chat) — so an admin/owner of the mural can assign themselves too
+  const allUsers = useMemo(() => {
+    if (!profile || otherUsers.some(u => u.id === profile.id)) return otherUsers;
+    const me = { ...(profile as any), user_id: (profile as any).user_id } as (typeof otherUsers)[number];
+    return [...otherUsers, me].sort((a, b) => (a.display_name || a.name || '').localeCompare(b.display_name || b.name || '', 'pt-BR'));
+  }, [otherUsers, profile]);
   const { uploadFile, uploading: fileUploading } = useFileUpload();
   const isMobile = useIsMobile();
   const coverInputRef = useRef<HTMLInputElement>(null);
