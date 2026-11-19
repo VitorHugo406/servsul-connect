@@ -1074,7 +1074,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
     );
   };
 
-  const renderProgress = () => total > 0 ? (
+  const renderProgress = () => total > 0 && groups.length !== 1 ? (
     <div className="px-4 py-1">
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs text-muted-foreground">Progresso geral</span>

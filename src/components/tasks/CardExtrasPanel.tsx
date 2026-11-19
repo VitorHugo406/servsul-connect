@@ -2,7 +2,9 @@
 // dependencies ("Bloqueado por" / "Bloqueia"). Uses the BoardExtrasProvider of the open mural; renders nothing when the
 // card is opened outside a mural.
 import { useEffect, useState } from 'react';
-import { Lock, Plus, Search, X } from 'lucide-react';
+import { ptBR } from 'date-fns/locale';
+import { Calendar } from '@/components/ui/calendar';
+import { Check, Lock, Plus, Search, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useBoardExtras, fieldText, type CustomField } from '@/hooks/useBoardExtras';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -11,18 +13,53 @@ import { CardLinks } from './CardLinks';
 
 type Mini = { id: string; task_number: number | null; title: string; completed_at: string | null; status: string };
 
+// One property row value, Notion-style: no visible box until hover/focus, "Vazio" when empty, lists and dates open
+// a small picker instead of showing every option.
 function FieldInput({ f, value, onChange, disabled }: { f: CustomField; value: unknown; onChange: (v: unknown) => void; disabled?: boolean }) {
-  const [txt, setTxt] = useState(value == null ? '' : String(value));
-  useEffect(() => { setTxt(value == null ? '' : String(value)); }, [value]);
-  const cls = 'h-8 w-full max-w-[320px] rounded-md border border-border bg-background px-2 text-sm outline-none focus:border-primary disabled:opacity-60';
-  if (f.type === 'checkbox') return <button type="button" disabled={disabled} onClick={() => onChange(!value)} className={`h-8 rounded-md border px-3 text-sm ${value ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'border-border'}`}>{value ? 'Sim' : 'Não'}</button>;
+  const show = (v: unknown) => v == null || v === '' ? '' : f.type === 'money' ? Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : f.type === 'number' ? Number(v).toLocaleString('pt-BR') : String(v);
+  const [txt, setTxt] = useState(show(value));
+  const [open, setOpen] = useState(false);
+  useEffect(() => { setTxt(show(value)); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [value]);
+  const cell = `flex h-8 w-full items-center gap-1.5 rounded-md px-2 text-left text-sm ${disabled ? '' : 'hover:bg-muted/70 focus-within:bg-muted/70'}`;
+  const empty = <span className="text-muted-foreground/70">Vazio</span>;
+  if (f.type === 'checkbox') return (
+    <button type="button" disabled={disabled} onClick={() => onChange(!value)} className={cell}>
+      <span className={`grid h-4 w-4 place-items-center rounded border ${value ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/40'}`}>{value ? <Check className="h-3 w-3" strokeWidth={3} /> : null}</span>
+      <span className={value ? '' : 'text-muted-foreground'}>{value ? 'Sim' : 'Não'}</span>
+    </button>);
   if (f.type === 'select') return (
-    <div className="flex flex-wrap gap-1.5">{f.options.map((o) => { const on = value === o; return <button key={o} type="button" disabled={disabled} onClick={() => onChange(on ? null : o)} className={`rounded-full border px-2.5 py-1 text-xs ${on ? 'border-primary bg-primary text-primary-foreground' : 'border-border hover:bg-muted'}`}>{o}</button>; })}{!f.options.length ? <span className="text-xs text-muted-foreground">Sem opções configuradas</span> : null}</div>);
-  if (f.type === 'date') return <input type="date" className={cls} disabled={disabled} value={value ? String(value) : ''} onChange={(e) => onChange(e.target.value || null)} />;
+    <Popover open={open} onOpenChange={(o) => !disabled && setOpen(o)}>
+      <PopoverTrigger asChild>
+        <button type="button" disabled={disabled} className={cell}>{value ? <span className="truncate rounded bg-muted px-1.5 py-0.5 text-[13px]">{String(value)}</span> : empty}</button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-56 p-1">
+        {f.options.map((o) => (
+          <button key={o} type="button" className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted" onClick={() => { onChange(o); setOpen(false); }}>
+            <span className="flex-1 truncate">{o}</span>{value === o ? <Check className="h-4 w-4 text-primary" /> : null}
+          </button>))}
+        {!f.options.length ? <p className="px-2 py-1.5 text-xs text-muted-foreground">Sem opções configuradas</p> : null}
+        {value ? <button type="button" className="mt-1 w-full rounded border-t border-border px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted" onClick={() => { onChange(null); setOpen(false); }}>Limpar</button> : null}
+      </PopoverContent>
+    </Popover>);
+  if (f.type === 'date') {
+    const sel = value ? (() => { const [y, m, d] = String(value).split('-').map(Number); return new Date(y, m - 1, d); })() : undefined;
+    const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return (
+      <Popover open={open} onOpenChange={(o) => !disabled && setOpen(o)}>
+        <PopoverTrigger asChild><button type="button" disabled={disabled} className={cell}>{value ? fieldText(f, value) : empty}</button></PopoverTrigger>
+        <PopoverContent align="start" className="w-auto p-0">
+          <Calendar mode="single" locale={ptBR} selected={sel} defaultMonth={sel} onSelect={(d) => { onChange(d ? ymd(d) : null); setOpen(false); }} initialFocus />
+          {value ? <button type="button" className="w-full border-t border-border px-3 py-2 text-left text-xs text-muted-foreground hover:bg-muted" onClick={() => { onChange(null); setOpen(false); }}>Limpar data</button> : null}
+        </PopoverContent>
+      </Popover>);
+  }
   const num = f.type === 'number' || f.type === 'money';
-  const commit = () => { const t = txt.trim(); if (!t) { if (value != null) onChange(null); return; } if (num) { const n = Number(t.replace(/\./g, '').replace(',', '.')); if (!isNaN(n) && n !== value) onChange(n); else if (isNaN(n)) setTxt(value == null ? '' : String(value)); } else if (t !== value) onChange(t.slice(0, 500)); };
-  return <div className="relative">{f.type === 'money' ? <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span> : null}
-    <input className={cls + (f.type === 'money' ? ' pl-8' : '')} disabled={disabled} inputMode={num ? 'decimal' : undefined} value={txt} onChange={(e) => setTxt(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} placeholder={num ? '0' : '—'} /></div>;
+  const commit = () => { const t = txt.trim(); if (!t) { if (value != null) onChange(null); return; } if (num) { const n = Number(t.replace(/\./g, '').replace(',', '.')); if (!isNaN(n) && n !== value) onChange(n); else setTxt(show(value)); } else if (t !== value) onChange(t.slice(0, 500)); };
+  return (
+    <label className={cell}>
+      {f.type === 'money' && txt ? <span className="text-muted-foreground">R$</span> : null}
+      <input className="h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted-foreground/70 disabled:cursor-default" disabled={disabled} inputMode={num ? 'decimal' : undefined} value={txt} onChange={(e) => setTxt(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} placeholder="Vazio" />
+    </label>);
 }
 
 export function CardExtrasPanel({ task, boardId, readOnly, conclusionIds, showLinks, showDeps }: { task: { id: string }; boardId: string; readOnly?: boolean; conclusionIds?: Set<string>; showLinks?: boolean; showDeps?: boolean }) {
@@ -49,11 +86,12 @@ export function CardExtrasPanel({ task, boardId, readOnly, conclusionIds, showLi
       {x.fields.length ? (
         <div className="px-4 py-2">
           <H>Campos</H>
-          <div className="grid gap-x-3 gap-y-1.5 sm:grid-cols-[150px_1fr]">
-            {x.fields.map((f) => [
-              <span key={f.id + 'l'} className="self-center truncate text-sm text-muted-foreground" title={f.name}>{f.name}</span>,
-              <div key={f.id + 'v'}><FieldInput f={f} value={x.valueOf(task.id, f.id)} disabled={readOnly} onChange={(v) => void x.setValue(task.id, f.id, v)} /></div>,
-            ])}
+          <div className="-mx-2 max-w-[520px]">
+            {x.fields.map((f) => (
+              <div key={f.id} className="flex items-center gap-2">
+                <span className="w-[130px] shrink-0 truncate px-2 text-[13px] text-muted-foreground" title={f.name}>{f.name}</span>
+                <div className="min-w-0 flex-1"><FieldInput f={f} value={x.valueOf(task.id, f.id)} disabled={readOnly} onChange={(v) => void x.setValue(task.id, f.id, v)} /></div>
+              </div>))}
           </div>
         </div>) : null}
       <CardLinks taskId={task.id} readOnly={readOnly} forceOpen={showLinks} />

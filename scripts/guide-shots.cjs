@@ -35,8 +35,8 @@ eval(require('fs').readFileSync(__dirname + '/guide-seed.cjs', 'utf8').replace(/
   });
   await step('card-campos', async () => {
     const dlg = d.locator('[role=dialog]');
-    await dlg.locator('input[placeholder="0"]').nth(1).fill('15000'); await dlg.locator('input[placeholder="0"]').nth(1).press('Enter');
-    await dlg.locator('input[placeholder="—"]').first().fill('Construtora Exemplo'); await dlg.locator('input[placeholder="—"]').first().press('Enter');
+    await dlg.locator('input[placeholder="Vazio"]').nth(1).fill('15000'); await dlg.locator('input[placeholder="Vazio"]').nth(1).press('Enter');
+    await dlg.locator('input[placeholder="Vazio"]').nth(2).fill('Construtora Exemplo'); await dlg.locator('input[placeholder="Vazio"]').nth(2).press('Enter');
     await d.waitForTimeout(600);
     await d.evaluate(() => { const el = [...document.querySelectorAll('[role=dialog] *')].find(e => e.textContent?.trim() === 'Dependências'); el?.scrollIntoView({ block: 'center' }); });
     await d.waitForTimeout(500); await shot('card-campos');
