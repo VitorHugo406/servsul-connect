@@ -11,12 +11,16 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { useActiveUsers } from '@/hooks/useDirectMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import '@/styles/board-views.css';
+import { TimelineView } from './TimelineView';
+import { WorkloadView } from './WorkloadView';
+import { InsightsView } from './InsightsView';
+import { useBoardExtras, fieldText } from '@/hooks/useBoardExtras';
 
-type T = { id: string; title: string; status: string; priority?: string | null; due_date?: string | null; completed_at?: string | null; assigned_to?: string | null; task_number?: number | null; is_archived?: boolean | null };
+type T = { id: string; title: string; status: string; created_at?: string; completed_late?: boolean | null; priority?: string | null; due_date?: string | null; start_date?: string | null; completed_at?: string | null; assigned_to?: string | null; task_number?: number | null; is_archived?: boolean | null };
 type C = { id: string; title: string; color?: string | null; is_conclusion?: boolean | null; position?: number | null };
 type L = { id?: string; name: string; color?: string | null };
 type P = { name: string; avatar: string | null };
-export type BoardViewMode = 'board' | 'list' | 'calendar';
+export type BoardViewMode = 'board' | 'list' | 'calendar' | 'timeline' | 'workload' | 'insights';
 
 const PRIO: Record<string, [string, number, string]> = { urgent: ['Urgente', 0, '#e5484d'], high: ['Alta', 1, '#f76b15'], medium: ['Média', 2, '#d9a400'], low: ['Baixa', 3, '#30a46c'] };
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -31,10 +35,10 @@ function Av({ p, id }: { p: P | null; id?: string | null }) {
   return <span className="bvx-av" title={p.name} style={p.avatar ? { backgroundImage: `url(${p.avatar})` } : { background: `hsl(${hueOf(id || p.name)} 45% 52%)` }}>{p.avatar ? '' : ini(p.name)}</span>;
 }
 
-type Upd = Partial<Pick<T, 'priority' | 'due_date' | 'assigned_to'>>;
+type Upd = Partial<Pick<T, 'priority' | 'due_date' | 'assigned_to'>> & { start_date?: string | null };
 type Acts = { onMove?: (t: T, colId: string) => void; onComplete?: (t: T) => void; onUpdate?: (t: T, u: Upd) => void | Promise<void>; locked?: { has: (id: string) => boolean } };
 
-export function BoardAltView({ mode, tasks, columns, onOpen, labelsOf, onMove, onComplete, onUpdate, locked }: { mode: BoardViewMode; tasks: T[]; columns: C[]; onOpen: (t: T) => void; dark?: boolean; labelsOf?: (taskId: string) => L[] } & Acts) {
+export function BoardAltView({ mode, tasks, columns, onOpen, labelsOf, onMove, onComplete, onUpdate, locked, boardName }: { mode: BoardViewMode; tasks: T[]; columns: C[]; onOpen: (t: T) => void; dark?: boolean; labelsOf?: (taskId: string) => L[]; boardName?: string } & Acts) {
   const { users } = useActiveUsers(); const { profile } = useAuth();
   const person = (id?: string | null): P | null => {
     if (!id) return null;
@@ -48,7 +52,9 @@ export function BoardAltView({ mode, tasks, columns, onOpen, labelsOf, onMove, o
   const live = tasks.filter((t) => !t.is_archived);
   const isLocked = (t: T) => !!locked?.has(t.id);
   const ctx = { col, cols, person, onOpen, done, late, labelsOf: labelsOf || (() => []), users, isLocked, onMove, onComplete, onUpdate };
-  return <div className="bvx">{mode === 'list' ? <ListView tasks={live} {...ctx} /> : <CalView tasks={live} {...ctx} />}</div>;
+  return <div className="bvx">{mode === 'list' ? <ListView tasks={live} {...ctx} /> : mode === 'timeline' ? <TimelineView tasks={live} cols={cols} person={person} onOpen={onOpen} done={done} late={late} isLocked={isLocked} onUpdate={onUpdate} Av={Av} />
+    : mode === 'insights' ? <InsightsView tasks={live} cols={cols} person={person} done={done} late={late} boardName={boardName || 'Mural'} Av={Av} />
+    : mode === 'workload' ? <WorkloadView tasks={live} cols={cols} users={users} person={person} onOpen={onOpen} done={done} late={late} Av={Av} /> : <CalView tasks={live} {...ctx} />}</div>;
 }
 
 type U = { id: string; name: string; display_name?: string | null; avatar_url?: string | null };
@@ -61,6 +67,7 @@ const ymd = (d?: string | null) => { if (!d) return ''; const x = new Date(d); r
 const withDay = (old: string | null | undefined, y: number, m: number, d: number) => { const o = old ? new Date(old) : null; const n = new Date(y, m, d, o ? o.getHours() : 18, o ? o.getMinutes() : 0); return n.toISOString(); };
 
 function ListView({ tasks, cols, col, person, onOpen, done, late, labelsOf, users, isLocked, onMove, onComplete, onUpdate }: Ctx) {
+  const ex = useBoardExtras(); const cf = ex?.fields || [];
   const [sort, setSort] = useState<{ k: K; asc: boolean } | null>(null);
   const colPos = (t: T) => cols.findIndex((c) => c.id === t.status);
   const val = (t: T): string | number => !sort ? colPos(t) : sort.k === 'title' ? t.title.toLowerCase() : sort.k === 'status' ? colPos(t) : sort.k === 'who' ? (person(t.assigned_to)?.name || '~').toLowerCase() : sort.k === 'due' ? (t.due_date ? new Date(t.due_date).getTime() : Infinity) : PRIO[t.priority || 'medium']?.[1] ?? 2;
@@ -74,7 +81,7 @@ function ListView({ tasks, cols, col, person, onOpen, done, late, labelsOf, user
       <div className="bvx-bar"><b>Lista</b><span className="bvx-mut">{tasks.length} cards · {tasks.filter(done).length} concluídos</span><span className="bvx-sp" /><span className="bvx-mut">Clique no card para abrir · mude status, responsável, prazo e prioridade direto na linha</span></div>
       <div className="bvx-scroll">
         <table className="bvx-tbl">
-          <thead><tr><H k="title">Nome do card</H><H k="status" w={170}>Status</H><H k="who" w={190}>Responsável</H><H k="due" w={130}>Prazo</H><H k="prio" w={120}>Prioridade</H><H w={200}>Etiquetas</H></tr></thead>
+          <thead><tr><H k="title">Nome do card</H><H k="status" w={170}>Status</H><H k="who" w={190}>Responsável</H><H k="due" w={130}>Prazo</H><H k="prio" w={120}>Prioridade</H><H w={200}>Etiquetas</H>{cf.map((f) => <H key={f.id} w={150}>{f.name}</H>)}</tr></thead>
           <tbody>
             {rows.map((t) => {
               const c = col.get(t.status); const p = PRIO[t.priority || 'medium'] || PRIO.medium; const who = person(t.assigned_to); const labs = labelsOf(t.id); const ok = done(t); const lk = isLocked(t);
@@ -105,9 +112,10 @@ function ListView({ tasks, cols, col, person, onOpen, done, late, labelsOf, user
                       <DropdownMenuContent align="start">{Object.entries(PRIO).map(([k, v]) => <DropdownMenuItem key={k} onSelect={() => void onUpdate?.(t, { priority: k })}><span className="bvx-pill" style={pill(v[2])}>{v[0]}</span>{(t.priority || 'medium') === k ? <Check className="ml-auto h-4 w-4" /> : null}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
                   </td>
                   <td><div className="bvx-tags">{labs.length ? labs.slice(0, 3).map((l, i) => <span key={i} className="bvx-pill" style={pill(l.color)}>{l.name}</span>) : <span className="bvx-mut">—</span>}{labs.length > 3 ? <span className="bvx-mut">+{labs.length - 3}</span> : null}</div></td>
+                  {cf.map((f) => { const v = fieldText(f, ex?.valueOf(t.id, f.id)); return <td key={f.id} title={v}>{v || <span className="bvx-mut">—</span>}</td>; })}
                 </tr>);
             })}
-            {!tasks.length ? <tr><td colSpan={6} className="bvx-empty" style={{ maxWidth: 'none' }}>Nenhum card neste mural (ou no filtro atual).</td></tr> : null}
+            {!tasks.length ? <tr><td colSpan={6 + cf.length} className="bvx-empty" style={{ maxWidth: 'none' }}>Nenhum card neste mural (ou no filtro atual).</td></tr> : null}
           </tbody>
         </table>
       </div>

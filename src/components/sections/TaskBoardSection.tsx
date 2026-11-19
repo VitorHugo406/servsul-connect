@@ -1,7 +1,12 @@
 import { PublicLinkSection } from '@/components/tasks/PublicLinkSection';
 import { InboundKeySection } from '@/components/tasks/InboundKeySection';
+import { BoardFormSection } from '@/components/tasks/BoardFormSection';
+import { MyTasksView } from '@/components/tasks/MyTasksView';
+import { BoardExtrasProvider, useBoardExtras, fieldText } from '@/hooks/useBoardExtras';
+import { TemplatesDialog } from '@/components/tasks/TemplatesDialog';
+import { CustomFieldsDialog } from '@/components/tasks/CustomFieldsDialog';
 import { BoardAltView, type BoardViewMode } from '@/components/tasks/BoardAltViews';
-import { List as ListIcon, CalendarDays as CalDaysIcon, Check } from 'lucide-react';
+import { List as ListIcon, CalendarDays as CalDaysIcon, Check, SlidersHorizontal, GanttChart, Lock as LockIcon, BarChart3, Users2 } from 'lucide-react';
 import { ImportBoardDialog } from '@/components/tasks/ImportBoardDialog';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useWarRoomLockedTasks } from '@/hooks/useWarRooms';
@@ -73,6 +78,7 @@ export function TaskBoardSection() {
   const [searchParams] = useSearchParams();
   const { boards, loading: boardsLoading, createBoard, updateBoard, deleteBoard, refetch: refetchBoards } = useTaskBoards();
   const [showImport, setShowImport] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const isMobile = useIsMobile();
   const boardSlugFromPath = location.pathname.match(/^\/tarefas\/([^/]+)$/)?.[1] || null;
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
@@ -90,7 +96,8 @@ export function TaskBoardSection() {
     if (legacyBoardId) {
       const legacyBoard = boards.find(b => b.id === legacyBoardId);
       if (legacyBoard) {
-        navigate('/tarefas/' + slugifyBoardName(legacyBoard.name) + '-' + legacyBoard.id, { replace: true });
+        const keepTask = searchParams.get('task');
+        navigate('/tarefas/' + slugifyBoardName(legacyBoard.name) + '-' + legacyBoard.id + (keepTask ? '?abrir=' + keepTask : ''), { replace: true });
         setSelectedBoardId(legacyBoard.id);
         return;
       }
@@ -192,6 +199,11 @@ export function TaskBoardSection() {
     );
   }
 
+  if (location.pathname === '/tarefas/minhas-tarefas') {
+    return <MyTasksView boards={boards} onBack={() => navigate('/tarefas')}
+      onOpenTask={(bid, tid) => { const b = boards.find((x) => x.id === bid); if (b) navigate('/tarefas/' + slugifyBoardName(b.name) + '-' + b.id + '?abrir=' + tid); }} />;
+  }
+
   if (selectedBoardId) {
     const board = boards.find(b => b.id === selectedBoardId);
     if (!board) return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
@@ -210,9 +222,12 @@ export function TaskBoardSection() {
 
   return (
     <>
+      <TemplatesDialog open={showTemplates} onOpenChange={setShowTemplates} onDone={(id) => { void refetchBoards(); setSelectedBoardId(id); }} />
       <ImportBoardDialog open={showImport} onOpenChange={setShowImport} onDone={(id) => { void refetchBoards(); setSelectedBoardId(id); }} />
       <MuralList
         onImport={() => setShowImport(true)}
+        onMyTasks={() => navigate('/tarefas/minhas-tarefas')}
+        onTemplates={() => setShowTemplates(true)}
         boards={boards as never}
         userId={user?.id}
         onOpen={(board) => { setSelectedBoardId(board.id); navigate('/tarefas/' + slugifyBoardName(board.name) + '-' + board.id); }}
@@ -271,7 +286,12 @@ export function TaskBoardSection() {
 }
 
 // ============ Board View ============
-function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwner, currentUserId }: {
+/** BoardView with the mural's custom fields / dependencies available to every child (card dialog, cards, views). */
+function BoardView(props: Parameters<typeof BoardViewInner>[0]) {
+  return <BoardExtrasProvider boardId={props.board.id}><BoardViewInner {...props} /></BoardExtrasProvider>;
+}
+
+function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwner, currentUserId }: {
   board: any;
   boards: any[];
   onBack: () => void;
@@ -310,6 +330,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const { columns, addColumn, updateColumn, deleteColumn, refetch: refetchColumns } = useBoardColumns(board.id);
   const { tasks, archivedTasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: refetchTasks } = useBoardTasks(board.id, restrictedTaskId);
   const warLocks = useWarRoomLockedTasks();
+  const extras = useBoardExtras();
+  const [showFields, setShowFields] = useState(false);
+  /** open card this one depends on (blocks concluding it), or null */
+  const openBlocker = (taskId: string) => {
+    const ids = extras?.blockersOf(taskId) || [];
+    for (const id of ids) { const b = tasks.find((x) => x.id === id); if (b && !b.completed_at && !columns.find((c) => c.id === b.status)?.is_conclusion) return b; }
+    return null;
+  };
   const { members, addMember, removeMember, updateMemberRole } = useBoardMembers(board.id);
   const {
     labels,
@@ -373,7 +401,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const [showPlanner, setShowPlanner] = useState(false);
   const [showBoard, setShowBoard] = useState(true);
   const viewKey = `ewvon:board-view:${board.id}`;
-  const [boardView, setBoardViewState] = useState<BoardViewMode>(() => { try { const v = localStorage.getItem(viewKey); return v === 'list' || v === 'calendar' ? v : 'board'; } catch { return 'board'; } });
+  const [boardView, setBoardViewState] = useState<BoardViewMode>(() => { try { const v = localStorage.getItem(viewKey); return v === 'list' || v === 'calendar' || v === 'timeline' || v === 'workload' || v === 'insights' ? v : 'board'; } catch { return 'board'; } });
   const setBoardView = (v: BoardViewMode) => { setBoardViewState(v); try { localStorage.setItem(viewKey, v); } catch { /* storage off */ } };
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showJoinRequests, setShowJoinRequests] = useState(false);
@@ -405,6 +433,14 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
     next.delete('task');
     setSearchParams(next, { replace: true });
   }, [tasks, board.id, searchParams, setSearchParams]);
+
+  // "Minhas tarefas" / external links: ?abrir=<task id> opens that card once the board's cards are loaded
+  useEffect(() => {
+    const id = searchParams.get('abrir'); if (!id) return;
+    const t = tasks.find(x => x.id === id) || archivedTasks.find(x => x.id === id); if (!t) return;
+    setSelectedTask(t); setShowTaskDetail(true);
+    const next = new URLSearchParams(searchParams); next.delete('abrir'); setSearchParams(next, { replace: true });
+  }, [tasks, archivedTasks, searchParams, setSearchParams]);
 
   // Score system
   const memberProfileIds = members.map(m => m.profile_id);
@@ -993,6 +1029,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const handleQuickComplete = async (task: BoardTask) => {
     const conclusionCol = columns.find(c => c.is_conclusion);
     if (!conclusionCol) { toast.error('Nenhuma coluna de conclusão configurada'); return; }
+    { const b = openBlocker(task.id); if (b) { toast.error(`Este card depende do #${b.task_number} "${b.title}", que ainda não foi concluído.`); return; } }
     const moveCheck = canMoveToColumn(task.status, conclusionCol.id);
     if (!moveCheck.allowed) { toast.error(moveCheck.reason || 'Movimento bloqueado'); return; }
     await moveTask(task.id, conclusionCol.id, 0);
@@ -1062,6 +1099,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
   const moveToColumn = (task: BoardTask, colId: string, position?: number) => {
     if (task.status === colId) return;
     if (warLocks.has(task.id)) { toast.error('Card controlado pela War Room: não pode ser movido enquanto ela estiver ativa.'); return; }
+    if (columns.find((c) => c.id === colId)?.is_conclusion) { const b = openBlocker(task.id); if (b) { toast.error(`Este card depende do #${b.task_number} "${b.title}", que ainda não foi concluído.`); return; } }
 
     // Workflow rule check
     const moveCheck = canMoveToColumn(task.status, colId);
@@ -1271,6 +1309,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                 <DropdownMenuItem onClick={() => setShowMembers(true)}>
                   <Users className="h-4 w-4 mr-2" /> Membros
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowFields(true)}>
+                  <SlidersHorizontal className="h-4 w-4 mr-2" /> Campos personalizados
+                </DropdownMenuItem>
                 {isAdminOrOwner && (
                   <>
                     <DropdownMenuSeparator />
@@ -1327,6 +1368,9 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               </Button>
               <Button variant="ghost" size="icon" onClick={() => setShowLabelsManager(true)} title="Etiquetas">
                 <Tag className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setShowFields(true)} title="Campos personalizados">
+                <SlidersHorizontal className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="icon" onClick={() => setShowReport(true)} title="Relatório">
                 <FileDown className="h-4 w-4" />
@@ -1594,7 +1638,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         )}
         </AnimatePresence>
         {showBoard && !isMobile && boardView !== 'board' ? (
-          <div className="relative z-[1] flex-1 overflow-hidden p-3"><BoardAltView mode={boardView} tasks={filteredTasks as never} columns={columns as never} dark={isDarkBg} labelsOf={getTaskLabels as never}
+          <div className="relative z-[1] flex-1 overflow-hidden p-3"><BoardAltView mode={boardView} boardName={board.name} tasks={filteredTasks as never} columns={columns as never} dark={isDarkBg} labelsOf={getTaskLabels as never}
             locked={warLocks}
             onMove={(t, colId) => { const full = tasks.find((x) => x.id === t.id); if (full) moveToColumn(full, colId); }}
             onComplete={(t) => { const full = tasks.find((x) => x.id === t.id); if (full) void handleQuickComplete(full); }}
@@ -2012,6 +2056,10 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
                                   <CheckCircle2 className="h-2.5 w-2.5" /> {sc.completed}/{sc.total}
                                 </span>
                               ) : null; })()}
+                              {!isTaskCompleted && openBlocker(task.id) ? (
+                                <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300" title={`Bloqueado: depende do #${openBlocker(task.id)?.task_number}`}><LockIcon className="h-2.5 w-2.5" />Bloqueado</span>
+                              ) : null}
+                              {extras?.fields.filter((f) => f.show_on_card).map((f) => { const v = fieldText(f, extras.valueOf(task.id, f.id)); return v ? <span key={f.id} className="max-w-[140px] truncate rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground" title={`${f.name}: ${v}`}>{v}</span> : null; })}
                               <div className="flex-1" />
                               {/* Additional Assignees */}
                               {(() => {
@@ -2292,12 +2340,12 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button type="button" className="ewvon-segbar-item" data-on={showBoard ? 'true' : undefined} aria-pressed={showBoard} title="Escolher como ver o mural">
-                  {boardView === 'list' ? <ListIcon className="h-4 w-4" strokeWidth={1.9} /> : boardView === 'calendar' ? <CalDaysIcon className="h-4 w-4" strokeWidth={1.9} /> : <Columns3 className="h-4 w-4" strokeWidth={1.9} />}
-                  {boardView === 'list' ? 'Lista' : boardView === 'calendar' ? 'Calendário' : 'Quadro'}<ChevronUp className="h-3.5 w-3.5 opacity-60" />
+                  {(() => { const Ic = boardView === 'list' ? ListIcon : boardView === 'calendar' ? CalDaysIcon : boardView === 'timeline' ? GanttChart : boardView === 'workload' ? Users2 : boardView === 'insights' ? BarChart3 : Columns3; return <Ic className="h-4 w-4" strokeWidth={1.9} />; })()}
+                  {({ board: 'Quadro', list: 'Lista', calendar: 'Calendário', timeline: 'Linha do tempo', workload: 'Carga de trabalho', insights: 'Relatórios' } as Record<string, string>)[boardView]}<ChevronUp className="h-3.5 w-3.5 opacity-60" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="center" className="w-56">
-                {([['board', 'Quadro', 'Colunas com os cards', Columns3], ['list', 'Lista', 'Tabela por coluna, com prazos', ListIcon], ['calendar', 'Calendário', 'Cards no dia do prazo', CalDaysIcon]] as const).map(([v, label, hint, Ic]) => (
+                {([['board', 'Quadro', 'Colunas com os cards', Columns3], ['list', 'Lista', 'Tabela com status, prazo e campos', ListIcon], ['calendar', 'Calendário', 'Cards no dia do prazo', CalDaysIcon], ['timeline', 'Linha do tempo', 'Barras de início a prazo e dependências', GanttChart], ['workload', 'Carga de trabalho', 'Cards de cada pessoa por semana', Users2], ['insights', 'Relatórios', 'Gráficos e PDF do mural', BarChart3]] as const).map(([v, label, hint, Ic]) => (
                   <DropdownMenuItem key={v} onClick={() => { setBoardView(v); if (!showBoard) toggleBoard(); }} className="flex items-center gap-3 p-2">
                     <Ic className="h-4 w-4 shrink-0" />
                     <span className="flex min-w-0 flex-1 flex-col"><span className="text-sm font-medium">{label}</span><span className="text-xs text-muted-foreground">{hint}</span></span>
@@ -2499,7 +2547,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         onDeleteLabel={deleteLabel}
         boardId={board.id}
         onOpenAutomation={(id) => { setShowTaskDetail(false); setAutomationTaskId(id); setShowAutomationRules(true); }}
-        columns={columns.map(c => ({ id: c.id, title: c.title, color: c.color }))}
+        columns={columns.map(c => ({ id: c.id, title: c.title, color: c.color, is_conclusion: c.is_conclusion }))}
         onDuplicateTemplate={duplicateTemplateAsCard}
         onMakeTemplate={handleMakeTemplate}
         boardMembers={members}
@@ -3112,6 +3160,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       </Sheet>
 
       {/* Report Dialog */}
+      <CustomFieldsDialog open={showFields} onOpenChange={setShowFields} canManage={isAdminOrOwner} />
       <ReportDialog open={showReport} onOpenChange={setShowReport} tasks={tasks.filter(t => !t.is_template)} columns={columns} boardName={board.name} />
 
       {/* Automation Rules Panel */}
@@ -3192,6 +3241,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               Pessoas que acessarem o link poderão solicitar participação. Você precisará aprovar cada solicitação.
             </p>
             <PublicLinkSection boardId={board.id} canManage={isAdminOrOwner} />
+            <BoardFormSection boardId={board.id} boardName={board.name} canManage={isAdminOrOwner} columns={columns.filter((c) => !(c as { is_template_column?: boolean }).is_template_column)} />
             <InboundKeySection boardId={board.id} canManage={isAdminOrOwner} columns={columns.filter((c) => !(c as { is_template_column?: boolean }).is_template_column)} />
           </div>
         </DialogContent>

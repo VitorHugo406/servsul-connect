@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { CardExtrasPanel } from '@/components/tasks/CardExtrasPanel';
 import { TaskTimeTracker } from '@/components/tasks/TaskTimeTracker';
 import { toast } from 'sonner';
 import {
@@ -1249,6 +1250,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
             {L(renderDescription())}
             {L(renderDecisions())}
             {!task.is_template ? <TaskTimeTracker taskId={task.id} /> : null}
+            {!task.is_template && boardId ? <CardExtrasPanel task={task as never} boardId={boardId} readOnly={warLocked} onUpdateTask={onUpdateTask} conclusionIds={new Set((columns || []).filter((c) => (c as { is_conclusion?: boolean }).is_conclusion).map((c) => c.id))} /> : null}
             <div className="h-px bg-border mx-4" />
             {renderProgress()}
             {renderSubtasks()}
@@ -1283,6 +1285,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
               {L(renderDescription())}
               {L(renderDecisions())}
               {!task.is_template ? <TaskTimeTracker taskId={task.id} /> : null}
+              {!task.is_template && boardId ? <CardExtrasPanel task={task as never} boardId={boardId} readOnly={warLocked} onUpdateTask={onUpdateTask} conclusionIds={new Set((columns || []).filter((c) => (c as { is_conclusion?: boolean }).is_conclusion).map((c) => c.id))} /> : null}
               {renderProgress()}
               {renderSubtasks()}
               </div>

@@ -16,6 +16,7 @@ export interface BoardTask {
   board_id: string | null;
   cover_image: string | null;
   due_date: string | null;
+  start_date?: string | null;
   position: number;
   is_archived: boolean;
   is_template: boolean;
