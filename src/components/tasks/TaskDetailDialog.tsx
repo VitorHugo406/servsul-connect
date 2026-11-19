@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { TaskTimeTracker } from '@/components/tasks/TaskTimeTracker';
 import { toast } from 'sonner';
 import {
   ArrowRight, Calendar as CalendarIcon, CheckCircle2, CheckSquare, ChevronDown, ChevronRight,
@@ -1247,6 +1248,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
             {!task.is_template && L(renderInfoRow())}
             {L(renderDescription())}
             {L(renderDecisions())}
+            {!task.is_template ? <TaskTimeTracker taskId={task.id} /> : null}
             <div className="h-px bg-border mx-4" />
             {renderProgress()}
             {renderSubtasks()}
@@ -1280,6 +1282,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
               {!task.is_template && L(renderInfoRow())}
               {L(renderDescription())}
               {L(renderDecisions())}
+              {!task.is_template ? <TaskTimeTracker taskId={task.id} /> : null}
               {renderProgress()}
               {renderSubtasks()}
               </div>

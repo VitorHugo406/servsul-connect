@@ -1,4 +1,5 @@
 import { PublicLinkSection } from '@/components/tasks/PublicLinkSection';
+import { InboundKeySection } from '@/components/tasks/InboundKeySection';
 import { BoardAltView, type BoardViewMode } from '@/components/tasks/BoardAltViews';
 import { List as ListIcon, CalendarDays as CalDaysIcon, Check } from 'lucide-react';
 import { ImportBoardDialog } from '@/components/tasks/ImportBoardDialog';
@@ -3157,7 +3158,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
 
       {/* Share Dialog */}
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Share2 className="h-5 w-5 text-primary" /> Compartilhar Quadro
@@ -3191,6 +3192,7 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
               Pessoas que acessarem o link poderão solicitar participação. Você precisará aprovar cada solicitação.
             </p>
             <PublicLinkSection boardId={board.id} canManage={isAdminOrOwner} />
+            <InboundKeySection boardId={board.id} canManage={isAdminOrOwner} columns={columns.filter((c) => !(c as { is_template_column?: boolean }).is_template_column)} />
           </div>
         </DialogContent>
       </Dialog>

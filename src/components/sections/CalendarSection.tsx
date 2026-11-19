@@ -1,4 +1,5 @@
 import { openDayReport } from '@/lib/designReports';
+import { CalendarFeedButton } from '@/components/calendar/CalendarFeedButton';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar as CalendarIcon, Plus, Trash2, Clock, Bell, ListTodo, Edit, X, Users, Link2, ChevronLeft, ChevronRight, Video, ArrowLeft, Check, FileDown, ExternalLink, MonitorPlay } from 'lucide-react';
@@ -863,6 +864,7 @@ export function CalendarSection() {
               <Badge variant="destructive" className="gap-1"><Bell className="h-3 w-3" /> {myInvites.length} convite(s)</Badge>
             )}
             <Button variant="outline" size="sm" onClick={goToToday} className="ewvon-calendar-action">Hoje</Button>
+            <CalendarFeedButton className="ewvon-calendar-action" />
             <Button variant="outline" size="sm" onClick={() => handleMeetingButtonClick(selectedDate)} className="gap-1 ewvon-calendar-action">
               <Video className="h-3.5 w-3.5" /> Reunião
             </Button>

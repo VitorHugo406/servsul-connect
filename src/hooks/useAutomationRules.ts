@@ -16,6 +16,10 @@ export interface AutomationRule {
 }
 
 export const TRIGGER_TYPES = [
+  { id: 'card_created', label: 'Card criado', description: 'Na hora em que um card é criado no mural (inclusive pela API/formulário)', instant: true },
+  { id: 'moved_to_column', label: 'Card entrou na coluna', description: 'Na hora em que um card chega à coluna escolhida', instant: true },
+  { id: 'card_completed', label: 'Card concluído', description: 'Na hora em que um card é concluído', instant: true },
+  { id: 'card_assigned', label: 'Responsável definido', description: 'Na hora em que o card recebe um responsável', instant: true },
   { id: 'deadline_approaching', label: 'Prazo se aproximando', description: 'Quando o prazo estiver a X horas' },
   { id: 'stuck_days', label: 'Card parado', description: 'Quando o card ficar parado por X dias' },
   { id: 'checklist_complete', label: 'Checklist 100%', description: 'Quando a checklist atingir 100%' },
@@ -23,7 +27,10 @@ export const TRIGGER_TYPES = [
 ];
 
 export const ACTION_TYPES = [
-  { id: 'notify', label: 'Notificar responsável', description: 'Envia notificação ao responsável do card' },
+  { id: 'notify', label: 'Notificar', description: 'Envia notificação ao responsável do card (ou à pessoa escolhida)' },
+  { id: 'assign_to', label: 'Definir responsável', description: 'Coloca a pessoa escolhida como responsável', instantOnly: true },
+  { id: 'add_label', label: 'Adicionar etiqueta', description: 'Aplica a etiqueta escolhida ao card', instantOnly: true },
+  { id: 'set_due_days', label: 'Definir prazo', description: 'Prazo = hoje + N dias, às 18h', instantOnly: true },
   { id: 'move_column', label: 'Mover para coluna', description: 'Move o card para uma coluna específica' },
   { id: 'set_priority', label: 'Alterar prioridade', description: 'Altera a prioridade do card' },
   { id: 'alert', label: 'Gerar alerta', description: 'Gera alerta visível na Gestão de Pessoas' },

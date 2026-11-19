@@ -71,3 +71,9 @@ verify_jwt = false
 
 [functions.company-export]
 verify_jwt = false
+
+[functions.ical]
+verify_jwt = false
+
+[functions.cards-in]
+verify_jwt = false
