@@ -37,7 +37,7 @@ const HELP: { cat: string; items: Q[] }[] = [
   { cat: 'Administração e privacidade', items: [
     { q: 'Como cadastro colaboradores?', a: 'Em Gerenciamento, adicione a pessoa com nome, e-mail e setor. Se a empresa usa um sistema de RH conectado em Integrações, é possível importar os colaboradores ativos de uma vez.' },
     { q: 'Como exporto os meus dados?', a: 'No seu perfil, abra "Meus dados e privacidade" para baixar uma cópia dos seus dados ou fazer um pedido de correção ou exclusão, conforme a LGPD.' },
-    { q: 'Como ligo o ewvon a outros sistemas (Zapier, Make)?', a: 'Em Integrações › Webhooks, cole o endereço https que o Zapier, Make ou o seu sistema forneceu e escolha os eventos (card criado, mudou de coluna, concluído). Use "Enviar teste" para conferir. Cada envio é assinado com a chave secreta mostrada ali.' },
+    { q: 'Como ligo o ewvon a outros sistemas (Zapier, Make)?', a: 'Em Integrações › Webhooks, cole o endereço https que o Zapier, Make ou o seu sistema forneceu e escolha os eventos: cards (criado, mudou de coluna, concluído, responsável, prazo, excluído, comentário), colaborador cadastrado/desativado/reativado, aviso publicado, reunião agendada/cancelada e War Room aberta/encerrada. Os eventos de um webhook já cadastrado podem ser trocados no botão "Eventos". Use "Enviar teste" para conferir. Cada envio é assinado com a chave secreta mostrada ali.' },
     { q: 'As chaves das integrações ficam seguras?', a: 'Sim. As chaves de API são guardadas criptografadas (AES-256) e só são abertas no servidor, no momento da sincronização. Nenhuma tela mostra a chave depois de salva.' },
   ] },
 ];

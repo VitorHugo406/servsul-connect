@@ -1055,6 +1055,12 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
       return;
     }
     if (task.status === colId) return;
+    moveToColumn(task, colId, position);
+  };
+  /** Same move the kanban drag does (workflow rules, column automations, conclusion data, activity log). */
+  const moveToColumn = (task: BoardTask, colId: string, position?: number) => {
+    if (task.status === colId) return;
+    if (warLocks.has(task.id)) { toast.error('Card controlado pela War Room: não pode ser movido enquanto ela estiver ativa.'); return; }
 
     // Workflow rule check
     const moveCheck = canMoveToColumn(task.status, colId);
@@ -1587,7 +1593,12 @@ function BoardView({ board, boards, onBack, onSelectBoard, onUpdateBoard, isOwne
         )}
         </AnimatePresence>
         {showBoard && !isMobile && boardView !== 'board' ? (
-          <div className="relative z-[1] flex-1 overflow-hidden p-3"><BoardAltView mode={boardView} tasks={filteredTasks as never} columns={columns as never} dark={isDarkBg} labelsOf={getTaskLabels as never} onOpen={(t) => { const full = tasks.find((x) => x.id === t.id); if (full) { setSelectedTask(full); setShowTaskDetail(true); } }} /></div>
+          <div className="relative z-[1] flex-1 overflow-hidden p-3"><BoardAltView mode={boardView} tasks={filteredTasks as never} columns={columns as never} dark={isDarkBg} labelsOf={getTaskLabels as never}
+            locked={warLocks}
+            onMove={(t, colId) => { const full = tasks.find((x) => x.id === t.id); if (full) moveToColumn(full, colId); }}
+            onComplete={(t) => { const full = tasks.find((x) => x.id === t.id); if (full) void handleQuickComplete(full); }}
+            onUpdate={async (t, upd) => { if (warLocks.has(t.id)) { toast.error('Card controlado pela War Room.'); return; } const { error } = await updateTask(t.id, upd as never) as { error?: unknown }; if (error) toast.error('Não foi possível alterar o card.'); }}
+            onOpen={(t) => { const full = tasks.find((x) => x.id === t.id); if (full) { setSelectedTask(full); setShowTaskDetail(true); } }} /></div>
         ) : null}
         {showBoard && (isMobile || boardView === 'board') && (
         <div className="flex-1 overflow-hidden">

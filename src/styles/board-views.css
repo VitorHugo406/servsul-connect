@@ -51,3 +51,16 @@
 .bvx-more { font-size: 11.5px; font-weight: 600; color: hsl(var(--muted-foreground)); text-align: left; padding: 2px 6px; border-radius: 6px; background: none; }
 .bvx-more:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
 .bvx-pop { position: absolute; z-index: 30; left: -1px; top: -1px; width: max(100%, 260px); max-height: 320px; overflow: auto; background: hsl(var(--popover)); border: 1px solid hsl(var(--border)); border-radius: 12px; box-shadow: 0 18px 40px -16px rgba(0,0,0,.4); padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+
+/* editable cells (list) and drop target (calendar) */
+.bvx-cell { display: flex; align-items: center; gap: 6px; width: 100%; height: 30px; padding: 0 4px; margin: 0 -4px; border-radius: 6px; background: none; color: inherit; text-align: left; min-width: 0; }
+.bvx-cell:not(:disabled):hover { background: hsl(var(--muted)); }
+.bvx-cell .bvx-cv { margin-left: auto; flex: none; opacity: 0; color: hsl(var(--muted-foreground)); }
+.bvx-row:hover .bvx-cell .bvx-cv { opacity: 1; }
+.bvx-cell:disabled { cursor: default; }
+button.bvx-chk { padding: 0; background: none; cursor: pointer; }
+button.bvx-chk:not(:disabled):hover { border-color: #22a06b; color: #22a06b; }
+button.bvx-chk.on { background: #22a06b; cursor: default; }
+.bvx-hidden-date { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.bvx-tbl td { position: relative; }
+.bvx-day.drop { background: hsl(var(--primary) / .1); outline: 2px dashed hsl(var(--primary) / .55); outline-offset: -3px; }

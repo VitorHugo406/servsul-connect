@@ -1,10 +1,13 @@
 // Other ways to see a mural (desktop), in a clean work-management style:
-//  - Lista: sections per column (collapsible), task rows with a round check, assignee avatar, due date, status pill,
-//    priority pill and labels; sortable headers; thin grid.
-//  - Calendário: month grid (weekdays wide, weekend narrow), cards as soft coloured bars with the assignee avatar.
-// Both use the board's already-filtered cards and open the normal card dialog; nothing is saved here.
-import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronRight as Caret } from 'lucide-react';
+//  - Lista: one flat table (no sections): round check (= conclude), title, then Status / Responsável / Prazo /
+//    Prioridade / Etiquetas as columns. Status, responsável, prazo and prioridade are editable in the row and use the
+//    SAME actions as the kanban (onMove = drag move with workflow rules/automations, onComplete, onUpdate).
+//  - Calendário: month grid (weekdays wide, weekend narrow), cards as soft coloured bars with the assignee avatar;
+//    dragging a card to another day changes its due date (keeps the time).
+// Clicking a card opens the normal card dialog. War Room-locked cards are read-only.
+import { useMemo, useRef, useState } from 'react';
+import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, Lock, UserX } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useActiveUsers } from '@/hooks/useDirectMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import '@/styles/board-views.css';
@@ -28,7 +31,10 @@ function Av({ p, id }: { p: P | null; id?: string | null }) {
   return <span className="bvx-av" title={p.name} style={p.avatar ? { backgroundImage: `url(${p.avatar})` } : { background: `hsl(${hueOf(id || p.name)} 45% 52%)` }}>{p.avatar ? '' : ini(p.name)}</span>;
 }
 
-export function BoardAltView({ mode, tasks, columns, onOpen, labelsOf }: { mode: BoardViewMode; tasks: T[]; columns: C[]; onOpen: (t: T) => void; dark?: boolean; labelsOf?: (taskId: string) => L[] }) {
+type Upd = Partial<Pick<T, 'priority' | 'due_date' | 'assigned_to'>>;
+type Acts = { onMove?: (t: T, colId: string) => void; onComplete?: (t: T) => void; onUpdate?: (t: T, u: Upd) => void | Promise<void>; locked?: { has: (id: string) => boolean } };
+
+export function BoardAltView({ mode, tasks, columns, onOpen, labelsOf, onMove, onComplete, onUpdate, locked }: { mode: BoardViewMode; tasks: T[]; columns: C[]; onOpen: (t: T) => void; dark?: boolean; labelsOf?: (taskId: string) => L[] } & Acts) {
   const { users } = useActiveUsers(); const { profile } = useAuth();
   const person = (id?: string | null): P | null => {
     if (!id) return null;
@@ -40,45 +46,66 @@ export function BoardAltView({ mode, tasks, columns, onOpen, labelsOf }: { mode:
   const done = (t: T) => !!t.completed_at || !!col.get(t.status)?.is_conclusion;
   const late = (t: T) => !!t.due_date && !done(t) && new Date(t.due_date).getTime() < Date.now();
   const live = tasks.filter((t) => !t.is_archived);
-  const ctx = { col, cols, person, onOpen, done, late, labelsOf: labelsOf || (() => []) };
+  const isLocked = (t: T) => !!locked?.has(t.id);
+  const ctx = { col, cols, person, onOpen, done, late, labelsOf: labelsOf || (() => []), users, isLocked, onMove, onComplete, onUpdate };
   return <div className="bvx">{mode === 'list' ? <ListView tasks={live} {...ctx} /> : <CalView tasks={live} {...ctx} />}</div>;
 }
 
-type Ctx = { tasks: T[]; col: Map<string, C>; cols: C[]; person: (id?: string | null) => P | null; onOpen: (t: T) => void; done: (t: T) => boolean; late: (t: T) => boolean; labelsOf: (id: string) => L[] };
-type K = 'title' | 'who' | 'due' | 'prio';
+type U = { id: string; name: string; display_name?: string | null; avatar_url?: string | null };
+type Ctx = { tasks: T[]; col: Map<string, C>; cols: C[]; person: (id?: string | null) => P | null; onOpen: (t: T) => void; done: (t: T) => boolean; late: (t: T) => boolean; labelsOf: (id: string) => L[]; users: U[]; isLocked: (t: T) => boolean } & Acts;
+type K = 'title' | 'status' | 'who' | 'due' | 'prio';
+const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+/** yyyy-mm-dd of a stored due date in local time */
+const ymd = (d?: string | null) => { if (!d) return ''; const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+/** new due date on another day, keeping the old time (or 18:00 when there was none) */
+const withDay = (old: string | null | undefined, y: number, m: number, d: number) => { const o = old ? new Date(old) : null; const n = new Date(y, m, d, o ? o.getHours() : 18, o ? o.getMinutes() : 0); return n.toISOString(); };
 
-function ListView({ tasks, cols, person, onOpen, done, late, labelsOf }: Ctx) {
+function ListView({ tasks, cols, col, person, onOpen, done, late, labelsOf, users, isLocked, onMove, onComplete, onUpdate }: Ctx) {
   const [sort, setSort] = useState<{ k: K; asc: boolean } | null>(null);
-  const [closed, setClosed] = useState<Set<string>>(new Set());
-  const val = (t: T): string | number => !sort ? 0 : sort.k === 'title' ? t.title.toLowerCase() : sort.k === 'who' ? (person(t.assigned_to)?.name || '~').toLowerCase() : sort.k === 'due' ? (t.due_date ? new Date(t.due_date).getTime() : Infinity) : PRIO[t.priority || 'medium']?.[1] ?? 2;
-  const order = (a: T[]) => !sort ? a : [...a].sort((x, y) => { const p = val(x), q = val(y); const r = p < q ? -1 : p > q ? 1 : 0; return sort.asc ? r : -r; });
+  const colPos = (t: T) => cols.findIndex((c) => c.id === t.status);
+  const val = (t: T): string | number => !sort ? colPos(t) : sort.k === 'title' ? t.title.toLowerCase() : sort.k === 'status' ? colPos(t) : sort.k === 'who' ? (person(t.assigned_to)?.name || '~').toLowerCase() : sort.k === 'due' ? (t.due_date ? new Date(t.due_date).getTime() : Infinity) : PRIO[t.priority || 'medium']?.[1] ?? 2;
+  const rows = [...tasks].sort((x, y) => { const p = val(x), q = val(y); const r = p < q ? -1 : p > q ? 1 : 0; return !sort || sort.asc ? r : -r; });
   const H = ({ k, children, w }: { k?: K; children: React.ReactNode; w?: number }) => (
     <th style={w ? { width: w } : undefined}>{k ? <button type="button" onClick={() => setSort((s) => (s?.k === k ? (s.asc ? { k, asc: false } : null) : { k, asc: true }))}>{children}{sort?.k === k ? (sort.asc ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : null}</button> : children}</th>);
   const fmt = (d: string) => new Date(d).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', '');
+  const dateRef = useRef<Record<string, HTMLInputElement | null>>({});
   return (
     <>
-      <div className="bvx-bar"><b>Lista</b><span className="bvx-mut">{tasks.length} cards · {tasks.filter(done).length} concluídos</span><span className="bvx-sp" /><span className="bvx-mut">Clique no título de uma coluna para ordenar</span></div>
+      <div className="bvx-bar"><b>Lista</b><span className="bvx-mut">{tasks.length} cards · {tasks.filter(done).length} concluídos</span><span className="bvx-sp" /><span className="bvx-mut">Clique no card para abrir · mude status, responsável, prazo e prioridade direto na linha</span></div>
       <div className="bvx-scroll">
         <table className="bvx-tbl">
-          <thead><tr><H k="title">Nome do card</H><H k="who" w={190}>Responsável</H><H k="due" w={130}>Prazo</H><H w={160}>Status</H><H k="prio" w={110}>Prioridade</H><H w={200}>Etiquetas</H></tr></thead>
+          <thead><tr><H k="title">Nome do card</H><H k="status" w={170}>Status</H><H k="who" w={190}>Responsável</H><H k="due" w={130}>Prazo</H><H k="prio" w={120}>Prioridade</H><H w={200}>Etiquetas</H></tr></thead>
           <tbody>
-            {cols.map((c) => {
-              const rows = order(tasks.filter((t) => t.status === c.id)); const isClosed = closed.has(c.id);
-              return [
-                <tr key={'s' + c.id} className="bvx-sec"><td colSpan={6}><button type="button" onClick={() => setClosed((s) => { const n = new Set(s); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); return n; })}>{isClosed ? <Caret className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}{c.title}<span className="bvx-n">{rows.length}</span></button></td></tr>,
-                ...(isClosed ? [] : rows.map((t) => {
-                  const p = PRIO[t.priority || 'medium'] || PRIO.medium; const who = person(t.assigned_to); const labs = labelsOf(t.id); const ok = done(t);
-                  return (
-                    <tr key={t.id} className={`bvx-row ${ok ? 'bvx-done' : ''}`} onClick={() => onOpen(t)}>
-                      <td><div className="bvx-name"><span className={`bvx-chk ${ok ? 'on' : ''}`}><Check className="h-3 w-3" strokeWidth={3} /></span>{t.task_number ? <span className="bvx-num">#{t.task_number}</span> : null}<span className="t">{t.title}</span></div></td>
-                      <td>{who ? <div className="bvx-who"><Av p={who} id={t.assigned_to} /><span className="t" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{who.name}</span></div> : <span className="bvx-mut">—</span>}</td>
-                      <td className={late(t) ? 'bvx-late' : ''}>{t.due_date ? fmt(t.due_date) : <span className="bvx-mut">—</span>}</td>
-                      <td><span className="bvx-pill" style={pill(c.color)}>{c.title}</span></td>
-                      <td><span className="bvx-pill" style={pill(p[2])}>{p[0]}</span></td>
-                      <td><div className="bvx-tags">{labs.length ? labs.slice(0, 3).map((l, i) => <span key={i} className="bvx-pill" style={pill(l.color)}>{l.name}</span>) : <span className="bvx-mut">—</span>}{labs.length > 3 ? <span className="bvx-mut">+{labs.length - 3}</span> : null}</div></td>
-                    </tr>);
-                })),
-              ];
+            {rows.map((t) => {
+              const c = col.get(t.status); const p = PRIO[t.priority || 'medium'] || PRIO.medium; const who = person(t.assigned_to); const labs = labelsOf(t.id); const ok = done(t); const lk = isLocked(t);
+              const edit = !lk;
+              return (
+                <tr key={t.id} className={`bvx-row ${ok ? 'bvx-done' : ''}`} onClick={() => onOpen(t)}>
+                  <td><div className="bvx-name">
+                    <button type="button" className={`bvx-chk ${ok ? 'on' : ''}`} disabled={ok || lk || !onComplete} title={ok ? 'Concluído' : 'Marcar como concluído'} aria-label="Concluir card" onClick={(e) => { stop(e); onComplete?.(t); }}><Check className="h-3 w-3" strokeWidth={3} /></button>
+                    {t.task_number ? <span className="bvx-num">#{t.task_number}</span> : null}<span className="t">{t.title}</span>{lk ? <Lock className="h-3.5 w-3.5 flex-none text-muted-foreground" aria-label="Controlado pela War Room" /> : null}
+                  </div></td>
+                  <td onClick={stop}>
+                    <DropdownMenu><DropdownMenuTrigger asChild disabled={!edit || !onMove}><button type="button" className="bvx-cell"><span className="bvx-pill" style={pill(c?.color)}>{c?.title || '—'}</span>{edit && onMove ? <ChevronDown className="bvx-cv h-3.5 w-3.5" /> : null}</button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="min-w-[200px]">{cols.map((x) => <DropdownMenuItem key={x.id} onSelect={() => onMove?.(t, x.id)}><span className="mr-2 h-2.5 w-2.5 flex-none rounded-full" style={{ background: x.color || '#8b93a7' }} />{x.title}{x.id === t.status ? <Check className="ml-auto h-4 w-4" /> : null}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+                  </td>
+                  <td onClick={stop}>
+                    <DropdownMenu><DropdownMenuTrigger asChild disabled={!edit || !onUpdate}><button type="button" className="bvx-cell">{who ? <div className="bvx-who"><Av p={who} id={t.assigned_to} /><span className="t" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{who.name}</span></div> : <span className="bvx-mut">—</span>}{edit && onUpdate ? <ChevronDown className="bvx-cv h-3.5 w-3.5" /> : null}</button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="max-h-[320px] min-w-[220px] overflow-auto">
+                        {t.assigned_to ? <><DropdownMenuItem onSelect={() => void onUpdate?.(t, { assigned_to: null })}><UserX className="mr-2 h-4 w-4" />Sem responsável</DropdownMenuItem><DropdownMenuSeparator /></> : null}
+                        {[...users].sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name, 'pt-BR')).map((u) => <DropdownMenuItem key={u.id} onSelect={() => void onUpdate?.(t, { assigned_to: u.id })}><span className="mr-2"><Av p={{ name: u.display_name || u.name, avatar: u.avatar_url || null }} id={u.id} /></span>{u.display_name || u.name}{u.id === t.assigned_to ? <Check className="ml-auto h-4 w-4" /> : null}</DropdownMenuItem>)}
+                      </DropdownMenuContent></DropdownMenu>
+                  </td>
+                  <td onClick={stop} className={late(t) ? 'bvx-late' : ''}>
+                    <button type="button" className="bvx-cell" disabled={!edit || !onUpdate} onClick={() => { const el = dateRef.current[t.id]; try { el?.showPicker(); } catch { el?.focus(); } }}>{t.due_date ? fmt(t.due_date) : <span className="bvx-mut">—</span>}</button>
+                    <input ref={(el) => { dateRef.current[t.id] = el; }} type="date" className="bvx-hidden-date" tabIndex={-1} aria-label="Prazo" value={ymd(t.due_date)} onChange={(e) => { const v = e.target.value; if (!v) { void onUpdate?.(t, { due_date: null }); return; } const [y, m, d] = v.split('-').map(Number); void onUpdate?.(t, { due_date: withDay(t.due_date, y, m - 1, d) }); }} />
+                  </td>
+                  <td onClick={stop}>
+                    <DropdownMenu><DropdownMenuTrigger asChild disabled={!edit || !onUpdate}><button type="button" className="bvx-cell"><span className="bvx-pill" style={pill(p[2])}>{p[0]}</span>{edit && onUpdate ? <ChevronDown className="bvx-cv h-3.5 w-3.5" /> : null}</button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">{Object.entries(PRIO).map(([k, v]) => <DropdownMenuItem key={k} onSelect={() => void onUpdate?.(t, { priority: k })}><span className="bvx-pill" style={pill(v[2])}>{v[0]}</span>{(t.priority || 'medium') === k ? <Check className="ml-auto h-4 w-4" /> : null}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+                  </td>
+                  <td><div className="bvx-tags">{labs.length ? labs.slice(0, 3).map((l, i) => <span key={i} className="bvx-pill" style={pill(l.color)}>{l.name}</span>) : <span className="bvx-mut">—</span>}{labs.length > 3 ? <span className="bvx-mut">+{labs.length - 3}</span> : null}</div></td>
+                </tr>);
             })}
             {!tasks.length ? <tr><td colSpan={6} className="bvx-empty" style={{ maxWidth: 'none' }}>Nenhum card neste mural (ou no filtro atual).</td></tr> : null}
           </tbody>
@@ -88,7 +115,8 @@ function ListView({ tasks, cols, person, onOpen, done, late, labelsOf }: Ctx) {
   );
 }
 
-function CalView({ tasks, col, person, onOpen, done, late }: Ctx) {
+function CalView({ tasks, col, person, onOpen, done, late, isLocked, onUpdate }: Ctx) {
+  const [drag, setDrag] = useState<T | null>(null); const [over, setOver] = useState<string | null>(null);
   const [m, setM] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [openDay, setOpenDay] = useState<string | null>(null);
   const byDay = useMemo(() => { const map = new Map<string, T[]>(); for (const t of tasks) if (t.due_date) { const k = dkey(new Date(t.due_date)); map.set(k, [...(map.get(k) || []), t]); } return map; }, [tasks]);
@@ -99,7 +127,8 @@ function CalView({ tasks, col, person, onOpen, done, late }: Ctx) {
   const days = Array.from({ length: weeks * 7 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; });
   const today = dkey(new Date());
   const Ev = ({ t }: { t: T }) => { const c = col.get(t.status); const s = pill(late(t) ? '#e5484d' : c?.color); return (
-    <button type="button" className={`bvx-ev ${done(t) ? 'done' : ''}`} style={s} onClick={() => onOpen(t)} title={`${t.title} · ${c?.title || ''}`}><Av p={person(t.assigned_to)} id={t.assigned_to} /><span className="t">{t.title}</span></button>); };
+    <button type="button" className={`bvx-ev ${done(t) ? 'done' : ''}`} style={s} onClick={() => onOpen(t)} title={`${t.title} · ${c?.title || ''}${onUpdate && !isLocked(t) ? ' · arraste para mudar o prazo' : ''}`}
+      draggable={!!onUpdate && !isLocked(t)} onDragStart={(e) => { setDrag(t); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', t.id); }} onDragEnd={() => { setDrag(null); setOver(null); }}><Av p={person(t.assigned_to)} id={t.assigned_to} /><span className="t">{t.title}</span></button>); };
   return (
     <>
       <div className="bvx-bar">
@@ -116,7 +145,9 @@ function CalView({ tasks, col, person, onOpen, done, late }: Ctx) {
           const k = dkey(d); const list = byDay.get(k) || []; const out = d.getMonth() !== m.getMonth(); const we = d.getDay() === 0 || d.getDay() === 6;
           const shown = list.length > 3 ? list.slice(0, 2) : list;
           return (
-            <div key={k} className={`bvx-day ${out ? 'out' : we ? 'we' : ''} ${k === today ? 'today' : ''}`}>
+            <div key={k} className={`bvx-day ${out ? 'out' : we ? 'we' : ''} ${k === today ? 'today' : ''} ${over === k ? 'drop' : ''}`}
+              onDragOver={(e) => { if (!drag) return; e.preventDefault(); if (over !== k) setOver(k); }} onDragLeave={() => setOver((o) => (o === k ? null : o))}
+              onDrop={(e) => { e.preventDefault(); const t = drag; setDrag(null); setOver(null); if (!t || dkey(new Date(t.due_date || 0)) === k) return; void onUpdate?.(t, { due_date: withDay(t.due_date, d.getFullYear(), d.getMonth(), d.getDate()) }); }}>
               <span className="bvx-dnum">{d.getDate()}</span>
               {shown.map((t) => <Ev key={t.id} t={t} />)}
               {list.length > 3 ? <button type="button" className="bvx-more" onClick={() => setOpenDay(k)}>+{list.length - 2} mais</button> : null}
