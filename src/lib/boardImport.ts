@@ -75,17 +75,36 @@ const H = {
   title: ['task name', 'name', 'nome', 'tarefa', 'titulo', 'title', 'card name', 'task'],
   col: ['status', 'section/column', 'section', 'column', 'coluna', 'lista', 'list', 'secao', 'etapa', 'list name'],
   desc: ['description', 'task content', 'notes', 'descricao', 'notas', 'content', 'card description'],
-  due: ['due date', 'due', 'prazo', 'data de entrega', 'vencimento', 'data limite'],
+  due: ['due date', 'due', 'prazo', 'data de entrega', 'vencimento', 'data limite', 'deadline', 'date', 'data'],
   prio: ['priority', 'prioridade'],
-  who: ['assignee email', 'assignees', 'assignee', 'assigned to', 'responsavel', 'responsaveis', 'members', 'membros'],
-  tags: ['tags', 'labels', 'etiquetas', 'label'],
+  who: ['assignee email', 'assignees', 'assignee', 'assigned to', 'responsavel', 'responsaveis', 'members', 'membros', 'person', 'pessoa', 'people', 'owner', 'assign', 'dono'],
+  tags: ['tags', 'labels', 'etiquetas', 'label', 'group', 'grupo'],
   done: ['completed at', 'date done', 'completed', 'concluido em', 'done'],
   check: ['checklists', 'checklist', 'subtasks', 'subtarefas'],
 };
 
 /** CSV from ClickUp, Asana, Trello CSV or a spreadsheet → ImpBoard (columns from the status/section column). */
-export function parseCsvBoard(text: string, fileName: string): ImpBoard {
-  const rows = parseCsv(text);
+export function parseCsvBoard(text: string, fileName: string): ImpBoard { return parseRowsBoard(parseCsv(text), fileName); }
+
+/** monday.com exports one block per group: [group name] / header row / items / blank. Flattens it into one table with a
+ *  "Group" column (used as a label) so the generic parser below can read it. Other sheets pass through unchanged. */
+function flattenGroups(rows: string[][]): { rows: string[][]; grouped: boolean } {
+  const isHead = (r: string[]) => /^(name|nome|item)$/.test(fold(r[0] || '')) && r.filter((c) => c.trim()).length >= 2;
+  const heads = rows.map((r, i) => (isHead(r) ? i : -1)).filter((i) => i >= 0);
+  if (heads.length < 2 && !(heads.length === 1 && heads[0] > 0)) return { rows, grouped: false };
+  const header = rows[heads[0]]; const out: string[][] = [[...header, 'Group']];
+  let cur: string[] = header; let group = '';
+  rows.forEach((r, i) => {
+    if (isHead(r)) { cur = r; const prev = rows[i - 1]; group = prev && prev.filter((c) => c.trim()).length === 1 ? prev.find((c) => c.trim())!.trim() : group; return; }
+    if (i < heads[0] || !r[0]?.trim() || (rows[i + 1] && isHead(rows[i + 1]) && r.filter((c) => c.trim()).length === 1)) return;
+    out.push([...header.map((h) => { const j = cur.findIndex((x) => fold(x) === fold(h)); return j >= 0 ? r[j] ?? '' : ''; }), group]);
+  });
+  return { rows: out, grouped: true };
+}
+
+/** Rows (first = header) from a CSV or a spreadsheet → ImpBoard. */
+export function parseRowsBoard(input: string[][], fileName: string, hint?: string): ImpBoard {
+  const flat = flattenGroups(input); const rows = flat.rows;
   if (rows.length < 2) throw new Error('A planilha está vazia ou sem cabeçalho.');
   const head = rows[0].map((h) => fold(h));
   const find = (k: keyof typeof H) => { for (const n of H[k]) { const i = head.indexOf(n); if (i >= 0) return i; } return head.findIndex((h) => H[k].some((n) => h.includes(n))); };
@@ -105,7 +124,7 @@ export function parseCsvBoard(text: string, fileName: string): ImpBoard {
     };
   });
   if (!cards.length) throw new Error('Nenhuma tarefa encontrada na planilha.');
-  const src = /clickup/i.test(fileName) || head.includes('task id') ? 'ClickUp' : head.includes('section/column') ? 'Asana' : 'Planilha';
+  const src = hint || (/monday/i.test(fileName) || flat.grouped ? 'monday.com' : /notion/i.test(fileName) || head.includes('created time') || head.includes('last edited time') ? 'Notion' : /clickup/i.test(fileName) || head.includes('task id') ? 'ClickUp' : head.includes('section/column') ? 'Asana' : 'Planilha');
   return { source: src, name: fileName.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || 'Mural importado', desc: '',
     columns: cols.map((c, i) => ({ title: c.slice(0, 80), color: DONE_RE.test(c) ? '#22c55e' : COL_COLORS[i % COL_COLORS.length] })),
     labels: labs.map((l, i) => ({ name: l.slice(0, 50), color: COL_COLORS[(i + 3) % COL_COLORS.length] })), cards };
@@ -113,6 +132,11 @@ export function parseCsvBoard(text: string, fileName: string): ImpBoard {
 
 export async function readBoardFile(file: File): Promise<ImpBoard> {
   if (file.size > 30 * 1024 * 1024) throw new Error('Arquivo grande demais (máximo 30 MB).');
+  if (/\.xlsx?$/i.test(file.name)) {
+    const { readSheet } = await import('@/lib/exportTable');
+    let rows: string[][]; try { rows = await readSheet(file); } catch { throw new Error('Não consegui ler a planilha do Excel.'); }
+    return parseRowsBoard(rows.filter((r) => r.some((c) => String(c).trim())), file.name);
+  }
   const text = await file.text();
   if (/\.json$/i.test(file.name) || text.trim().startsWith('{')) {
     let j: unknown; try { j = JSON.parse(text); } catch { throw new Error('O arquivo JSON está corrompido.'); }

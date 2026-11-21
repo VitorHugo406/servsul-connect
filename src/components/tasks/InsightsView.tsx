@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { FileDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { openReport } from '@/lib/reports';
+import { ExportMenu } from '@/components/ui/ExportMenu';
 
 type T = { id: string; title: string; status: string; due_date?: string | null; completed_at?: string | null; completed_late?: boolean | null; assigned_to?: string | null; created_at?: string; task_number?: number | null };
 type C = { id: string; title: string; color?: string | null; is_conclusion?: boolean | null };
@@ -92,6 +93,10 @@ export function InsightsView({ tasks, cols, person, done, late, boardName, Av }:
     <>
       <div className="bvx-bar"><b>Relatórios</b><span className="bvx-mut">Usa os cards do filtro atual</span><span className="bvx-sp" />
         <div className="tl-seg" role="group" aria-label="Período">{[7, 30, 90].map((d) => <button key={d} type="button" className={days === d ? 'on' : ''} aria-pressed={days === d} onClick={() => setDays(d)}>{d} dias</button>)}</div>
+        <ExportMenu getData={() => ({ name: `relatorio-${boardName}`, sheet: 'Por pessoa', headers: ['Pessoa', 'Em aberto', 'Atrasados', 'Concluídos (30 dias)', 'Horas (30 dias)', `Criou (${days}d)`, `Moveu (${days}d)`, `Checklist (${days}d)`, `Comentou (${days}d)`, `Editou (${days}d)`],
+          rows: (() => { const m = new Map<string, (string | number)[]>(); for (const [id, r] of s.ppl) m.set(nameOf(id), [nameOf(id), r.open, r.late, r.done30, fmtH(hours.get(id) || 0), 0, 0, 0, 0, 0]);
+            for (const r of mv || []) { const row = m.get(r.name) || [r.name, 0, 0, 0, '—', 0, 0, 0, 0, 0]; row[5] = r.created; row[6] = r.moved; row[7] = r.checklist; row[8] = r.comments; row[9] = r.edits; m.set(r.name, row); }
+            return [...m.values()]; })() })} />
         <button type="button" className="bvx-btn" onClick={pdf}><FileDown className="h-4 w-4" />Baixar PDF</button></div>
       <div className="bvx-scroll in-pg">
         <div className="in-kpis">

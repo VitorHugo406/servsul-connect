@@ -7,7 +7,7 @@ import { BoardExtrasProvider, useBoardExtras, fieldText } from '@/hooks/useBoard
 import { TemplatesDialog } from '@/components/tasks/TemplatesDialog';
 import { CustomFieldsDialog } from '@/components/tasks/CustomFieldsDialog';
 import { BoardAltView, type BoardViewMode } from '@/components/tasks/BoardAltViews';
-import { List as ListIcon, CalendarDays as CalDaysIcon, Check, SlidersHorizontal, GanttChart, Lock as LockIcon, BarChart3, Users2 } from 'lucide-react';
+import { List as ListIcon, CalendarDays as CalDaysIcon, Check, SlidersHorizontal, GanttChart, Lock as LockIcon, BarChart3, Users2, Wand2, ChevronDown } from 'lucide-react';
 import { ImportBoardDialog } from '@/components/tasks/ImportBoardDialog';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useWarRoomLockedTasks } from '@/hooks/useWarRooms';
@@ -1386,67 +1386,46 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
             </DropdownMenu>
           ) : (
             <>
-              <Button variant="ghost" size="icon" onClick={() => setShowOperationMode(true)} title="Modo Operação" className="text-orange-500 hover:text-orange-600">
-                <Activity className="h-4 w-4" />
-              </Button>
-              {isAdminOrOwner && (
-                <Button variant="ghost" size="icon" onClick={() => setShowDistribution(true)} title="Auto-distribuição" className="text-orange-500 hover:text-orange-600">
-                  <Shuffle className="h-4 w-4" />
-                </Button>
-               )}
-              {isAdminOrOwner && (
-                <Button variant="ghost" size="icon" onClick={() => setShowScore(true)} title="Score" className="text-yellow-500 hover:text-yellow-600">
-                  <Trophy className="h-4 w-4" />
-                </Button>
-              )}
+              {/* Sempre à vista: filtro, membros e compartilhar. O resto fica em 3 menus por tipo de função. */}
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowFilter(true)}
                 title="Filtro"
-                className={cn(isFilterActive(taskFilter) && "text-primary")}
+                className={cn('relative', isFilterActive(taskFilter) && "text-primary")}
               >
                 <Filter className="h-4 w-4" />
                 {isFilterActive(taskFilter) && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />}
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => { setAutomationTaskId(undefined); setShowAutomationRules(true); }} title="Automações do Board">
-                <Zap className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setShowLabelsManager(true)} title="Etiquetas">
-                <Tag className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setShowFields(true)} title="Campos personalizados">
-                <SlidersHorizontal className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setShowReport(true)} title="Relatório">
-                <FileDown className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="icon" onClick={() => setShowMembers(true)} title="Membros">
                 <Users className="h-4 w-4" />
               </Button>
               {isAdminOrOwner && (
-                <>
-                  <Button variant="ghost" size="icon" onClick={() => setShowShareDialog(true)} title="Compartilhar quadro">
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                  <div className="relative">
-                    <Button variant="ghost" size="icon" onClick={() => setShowJoinRequests(true)} title="Solicitações">
-                      <UserPlus className="h-4 w-4" />
-                    </Button>
-                    {joinRequests.length > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] flex items-center justify-center font-bold">
-                        {joinRequests.length}
-                      </span>
-                    )}
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => setShowArchive(true)} title="Arquivados">
-                    <Archive className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)} title="Configurações">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </>
+                <Button variant="ghost" size="icon" onClick={() => setShowShareDialog(true)} title="Compartilhar quadro">
+                  <Share2 className="h-4 w-4" />
+                </Button>
               )}
+              <span className={cn('mx-1 h-5 w-px', isDarkBg ? 'bg-white/30' : 'bg-border')} aria-hidden />
+              <BoardToolMenu label="Organizar" icon={Wand2} dark={isDarkBg} items={[
+                { icon: Activity, label: 'Modo Operação', hint: 'Ordena as colunas e sobe a prioridade do que vence', onClick: () => setShowOperationMode(true) },
+                ...(isAdminOrOwner ? [{ icon: Shuffle, label: 'Auto-distribuição', hint: 'Divide os cards entre os membros', onClick: () => setShowDistribution(true) }] : []),
+                { icon: Zap, label: 'Automações', hint: 'Regras SE → ENTÃO do mural', onClick: () => { setAutomationTaskId(undefined); setShowAutomationRules(true); } },
+              ]} />
+              <BoardToolMenu label="Acompanhar" icon={BarChart3} dark={isDarkBg} badge={isAdminOrOwner ? joinRequests.length : 0} items={[
+                { icon: FileDown, label: 'Relatório em PDF', hint: 'Resumo do mural para imprimir ou enviar', onClick: () => setShowReport(true) },
+                ...(isAdminOrOwner ? [
+                  { icon: Trophy, label: 'Score', hint: 'Pontuação mensal de cada membro', onClick: () => setShowScore(true) },
+                  { icon: UserPlus, label: 'Solicitações', hint: 'Pedidos para entrar no mural', onClick: () => setShowJoinRequests(true), badge: joinRequests.length },
+                ] : []),
+              ]} />
+              <BoardToolMenu label="Configurar" icon={Settings} dark={isDarkBg} items={[
+                { icon: Tag, label: 'Etiquetas', hint: 'Criar e editar as etiquetas', onClick: () => setShowLabelsManager(true) },
+                { icon: SlidersHorizontal, label: 'Campos personalizados', hint: 'Valor, cliente, tipo… em cada card', onClick: () => setShowFields(true) },
+                ...(isAdminOrOwner ? [
+                  { icon: Archive, label: 'Arquivados e lixeira', hint: 'Recuperar cards guardados ou excluídos', onClick: () => setShowArchive(true) },
+                  { icon: Settings, label: 'Configurações do mural', hint: 'Nome, fundo, colunas e permissões', onClick: () => setShowSettings(true) },
+                ] : []),
+              ]} />
             </>
           )}
         </div>
@@ -3447,5 +3426,29 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/** One header menu of the mural (Organizar / Acompanhar / Configurar): a labelled trigger and items with a short hint. */
+function BoardToolMenu({ label, icon: Icon, items, dark, badge }: { label: string; icon: React.ComponentType<{ className?: string }>; dark?: boolean; badge?: number; items: { icon: React.ComponentType<{ className?: string }>; label: string; hint: string; onClick: () => void; badge?: number }[] }) {
+  if (!items.length) return null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className={cn('relative h-8 gap-1.5 px-2.5 text-[13px] font-medium', dark && 'text-white hover:bg-white/20 hover:text-white')}>
+          <Icon className="h-4 w-4" />{label}<ChevronDown className="h-3.5 w-3.5 opacity-60" />
+          {badge ? <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground">{badge}</span> : null}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-72 p-1">
+        {items.map((it) => (
+          <DropdownMenuItem key={it.label} onClick={it.onClick} className="flex items-start gap-3 p-2">
+            <it.icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="flex min-w-0 flex-1 flex-col"><span className="text-sm font-medium">{it.label}</span><span className="text-xs text-muted-foreground">{it.hint}</span></span>
+            {it.badge ? <span className="rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">{it.badge}</span> : null}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

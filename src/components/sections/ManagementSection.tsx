@@ -1,6 +1,7 @@
 // Gerenciamento: lista de colaboradores à esquerda e ficha completa à direita (dados pessoais, contato, profissional,
 // bancário, acesso e permissões). Dados sensíveis ficam criptografados (employee_records) e só o administrador grava.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ExportMenu } from '@/components/ui/ExportMenu';
 import { Eye, EyeOff, Shield } from 'lucide-react';
 import { passwordError } from '@/lib/passwordPolicy';
 import { PasswordChecklist } from '@/components/common/PasswordChecklist';
@@ -208,7 +209,9 @@ export function ManagementSection() {
     <div className="dk-pg dk-mg">
       <aside className="dk-ml">
         <div className="sh">
-          <div className="srow"><input className="dk-srch" placeholder="Buscar usuário..." value={search} onChange={(e) => setSearch(e.target.value)} /><button className="dk-b2 pri" onClick={() => setCreateOpen(true)}>+ Novo</button></div>
+          <div className="srow"><input className="dk-srch" placeholder="Buscar usuário..." value={search} onChange={(e) => setSearch(e.target.value)} /><button className="dk-b2 pri" onClick={() => setCreateOpen(true)}>+ Novo</button>
+            <ExportMenu className="dk-b2" label="" getData={() => ({ name: 'colaboradores', sheet: 'Colaboradores', headers: ['Nome', 'E-mail', 'Telefone', 'Setor', 'Nível', 'Situação'],
+              rows: filtered.map((u) => [u.name, u.email, u.phone || '', sectorName(u), roleOf(u) === 'admin' ? 'Administrador' : (u.autonomy_level || 'colaborador'), u.is_active ? 'Ativo' : 'Inativo']) })} /></div>
           <div className="dk-tb" role="group" aria-label="Situação" ref={tabInd.ref as React.RefObject<HTMLDivElement>}>{([['all', 'Todos'], ['on', 'Ativos'], ['off', 'Inativos']] as const).map(([k, l]) => <button key={k} data-tab={k} aria-pressed={filter === k} className={filter === k ? 'on' : ''} onClick={() => setFilter(k)}>{l}<span>{counts[k]}</span></button>)}<i className="dk-ind" style={tabInd.style} /></div>
         </div>
         <div style={{ overflowY: 'auto', flex: 1 }}>

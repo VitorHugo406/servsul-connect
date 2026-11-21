@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowLeft, ArrowUp, Loader2, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import '@/styles/board-views.css';
+import { ExportMenu } from '@/components/ui/ExportMenu';
 
 type B = { id: string; name: string };
 type T = { id: string; title: string; task_number: number | null; board_id: string; status: string; due_date: string | null; completed_at: string | null; completed_late: boolean | null };
@@ -68,6 +69,8 @@ export function PortfolioView({ boards, onBack, onOpenBoard, onOpenTask }: { boa
           <button type="button" className="bvx-btn bvx-ibtn" onClick={onBack} aria-label="Voltar aos murais"><ArrowLeft className="h-4 w-4" /></button>
           <b>Visão geral dos murais</b><span className="bvx-mut">{boards.length} mural(is)</span><span className="bvx-sp" />
           <label className="mt-srch"><Search className="h-4 w-4" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar mural" aria-label="Buscar mural" /></label>
+          <ExportMenu getData={() => ({ name: 'visao-geral-murais', sheet: 'Murais', headers: ['Mural', 'Cards', 'Concluídos', 'Progresso (%)', 'Em aberto', 'Atrasados', 'Vencem em 7 dias', 'Concluídos (30 dias)'],
+            rows: list.map((r) => [r.b.name, r.total, r.done, r.pct, r.open, r.late, r.week, r.done30]) })} />
         </div>
         {tasks === null ? <div className="bvx-empty"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div> : (
           <div className="bvx-scroll in-pg">

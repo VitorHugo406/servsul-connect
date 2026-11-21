@@ -15,6 +15,7 @@ import { TimelineView } from './TimelineView';
 import { WorkloadView } from './WorkloadView';
 import { InsightsView } from './InsightsView';
 import { useBoardExtras, fieldText } from '@/hooks/useBoardExtras';
+import { ExportMenu } from '@/components/ui/ExportMenu';
 
 type T = { id: string; title: string; status: string; created_at?: string; completed_late?: boolean | null; priority?: string | null; due_date?: string | null; start_date?: string | null; completed_at?: string | null; assigned_to?: string | null; task_number?: number | null; is_archived?: boolean | null };
 type C = { id: string; title: string; color?: string | null; is_conclusion?: boolean | null; position?: number | null };
@@ -54,7 +55,7 @@ export function BoardAltView({ mode, tasks, columns, onOpen, labelsOf, onMove, o
   const live = tasks.filter((t) => !t.is_archived);
   const isLocked = (t: T) => !!locked?.has(t.id);
   const ctx = { col, cols, person, onOpen, done, late, labelsOf: labelsOf || (() => []), users, isLocked, onMove, onComplete, onUpdate, onDeleteMany };
-  return <div className="bvx">{mode === 'list' ? <ListView tasks={live} {...ctx} /> : mode === 'timeline' ? <TimelineView tasks={live} cols={cols} person={person} onOpen={onOpen} done={done} late={late} isLocked={isLocked} onUpdate={onUpdate} Av={Av} />
+  return <div className="bvx">{mode === 'list' ? <ListView tasks={live} {...ctx} boardName={boardName} /> : mode === 'timeline' ? <TimelineView tasks={live} cols={cols} person={person} onOpen={onOpen} done={done} late={late} isLocked={isLocked} onUpdate={onUpdate} Av={Av} />
     : mode === 'insights' ? <InsightsView tasks={live} cols={cols} person={person} done={done} late={late} boardName={boardName || 'Mural'} Av={Av} />
     : mode === 'workload' ? <WorkloadView tasks={live} cols={cols} users={users} person={person} onOpen={onOpen} done={done} late={late} Av={Av} /> : <CalView tasks={live} {...ctx} />}</div>;
 }
@@ -68,7 +69,7 @@ const ymd = (d?: string | null) => { if (!d) return ''; const x = new Date(d); r
 /** new due date on another day, keeping the old time (or 18:00 when there was none) */
 const withDay = (old: string | null | undefined, y: number, m: number, d: number) => { const o = old ? new Date(old) : null; const n = new Date(y, m, d, o ? o.getHours() : 18, o ? o.getMinutes() : 0); return n.toISOString(); };
 
-function ListView({ tasks, cols, col, person, onOpen, done, late, labelsOf, users, isLocked, onMove, onComplete, onUpdate, onDeleteMany }: Ctx) {
+function ListView({ tasks, cols, col, person, onOpen, done, late, labelsOf, users, isLocked, onMove, onComplete, onUpdate, onDeleteMany, boardName }: Ctx & { boardName?: string }) {
   // ações em massa: selection by id (only cards still visible in the filter count)
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -89,7 +90,10 @@ function ListView({ tasks, cols, col, person, onOpen, done, late, labelsOf, user
   const dateRef = useRef<Record<string, HTMLInputElement | null>>({});
   return (
     <>
-      <div className="bvx-bar"><b>Lista</b><span className="bvx-mut">{tasks.length} cards · {tasks.filter(done).length} concluídos</span><span className="bvx-sp" /><span className="bvx-mut">Clique no card para abrir · mude status, responsável, prazo e prioridade direto na linha</span></div>
+      <div className="bvx-bar"><b>Lista</b><span className="bvx-mut">{tasks.length} cards · {tasks.filter(done).length} concluídos</span><span className="bvx-sp" /><span className="bvx-mut">Clique no card para abrir · mude status, responsável, prazo e prioridade direto na linha</span>
+        <ExportMenu getData={() => ({ name: `cards-${boardName || 'mural'}`, sheet: 'Cards',
+          headers: ['Número', 'Card', 'Status', 'Responsável', 'Prazo', 'Prioridade', 'Etiquetas', ...cf.map((f) => f.name), 'Concluído em'],
+          rows: rows.map((t) => [t.task_number ?? '', t.title, col.get(t.status)?.title || '', person(t.assigned_to)?.name || '', t.due_date ? new Date(t.due_date).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '', (PRIO[t.priority || 'medium'] || PRIO.medium)[0], labelsOf(t.id).map((l) => l.name).join(', '), ...cf.map((f) => fieldText(f, ex?.valueOf(t.id, f.id))), t.completed_at ? new Date(t.completed_at).toLocaleDateString('pt-BR') : '']) })} /></div>
       {picked.length ? (
         <div className="bvx-bulk" role="toolbar" aria-label="Ações em massa">
           <b>{picked.length} selecionado(s)</b>{editable.length < picked.length ? <span className="bvx-mut">{picked.length - editable.length} bloqueado(s) pela War Room</span> : null}

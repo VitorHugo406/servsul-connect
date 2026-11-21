@@ -26,6 +26,7 @@ import { CriteriaModelPanel } from '@/components/evaluations/CriteriaModelPanel'
 import { FORM_TYPES, formTypeLabel, type FormType } from '@/lib/evalPresets';
 import { brDate, contractDates, daysSinceAdmission, getEmployeeRecord, type EmployeeRecord } from '@/lib/employeeRecord';
 import { Sel } from '@/components/ui/Sel';
+import { ExportMenu } from '@/components/ui/ExportMenu';
 
 const MANAGER_LEVELS = ['admin', 'gerente', 'supervisor', 'diretoria'];
 const FILTERS: { id: 'all' | EvalStatus; label: string }[] = [
@@ -150,6 +151,8 @@ export function EvaluationsSection() {
             <div className="dk-flt">
               <input type="text" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar pessoa ou período" aria-label="Buscar pessoa ou período" />
               <Sel aria-label="Período" value={periodF} onChange={(e) => setPeriodF(e.target.value)}><option value="all">Período: todos</option>{periods.map((p) => <option key={p} value={p}>{p}</option>)}</Sel>
+              <ExportMenu className="dk-btn" disabled={!shown2.length} getData={() => ({ name: 'avaliacoes', sheet: 'Avaliações', headers: ['Colaborador', 'Setor', 'Avaliador', 'Período', 'Nota', 'Conceito', 'Situação', 'Data'],
+                rows: shown2.map((e) => [e.evaluatedName, e.evaluatedSector || '', e.evaluatorName, phaseLabel(e), e.score != null ? E.fmtScore(e.score) : '', e.score != null ? E.scaleLabel(e.score) : '', E.STATUS_LABEL[e.status], new Date(e.sentAt || e.createdAt).toLocaleDateString('pt-BR')]) })} />
             </div>
           </div>
           {loading ? <div style={{ padding: 24 }}><Skeleton className="h-14 w-full" /><Skeleton className="mt-3 h-14 w-full" /><Skeleton className="mt-3 h-14 w-full" /></div>

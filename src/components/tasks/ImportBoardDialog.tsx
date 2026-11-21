@@ -12,6 +12,8 @@ const HOW: Record<string, string> = {
   Trello: 'No Trello, abra o quadro › Menu (…) › Imprimir, exportar e compartilhar › Exportar como JSON.',
   ClickUp: 'No ClickUp, abra a lista ou o espaço › … › Exportar › CSV.',
   Asana: 'No Asana, abra o projeto › seta ao lado do nome › Exportar/Imprimir › CSV.',
+  'monday.com': 'No monday.com, abra o quadro › … (mais ações) › Exportar quadro para o Excel.',
+  Notion: 'No Notion, abra a base de dados › … › Exportar › Markdown e CSV (use o arquivo .csv de dentro do .zip).',
 };
 
 export function ImportBoardDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; onDone: (boardId: string) => void }) {
@@ -49,12 +51,12 @@ export function ImportBoardDialog({ open, onOpenChange, onDone }: { open: boolea
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><FileUp className="h-5 w-5" />Importar mural</DialogTitle>
-          <DialogDescription>Traga seus quadros do Trello (arquivo JSON) ou do ClickUp, Asana e planilhas (arquivo CSV). Um mural novo é criado; nada do original é alterado.</DialogDescription>
+          <DialogDescription>Traga seus quadros do Trello (JSON), do ClickUp, Asana e Notion (CSV), do monday.com (Excel) ou de planilhas. Um mural novo é criado; nada do original é alterado.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 text-sm">
-          <input ref={ref} type="file" accept=".json,.csv,application/json,text/csv" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />
+          <input ref={ref} type="file" accept=".json,.csv,.xlsx,.xls,application/json,text/csv" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />
           <button type="button" onClick={() => ref.current?.click()} disabled={busy} className="flex w-full flex-col items-center gap-1 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-6 hover:bg-muted/60">
-            <FileUp className="h-6 w-6 text-muted-foreground" /><span className="font-medium">{data ? 'Escolher outro arquivo' : 'Escolher arquivo (.json ou .csv)'}</span><span className="text-xs text-muted-foreground">Até 30 MB</span>
+            <FileUp className="h-6 w-6 text-muted-foreground" /><span className="font-medium">{data ? 'Escolher outro arquivo' : 'Escolher arquivo (.json, .csv ou .xlsx)'}</span><span className="text-xs text-muted-foreground">Até 30 MB</span>
           </button>
           {err ? <p className="rounded-lg bg-destructive/10 px-3 py-2 text-destructive">{err}</p> : null}
           {!data ? <ul className="space-y-1 text-xs text-muted-foreground">{Object.entries(HOW).map(([k, v]) => <li key={k}><b className="text-foreground">{k}:</b> {v}</li>)}</ul> : null}

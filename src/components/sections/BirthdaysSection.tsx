@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { withCompany } from '@/lib/companyScope';
 import { canManageBirthdayPresentation, upcomingBirthdayPeople } from '@/lib/birthdayPresentation';
 import { Sel } from '@/components/ui/Sel';
+import { ExportMenu } from '@/components/ui/ExportMenu';
 
 
 type BirthdayPerson = ReturnType<typeof useBirthdays>['birthdayPeople'][number];
@@ -130,6 +131,8 @@ export function BirthdaysSection() {
             <input type="text" placeholder="Buscar colaborador" aria-label="Buscar colaborador" value={q} onChange={e => setQ(e.target.value)} />
             <Sel aria-label="Setor" value={sectorF} onChange={e => setSectorF(e.target.value)}><option value="all">Setor: todos</option>{sectors.map(s => <option key={s} value={s}>{s}</option>)}</Sel>
             <button className="dk-btn" onClick={generateMonthlyPdf} disabled={generatingPdf || birthdayPeople.length === 0}><Download size={15} />{generatingPdf ? 'Gerando...' : 'Baixar PDF'}</button>
+            <ExportMenu className="dk-btn" disabled={!birthdayPeople.length} getData={() => ({ name: 'aniversariantes', sheet: 'Aniversariantes', headers: ['Nome', 'Setor', 'Dia', 'Mês'],
+              rows: [...birthdayPeople].sort((x, y) => x.birthMonth - y.birthMonth || x.birthDay - y.birthDay).map((p) => [p.name, p.sector, p.birthDay, p.birthMonth]) })} />
           </div>
         </div>
         {birthdayPeople.length === 0 ? <div className="dk-empty"><b>Nenhum aniversariante</b><div className="dk-sub" style={{ marginTop: 6 }}>Não há aniversariantes neste mês com data cadastrada.</div></div>

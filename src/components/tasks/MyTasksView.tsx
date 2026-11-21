@@ -7,6 +7,7 @@ import { ArrowLeft, Check, ChevronDown, ChevronRight, Loader2, Search } from 'lu
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sel } from '@/components/ui/Sel';
+import { ExportMenu } from '@/components/ui/ExportMenu';
 import '@/styles/board-views.css';
 
 const db = supabase as any;
@@ -80,6 +81,8 @@ export function MyTasksView({ boards, onBack, onOpenTask }: { boards: { id: stri
           <span className="bvx-sp" />
           <label className="mt-srch"><Search className="h-4 w-4" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar card ou mural" aria-label="Buscar" /></label>
           <Sel value={board} onChange={(e) => setBoard(e.target.value)} className="ui-sel min-w-[180px]"><option value="">Todos os murais</option>{boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Sel>
+          <ExportMenu getData={() => ({ name: 'minhas-tarefas', sheet: 'Minhas tarefas', headers: ['Grupo', 'Número', 'Card', 'Mural', 'Status', 'Prioridade', 'Prazo'],
+            rows: (Object.keys(GL) as G[]).flatMap((g) => groups[g].map((t) => [GL[g], t.task_number ?? '', t.title, bname.get(t.board_id) || '', cols.get(t.status)?.title || '', (PRIO[t.priority || 'medium'] || PRIO.medium)[0], t.completed_at ? 'Concluída' : t.due_date ? new Date(t.due_date).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : ''])) })} />
         </div>
         <div className="bvx-scroll">
           {loading ? <div className="bvx-empty"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div> : !rows.length ? (

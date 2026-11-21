@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { appConfirm } from '@/lib/appDialog';
 import { Sel } from '@/components/ui/Sel';
+import { ExportMenu } from '@/components/ui/ExportMenu';
 
 /* Gestão de Pessoas — port of the owner's design "Gestão de pessoas" (Tela_de_Avisos_10): teams on the left, the selected
    team's data on the right (header, KPIs, Equipe / Alertas / Relatórios / Atividades / Score). Atividades keeps its
@@ -184,6 +185,10 @@ export function PeopleManagementSection() {
           {tab === 'team' && (loading || statsLoading ? <div className="gp-act"><ListSkeleton rows={5} /></div> : !members.length ? (
             <div className="gp-empty"><b>Nenhum colaborador nesta equipe</b>Use “Adicionar colaborador” para acompanhar as métricas.</div>
           ) : (<>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 0 2px' }}>
+              <ExportMenu className="gp-btn gp-sm" getData={() => ({ name: `equipe-${selectedTeam?.name || "equipe"}`, sheet: 'Equipe', headers: ['Colaborador', 'E-mail', 'Tarefas', 'Concluídas', 'Mensagens', 'Interações', 'Score'],
+                rows: members.map((m) => { const s = S(m.member_profile_id); return [m.profile.display_name || m.profile.name, m.profile.email || '', s?.tasks ?? 0, s?.completed ?? 0, s?.messages ?? 0, s ? s.messages + s.tasks + s.comments : 0, scoreOf(m.member_profile_id) ?? '']; }) })} />
+            </div>
             <table>
               <thead><tr><th>Colaborador</th><th>Tarefas</th><th>Concluídas</th><th>Mensagens</th><th>Interações</th><th>Score</th><th>Última atividade</th><th /></tr></thead>
               <tbody>
