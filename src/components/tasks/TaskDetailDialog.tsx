@@ -1,11 +1,13 @@
 import { useState, useRef, useCallback } from 'react';
+import { CardApproval } from './CardApproval';
+import { useDbFeature } from '@/hooks/useDbFeature';
 import { CardExtrasPanel } from '@/components/tasks/CardExtrasPanel';
 import { TaskTimeTracker } from '@/components/tasks/TaskTimeTracker';
 import { toast } from 'sonner';
 import {
   ArrowRight, Calendar as CalendarIcon, CheckCircle2, CheckSquare, ChevronDown, ChevronRight,
   Eye, EyeOff, Image, Loader2, MessageSquare, Palette, Plus, Tag, Trash2, Users, X, Zap, Bell, Move, Copy, Layout,
-  Bold, Italic, Strikethrough, List, Type, Minus, Search, Upload, Siren, Signal, MoreHorizontal, Timer, Link as LinkIcon2, Link2
+  Bold, Italic, Strikethrough, List, Type, Minus, Search, Upload, Siren, Signal, MoreHorizontal, Timer, Link as LinkIcon2, Link2, BadgeCheck
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -251,6 +253,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
   // extras (tempo, links, dependências) stay hidden until they have content or the person opens them in "Mais"
   const [extraOpen, setExtraOpen] = useState<Set<string>>(new Set());
   const [moreOpen, setMoreOpen] = useState(false);
+  const hasApprovals = useDbFeature('task_approvals');
   const extraTask = task?.id;
   const [extraFor, setExtraFor] = useState<string | undefined>(extraTask);
   if (extraFor !== extraTask) { setExtraFor(extraTask); setExtraOpen(new Set()); }
@@ -905,7 +908,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
               <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs"><MoreHorizontal className="h-3.5 w-3.5" /> Mais</Button>
             </PopoverTrigger>
             <PopoverContent className="w-60 p-1" align="start">
-              {([['time', Timer, 'Tempo', 'Cronômetro e horas gastas'], ['links', LinkIcon2, 'Links e arquivos', 'Drive, OneDrive, Dropbox, Figma…'], ['deps', Link2, 'Dependências', 'Este card espera outro terminar']] as const).map(([k, Ic, l, h]) => (
+              {([['time', Timer, 'Tempo', 'Cronômetro e horas gastas'], ['links', LinkIcon2, 'Links e arquivos', 'Drive, OneDrive, Dropbox, Figma…'], ['deps', Link2, 'Dependências', 'Este card espera outro terminar'], ['approval', BadgeCheck, 'Aprovação', 'Peça o ok de alguém antes de seguir']] as const).filter(([k]) => k !== 'approval' || hasApprovals).map(([k, Ic, l, h]) => (
                 <button key={k} type="button" className="flex w-full items-start gap-2.5 rounded-md px-2.5 py-2 text-left hover:bg-muted" onClick={() => { setExtraOpen((x) => new Set(x).add(k)); setMoreOpen(false); }}>
                   <Ic className="mt-0.5 h-4 w-4 text-muted-foreground" /><span><span className="block text-sm font-medium">{l}</span><span className="block text-xs text-muted-foreground">{h}</span></span>
                 </button>))}
@@ -1281,6 +1284,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
             {L(renderDescription())}
             {L(renderDecisions())}
             {!task.is_template ? <TaskTimeTracker taskId={task.id} forceOpen={extraOpen.has('time')} /> : null}
+            {!task.is_template && boardId && hasApprovals ? <CardApproval taskId={task.id} columns={(columns || []) as never} users={(allUsers || []) as never} readOnly={warLocked} forceOpen={extraOpen.has('approval')} onClose={() => setExtraOpen((x) => { const n = new Set(x); n.delete('approval'); return n; })} /> : null}
             {!task.is_template && boardId ? <CardExtrasPanel task={task as never} boardId={boardId} readOnly={warLocked} showLinks={extraOpen.has('links')} showDeps={extraOpen.has('deps')} conclusionIds={new Set((columns || []).filter((c) => (c as { is_conclusion?: boolean }).is_conclusion).map((c) => c.id))} /> : null}
             <div className="h-px bg-border mx-4" />
             {renderProgress()}
@@ -1316,6 +1320,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
               {L(renderDescription())}
               {L(renderDecisions())}
               {!task.is_template ? <TaskTimeTracker taskId={task.id} forceOpen={extraOpen.has('time')} /> : null}
+            {!task.is_template && boardId && hasApprovals ? <CardApproval taskId={task.id} columns={(columns || []) as never} users={(allUsers || []) as never} readOnly={warLocked} forceOpen={extraOpen.has('approval')} onClose={() => setExtraOpen((x) => { const n = new Set(x); n.delete('approval'); return n; })} /> : null}
               {!task.is_template && boardId ? <CardExtrasPanel task={task as never} boardId={boardId} readOnly={warLocked} showLinks={extraOpen.has('links')} showDeps={extraOpen.has('deps')} conclusionIds={new Set((columns || []).filter((c) => (c as { is_conclusion?: boolean }).is_conclusion).map((c) => c.id))} /> : null}
               {renderProgress()}
               {renderSubtasks()}

@@ -25,6 +25,7 @@ function useBoardExtrasState(boardId: string | null) {
   const [fields, setFields] = useState<CustomField[]>([]);
   const [values, setValues] = useState<Map<string, unknown>>(new Map());   // key `${task}:${field}`
   const [deps, setDeps] = useState<Dep[]>([]);
+  const [approvals, setApprovals] = useState<Map<string, string>>(new Map());   // task id → approver profile id (pending)
   const load = useCallback(async () => {
     if (!boardId) return;
     const { data: fs } = await db.from('board_custom_fields').select('id,board_id,name,type,options,position,show_on_card').eq('board_id', boardId).order('position');
@@ -41,6 +42,8 @@ function useBoardExtrasState(boardId: string | null) {
     const out: Dep[] = [];
     for (let i = 0; i < ids.length; i += 300) { const { data: ds } = await db.from('task_dependencies').select('task_id,depends_on').in('task_id', ids.slice(i, i + 300)); out.push(...((ds || []) as Dep[])); }
     setDeps(out);
+    const { data: ap } = await db.from('task_approvals').select('task_id,approver_id').eq('board_id', boardId).eq('status', 'pending').limit(2000);
+    setApprovals(new Map(((ap || []) as { task_id: string; approver_id: string }[]).map((a) => [a.task_id, a.approver_id])));
   }, [boardId]);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
@@ -48,6 +51,7 @@ function useBoardExtrasState(boardId: string | null) {
     const ch = supabase.channel('board-extras-' + boardId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'task_field_values' }, () => void load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'task_dependencies' }, () => void load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_approvals', filter: `board_id=eq.${boardId}` }, () => void load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'board_custom_fields', filter: `board_id=eq.${boardId}` }, () => void load())
       .subscribe();
     return () => { void supabase.removeChannel(ch); };
@@ -91,7 +95,7 @@ function useBoardExtrasState(boardId: string | null) {
     const { error } = await db.from('task_dependencies').delete().eq('task_id', taskId).eq('depends_on', dependsOn);
     if (error) { toast.error('Não foi possível remover a dependência.'); void load(); }
   }, [load]);
-  return { fields, valueOf, setValue, saveField, deleteField, moveField, deps, blockersOf, blockingOf, addDep, removeDep, reload: load };
+  return { approvals, fields, valueOf, setValue, saveField, deleteField, moveField, deps, blockersOf, blockingOf, addDep, removeDep, reload: load };
 }
 
 export type BoardExtras = ReturnType<typeof useBoardExtrasState>;

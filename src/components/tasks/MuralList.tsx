@@ -3,7 +3,7 @@
 // Per mural: cards done / total (templates and archived cards excluded; cards without a due date count),
 // overdue cards (not done, due date in the past), members' photos (up to 3 + "+N").
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Edit, Image as ImageIcon, Loader2, MoreVertical, Plus, Trash2 , FileUp, ListChecks, LayoutTemplate } from 'lucide-react';
+import { ChevronDown, Edit, Image as ImageIcon, Loader2, MoreVertical, Plus, Trash2 , FileUp, ListChecks, LayoutTemplate, BarChart3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { SignedStorageImage } from '@/components/common/SignedStorageMedia';
@@ -31,9 +31,10 @@ function Cover({ board }: { board: Board }) {
   return <div className="tm-cover" />;
 }
 
-export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete, onImport, onMyTasks, onTemplates }: {
+export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete, onImport, onMyTasks, onTemplates, onOverview }: {
   onImport?: () => void;
   onMyTasks?: () => void;
+  onOverview?: () => void;
   onTemplates?: () => void;
   boards: Board[];
   userId: string | undefined;
@@ -176,8 +177,17 @@ export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete, 
             </DropdownMenuContent>
           </DropdownMenu>
           {onMyTasks ? <button type="button" className="tm-btn" onClick={onMyTasks} title="Seus cards de todos os murais"><ListChecks className="h-4 w-4" />Minhas tarefas</button> : null}
-          {onTemplates ? <button type="button" className="tm-btn" onClick={onTemplates} title="Criar mural a partir de um modelo pronto"><LayoutTemplate className="h-4 w-4" />Modelos</button> : null}
-          {onImport ? <button type="button" className="tm-btn" onClick={onImport} title="Importar do Trello, ClickUp, Asana ou planilha"><FileUp className="h-4 w-4" />Importar</button> : null}<button type="button" className="tm-btn tm-pri" onClick={openNew}><Plus className="h-4 w-4" />Novo mural</button>
+          {onOverview ? <button type="button" className="tm-btn" onClick={onOverview} title="Andamento de todos os murais"><BarChart3 className="h-4 w-4" />Visão geral</button> : null}
+          {onTemplates || onImport ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><button type="button" className="tm-btn tm-pri"><Plus className="h-4 w-4" />Novo mural<ChevronDown className="h-4 w-4" /></button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuItem onClick={openNew} className="flex items-start gap-2.5 py-2"><Plus className="mt-0.5 h-4 w-4" /><span><b className="block text-sm font-medium">Mural em branco</b><span className="text-xs text-muted-foreground">Comece do zero</span></span></DropdownMenuItem>
+                {onTemplates ? <DropdownMenuItem onClick={onTemplates} className="flex items-start gap-2.5 py-2"><LayoutTemplate className="mt-0.5 h-4 w-4" /><span><b className="block text-sm font-medium">A partir de um modelo</b><span className="text-xs text-muted-foreground">16 modelos prontos por área</span></span></DropdownMenuItem> : null}
+                {onImport ? <DropdownMenuItem onClick={onImport} className="flex items-start gap-2.5 py-2"><FileUp className="mt-0.5 h-4 w-4" /><span><b className="block text-sm font-medium">Importar</b><span className="text-xs text-muted-foreground">Trello, ClickUp, Asana ou planilha</span></span></DropdownMenuItem> : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : <button type="button" className="tm-btn tm-pri" onClick={openNew}><Plus className="h-4 w-4" />Novo mural</button>}
         </div>
       </div>
 

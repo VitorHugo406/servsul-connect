@@ -5,14 +5,18 @@ import { useAuth } from '@/contexts/AuthContext';
 interface NotificationCounts {
   unreadMessages: number;
   unreadAnnouncements: number;
+  /** unread card notifications (prazo, atraso, aprovação, automação) from user_notifications */
+  cardAlerts: number;
   total: number;
 }
+export const CARD_NOTIF_TYPES = ['task_reminder', 'approval', 'automation'];
 
 export function useNotifications() {
   const instanceId = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const [counts, setCounts] = useState<NotificationCounts>({
     unreadMessages: 0,
     unreadAnnouncements: 0,
+    cardAlerts: 0,
     total: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -20,7 +24,7 @@ export function useNotifications() {
 
   const fetchCounts = useCallback(async () => {
     if (!profile || !user) {
-      setCounts({ unreadMessages: 0, unreadAnnouncements: 0, total: 0 });
+      setCounts({ unreadMessages: 0, unreadAnnouncements: 0, cardAlerts: 0, total: 0 });
       setLoading(false);
       return;
     }
@@ -68,11 +72,15 @@ export function useNotifications() {
       const readIds = new Set((readAnnouncements || []).map(r => r.announcement_id));
       const unreadAnnouncements = activeAnnouncements.filter(a => !readIds.has(a.id)).length;
 
-      const total = (unreadMessages || 0) + unreadAnnouncements;
+      const { count: cardAlerts } = await (supabase as any).from('user_notifications').select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id).eq('is_read', false).in('type', CARD_NOTIF_TYPES);
+
+      const total = (unreadMessages || 0) + unreadAnnouncements + (cardAlerts || 0);
 
       setCounts({
         unreadMessages: unreadMessages || 0,
         unreadAnnouncements,
+        cardAlerts: cardAlerts || 0,
         total,
       });
     } catch (error) {
@@ -119,6 +127,13 @@ export function useNotifications() {
       )
       .subscribe();
 
+    // Subscribe to card notifications (lembretes, aprovações)
+    const cardsChannel = supabase
+      .channel(`notification-cards-${instanceId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_notifications', filter: `user_id=eq.${user.id}` }, () => { fetchCounts(); })
+      .subscribe();
+    const poll = window.setInterval(() => { if (!document.hidden) fetchCounts(); }, 120000);
+
     // Subscribe to announcement reads
     const readsChannel = supabase
       .channel(`notification-reads-${instanceId}`)
@@ -136,6 +151,7 @@ export function useNotifications() {
       .subscribe();
 
     return () => {
+      supabase.removeChannel(cardsChannel); window.clearInterval(poll);
       supabase.removeChannel(dmChannel);
       supabase.removeChannel(annChannel);
       supabase.removeChannel(readsChannel);
@@ -239,7 +255,7 @@ export function useNotifications() {
   }, [profile, fetchCounts]);
 
   const resetCounts = useCallback(() => {
-    setCounts({ unreadMessages: 0, unreadAnnouncements: 0, total: 0 });
+    setCounts({ unreadMessages: 0, unreadAnnouncements: 0, cardAlerts: 0, total: 0 });
   }, []);
 
   return { 

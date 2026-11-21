@@ -373,6 +373,13 @@ export function ChatSection({ globalSearch = '' }: { globalSearch?: string }) {
   const dmUnread = conversations.reduce((n, c) => n + (c.unreadCount > 0 ? c.unreadCount : unreadMarks.includes('dm:' + c.partnerId) ? 1 : 0), 0);
   const railBadges = { direct: dmUnread, groups: markCount('group:'), sectors: markCount('sector:'), all: dmUnread + markCount('group:') + markCount('sector:') };
   const callPeopleList = callPeople.map(u => ({ id: u.id, name: u.display_name || u.name, avatar_url: u.avatar_url }));
+  // Busca geral (Ctrl+K) › pessoa: open the direct chat with that colleague
+  useEffect(() => {
+    const go = (id?: string | null) => { if (!id) return; setChatMode('direct'); setSelectedUserId(id); setSelectedGroupId(null); };
+    try { const v = sessionStorage.getItem('ewvon:open-dm'); if (v) { sessionStorage.removeItem('ewvon:open-dm'); go(v); } } catch { /* storage off */ }
+    const h = (e: Event) => { try { sessionStorage.removeItem('ewvon:open-dm'); } catch { /* storage off */ } go((e as CustomEvent<string>).detail); };
+    window.addEventListener('ewvon:open-dm', h); return () => window.removeEventListener('ewvon:open-dm', h);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const openCallConversation = (conv: 'dm' | 'group' | 'sector', target: string) => {
     if (conv === 'dm') { setChatMode('direct'); setSelectedUserId(target); setSelectedGroupId(null); }
     else if (conv === 'group') { setChatMode('groups'); setSelectedGroupId(target); setSelectedUserId(null); }

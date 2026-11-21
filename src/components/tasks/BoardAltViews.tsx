@@ -6,7 +6,7 @@
 //    dragging a card to another day changes its due date (keeps the time).
 // Clicking a card opens the normal card dialog. War Room-locked cards are read-only.
 import { useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, Lock, UserX } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, Lock, UserX, X } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useActiveUsers } from '@/hooks/useDirectMessages';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,9 +36,9 @@ function Av({ p, id }: { p: P | null; id?: string | null }) {
 }
 
 type Upd = Partial<Pick<T, 'priority' | 'due_date' | 'assigned_to'>> & { start_date?: string | null };
-type Acts = { onMove?: (t: T, colId: string) => void; onComplete?: (t: T) => void; onUpdate?: (t: T, u: Upd) => void | Promise<void>; locked?: { has: (id: string) => boolean } };
+type Acts = { onMove?: (t: T, colId: string) => void; onComplete?: (t: T) => void; onUpdate?: (t: T, u: Upd) => void | Promise<void>; onDeleteMany?: (ids: string[]) => Promise<boolean>; locked?: { has: (id: string) => boolean } };
 
-export function BoardAltView({ mode, tasks, columns, onOpen, labelsOf, onMove, onComplete, onUpdate, locked, boardName }: { mode: BoardViewMode; tasks: T[]; columns: C[]; onOpen: (t: T) => void; dark?: boolean; labelsOf?: (taskId: string) => L[]; boardName?: string } & Acts) {
+export function BoardAltView({ mode, tasks, columns, onOpen, labelsOf, onMove, onComplete, onUpdate, onDeleteMany, locked, boardName }: { mode: BoardViewMode; tasks: T[]; columns: C[]; onOpen: (t: T) => void; dark?: boolean; labelsOf?: (taskId: string) => L[]; boardName?: string } & Acts) {
   const { users: others } = useActiveUsers(); const { profile } = useAuth();
   // include yourself, so you can take a card in the Lista (useActiveUsers leaves you out)
   const users = useMemo(() => (profile && !others.some((u) => u.id === profile.id) ? [...others, { id: profile.id, name: profile.name, display_name: profile.display_name, avatar_url: profile.avatar_url } as (typeof others)[number]] : others), [others, profile]);
@@ -53,7 +53,7 @@ export function BoardAltView({ mode, tasks, columns, onOpen, labelsOf, onMove, o
   const late = (t: T) => !!t.due_date && !done(t) && new Date(t.due_date).getTime() < Date.now();
   const live = tasks.filter((t) => !t.is_archived);
   const isLocked = (t: T) => !!locked?.has(t.id);
-  const ctx = { col, cols, person, onOpen, done, late, labelsOf: labelsOf || (() => []), users, isLocked, onMove, onComplete, onUpdate };
+  const ctx = { col, cols, person, onOpen, done, late, labelsOf: labelsOf || (() => []), users, isLocked, onMove, onComplete, onUpdate, onDeleteMany };
   return <div className="bvx">{mode === 'list' ? <ListView tasks={live} {...ctx} /> : mode === 'timeline' ? <TimelineView tasks={live} cols={cols} person={person} onOpen={onOpen} done={done} late={late} isLocked={isLocked} onUpdate={onUpdate} Av={Av} />
     : mode === 'insights' ? <InsightsView tasks={live} cols={cols} person={person} done={done} late={late} boardName={boardName || 'Mural'} Av={Av} />
     : mode === 'workload' ? <WorkloadView tasks={live} cols={cols} users={users} person={person} onOpen={onOpen} done={done} late={late} Av={Av} /> : <CalView tasks={live} {...ctx} />}</div>;
@@ -68,7 +68,16 @@ const ymd = (d?: string | null) => { if (!d) return ''; const x = new Date(d); r
 /** new due date on another day, keeping the old time (or 18:00 when there was none) */
 const withDay = (old: string | null | undefined, y: number, m: number, d: number) => { const o = old ? new Date(old) : null; const n = new Date(y, m, d, o ? o.getHours() : 18, o ? o.getMinutes() : 0); return n.toISOString(); };
 
-function ListView({ tasks, cols, col, person, onOpen, done, late, labelsOf, users, isLocked, onMove, onComplete, onUpdate }: Ctx) {
+function ListView({ tasks, cols, col, person, onOpen, done, late, labelsOf, users, isLocked, onMove, onComplete, onUpdate, onDeleteMany }: Ctx) {
+  // ações em massa: selection by id (only cards still visible in the filter count)
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const picked = tasks.filter((t) => sel.has(t.id));
+  const editable = picked.filter((t) => !isLocked(t));
+  const toggle = (id: string) => setSel((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const allOn = tasks.length > 0 && picked.length === tasks.length;
+  const bulkDate = useRef<HTMLInputElement | null>(null);
+  const runBulk = async (fn: (t: T) => unknown) => { setBulkBusy(true); for (const t of editable) await fn(t); setBulkBusy(false); };
   const ex = useBoardExtras(); const cf = ex?.fields || [];
   const [sort, setSort] = useState<{ k: K; asc: boolean } | null>(null);
   const colPos = (t: T) => cols.findIndex((c) => c.id === t.status);
@@ -81,15 +90,36 @@ function ListView({ tasks, cols, col, person, onOpen, done, late, labelsOf, user
   return (
     <>
       <div className="bvx-bar"><b>Lista</b><span className="bvx-mut">{tasks.length} cards · {tasks.filter(done).length} concluídos</span><span className="bvx-sp" /><span className="bvx-mut">Clique no card para abrir · mude status, responsável, prazo e prioridade direto na linha</span></div>
+      {picked.length ? (
+        <div className="bvx-bulk" role="toolbar" aria-label="Ações em massa">
+          <b>{picked.length} selecionado(s)</b>{editable.length < picked.length ? <span className="bvx-mut">{picked.length - editable.length} bloqueado(s) pela War Room</span> : null}
+          <span className="bvx-sp" />
+          {onMove ? <DropdownMenu><DropdownMenuTrigger asChild><button type="button" className="bvx-btn" disabled={bulkBusy || !editable.length}>Mover para<ChevronDown className="h-3.5 w-3.5" /></button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[200px]">{cols.map((x) => <DropdownMenuItem key={x.id} onSelect={() => void runBulk((t) => t.status !== x.id && onMove(t, x.id))}><span className="mr-2 h-2.5 w-2.5 flex-none rounded-full" style={{ background: x.color || '#8b93a7' }} />{x.title}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu> : null}
+          {onUpdate ? <>
+            <DropdownMenu><DropdownMenuTrigger asChild><button type="button" className="bvx-btn" disabled={bulkBusy || !editable.length}>Responsável<ChevronDown className="h-3.5 w-3.5" /></button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-[320px] min-w-[220px] overflow-y-auto">
+                <DropdownMenuItem onSelect={() => void runBulk((t) => onUpdate(t, { assigned_to: null }))}><UserX className="mr-2 h-4 w-4" />Sem responsável</DropdownMenuItem><DropdownMenuSeparator />
+                {users.map((u) => <DropdownMenuItem key={u.id} onSelect={() => void runBulk((t) => onUpdate(t, { assigned_to: u.id }))}><span className="mr-2"><Av p={{ name: u.display_name || u.name, avatar: u.avatar_url || null }} id={u.id} /></span>{u.display_name || u.name}</DropdownMenuItem>)}
+              </DropdownMenuContent></DropdownMenu>
+            <button type="button" className="bvx-btn" disabled={bulkBusy || !editable.length} onClick={() => { const el = bulkDate.current; try { el?.showPicker(); } catch { el?.focus(); } }}>Prazo</button>
+            <input ref={bulkDate} type="date" className="bvx-hidden-date" tabIndex={-1} aria-label="Prazo dos cards selecionados" onChange={(e) => { const v = e.target.value; e.target.value = ''; if (!v) return; const [y, m, d] = v.split('-').map(Number); void runBulk((t) => onUpdate(t, { due_date: withDay(t.due_date, y, m - 1, d) })); }} />
+            <DropdownMenu><DropdownMenuTrigger asChild><button type="button" className="bvx-btn" disabled={bulkBusy || !editable.length}>Prioridade<ChevronDown className="h-3.5 w-3.5" /></button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">{Object.entries(PRIO).map(([k, v]) => <DropdownMenuItem key={k} onSelect={() => void runBulk((t) => onUpdate(t, { priority: k }))}><span className="bvx-pill" style={pill(v[2])}>{v[0]}</span></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+          </> : null}
+          {onDeleteMany ? <button type="button" className="bvx-btn bvx-danger" disabled={bulkBusy || !editable.length} onClick={async () => { setBulkBusy(true); const ok = await onDeleteMany(editable.map((t) => t.id)); setBulkBusy(false); if (ok) setSel(new Set()); }}>Excluir</button> : null}
+          <button type="button" className="bvx-btn bvx-ibtn" onClick={() => setSel(new Set())} aria-label="Limpar seleção" title="Limpar seleção"><X className="h-4 w-4" /></button>
+        </div>) : null}
       <div className="bvx-scroll">
-        <table className="bvx-tbl">
-          <thead><tr><H k="title">Nome do card</H><H k="status" w={170}>Status</H><H k="who" w={190}>Responsável</H><H k="due" w={130}>Prazo</H><H k="prio" w={120}>Prioridade</H><H w={200}>Etiquetas</H>{cf.map((f) => <H key={f.id} w={150}>{f.name}</H>)}</tr></thead>
+        <table className="bvx-tbl" style={{ minWidth: 1180 + cf.length * 150 }}>
+          <thead><tr><th className="bvx-selh"><input type="checkbox" className="bvx-sel" checked={allOn} ref={(el) => { if (el) el.indeterminate = picked.length > 0 && !allOn; }} onChange={() => setSel(allOn ? new Set() : new Set(tasks.map((t) => t.id)))} aria-label="Selecionar todos" /></th><H k="title" w={320}>Nome do card</H><H k="status" w={170}>Status</H><H k="who" w={190}>Responsável</H><H k="due" w={130}>Prazo</H><H k="prio" w={120}>Prioridade</H><H w={200}>Etiquetas</H>{cf.map((f) => <H key={f.id} w={150}>{f.name}</H>)}</tr></thead>
           <tbody>
             {rows.map((t) => {
               const c = col.get(t.status); const p = PRIO[t.priority || 'medium'] || PRIO.medium; const who = person(t.assigned_to); const labs = labelsOf(t.id); const ok = done(t); const lk = isLocked(t);
               const edit = !lk;
               return (
-                <tr key={t.id} className={`bvx-row ${ok ? 'bvx-done' : ''}`} onClick={() => onOpen(t)}>
+                <tr key={t.id} className={`bvx-row ${ok ? 'bvx-done' : ''} ${sel.has(t.id) ? 'bvx-picked' : ''}`} onClick={() => onOpen(t)}>
+                  <td className="bvx-selh" onClick={stop}><input type="checkbox" className="bvx-sel" checked={sel.has(t.id)} onChange={() => toggle(t.id)} aria-label={`Selecionar card ${t.task_number || ''}`} /></td>
                   <td><div className="bvx-name">
                     <button type="button" className={`bvx-chk ${ok ? 'on' : ''}`} disabled={ok || lk || !onComplete} title={ok ? 'Concluído' : 'Marcar como concluído'} aria-label="Concluir card" onClick={(e) => { stop(e); onComplete?.(t); }}><Check className="h-3 w-3" strokeWidth={3} /></button>
                     {t.task_number ? <span className="bvx-num">#{t.task_number}</span> : null}<span className="t">{t.title}</span>{lk ? <Lock className="h-3.5 w-3.5 flex-none text-muted-foreground" aria-label="Controlado pela War Room" /> : null}
@@ -117,7 +147,7 @@ function ListView({ tasks, cols, col, person, onOpen, done, late, labelsOf, user
                   {cf.map((f) => { const v = fieldText(f, ex?.valueOf(t.id, f.id)); return <td key={f.id} title={v}>{v || <span className="bvx-mut">—</span>}</td>; })}
                 </tr>);
             })}
-            {!tasks.length ? <tr><td colSpan={6 + cf.length} className="bvx-empty" style={{ maxWidth: 'none' }}>Nenhum card neste mural (ou no filtro atual).</td></tr> : null}
+            {!tasks.length ? <tr><td colSpan={7 + cf.length} className="bvx-empty" style={{ maxWidth: 'none' }}>Nenhum card neste mural (ou no filtro atual).</td></tr> : null}
           </tbody>
         </table>
       </div>

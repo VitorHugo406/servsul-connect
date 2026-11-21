@@ -2,6 +2,8 @@ import { AssistantButton } from '@/components/chatbot/AssistantButton';
 import { useCompanyPlan } from '@/hooks/useCompanyPlan';
 import { sectionLock } from '@/lib/planAccess';
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { GlobalSearch } from './GlobalSearch';
+import { CardNotifications } from './CardNotifications';
 import { Box, Search, Bell, ExternalLink, Construction, Plus, Palette, HelpCircle, LayoutDashboard, StickyNote, ListTodo, UsersRound, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -42,7 +44,7 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
   const { plan: companyPlan } = useCompanyPlan(); const isSuperAdminUser = (useAuth().roles || []).some((r: any) => (r.role as string) === 'super_admin');
   const visibleSections = useMemo(() => ALL_SECTIONS.filter(s => { if (sectionLock(s.id, companyPlan, isSuperAdminUser)) return false; if (s.mainAdminOnly) return isAdmin && isMainAdmin; if (s.adminOnly) return isAdmin; if (s.supervisorOnly) return isAdmin || ['supervisor','gerente','gestor','diretoria'].includes(autonomy || ''); if (s.permission) return isAdmin || autonomy === 'diretoria' || canAccess(s.permission); return true; }), [isAdmin, isMainAdmin, autonomy, canAccess, companyPlan, isSuperAdminUser]);
   const filteredSections = useMemo(() => { if (!searchQuery) return []; const q = searchQuery.toLowerCase(); return visibleSections.filter(s => s.label.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)); }, [searchQuery, visibleSections]);
-  const selectSection = (id: string) => { onNavigateToSection?.(id); onSearchChange?.(''); setShowSectionSearch(false); };
+  useEffect(() => { const k = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); setShowSectionSearch((v) => !v); } }; window.addEventListener('keydown', k); const o = () => setShowSectionSearch(true); window.addEventListener('ewvon:global-search', o); return () => { window.removeEventListener('keydown', k); window.removeEventListener('ewvon:global-search', o); }; }, []);
   const showOrbsButton = hasModule('orbs') && (isAdmin || canAccess('can_access_orbs' as any)); const canCreateAnnouncement = isAdmin || canAccess('can_post_announcements');
   const openNewAnnouncement = () => window.dispatchEvent(new CustomEvent('ewvor:open-new-announcement'));
   return (<>
@@ -89,24 +91,12 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
 
         <div className="ewvon-actions flex shrink-0 items-center justify-end gap-1.5">
           <div className="relative">
-            <button type="button" onClick={() => { setShowSectionSearch(value => !value); if (showSectionSearch) onSearchChange?.(''); }}
-              title="Pesquisar abas" aria-label="Pesquisar abas"
+            <button type="button" onClick={() => setShowSectionSearch(true)}
+              title="Buscar (Ctrl+K)" aria-label="Buscar cards, murais, pessoas ou telas"
               className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900">
               <Search className="h-[18px] w-[18px]" strokeWidth={1.8} />
             </button>
-            {showSectionSearch && <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
-              <Input autoFocus placeholder="Buscar uma tela..." value={searchQuery}
-                onChange={event => onSearchChange?.(event.target.value)}
-                className="h-10 rounded-full border-slate-200 bg-slate-50 px-4 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-slate-300" />
-              <div className="mt-2 max-h-72 overflow-y-auto">
-                {filteredSections.length ? filteredSections.map(section => (
-                  <button key={section.id} onMouseDown={event => { event.preventDefault(); selectSection(section.id); }}
-                    className="flex w-full items-start rounded-xl px-3 py-2.5 text-left hover:bg-slate-50">
-                    <div><p className="text-sm font-medium text-slate-800">{section.label}</p><p className="text-xs text-slate-400">{section.description}</p></div>
-                  </button>
-                )) : searchQuery ? <div className="p-4 text-center text-sm text-slate-500">Nenhuma aba encontrada</div> : <p className="p-3 text-xs text-slate-400">Digite para encontrar uma tela.</p>}
-              </div>
-            </div>}
+            <GlobalSearch open={showSectionSearch} onOpenChange={setShowSectionSearch} sections={visibleSections} onSection={(id) => onNavigateToSection?.(id)} />
           </div>
           {title === 'Avisos Gerais' && canCreateAnnouncement && <Button onClick={openNewAnnouncement} size="sm" className="h-9 gap-1.5 rounded-full px-3"><Plus className="h-4 w-4" /><span className="hidden sm:inline">Novo Aviso</span></Button>}
           {title === 'Início' && <SystemShortcutBar onManage={() => onNavigateToSection?.('shortcuts')} />}
@@ -117,7 +107,7 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
           <AssistantButton />
           {!hideNotifications && <Popover open={showNotifications} onOpenChange={setShowNotifications}>
             <PopoverTrigger asChild><Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full text-slate-500 hover:bg-slate-100" title="Notificações"><Bell className="h-[18px] w-[18px]" />{counts.total > 0 && <Badge className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 p-0 text-[9px] text-white">{counts.total > 99 ? '99+' : counts.total}</Badge>}</Button></PopoverTrigger>
-            <PopoverContent className="w-80 rounded-2xl p-0" align="end"><div className="border-b border-border p-4"><h3 className="font-semibold">Notificações</h3></div><ScrollArea className="h-64"><div className="space-y-3 p-4">{counts.unreadMessages > 0 && <div className="rounded-xl bg-muted/50 p-3 text-sm">{counts.unreadMessages} mensagens não lidas</div>}{counts.unreadAnnouncements > 0 && <div className="rounded-xl bg-muted/50 p-3 text-sm">{counts.unreadAnnouncements} avisos não lidos</div>}{counts.total === 0 && <div className="py-8 text-center text-muted-foreground"><Bell className="mx-auto mb-2 h-8 w-8 opacity-50" /><p className="text-sm">Nenhuma notificação</p></div>}</div></ScrollArea></PopoverContent>
+            <PopoverContent className="w-96 rounded-2xl p-0" align="end"><div className="border-b border-border p-4"><h3 className="font-semibold">Notificações</h3></div><ScrollArea className="h-80"><div className="space-y-3 p-3"><CardNotifications onDone={() => setShowNotifications(false)} refreshKey={counts.cardAlerts} />{counts.unreadMessages > 0 && <div className="rounded-xl bg-muted/50 p-3 text-sm">{counts.unreadMessages} mensagens não lidas</div>}{counts.unreadAnnouncements > 0 && <div className="rounded-xl bg-muted/50 p-3 text-sm">{counts.unreadAnnouncements} avisos não lidos</div>}{counts.total === 0 && <div className="py-8 text-center text-muted-foreground"><Bell className="mx-auto mb-2 h-8 w-8 opacity-50" /><p className="text-sm">Nenhuma notificação</p></div>}</div></ScrollArea></PopoverContent>
           </Popover>}
           <button type="button" onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); document.documentElement.style.setProperty("--ewvon-profile-top", `${Math.round(rect.bottom)}px`); document.documentElement.style.setProperty("--ewvon-profile-right", `${Math.max(12, Math.round(window.innerWidth - rect.right))}px`); setShowProfile(true); }} ref={profileButtonRef} className="ml-1 flex h-10 items-center gap-2 rounded-full border border-slate-100 bg-white py-1 pl-1 pr-3 transition-colors hover:bg-slate-50" title="Perfil do usuário">
             <Avatar className="h-8 w-8"><AvatarImage src={profile?.avatar_url || ''} alt={displayName} className="object-cover" /><AvatarFallback className="bg-slate-900 text-[11px] font-semibold text-white">{initials}</AvatarFallback></Avatar>

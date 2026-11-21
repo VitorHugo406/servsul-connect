@@ -2,6 +2,7 @@ import { PublicLinkSection } from '@/components/tasks/PublicLinkSection';
 import { InboundKeySection } from '@/components/tasks/InboundKeySection';
 import { BoardFormSection } from '@/components/tasks/BoardFormSection';
 import { MyTasksView } from '@/components/tasks/MyTasksView';
+import { PortfolioView } from '@/components/tasks/PortfolioView';
 import { BoardExtrasProvider, useBoardExtras, fieldText } from '@/hooks/useBoardExtras';
 import { TemplatesDialog } from '@/components/tasks/TemplatesDialog';
 import { CustomFieldsDialog } from '@/components/tasks/CustomFieldsDialog';
@@ -68,6 +69,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CheckSquare, CheckCircle2, CalendarRange, Columns3, ArrowLeftRight, ChevronUp, Maximize2, Minimize2 } from 'lucide-react';
 import { appConfirm } from '@/lib/appDialog';
+import { TrashList } from '@/components/tasks/TrashList';
+import { useDbFeature } from '@/hooks/useDbFeature';
 
 const slugifyBoardName = (name: string) => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -206,6 +209,10 @@ export function TaskBoardSection() {
     );
   }
 
+  if (location.pathname === '/tarefas/visao-geral') {
+    const openB = (id: string, task?: string) => { const b = boards.find((x) => x.id === id); if (b) navigate('/tarefas/' + slugifyBoardName(b.name) + '-' + b.id + (task ? '?abrir=' + task : '')); };
+    return <PortfolioView boards={boards} onBack={() => navigate('/tarefas')} onOpenBoard={(id) => openB(id)} onOpenTask={(bid, tid) => openB(bid, tid)} />;
+  }
   if (location.pathname === '/tarefas/minhas-tarefas') {
     return <MyTasksView boards={boards} onBack={() => navigate('/tarefas')}
       onOpenTask={(bid, tid) => { const b = boards.find((x) => x.id === bid); if (b) navigate('/tarefas/' + slugifyBoardName(b.name) + '-' + b.id + '?abrir=' + tid); }} />;
@@ -234,6 +241,7 @@ export function TaskBoardSection() {
       <MuralList
         onImport={() => setShowImport(true)}
         onMyTasks={() => navigate('/tarefas/minhas-tarefas')}
+        onOverview={() => navigate('/tarefas/visao-geral')}
         onTemplates={() => setShowTemplates(true)}
         boards={boards as never}
         userId={user?.id}
@@ -405,6 +413,10 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
   const [automationTaskId, setAutomationTaskId] = useState<string | undefined>(undefined);
   const [showOperationMode, setShowOperationMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [archTab, setArchTab] = useState<'archive' | 'trash'>('archive');
+  const hasTrash = useDbFeature('task_trash');
+  const boardSearchRef = useRef<HTMLInputElement>(null);
+  const [showKeys, setShowKeys] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [bgCategory, setBgCategory] = useState('color');
   const boardScrollRef = useRef<HTMLDivElement>(null);
@@ -859,11 +871,30 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
     setShowTemplatePicker(null);
   };
 
-  const handleDeleteTask = async (taskId: string) => {
-    if (!(await appConfirm({ title: 'Excluir esta tarefa?', message: 'Esta ação não pode ser desfeita.', confirmText: 'Excluir', danger: true }))) return;
+  // Atalhos de teclado do mural (PC): N novo card na 1ª coluna · F pesquisar · 1–6 visões · ? lista de atalhos.
+  // Ignored while typing or when a dialog is open.
+  useEffect(() => {
+    if (isMobile) return;
+    const VIEWS: BoardViewMode[] = ['board', 'list', 'calendar', 'timeline', 'workload', 'insights'];
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      if (document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]')) return;
+      const k = e.key;
+      if (k === 'n' || k === 'N') { const first = [...columns].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))[0]; if (first) { e.preventDefault(); openCreateTask(first.id); } }
+      else if (k === 'f' || k === 'F' || k === '/') { e.preventDefault(); boardSearchRef.current?.focus(); }
+      else if (/^[1-6]$/.test(k)) { e.preventDefault(); setBoardView(VIEWS[Number(k) - 1]); if (!showBoard) toggleBoard(); }
+      else if (k === '?') { e.preventDefault(); setShowKeys(true); }
+    };
+    window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
+  }); // re-bound every render so it always sees the current columns/handlers
+
+  const handleDeleteTask = async (taskId: string, isTemplate = false) => {
+    if (!(await appConfirm(isTemplate ? { title: 'Excluir este template?', message: 'Templates não vão para a lixeira: a exclusão é definitiva.', confirmText: 'Excluir', danger: true } : { title: 'Excluir este card?', message: hasTrash ? 'Ele vai para a Lixeira do mural (em Arquivados) e pode ser restaurado por 30 dias.' : 'Esta ação não pode ser desfeita.', confirmText: 'Excluir', danger: true }))) return;
     const { error } = await deleteTask(taskId);
-    if (error) { toast.error('Erro ao excluir tarefa'); return; }
-    toast.success('Tarefa excluída');
+    if (error) { toast.error(/CARD_WAR_ROOM/.test(error.message || '') ? 'Este card está ligado a uma War Room ativa.' : 'Erro ao excluir o card'); return; }
+    toast.success(isTemplate ? 'Template excluído' : hasTrash ? 'Card enviado para a lixeira' : 'Card excluído');
     await refetchTasks();
   };
 
@@ -1259,7 +1290,8 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Pesquisar..."
+              ref={boardSearchRef}
+              placeholder="Pesquisar... (F)"
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setShowSearch(true); }}
               onFocus={() => { if (searchQuery) setShowSearch(true); }}
@@ -1654,6 +1686,13 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
         {showBoard && !isMobile && boardView !== 'board' ? (
           <div className="bvx-full relative z-[1] flex-1 overflow-hidden"><BoardAltView mode={boardView} boardName={board.name} tasks={filteredTasks as never} columns={columns as never} dark={isDarkBg} labelsOf={getTaskLabels as never}
             locked={warLocks}
+            onDeleteMany={async (ids) => {
+              if (!(await appConfirm({ title: `Excluir ${ids.length} card(s)?`, message: hasTrash ? 'Eles vão para a Lixeira do mural (em Arquivados) e podem ser restaurados por 30 dias.' : 'Esta ação não pode ser desfeita.', confirmText: 'Excluir', danger: true }))) return false;
+              let fail = 0; for (const id of ids) { const { error } = await deleteTask(id); if (error) fail++; }
+              await refetchTasks();
+              if (fail) toast.error(`${fail} card(s) não puderam ser excluídos.`); else toast.success(hasTrash ? `${ids.length} card(s) enviados para a lixeira` : `${ids.length} card(s) excluídos`);
+              return true;
+            }}
             onMove={(t, colId) => { const full = tasks.find((x) => x.id === t.id); if (full) moveToColumn(full, colId); }}
             onComplete={(t) => { const full = tasks.find((x) => x.id === t.id); if (full) void handleQuickComplete(full); }}
             onUpdate={async (t, upd) => { if (warLocks.has(t.id)) { toast.error('Card controlado pela War Room.'); return; } const { error } = await updateTask(t.id, upd as never) as { error?: unknown }; if (error) toast.error('Não foi possível alterar o card.'); }}
@@ -2073,6 +2112,9 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                               {!isTaskCompleted && openBlocker(task.id) ? (
                                 <span className="inline-flex items-center text-amber-600" title={`Bloqueado: espera o card #${openBlocker(task.id)?.task_number}`}><LockIcon className="h-3 w-3" /></span>
                               ) : null}
+                              {extras?.approvals.has(task.id) ? (
+                                <span className="inline-flex items-center rounded bg-amber-100 px-1 text-[10px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-200" title="Aguardando aprovação">Aprovação</span>
+                              ) : null}
                               {extras?.fields.filter((f) => f.show_on_card).map((f) => ({ f, v: fieldText(f, extras.valueOf(task.id, f.id)) })).filter((x) => x.v).slice(0, 2).map(({ f, v }) => <span key={f.id} className="max-w-[110px] truncate text-[10px] text-muted-foreground" title={`${f.name}: ${v}`}>{v}</span>)}
                               <div className="flex-1" />
                               {/* Additional Assignees */}
@@ -2263,7 +2305,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                                   }}>
                                     <Repeat className="h-4 w-4 mr-2" /> Auto-duplicar
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteTask(template.id); }} className="text-destructive">
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteTask(template.id, true); }} className="text-destructive">
                                     <Trash2 className="h-4 w-4 mr-2" /> Excluir Template
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -2366,6 +2408,8 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                     {boardView === v ? <Check className="h-4 w-4 text-primary" /> : null}
                   </DropdownMenuItem>
                 ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setShowKeys(true)} className="flex items-center gap-3 p-2 text-sm text-muted-foreground"><span className="w-4 text-center font-semibold">?</span>Atalhos do teclado</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <span className="ewvon-segbar-sep" aria-hidden="true" />
@@ -3104,14 +3148,28 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
         </DialogContent>
       </Dialog>
 
+      <Dialog open={showKeys} onOpenChange={setShowKeys}>
+        <DialogContent className="max-w-sm">
+          <DialogTitle>Atalhos do mural</DialogTitle>
+          <div className="space-y-1.5 text-sm">
+            {([['N', 'Novo card na primeira coluna'], ['F ou /', 'Pesquisar no mural'], ['1', 'Quadro'], ['2', 'Lista'], ['3', 'Calendário'], ['4', 'Linha do tempo'], ['5', 'Carga de trabalho'], ['6', 'Relatórios'], ['Ctrl + K', 'Busca geral (qualquer tela)'], ['?', 'Esta lista']] as const).map(([k, l]) => (
+              <div key={k} className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{l}</span><kbd className="rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-xs font-medium">{k}</kbd></div>))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Archive Sidebar */}
       <Sheet open={showArchive} onOpenChange={setShowArchive}>
         <SheetContent side="right" className="w-[320px] sm:w-[360px] p-0 flex flex-col">
           <SheetHeader className="p-4 border-b border-border">
             <SheetTitle className="flex items-center gap-2">
-              <Archive className="h-5 w-5 text-primary" /> Arquivados
+              <Archive className="h-5 w-5 text-primary" /> {hasTrash ? 'Arquivados e lixeira' : 'Arquivados'}
             </SheetTitle>
+            {hasTrash ? <div className="mt-2 flex gap-1 rounded-lg bg-muted p-1" role="group" aria-label="Mostrar">
+              {(['archive', 'trash'] as const).map((k) => <button key={k} type="button" aria-pressed={archTab === k} onClick={() => setArchTab(k)} className={`h-8 flex-1 rounded-md text-sm font-medium ${archTab === k ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}>{k === 'archive' ? `Arquivados (${archivedTasks.length})` : 'Lixeira'}</button>)}
+            </div> : null}
           </SheetHeader>
+          {archTab === 'trash' && hasTrash ? <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-3"><TrashList boardId={board.id} onRestored={() => void refetchTasks()} /></div> : <>
           {archivedTasks.length > 0 && (
             <div className="px-4 pt-3 space-y-2">
               <Button
@@ -3119,7 +3177,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                 size="sm"
                 className="w-full gap-2"
                 onClick={async () => {
-                  if (!(await appConfirm({ title: `Excluir permanentemente ${archivedTasks.length} card(s) arquivado(s)?`, message: 'Esta ação não pode ser desfeita.', confirmText: 'Excluir todos', danger: true }))) return;
+                  if (!(await appConfirm({ title: `Excluir ${archivedTasks.length} card(s) arquivado(s)?`, message: hasTrash ? 'Eles vão para a Lixeira e podem ser restaurados por 30 dias.' : 'Esta ação não pode ser desfeita.', confirmText: 'Excluir todos', danger: true }))) return;
                   for (const task of archivedTasks) {
                     await deleteTask(task.id);
                   }
@@ -3162,7 +3220,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                     <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleUnarchiveTask(task.id)} title="Restaurar">
                       <ArchiveRestore className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 text-destructive" onClick={() => handleDeleteTask(task.id)} title="Excluir permanentemente">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 text-destructive" onClick={() => handleDeleteTask(task.id)} title={hasTrash ? "Excluir (vai para a lixeira)" : "Excluir permanentemente"}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -3170,6 +3228,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
               </div>
             )}
           </div>
+          </>}
         </SheetContent>
       </Sheet>
 
