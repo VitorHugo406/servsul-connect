@@ -3,6 +3,8 @@ import { reactionBurst } from '@/lib/reactionFx';
 import { useReactionBoom } from './ChatReactionBar';
 import { parseCall, CallMessageCard } from '@/components/video/VideoCallHost';
 import { parseDeletion, DeletionRequestCard } from '@/components/common/DeletionRequestCard';
+import { PollCard, parsePoll } from './extras/ChatPoll';
+import { MessageMoreMenu } from './extras/ChatActions';
 import { VoicePlayer } from '@/components/common/Voice';
 import { parseVoice } from '@/lib/e2e';
 import { StickerMessage, PackCard } from '@/components/common/Stickers';
@@ -145,7 +147,7 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
   };
 
   const renderContent = (content: string, isOwnMsg: boolean) => {
-    const __del = parseDeletion(content); if (__del) return <DeletionRequestCard id={__del} />; const __call = parseCall(content); if (__call) return <CallMessageCard room={__call} own={isOwnMsg} />; const __stk = parseSticker(content); if (__stk) return <StickerMessage sticker={__stk} mine={isOwnMsg} />; const __pk = parsePack(content); if (__pk) return <PackCard id={__pk} mine={isOwnMsg} />; const __vc = parseVoice(content); if (__vc) return <VoicePlayer voice={__vc} />;
+    const __poll = parsePoll(content); if (__poll) return <PollCard id={__poll} />; const __del = parseDeletion(content); if (__del) return <DeletionRequestCard id={__del} />; const __call = parseCall(content); if (__call) return <CallMessageCard room={__call} own={isOwnMsg} />; const __stk = parseSticker(content); if (__stk) return <StickerMessage sticker={__stk} mine={isOwnMsg} />; const __pk = parsePack(content); if (__pk) return <PackCard id={__pk} mine={isOwnMsg} />; const __vc = parseVoice(content); if (__vc) return <VoicePlayer voice={__vc} />;
     const lines = content.split('\n');
     const textLines: string[] = [];
     const attachments: { type: 'image' | 'file'; name: string; url: string }[] = [];
@@ -201,7 +203,7 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
 
         <div className={cn('flex w-full min-w-0 max-w-full items-end gap-1.5', isOwn && 'flex-row-reverse')}>
           <div className="relative w-fit min-w-0 max-w-[90%] sm:max-w-[min(82%,620px)]" style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 160ms ease-out' : 'none' }}>
-            <div onTouchStart={startLongPress} onTouchMove={handleTouchMove} onTouchEnd={finishTouch} onTouchCancel={finishTouch} onContextMenu={(event) => { event.preventDefault(); setIsFocused(true); setShowReactionPicker(false); }} style={{ touchAction: isFocused ? 'none' : 'pan-y' }} className={cn('chat-bubble relative min-w-0 max-w-full select-none', isOwn ? 'chat-bubble-outgoing' : 'chat-bubble-incoming', isFocused && 'z-[110]')}>
+            <div onTouchStart={startLongPress} onTouchMove={handleTouchMove} onTouchEnd={finishTouch} onTouchCancel={finishTouch} onContextMenu={(event) => { event.preventDefault(); setIsFocused(true); setShowReactionPicker(false); }} style={{ touchAction: isFocused ? 'none' : 'pan-y' }} data-msg-id={message.id} className={cn('chat-bubble relative min-w-0 max-w-full select-none', isOwn ? 'chat-bubble-outgoing' : 'chat-bubble-incoming', isFocused && 'z-[110]')}>
               {message.reply_to && <div className={cn('mb-1.5 max-w-full rounded-2xl px-2 py-1 text-[10px] border-l-2 cursor-pointer transition-colors sm:mb-2 sm:py-1.5 sm:text-xs', 'bg-muted/60 border-primary/50 hover:bg-muted')} onClick={() => message.reply_to?.id && onScrollToMessage?.(message.reply_to.id)}>
                 <span className="font-semibold">{message.reply_to.reply_author?.display_name || message.reply_to.reply_author?.name || 'Usuário'}</span>
                 <p className="mt-0.5 truncate opacity-80">{message.reply_to.content.substring(0, 100)}</p>
@@ -223,6 +225,7 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
                 <ChatEmojiGrid emojis={QUICK_REACTIONS} onSelect={selectReaction} label="Escolher reação" />
               </PopoverContent>
             </Popover>
+            <MessageMoreMenu bare msg={{ id: message.id, content: message.content, created_at: message.created_at, authorName: isOwn ? 'Você' : displayName }} align={isOwn ? 'end' : 'start'} />
           </div>
         </div>
 

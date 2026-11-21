@@ -35,7 +35,7 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { PRIORITIES, getInitials, getCoverDisplay } from './taskConstants';
 import { TaskCompletionReport } from './TaskCompletionReport';
 import { SubtaskList } from './SubtaskList';
-import { SignedStorageImage } from '@/components/common/SignedStorageMedia';
+import { SignedStorageImage, SignedStorageLink } from '@/components/common/SignedStorageMedia';
 import { cn } from '@/lib/utils';
 
 // Colorblind patterns as SVG data URIs
@@ -97,6 +97,14 @@ const ACTIVITY_ICONS: Record<string, any> = {
 // Simple rich text renderer for descriptions
 function RichDescription({ text }: { text: string }) {
   const processLine = (line: string, idx: number) => {
+    // attachments copied from a chat message ("📷 [name](url)" / "📎 [name](url)") open like in the chat
+    const att = line.match(/^(📷|📎) \[(.+?)\]\((.+?)\)$/);
+    if (att) return (
+      <SignedStorageLink key={idx} url={att[3]} className="flex w-fit max-w-full items-center gap-2 rounded-[10px] border border-border bg-muted/40 px-2.5 py-1.5 text-sm hover:bg-muted">
+        {att[1] === '📷' ? <SignedStorageImage url={att[3]} alt={att[2]} className="h-10 w-10 rounded-md object-cover" /> : <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-[10px] font-bold uppercase text-primary">{att[2].split('.').pop()?.slice(0, 4) || 'ARQ'}</span>}
+        <span className="min-w-0 truncate">{att[2]}</span>
+      </SignedStorageLink>
+    );
     const parts: React.ReactNode[] = [];
     let remaining = line;
     let key = 0;
