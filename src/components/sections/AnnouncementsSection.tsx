@@ -16,6 +16,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from 'sonner';
 import { appConfirm } from '@/lib/appDialog';
 import { Sel } from '@/components/ui/Sel';
+import { useAnnouncementExtras, SectorPicker, useSectorNames, AckStatusDialog, AnnouncementDetailDialog } from '@/components/announcements/AnnouncementExtras';
+import { PollEditor, createPoll, emptyPoll, pollReady, type PollDraft } from '@/components/chat/extras/ChatPoll';
+import { ShieldCheck, BarChart3, CheckCircle2 } from 'lucide-react';
 
 type Priority = 'normal' | 'important' | 'urgent';
 type Status = 'active' | 'scheduled' | 'expired';
@@ -65,8 +68,15 @@ export function AnnouncementsSection() {
   const [isPinned, setIsPinned] = useState(false);
   const [startAt, setStartAt] = useState('');
   const [expireAt, setExpireAt] = useState('');
+  const [requireAck, setRequireAck] = useState(false);
+  const [targets, setTargets] = useState<string[]>([]);
+  const [withPoll, setWithPoll] = useState(false);
+  const [poll, setPoll] = useState<PollDraft>(emptyPoll);
+  const [detail, setDetail] = useState<any | null>(null);
+  const [ackFor, setAckFor] = useState<any | null>(null);
+  const sectorNames = useSectorNames();
 
-  const openNew = () => { setEditingId(null); setTitle(''); setContent(''); setPriority('normal'); setIsPinned(false); setStartAt(''); setExpireAt(''); setShowForm(true); };
+  const openNew = () => { setEditingId(null); setTitle(''); setContent(''); setPriority('normal'); setIsPinned(false); setStartAt(''); setExpireAt(''); setRequireAck(false); setTargets([]); setWithPoll(false); setPoll(emptyPoll()); setShowForm(true); };
   // The create action also lives in the main site header (UI event, so the header knows nothing about this form).
   useEffect(() => {
     const handler = () => { if (canManageAnnouncements) openNew(); };
@@ -75,7 +85,7 @@ export function AnnouncementsSection() {
   }, [canManageAnnouncements]);
 
   const localInput = (iso?: string | null) => { if (!iso) return ''; const d = new Date(iso); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
-  const openEdit = (a: any) => { setEditingId(a.id); setTitle(a.title); setContent(a.content); setPriority((a.priority as Priority) || 'normal'); setIsPinned(!!a.is_pinned); setStartAt(localInput(a.start_at || a.created_at)); setExpireAt(localInput(a.expire_at)); setShowForm(true); window.scrollTo?.({ top: 0, behavior: 'smooth' }); };
+  const openEdit = (a: any) => { setEditingId(a.id); setTitle(a.title); setContent(a.content); setPriority((a.priority as Priority) || 'normal'); setIsPinned(!!a.is_pinned); setStartAt(localInput(a.start_at || a.created_at)); setExpireAt(localInput(a.expire_at)); setRequireAck(!!a.require_ack); setTargets(Array.isArray(a.target_sectors) ? a.target_sectors : []); setWithPoll(false); setPoll(emptyPoll()); setShowForm(true); window.scrollTo?.({ top: 0, behavior: 'smooth' }); };
 
   useEffect(() => { if (showForm && !startAt) { setStartAt(localInput(new Date().toISOString())); } }, [showForm, startAt]);
 
@@ -103,6 +113,8 @@ export function AnnouncementsSection() {
     return () => { live = false; };
   }, [idsKey, canManageAnnouncements]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const extras = useAnnouncementExtras(rows.map(r => r.a.id));
+  const audience = (a: any) => Array.isArray(a.target_sectors) && a.target_sectors.length ? a.target_sectors.map((id: string) => sectorNames.get(id) || 'Setor').join(', ') : 'Todos os usuários';
   const counts = { all: rows.length, active: announcements.length, scheduled: scheduledAnnouncements.length, expired: expiredAnnouncements.length };
   const filtered = rows.filter(r => (tab === 'all' || r.status === tab) && (typeF === 'all' || r.a.priority === typeF) && (!q.trim() || String(r.a.title).toLowerCase().includes(q.trim().toLowerCase())));
   const groups = (['active', 'scheduled', 'expired'] as Status[]).map(s => ({ s, items: filtered.filter(r => r.status === s) })).filter(g => g.items.length);
@@ -138,13 +150,20 @@ export function AnnouncementsSection() {
     if (!startAt) { toast.error('Data de início é obrigatória'); return; }
     if (expireAt && new Date(expireAt) <= new Date()) { toast.error('A data de término já passou: o aviso nasceria expirado e ninguém o veria. Escolha uma data futura ou deixe em branco.'); return; }
     if (expireAt && new Date(expireAt) <= new Date(startAt)) { toast.error('O término precisa ser depois do início.'); return; }
+    if (withPoll && !pollReady(poll)) { toast.error('Complete a enquete: pergunta e pelo menos duas opções.'); return; }
     setFormLoading(true);
     const start = new Date(startAt).toISOString(), end = expireAt ? new Date(expireAt).toISOString() : null;
-    const { error } = editingId
-      ? await updateAnnouncement(editingId, { title, content, priority, is_pinned: isPinned, start_at: start, expire_at: end })
-      : await createAnnouncement(title, content, priority, isPinned, start, end);
+    const extra = extras.ackOn ? { require_ack: requireAck, target_sectors: targets.length ? targets : null } : {};
+    let savedId = editingId;
+    let error: unknown = null;
+    if (editingId) ({ error } = await updateAnnouncement(editingId, { title, content, priority, is_pinned: isPinned, start_at: start, expire_at: end, ...extra }));
+    else { const r = await createAnnouncement(title, content, priority, isPinned, start, end, extra); error = r.error; savedId = (r.data as any)?.id || null; }
+    if (!error && withPoll && savedId && extras.pollsOn && !extras.polls.has(savedId)) {
+      try { await createPoll('announcement', savedId, poll); } catch { toast.error('O aviso foi salvo, mas a enquete não pôde ser criada.'); }
+    }
     if (error) { console.error('Error saving announcement:', error); toast.error('Erro ao salvar aviso. Verifique suas permissões.'); }
     else {
+      void extras.reload();
       toast.success(editingId ? 'Aviso atualizado' : new Date(startAt) > new Date() ? 'Aviso agendado com sucesso!' : 'Aviso publicado com sucesso!');
       setShowForm(false); setEditingId(null); void reload();
     }
@@ -160,9 +179,9 @@ export function AnnouncementsSection() {
     return (
       <tr key={a.id} className={status === 'expired' ? 'dk-exp' : undefined}>
         {canManageAnnouncements && <td><input type="checkbox" aria-label="Selecionar" checked={sel.has(a.id)} onChange={() => setSel(prev => { const n = new Set(prev); n.has(a.id) ? n.delete(a.id) : n.add(a.id); return n; })} /></td>}
-        <td><div className="dk-ti">{a.is_pinned && <Pin className="mr-1.5 inline h-3.5 w-3.5 text-primary" aria-label="Fixado" />}{a.title}</div><div className="dk-su" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.content}</div></td>
+        <td><div className="dk-ti" role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={() => setDetail(a)} onKeyDown={e => { if (e.key === 'Enter') setDetail(a); }}>{a.is_pinned && <Pin className="mr-1.5 inline h-3.5 w-3.5 text-primary" aria-label="Fixado" />}{a.title}{extras.polls.has(a.id) ? <BarChart3 className="ml-1.5 inline h-3.5 w-3.5 text-muted-foreground" aria-label="Tem enquete" /> : null}{a.require_ack ? (extras.acked.has(a.id) ? <span className="dk-st dk-s1" style={{ marginLeft: 8 }}><CheckCircle2 className="mr-1 inline h-3 w-3" />Lido</span> : <span className="dk-st dk-s2" style={{ marginLeft: 8 }}><ShieldCheck className="mr-1 inline h-3 w-3" />Confirmar leitura</span>) : null}</div><div className="dk-su" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.content}</div></td>
         <td><span className={`dk-ty ${PRIORITY[a.priority]?.cls || 'dk-gy'}`}>{PRIORITY[a.priority]?.label || 'Geral'}</span></td>
-        {canManageAnnouncements && <td>Todos os usuários</td>}
+        {canManageAnnouncements && <td>{audience(a)}</td>}
         <td>{v.main}<div className="dk-sub">{v.sub}</div></td>
         {canManageAnnouncements && <td>{status === 'scheduled' || !st ? '—' : <div className="dk-rd"><div className="dk-rb"><i style={{ width: `${pct}%` }} /></div>{st.reads}/{st.total}</div>}</td>}
         {canManageAnnouncements ? <td><span className={`dk-st ${STATUS[status].cls}`}>{STATUS[status].label}</span></td> : <td>{a.author?.display_name || a.author?.name || '—'}</td>}
@@ -172,6 +191,7 @@ export function AnnouncementsSection() {
             <DropdownMenuTrigger asChild><button className="dk-ic" aria-label="Mais ações"><MoreVertical size={17} /></button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => togglePin(a)}><Pin className="mr-2 h-4 w-4" />{a.is_pinned ? 'Desafixar' : 'Fixar no topo'}</DropdownMenuItem>
+              {a.require_ack ? <DropdownMenuItem onClick={() => setAckFor(a)}><ShieldCheck className="mr-2 h-4 w-4" />Confirmações de leitura</DropdownMenuItem> : null}
               {canDelete(a.author_id) && <DropdownMenuItem className="text-destructive" onClick={() => handleDelete([a.id])}><Trash2 className="mr-2 h-4 w-4" />Excluir</DropdownMenuItem>}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -200,6 +220,14 @@ export function AnnouncementsSection() {
                     <Select value={priority} onValueChange={v => setPriority(v as Priority)}><SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="normal">Normal</SelectItem><SelectItem value="important">Importante</SelectItem><SelectItem value="urgent">Urgente</SelectItem></SelectContent></Select></div>
                   <div className="flex items-center gap-3 pt-0 sm:pt-6"><Switch id="pinned" checked={isPinned} onCheckedChange={setIsPinned} /><Label htmlFor="pinned" className="cursor-pointer"><Pin className="mr-1 inline h-4 w-4" />Fixar no topo</Label></div>
                 </div>
+                {extras.ackOn ? <>
+                  <div className="space-y-2"><Label>Quem vê este aviso</Label><SectorPicker value={targets} onChange={setTargets} /><p className="dk-hp">{targets.length ? 'Só as pessoas dos setores escolhidos (e você) verão o aviso.' : 'Todos os colaboradores da empresa.'}</p></div>
+                  <div className="flex items-start gap-3"><Switch id="requireAck" checked={requireAck} onCheckedChange={setRequireAck} /><Label htmlFor="requireAck" className="cursor-pointer"><ShieldCheck className="mr-1 inline h-4 w-4" />Exigir confirmação de leitura<span className="dk-hp block font-normal">Cada pessoa confirma com “Li e concordo” e você vê quem ainda não confirmou.</span></Label></div>
+                </> : null}
+                {extras.pollsOn && !(editingId && extras.polls.has(editingId)) ? <>
+                  <div className="flex items-center gap-3"><Switch id="withPoll" checked={withPoll} onCheckedChange={setWithPoll} /><Label htmlFor="withPoll" className="cursor-pointer"><BarChart3 className="mr-1 inline h-4 w-4" />Incluir enquete no aviso</Label></div>
+                  {withPoll ? <div className="rounded-[12px] border border-border p-3"><PollEditor value={poll} onChange={setPoll} /></div> : null}
+                </> : null}
                 <Button type="submit" disabled={formLoading} className="h-11 w-full gap-2 rounded-full" style={{ background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}>
                   {formLoading ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <><Send className="h-4 w-4" />{editingId ? 'Salvar alterações' : startAt && new Date(startAt) > new Date() ? 'Agendar aviso' : 'Publicar aviso'}</>}
                 </Button>
@@ -244,6 +272,8 @@ export function AnnouncementsSection() {
         )}
         <div className="dk-ft"><span>Exibindo {filtered.length} de {rows.length} avisos</span><span>Ordenado por situação e data de vigência</span></div>
       </div>
+      <AnnouncementDetailDialog a={detail} open={!!detail} onOpenChange={o => { if (!o) setDetail(null); }} pollId={detail ? extras.polls.get(detail.id) : undefined} ackedAt={detail ? extras.acked.get(detail.id) : undefined} onAcked={() => void extras.reload()} audience={detail ? audience(detail) : ''} />
+      <AckStatusDialog id={ackFor?.id || null} title={ackFor?.title || ''} open={!!ackFor} onOpenChange={o => { if (!o) setAckFor(null); }} />
     </motion.div>
   );
 }

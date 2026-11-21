@@ -38,7 +38,7 @@ export interface Chat {
   m: Msg[]; loaded: boolean; set: ChatSet; wp: string | null; canEdit: boolean; canSummary: boolean;
   sum?: Summary; welcome?: boolean;
 }
-export interface Notice { id: string; title: string; body: string; preview: string; at: string; unread: boolean; acked: boolean; pinned: boolean; author: string; priority: string; authorId?: string; expiresAt?: string | null }
+export interface Notice { id: string; title: string; body: string; preview: string; at: string; unread: boolean; acked: boolean; pinned: boolean; author: string; priority: string; authorId?: string; expiresAt?: string | null; mustAck?: boolean; pollId?: string }
 export interface Ticket { id: string; num: number; t: string; s: string; c: string; d: string; who?: string | null }
 export interface DeskTicket {
   id: number; label: string; companyId: string; companyName: string; reporterId: string; reporterName: string; reporterEmail: string;
@@ -136,7 +136,7 @@ export async function bootstrap(opts: {
     sb.from('private_groups').select('id,name,description,avatar_url,cover_url,wallpaper,automations,created_by,updated_at').eq('company_id', companyId),
     sb.from('user_preferences').select('data').eq('profile_id', profileId).maybeSingle(),
     sb.from('chat_member_prefs').select('*').eq('profile_id', profileId),
-    sb.from('announcements').select('id,title,content,priority,is_pinned,created_at,start_at,expire_at,author_id').eq('company_id', companyId)
+    sb.from('announcements').select('*').eq('company_id', companyId)
       .or(`start_at.is.null,start_at.lte.${nowIso}`).or(`expire_at.is.null,expire_at.gt.${nowIso}`)
       .order('is_pinned', { ascending: false }).order('created_at', { ascending: false }).limit(60),
     authUserId ? sb.from('announcement_reads').select('announcement_id,acked_at').eq('user_id', authUserId) : Promise.resolve({ data: [] }),
@@ -254,11 +254,16 @@ export async function bootstrap(opts: {
 
   // --- notices
   const reads = new Map<string, Row>((readsR.data || []).map((r: Row) => [r.announcement_id, r]));
+  // polls inside announcements (table from migration 20261121010000; an error just means there are none yet)
+  const noticeIds = (noticesR.data || []).map((a: Row) => a.id);
+  const pollsR = noticeIds.length ? await sb.from('polls').select('id,context_key').eq('context', 'announcement').in('context_key', noticeIds) : { data: [] };
+  const pollOf = new Map<string, string>(((pollsR as { data: Row[] | null }).data || []).map((p: Row) => [p.context_key, p.id]));
   const notices: Notice[] = (noticesR.data || []).map((a: Row) => {
     const body = String(a.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     return {
       id: a.id, title: a.title, body, preview: body.slice(0, 80), at: a.created_at, unread: !reads.has(a.id), acked: !!reads.get(a.id)?.acked_at,
       pinned: !!a.is_pinned, author: people[a.author_id]?.n || 'Administração', priority: a.priority || 'normal', authorId: a.author_id, expiresAt: a.expire_at || null,
+      mustAck: !!a.require_ack, pollId: pollOf.get(a.id),
     };
   });
 

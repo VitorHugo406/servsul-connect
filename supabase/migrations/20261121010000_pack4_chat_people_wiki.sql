@@ -1,7 +1,8 @@
 -- Competitive pack 4 (one migration = one approval). Everything is company-scoped and protected by RLS.
 --  A. Chat: pinned messages, polls (also used in announcements), scheduled messages (cron every minute).
 --     Conversation keys: 'sector:<id>', 'group:<id>', 'dm:<profileA>:<profileB>' (A < B, the same key for both people).
---  B. Avisos: read confirmation ("Li e concordo") + list of who has not confirmed, target sectors.
+--  B. Avisos: required reading confirmation ("Li e concordo", stored in announcement_reads.acked_at) + list of who has
+--     not confirmed, target sectors.
 --  C. Agenda: public booking page (/agendar/<token>), meeting agenda/minutes with action items, room QR check-in.
 --  D. Pessoas: time off (férias e ausências) with manager approval, climate/eNPS surveys (anonymous), 1:1 meetings,
 --     praise/feedback, individual goals linked to evaluations, automatic onboarding switch.
@@ -266,23 +267,8 @@ drop policy if exists "Same company can view announcements" on public.announceme
 create policy "Same company can view announcements" on public.announcements for select
   using (((select auth.uid()) is not null) and public.same_company(company_id) and public.announcement_visible(target_sectors, author_id));
 
-create table if not exists public.announcement_acks (
-  announcement_id uuid not null references public.announcements(id) on delete cascade,
-  profile_id uuid not null default public.get_current_profile_id() references public.profiles(id) on delete cascade,
-  acked_at timestamptz not null default now(),
-  primary key (announcement_id, profile_id)
-);
-alter table public.announcement_acks enable row level security;
-drop policy if exists "See own or as author" on public.announcement_acks;
-create policy "See own or as author" on public.announcement_acks for select to authenticated
-  using (profile_id = public.get_current_profile_id() or exists (select 1 from public.announcements a where a.id = announcement_id
-         and public.same_company(a.company_id) and (a.author_id = public.get_current_profile_id() or public.is_admin())));
-drop policy if exists "Confirm reading" on public.announcement_acks;
-create policy "Confirm reading" on public.announcement_acks for insert to authenticated
-  with check (profile_id = public.get_current_profile_id() and exists (select 1 from public.announcements a where a.id = announcement_id
-              and public.same_company(a.company_id) and a.require_ack and public.announcement_visible(a.target_sectors, a.author_id)));
-grant select, insert on public.announcement_acks to authenticated;
-
+-- The confirmation itself is announcement_reads.acked_at (the same "Ciente" the mobile app already writes), so a
+-- reading confirmed on the phone or on the computer counts once.
 /** Who must confirm an announcement and whether they did (author/admin only). */
 create or replace function public.announcement_ack_status(_id uuid)
 returns table (profile_id uuid, name text, sector text, avatar_url text, acked_at timestamptz)
@@ -294,7 +280,7 @@ begin
   return query
     select p.id, coalesce(nullif(p.display_name, ''), p.name), s.name, p.avatar_url, k.acked_at
     from public.profiles p left join public.sectors s on s.id = p.sector_id
-    left join public.announcement_acks k on k.announcement_id = _id and k.profile_id = p.id
+    left join public.announcement_reads k on k.announcement_id = _id and k.user_id = p.user_id and k.acked_at is not null
     where p.company_id = a.company_id and p.is_active and coalesce(p.profile_type, 'user') <> 'system'
       and (a.target_sectors is null or cardinality(a.target_sectors) = 0 or p.sector_id = any(a.target_sectors)
            or '00000000-0000-0000-0000-000000000001'::uuid = any(a.target_sectors)

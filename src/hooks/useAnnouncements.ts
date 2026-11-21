@@ -129,9 +129,11 @@ export function useAnnouncements() {
     priority: 'normal' | 'important' | 'urgent' = 'normal',
     isPinned: boolean = false,
     startAt?: string | null,
-    expireAt?: string | null
+    expireAt?: string | null,
+    /** require_ack / target_sectors (migration 20261121010000) — only sent when the screen knows they exist. */
+    extra?: Record<string, unknown>
   ) => {
-    if (!profile) return { error: new Error('Not authenticated') };
+    if (!profile) return { error: new Error('Not authenticated'), data: null };
 
     const { data, error } = await supabase.from('announcements').insert(withCompany({
       title,
@@ -141,6 +143,7 @@ export function useAnnouncements() {
       is_pinned: isPinned,
       start_at: startAt || new Date().toISOString(),
       expire_at: expireAt || null,
+      ...(extra || {}),
     })).select().single();
 
     // Send email notification in background
@@ -153,7 +156,7 @@ export function useAnnouncements() {
       });
     }
 
-    return { error };
+    return { error, data };
   };
 
   const updateAnnouncement = async (
@@ -165,9 +168,12 @@ export function useAnnouncements() {
       is_pinned?: boolean;
       start_at?: string | null;
       expire_at?: string | null;
+      require_ack?: boolean;
+      target_sectors?: string[] | null;
     }
   ) => {
-    const { error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
       .from('announcements')
       .update(updates)
       .eq('id', id);
