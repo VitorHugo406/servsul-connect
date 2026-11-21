@@ -37,15 +37,23 @@ Deno.serve(async (req) => {
     const { data: me } = await admin.from('profiles').select('id, company_id, name, display_name').eq('user_id', user.id).eq('is_active', true).maybeSingle()
     if (!me) return json({ error: 'Perfil não encontrado' }, 403)
 
-    const { data: a } = await admin.from('announcements').select('id, title, content, priority, author_id, company_id, created_at').eq('id', announcementId).maybeSingle()
+    // '*' so target_sectors / require_ack come along once migration 20261121010000 exists
+    const { data: a } = await admin.from('announcements').select('*').eq('id', announcementId).maybeSingle()
     if (!a || a.author_id !== me.id || a.company_id !== me.company_id) return json({ error: 'Aviso não encontrado' }, 404)
     if (Date.now() - new Date(a.created_at).getTime() > 15 * 60e3) return json({ error: 'Aviso antigo demais para disparo' }, 400)
 
-    const [{ data: company }, { data: people }] = await Promise.all([
+    // Announcements for chosen sectors only reach people of those sectors (main or additional) and the author.
+    const GERAL = '00000000-0000-0000-0000-000000000001'
+    const targets: string[] = Array.isArray(a.target_sectors) ? a.target_sectors : []
+    const limited = targets.length > 0 && !targets.includes(GERAL)
+    const [{ data: company }, { data: people }, { data: extra }] = await Promise.all([
       admin.from('companies').select('name').eq('id', a.company_id).maybeSingle(),
-      admin.from('profiles').select('email').eq('company_id', a.company_id).eq('is_active', true).neq('profile_type', 'bot'),
+      admin.from('profiles').select('email, user_id, sector_id').eq('company_id', a.company_id).eq('is_active', true).neq('profile_type', 'bot'),
+      limited ? admin.from('user_additional_sectors').select('user_id').in('sector_id', targets) : Promise.resolve({ data: [] as { user_id: string }[] }),
     ])
-    const emails = (people || []).map((p: { email: string | null }) => p.email || '').filter(Boolean)
+    const alsoIn = new Set((extra || []).map((x: { user_id: string }) => x.user_id))
+    const emails = (people || []).filter((p: { user_id: string; sector_id: string | null }) => !limited || targets.includes(p.sector_id || '') || alsoIn.has(p.user_id) || p.user_id === user.id)
+      .map((p: { email: string | null }) => p.email || '').filter(Boolean)
     if (!emails.length) return json({ error: 'Nenhum destinatário' }, 400)
 
     const p = PRIORITY[a.priority] || PRIORITY.normal
@@ -60,6 +68,7 @@ Deno.serve(async (req) => {
     <h1 style="margin:14px 0 0;font-size:24px;line-height:1.25;color:#09090b">${esc(a.title)}</h1>
   </td></tr>
   <tr><td style="padding:12px 28px 24px;color:#3f3f46;font-size:15px;line-height:1.65;white-space:pre-wrap">${esc(a.content)}</td></tr>
+  ${a.require_ack ? `<tr><td style="padding:0 28px 20px"><div style="padding:12px 14px;border-radius:12px;background:#f4f4f5;color:#18181b;font-size:14px"><b>Confirmação de leitura obrigatória.</b> Abra o ewvon e toque em “Li e concordo” neste aviso.</div></td></tr>` : ''}
   <tr><td style="padding:16px 28px;border-top:1px solid #f4f4f5;color:#71717a;font-size:13px">Publicado por <b style="color:#18181b">${esc(author)}</b> · ${esc(when)}</td></tr>
 </table>`
     const sent = await sendBulk(emails, { subject: `${p.label}: ${a.title}`, html: layout(inner, a.content.slice(0, 120)), fromName: companyName })

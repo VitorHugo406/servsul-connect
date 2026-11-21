@@ -74,11 +74,16 @@ Deno.serve(async (req) => {
     payload = { kind: 'message', title: sector?.name || 'Setor', body: `${nm(from).split(' ')[0]}: ${preview(r.content)}`, icon: IC.sector, tag: `sector:${r.sector_id}`, url: `/?chat=${encodeURIComponent(`sector:${r.sector_id}`)}`, sender: nm(from) }
   } else if (table === 'announcements') {
     if (r.start_at && new Date(r.start_at).getTime() > Date.now() + 60_000) return json({ skipped: 'scheduled' })
-    const [{ data: people }, { data: company }] = await Promise.all([
-      admin.from('profiles').select('id').eq('company_id', r.company_id).eq('is_active', true),
+    // Announcements for chosen sectors (target_sectors) only reach people of those sectors (main or additional).
+    const targets: string[] = Array.isArray(r.target_sectors) ? r.target_sectors : []
+    const limited = targets.length > 0 && !targets.includes(GERAL)
+    const [{ data: people }, { data: company }, { data: extra }] = await Promise.all([
+      admin.from('profiles').select('id, user_id, sector_id').eq('company_id', r.company_id).eq('is_active', true),
       admin.from('companies').select('name, logo_url').eq('id', r.company_id).maybeSingle(),
+      limited ? admin.from('user_additional_sectors').select('user_id').in('sector_id', targets) : Promise.resolve({ data: [] as Row[] }),
     ])
-    recipients = (people || []).map((p: Row) => p.id)
+    const alsoIn = new Set((extra || []).map((x: Row) => x.user_id))
+    recipients = (people || []).filter((p: Row) => !limited || targets.includes(p.sector_id) || alsoIn.has(p.user_id)).map((p: Row) => p.id)
     const urgent = r.priority === 'urgent' || r.priority === 'high' || r.is_pinned
     payload = { kind: 'notice', title: `📢 ${r.title}`, body: String(r.content || '').replace(/\s+/g, ' ').slice(0, 180), icon: IC.notice, tag: `notice:${r.id}`, url: '/?tab=notices', urgent, company: company?.name || 'ewvon' }
   } else if (table === 'birthday_daily') {
