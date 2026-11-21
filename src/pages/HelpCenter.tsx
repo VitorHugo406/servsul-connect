@@ -54,7 +54,7 @@ function Frame({ title, children }: { title: string; children: React.ReactNode }
   useEffect(() => { document.title = `${title} | ewvon`; }, [title]);
   return (
     <div className="legal-page">
-      <header className="legal-top"><Link to="/" className="legal-brand">ewvon</Link><nav><Link to="/guia">Guia passo a passo</Link><Link to="/ajuda">Ajuda</Link><Link to="/status">Status</Link><Link to="/termos">Termos</Link><Link to="/privacidade">Privacidade</Link></nav></header>
+      <header className="legal-top"><Link to="/" className="legal-brand">ewvon</Link><nav><a href="/guia/">Guia de funcionalidades</a><Link to="/ajuda">Ajuda</Link><Link to="/status">Status</Link><Link to="/termos">Termos</Link><Link to="/privacidade">Privacidade</Link></nav></header>
       <main>{children}</main>
       <footer className="legal-foot">© {new Date().getFullYear()} ewvon · Dúvidas, sugestões e suporte: {LEGAL.email}</footer>
     </div>

@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronRight, Lightbulb, Search, ThumbsDown, ThumbsUp, X } from 'lucide-react';
-import { GUIDE, GUIDE_CATS, type GuideArticle } from '@/lib/guideArticles';
+import { PUBLISHED as GUIDE, GUIDE_CATS, type GuideArticle } from '@/lib/guideArticles';
 import '@/styles/guide.css';
 
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();

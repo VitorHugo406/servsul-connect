@@ -3,9 +3,31 @@
 // articles. Only describe features that exist; update together with the feature. Screenshots: scratchpad script
 // "guide-shots" (Playwright, test mode) — recapture when a screen changes.
 export type GuideStep = { t: string; d: string; img?: string };
-export type GuideArticle = { slug: string; cat: string; title: string; sum: string; steps: GuideStep[]; tips?: string[]; rel?: string[]; who?: string };
+/** hidden: written but not published yet (the feature waits for a database change) — flip to false when it is live. */
+export type GuideArticle = { slug: string; cat: string; title: string; sum: string; steps: GuideStep[]; tips?: string[]; rel?: string[]; who?: string; hidden?: boolean };
 
-export const GUIDE_CATS = ['Primeiros passos', 'Murais e cards', 'Visualizações', 'Organização avançada', 'Receber e compartilhar', 'Integrações', 'Conta e segurança'];
+/** Topics in the order they appear on /guia (like a help center: one topic → many how-to articles). */
+export const GUIDE_CATS = ['Primeiros passos', 'Chat e comunicação', 'Murais e cards', 'Visualizações', 'Organização avançada', 'Receber e compartilhar',
+  'Agenda e reuniões', 'Avisos e celebrações', 'War Room', 'Pessoas e equipes', 'Avaliações', 'Anotações', 'Dash 3D', 'Integrações', 'Administração', 'Conta e segurança'];
+/** One line per topic, shown on the topic cards of /guia. */
+export const GUIDE_CAT_DESC: Record<string, string> = {
+  'Primeiros passos': 'Entrar, conhecer as telas, buscar qualquer coisa e criar o primeiro mural.',
+  'Chat e comunicação': 'Conversas por setor, diretas e em grupo, áudios, figurinhas, chamadas e assistente.',
+  'Murais e cards': 'Cards, checklists, etiquetas, anexos, templates, repetição e ações em massa.',
+  'Visualizações': 'Quadro, Lista, Calendário, Linha do tempo, Carga, Relatórios e visão geral.',
+  'Organização avançada': 'Campos personalizados, dependências, cronômetro, automações, modo operação e score.',
+  'Receber e compartilhar': 'Formulário público, link para clientes, importação e convite de membros.',
+  'Agenda e reuniões': 'Calendário, salas de reunião, relatório do dia e agenda no celular.',
+  'Avisos e celebrações': 'Avisos oficiais, aniversariantes e eventos do mês.',
+  'War Room': 'Sala de crise: convocação com alerta, linha do tempo e card de emergência.',
+  'Pessoas e equipes': 'Equipes, indicadores, alertas, score, setores e o seu painel.',
+  'Avaliações': 'Experiência de 45 e 90 dias, desempenho e desenvolvimento, com PDF validável.',
+  'Anotações': 'Notas pessoais e compartilhadas, editadas por várias pessoas ao mesmo tempo.',
+  'Dash 3D': 'O escritório em 3D com a equipe, indicadores de RH e passeio em primeira pessoa.',
+  'Integrações': 'Sistemas de RH, Slack, Teams, WhatsApp, Google, webhooks, API e assistente com IA.',
+  'Administração': 'Colaboradores, permissões, setores, pagamentos e personalização da empresa.',
+  'Conta e segurança': 'Perfil, aparência, notificações, verificação em duas etapas e privacidade.',
+};
 
 export const GUIDE: GuideArticle[] = [
   { slug: 'criar-mural', cat: 'Primeiros passos', title: 'Criar um mural', sum: 'O mural é onde a equipe organiza o trabalho em colunas e cards. Crie do zero ou a partir de um modelo pronto.',
@@ -107,7 +129,7 @@ export const GUIDE: GuideArticle[] = [
       { t: 'Importe no ewvon', d: 'Em Tarefas, clique em "Importar", escolha o arquivo e confira o resumo (colunas, cards, etiquetas).', img: 'importar' },
       { t: 'Confirme', d: 'Clique em importar. Um mural novo é criado; responsáveis são ligados pelo e-mail ou nome dos colaboradores da empresa.' },
     ], rel: ['criar-mural'] },
-  { slug: 'agenda', cat: 'Integrações', title: 'Prazos no Google Agenda, Outlook e iPhone', sum: 'Assine um link pessoal e veja seus prazos e reuniões na agenda do celular, com atualização automática.',
+  { slug: 'agenda', cat: 'Agenda e reuniões', title: 'Prazos no Google Agenda, Outlook e iPhone', sum: 'Assine um link pessoal e veja seus prazos e reuniões na agenda do celular, com atualização automática.',
     steps: [
       { t: 'Gere o link', d: 'Em Calendário, clique em "Agenda no celular".', img: 'agenda' },
       { t: 'Adicione à sua agenda', d: 'Clique em Google Agenda, iPhone/Mac ou Outlook, ou copie o link e cole em "Adicionar calendário pela URL".' },
@@ -136,4 +158,345 @@ export const GUIDE: GuideArticle[] = [
       { t: 'Leia a página de segurança', d: 'Em ewvon.com/seguranca estão as medidas: servidores em São Paulo, HTTPS, regras por linha no banco, permissões por pessoa, criptografia de dados sensíveis e LGPD.' },
       { t: 'Seus dados, suas regras', d: 'Em "Meus dados e privacidade" cada pessoa baixa seus dados ou pede correção/exclusão.' },
     ], rel: ['duas-etapas'] },
+  // ───────── Primeiros passos
+  { slug: 'entrar', cat: 'Primeiros passos', title: 'Entrar no ewvon pela primeira vez', sum: 'Acesse com o e-mail e a senha que o administrador da sua empresa cadastrou, troque a senha e conheça as telas com o tour.',
+    steps: [
+      { t: 'Abra o ewvon', d: 'Acesse ewvon.com e clique em Entrar. Escolha a sua empresa e informe o e-mail e a senha recebidos.' },
+      { t: 'Crie a sua senha', d: 'No primeiro acesso o sistema pede uma senha nova, só sua. Depois disso a senha inicial deixa de valer.' },
+      { t: 'Faça o tour', d: 'Um passo a passo destaca cada aba que você pode usar. Para rever depois, clique no "?" no topo da tela.' },
+    ], tips: ['Esqueceu a senha? Use "Esqueci minha senha" na tela de login.'], rel: ['navegar', 'busca-geral', 'celular'] },
+  { slug: 'navegar', cat: 'Primeiros passos', title: 'Conhecer as telas e navegar', sum: 'O menu lateral leva às áreas do sistema; o topo tem busca, notificações, aparência, ajuda e o seu perfil.',
+    steps: [
+      { t: 'Menu lateral', d: 'Início, Chat, Avisos, Aniversariantes, Tarefas, Calendário, Salas de reunião, War Room, Pessoas e as telas de administração. Cada pessoa vê só o que o plano da empresa e as permissões liberam.' },
+      { t: 'Barra do topo', d: 'Lupa (busca geral), "?" (tour), paleta (aparência), assistente, sino (notificações) e a sua foto (perfil, privacidade e sair).' },
+      { t: 'Modo foco', d: 'Ctrl+Shift+F esconde menus e deixa só a tela atual; Ctrl+Shift+E troca de aba sem sair do foco. Repita o atalho para voltar.' },
+    ], rel: ['busca-geral', 'aparencia', 'notificacoes'] },
+  { slug: 'busca-geral', cat: 'Primeiros passos', title: 'Busca geral (Ctrl+K)', sum: 'Encontre qualquer card, mural, pessoa ou tela de onde você estiver, só pelo teclado.',
+    steps: [
+      { t: 'Abra a busca', d: 'Pressione Ctrl+K (⌘K no Mac) ou clique na lupa no topo.' },
+      { t: 'Digite', d: 'Nome ou número do card (ex.: #42), nome do mural, de um colega ou de uma tela. Os resultados aparecem separados em Cards, Murais, Pessoas e Telas.' },
+      { t: 'Abra com Enter', d: 'Use as setas e Enter. Um card abre já dentro do mural dele; uma pessoa abre a conversa com ela no chat.' },
+    ], rel: ['navegar', 'atalhos'] },
+  { slug: 'celular', cat: 'Primeiros passos', title: 'Usar no celular e no aplicativo Android', sum: 'Pelo navegador do celular o ewvon abre a versão de celular. No Android há também o aplicativo com notificações.',
+    steps: [
+      { t: 'No navegador', d: 'Abra ewvon.com no celular e entre normalmente: chat, tarefas, avisos, agenda e perfil se ajustam à tela.' },
+      { t: 'Aplicativo Android', d: 'No celular, abra o seu Perfil e use "Baixar aplicativo". O app avisa quando há uma versão nova para instalar.' },
+      { t: 'Permita as notificações', d: 'No primeiro acesso o app pede permissão de notificações. Assim mensagens, menções e alertas de War Room chegam mesmo com o app fechado.' },
+    ], rel: ['notificacoes', 'war-room'] },
+
+  // ───────── Chat e comunicação
+  { slug: 'chat-conversas', cat: 'Chat e comunicação', title: 'Conversas por setor, diretas e em grupo', sum: 'Cada setor tem o seu canal; além disso há conversas diretas com colegas e grupos criados por você.',
+    steps: [
+      { t: 'Abra o Chat', d: 'À esquerda ficam as conversas, com filtros para diretas, grupos, setores e favoritas. Conversas não lidas ficam destacadas.' },
+      { t: 'Nova conversa', d: 'Clique no ícone de nova conversa e digite o nome. A seção "Pessoas" lista quem ainda não conversou com você; é só clicar.' },
+      { t: 'Novo grupo', d: 'Clique no ícone de pessoas no topo da lista, dê nome e descrição, marque os participantes e crie. Quem cria é o administrador do grupo.' },
+      { t: 'Informações da conversa', d: 'No computador, o painel lateral mostra os dados da pessoa ou do grupo e pode ser recolhido.' },
+    ], tips: ['Você pode conversar consigo mesmo para guardar lembretes e arquivos.'], rel: ['chat-mencoes', 'chat-midia', 'chat-personalizar'] },
+  { slug: 'chat-mencoes', cat: 'Chat e comunicação', title: 'Menções, reações e formatação', sum: 'Chame a atenção de alguém com @, reaja às mensagens e destaque palavras.',
+    steps: [
+      { t: 'Mencione', d: 'Digite @ e escolha a pessoa na lista, que filtra enquanto você digita. Quem é mencionado sempre recebe o aviso, mesmo com a conversa silenciada.' },
+      { t: 'Reaja e responda', d: 'Use as reações rápidas em uma mensagem ou responda citando a mensagem original.' },
+      { t: 'Formate', d: 'Escreva *negrito*, _itálico_ ou ~riscado~. Links viram atalhos clicáveis com pré-visualização.' },
+    ], rel: ['chat-conversas', 'notificacoes'] },
+  { slug: 'chat-midia', cat: 'Chat e comunicação', title: 'Áudios, arquivos, fotos e figurinhas', sum: 'Envie áudios protegidos, documentos com pré-visualização, fotos e figurinhas, inclusive animadas.',
+    steps: [
+      { t: 'Áudio', d: 'Segure o botão do microfone para gravar; no celular, deslize para travar e gravar sem segurar. Os áudios são criptografados de ponta a ponta.' },
+      { t: 'Arquivos e fotos', d: 'Use o clipe para enviar. PDFs têm pré-visualização dentro da conversa.' },
+      { t: 'Figurinhas', d: 'Abra o painel de figurinhas ao lado do "+", use os pacotes, salve figurinhas recebidas e crie as suas (até 5 segundos se animadas). Pacotes podem ser exportados e compartilhados.' },
+    ], tips: ['Fotos, arquivos e áudios do chat saem do servidor quando todos recebem, ou em no máximo 7 dias. Anexos de tarefas e avisos não seguem essa regra.'], rel: ['chat-conversas'] },
+  { slug: 'chamadas', cat: 'Chat e comunicação', title: 'Chamadas de voz e vídeo', sum: 'Ligue para um colega ou grupo direto da conversa, no computador ou no celular.',
+    steps: [
+      { t: 'Inicie a chamada', d: 'Na conversa, clique no ícone de chamada. A outra pessoa recebe o toque no computador ou no celular.' },
+      { t: 'Durante a chamada', d: 'Ligue ou desligue câmera e microfone e encerre quando terminar.' },
+      { t: 'Histórico', d: 'Chamadas perdidas, encerradas e a duração aparecem na conversa, como em aplicativos de mensagem.' },
+    ], rel: ['chat-conversas'] },
+  { slug: 'chat-personalizar', cat: 'Chat e comunicação', title: 'Personalizar conversas e marcar como não lida', sum: 'Cor do seu balão por conversa, conversas favoritas, silenciar e lembrar depois.',
+    steps: [
+      { t: 'Cor do balão', d: 'Na conversa, abra Personalização e escolha "Cor do meu balão". Vale só para você e só naquela conversa.' },
+      { t: 'Favoritar e silenciar', d: 'Pelo menu da conversa, fixe as mais importantes e silencie as que não precisam avisar (menções continuam chegando).' },
+      { t: 'Marcar como não lida', d: 'Marque uma conversa como não lida para lembrar de responder depois. Isso não muda o "visto" para quem enviou.' },
+    ], rel: ['chat-conversas'] },
+  { slug: 'assistente-ia', cat: 'Chat e comunicação', title: 'EwvonAI, o assistente no chat', sum: 'Escreva @ewvonai em uma conversa para pedir ajuda ao assistente com inteligência artificial.',
+    steps: [
+      { t: 'Chame o assistente', d: 'Em qualquer conversa, digite @ewvonai seguido da pergunta.' },
+      { t: 'Receba a resposta', d: 'O EwvonAI responde na própria conversa. Ele aparece com o seu próprio ícone.' },
+      { t: 'Se ele avisar que falta configuração', d: 'O assistente usa uma chave de IA cadastrada pela empresa. Sem ela, ele responde pedindo para o administrador cadastrar a chave em Integrações.' },
+    ], rel: ['integracoes-ia'] },
+
+  // ───────── Murais e cards (extras)
+  { slug: 'detalhes-card', cat: 'Murais e cards', title: 'Etiquetas, checklist, anexos, capa e decisões', sum: 'Tudo o que um card pode guardar, organizado em botões no topo do card.',
+    steps: [
+      { t: 'Etiquetas e prioridade', d: 'Use "Etiquetas" para classificar e "Prioridade" para marcar Baixa, Média, Alta ou Urgente.' },
+      { t: 'Datas e membros', d: 'Em "Datas", defina início, prazo e lembrete. Em "Membros", escolha o responsável e outras pessoas.' },
+      { t: 'Checklist', d: 'Crie listas de itens; o progresso aparece no card do quadro.' },
+      { t: 'Capa, anexos e decisões', d: 'Coloque uma capa, anexe arquivos e registre decisões (o que foi decidido, por quem e quando).' },
+      { t: 'Mais', d: 'Em "Mais" ficam cronômetro, links externos (Drive, OneDrive, Figma…), dependências e aprovação.' },
+    ], rel: ['cards', 'templates-card'] },
+  { slug: 'templates-card', cat: 'Murais e cards', title: 'Templates de card', sum: 'Transforme um card em modelo e crie cards iguais com um clique.',
+    steps: [
+      { t: 'Torne um card template', d: 'Abra o card e clique em "Tornar Template". Ele passa a servir de modelo e não entra nos números do mural.' },
+      { t: 'Crie a partir do template', d: 'Na coluna, use o botão de templates ao lado de "Adicionar um cartão" e escolha o modelo. O card nasce com descrição, checklist e etiquetas.' },
+    ], rel: ['repetir-card'] },
+  { slug: 'repetir-card', cat: 'Murais e cards', title: 'Cards que se repetem', sum: 'Programe um card para ser criado de novo todo dia, semana ou mês, na coluna que você escolher.',
+    steps: [
+      { t: 'Abra a duplicação automática', d: 'No menu do card (ou do template), escolha "Auto-duplicar".' },
+      { t: 'Escolha a frequência', d: 'Diária, semanal (escolhendo os dias) ou mensal (escolhendo o dia do mês) e a coluna de destino.' },
+      { t: 'Ative', d: 'O ewvon cria a cópia no horário programado. Desative quando não precisar mais.' },
+    ], rel: ['templates-card'] },
+  { slug: 'card-emergente', cat: 'Murais e cards', title: 'Modo Emergente em um card', sum: 'Destaque um card urgente para que ele chame a atenção de todos no mural.',
+    steps: [
+      { t: 'Ative', d: 'No menu do card, escolha "Ativar Modo Emergente". O card ganha destaque no quadro.' },
+      { t: 'Desative', d: 'Quando a urgência passar, use "Desativar Emergente" no mesmo menu. Para incidentes maiores, use a War Room.' },
+    ], rel: ['war-room'] },
+  { slug: 'arquivar', cat: 'Murais e cards', title: 'Arquivar cards e colunas', sum: 'Tire do caminho o que já foi resolvido sem perder nada.',
+    steps: [
+      { t: 'Arquive', d: 'No menu do card, use "Arquivar". No menu da coluna, "Arquivar todos os cards".' },
+      { t: 'Recupere', d: 'No topo do mural, abra Arquivados para restaurar um card ou todos de uma vez.' },
+    ], rel: ['lixeira'] },
+  { slug: 'lixeira', cat: 'Murais e cards', title: 'Lixeira: recuperar cards excluídos', sum: 'Card excluído fica 30 dias na lixeira do mural e volta com checklists, comentários, etiquetas e campos.', hidden: true,
+    steps: [
+      { t: 'Abra a lixeira', d: 'No topo do mural, abra Arquivados e escolha a aba "Lixeira".' },
+      { t: 'Restaure', d: 'Clique em restaurar: o card volta com o mesmo número e tudo o que tinha.' },
+      { t: 'Excluir de vez', d: 'O dono ou administrador do mural (ou quem excluiu) pode apagar definitivamente. Depois de 30 dias isso acontece sozinho.' },
+    ], rel: ['arquivar'] },
+  { slug: 'acoes-em-massa', cat: 'Murais e cards', title: 'Alterar vários cards de uma vez', sum: 'Na Lista, selecione vários cards e mude coluna, responsável, prazo ou prioridade, ou exclua.',
+    steps: [
+      { t: 'Abra a Lista', d: 'Na barra de baixo do mural, escolha "Lista".' },
+      { t: 'Selecione', d: 'Marque a caixa à esquerda de cada card, ou a do cabeçalho para todos os que estão no filtro.' },
+      { t: 'Aplique', d: 'Use Mover para, Responsável, Prazo, Prioridade ou Excluir. Cards controlados por uma War Room ficam de fora.' },
+    ], rel: ['lista'] },
+  { slug: 'atalhos', cat: 'Murais e cards', title: 'Atalhos de teclado', sum: 'Trabalhe mais rápido no mural sem tirar a mão do teclado.',
+    steps: [
+      { t: 'No mural', d: 'N cria um card na primeira coluna; F ou / vai para a pesquisa; 1 a 6 trocam a visão (Quadro, Lista, Calendário, Linha do tempo, Carga, Relatórios); ? mostra a lista de atalhos.' },
+      { t: 'Em qualquer tela', d: 'Ctrl+K abre a busca geral; Ctrl+Shift+F liga o modo foco; Ctrl+Shift+E troca de aba no modo foco.' },
+    ], rel: ['busca-geral'] },
+  { slug: 'aprovacao', cat: 'Organização avançada', title: 'Pedir aprovação em um card', sum: 'Peça o "ok" de alguém antes de seguir; ao aprovar ou recusar, o card pode mudar de coluna sozinho.', hidden: true,
+    steps: [
+      { t: 'Peça a aprovação', d: 'Abra o card, clique em "Mais" › "Aprovação", escolha quem aprova, escreva uma mensagem e, se quiser, as colunas para onde o card vai ao aprovar ou recusar.' },
+      { t: 'Quem aprova é avisado', d: 'A pessoa recebe a notificação e vê os botões Aprovar e Recusar dentro do card. O quadro mostra o selo "Aprovação" enquanto espera.' },
+      { t: 'Decisão registrada', d: 'Quem pediu é avisado do resultado e o histórico fica no card.' },
+    ], rel: ['automacoes'] },
+
+  // ───────── Visualizações (extras)
+  { slug: 'visao-geral', cat: 'Visualizações', title: 'Visão geral de todos os murais', sum: 'O andamento de todos os murais lado a lado e os atrasados de todos eles em uma lista.',
+    steps: [
+      { t: 'Abra a visão geral', d: 'Na lista de murais, clique em "Visão geral".' },
+      { t: 'Compare', d: 'Cada linha mostra progresso, em aberto, atrasados, vencem em 7 dias, concluídos em 30 dias e a situação. Clique no título de uma coluna para ordenar.' },
+      { t: 'Ataque os atrasados', d: 'Embaixo ficam os cards atrasados de todos os murais, do mais antigo para o mais novo. Clique para abrir.' },
+    ], rel: ['minhas-tarefas', 'relatorios'] },
+  { slug: 'planejador', cat: 'Visualizações', title: 'Planejador do dia', sum: 'Um painel ao lado do mural com os cards do dia, para organizar a sua jornada.',
+    steps: [
+      { t: 'Abra o planejador', d: 'Na barra de baixo do mural, clique em "Planejador".' },
+      { t: 'Acompanhe o dia', d: 'Os cards com prazo para hoje aparecem no painel; abra qualquer um com um clique.' },
+    ], rel: ['minhas-tarefas'] },
+
+  // ───────── Organização avançada (extras)
+  { slug: 'modo-operacao', cat: 'Organização avançada', title: 'Modo Operação', sum: 'Reorganiza o mural de uma vez: ordena as colunas e sobe a prioridade de quem está com prazo vencido ou perto de vencer.',
+    steps: [
+      { t: 'Abra o Modo Operação', d: 'No topo do mural, clique no ícone de atividade (laranja).' },
+      { t: 'Escolha os critérios', d: 'Prioridade, prazo e urgência. O painel mostra antes quantos cards vão mudar de lugar e quais vão subir de prioridade.' },
+      { t: 'Aplique', d: 'Confirme para reorganizar. Bom para começar o dia ou a semana com o quadro em ordem.' },
+    ], rel: ['score'] },
+  { slug: 'score', cat: 'Organização avançada', title: 'Score da equipe no mural', sum: 'Pontuação mensal de cada pessoa pelos cards entregues no prazo e com atraso.',
+    steps: [
+      { t: 'Abra o Score', d: 'No topo do mural, clique no troféu.' },
+      { t: 'Leia a pontuação', d: 'Cada membro aparece com os cards concluídos no mês, no prazo e com atraso, e a evolução mês a mês.' },
+    ], rel: ['relatorios', 'equipes'] },
+  { slug: 'notificacoes', cat: 'Conta e segurança', title: 'Notificações, lembretes e resumo do dia', sum: 'O sino reúne mensagens, avisos e avisos de cards; no PC, um resumo do dia mostra o que vence hoje.',
+    steps: [
+      { t: 'Sino do topo', d: 'Mostra mensagens não lidas, avisos novos e avisos dos seus cards. Clique para abrir.' },
+      { t: 'Resumo do dia', d: 'No computador, uma vez por dia, aparece "Seu dia": cards atrasados, que vencem hoje, aprovações para você e a agenda. Desligue em "Não mostrar automaticamente".' },
+      { t: 'No celular', d: 'O app avisa mensagens, menções, War Room e lembretes de reunião, mesmo fechado.' },
+    ], rel: ['lembretes', 'celular'] },
+  { slug: 'lembretes', cat: 'Organização avançada', title: 'Lembretes de prazo', sum: 'O responsável é avisado antes do vencimento (pelo lembrete do card) e quando o card atrasa.', hidden: true,
+    steps: [
+      { t: 'Defina o lembrete', d: 'No card, em "Datas", escolha o lembrete (ex.: 1 hora ou 1 dia antes).' },
+      { t: 'Receba o aviso', d: 'O responsável e os demais membros do card recebem "Prazo chegando" e, se passar do prazo, "Card atrasado". Clique no aviso para abrir o card.' },
+    ], rel: ['notificacoes'] },
+
+  // ───────── Receber e compartilhar (extras)
+  { slug: 'membros-mural', cat: 'Receber e compartilhar', title: 'Membros e convite para o mural', sum: 'Escolha quem participa do mural e convide colegas por link.',
+    steps: [
+      { t: 'Abra os membros', d: 'No topo do mural, clique no ícone de pessoas para ver e gerenciar os membros.' },
+      { t: 'Convide por link', d: 'Em "Compartilhar quadro", copie o convite. O colega da empresa que abrir o link entra no mural.' },
+    ], rel: ['convidados'] },
+
+  // ───────── Agenda e reuniões
+  { slug: 'calendario-eventos', cat: 'Agenda e reuniões', title: 'Calendário: eventos e reuniões', sum: 'Marque compromissos com participantes, lembrete e link de reunião, e veja junto os prazos dos seus cards.',
+    steps: [
+      { t: 'Abra o Calendário', d: 'Escolha a visão de Mês, Semana ou Dia no topo.' },
+      { t: 'Crie um evento', d: 'Clique em um dia ou horário, preencha título, horário, participantes, cor e lembrete.' },
+      { t: 'Veja seus prazos', d: 'Os cards com prazo aparecem junto com os eventos.' },
+    ], rel: ['relatorio-dia', 'agenda', 'salas-reuniao'] },
+  { slug: 'relatorio-dia', cat: 'Agenda e reuniões', title: 'Relatório do dia (PDF)', sum: 'Um relatório em A4 com os compromissos e cards do dia, pronto para imprimir.',
+    steps: [
+      { t: 'Escolha o dia', d: 'No Calendário, abra o dia desejado.' },
+      { t: 'Gere o relatório', d: 'Clique no botão de relatório do dia. A página abre pronta para imprimir ou salvar em PDF.' },
+    ], rel: ['calendario-eventos'] },
+  { slug: 'salas-reuniao', cat: 'Agenda e reuniões', title: 'Salas de reunião', sum: 'Reserve salas por horário, convide participantes e veja quem está em reunião.',
+    steps: [
+      { t: 'Escolha a sala', d: 'Em Salas de reunião, veja as salas, a capacidade e a agenda de cada uma.' },
+      { t: 'Reserve', d: 'Escolha um horário livre, dê um título e convide os participantes.' },
+      { t: 'Status automático', d: 'Durante a reserva, o status dos participantes muda para "Em reunião" sozinho e volta ao terminar (sem sobrescrever um status escolhido à mão).' },
+    ], rel: ['calendario-eventos'] },
+
+  // ───────── Avisos e celebrações
+  { slug: 'avisos', cat: 'Avisos e celebrações', title: 'Avisos gerais', sum: 'Comunicados oficiais com fixação, agendamento, data de término e contagem de leitura.',
+    steps: [
+      { t: 'Publique', d: 'Em Avisos, clique em "Novo aviso". Administradores e quem tem a permissão "Postar avisos" podem publicar.' },
+      { t: 'Organize', d: 'Fixe no topo, agende para começar depois e defina quando deixa de valer. Os avisos ficam separados em Ativos, Agendados e Expirados.' },
+      { t: 'Acompanhe', d: 'Veja quantas pessoas leram, reative um aviso expirado e exporte a lista em CSV.' },
+    ], rel: ['aniversariantes', 'comunicados'] },
+  { slug: 'aniversariantes', cat: 'Avisos e celebrações', title: 'Aniversariantes', sum: 'Lista e calendário dos aniversários, com relatório em PDF para a gestão.',
+    steps: [
+      { t: 'Veja os próximos', d: 'Em Aniversariantes, a lista mostra os próximos aniversários com nome e setor, e o calendário do mês.' },
+      { t: 'Relatório (gestão)', d: 'Quem gerencia gera o PDF do mês com a marca da empresa e um QR Code com link curto.' },
+      { t: 'No dia', d: 'O aniversariante recebe uma comemoração ao entrar e, no app Android, uma saudação e um ícone especial.' },
+    ], rel: ['avisos'] },
+  { slug: 'comunicados', cat: 'Avisos e celebrações', title: 'Comunicados automáticos e eventos do mês', sum: 'O remetente "Comunicados" entrega mensagens automáticas: feedback mensal, alertas de equipe e avisos de experiência.',
+    steps: [
+      { t: 'Onde aparecem', d: 'No Chat, na conversa "Comunicados". Ali chegam o relatório mensal em PDF de cada pessoa, os resumos de alertas da equipe e os avisos de fim de experiência.' },
+      { t: 'Eventos do mês', d: 'Em datas especiais, a tela ganha efeitos sazonais. O histórico de campanhas fica em "Eventos Mensais".' },
+    ], rel: ['avisos', 'alertas-equipe'] },
+
+  // ───────── War Room
+  { slug: 'war-room', cat: 'War Room', title: 'Abrir uma War Room (sala de crise)', sum: 'Para incidentes urgentes: convoque as pessoas com alerta até confirmarem e coordene tudo em uma sala só.',
+    steps: [
+      { t: 'Crie a sala', d: 'Em War Room, clique em nova sala: título, descrição, meta (prazo) e quem será convocado. Requer a permissão "Criar War Room".' },
+      { t: 'Convocação com alerta', d: 'Cada convocado recebe um alerta como uma ligação no celular (e um aviso no computador) até tocar em "Ciente".' },
+      { t: 'Ligue a um card', d: 'Escolha mural e coluna para criar o card de emergência. Enquanto a sala está ativa, o card fica travado e o checklist espelha a linha do tempo.' },
+    ], rel: ['war-room-timeline'] },
+  { slug: 'war-room-timeline', cat: 'War Room', title: 'Linha do tempo, chat e encerramento', sum: 'Ações com responsável e duração, conversa da sala e encerramento que conclui o card.',
+    steps: [
+      { t: 'Linha do tempo', d: 'Adicione ações com título, responsável e duração. Marcar uma ação conclui o item do card, e vice-versa. A primeira pendente aparece como "Em andamento".' },
+      { t: 'Converse', d: 'O chat da sala reúne a comunicação do incidente. Descrição e convocados ficam em "Informações".' },
+      { t: 'Encerre', d: 'Ao encerrar, o card de emergência vai para a coluna de conclusão, com a data e se foi no prazo.' },
+    ], rel: ['war-room'] },
+
+  // ───────── Pessoas e equipes
+  { slug: 'equipes', cat: 'Pessoas e equipes', title: 'Gestão de Pessoas: equipes e indicadores', sum: 'Monte equipes e acompanhe tarefas, mensagens, interações e score de cada pessoa.',
+    steps: [
+      { t: 'Crie a equipe', d: 'Em Gestão de Pessoas, use "Nova equipe" e adicione colaboradores.' },
+      { t: 'Acompanhe', d: 'A aba Equipe mostra, por pessoa: tarefas, concluídas, mensagens, interações, score e última atividade. Atividades mostra a linha do tempo dia a dia.' },
+      { t: 'Relatórios e Score', d: 'Relatórios compara períodos (7, 30 ou 90 dias) e exporta PDF; Score mostra o pódio da equipe.' },
+    ], rel: ['alertas-equipe', 'meu-painel'] },
+  { slug: 'alertas-equipe', cat: 'Pessoas e equipes', title: 'Alertas da equipe', sum: 'Avisos automáticos de cards atrasados, prazos em risco, cards parados e sobrecarga.',
+    steps: [
+      { t: 'Ligue os alertas', d: 'Na equipe, abra Alertas e escolha os tipos, os dias da semana e os horários.' },
+      { t: 'Receba o resumo', d: 'Marque o envio pelo chat para o supervisor receber um resumo em "Comunicados".' },
+    ], rel: ['equipes'] },
+  { slug: 'meu-painel', cat: 'Pessoas e equipes', title: 'Meu Painel', sum: 'As suas métricas pessoais de trabalho em uma tela.',
+    steps: [
+      { t: 'Abra o painel', d: 'No topo, abra "Meu Painel" para ver seus números de tarefas e atividade.' },
+      { t: 'Relatório mensal', d: 'Todo mês você recebe em "Comunicados" um PDF com seus indicadores, evolução semanal e recomendações.' },
+    ], rel: ['equipes'] },
+
+  // ───────── Avaliações
+  { slug: 'avaliacoes', cat: 'Avaliações', title: 'Avaliações de experiência e de desempenho', sum: 'Experiência de 45 e 90 dias, desempenho e desenvolvimento, feitas pelo supervisor da equipe.',
+    steps: [
+      { t: 'Quem avalia', d: 'O supervisor de uma equipe avalia as pessoas da equipe. Em Avaliações, a aba Equipe lista quem pode ser avaliado e o progresso da experiência.' },
+      { t: 'Experiência', d: 'Há uma avaliação de 45 dias e uma de 90 dias por pessoa; a de 90 dias mostra a evolução em cada critério. Dez dias antes do fim de cada período os gestores são avisados.' },
+      { t: 'Desempenho e desenvolvimento', d: 'Escolha os critérios de desenvolvimento que entram em cada avaliação.' },
+      { t: 'PDF validável', d: 'Cada avaliação gera um PDF com a marca da empresa, número, chave e QR Code para conferir a autenticidade, sem expor dados pessoais.' },
+    ], rel: ['criterios-avaliacao'] },
+  { slug: 'criterios-avaliacao', cat: 'Avaliações', title: 'Critérios de avaliação', sum: 'Ajuste os critérios do formulário de experiência e de desenvolvimento.',
+    steps: [
+      { t: 'Abra Critérios', d: 'Em Avaliações, aba Critérios. O modelo de experiência é cadastrado pelo administrador da empresa.' },
+      { t: 'Desenvolvimento', d: 'Supervisores podem editar os critérios de desenvolvimento e agrupá-los.' },
+    ], rel: ['avaliacoes'] },
+
+  // ───────── Anotações
+  { slug: 'anotacoes', cat: 'Anotações', title: 'Anotações pessoais e compartilhadas', sum: 'Notas com cores, imagens e compartilhamento; várias pessoas podem editar ao mesmo tempo sem perder nada.',
+    steps: [
+      { t: 'Crie a nota', d: 'Em Anotações, crie uma nota, escolha cor, textura ou imagem e fixe as importantes.' },
+      { t: 'Compartilhe', d: 'Dê acesso de edição ou só de visualização a colegas. Quem só visualiza vê "Somente visualização".' },
+      { t: 'Edição ao mesmo tempo', d: 'Se duas pessoas editarem juntas, o ewvon junta as alterações em vez de sobrescrever.' },
+      { t: 'Janela flutuante', d: 'Abra a nota em uma janela flutuante para consultar enquanto usa outras telas.' },
+    ], rel: [] },
+
+  // ───────── Dash 3D
+  { slug: 'dash-3d', cat: 'Dash 3D', title: 'Dash 3D: o escritório da equipe em 3D', sum: 'Veja onde cada pessoa está, o status de cada uma e os indicadores no telão, andar por andar.',
+    steps: [
+      { t: 'Abra o Dash', d: 'No topo, troque de "Sistema" para "Dash". Requer a permissão Dash e o módulo no plano.' },
+      { t: 'Navegue', d: 'Gire e aproxime com o mouse ou o dedo; troque de andar pelo seletor. As pessoas aparecem nas mesas, em reunião ou no almoço conforme o status.' },
+      { t: 'Telão e informações', d: 'O telão mostra indicadores escolhidos em "Informações" (como turnover e absenteísmo, quando o sistema de RH fornece os dados). O "?" explica cada fórmula.' },
+      { t: 'Configure', d: 'Em "Configurar escritório" ajuste tamanho, andares, aparência e logotipo; gere relatórios em PDF.' },
+    ], rel: ['dash-passeio', 'integracoes-rh'] },
+  { slug: 'dash-passeio', cat: 'Dash 3D', title: 'Passeio em primeira pessoa', sum: 'Caminhe pelo escritório, pegue o elevador e encontre qualquer colega.',
+    steps: [
+      { t: 'Comece o passeio', d: 'Clique em "Passear". No computador ande com WASD ou as setas (Shift corre); no celular use o joystick.' },
+      { t: 'Elevador', d: 'Entre no elevador e escolha o andar pelos botões ou digitando o número.' },
+      { t: 'Encontre alguém', d: 'Em "Pessoas", busque o colega: o passeio leva até ele. Mire em alguém para ver nome, cargo, setor e status.' },
+    ], rel: ['dash-3d'] },
+
+  // ───────── Integrações (extras)
+  { slug: 'integracoes-rh', cat: 'Integrações', title: 'Conectar o sistema de RH', sum: 'Sincronize colaboradores do seu sistema de RH e importe as pessoas como usuários.',
+    steps: [
+      { t: 'Adicione o sistema', d: 'Em Integrações › RH e Pessoas, clique em "Adicionar sistema", escolha o seu e informe a chave de acesso. As chaves ficam criptografadas.' },
+      { t: 'Sincronize', d: 'O cartão mostra quantos ativos e desligados foram lidos. Esses dados alimentam os indicadores do Dash.' },
+      { t: 'Importe como usuários', d: 'Use "Importar como usuários" para criar logins para as pessoas ativas com e-mail, respeitando as vagas do plano. Elas entram por "Esqueci minha senha".' },
+    ], rel: ['dash-3d', 'colaboradores'] },
+  { slug: 'integracoes-mensagens', cat: 'Integrações', title: 'Slack, Microsoft Teams e WhatsApp', sum: 'Leve avisos, tarefas atribuídas e reuniões para os canais que a equipe já usa.',
+    steps: [
+      { t: 'Abra Integrações', d: 'Escolha Slack (link de Incoming Webhook), Microsoft Teams ou WhatsApp Business (token de acesso) e siga o passo a passo detalhado da tela.' },
+      { t: 'Teste e use', d: 'Envie um teste. Depois disso, avisos, avisos importantes, tarefas atribuídas e reuniões são enviados automaticamente.' },
+    ], rel: ['webhooks'] },
+  { slug: 'integracoes-ia', cat: 'Integrações', title: 'Chave de IA para o EwvonAI', sum: 'O administrador cadastra a chave da IA da empresa para o assistente responder no chat.',
+    steps: [
+      { t: 'Cadastre a chave', d: 'Em Integrações, abra o cartão da IA e cole a chave da empresa. Ela fica criptografada.' },
+      { t: 'Use no chat', d: 'Depois disso, qualquer pessoa chama o assistente com @ewvonai.' },
+    ], rel: ['assistente-ia'] },
+
+  // ───────── Administração
+  { slug: 'colaboradores', cat: 'Administração', title: 'Cadastrar e gerenciar colaboradores', sum: 'Ficha completa de cada pessoa, com dados sensíveis criptografados.',
+    steps: [
+      { t: 'Abra Gerenciamento', d: 'À esquerda a lista de colaboradores; à direita a ficha: dados pessoais, contato, profissional, bancário, acesso e permissões.' },
+      { t: 'Cadastre', d: 'Adicione nome, e-mail e setor. Os dados de admissão, documentos e salário ficam criptografados e preenchem as avaliações sozinhos.' },
+      { t: 'Ative ou desative', d: 'Desative quem saiu da empresa sem apagar o histórico.' },
+    ], tips: ['Gestores que não são administradores veem a ficha sem os dados financeiros e sem poder editar.'], rel: ['permissoes', 'setores', 'integracoes-rh'] },
+  { slug: 'permissoes', cat: 'Administração', title: 'Permissões por pessoa', sum: 'Libere funções específicas sem dar acesso de administrador.',
+    steps: [
+      { t: 'Abra a ficha', d: 'Em Gerenciamento, escolha a pessoa e vá em Permissões.' },
+      { t: 'Ligue o que precisa', d: 'Postar avisos, Criar War Room, Dash, Sala de reunião, Excluir mensagens, Alterar senhas e Gerenciamento. Só aparecem as que o plano da empresa inclui.' },
+    ], rel: ['colaboradores'] },
+  { slug: 'setores', cat: 'Administração', title: 'Setores da empresa', sum: 'Organize as pessoas em setores, cada um com cor, ícone, gestor e canal de chat.',
+    steps: [
+      { t: 'Crie o setor', d: 'Em Gestão de Setores, clique em novo setor: nome, descrição, cor, ícone e gestor.' },
+      { t: 'Adicione pessoas', d: 'Inclua colaboradores; a mudança vale na hora. O setor Geral inclui todos automaticamente.' },
+    ], rel: ['chat-conversas', 'colaboradores'] },
+  { slug: 'pagamentos', cat: 'Administração', title: 'Plano, pagamentos e recibos', sum: 'Veja o plano, o uso, compre extras e baixe os recibos.',
+    steps: [
+      { t: 'Abra Pagamentos', d: 'Mostra o plano, a validade, o valor, o que está incluído e o uso (pessoas e armazenamento).' },
+      { t: 'Extras e plano', d: 'Compre extras ou mude de plano; a diferença é calculada de forma proporcional.' },
+      { t: 'Recibos', d: 'No histórico, baixe o recibo em PDF de cada pagamento ou exporte a lista.' },
+    ], rel: [] },
+  { slug: 'personalizacao', cat: 'Administração', title: 'Marca da empresa e atalhos do sistema', sum: 'Logotipo, cores e links rápidos no topo para toda a empresa.',
+    steps: [
+      { t: 'Marca', d: 'O logotipo e a cor da empresa aparecem no topo, nos botões, na aba do navegador e nos PDFs.' },
+      { t: 'Atalhos do sistema', d: 'Em "Atalhos do Sistema", cadastre links que aparecem no topo para todos (por exemplo, sistemas internos).' },
+    ], rel: ['aparencia'] },
+  { slug: 'exclusao-dados', cat: 'Administração', title: 'Exclusão de dados', sum: 'Administradores podem limpar dados antigos de forma controlada.',
+    steps: [
+      { t: 'Abra Exclusão de Dados', d: 'Escolha o que remover: mensagens (por período), avisos, arquivos enviados, dados de tarefas ou usuários. Cada opção explica o que será apagado e pede confirmação.' },
+    ], rel: ['privacidade'] },
+
+  // ───────── Conta e segurança (extras)
+  { slug: 'perfil', cat: 'Conta e segurança', title: 'Seu perfil e status', sum: 'Foto, capa, descrição, expediente e status (disponível, em reunião, almoço, ausente) com horário para terminar.',
+    steps: [
+      { t: 'Abra o perfil', d: 'Clique na sua foto no topo. Troque foto e capa, escreva uma descrição e informe o seu expediente.' },
+      { t: 'Defina o status', d: 'Escolha o status e, se quiser, até quando ele vale. Os colegas veem no chat, no cartão de perfil e no Dash.' },
+    ], rel: ['aparencia', 'privacidade'] },
+  { slug: 'aparencia', cat: 'Conta e segurança', title: 'Aparência: temas claros e escuros', sum: 'Escolha o tema que preferir no computador e no celular.',
+    steps: [
+      { t: 'No computador', d: 'Clique na paleta no topo e escolha um tema claro ou escuro.' },
+      { t: 'No celular', d: 'Vá em Perfil › Aparência.' },
+    ], rel: ['perfil'] },
+  { slug: 'privacidade', cat: 'Conta e segurança', title: 'Meus dados e privacidade (LGPD)', sum: 'Baixe uma cópia dos seus dados ou peça correção ou exclusão.',
+    steps: [
+      { t: 'Abra "Meus dados e privacidade"', d: 'No perfil (computador) ou em Perfil (celular).' },
+      { t: 'Escolha', d: 'Exporte os seus dados ou registre um pedido de correção ou exclusão. Termos, privacidade e cookies ficam em ewvon.com/termos, /privacidade e /cookies.' },
+    ], rel: ['seguranca', 'duas-etapas'] },
 ];
+
+/** Published articles (hidden ones stay out of the site, the sitemap and the search). */
+export const PUBLISHED = GUIDE.filter((a) => !a.hidden);
