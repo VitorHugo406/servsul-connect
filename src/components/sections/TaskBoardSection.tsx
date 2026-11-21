@@ -7,7 +7,8 @@ import { BoardExtrasProvider, useBoardExtras, fieldText } from '@/hooks/useBoard
 import { TemplatesDialog } from '@/components/tasks/TemplatesDialog';
 import { CustomFieldsDialog } from '@/components/tasks/CustomFieldsDialog';
 import { BoardAltView, type BoardViewMode } from '@/components/tasks/BoardAltViews';
-import { List as ListIcon, CalendarDays as CalDaysIcon, Check, SlidersHorizontal, GanttChart, Lock as LockIcon, BarChart3, Users2, Wand2, ChevronDown } from 'lucide-react';
+import { List as ListIcon, CalendarDays as CalDaysIcon, Check, SlidersHorizontal, GanttChart, Lock as LockIcon, BarChart3, Users2, Wand2, ChevronDown, Sparkles, ListPlus } from 'lucide-react';
+import { BoardSummaryDialog, CardsFromTextDialog } from '@/components/tasks/BoardAiDialogs';
 import { ImportBoardDialog } from '@/components/tasks/ImportBoardDialog';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useWarRoomLockedTasks } from '@/hooks/useWarRooms';
@@ -391,6 +392,8 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showTaskDetail, setShowTaskDetail] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [showAiSummary, setShowAiSummary] = useState(false);
+  const [showAiCards, setShowAiCards] = useState(false);
   const [showAutomation, setShowAutomation] = useState<TaskBoardColumn | null>(null);
   const [autoTab, setAutoTab] = useState<'appearance' | 'config' | 'subtasks'>('appearance');
   const [showLabelsManager, setShowLabelsManager] = useState(false);
@@ -1410,9 +1413,11 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                 { icon: Activity, label: 'Modo Operação', hint: 'Ordena as colunas e sobe a prioridade do que vence', onClick: () => setShowOperationMode(true) },
                 ...(isAdminOrOwner ? [{ icon: Shuffle, label: 'Auto-distribuição', hint: 'Divide os cards entre os membros', onClick: () => setShowDistribution(true) }] : []),
                 { icon: Zap, label: 'Automações', hint: 'Regras SE → ENTÃO do mural', onClick: () => { setAutomationTaskId(undefined); setShowAutomationRules(true); } },
+                { icon: ListPlus, label: 'Criar cards de um texto', hint: 'A IA transforma uma ata ou e-mail em cards', onClick: () => setShowAiCards(true) },
               ]} />
               <BoardToolMenu label="Acompanhar" icon={BarChart3} dark={isDarkBg} badge={isAdminOrOwner ? joinRequests.length : 0} items={[
                 { icon: FileDown, label: 'Relatório em PDF', hint: 'Resumo do mural para imprimir ou enviar', onClick: () => setShowReport(true) },
+                { icon: Sparkles, label: 'Resumo com IA', hint: 'Situação, atrasos e próximos prazos', onClick: () => setShowAiSummary(true) },
                 ...(isAdminOrOwner ? [
                   { icon: Trophy, label: 'Score', hint: 'Pontuação mensal de cada membro', onClick: () => setShowScore(true) },
                   { icon: UserPlus, label: 'Solicitações', hint: 'Pedidos para entrar no mural', onClick: () => setShowJoinRequests(true), badge: joinRequests.length },
@@ -3214,6 +3219,8 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
       {/* Report Dialog */}
       <CustomFieldsDialog open={showFields} onOpenChange={setShowFields} canManage={isAdminOrOwner} />
       <ReportDialog open={showReport} onOpenChange={setShowReport} tasks={tasks.filter(t => !t.is_template)} columns={columns} boardName={board.name} />
+      <BoardSummaryDialog open={showAiSummary} onOpenChange={setShowAiSummary} boardId={board.id} boardName={board.name} />
+      <CardsFromTextDialog open={showAiCards} onOpenChange={setShowAiCards} boardId={board.id} users={allUsers} onCreated={() => void refetchTasks()} />
 
       {/* Automation Rules Panel */}
       <AutomationRulesPanel
