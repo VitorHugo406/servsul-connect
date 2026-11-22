@@ -79,3 +79,19 @@ drop policy if exists "Signature managers delete logos" on storage.objects;
 create policy "Signature managers delete logos" on storage.objects for delete to authenticated
   using (bucket_id = 'company-logos' and (storage.foldername(name))[1] = 'signatures'
     and (storage.foldername(name))[2] = public.current_company_id()::text and public.can_manage_signatures());
+
+-- company switch: show the signature in everyone's Meu Perfil (default) or keep it hidden
+create table if not exists public.email_signature_settings (
+  company_id uuid primary key default public.current_company_id() references public.companies(id) on delete cascade,
+  show_to_users boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+alter table public.email_signature_settings enable row level security;
+drop policy if exists "Company reads signature settings" on public.email_signature_settings;
+create policy "Company reads signature settings" on public.email_signature_settings for select to authenticated
+  using (public.same_company(company_id));
+drop policy if exists "Managers write signature settings" on public.email_signature_settings;
+create policy "Managers write signature settings" on public.email_signature_settings for all to authenticated
+  using (public.same_company(company_id) and public.can_manage_signatures())
+  with check (public.same_company(company_id) and public.can_manage_signatures());
+grant select, insert, update on public.email_signature_settings to authenticated;

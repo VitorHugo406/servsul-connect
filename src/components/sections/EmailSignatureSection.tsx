@@ -14,6 +14,7 @@ import { appConfirm } from '@/lib/appDialog';
 import { dbHasTable } from '@/hooks/useDbFeature';
 import { Sel } from '@/components/ui/Sel';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { DEFAULT_SIG, SIG_FONTS, SIG_LAYOUTS, companyLogoPublicUrl, copyRich, fullConfig, renderSignature, signatureText, toHex,
   type SigConfig, type SigPerson, type SigTemplate } from '@/lib/emailSignature';
 
@@ -47,16 +48,19 @@ function useSignatureData() {
   const [templateId, setTemplateId] = useState<string>('');
   const [fields, setFields] = useState<Fields>({});
   const [jobTitle, setJobTitle] = useState('');
+  const [showToUsers, setShowToUsers] = useState(true);
   const companyColor = toHex(company?.primary_color);
   const companyLogo = useMemo(() => companyLogoPublicUrl(company?.logo_url), [company?.logo_url]);
   const builtIn: SigTemplate = useMemo(() => ({ id: '', name: 'Padrão', is_default: true, config: { ...DEFAULT_SIG, color: companyColor, logoUrl: companyLogo } }), [companyColor, companyLogo]);
   const load = useCallback(async () => {
-    const [{ data: t }, { data: pref }, { data: perm }] = await Promise.all([
+    const [{ data: t }, { data: pref }, { data: perm }, { data: st }] = await Promise.all([
       db.from('email_signature_templates').select('id,name,config,is_default,updated_at').order('is_default', { ascending: false }).order('name'),
       profile?.id ? db.from('email_signature_prefs').select('template_id,fields').eq('profile_id', profile.id).maybeSingle() : Promise.resolve({ data: null }),
       db.rpc('can_manage_signatures'),
+      db.from('email_signature_settings').select('show_to_users').maybeSingle(),
     ]);
     setTemplates((t || []) as SigTemplate[]);
+    setShowToUsers(st ? st.show_to_users !== false : true);
     setCanManage(!!perm || isAdmin);
     if (pref) { setTemplateId(pref.template_id || ''); setFields((pref.fields || {}) as Fields); }
     setLoading(false);
@@ -68,7 +72,7 @@ function useSignatureData() {
     name: profile?.name || profile?.display_name || '', role: jobTitle, sector: sectorName,
     phone: (profile as { phone?: string } | null)?.phone || '', mobile: '', email: profile?.email || '', photo: profile?.avatar_url || null,
   }), [profile, jobTitle, sectorName]);
-  return { profile, company, templates, loading, canManage, templateId, setTemplateId, fields, setFields, base, builtIn, companyColor, companyLogo, reload: load };
+  return { profile, company, templates, loading, canManage, showToUsers, setShowToUsers, templateId, setTemplateId, fields, setFields, base, builtIn, companyColor, companyLogo, reload: load };
 }
 
 /** "Assinatura de e-mail" inside Meu Perfil: preview + copy for everyone; data/visual adjustable below. */
@@ -81,7 +85,8 @@ export function MySignaturePanel() {
   const current = options.find((t) => t.id === templateId) || options.find((t) => t.is_default) || options[0];
   const cfg = fullConfig(current?.config);
   const html = renderSignature(cfg, person);
-  if (d.loading) return <div className="flex justify-center p-4"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>;
+  if (d.loading) return null;
+  if (!d.showToUsers && !d.canManage) return null;
   const save = async () => {
     if (!profile?.id) return;
     setSaving(true);
@@ -94,7 +99,9 @@ export function MySignaturePanel() {
   const setF = (k: keyof Fields) => (e: React.ChangeEvent<HTMLInputElement>) => setFields((f) => ({ ...f, [k]: e.target.value }));
   const val = (k: Exclude<keyof Fields, 'photo'>) => (fields[k] ?? (base[k] as string) ?? '');
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 rounded-xl border p-3">
+      <p className="text-sm font-medium">Assinatura de e-mail</p>
+      {!d.showToUsers ? <p className="text-xs text-muted-foreground">Oculta para os colaboradores. Você vê porque configura os visuais.</p> : null}
       <Preview html={html} />
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" onClick={() => void copy()}><Copy className="mr-2 h-4 w-4" />Copiar assinatura</Button>
@@ -165,6 +172,12 @@ function EmailSignatureInner() {
     if (error) { toast.error('Não foi possível salvar o visual.'); return; }
     toast.success('Visual salvo.'); setEdit((e) => (e ? { ...e, id: data.id } : e)); void d.reload();
   };
+  const toggleShow = async (v: boolean) => {
+    d.setShowToUsers(v);
+    const { error } = await db.from('email_signature_settings').upsert({ company_id: company?.id, show_to_users: v, updated_at: new Date().toISOString() });
+    if (error) { d.setShowToUsers(!v); toast.error('Não foi possível salvar.'); return; }
+    toast.success(v ? 'Assinatura visível para os colaboradores.' : 'Assinatura oculta para os colaboradores.');
+  };
   const removeVisual = async () => {
     if (!edit?.id) { setEdit(null); return; }
     if (!(await appConfirm({ title: 'Excluir visual?', message: `"${edit.name}" deixa de aparecer para todos. Quem usava passa para o visual padrão.`, confirmText: 'Excluir', danger: true }))) return;
@@ -181,7 +194,13 @@ function EmailSignatureInner() {
       <div className="dk-panel">
         <div className="dk-bar">
           <div><b className="text-[15px] font-semibold">Visuais de assinatura <span className="ml-1 text-muted-foreground">{templates.length}</span></b><p className="text-xs text-muted-foreground">Cada pessoa escolhe o visual e copia a própria assinatura em Meu Perfil.</p></div>
-          <button type="button" className="dk-btn pri" onClick={startNew}><Plus className="h-4 w-4" />Novo visual</button>
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2.5 text-sm" title="Quando desligado, a assinatura não aparece no Meu Perfil dos colaboradores">
+              <Switch checked={d.showToUsers} onCheckedChange={(v) => void toggleShow(v)} aria-label="Mostrar a assinatura para os colaboradores" />
+              <span><b className="font-medium">Mostrar para os colaboradores</b><span className="block text-xs text-muted-foreground">No fim do Meu Perfil, com o botão de copiar</span></span>
+            </label>
+            <button type="button" className="dk-btn pri" onClick={startNew}><Plus className="h-4 w-4" />Novo visual</button>
+          </div>
         </div>
           <div className="grid gap-0 lg:grid-cols-[300px_minmax(0,1fr)]">
             <div className="flex flex-col gap-2 border-r border-border p-4">
