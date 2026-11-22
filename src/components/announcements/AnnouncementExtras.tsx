@@ -14,7 +14,7 @@ import { ExportMenu } from '@/components/ui/ExportMenu';
 import { PollCard } from '@/components/chat/extras/ChatPoll';
 import { formatText } from '@/lib/chatFormatUtils';
 import { useAuth } from '@/contexts/AuthContext';
-import { listAnnouncementMedia, mediaProblem, MEDIA_ACCEPT, MEDIA_MAX_FILES, type AnnMedia } from '@/lib/announcementMedia';
+import { listAnnouncementMedia, mediaAccept, mediaProblem, mediaType, MEDIA_MAX_FILES, type AnnMedia } from '@/lib/announcementMedia';
 import '@/styles/chat-extras.css';
 import '@/styles/announcement-view.css';
 
@@ -156,18 +156,22 @@ export function MediaGallery({ items }: { items: AnnMedia[] }) {
 /** Form field: photos/videos already in the announcement (removable) + new files to send after saving. */
 export function MediaPicker({ existing, onRemoveExisting, files, onFiles }: { existing: AnnMedia[]; onRemoveExisting: (m: AnnMedia) => void; files: File[]; onFiles: (f: File[]) => void }) {
   const ref = useRef<HTMLInputElement>(null);
+  const [err, setErr] = useState('');
   const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
   useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
   const total = existing.length + files.length;
+  // problems are shown right under the picker (a toast can be hidden behind the phone's sheet)
   const add = (list: FileList | null) => {
-    const next = [...files];
+    const next = [...files]; const probs: string[] = [];
     for (const f of Array.from(list || [])) {
-      if (existing.length + next.length >= MEDIA_MAX_FILES) { toast.error(`Até ${MEDIA_MAX_FILES} fotos ou vídeos por aviso.`); break; }
-      const p = mediaProblem(f); if (p) { toast.error(p); continue; }
+      if (existing.length + next.length >= MEDIA_MAX_FILES) { probs.push(`Até ${MEDIA_MAX_FILES} fotos ou vídeos por aviso.`); break; }
+      const p = mediaProblem(f); if (p) { probs.push(p); continue; }
       next.push(f);
     }
+    setErr(probs.join(' '));
     onFiles(next);
   };
+  const isVideo = (f: File) => mediaType(f).startsWith('video/');
   return (
     <div className="av-pick">
       {existing.map((m) => (
@@ -179,15 +183,16 @@ export function MediaPicker({ existing, onRemoveExisting, files, onFiles }: { ex
       ))}
       {files.map((f, i) => (
         <div key={i} className="av-th">
-          {f.type.startsWith('video/') ? <video src={previews[i]} muted preload="metadata" /> : <img src={previews[i]} alt="" />}
-          {f.type.startsWith('video/') ? <span className="vb">Vídeo</span> : null}
+          {isVideo(f) ? <video src={previews[i]} muted playsInline preload="metadata" /> : <img src={previews[i]} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }} />}
+          {isVideo(f) ? <span className="vb">Vídeo</span> : <span className="vb">Foto</span>}
           <button type="button" className="rm" aria-label="Remover" onClick={() => onFiles(files.filter((_, j) => j !== i))}><X size={13} /></button>
         </div>
       ))}
       {total < MEDIA_MAX_FILES ? (
         <button type="button" className="av-add" onClick={() => ref.current?.click()}><ImagePlus size={20} />Foto ou vídeo</button>
       ) : null}
-      <input ref={ref} type="file" accept={MEDIA_ACCEPT} multiple hidden onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
+      <input ref={ref} type="file" accept={mediaAccept()} multiple hidden onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
+      {err ? <p className="av-err" role="alert">{err}</p> : null}
     </div>
   );
 }

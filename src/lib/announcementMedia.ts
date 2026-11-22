@@ -9,30 +9,48 @@ const BUCKET = 'announcement-media';
 export const MEDIA_MAX_FILES = 6;
 export const IMAGE_MAX = 10 * 1024 * 1024;
 export const VIDEO_MAX = 50 * 1024 * 1024;
-export const MEDIA_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime';
-const OK = new Set(MEDIA_ACCEPT.split(','));
+/** Kinds stored as they are; other photos (HEIC, BMP…) are converted to JPEG before sending. */
+const OK = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime', 'video/3gpp', 'video/x-m4v']);
+const EXT: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', jfif: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', heic: 'image/heic', heif: 'image/heif', bmp: 'image/bmp', mp4: 'video/mp4', m4v: 'video/x-m4v', mov: 'video/quicktime', webm: 'video/webm', '3gp': 'video/3gpp' };
+/** The Android app's file chooser only honours the FIRST accepted type (a list would show only JPEGs and hide
+ *  videos), so inside the app nothing is filtered and the file is checked after it is picked. */
+export function mediaAccept(): string | undefined {
+  return typeof window !== 'undefined' && (window as unknown as { EwvonNative?: unknown }).EwvonNative ? undefined : 'image/*,video/*';
+}
+/** Real type of a picked file: some phones send it empty or generic, so the extension decides. */
+export function mediaType(f: File): string {
+  const t = (f.type || '').toLowerCase();
+  if (t && t !== 'application/octet-stream') return t === 'image/jpg' ? 'image/jpeg' : t;
+  return EXT[(f.name.split('.').pop() || '').toLowerCase()] || '';
+}
 
 export type AnnMedia = { id: string; announcement_id: string; path: string; kind: 'image' | 'video'; mime: string | null; size: number | null; position: number; url: string };
 
 /** Problem with a file, in plain Portuguese (null = it can be sent). */
 export function mediaProblem(f: File): string | null {
-  if (!OK.has(f.type)) return `"${f.name}": use foto (JPG, PNG, WebP, GIF) ou vídeo (MP4, WebM, MOV).`;
-  const video = f.type.startsWith('video/');
+  const t = mediaType(f);
+  if (!t.startsWith('image/') && !t.startsWith('video/')) return `"${f.name}" não é foto nem vídeo.`;
+  if (t.startsWith('video/') && !OK.has(t)) return `"${f.name}": envie o vídeo em MP4, MOV ou WebM.`;
+  const video = t.startsWith('video/');
   if (f.size > (video ? VIDEO_MAX : IMAGE_MAX)) return `"${f.name}" passa de ${video ? '50' : '10'} MB.`;
   return null;
 }
 
 /** Big photos are reduced (max 2000 px, JPEG) so the storage is not filled by phone pictures; GIFs stay as they are. */
 async function shrink(f: File): Promise<Blob> {
-  if (!f.type.startsWith('image/') || f.type === 'image/gif' || f.size < 1.5 * 1024 * 1024) return f;
+  const t = mediaType(f);
+  if (!t.startsWith('image/') || t === 'image/gif') return t && t !== f.type ? new Blob([f], { type: t }) : f;
+  const convert = !OK.has(t);   // HEIC, BMP…: re-encode as JPEG so every browser shows it
+  if (!convert && f.size < 1.5 * 1024 * 1024) return t !== f.type ? new Blob([f], { type: t }) : f;
   try {
     const bmp = await createImageBitmap(f);
     const k = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
     const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
     c.getContext('2d')?.drawImage(bmp, 0, 0, c.width, c.height);
     const out: Blob | null = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.86));
-    return out && out.size < f.size ? out : f;
-  } catch { return f; }
+    if (out && (convert || out.size < f.size)) return out;
+    return t !== f.type ? new Blob([f], { type: t }) : f;
+  } catch { if (convert) throw new Error('decode'); return f; }
 }
 
 /** Sends the files of an announcement (after it was created, because the path needs its id). Returns how many failed. */
@@ -41,8 +59,9 @@ export async function uploadAnnouncementMedia(companyId: string, announcementId:
   for (let i = 0; i < files.length; i++) {
     const f = files[i];
     if (mediaProblem(f)) { failed++; continue; }
-    const blob = await shrink(f);
-    const type = blob.type || f.type;
+    let blob: Blob;
+    try { blob = await shrink(f); } catch { failed++; continue; }
+    const type = blob.type || mediaType(f);
     const ext = type === 'image/jpeg' ? 'jpg' : (type.split('/')[1] || 'bin').replace('quicktime', 'mov');
     const path = `${companyId}/${announcementId}/${crypto.randomUUID()}.${ext}`;
     const up = await supabase.storage.from(BUCKET).upload(path, blob, { contentType: type, cacheControl: '3600', upsert: false });
