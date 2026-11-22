@@ -121,7 +121,7 @@ export function TimeOffTab({ isManager }: { isManager: boolean }) {
         <div className="dk-ti" style={{ fontSize: 15 }}>Calendário da equipe</div>
         <div className="flex items-center gap-1.5">
           <button type="button" className="dk-ic bg" aria-label="Mês anterior" onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}><ChevronLeft size={17} /></button>
-          <b className="min-w-[150px] text-center capitalize">{month.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</b>
+          <b className="min-w-[150px] text-center">{((m) => m.charAt(0).toUpperCase() + m.slice(1))(month.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }))}</b>
           <button type="button" className="dk-ic bg" aria-label="Próximo mês" onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}><ChevronRight size={17} /></button>
         </div>
       </div>
