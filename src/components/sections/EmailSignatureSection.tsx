@@ -25,9 +25,9 @@ type Fields = { name?: string; role?: string; sector?: string; phone?: string; m
 
 function Preview({ html }: { html: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-white p-5 text-left shadow-sm" style={{ colorScheme: 'light' }}>
+    <div className="min-w-0 max-w-full rounded-2xl border border-border bg-white p-3 text-left shadow-sm sm:p-5" style={{ colorScheme: 'light' }}>
       <div className="mb-3 border-b border-neutral-200 pb-2 text-[11px] text-neutral-400">Prévia — como aparece no fim do e-mail</div>
-      <div className="overflow-x-auto" dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="min-w-0 max-w-full overflow-hidden [overflow-wrap:anywhere] [&_img]:max-w-full [&_table]:max-w-full" dangerouslySetInnerHTML={{ __html: html }} />
     </div>
   );
 }
@@ -41,11 +41,12 @@ function BannerCanvas({ cfg, person, company, width = BANNER_W, hotspots = false
     void bannerAssets(c, person).then((a) => { if (alive && ref.current) { const l: BannerLink[] = []; drawBanner(ref.current, c, person, a, company, l); if (hotspots) setLinks(l); } });
     return () => { alive = false; };
   }, [key]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const cv = <canvas ref={ref} style={{ width, maxWidth: '100%', height: 'auto', aspectRatio: `${BANNER_W} / ${H}`, display: 'block' }} />;
+  // width follows the container (never forces it wider): 100% up to the requested size
+  const cv = <canvas ref={ref} style={{ width: '100%', maxWidth: width, height: 'auto', aspectRatio: `${BANNER_W} / ${H}`, display: 'block' }} />;
   if (!hotspots) return cv;
   // the preview is clickable like the e-mail: each contact, network, logo and button opens its own link
   return (
-    <div className="relative" style={{ width, maxWidth: '100%' }}>
+    <div className="relative" style={{ width: '100%', maxWidth: width }}>
       {cv}
       {links.map((l, i) => (
         <a key={i} href={l.href} target="_blank" rel="noopener noreferrer" title={l.href.replace(/^(mailto|tel):/, '')}
@@ -60,11 +61,11 @@ function SigPreview({ cfg, person, company }: { cfg: Partial<SigConfig>; person:
   const c = fullConfig(cfg);
   if (!isBannerStyle(c.style)) return <Preview html={renderSignature(c, person)} />;
   return (
-    <div className="rounded-2xl border border-border bg-white p-5 text-left shadow-sm" style={{ colorScheme: 'light' }}>
+    <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-white p-3 text-left shadow-sm sm:p-5" style={{ colorScheme: 'light' }}>
       <div className="mb-3 border-b border-neutral-200 pb-2 text-[11px] text-neutral-400">Prévia — como aparece no fim do e-mail</div>
       <BannerCanvas cfg={c} person={person} company={company} hotspots />
       <p className="mt-2 text-[11px] text-neutral-400">Telefones, e-mail, site, endereço, redes sociais, logo e botão abrem o próprio link no e-mail. Passe o mouse para ver.</p>
-      <table><tbody dangerouslySetInnerHTML={{ __html: bannerLinksHtml(c, person) }} /></table>
+      <table className="w-full table-fixed [overflow-wrap:anywhere]"><tbody dangerouslySetInnerHTML={{ __html: bannerLinksHtml(c, person) }} /></table>
     </div>
   );
 }
@@ -179,7 +180,7 @@ export function MySignaturePanel() {
   const setF = (k: keyof Fields) => (e: React.ChangeEvent<HTMLInputElement>) => setFields((f) => ({ ...f, [k]: e.target.value }));
   const val = (k: Exclude<keyof Fields, 'photo'>) => (fields[k] ?? (base[k] as string) ?? '');
   return (
-    <div className="flex flex-col gap-3 rounded-xl border p-3">
+    <div className="flex min-w-0 max-w-full flex-col gap-3 rounded-xl border p-3">
       <p className="text-sm font-medium">Assinatura de e-mail</p>
       {!d.showToUsers ? <p className="text-xs text-muted-foreground">Oculta para os colaboradores. Você vê porque configura os visuais.</p> : null}
       <SigPreview cfg={cfg} person={person} company={companyName} />
