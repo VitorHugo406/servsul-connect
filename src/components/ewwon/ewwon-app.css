@@ -677,3 +677,7 @@ html body .ew .ewx-ment::-webkit-scrollbar-thumb { background: color-mix(in srgb
 .ew .ewx-popt .fld { flex: 1; margin: 0; }
 .ew .ewx-padd { margin: 2px 0 8px; }
 .ew .ewx-fpoll { margin-top: 10px; }
+/* The global sheet is a flex column: without this its fields shrink (the "Novo aviso" message box collapsed to one
+   line once fotos/vídeos and enquete made the sheet taller than the screen); the sheet scrolls instead. */
+.ew .sheet.gs > * { flex-shrink: 0; }
+.ew .sheet.gs textarea.fld { min-height: 112px; }
