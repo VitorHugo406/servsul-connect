@@ -1,5 +1,5 @@
 import { IS_DEMO } from '@/lib/demo/bootDemo';
-import { CreditCard, Plug, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, Globe, ClipboardCheck, Megaphone, Link, MessageSquare, Bell, Home, Cake, Settings, Trash2, Building2, Sparkles, DoorOpen, HeartHandshake, BookMarked } from 'lucide-react';
+import { CreditCard, Plug, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, Globe, ClipboardCheck, Megaphone, Link, MessageSquare, Bell, Home, Cake, Settings, Trash2, Building2, Briefcase, Sparkles, DoorOpen, HeartHandshake, BookMarked } from 'lucide-react';
 import { useDbFeature } from '@/hooks/useDbFeature';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompanyPlan } from '@/hooks/useCompanyPlan';
@@ -15,7 +15,7 @@ export const menuItems = [
   { id: 'meeting-rooms', icon: DoorOpen, label: 'Sala de Reunião', permission: 'can_access_meeting_rooms' as const },
   { id: 'management', icon: Settings, label: 'Gerenciamento', permission: 'can_access_management' as const },
   { id: 'shortcuts', icon: Link, label: 'Atalhos do Sistema', adminOnly: true },
-  { id: 'companies', icon: Building2, label: 'Empresas', superAdminOnly: true },
+  { id: 'companies', icon: Briefcase, label: 'Empresas', superAdminOnly: true },   // not Building2: that is Gestão de Setores
   { id: 'system-broadcasts', icon: Megaphone, label: 'Comunicados Globais', superAdminOnly: true },
   { id: 'sectors', icon: Building2, label: 'Gestão de Setores', adminOnly: true },
   { id: 'data-management', icon: Trash2, label: 'Exclusão de Dados', adminOnly: true },

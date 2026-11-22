@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import { lazyWithRetry } from '@/lib/lazyRetry';
 import { SectionBoundary } from '@/components/common/SectionBoundary';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, LayoutDashboard, MessageSquare, Bell, Cake, Settings, Link as LinkIcon, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, CalendarDays, FileText, HardDrive, BookOpen, Shield, Globe, ClipboardCheck, StickyNote, Megaphone, Plug, LayoutGrid, CreditCard, Lock, HeartHandshake, BookMarked } from 'lucide-react';
+import { Home, LayoutDashboard, MessageSquare, Bell, Cake, Settings, Link as LinkIcon, Trash2, Building2, Briefcase, Sparkles, ListTodo, UsersRound, Mail, CalendarDays, FileText, HardDrive, BookOpen, Shield, Globe, ClipboardCheck, StickyNote, Megaphone, Plug, LayoutGrid, CreditCard, Lock, HeartHandshake, BookMarked } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { usePresence } from '@/hooks/usePresence';
 import { useMeetingStatus } from '@/hooks/useMeetingStatus';
@@ -118,7 +118,7 @@ const sectionIntroIcons = {
   calendar: CalendarDays, 'system-logs': FileText,
   storage: HardDrive, documentation: BookOpen, 'war-room': Shield,
   'api-management': Plug, evaluations: ClipboardCheck, notes: StickyNote, rh: HeartHandshake, wiki: BookMarked,
-  companies: Building2, 'system-broadcasts': Megaphone, 'event-history': Sparkles, billing: CreditCard, 'dashboard-3d': LayoutDashboard, integrations: Plug,
+  companies: Briefcase, 'system-broadcasts': Megaphone, 'event-history': Sparkles, billing: CreditCard, 'dashboard-3d': LayoutDashboard, integrations: Plug,
 } as const;
 
 function LockedSection({ reason, feature, onBilling, onHome }: { reason: 'system' | 'plan'; feature: string; onBilling?: () => void; onHome: () => void }) {
