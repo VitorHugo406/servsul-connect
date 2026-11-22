@@ -3,7 +3,7 @@
 // read and opens the card in its mural (/tarefas/<slug>-<id>?abrir=<task>).
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlarmClock, BadgeCheck, Zap } from 'lucide-react';
+import { AlarmClock, BadgeCheck, CalendarCheck2, ClipboardList, Heart, Target, TreePalm, Users, Zap } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +28,10 @@ export function CardNotifications({ onDone, refreshKey }: { onDone?: () => void;
   const open = async (n: N) => {
     await db.from('user_notifications').update({ is_read: true }).eq('id', n.id);
     setRows((r) => r.filter((x) => x.id !== n.id));
+    // agenda / RH notifications open their screen (the RH tab is remembered in localStorage by RhSection)
+    const RH: Record<string, string> = { time_off: 'timeoff', survey: 'surveys', one_on_one: 'oneonone', feedback: 'feedback', goal: 'goals' };
+    if (n.type === 'booking') { onDone?.(); navigate('/calendario'); return; }
+    if (RH[n.type]) { try { localStorage.setItem('ewvon:rh-tab', RH[n.type]); } catch { /* storage unavailable */ } onDone?.(); navigate('/rh'); return; }
     if (!n.reference_id) return;
     const { data: t } = await db.from('tasks').select('board_id').eq('id', n.reference_id).maybeSingle();
     if (!t?.board_id) return;
@@ -36,11 +40,11 @@ export function CardNotifications({ onDone, refreshKey }: { onDone?: () => void;
     onDone?.(); navigate(`/tarefas/${slug(b.name)}-${b.id}?abrir=${n.reference_id}`);
   };
   const readAll = async () => { const ids = rows.map((r) => r.id); setRows([]); await db.from('user_notifications').update({ is_read: true }).in('id', ids); };
-  const Ico = (t: string) => (t === 'approval' ? BadgeCheck : t === 'automation' ? Zap : AlarmClock);
+  const Ico = (t: string) => ({ approval: BadgeCheck, automation: Zap, booking: CalendarCheck2, time_off: TreePalm, survey: ClipboardList, one_on_one: Users, feedback: Heart, goal: Target } as Record<string, typeof AlarmClock>)[t] || AlarmClock;
 
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between px-1"><span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cards</span>
+      <div className="mb-1 flex items-center justify-between px-1"><span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cards, agenda e RH</span>
         <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => void readAll()}>Marcar como lidas</button></div>
       <div className="space-y-1">
         {rows.map((n) => { const I = Ico(n.type); const bad = /atrasad|Recusado/.test(n.title); return (

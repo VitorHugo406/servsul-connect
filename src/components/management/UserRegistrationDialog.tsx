@@ -39,6 +39,8 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { companyAutoOnboarding, createOnboardingBoard } from '@/lib/onboarding';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -80,6 +82,7 @@ export function UserRegistrationDialog({
   onSuccess 
 }: UserRegistrationDialogProps) {
   const { company: currentCompany } = useCompany();
+  const { user: me, profile: meProfile } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -241,6 +244,11 @@ export function UserRegistrationDialog({
         }
       }
       toast.success('Usuário criado com sucesso!');
+      // Onboarding automático (RH): a mural for the new person, when the company turned it on
+      if (currentCompany?.id && me && meProfile && await companyAutoOnboarding(currentCompany.id)) {
+        try { await createOnboardingBoard({ email: email.trim(), name }, { userId: me.id, profileId: meProfile.id, companyId: currentCompany.id }); toast.success(`Mural de onboarding criado para ${name}`); }
+        catch { toast.error('Usuário criado, mas o mural de onboarding não pôde ser criado.'); }
+      }
       resetForm();
       onSuccess();
     } catch (error) {

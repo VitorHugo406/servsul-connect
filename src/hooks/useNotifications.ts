@@ -9,7 +9,8 @@ interface NotificationCounts {
   cardAlerts: number;
   total: number;
 }
-export const CARD_NOTIF_TYPES = ['task_reminder', 'approval', 'automation'];
+// cards (task_reminder/approval/automation) + agenda and RH (migration 20261121010000): booking, time_off, survey, one_on_one, feedback, goal
+export const CARD_NOTIF_TYPES = ['task_reminder', 'approval', 'automation', 'booking', 'time_off', 'survey', 'one_on_one', 'feedback', 'goal'];
 
 export function useNotifications() {
   const instanceId = useId().replace(/[^a-zA-Z0-9_-]/g, '');

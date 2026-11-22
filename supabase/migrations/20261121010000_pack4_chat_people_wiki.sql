@@ -908,6 +908,15 @@ create policy "Evaluation goals" on public.evaluation_goals for all to authentic
 grant select, insert, delete on public.evaluation_goals to authenticated;
 
 alter table public.companies add column if not exists auto_onboarding boolean not null default false;
+-- companies can only be updated by the super admin, so the company admin turns the switch on/off through this function
+create or replace function public.set_auto_onboarding(_on boolean)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'not allowed'; end if;
+  update public.companies set auto_onboarding = coalesce(_on, false) where id = public.current_company_id();
+end $$;
+revoke all on function public.set_auto_onboarding(boolean) from public, anon;
+grant execute on function public.set_auto_onboarding(boolean) to authenticated;
 
 -- ───────────── E. wiki
 create table if not exists public.wiki_pages (

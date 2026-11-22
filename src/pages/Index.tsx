@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import { lazyWithRetry } from '@/lib/lazyRetry';
 import { SectionBoundary } from '@/components/common/SectionBoundary';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, LayoutDashboard, MessageSquare, Bell, Cake, Settings, Link as LinkIcon, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, CalendarDays, FileText, HardDrive, BookOpen, Shield, Globe, ClipboardCheck, StickyNote, Megaphone, Plug, LayoutGrid, CreditCard, Lock } from 'lucide-react';
+import { Home, LayoutDashboard, MessageSquare, Bell, Cake, Settings, Link as LinkIcon, Trash2, Building2, Sparkles, ListTodo, UsersRound, Mail, CalendarDays, FileText, HardDrive, BookOpen, Shield, Globe, ClipboardCheck, StickyNote, Megaphone, Plug, LayoutGrid, CreditCard, Lock, HeartHandshake, BookMarked } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { usePresence } from '@/hooks/usePresence';
 import { useMeetingStatus } from '@/hooks/useMeetingStatus';
@@ -37,6 +37,8 @@ const WarRoomSection = lazyWithRetry(() => import('@/components/sections/WarRoom
 const MeetingRoomsSection = lazyWithRetry(() => import('@/components/sections/MeetingRoomsSection').then((module) => ({ default: module.MeetingRoomsSection })));
 const EvaluationsSection = lazyWithRetry(() => import('@/components/sections/EvaluationsSection').then((module) => ({ default: module.EvaluationsSection })));
 const NotesSection = lazyWithRetry(() => import('@/components/sections/NotesSection').then((module) => ({ default: module.NotesSection })));
+const RhSection = lazyWithRetry(() => import('@/components/sections/RhSection').then((module) => ({ default: module.RhSection })));
+const WikiSection = lazyWithRetry(() => import('@/components/sections/WikiSection').then((module) => ({ default: module.WikiSection })));
 const CompaniesManagementSection = lazyWithRetry(() => import('@/components/sections/CompaniesManagementSection').then((module) => ({ default: module.CompaniesManagementSection })));
 const SystemBroadcastsSection = lazyWithRetry(() => import('@/components/sections/SystemBroadcastsSection').then((module) => ({ default: module.SystemBroadcastsSection })));
 const Dashboard3DSection = lazyWithRetry(() => import('@/components/sections/Dashboard3DSection').then((module) => ({ default: module.Dashboard3DSection })));
@@ -82,6 +84,8 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   'api-management': { title: 'API de Integração', subtitle: 'Gerenciamento de integrações externas' },
   evaluations: { title: 'Avaliações', subtitle: 'Avaliação de desempenho e feedback' },
   notes: { title: 'Anotações', subtitle: 'Suas notas pessoais e compartilhadas' },
+  rh: { title: 'RH', subtitle: 'Ausências, pesquisas, 1:1, reconhecimento, metas e organograma' },
+  wiki: { title: 'Base de conhecimento', subtitle: 'Procedimentos e políticas da empresa' },
   companies: { title: 'Empresas', subtitle: 'Gestão de tenants do sistema' },
   'system-broadcasts': { title: 'Comunicados Globais', subtitle: 'Avisos para todas as empresas' },
   billing: { title: 'Pagamentos', subtitle: 'Plano, cobranças e extras da empresa' },
@@ -97,7 +101,7 @@ const sectionPaths: Record<string, string> = {
   'people-management': '/gestao-de-pessoas',
   calendar: '/calendario', 'system-logs': '/logs-do-sistema', storage: '/armazenamento',
   'event-history': '/eventos-mensais', documentation: '/documentacao', 'war-room': '/war-room',
-  'api-management': '/integracoes-api', evaluations: '/avaliacoes', notes: '/anotacoes',
+  'api-management': '/integracoes-api', evaluations: '/avaliacoes', notes: '/anotacoes', rh: '/rh', wiki: '/base-de-conhecimento',
   companies: '/empresas', 'system-broadcasts': '/comunicados-globais', 'meeting-rooms': '/salas-de-reuniao',
   billing: '/pagamentos',
   'dashboard-3d': '/dash',
@@ -113,7 +117,7 @@ const sectionIntroIcons = {
   tasks: ListTodo, 'people-management': UsersRound,
   calendar: CalendarDays, 'system-logs': FileText,
   storage: HardDrive, documentation: BookOpen, 'war-room': Shield,
-  'api-management': Plug, evaluations: ClipboardCheck, notes: StickyNote,
+  'api-management': Plug, evaluations: ClipboardCheck, notes: StickyNote, rh: HeartHandshake, wiki: BookMarked,
   companies: Building2, 'system-broadcasts': Megaphone, 'event-history': Sparkles, billing: CreditCard, 'dashboard-3d': LayoutDashboard, integrations: Plug,
 } as const;
 
@@ -287,6 +291,8 @@ const Index = () => {
       case 'api-management': return <ApiManagementSection />;
       case 'evaluations': return <EvaluationsSection />;
       case 'notes': return <NotesSection />;
+      case 'rh': return <RhSection />;
+      case 'wiki': return <WikiSection />;
       case 'companies': return <CompaniesManagementSection />;
       case 'system-broadcasts': return <SystemBroadcastsSection />;
       case 'dashboard-3d': return <Dashboard3DSection onExit={() => handleSectionChange('home')} />;

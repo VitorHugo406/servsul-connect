@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import * as E from '@/lib/evaluations';
 import type { Criterion, EvalItem, EvalRow, EvalStatus } from '@/lib/evaluations';
 import { appConfirm } from '@/lib/appDialog';
+import { EvaluationGoals } from '@/components/rh/EvaluationGoals';
 import { downloadEvaluationPdf } from '@/lib/evalDocument';
 import { CriteriaModelPanel } from '@/components/evaluations/CriteriaModelPanel';
 import { FORM_TYPES, formTypeLabel, type FormType } from '@/lib/evalPresets';
@@ -421,6 +422,7 @@ function EvaluationDialog({ ev, meId, canManage, isAdmin, onClose, onChanged }: 
           <FeedbackField label="Pontos a desenvolver" value={improvements} onChange={setImprovements} editable={editable} placeholder="O que pode melhorar e como" />
         </div>
         <FeedbackField label="Feedback geral" value={feedback} onChange={setFeedback} editable={editable} placeholder="Mensagem final para o colaborador (obrigatório para enviar)" rows={4} />
+        <EvaluationGoals evaluationId={ev.id} personId={ev.evaluatedId} editable={editable} />
 
         {ev.status === 'finalized' && ev.evaluatedComment ? <FeedbackField label="Comentário do colaborador" value={ev.evaluatedComment} editable={false} /> : null}
         {ev.status === 'finalized' && ev.finishedAt ? <p className="text-xs text-zinc-500"><Check className="mr-1 inline h-3.5 w-3.5" />Ciência dada em {new Date(ev.finishedAt).toLocaleString('pt-BR')}</p> : null}
