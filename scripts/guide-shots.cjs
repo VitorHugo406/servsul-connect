@@ -16,7 +16,7 @@ eval(require('fs').readFileSync(__dirname + '/guide-seed.cjs', 'utf8').replace(/
     await d.locator('button:has-text("Usar modelo")').click(); await d.waitForTimeout(4000); });
   await step('quadro', async () => shot('quadro'));
   await step('campos', async () => {
-    await d.click('button[title="Campos personalizados"]'); await d.waitForTimeout(500);
+    await d.locator('button:has-text("Configurar")').first().click(); await d.waitForTimeout(300); await d.locator('[role=menuitem]:has-text("Campos personalizados")').click(); await d.waitForTimeout(500);
     for (const [name, type, opts] of [['Valor do contrato', 'Valor (R$)', ''], ['Cliente', 'Texto', ''], ['Área', 'Lista de opções', 'Comercial, Operações, TI']]) {
       await d.locator('[role=dialog] button:has-text("Novo campo")').click(); await d.waitForTimeout(200);
       await d.locator('[role=dialog] input[aria-label="Nome do campo"]').fill(name);
@@ -51,7 +51,7 @@ eval(require('fs').readFileSync(__dirname + '/guide-seed.cjs', 'utf8').replace(/
   await step('relatorios', async () => { await view('Relatórios'); await shot('relatorios'); await view('Quadro'); });
   await d.keyboard.press('Escape'); await d.waitForTimeout(400);
   await step('automacoes', async () => {
-    await d.click('button[title="Automações do Board"]'); await d.waitForTimeout(600); await d.locator('text=Nova Regra').click(); await d.waitForTimeout(400);
+    await d.locator('button:has-text("Organizar")').first().click(); await d.waitForTimeout(300); await d.locator('[role=menuitem]:has-text("Automações")').click(); await d.waitForTimeout(600); await d.locator('text=Nova Regra').click(); await d.waitForTimeout(400);
     await d.locator('[role=combobox]').first().click(); await d.waitForTimeout(300); await d.locator('[role=option]:has-text("Card entrou na coluna")').click(); await d.waitForTimeout(300);
     await d.locator('[role=combobox]').nth(2).click(); await d.waitForTimeout(300); await d.locator('[role=option]:has-text("Definir prazo")').click(); await d.waitForTimeout(300);
     await shot('automacoes'); await d.keyboard.press('Escape'); await d.waitForTimeout(500); });

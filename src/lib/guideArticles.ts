@@ -41,7 +41,7 @@ export const GUIDE: GuideArticle[] = [
       { t: 'Abra a galeria', d: 'Em Tarefas, clique em "Modelos". À esquerda ficam as áreas (Recursos Humanos, Vendas e atendimento, Marketing, Operações, Financeiro e compras, Projetos e tecnologia) e uma busca; no centro, os modelos; à direita, a prévia das colunas e tudo o que o modelo traz.', img: 'modelos' },
       { t: 'Escolha e dê um nome', d: 'Clique no modelo, ajuste o nome do mural no rodapé e clique em "Usar modelo". Os prazos e datas de início dos exemplos são calculados a partir de hoje.' },
       { t: 'O que já vem pronto', d: 'Conforme o modelo: campos personalizados (ex.: Valor, Origem e Probabilidade no funil de vendas) já preenchidos nos exemplos, automações (ex.: card novo ganha prazo, ao entrar em uma coluna vira prioridade Alta), dependências entre etapas (veja na Linha do tempo) e um formulário público (Trabalhe conosco, Abrir chamado, Pedido de compra, Pedido de manutenção...). O formulário começa pausado: revise e ative em Compartilhar › Formulário.' },
-      { t: 'Edite à vontade', d: 'O mural é seu: apague os cards de exemplo, renomeie colunas, ajuste campos (ícone de campos no topo) e automações (raio no topo). Nada muda nos outros murais.', img: 'quadro' },
+      { t: 'Edite à vontade', d: 'O mural é seu: apague os cards de exemplo, renomeie colunas, ajuste campos (Configurar › Campos personalizados) e automações (Organizar › Automações), no topo do mural. Nada muda nos outros murais.', img: 'quadro' },
     ], rel: ['criar-mural', 'cards'] },
   { slug: 'cards', cat: 'Murais e cards', title: 'Criar, mover e concluir cards', sum: 'Cada tarefa é um card. Ele guarda responsável, prazo, prioridade, etiquetas, checklist, comentários e anexos.',
     steps: [
@@ -89,7 +89,7 @@ export const GUIDE: GuideArticle[] = [
     ], rel: ['carga'] },
   { slug: 'campos', cat: 'Organização avançada', title: 'Campos personalizados', sum: 'Crie campos próprios do mural, como Valor (R$), Cliente, Tipo de pedido ou Aprovado, e preencha em cada card.',
     steps: [
-      { t: 'Abra os campos do mural', d: 'No topo do mural, clique no ícone de "Campos personalizados" (controles deslizantes). Só o dono ou administrador do mural cria campos.', img: 'campos' },
+      { t: 'Abra os campos do mural', d: 'No topo do mural, abra o menu Configurar e escolha "Campos personalizados". Só o dono ou administrador do mural cria campos.', img: 'campos' },
       { t: 'Crie o campo', d: 'Clique em "Novo campo", dê o nome e escolha o tipo: Texto, Número, Valor (R$), Data, Lista de opções ou Sim/Não. Marque se o valor aparece no card do quadro.' },
       { t: 'Preencha no card', d: 'Abra um card: os campos aparecem na seção "Campos". O valor também aparece como coluna na visualização Lista.', img: 'card-campos' },
     ], rel: ['lista', 'dependencias'] },
@@ -107,7 +107,7 @@ export const GUIDE: GuideArticle[] = [
     ], rel: ['carga', 'relatorios'] },
   { slug: 'automacoes', cat: 'Organização avançada', title: 'Automações (SE → ENTÃO)', sum: 'Faça o mural trabalhar sozinho: ao entrar numa coluna, definir responsável, prazo, etiqueta ou avisar alguém.',
     steps: [
-      { t: 'Abra as automações', d: 'No topo do mural, clique no raio ⚡ e em "Nova regra SE → ENTÃO".', img: 'automacoes' },
+      { t: 'Abra as automações', d: 'No topo do mural, abra o menu Organizar, escolha "Automações" e clique em "Nova regra SE → ENTÃO".', img: 'automacoes' },
       { t: 'Escolha o gatilho (SE)', d: 'Instantâneos (⚡): card criado, entrou numa coluna, concluído, responsável definido. Periódicos (⏱): prazo chegando, card parado, checklist completo, etiqueta urgente.' },
       { t: 'Escolha a ação (ENTÃO)', d: 'Notificar, definir responsável, adicionar etiqueta, definir prazo (hoje + N dias), mudar prioridade, mover de coluna ou gerar alerta. Clique em "Criar regra".' },
     ], tips: ['Exemplo: SE o card entrar em "Revisão", ENTÃO o responsável vira a pessoa que revisa e ela recebe um aviso.'], rel: ['formulario', 'webhooks'] },
@@ -123,9 +123,9 @@ export const GUIDE: GuideArticle[] = [
       { t: 'Libere comentários (opcional)', d: 'Marque "Permitir que convidados comentem e aprovem cards". O convidado clica num card e escolhe Comentar, Aprovar ou Pedir ajustes.', img: 'convidado' },
       { t: 'A equipe acompanha', d: 'Cada comentário de convidado também aparece dentro do card, nos comentários. Desative ou gere um novo link quando quiser.' },
     ], tips: ['Descrições, comentários internos, anexos e nomes da equipe nunca aparecem para convidados.'], rel: ['formulario'] },
-  { slug: 'importar', cat: 'Receber e compartilhar', title: 'Importar do Trello, Asana ou ClickUp', sum: 'Traga seus quadros com colunas, cards, etiquetas, checklists, comentários e responsáveis.',
+  { slug: 'importar', cat: 'Receber e compartilhar', title: 'Importar do Trello, Asana, ClickUp, monday.com ou Notion', sum: 'Traga seus quadros com colunas, cards, etiquetas, checklists, comentários e responsáveis.',
     steps: [
-      { t: 'Exporte da outra ferramenta', d: 'Trello: Menu do quadro › Imprimir, exportar e compartilhar › Exportar como JSON. Asana/ClickUp ou planilhas: exporte em CSV.' },
+      { t: 'Exporte da outra ferramenta', d: 'Trello: Menu do quadro › Imprimir, exportar e compartilhar › Exportar como JSON. Asana e ClickUp: CSV. monday.com: "Exportar quadro para o Excel" (os grupos viram etiquetas). Notion: exporte o banco de dados em "Markdown e CSV". Planilhas em Excel (.xlsx) ou CSV também funcionam.' },
       { t: 'Importe no ewvon', d: 'Em Tarefas, clique em "Importar", escolha o arquivo e confira o resumo (colunas, cards, etiquetas).', img: 'importar' },
       { t: 'Confirme', d: 'Clique em importar. Um mural novo é criado; responsáveis são ligados pelo e-mail ou nome dos colaboradores da empresa.' },
     ], rel: ['criar-mural'] },
@@ -251,11 +251,11 @@ export const GUIDE: GuideArticle[] = [
   { slug: 'arquivar', cat: 'Murais e cards', title: 'Arquivar cards e colunas', sum: 'Tire do caminho o que já foi resolvido sem perder nada.',
     steps: [
       { t: 'Arquive', d: 'No menu do card, use "Arquivar". No menu da coluna, "Arquivar todos os cards".' },
-      { t: 'Recupere', d: 'No topo do mural, abra Arquivados para restaurar um card ou todos de uma vez.' },
+      { t: 'Recupere', d: 'No topo do mural, abra Configurar › Arquivados e lixeira para restaurar um card ou todos de uma vez.' },
     ], rel: ['lixeira'] },
   { slug: 'lixeira', cat: 'Murais e cards', title: 'Lixeira: recuperar cards excluídos', sum: 'Card excluído fica 30 dias na lixeira do mural e volta com checklists, comentários, etiquetas e campos.', hidden: true,
     steps: [
-      { t: 'Abra a lixeira', d: 'No topo do mural, abra Arquivados e escolha a aba "Lixeira".' },
+      { t: 'Abra a lixeira', d: 'No topo do mural, abra Configurar › Arquivados e lixeira e escolha a aba "Lixeira".' },
       { t: 'Restaure', d: 'Clique em restaurar: o card volta com o mesmo número e tudo o que tinha.' },
       { t: 'Excluir de vez', d: 'O dono ou administrador do mural (ou quem excluiu) pode apagar definitivamente. Depois de 30 dias isso acontece sozinho.' },
     ], rel: ['arquivar'] },
@@ -293,13 +293,13 @@ export const GUIDE: GuideArticle[] = [
   // ───────── Organização avançada (extras)
   { slug: 'modo-operacao', cat: 'Organização avançada', title: 'Modo Operação', sum: 'Reorganiza o mural de uma vez: ordena as colunas e sobe a prioridade de quem está com prazo vencido ou perto de vencer.',
     steps: [
-      { t: 'Abra o Modo Operação', d: 'No topo do mural, clique no ícone de atividade (laranja).' },
+      { t: 'Abra o Modo Operação', d: 'No topo do mural, abra o menu Organizar e escolha "Modo Operação".' },
       { t: 'Escolha os critérios', d: 'Prioridade, prazo e urgência. O painel mostra antes quantos cards vão mudar de lugar e quais vão subir de prioridade.' },
       { t: 'Aplique', d: 'Confirme para reorganizar. Bom para começar o dia ou a semana com o quadro em ordem.' },
     ], rel: ['score'] },
   { slug: 'score', cat: 'Organização avançada', title: 'Score da equipe no mural', sum: 'Pontuação mensal de cada pessoa pelos cards entregues no prazo e com atraso.',
     steps: [
-      { t: 'Abra o Score', d: 'No topo do mural, clique no troféu.' },
+      { t: 'Abra o Score', d: 'No topo do mural, abra o menu Acompanhar e escolha "Score".' },
       { t: 'Leia a pontuação', d: 'Cada membro aparece com os cards concluídos no mês, no prazo e com atraso, e a evolução mês a mês.' },
     ], rel: ['relatorios', 'equipes'] },
   { slug: 'notificacoes', cat: 'Conta e segurança', title: 'Notificações, lembretes e resumo do dia', sum: 'O sino reúne mensagens, avisos e avisos de cards; no PC, um resumo do dia mostra o que vence hoje.',
@@ -445,7 +445,7 @@ export const GUIDE: GuideArticle[] = [
     steps: [
       { t: 'Cadastre a chave', d: 'Em Integrações, abra o cartão da IA e cole a chave da empresa. Ela fica criptografada.' },
       { t: 'Use no chat', d: 'Depois disso, qualquer pessoa chama o assistente com @ewvonai.' },
-    ], rel: ['assistente-ia'] },
+    ], rel: ['assistente-ia', 'integracoes-ia'] },
 
   // ───────── Administração
   { slug: 'colaboradores', cat: 'Administração', title: 'Cadastrar e gerenciar colaboradores', sum: 'Ficha completa de cada pessoa, com dados sensíveis criptografados.',
@@ -496,6 +496,123 @@ export const GUIDE: GuideArticle[] = [
       { t: 'Abra "Meus dados e privacidade"', d: 'No perfil (computador) ou em Perfil (celular).' },
       { t: 'Escolha', d: 'Exporte os seus dados ou registre um pedido de correção ou exclusão. Termos, privacidade e cookies ficam em ewvon.com/termos, /privacidade e /cookies.' },
     ], rel: ['seguranca', 'duas-etapas'] },
+
+  // ── pacote 4 (os marcados com hidden dependem da migração 20261121010000 e entram no site quando ela for aplicada)
+  { slug: 'criar-card-mensagem', cat: 'Chat e comunicação', title: 'Criar um card a partir de uma mensagem', sum: 'Transforme um pedido feito no chat em card, com o texto e os anexos, sem copiar e colar.',
+    steps: [
+      { t: 'Abra o menu da mensagem', d: 'Passe o mouse sobre a mensagem e clique nos três pontinhos (⋯) ao lado dela.' },
+      { t: 'Escolha "Criar card"', d: 'Escolha o mural e a coluna. O título e a descrição já vêm preenchidos com a mensagem; ajuste prioridade e prazo se quiser.' },
+      { t: 'Anexos e aviso', d: 'Os arquivos da mensagem são copiados para o card (a primeira imagem pode virar capa), e a conversa recebe um aviso com o card criado.' },
+    ], rel: ['chat-conversas', 'detalhes-card'] },
+  { slug: 'buscar-na-conversa', cat: 'Chat e comunicação', title: 'Buscar dentro de uma conversa', sum: 'Encontre uma mensagem antiga em uma conversa direta ou em grupo.',
+    steps: [
+      { t: 'Abra a busca', d: 'No topo da conversa, clique na lupa e digite pelo menos duas letras.' },
+      { t: 'Vá até a mensagem', d: 'A busca procura no histórico inteiro. Clique no resultado para ir até a mensagem; se ela for antiga, role a conversa para cima para carregá-la.' },
+    ], rel: ['busca-geral'] },
+  { slug: 'resumo-conversa-ia', cat: 'Chat e comunicação', title: 'Resumo da conversa com IA', sum: 'O EwvonAI resume as últimas 24 horas, 3 ou 7 dias da conversa: assuntos, decisões e pendências com responsáveis.',
+    who: 'Disponível quando a empresa cadastrou a chave da Claude em Integrações › EwvonAI.',
+    steps: [
+      { t: 'Abra o resumo', d: 'No topo da conversa (setor, direta ou grupo), clique no ícone de brilho.' },
+      { t: 'Escolha o período', d: 'Últimas 24 h, 3 dias ou 7 dias, e clique em Resumir. O texto pode ser copiado.' },
+      { t: 'Limite diário', d: 'Cada resumo conta no limite diário de pedidos de IA definido pelo administrador. A IA só lê conversas de que você participa.' },
+    ], rel: ['assistente-ia', 'integracoes-ia'] },
+  { slug: 'ia-no-mural', cat: 'Organização avançada', title: 'IA no mural: resumo e cards a partir de um texto', sum: 'Peça um resumo da situação do mural ou cole uma ata e receba os cards prontos para revisar.',
+    who: 'Disponível quando a empresa cadastrou a chave da Claude em Integrações › EwvonAI.',
+    steps: [
+      { t: 'Resumo do mural', d: 'No topo do mural, abra Acompanhar › Resumo com IA: situação geral, cards em atenção, próximos prazos e sugestões.' },
+      { t: 'Cards a partir de um texto', d: 'Abra Organizar › Criar cards de um texto, cole a ata, o e-mail ou a lista e clique em Sugerir cards.' },
+      { t: 'Revise e crie', d: 'Ajuste título, coluna, prioridade, prazo e responsável de cada sugestão, desmarque o que não quiser e crie. Nada é criado sem a sua revisão.' },
+    ], rel: ['automacoes', 'relatorios'] },
+  { slug: 'exportar-excel', cat: 'Primeiros passos', title: 'Exportar para Excel ou CSV', sum: 'Leve as tabelas do sistema para uma planilha: cards da Lista, minhas tarefas, visão geral, relatórios, avaliações, pessoas e aniversariantes.',
+    steps: [
+      { t: 'Clique em Exportar', d: 'Nas telas com tabela, use o botão Exportar.' },
+      { t: 'Escolha o formato', d: 'Excel (.xlsx) abre direto no Excel ou no Google Planilhas; CSV serve para outros sistemas. O arquivo leva o que está filtrado na tela.' },
+    ], rel: ['lista', 'relatorios'] },
+  { slug: 'organograma', cat: 'Pessoas e equipes', title: 'Organograma da empresa', sum: 'Veja os setores, quem é o gestor de cada um, as pessoas e as equipes supervisionadas.',
+    steps: [
+      { t: 'Abra o RH', d: 'No menu, abra RH e escolha Organograma.' },
+      { t: 'Busque', d: 'Procure por nome de pessoa ou de setor. O gestor de cada setor é definido em Gestão de Setores.' },
+    ], rel: ['setores', 'equipes'] },
+  { slug: 'fixar-mensagens', cat: 'Chat e comunicação', title: 'Fixar mensagens no topo da conversa', sum: 'Deixe à vista o que todos precisam lembrar: regras, links, combinados.', hidden: true,
+    steps: [
+      { t: 'Fixe', d: 'No menu ⋯ da mensagem, escolha "Fixar no topo". Cada conversa guarda até 20 mensagens fixadas.' },
+      { t: 'Navegue', d: 'A barra no topo mostra a última fixada; use as setas para ver as outras e clique para ir até a mensagem.' },
+    ], rel: ['buscar-na-conversa'] },
+  { slug: 'enquetes', cat: 'Chat e comunicação', title: 'Enquetes no chat e nos avisos', sum: 'Pergunte e veja o resultado na hora, com voto único ou múltiplo, aberto ou anônimo.', hidden: true,
+    steps: [
+      { t: 'Crie no chat', d: 'Na caixa de mensagem, clique em + › Criar enquete, escreva a pergunta e as opções (até 10).' },
+      { t: 'Escolha as regras', d: 'Permita várias respostas, deixe os votos anônimos (só os totais aparecem) e defina quando encerra.' },
+      { t: 'Nos avisos', d: 'Ao criar um aviso, ligue "Incluir enquete no aviso". Quem vê o aviso vota pelo computador ou pelo celular.' },
+    ], rel: ['avisos'] },
+  { slug: 'agendar-mensagem', cat: 'Chat e comunicação', title: 'Agendar mensagem', sum: 'Escreva agora e deixe a mensagem sair no dia e hora certos.', hidden: true,
+    steps: [
+      { t: 'Agende', d: 'Na caixa de mensagem, clique em + › Agendar mensagem, escreva e escolha o dia e a hora.' },
+      { t: 'Acompanhe', d: 'Acima da caixa aparece quantas mensagens estão agendadas. Clique para ver, ou cancelar antes do envio.' },
+    ], rel: ['fixar-mensagens'] },
+  { slug: 'leitura-obrigatoria', cat: 'Avisos e celebrações', title: 'Leitura obrigatória e avisos para setores', sum: 'Peça "Li e concordo" em avisos importantes, veja quem ainda não confirmou e escolha quais setores recebem o aviso.', hidden: true,
+    steps: [
+      { t: 'Escolha o público', d: 'No formulário do aviso, em "Quem vê este aviso", deixe Todos os usuários ou marque os setores. Notificação e e-mail chegam só a eles.' },
+      { t: 'Peça confirmação', d: 'Ligue "Exigir confirmação de leitura". Cada pessoa confirma com "Li e concordo", no computador ou no celular.' },
+      { t: 'Acompanhe', d: 'No menu do aviso, abra "Confirmações de leitura" para ver quem confirmou e quem falta, e exportar a lista.' },
+    ], rel: ['avisos', 'enquetes'] },
+  { slug: 'link-agendamento', cat: 'Agenda e reuniões', title: 'Link público de agendamento', sum: 'Envie um link para clientes e parceiros escolherem um horário livre na sua agenda.', hidden: true,
+    steps: [
+      { t: 'Configure', d: 'No Calendário, clique em "Link de agendamento": dias da semana, horário, duração, intervalo, antecedência mínima e link da reunião on-line.' },
+      { t: 'Compartilhe', d: 'Copie o link e envie. Só aparecem horários em que você não tem compromisso nem reserva de sala.' },
+      { t: 'Receba', d: 'Cada agendamento entra no seu calendário e você recebe um aviso no sino. Pause o link quando quiser ou gere um novo.' },
+    ], rel: ['agenda', 'salas-reuniao'] },
+  { slug: 'pauta-ata', cat: 'Agenda e reuniões', title: 'Pauta e ata da reunião', sum: 'Prepare a pauta, registre a ata e transforme as ações combinadas em cards.', hidden: true,
+    steps: [
+      { t: 'Abra a pauta', d: 'No evento do Calendário ou na reserva da sala, clique em "Pauta e ata". Todos os participantes veem e editam.' },
+      { t: 'Registre', d: 'Escreva a pauta antes e a ata durante ou depois da reunião. Adicione as ações com responsável e prazo.' },
+      { t: 'Vire cards', d: 'Escolha o mural e a coluna e clique em "Criar cards": cada ação vira um card com responsável e prazo.' },
+    ], rel: ['salas-reuniao', 'link-agendamento'] },
+  { slug: 'checkin-sala', cat: 'Agenda e reuniões', title: 'Check-in na sala por QR Code', sum: 'Cole o QR Code na porta da sala e as pessoas confirmam presença na reunião pelo celular.', hidden: true,
+    steps: [
+      { t: 'Imprima o QR', d: 'Em Salas de reunião, abra a sala e clique em "QR de check-in" (administradores). Imprima e cole na porta.' },
+      { t: 'Faça o check-in', d: 'Quem chega lê o código com o celular, entra com a conta da empresa e toca em "Fazer check-in". Abre 15 minutos antes do início.' },
+    ], rel: ['salas-reuniao'] },
+  { slug: 'ausencias', cat: 'Pessoas e equipes', title: 'Férias e ausências', sum: 'Peça férias, folga, atestado ou home office; o gestor aprova e todos veem o calendário da equipe.', hidden: true,
+    steps: [
+      { t: 'Peça', d: 'Em RH › Ausências, clique em "Solicitar ausência", escolha o tipo e o período.' },
+      { t: 'Aprovação', d: 'O gestor da equipe ou do setor recebe um aviso e aprova ou recusa (com motivo). Você é avisado da resposta.' },
+      { t: 'Calendário da equipe', d: 'As ausências aprovadas aparecem no calendário do mês. Colegas veem "Ausente"; gestores veem o tipo.' },
+    ], rel: ['equipes', 'organograma'] },
+  { slug: 'pesquisas-clima', cat: 'Pessoas e equipes', title: 'Pesquisas de clima e eNPS anônimas', sum: 'Meça o clima e a satisfação da equipe com respostas anônimas.', hidden: true,
+    steps: [
+      { t: 'Crie', d: 'Em RH › Pesquisas, gestores escolhem um modelo (eNPS ou Clima) ou começam em branco, escolhem os setores e a data de encerramento.' },
+      { t: 'Abra', d: 'Ao abrir a pesquisa, o público recebe um aviso. As respostas não ficam ligadas à pessoa.' },
+      { t: 'Resultados', d: 'Aparecem a partir de 3 respostas: eNPS, médias, distribuição e comentários. A divisão por setor só aparece com 5 respostas ou mais no setor.' },
+    ], rel: ['ausencias'] },
+  { slug: 'reunioes-1-1', cat: 'Pessoas e equipes', title: 'Reuniões 1:1', sum: 'Encontros recorrentes entre gestor e pessoa, com pauta conjunta, combinados e anotações privadas.', hidden: true,
+    steps: [
+      { t: 'Marque', d: 'Em RH › 1:1, o gestor clica em "Marcar 1:1", escolhe a pessoa e o horário. Ela recebe um aviso.' },
+      { t: 'Prepare a pauta', d: 'Os dois adicionam assuntos antes do encontro. Durante, registrem as anotações e os combinados com responsável.' },
+      { t: 'Anotações privadas', d: 'Cada um tem um espaço que só ele vê. O histórico fica guardado por pessoa.' },
+    ], rel: ['metas', 'avaliacoes'] },
+  { slug: 'reconhecimento', cat: 'Pessoas e equipes', title: 'Elogios e feedback', sum: 'Mural de elogios com os valores da empresa e feedback privado entre colegas.', hidden: true,
+    steps: [
+      { t: 'Elogie', d: 'Em RH › Reconhecimento, clique em "Elogiar alguém", escolha a pessoa e o valor. O elogio público vai para o mural e os colegas podem aplaudir.' },
+      { t: 'Dê feedback', d: '"Dar feedback" é sempre privado: só vocês dois e os gestores da pessoa veem.' },
+    ], rel: ['reunioes-1-1'] },
+  { slug: 'metas', cat: 'Pessoas e equipes', title: 'Metas individuais', sum: 'Metas com prazo e progresso, definidas pela pessoa ou pelo gestor e consideradas na avaliação.', hidden: true,
+    steps: [
+      { t: 'Crie', d: 'Em RH › Metas, clique em "Nova meta": percentual, número (com alvo e unidade) ou feito/não feito, e o prazo. Gestores definem metas para a equipe.' },
+      { t: 'Atualize', d: 'Informe o valor atual sempre que avançar. Cada atualização fica registrada.' },
+      { t: 'Na avaliação', d: 'Ao avaliar alguém, marque as metas que entram na avaliação: o progresso daquele momento fica guardado com ela.' },
+    ], rel: ['avaliacoes', 'reunioes-1-1'] },
+  { slug: 'onboarding-automatico', cat: 'Pessoas e equipes', title: 'Onboarding automático', sum: 'Cada pessoa cadastrada ganha um mural de integração com as tarefas dos primeiros dias.', hidden: true, who: 'Administradores da empresa.',
+    steps: [
+      { t: 'Ligue', d: 'Em RH, ligue "Onboarding automático" (canto superior direito).' },
+      { t: 'Cadastre', d: 'Ao cadastrar uma pessoa no Gerenciamento, o mural "Onboarding — Nome" é criado a partir do modelo de onboarding, com os cards atribuídos a ela.' },
+    ], rel: ['modelos', 'colaboradores'] },
+  { slug: 'base-de-conhecimento', cat: 'Anotações', title: 'Base de conhecimento', sum: 'Procedimentos, políticas e respostas para dúvidas frequentes, organizados por setor e com busca.', hidden: true,
+    steps: [
+      { t: 'Crie páginas', d: 'Em Base de conhecimento, clique em "Nova página" em Toda a empresa ou no seu setor. Páginas podem ter subpáginas.' },
+      { t: 'Escreva', d: 'O texto salva sozinho. Cada edição importante vira uma versão no Histórico, que pode ser restaurada.' },
+      { t: 'Controle o acesso', d: 'Em "Quem vê e quem edita", escolha se a página é da empresa toda ou só do setor e quem pode editar.' },
+      { t: 'Busque', d: 'A busca procura no título e no texto de todas as páginas que você pode ver.' },
+    ], rel: ['anotacoes'] },
 ];
 
 /** Published articles (hidden ones stay out of the site, the sitemap and the search). */
