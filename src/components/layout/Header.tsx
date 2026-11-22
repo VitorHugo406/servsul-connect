@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useDbFeature } from '@/hooks/useDbFeature';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCompanyLogoUrl } from '@/lib/companyLogo';
 import { createCompanyLogoUrl, setRoundedFavicon } from '@/lib/companyLogo';
@@ -42,7 +43,8 @@ export function Header({ title, subtitle, activeSection = 'home', hideNotificati
   useEffect(() => { document.title = company?.name ? `${company.name} | ewvon` : 'ewvon - Gestão de operações'; void createCompanyLogoUrl(company?.logo_url).then(faviconUrl => setRoundedFavicon(faviconUrl)); }, [company?.name, company?.logo_url]);
   const isMainAdmin = profile?.email === ADMIN_EMAIL; const autonomy = profile?.autonomy_level;
   const { plan: companyPlan } = useCompanyPlan(); const isSuperAdminUser = (useAuth().roles || []).some((r: any) => (r.role as string) === 'super_admin');
-  const visibleSections = useMemo(() => ALL_SECTIONS.filter(s => { if (sectionLock(s.id, companyPlan, isSuperAdminUser)) return false; if (s.mainAdminOnly) return isAdmin && isMainAdmin; if (s.adminOnly) return isAdmin; if (s.supervisorOnly) return isAdmin || ['supervisor','gerente','gestor','diretoria'].includes(autonomy || ''); if (s.permission) return isAdmin || autonomy === 'diretoria' || canAccess(s.permission); return true; }), [isAdmin, isMainAdmin, autonomy, canAccess, companyPlan, isSuperAdminUser]);
+  const wikiOn = useDbFeature('wiki_pages');
+  const visibleSections = useMemo(() => ALL_SECTIONS.filter(s => { if (s.id === 'wiki' && !wikiOn) return false; if (sectionLock(s.id, companyPlan, isSuperAdminUser)) return false; if (s.mainAdminOnly) return isAdmin && isMainAdmin; if (s.adminOnly) return isAdmin; if (s.supervisorOnly) return isAdmin || ['supervisor','gerente','gestor','diretoria'].includes(autonomy || ''); if (s.permission) return isAdmin || autonomy === 'diretoria' || canAccess(s.permission); return true; }), [isAdmin, isMainAdmin, autonomy, canAccess, companyPlan, isSuperAdminUser, wikiOn]);
   const filteredSections = useMemo(() => { if (!searchQuery) return []; const q = searchQuery.toLowerCase(); return visibleSections.filter(s => s.label.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)); }, [searchQuery, visibleSections]);
   useEffect(() => { const k = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); setShowSectionSearch((v) => !v); } }; window.addEventListener('keydown', k); const o = () => setShowSectionSearch(true); window.addEventListener('ewvon:global-search', o); return () => { window.removeEventListener('keydown', k); window.removeEventListener('ewvon:global-search', o); }; }, []);
   const showOrbsButton = hasModule('orbs') && (isAdmin || canAccess('can_access_orbs' as any)); const canCreateAnnouncement = isAdmin || canAccess('can_post_announcements');

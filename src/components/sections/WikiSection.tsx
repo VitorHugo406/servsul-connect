@@ -16,6 +16,7 @@ import { appConfirm, appPrompt } from '@/lib/appDialog';
 import { sanitizeHtml } from '@/lib/safeHtml';
 import { cn } from '@/lib/utils';
 import { usePeople, pname } from '@/components/rh/rhShared';
+import { dbHasTable } from '@/hooks/useDbFeature';
 
 const db = supabase as any;
 type P = { id: string; parent_id: string | null; sector_id: string | null; title: string; content: string; position: number; visibility: 'company' | 'sector'; edit_scope: 'admins' | 'sector' | 'all'; created_by: string | null; updated_by: string | null; updated_at: string };
@@ -23,6 +24,14 @@ type V = { id: string; title: string; content: string; edited_by: string | null;
 type Hit = { id: string; title: string; sector_id: string | null; snippet: string };
 
 export function WikiSection() {
+  const [has, setHas] = useState<boolean | null>(null);
+  useEffect(() => { let alive = true; void dbHasTable('wiki_pages').then((v) => { if (alive) setHas(v); }); return () => { alive = false; }; }, []);
+  if (has === null) return <div className="dk-pg"><div className="flex flex-1 items-center justify-center p-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div></div>;
+  if (!has) return <div className="dk-pg"><div className="dk-panel flex flex-1 flex-col items-center justify-center gap-2 p-10 text-center"><b className="text-lg">Base de conhecimento</b><p className="max-w-md text-sm text-muted-foreground">Este recurso será liberado assim que a atualização do banco de dados for aplicada pelo administrador do sistema.</p></div></div>;
+  return <WikiInner />;
+}
+
+function WikiInner() {
   const { profile, isAdmin } = useAuth();
   const { sectors } = useSectors();
   const { byId } = usePeople();

@@ -8,9 +8,11 @@ const cache = new Map<string, Promise<boolean>>();
 export function dbHasTable(table: string): Promise<boolean> {
   let p = cache.get(table);
   if (!p) {
-    p = (supabase as any).from(table).select('*', { count: 'exact', head: true }).limit(1)
-      .then(({ error }: { error: { code?: string; message?: string } | null }) => !error || !/42P01|does not exist|schema cache|PGRST205/i.test(`${error.code} ${error.message}`))
-      .catch(() => false);
+    // GET with limit 0 (not HEAD: a HEAD answer has no body, so a missing table looked like "no error code" and the
+    // feature showed up before its migration). Any error = not available; network failures are not cached.
+    p = (supabase as any).from(table).select('*').limit(0)
+      .then(({ error }: { error: { code?: string; message?: string } | null }) => { if (error && (!error.code || error.code === '42501')) cache.delete(table); return !error; })
+      .catch(() => { cache.delete(table); return false; });
     cache.set(table, p!);
   }
   return p!;
@@ -26,9 +28,9 @@ export function dbHasColumn(table: string, column: string): Promise<boolean> {
   const k = `${table}.${column}`;
   let p = cache.get(k);
   if (!p) {
-    p = (supabase as any).from(table).select(column, { count: 'exact', head: true }).limit(1)
-      .then(({ error }: { error: { code?: string; message?: string } | null }) => !error || !/42703|42P01|does not exist|schema cache|PGRST20[45]/i.test(`${error.code} ${error.message}`))
-      .catch(() => false);
+    p = (supabase as any).from(table).select(column).limit(0)
+      .then(({ error }: { error: { code?: string; message?: string } | null }) => { if (error && (!error.code || error.code === '42501')) cache.delete(k); return !error; })
+      .catch(() => { cache.delete(k); return false; });
     cache.set(k, p!);
   }
   return p!;
