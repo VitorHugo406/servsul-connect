@@ -22,7 +22,7 @@ export const menuItems = [
   { id: 'evaluations', icon: ClipboardCheck, label: 'Avaliações' },
   { id: 'rh', icon: HeartHandshake, label: 'RH' },
   { id: 'wiki', icon: BookMarked, label: 'Base de conhecimento', dbTable: 'wiki_pages' },
-  { id: 'signatures', icon: Signature, label: 'Assinatura de e-mail', dbTable: 'email_signature_templates' },
+  { id: 'signatures', icon: Signature, label: 'Visuais de assinatura', dbTable: 'email_signature_templates' },
   { id: 'calendar', icon: CalendarDays, label: 'Calendário' },
   { id: 'system-logs', icon: FileText, label: 'Logs do Sistema', mainAdminOnly: true },
   { id: 'event-history', icon: Sparkles, label: 'Eventos Mensais', adminOnly: true },
@@ -43,6 +43,7 @@ export function useVisibleMenuItems() {
   const visibleMenuItems = menuItems.filter(item => {
     if ('dbTable' in item && item.dbTable === 'wiki_pages' && !wikiOn) return false;
     if ('dbTable' in item && item.dbTable === 'email_signature_templates' && !sigOn) return false;
+    if (item.id === 'signatures') return isAdmin || canAccess('can_manage_signatures');   // everyone else copies theirs in Meu Perfil
     if (IS_DEMO && DEMO_HIDDEN_SECTIONS.has(item.id)) return false;
     // Plan: system tabs only for the platform owner; features the plan does not include stay hidden.
     if (sectionLock(item.id, plan, isSuperAdmin)) return false;

@@ -87,7 +87,7 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   notes: { title: 'Anotações', subtitle: 'Suas notas pessoais e compartilhadas' },
   rh: { title: 'RH', subtitle: 'Ausências, pesquisas, 1:1, reconhecimento, metas e organograma' },
   wiki: { title: 'Base de conhecimento', subtitle: 'Procedimentos e políticas da empresa' },
-  signatures: { title: 'Assinatura de e-mail', subtitle: 'Assinatura padronizada com a identidade da empresa' },
+  signatures: { title: 'Visuais de assinatura', subtitle: 'Modelos de assinatura de e-mail da empresa' },
   companies: { title: 'Empresas', subtitle: 'Gestão de tenants do sistema' },
   'system-broadcasts': { title: 'Comunicados Globais', subtitle: 'Avisos para todas as empresas' },
   billing: { title: 'Pagamentos', subtitle: 'Plano, cobranças e extras da empresa' },
