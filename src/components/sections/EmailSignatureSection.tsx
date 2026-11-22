@@ -15,7 +15,7 @@ import { dbHasTable } from '@/hooks/useDbFeature';
 import { Sel } from '@/components/ui/Sel';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { BANNER_W, bannerAssets, bannerHeight, bannerHtml, bannerLinksHtml, drawBanner, isBannerStyle } from '@/lib/signatureBanner';
+import { BANNER_W, bannerAssets, bannerHeight, bannerHtml, bannerLinksHtml, drawBanner, isBannerStyle, sliceBanner, type BannerLink } from '@/lib/signatureBanner';
 import { DEFAULT_SIG, SIG_FONTS, SIG_LAYOUTS, SIG_SHAPES, SIG_STYLES, SIG_STYLE_CATS, hasCta, companyLogoPublicUrl, copyRich, fullConfig, renderSignature, signatureText, toHex,
   type SigConfig, type SigPerson, type SigTemplate } from '@/lib/emailSignature';
 
@@ -32,15 +32,28 @@ function Preview({ html }: { html: string }) {
   );
 }
 
-function BannerCanvas({ cfg, person, company, width = BANNER_W }: { cfg: Partial<SigConfig>; person: SigPerson; company: string; width?: number }) {
+function BannerCanvas({ cfg, person, company, width = BANNER_W, hotspots = false }: { cfg: Partial<SigConfig>; person: SigPerson; company: string; width?: number; hotspots?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const c = fullConfig(cfg); const key = JSON.stringify([c, person, company]);
+  const [links, setLinks] = useState<BannerLink[]>([]);
+  const c = fullConfig(cfg); const key = JSON.stringify([c, person, company]); const H = bannerHeight(c.style);
   useEffect(() => {
     let alive = true;
-    void bannerAssets(c, person).then((a) => { if (alive && ref.current) drawBanner(ref.current, c, person, a, company); });
+    void bannerAssets(c, person).then((a) => { if (alive && ref.current) { const l: BannerLink[] = []; drawBanner(ref.current, c, person, a, company, l); if (hotspots) setLinks(l); } });
     return () => { alive = false; };
   }, [key]);   // eslint-disable-line react-hooks/exhaustive-deps
-  return <canvas ref={ref} style={{ width, maxWidth: '100%', height: 'auto', aspectRatio: `${BANNER_W} / ${bannerHeight(c.style)}`, display: 'block' }} />;
+  const cv = <canvas ref={ref} style={{ width, maxWidth: '100%', height: 'auto', aspectRatio: `${BANNER_W} / ${H}`, display: 'block' }} />;
+  if (!hotspots) return cv;
+  // the preview is clickable like the e-mail: each contact, network, logo and button opens its own link
+  return (
+    <div className="relative" style={{ width, maxWidth: '100%' }}>
+      {cv}
+      {links.map((l, i) => (
+        <a key={i} href={l.href} target="_blank" rel="noopener noreferrer" title={l.href.replace(/^(mailto|tel):/, '')}
+          className="absolute rounded-md outline-none ring-primary/60 transition hover:bg-primary/10 hover:ring-2"
+          style={{ left: `${(l.x / BANNER_W) * 100}%`, top: `${(l.y / H) * 100}%`, width: `${(l.w / BANNER_W) * 100}%`, height: `${(l.h / H) * 100}%` }} />
+      ))}
+    </div>
+  );
 }
 
 function SigPreview({ cfg, person, company }: { cfg: Partial<SigConfig>; person: SigPerson; company: string }) {
@@ -49,7 +62,8 @@ function SigPreview({ cfg, person, company }: { cfg: Partial<SigConfig>; person:
   return (
     <div className="rounded-2xl border border-border bg-white p-5 text-left shadow-sm" style={{ colorScheme: 'light' }}>
       <div className="mb-3 border-b border-neutral-200 pb-2 text-[11px] text-neutral-400">Prévia — como aparece no fim do e-mail</div>
-      <BannerCanvas cfg={c} person={person} company={company} />
+      <BannerCanvas cfg={c} person={person} company={company} hotspots />
+      <p className="mt-2 text-[11px] text-neutral-400">Telefones, e-mail, site, endereço, redes sociais, logo e botão abrem o próprio link no e-mail. Passe o mouse para ver.</p>
       <table><tbody dangerouslySetInnerHTML={{ __html: bannerLinksHtml(c, person) }} /></table>
     </div>
   );
@@ -121,13 +135,27 @@ export function MySignaturePanel() {
     let alive = true; setBHtml('');
     const t = window.setTimeout(async () => {
       try {
-        const a = await bannerAssets(cfg, person); const cv = document.createElement('canvas'); drawBanner(cv, cfg, person, a, companyName);
-        const blob: Blob = await new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('png'))), 'image/png'));
-        const path = `${profile.user_id}/assinatura-${await sha(prepKey)}.png`;
-        const url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
-        const head = await fetch(url, { method: 'HEAD' }).catch(() => null);
-        if (!head?.ok) { const { error } = await supabase.storage.from('avatars').upload(path, blob, { contentType: 'image/png', upsert: true, cacheControl: '31536000' }); if (error) throw error; }
-        if (alive) { setBUrl(url); setBHtml(bannerHtml(url, cfg, person)); }
+        const a = await bannerAssets(cfg, person); const cv = document.createElement('canvas'); const links: BannerLink[] = [];
+        drawBanner(cv, cfg, person, a, companyName, links);
+        const rows = sliceBanner(links, BANNER_W, bannerHeight(cfg.style));
+        const full: Blob = await new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('png'))), 'image/png'));
+        if (alive) setBUrl((old) => { if (old.startsWith('blob:')) URL.revokeObjectURL(old); return URL.createObjectURL(full); });
+        // one small image per cell, each clickable area with its own link
+        const hash = await sha('v2|' + prepKey); const k = cv.width / BANNER_W;
+        const cells = rows.flatMap((r) => r.cells.map((c) => ({ x: c.x, y: r.y, w: c.w, h: r.h })));
+        const urls = await Promise.all(cells.map(async (c, i) => {
+          const path = `${profile.user_id}/assinatura-${hash}-${i}.png`;
+          const url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
+          const head = await fetch(url, { method: 'HEAD' }).catch(() => null);
+          if (!head?.ok) {
+            const pc = document.createElement('canvas'); pc.width = Math.round(c.w * k); pc.height = Math.round(c.h * k);
+            pc.getContext('2d')?.drawImage(cv, c.x * k, c.y * k, c.w * k, c.h * k, 0, 0, pc.width, pc.height);
+            const blob: Blob = await new Promise((res, rej) => pc.toBlob((b) => (b ? res(b) : rej(new Error('png'))), 'image/png'));
+            const { error } = await supabase.storage.from('avatars').upload(path, blob, { contentType: 'image/png', upsert: true, cacheControl: '31536000' }); if (error) throw error;
+          }
+          return url;
+        }));
+        if (alive) setBHtml(bannerHtml(rows, urls, cfg, person));
       } catch { if (alive) setBHtml(''); }
     }, 700);
     return () => { alive = false; window.clearTimeout(t); };

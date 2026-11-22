@@ -4,7 +4,7 @@
 // Nothing is ever cut: text that does not fit shrinks (and, as a last resort, is condensed), a contact too long for
 // its column takes the whole row, and rows get closer together when they would pass the bottom.
 // Images come from public buckets (CORS ok).
-import { fullConfig, hasCta, hostOf, safeUrl, toHex, type SigConfig, type SigPerson, type SigShape, type SigStyle } from '@/lib/emailSignature';
+import { digits, fullConfig, hasCta, hostOf, mapsUrl, safeUrl, socialHref, toHex, type SigConfig, type SigPerson, type SigShape, type SigStyle } from '@/lib/emailSignature';
 
 type Node = [string, Record<string, string>];
 const ICONS: Record<string, Node[]> = {"phone":[["path",{"d":"M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"}]],"mail":[["rect",{"width":"20","height":"16","x":"2","y":"4","rx":"2"}],["path",{"d":"m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"}]],"globe":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"}],["path",{"d":"M2 12h20"}]],"map-pin":[["path",{"d":"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"}],["circle",{"cx":"12","cy":"10","r":"3"}]],"smartphone":[["rect",{"width":"14","height":"20","x":"5","y":"2","rx":"2","ry":"2"}],["path",{"d":"M12 18h.01"}]],"linkedin":[["path",{"d":"M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"}],["rect",{"width":"4","height":"12","x":"2","y":"9"}],["circle",{"cx":"4","cy":"4","r":"2"}]],"instagram":[["rect",{"width":"20","height":"20","x":"2","y":"2","rx":"5","ry":"5"}],["path",{"d":"M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"}],["line",{"x1":"17.5","x2":"17.51","y1":"6.5","y2":"6.5"}]],"facebook":[["path",{"d":"M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"}]],"youtube":[["path",{"d":"M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"}],["path",{"d":"m10 15 5-3-5-3z"}]],"message-circle":[["path",{"d":"M7.9 20A9 9 0 1 0 4 16.1L2 22Z"}]]};
@@ -40,6 +40,13 @@ export async function bannerAssets(c: SigConfig, p: SigPerson): Promise<BannerAs
   const [photo, logo, wm] = await Promise.all([loadImg(p.photo), loadImg(c.logoUrl), loadImg(wmSrc)]);
   return { photo, logo, wm };
 }
+
+/** Clickable areas recorded while drawing (logical px). The e-mail HTML slices the image so each one gets its own link. */
+export type BannerLink = { x: number; y: number; w: number; h: number; href: string };
+let LINKS: BannerLink[] | null = null;
+const hot = (X: number, Y: number, w: number, h: number, href?: string | null) => { if (LINKS && href && w > 0 && h > 0) LINKS.push({ x: X, y: Y, w, h, href }); };
+const siteOf = (d: { c: SigConfig }) => (d.c.show.website ? safeUrl(d.c.website) : '') || safeUrl(d.c.website);
+const ctaUrl = (d: { c: SigConfig }) => safeUrl(d.c.cta.url) || safeUrl(d.c.website);
 
 type Ctx = CanvasRenderingContext2D;
 type D = { c: SigConfig; p: SigPerson; a: BannerAssets; company: string; W: number; H: number; P: string; S: string; T: string; M: string; BG: string; gray?: boolean };
@@ -133,6 +140,7 @@ function photo(x: Ctx, d: D, cx: number, cy: number, r: number, ring?: { color: 
  *  a near-square logo fills the shape, a wide one sits on a white tile of that shape. */
 function logo(x: Ctx, d: D, X: number, Y: number, w: number, h: number, textColor: string) {
   const img = d.a.logo, sh = d.c.logoShape;
+  hot(X, Y, w, h, siteOf(d));
   if (sh && sh !== 'original') {
     const s = Math.min(w, h * 1.15), r = s / 2, cx = X + w / 2, cy = Y + h / 2;
     x.save(); shapePath(x, sh, cx, cy, r);
@@ -152,22 +160,24 @@ function logoTile(x: Ctx, d: D, X: number, Y: number, w: number, h: number) {
   logo(x, d, X + 6, Y + 4, w - 12, h - 8, '#1f2326');
 }
 function contacts(d: D) {
-  const c = d.c, p = d.p, out: [string, string, string][] = [];
-  if (c.show.phone && p.phone) out.push(['phone', p.phone, 'Telefone']);
-  if (c.show.mobile && p.mobile) out.push(['smartphone', p.mobile, 'Celular']);
-  if (c.show.email && p.email) out.push(['mail', p.email, 'E-mail']);
-  const site = safeUrl(c.website); if (c.show.website && site) out.push(['globe', hostOf(site), 'Site']);
-  if (c.show.address && c.address.trim()) out.push(['map-pin', c.address.trim(), 'Endereço']);
+  const c = d.c, p = d.p, out: [string, string, string, string][] = [];
+  if (c.show.phone && p.phone) out.push(['phone', p.phone, 'Telefone', `tel:${digits(p.phone)}`]);
+  if (c.show.mobile && p.mobile) out.push(['smartphone', p.mobile, 'Celular', `tel:${digits(p.mobile)}`]);
+  if (c.show.email && p.email) out.push(['mail', p.email, 'E-mail', `mailto:${p.email.trim()}`]);
+  const site = safeUrl(c.website); if (c.show.website && site) out.push(['globe', hostOf(site), 'Site', site]);
+  if (c.show.address && c.address.trim()) out.push(['map-pin', c.address.trim(), 'Endereço', mapsUrl(c.address)]);
   return out;
 }
 function socials(d: D) {
   const m: [keyof SigConfig['social'], string][] = [['linkedin', 'linkedin'], ['instagram', 'instagram'], ['facebook', 'facebook'], ['youtube', 'youtube'], ['whatsapp', 'message-circle']];
   return m.filter(([k]) => d.c.social[k]?.trim()).map(([, i]) => i);
 }
+const socialLinks = (d: D) => (['linkedin', 'instagram', 'facebook', 'youtube', 'whatsapp'] as (keyof SigConfig['social'])[]).filter((k) => d.c.social[k]?.trim()).map((k) => socialHref(k, d.c.social[k]));
 function socialRow(x: Ctx, d: D, cx: number, cy: number, r: number, bg: string | null, fg: string, align: 'center' | 'left' = 'center', shape: 'circle' | 'outline' | 'square' = 'circle') {
   const list = socials(d); if (!list.length) return;
   const gap = r * 2 + 6; const total = list.length * gap - 6; let X = align === 'center' ? cx - total / 2 + r : cx + r;
-  for (const s of list) { badge(x, s, X, cy, r, bg, fg, shape); X += gap; }
+  const hrefs = socialLinks(d);
+  list.forEach((s, i) => { badge(x, s, X, cy, r, bg, fg, shape); hot(X - r - 3, cy - r - 3, r * 2 + 6, r * 2 + 6, hrefs[i]); X += gap; });
 }
 type ListO = { cols?: number; colW?: number; rowH?: number; size?: number; r?: number; bg?: string | null; fg?: string; color?: string; shape?: BadgeShape; pill?: string; label?: boolean; bottom?: number };
 /** Every contact the visual shows (never a fixed maximum). Y = centre of the first row; rows stay above `bottom`. */
@@ -190,11 +200,13 @@ function contactList(x: Ctx, d: D, X: number, Y: number, o: ListO) {
     if (rowH < r * 2 + 3) { r = Math.max(4.5, (rowH - 3) / 2); size = Math.min(size, Math.max(6.5, rowH * 0.66)); }
   }
   for (const s of slots) {
-    const [ic, val, lab] = list[s.i]; const bx = X + s.col * colW, by = Y + s.row * rowH, maxW = s.w - r * 2 - 12 - (o.pill ? 8 : 0);
+    const [ic, val, lab, href] = list[s.i]; const bx = X + s.col * colW, by = Y + s.row * rowH, maxW = s.w - r * 2 - 12 - (o.pill ? 8 : 0);
     if (o.pill) { x.font = `500 ${size}px ${F}`; const w = Math.min(s.w - 8, x.measureText(val).width + r * 2 + 18); rr(x, bx - 3, by - r - 2, w, r * 2 + 4, r + 2); x.fillStyle = o.pill; x.fill(); }
     badge(x, ic, bx + r, by, r, o.bg === undefined ? d.P : o.bg, o.fg || '#fff', o.shape || 'circle');
-    if (label) { txt(x, lab, bx + r * 2 + 7, by - 2, { size: 6.5, weight: 500, color: d.M, upper: true, ls: 0.6 }); txt(x, val, bx + r * 2 + 7, by + 8, { size, weight: 600, color: o.color || d.T, maxW }); }
-    else txt(x, val, bx + r * 2 + 7, by + size * 0.36, { size, weight: 500, color: o.color || d.T, maxW });
+    let tw = 0;
+    if (label) { txt(x, lab, bx + r * 2 + 7, by - 2, { size: 6.5, weight: 500, color: d.M, upper: true, ls: 0.6 }); tw = txt(x, val, bx + r * 2 + 7, by + 8, { size, weight: 600, color: o.color || d.T, maxW }); }
+    else tw = txt(x, val, bx + r * 2 + 7, by + size * 0.36, { size, weight: 500, color: o.color || d.T, maxW });
+    hot(bx - 3, by - rowH / 2, Math.min(s.w, r * 2 + 7 + tw + 6), rowH, href);
   }
 }
 /** contacts as centred lines (icon + value), wrapping into up to `lines` lines; the font shrinks until all fit */
@@ -212,7 +224,7 @@ function contactInline(x: Ctx, d: D, cx: number, Y: number, maxW: number, o: { s
   const lh = o.lineH || size * 2;
   L.out.forEach((idx, li) => {
     const tot = idx.reduce((a, i, k) => a + L.ws[i] + (k ? L.gap : 0), 0); let X = cx - tot / 2; const y = Y + li * lh;
-    idx.forEach((i) => { const [ic, v] = list[i]; icon(x, ic, X, y - L.ic * 0.78, L.ic, o.iconColor || d.P, 2); txt(x, v, X + L.ic + 5, y, { size, weight: 500, color: o.color || d.T, maxW: L.ws[i] - L.ic - 5 }); X += L.ws[i] + L.gap; });
+    idx.forEach((i) => { const [ic, v, , href] = list[i]; hot(X - 3, y - lh * 0.68, L.ws[i] + 6, lh, href); icon(x, ic, X, y - L.ic * 0.78, L.ic, o.iconColor || d.P, 2); txt(x, v, X + L.ic + 5, y, { size, weight: 500, color: o.color || d.T, maxW: L.ws[i] - L.ic - 5 }); X += L.ws[i] + L.gap; });
   });
 }
 const nameOf = (d: D) => (d.p.name || '').trim() || 'Seu nome';
@@ -527,11 +539,13 @@ const STYLES: Record<BannerStyle, (x: Ctx, d: D) => void> = {
     watermark(x, d);
     photo(x, d, 74, 74, 58);
     const list = socials(d).length ? socials(d) : ['phone', 'mail', 'globe'];
-    list.slice(0, 3).forEach((s, i) => badge(x, s, 166, 34 + i * 38, 14, d.P, onColor(d.P)));
+    const sh = socials(d).length ? socialLinks(d) : [];
+    list.slice(0, 3).forEach((s, i) => { badge(x, s, 166, 34 + i * 38, 14, d.P, onColor(d.P)); hot(150, 18 + i * 38, 32, 32, sh[i]); });
     txt(x, nameOf(d), 196, 38, { size: 17, weight: 700, color: d.P, maxW: 390 });
     txt(x, roleOf(d), 196, 56, { size: 12, color: d.T, maxW: 390 });
     const cl = contacts(d); const step = cl.length > 1 ? Math.min(17, 64 / (cl.length - 1)) : 17;
-    cl.forEach(([, v], i) => txt(x, v, 196, 80 + i * step, { size: step < 15 ? 10 : 11, color: d.T, maxW: 390 }));
+    cl.forEach(([, v, , href], i) => { const tw = txt(x, v, 196, 80 + i * step, { size: step < 15 ? 10 : 11, color: d.T, maxW: 390 }); hot(193, 80 + i * step - step * 0.72, tw + 6, step, href); });
+    hot(10, 160, 580, 60, ctaUrl(d));
     rr(x, 210, 160, 380, 60, 14); x.fillStyle = alpha(d.P, 0.28); x.fill();
     rr(x, 10, 160, 236, 60, 14); x.fillStyle = shade(d.P, 0.8); x.fill();
     const [l1, l2] = twoLines(ctaText(d).toUpperCase());
@@ -553,7 +567,7 @@ const STYLES: Record<BannerStyle, (x: Ctx, d: D) => void> = {
     const ink = onColor(d.P); const [l1, l2] = twoLines(ctaText(d));
     txt(x, l1, 500, l2 ? 84 : 94, { size: 15, weight: 700, color: ink, align: 'center', maxW: 176 });
     if (l2) txt(x, l2, 500, 103, { size: 15, weight: 700, color: ink, align: 'center', maxW: 176 });
-    rr(x, 420, 118, 162, 34, 17); x.fillStyle = ink; x.fill();
+    rr(x, 420, 118, 162, 34, 17); x.fillStyle = ink; x.fill(); hot(412, 64, 178, 94, ctaUrl(d));
     txt(x, ctaBtn(d), 501, 140, { size: 11.5, weight: 700, color: d.P, align: 'center', maxW: 148 });
     socialRow(x, d, 501, 178, 7, null, ink);
   },
@@ -564,7 +578,7 @@ const STYLES: Record<BannerStyle, (x: Ctx, d: D) => void> = {
     info(x, d, 162, 58, 280, { ns: 21, bar: d.S, cols: 2, rowH: 19, r: 7, size: 9.5, bg: d.P, fg: onColor(d.P), bottom: 164 });
     logo(x, d, 462, 36, 122, 48, d.T);
     socialRow(x, d, 523, 112, 7, d.P, onColor(d.P));
-    x.fillStyle = d.P; x.fillRect(0, 176, d.W, 54);
+    x.fillStyle = d.P; x.fillRect(0, 176, d.W, 54); hot(0, 176, d.W, 54, ctaUrl(d));
     poly(x, [[0, 176], [206, 176], [184, 230], [0, 230]], d.S);
     txt(x, ctaText(d), 18, 209, { size: 13, weight: 700, color: onColor(d.S), maxW: 168 });
     const bw = txt(x, ctaBtn(d).toUpperCase(), 394, 209, { size: 13, weight: 700, color: onColor(d.P), align: 'center', maxW: 330, ls: 0.8 });
@@ -624,7 +638,7 @@ function corporate(x: Ctx, d: D, v: 'light' | 'color' | 'dark') {
 }
 
 /** Draws the banner into the canvas (2x for sharp text). Returns false for the classic (text) style. */
-export function drawBanner(canvas: HTMLCanvasElement, cfg0: Partial<SigConfig>, p: SigPerson, a: BannerAssets, company: string): boolean {
+export function drawBanner(canvas: HTMLCanvasElement, cfg0: Partial<SigConfig>, p: SigPerson, a: BannerAssets, company: string, links?: BannerLink[]): boolean {
   const c = fullConfig(cfg0); if (!isBannerStyle(c.style)) return false;
   const draw = STYLES[c.style as BannerStyle]; if (!draw) return false;
   const W = BANNER_W, H = bannerHeight(c.style), k = 2;
@@ -632,8 +646,35 @@ export function drawBanner(canvas: HTMLCanvasElement, cfg0: Partial<SigConfig>, 
   const x = canvas.getContext('2d'); if (!x) return false;
   x.setTransform(k, 0, 0, k, 0, 0); x.clearRect(0, 0, W, H);
   const d: D = { c, p, a, company: company || 'Empresa', W, H, P: toHex(c.color), S: toHex(c.color2, '#F5B800'), T: toHex(c.textColor, '#333333'), M: '#6b7280', BG: toHex(c.bgColor, '#ffffff') };
-  draw(x, d);
+  LINKS = links || null;
+  try { draw(x, d); } finally { LINKS = null; }
   return true;
+}
+
+export type SliceRow = { y: number; h: number; cells: { x: number; w: number; href: string | null }[] };
+/** Cuts the banner into horizontal bands and each band into cells so every clickable area is its own image + link.
+ *  Bands with the same cells are merged, so a typical signature becomes 10–40 small images. */
+export function sliceBanner(links: BannerLink[], W: number, H: number): SliceRow[] {
+  const L = links.map((l) => ({ x0: Math.max(0, Math.floor(l.x)), y0: Math.max(0, Math.floor(l.y)), x1: Math.min(W, Math.ceil(l.x + l.w)), y1: Math.min(H, Math.ceil(l.y + l.h)), href: l.href }))
+    .filter((l) => l.x1 - l.x0 >= 2 && l.y1 - l.y0 >= 2);
+  const ys = [...new Set([0, H, ...L.flatMap((l) => [l.y0, l.y1])])].sort((a, b) => a - b);
+  const rows: SliceRow[] = [];
+  for (let i = 0; i < ys.length - 1; i++) {
+    const a = ys[i], b = ys[i + 1]; if (b <= a) continue;
+    const act = L.filter((l) => l.y0 < b && l.y1 > a);
+    const xs = [...new Set([0, W, ...act.flatMap((l) => [l.x0, l.x1])])].sort((p, q) => p - q);
+    const cells: SliceRow['cells'] = [];
+    for (let j = 0; j < xs.length - 1; j++) {
+      const sx = xs[j], ex = xs[j + 1]; if (ex <= sx) continue;
+      const hit = act.find((l) => l.x0 <= sx && l.x1 >= ex); const href = hit ? hit.href : null;
+      const last = cells[cells.length - 1];
+      if (last && last.href === href) last.w += ex - sx; else cells.push({ x: sx, w: ex - sx, href });
+    }
+    const prev = rows[rows.length - 1];
+    const same = prev && prev.cells.length === cells.length && prev.cells.every((c, k) => c.x === cells[k].x && c.w === cells[k].w && c.href === cells[k].href);
+    if (same) prev.h += b - a; else rows.push({ y: a, h: b - a, cells });
+  }
+  return rows;
 }
 
 /** Rows under the banner: clickable contacts (optional) and the legal notice. */
@@ -655,12 +696,20 @@ export function bannerLinksHtml(cfg0: Partial<SigConfig>, p: SigPerson): string 
   return line + disc;
 }
 
-/** E-mail HTML around the uploaded banner: the image (linked to the site or the call-to-action) + the rows above. */
-export function bannerHtml(url: string, cfg0: Partial<SigConfig>, p: SigPerson): string {
-  const c = fullConfig(cfg0); const H = bannerHeight(c.style);
+/** E-mail HTML of the banner: the sliced images (row-major `urls`, one per cell of `rows`), each clickable area with its
+ *  own link (phone, e-mail, site, address, social networks, logo, call-to-action), then the rows above. */
+export function bannerHtml(rows: SliceRow[], urls: string[], cfg0: Partial<SigConfig>, p: SigPerson): string {
+  const c = fullConfig(cfg0);
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const href = (hasCta(c.style) && safeUrl(c.cta.url)) || safeUrl(c.website);
   const alt = esc([p.name, [c.show.role && p.role, c.show.sector && p.sector].filter(Boolean).join(' · ')].filter(Boolean).join(' — '));
-  const img = `<img src="${esc(url)}" width="${BANNER_W}" height="${H}" alt="${alt}" style="display:block;border:0;width:${BANNER_W}px;max-width:100%;height:auto">`;
-  return `<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td>${href ? `<a href="${esc(href)}">${img}</a>` : img}</td></tr>${bannerLinksHtml(c, p)}</table>`;
+  const z = 'padding:0;margin:0;line-height:0;font-size:0;mso-line-height-rule:exactly';
+  let k = 0;
+  const band = rows.map((r) => {
+    const tds = r.cells.map((cell) => {
+      const img = `<img src="${esc(urls[k] || '')}" width="${cell.w}" height="${r.h}" alt="${k === 0 ? alt : ''}" style="display:block;border:0;outline:none;width:${cell.w}px;height:${r.h}px">`; k++;
+      return `<td width="${cell.w}" valign="top" style="${z}">${cell.href ? `<a href="${esc(cell.href)}" target="_blank" style="display:block;text-decoration:none">${img}</a>` : img}</td>`;
+    }).join('');
+    return `<tr><td style="${z}"><table cellpadding="0" cellspacing="0" border="0" width="${BANNER_W}" style="border-collapse:collapse;width:${BANNER_W}px"><tr>${tds}</tr></table></td></tr>`;
+  }).join('');
+  return `<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td style="${z}"><table cellpadding="0" cellspacing="0" border="0" width="${BANNER_W}" style="border-collapse:collapse;width:${BANNER_W}px">${band}</table></td></tr>${bannerLinksHtml(c, p)}</table>`;
 }

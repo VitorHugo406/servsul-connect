@@ -475,10 +475,6 @@ export const GUIDE: GuideArticle[] = [
       { t: 'Marca', d: 'O logotipo e a cor da empresa aparecem no topo, nos botões, na aba do navegador e nos PDFs.' },
       { t: 'Atalhos do sistema', d: 'Em "Atalhos do Sistema", cadastre links que aparecem no topo para todos (por exemplo, sistemas internos).' },
     ], rel: ['aparencia'] },
-  { slug: 'exclusao-dados', cat: 'Administração', title: 'Exclusão de dados', sum: 'Administradores podem limpar dados antigos de forma controlada.',
-    steps: [
-      { t: 'Abra Exclusão de Dados', d: 'Escolha o que remover: mensagens (por período), avisos, arquivos enviados, dados de tarefas ou usuários. Cada opção explica o que será apagado e pede confirmação.' },
-    ], rel: ['privacidade'] },
 
   // ───────── Conta e segurança (extras)
   { slug: 'perfil', cat: 'Conta e segurança', title: 'Seu perfil e status', sum: 'Foto, capa, descrição, expediente e status (disponível, em reunião, almoço, ausente) com horário para terminar.',
@@ -620,7 +616,7 @@ export const GUIDE: GuideArticle[] = [
       { t: 'Escolha o visual padrão', d: 'Marque "Visual padrão da empresa": ele é usado por quem ainda não escolheu outro.' },
       { t: 'Monte a sua assinatura', d: 'Abra Meu Perfil (sua foto no canto superior). Lá embaixo, em Assinatura de e-mail, aparece a prévia; em "Ajustar meus dados e o visual" confira nome, cargo, setor e telefones e salve.' },
       { t: 'Cole no seu e-mail', d: 'Clique em "Copiar assinatura" e cole nas configurações de assinatura do Gmail, do Outlook ou do Apple Mail. A tela mostra o caminho de cada um.' },
-    ], tips: ['Os estilos com formas e marca d\'água viram uma imagem gerada pelo ewvon, para aparecerem iguais em qualquer programa de e-mail; logo abaixo fica uma linha com os contatos clicáveis. Nenhuma informação é cortada: textos longos ficam menores e um contato comprido ocupa a linha inteira.', 'Copie pelo computador: os aplicativos de e-mail do celular costumam aceitar só assinatura em texto simples.', 'Use logo em PNG, JPG ou GIF; alguns programas de e-mail não mostram outros formatos.'], who: 'Todos usam a própria assinatura; criar visuais é para administradores ou quem tem a permissão.' },
+    ], tips: ['Os estilos com formas e marca d\'água viram uma imagem gerada pelo ewvon, para aparecerem iguais em qualquer programa de e-mail; telefones, e-mail, site, endereço, redes sociais, logo e botão de chamada continuam clicáveis, cada um com o próprio link. Nenhuma informação é cortada: textos longos ficam menores e um contato comprido ocupa a linha inteira.', 'Copie pelo computador: os aplicativos de e-mail do celular costumam aceitar só assinatura em texto simples.', 'Use logo em PNG, JPG ou GIF; alguns programas de e-mail não mostram outros formatos.'], who: 'Todos usam a própria assinatura; criar visuais é para administradores ou quem tem a permissão.' },
 ];
 
 /** Published articles (hidden ones stay out of the site, the sitemap and the search). */

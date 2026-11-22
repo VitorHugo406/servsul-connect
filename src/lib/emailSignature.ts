@@ -105,6 +105,10 @@ export function companyLogoPublicUrl(value: string | null | undefined): string {
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 export const safeUrl = (u: string) => { const v = u.trim(); if (!v) return ''; const full = /^https?:\/\//i.test(v) ? v : `https://${v}`; try { const x = new URL(full); return x.protocol === 'https:' || x.protocol === 'http:' ? x.href : ''; } catch { return ''; } };
 export const digits = (s: string) => s.replace(/[^\d+]/g, '');
+/** Google Maps search link for an address */
+export const mapsUrl = (a: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.trim())}`;
+/** link of a social network field (WhatsApp accepts the number) */
+export const socialHref = (k: string, v: string) => (k === 'whatsapp' ? (digits(v) ? `https://wa.me/${digits(v).replace(/^\+/, '')}` : safeUrl(v)) : safeUrl(v));
 export const hostOf = (u: string) => { try { return new URL(u).host.replace(/^www\./, ''); } catch { return u; } };
 
 /** Email-safe HTML of the signature. */
@@ -127,10 +131,10 @@ export function renderSignature(cfg0: Partial<SigConfig>, p: SigPerson): string 
   if (c.show.email && p.email) lines.push(`<div>${link(`mailto:${p.email}`, p.email)}</div>`);
   const site = safeUrl(c.website);
   if (c.show.website && site) lines.push(`<div>${link(site, hostOf(site))}</div>`);
-  if (c.show.address && c.address.trim()) lines.push(`<div style="color:${muted}">${esc(c.address.trim())}</div>`);
+  if (c.show.address && c.address.trim()) lines.push(`<div><a href="${esc(mapsUrl(c.address))}" style="color:${muted};text-decoration:none">${esc(c.address.trim())}</a></div>`);
   const socials = (Object.entries(c.social) as [string, string][]).map(([k, v]) => {
     const label = { linkedin: 'LinkedIn', instagram: 'Instagram', facebook: 'Facebook', youtube: 'YouTube', whatsapp: 'WhatsApp' }[k] || k;
-    const href = k === 'whatsapp' ? (digits(v) ? `https://wa.me/${digits(v).replace(/^\+/, '')}` : '') : safeUrl(v);
+    const href = socialHref(k, v);
     return href ? link(href, label) : '';
   }).filter(Boolean);
   if (socials.length) lines.push(`<div style="margin-top:4px;font-size:${Math.max(11, c.size - 1)}px">${socials.join(`<span style="color:#bbbbbb">&nbsp;·&nbsp;</span>`)}</div>`);
@@ -138,8 +142,9 @@ export function renderSignature(cfg0: Partial<SigConfig>, p: SigPerson): string 
   const textCell = lines.join('');
 
   const radius = c.logoShape === 'original' ? '0' : cssRadius(c.logoShape, '10px');
-  const logo = c.layout !== 'none' && c.logoUrl
+  const logoImg = c.layout !== 'none' && c.logoUrl
     ? `<img src="${esc(c.logoUrl)}" width="${c.logoWidth}" alt="" style="display:block;border:0;max-width:${c.logoWidth}px;height:auto;border-radius:${radius}">` : '';
+  const logo = logoImg && site ? `<a href="${esc(site)}" style="text-decoration:none">${logoImg}</a>` : logoImg;
   const photo = c.photo && p.photo ? `<img src="${esc(p.photo)}" width="64" height="64" alt="" style="display:block;border:0;width:64px;height:64px;border-radius:${cssRadius(c.photoShape, '14px')};object-fit:cover">` : '';
   const bar = c.divider === 'bar' ? `border-left:2px solid ${color};` : '';
   const barR = c.divider === 'bar' ? `border-right:2px solid ${color};` : '';
