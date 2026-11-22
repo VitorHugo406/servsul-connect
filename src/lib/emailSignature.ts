@@ -5,7 +5,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { getCompanyLogoPathFromValue } from '@/lib/companyLogo';
 
 export type SigLayout = 'left' | 'right' | 'top' | 'bottom' | 'none';
+export type SigStyle = 'classic' | 'diagonal' | 'arcs' | 'darkpanel' | 'ring' | 'cta' | 'wave' | 'hexagon' | 'triangles' | 'corp-light' | 'corp-color' | 'corp-dark';
+export type SigWatermark = { kind: 'none' | 'logo' | 'image' | 'text'; src: string; text: string; pos: 'center' | 'left' | 'right' | 'full'; opacity: number; size: number };
 export type SigConfig = {
+  style: SigStyle;
+  color2: string;
+  bgColor: string;
+  photoShape: 'circle' | 'hexagon' | 'rounded';
+  watermark: SigWatermark;
+  cta: { text: string; button: string; url: string };
+  textLinks: boolean;
   layout: SigLayout;
   logoUrl: string;
   logoWidth: number;
@@ -34,8 +43,17 @@ export const SIG_FONTS: [string, string][] = [
 ];
 export const SIG_LAYOUTS: [SigLayout, string][] = [['left', 'Logo à esquerda'], ['right', 'Logo à direita'], ['top', 'Logo em cima'], ['bottom', 'Logo embaixo'], ['none', 'Sem logo']];
 
+export const SIG_STYLES: [SigStyle, string][] = [
+  ['classic', 'Clássico (texto)'], ['diagonal', 'Diagonal'], ['arcs', 'Arcos'], ['darkpanel', 'Painel escuro'], ['ring', 'Anel'],
+  ['cta', 'Com chamada (botão)'], ['wave', 'Onda lateral'], ['hexagon', 'Hexágono'], ['triangles', 'Triângulos'],
+  ['corp-light', 'Corporativo claro'], ['corp-color', 'Corporativo na cor'], ['corp-dark', 'Corporativo escuro'],
+];
 export const DEFAULT_SIG: SigConfig = {
-  layout: 'left', logoUrl: '', logoWidth: 110, logoShape: 'original', photo: false, color: '#2358C3', textColor: '#333333',
+  style: 'diagonal', color2: '#F5B800', bgColor: '#ffffff', photoShape: 'circle',
+  watermark: { kind: 'none', src: '', text: '', pos: 'center', opacity: 0.08, size: 70 },
+  cta: { text: 'Quer saber mais?', button: 'Agende uma conversa', url: '' },
+  textLinks: true,
+  layout: 'left', logoUrl: '', logoWidth: 110, logoShape: 'original', photo: true, color: '#2358C3', textColor: '#333333',
   font: SIG_FONTS[0][0], size: 13, divider: 'bar', nameStyle: 'bold',
   show: { role: true, sector: true, phone: true, mobile: true, email: true, website: true, address: false },
   website: '', address: '', slogan: '', disclaimer: '',
@@ -44,7 +62,10 @@ export const DEFAULT_SIG: SigConfig = {
 
 export function fullConfig(c?: Partial<SigConfig> | null): SigConfig {
   const x = (c || {}) as Partial<SigConfig>;
-  return { ...DEFAULT_SIG, ...x, show: { ...DEFAULT_SIG.show, ...(x.show || {}) }, social: { ...DEFAULT_SIG.social, ...(x.social || {}) } };
+  // visuals saved before the image styles existed keep the text (classic) look
+  const style = x.style || (Object.keys(x).length ? 'classic' : DEFAULT_SIG.style);
+  return { ...DEFAULT_SIG, ...x, style, show: { ...DEFAULT_SIG.show, ...(x.show || {}) }, social: { ...DEFAULT_SIG.social, ...(x.social || {}) },
+    watermark: { ...DEFAULT_SIG.watermark, ...(x.watermark || {}) }, cta: { ...DEFAULT_SIG.cta, ...(x.cta || {}) } };
 }
 
 /** "#rrggbb" from a hex or an "H S% L%" theme value (the company colour is stored either way). */
@@ -66,9 +87,9 @@ export function companyLogoPublicUrl(value: string | null | undefined): string {
 }
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const safeUrl = (u: string) => { const v = u.trim(); if (!v) return ''; const full = /^https?:\/\//i.test(v) ? v : `https://${v}`; try { const x = new URL(full); return x.protocol === 'https:' || x.protocol === 'http:' ? x.href : ''; } catch { return ''; } };
-const digits = (s: string) => s.replace(/[^\d+]/g, '');
-const hostOf = (u: string) => { try { return new URL(u).host.replace(/^www\./, ''); } catch { return u; } };
+export const safeUrl = (u: string) => { const v = u.trim(); if (!v) return ''; const full = /^https?:\/\//i.test(v) ? v : `https://${v}`; try { const x = new URL(full); return x.protocol === 'https:' || x.protocol === 'http:' ? x.href : ''; } catch { return ''; } };
+export const digits = (s: string) => s.replace(/[^\d+]/g, '');
+export const hostOf = (u: string) => { try { return new URL(u).host.replace(/^www\./, ''); } catch { return u; } };
 
 /** Email-safe HTML of the signature. */
 export function renderSignature(cfg0: Partial<SigConfig>, p: SigPerson): string {

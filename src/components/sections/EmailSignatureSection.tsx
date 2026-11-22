@@ -2,8 +2,8 @@
 // checks their data and copies the signature into Gmail/Outlook. /assinaturas (admins + people with the
 // "Criar visuais de assinatura" permission): create/edit visuals — logo position, size and shape, colours, font,
 // separator, which fields show, links and legal notice. Tables from migration 20261122010000.
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Copy, ImageUp, Loader2, Plus, Star, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Check, Copy, Download, ImageUp, Loader2, Plus, Star, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,7 +15,8 @@ import { dbHasTable } from '@/hooks/useDbFeature';
 import { Sel } from '@/components/ui/Sel';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { DEFAULT_SIG, SIG_FONTS, SIG_LAYOUTS, companyLogoPublicUrl, copyRich, fullConfig, renderSignature, signatureText, toHex,
+import { BANNER_W, bannerAssets, bannerHeight, bannerHtml, bannerLinksHtml, drawBanner, isBannerStyle } from '@/lib/signatureBanner';
+import { DEFAULT_SIG, SIG_FONTS, SIG_LAYOUTS, SIG_STYLES, companyLogoPublicUrl, copyRich, fullConfig, renderSignature, signatureText, toHex,
   type SigConfig, type SigPerson, type SigTemplate } from '@/lib/emailSignature';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,10 +32,36 @@ function Preview({ html }: { html: string }) {
   );
 }
 
+function BannerCanvas({ cfg, person, company, width = BANNER_W }: { cfg: Partial<SigConfig>; person: SigPerson; company: string; width?: number }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const c = fullConfig(cfg); const key = JSON.stringify([c, person, company]);
+  useEffect(() => {
+    let alive = true;
+    void bannerAssets(c, person).then((a) => { if (alive && ref.current) drawBanner(ref.current, c, person, a, company); });
+    return () => { alive = false; };
+  }, [key]);   // eslint-disable-line react-hooks/exhaustive-deps
+  return <canvas ref={ref} style={{ width, maxWidth: '100%', height: 'auto', aspectRatio: `${BANNER_W} / ${bannerHeight(c.style)}`, display: 'block' }} />;
+}
+
+function SigPreview({ cfg, person, company }: { cfg: Partial<SigConfig>; person: SigPerson; company: string }) {
+  const c = fullConfig(cfg);
+  if (!isBannerStyle(c.style)) return <Preview html={renderSignature(c, person)} />;
+  return (
+    <div className="rounded-2xl border border-border bg-white p-5 text-left shadow-sm" style={{ colorScheme: 'light' }}>
+      <div className="mb-3 border-b border-neutral-200 pb-2 text-[11px] text-neutral-400">Prévia — como aparece no fim do e-mail</div>
+      <BannerCanvas cfg={c} person={person} company={company} />
+      <table><tbody dangerouslySetInnerHTML={{ __html: bannerLinksHtml(c, person) }} /></table>
+    </div>
+  );
+}
+
+async function sha(s: string) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(b)].slice(0, 10).map((x) => x.toString(16).padStart(2, '0')).join(''); }
+
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return <label className="flex flex-col gap-1.5"><span className="text-[12.5px] font-medium text-muted-foreground">{label}</span>{children}{hint ? <span className="text-[11.5px] text-muted-foreground">{hint}</span> : null}</label>;
 }
 const inp = 'dk-in !h-10';
+const chipOn = (on: boolean) => (on ? { background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))', borderColor: 'hsl(var(--primary))' } : undefined);
 const pinp = 'h-10 w-full rounded-[10px] border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 /** Shared data: company visuals, the person's saved choice and the data that fills the signature. */
@@ -84,7 +111,27 @@ export function MySignaturePanel() {
   const options = templates.length ? templates : [builtIn];
   const current = options.find((t) => t.id === templateId) || options.find((t) => t.is_default) || options[0];
   const cfg = fullConfig(current?.config);
-  const html = renderSignature(cfg, person);
+  const isBanner = isBannerStyle(cfg.style);
+  const companyName = d.company?.name || '';
+  const html = isBanner ? '' : renderSignature(cfg, person);
+  const [bHtml, setBHtml] = useState(''); const [bUrl, setBUrl] = useState('');
+  const prepKey = JSON.stringify([cfg, person, companyName]);
+  useEffect(() => {
+    if (!isBanner || !profile?.user_id) return;
+    let alive = true; setBHtml('');
+    const t = window.setTimeout(async () => {
+      try {
+        const a = await bannerAssets(cfg, person); const cv = document.createElement('canvas'); drawBanner(cv, cfg, person, a, companyName);
+        const blob: Blob = await new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('png'))), 'image/png'));
+        const path = `${profile.user_id}/assinatura-${await sha(prepKey)}.png`;
+        const url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
+        const head = await fetch(url, { method: 'HEAD' }).catch(() => null);
+        if (!head?.ok) { const { error } = await supabase.storage.from('avatars').upload(path, blob, { contentType: 'image/png', upsert: true, cacheControl: '31536000' }); if (error) throw error; }
+        if (alive) { setBUrl(url); setBHtml(bannerHtml(url, cfg, person)); }
+      } catch { if (alive) setBHtml(''); }
+    }, 700);
+    return () => { alive = false; window.clearTimeout(t); };
+  }, [prepKey, isBanner, profile?.user_id]);   // eslint-disable-line react-hooks/exhaustive-deps
   if (d.loading) return null;
   if (!d.showToUsers && !d.canManage) return null;
   const save = async () => {
@@ -94,18 +141,24 @@ export function MySignaturePanel() {
     setSaving(false);
     if (error) toast.error('Não foi possível salvar sua assinatura.'); else toast.success('Assinatura salva.');
   };
-  const copy = async () => { const ok = await copyRich(html, signatureText(cfg, person)); if (ok) toast.success('Assinatura copiada. Cole nas configurações de assinatura do seu e-mail.'); else toast.error('Não foi possível copiar. Use "Copiar código".'); };
-  const copyCode = async () => { try { await navigator.clipboard.writeText(html); toast.success('Código HTML copiado.'); } catch { toast.error('Não foi possível copiar.'); } };
+  const out = isBanner ? bHtml : html;
+  const copy = async () => {
+    if (!out) { toast.info('Preparando a imagem da assinatura. Tente de novo em instantes.'); return; }
+    const ok = await copyRich(out, signatureText(cfg, person)); if (ok) toast.success('Assinatura copiada. Cole nas configurações de assinatura do seu e-mail.'); else toast.error('Não foi possível copiar. Use "Copiar código".');
+  };
+  const copyCode = async () => { if (!out) { toast.info('Preparando a imagem da assinatura. Tente de novo em instantes.'); return; } try { await navigator.clipboard.writeText(out); toast.success('Código HTML copiado.'); } catch { toast.error('Não foi possível copiar.'); } };
+  const downloadPng = () => { if (!bUrl) return; const a = document.createElement('a'); a.href = bUrl; a.download = 'assinatura.png'; a.target = '_blank'; a.click(); };
   const setF = (k: keyof Fields) => (e: React.ChangeEvent<HTMLInputElement>) => setFields((f) => ({ ...f, [k]: e.target.value }));
   const val = (k: Exclude<keyof Fields, 'photo'>) => (fields[k] ?? (base[k] as string) ?? '');
   return (
     <div className="flex flex-col gap-3 rounded-xl border p-3">
       <p className="text-sm font-medium">Assinatura de e-mail</p>
       {!d.showToUsers ? <p className="text-xs text-muted-foreground">Oculta para os colaboradores. Você vê porque configura os visuais.</p> : null}
-      <Preview html={html} />
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" onClick={() => void copy()}><Copy className="mr-2 h-4 w-4" />Copiar assinatura</Button>
-        <Button type="button" size="sm" variant="outline" onClick={() => void copyCode()}>Copiar código</Button>
+      <SigPreview cfg={cfg} person={person} company={companyName} />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="button" size="sm" onClick={() => void copy()} disabled={isBanner && !bHtml}>{isBanner && !bHtml ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}Copiar assinatura</Button>
+        <Button type="button" size="sm" variant="outline" onClick={() => void copyCode()} disabled={isBanner && !bHtml}>Copiar código</Button>
+        {isBanner && bUrl ? <Button type="button" size="sm" variant="outline" onClick={downloadPng}><Download className="mr-2 h-4 w-4" />Imagem PNG</Button> : null}
       </div>
       <details className="rounded-xl border border-border p-3 text-sm">
         <summary className="cursor-pointer font-medium">Ajustar meus dados e o visual</summary>
@@ -152,7 +205,7 @@ function EmailSignatureInner() {
   const startNew = () => setEdit({ name: 'Novo visual', config: { ...DEFAULT_SIG, color: companyColor, logoUrl: companyLogo }, is_default: !templates.length });
   const startEdit = (t: SigTemplate) => setEdit({ id: t.id, name: t.name, config: fullConfig(t.config), is_default: t.is_default });
   const setC = <K extends keyof SigConfig>(k: K, v: SigConfig[K]) => setEdit((e) => (e ? { ...e, config: { ...e.config, [k]: v } } : e));
-  const upload = async (file: File) => {
+  const upload = async (file: File, done: (url: string) => void) => {
     if (!company?.id) return;
     if (!/^image\/(png|jpeg|gif)$/.test(file.type)) { toast.error('Use PNG, JPG ou GIF (outros formatos não aparecem em alguns e-mails).'); return; }
     if (file.size > 1024 * 1024) { toast.error('A imagem precisa ter até 1 MB.'); return; }
@@ -162,7 +215,7 @@ function EmailSignatureInner() {
     const { error } = await supabase.storage.from('company-logos').upload(path, file, { contentType: file.type, cacheControl: '31536000' });
     setUploading(false);
     if (error) { toast.error('Não foi possível enviar a imagem.'); return; }
-    setC('logoUrl', supabase.storage.from('company-logos').getPublicUrl(path).data.publicUrl);
+    done(supabase.storage.from('company-logos').getPublicUrl(path).data.publicUrl);
   };
   const saveVisual = async () => {
     if (!edit) return;
@@ -208,39 +261,90 @@ function EmailSignatureInner() {
               {templates.map((t) => (
                 <button key={t.id} type="button" onClick={() => startEdit(t)} className={`ui-btn flex flex-col items-start gap-2 rounded-xl border p-3 text-left transition-colors ${edit?.id === t.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
                   <span className="flex w-full items-center gap-2 text-sm font-medium">{t.name}{t.is_default ? <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-primary"><Star className="h-3 w-3" />Padrão</span> : null}</span>
-                  <span className="pointer-events-none block max-h-[86px] w-full overflow-hidden rounded-lg bg-white p-2" style={{ zoom: 0.55 }} dangerouslySetInnerHTML={{ __html: renderSignature(t.config, base) }} />
+                  {isBannerStyle(fullConfig(t.config).style)
+                    ? <span className="pointer-events-none block w-full overflow-hidden rounded-lg bg-white"><BannerCanvas cfg={t.config} person={base} company={company?.name || ''} width={260} /></span>
+                    : <span className="pointer-events-none block max-h-[86px] w-full overflow-hidden rounded-lg bg-white p-2" style={{ zoom: 0.55 }} dangerouslySetInnerHTML={{ __html: renderSignature(t.config, base) }} />}
                 </button>
               ))}
             </div>
             {edit ? (
               <div className="grid gap-6 p-6 xl:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 xl:max-h-[calc(100vh-220px)] xl:overflow-y-auto xl:pr-2">
                   <Field label="Nome do visual"><input className={inp} value={edit.name} maxLength={80} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
-                  <Field label="Posição da logo">
-                    <div className="flex flex-wrap gap-1.5">{SIG_LAYOUTS.map(([k, l]) => <button key={k} type="button" className="ui-chip dk-cp" aria-pressed={edit.config.layout === k} data-on={edit.config.layout === k} style={edit.config.layout === k ? { background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))', borderColor: 'hsl(var(--primary))' } : undefined} onClick={() => setC('layout', k)}>{l}</button>)}</div>
+                  <Field label="Estilo">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {SIG_STYLES.map(([k, l]) => (
+                        <button key={k} type="button" aria-pressed={edit.config.style === k} onClick={() => setC('style', k)}
+                          className={`ui-btn flex flex-col gap-1.5 rounded-xl border p-1.5 text-left text-[11.5px] font-medium ${edit.config.style === k ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:bg-muted/50'}`}>
+                          {k === 'classic'
+                            ? <span className="flex h-[46px] items-center justify-center rounded-lg bg-white text-[10px] text-neutral-500" style={{ colorScheme: 'light' }}>Texto simples</span>
+                            : <span className="block overflow-hidden rounded-lg bg-white"><BannerCanvas cfg={{ ...edit.config, style: k }} person={base} company={company?.name || ''} width={150} /></span>}
+                          {l}
+                        </button>
+                      ))}
+                    </div>
                   </Field>
-                  {edit.config.layout !== 'none' ? (
-                    <>
                       <Field label="Logo" hint="PNG, JPG ou GIF até 1 MB. A imagem fica num endereço público para abrir no e-mail de quem recebe.">
                         <div className="flex flex-wrap items-center gap-2">
                           {edit.config.logoUrl ? <img src={edit.config.logoUrl} alt="" className="h-10 max-w-[140px] rounded border border-border bg-white object-contain p-1" /> : <span className="text-xs text-muted-foreground">Sem imagem</span>}
-                          <label className="dk-btn cursor-pointer">{uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageUp className="h-4 w-4" />}Enviar imagem<input type="file" accept="image/png,image/jpeg,image/gif" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void upload(f); }} /></label>
+                          <label className="dk-btn cursor-pointer">{uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageUp className="h-4 w-4" />}Enviar imagem<input type="file" accept="image/png,image/jpeg,image/gif" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void upload(f, (u) => setC('logoUrl', u)); }} /></label>
                           {companyLogo ? <button type="button" className="dk-btn" onClick={() => setC('logoUrl', companyLogo)}>Usar logo da empresa</button> : null}
                         </div>
                       </Field>
+                  {edit.config.style === 'classic' ? (
+                    <>
+                      <Field label="Posição da logo">
+                        <div className="flex flex-wrap gap-1.5">{SIG_LAYOUTS.map(([k, l]) => <button key={k} type="button" className="ui-chip dk-cp" aria-pressed={edit.config.layout === k} style={chipOn(edit.config.layout === k)} onClick={() => setC('layout', k)}>{l}</button>)}</div>
+                      </Field>
                       <div className="grid grid-cols-2 gap-3">
                         <Field label={`Tamanho da logo (${edit.config.logoWidth}px)`}><input type="range" min={40} max={240} step={5} value={edit.config.logoWidth} onChange={(e) => setC('logoWidth', +e.target.value)} /></Field>
-                        <Field label="Formato"><Sel className="ui-sel" value={edit.config.logoShape} onChange={(e) => setC('logoShape', e.target.value as SigConfig['logoShape'])}><option value="original">Original</option><option value="rounded">Cantos arredondados</option><option value="circle">Redonda</option></Sel></Field>
+                        <Field label="Formato da logo"><Sel className="ui-sel" value={edit.config.logoShape} onChange={(e) => setC('logoShape', e.target.value as SigConfig['logoShape'])}><option value="original">Original</option><option value="rounded">Cantos arredondados</option><option value="circle">Redonda</option></Sel></Field>
+                        <Field label="Fonte"><Sel className="ui-sel" value={edit.config.font} onChange={(e) => setC('font', e.target.value)}>{SIG_FONTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Sel></Field>
+                        <Field label={`Tamanho do texto (${edit.config.size}px)`}><input type="range" min={11} max={16} value={edit.config.size} onChange={(e) => setC('size', +e.target.value)} /></Field>
+                        <Field label="Separador"><Sel className="ui-sel" value={edit.config.divider} onChange={(e) => setC('divider', e.target.value as SigConfig['divider'])}><option value="bar">Barra vertical</option><option value="line">Linha embaixo do nome</option><option value="none">Nenhum</option></Sel></Field>
+                        <Field label="Nome"><Sel className="ui-sel" value={edit.config.nameStyle} onChange={(e) => setC('nameStyle', e.target.value as SigConfig['nameStyle'])}><option value="bold">Negrito</option><option value="upper">Maiúsculas</option></Sel></Field>
                       </div>
                     </>
-                  ) : null}
+                  ) : (
+                    <>
+                      <Field label="Formato da foto"><div className="flex flex-wrap gap-1.5">{([['circle', 'Redonda'], ['hexagon', 'Hexágono'], ['rounded', 'Quadrada arredondada']] as [SigConfig['photoShape'], string][]).map(([k, l]) => <button key={k} type="button" className="ui-chip dk-cp" aria-pressed={edit.config.photoShape === k} style={chipOn(edit.config.photoShape === k)} onClick={() => setC('photoShape', k)}>{l}</button>)}</div></Field>
+                      <div className="rounded-xl border border-border p-3">
+                        <p className="mb-2 text-[12.5px] font-semibold">Marca d'água</p>
+                        <div className="flex flex-col gap-3">
+                          <div className="flex flex-wrap gap-1.5">{([['none', 'Nenhuma'], ['logo', 'Logo'], ['image', 'Imagem própria'], ['text', 'Texto']] as [SigConfig['watermark']['kind'], string][]).map(([k, l]) => <button key={k} type="button" className="ui-chip dk-cp" aria-pressed={edit.config.watermark.kind === k} style={chipOn(edit.config.watermark.kind === k)} onClick={() => setC('watermark', { ...edit.config.watermark, kind: k })}>{l}</button>)}</div>
+                          {edit.config.watermark.kind === 'image' ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              {edit.config.watermark.src ? <img src={edit.config.watermark.src} alt="" className="h-10 max-w-[140px] rounded border border-border bg-white object-contain p-1" /> : <span className="text-xs text-muted-foreground">Nenhuma imagem</span>}
+                              <label className="dk-btn cursor-pointer"><ImageUp className="h-4 w-4" />Enviar imagem<input type="file" accept="image/png,image/jpeg,image/gif" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void upload(f, (u) => setC('watermark', { ...edit.config.watermark, src: u })); }} /></label>
+                            </div>
+                          ) : null}
+                          {edit.config.watermark.kind === 'text' ? <input className={inp} placeholder="Ex.: nome da empresa" maxLength={40} value={edit.config.watermark.text} onChange={(e) => setC('watermark', { ...edit.config.watermark, text: e.target.value })} /> : null}
+                          {edit.config.watermark.kind !== 'none' ? (
+                            <>
+                              <div className="flex flex-wrap gap-1.5">{([['center', 'Centro'], ['left', 'Esquerda'], ['right', 'Direita'], ['full', 'Toda a assinatura']] as [SigConfig['watermark']['pos'], string][]).map(([k, l]) => <button key={k} type="button" className="ui-chip dk-cp" aria-pressed={edit.config.watermark.pos === k} style={chipOn(edit.config.watermark.pos === k)} onClick={() => setC('watermark', { ...edit.config.watermark, pos: k })}>{l}</button>)}</div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <Field label={`Transparência (${Math.round(edit.config.watermark.opacity * 100)}%)`}><input type="range" min={2} max={40} value={Math.round(edit.config.watermark.opacity * 100)} onChange={(e) => setC('watermark', { ...edit.config.watermark, opacity: +e.target.value / 100 })} /></Field>
+                                <Field label={`Tamanho (${edit.config.watermark.size}%)`}><input type="range" min={15} max={100} value={edit.config.watermark.size} onChange={(e) => setC('watermark', { ...edit.config.watermark, size: +e.target.value })} /></Field>
+                              </div>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+                      {edit.config.style === 'cta' ? (
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Texto da chamada"><input className={inp} maxLength={40} value={edit.config.cta.text} onChange={(e) => setC('cta', { ...edit.config.cta, text: e.target.value })} /></Field>
+                          <Field label="Texto do botão"><input className={inp} maxLength={40} value={edit.config.cta.button} onChange={(e) => setC('cta', { ...edit.config.cta, button: e.target.value })} /></Field>
+                          <div className="col-span-2"><Field label="Link do botão (agenda, site, WhatsApp)"><input className={inp} placeholder="https://..." value={edit.config.cta.url} onChange={(e) => setC('cta', { ...edit.config.cta, url: e.target.value })} /></Field></div>
+                        </div>
+                      ) : null}
+                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={edit.config.textLinks} onChange={(e) => setC('textLinks', e.target.checked)} />Linha de contatos clicáveis embaixo da imagem</label>
+                    </>
+                  )}
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="Cor de destaque"><input type="color" className="h-10 w-full cursor-pointer rounded-lg border border-border bg-transparent" value={toHex(edit.config.color)} onChange={(e) => setC('color', e.target.value)} /></Field>
+                    <Field label="Cor principal"><input type="color" className="h-10 w-full cursor-pointer rounded-lg border border-border bg-transparent" value={toHex(edit.config.color)} onChange={(e) => setC('color', e.target.value)} /></Field>
                     <Field label="Cor do texto"><input type="color" className="h-10 w-full cursor-pointer rounded-lg border border-border bg-transparent" value={toHex(edit.config.textColor, '#333333')} onChange={(e) => setC('textColor', e.target.value)} /></Field>
-                    <Field label="Fonte"><Sel className="ui-sel" value={edit.config.font} onChange={(e) => setC('font', e.target.value)}>{SIG_FONTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Sel></Field>
-                    <Field label={`Tamanho do texto (${edit.config.size}px)`}><input type="range" min={11} max={16} value={edit.config.size} onChange={(e) => setC('size', +e.target.value)} /></Field>
-                    <Field label="Separador"><Sel className="ui-sel" value={edit.config.divider} onChange={(e) => setC('divider', e.target.value as SigConfig['divider'])}><option value="bar">Barra vertical</option><option value="line">Linha embaixo do nome</option><option value="none">Nenhum</option></Sel></Field>
-                    <Field label="Nome"><Sel className="ui-sel" value={edit.config.nameStyle} onChange={(e) => setC('nameStyle', e.target.value as SigConfig['nameStyle'])}><option value="bold">Negrito</option><option value="upper">Maiúsculas</option></Sel></Field>
+                    {edit.config.style !== 'classic' ? <Field label="Cor secundária"><input type="color" className="h-10 w-full cursor-pointer rounded-lg border border-border bg-transparent" value={toHex(edit.config.color2, '#F5B800')} onChange={(e) => setC('color2', e.target.value)} /></Field> : null}
+                    {edit.config.style !== 'classic' ? <Field label="Cor de fundo"><input type="color" className="h-10 w-full cursor-pointer rounded-lg border border-border bg-transparent" value={toHex(edit.config.bgColor, '#ffffff')} onChange={(e) => setC('bgColor', e.target.value)} /></Field> : null}
                   </div>
                   <Field label="O que aparece">
                     <div className="grid grid-cols-2 gap-1.5 text-sm">
@@ -267,8 +371,8 @@ function EmailSignatureInner() {
                     <button type="button" className="dk-btn" onClick={() => void removeVisual()}><Trash2 className="h-4 w-4" />{edit.id ? 'Excluir' : 'Cancelar'}</button>
                   </div>
                 </div>
-                <div className="flex min-w-0 flex-col gap-3 self-start xl:sticky xl:top-4">
-                  <Preview html={renderSignature(edit.config, base)} />
+                <div className="flex min-w-0 flex-col gap-3 self-start" data-sig-preview>
+                  <SigPreview cfg={edit.config} person={base} company={company?.name || ''} />
                   <p className="text-xs text-muted-foreground">Prévia com os seus dados. Cada pessoa vê a própria assinatura em "Minha assinatura".</p>
                 </div>
               </div>
