@@ -16,6 +16,7 @@ interface PermissionUpdate {
     canAccessOrbs?: boolean;
     canAccessMeetingRooms?: boolean;
     canAccessDash?: boolean;
+    canManageSignatures?: boolean;
   };
 }
 
@@ -132,6 +133,7 @@ Deno.serve(async (req) => {
       can_access_orbs: permissions.canAccessOrbs ?? existingPerm?.can_access_orbs ?? false,
       can_access_meeting_rooms: permissions.canAccessMeetingRooms ?? existingPerm?.can_access_meeting_rooms ?? false,
       can_access_dash: permissions.canAccessDash ?? existingPerm?.can_access_dash ?? false,
+      can_manage_signatures: permissions.canManageSignatures ?? existingPerm?.can_manage_signatures ?? false,
       updated_at: new Date().toISOString(),
     };
 

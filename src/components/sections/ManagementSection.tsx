@@ -21,7 +21,7 @@ import { Sel } from '@/components/ui/Sel';
 
 interface Profile { avatar_url?: string | null; id: string; user_id: string; name: string; email: string; phone: string | null; address?: string | null; company: string | null; registration_number: string | null; profile_type: string; is_active: boolean; sector_id: string | null; birth_date: string | null; autonomy_level: string; last_seen_at?: string | null }
 interface Sector { id: string; name: string; color: string }
-interface Permission { user_id: string; can_post_announcements: boolean; can_delete_messages: boolean; can_access_management: boolean; can_access_password_change: boolean; can_create_war_room: boolean; can_access_orbs?: boolean; can_access_meeting_rooms?: boolean; can_access_dash?: boolean }
+interface Permission { user_id: string; can_post_announcements: boolean; can_delete_messages: boolean; can_access_management: boolean; can_access_password_change: boolean; can_create_war_room: boolean; can_access_orbs?: boolean; can_access_meeting_rooms?: boolean; can_access_dash?: boolean; can_manage_signatures?: boolean }
 interface Role { user_id: string; role: string }
 const ADMIN_EMAIL = 'adminservchat@servsul.com.br';
 const LEVELS: [string, string][] = [['colaborador', 'Colaborador'], ['supervisor', 'Supervisor'], ['gerente', 'Gerente'], ['diretoria', 'Diretoria']];
@@ -31,6 +31,7 @@ const PERMS: { key: keyof Permission; label: string; feature?: string }[] = [
   { key: 'can_post_announcements', label: 'Postar avisos', feature: 'announcements' }, { key: 'can_access_password_change', label: 'Alterar senhas' },
   { key: 'can_create_war_room', label: 'Criar War Room', feature: 'war_room' }, { key: 'can_access_dash', label: 'Dash', feature: 'dashboard_3d' },
   { key: 'can_access_meeting_rooms', label: 'Sala de Reunião', feature: 'meeting_rooms' }, { key: 'can_delete_messages', label: 'Excluir mensagens', feature: 'chat' },
+  { key: 'can_manage_signatures', label: 'Criar visuais de assinatura' },
   { key: 'can_access_management', label: 'Gerenciamento' },
 ];
 
@@ -136,7 +137,7 @@ export function ManagementSection() {
   const setR = (k: keyof EmployeeRecord) => (v: string) => setRec((prev) => ({ ...prev, [k]: v }));
 
   const updatePermission = async (userId: string, key: keyof Permission, value: boolean) => {
-    const map: Record<string, string> = { can_post_announcements: 'canPostAnnouncements', can_delete_messages: 'canDeleteMessages', can_access_management: 'canAccessManagement', can_access_password_change: 'canAccessPasswordChange', can_create_war_room: 'canCreateWarRoom', can_access_orbs: 'canAccessOrbs', can_access_meeting_rooms: 'canAccessMeetingRooms', can_access_dash: 'canAccessDash' };
+    const map: Record<string, string> = { can_post_announcements: 'canPostAnnouncements', can_delete_messages: 'canDeleteMessages', can_access_management: 'canAccessManagement', can_access_password_change: 'canAccessPasswordChange', can_create_war_room: 'canCreateWarRoom', can_access_orbs: 'canAccessOrbs', can_access_meeting_rooms: 'canAccessMeetingRooms', can_access_dash: 'canAccessDash', can_manage_signatures: 'canManageSignatures' };
     try {
       const response = await supabase.functions.invoke('update-user-permissions', { body: { userId, permissions: { [map[key]]: value } } });
       if (response.error || response.data?.error) throw new Error(response.data?.error || response.error?.message);

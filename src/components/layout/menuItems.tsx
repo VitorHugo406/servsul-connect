@@ -1,5 +1,5 @@
 import { IS_DEMO } from '@/lib/demo/bootDemo';
-import { CreditCard, Plug, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, Globe, ClipboardCheck, Megaphone, Link, MessageSquare, Bell, Home, Cake, Settings, Trash2, Building2, Briefcase, Sparkles, DoorOpen, HeartHandshake, BookMarked } from 'lucide-react';
+import { CreditCard, Plug, Mail, FileText, HardDrive, CalendarDays, BookOpen, Shield, Globe, ClipboardCheck, Megaphone, Link, MessageSquare, Bell, Home, Cake, Settings, Trash2, Building2, Briefcase, Sparkles, DoorOpen, HeartHandshake, BookMarked, Signature } from 'lucide-react';
 import { useDbFeature } from '@/hooks/useDbFeature';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompanyPlan } from '@/hooks/useCompanyPlan';
@@ -22,6 +22,7 @@ export const menuItems = [
   { id: 'evaluations', icon: ClipboardCheck, label: 'Avaliações' },
   { id: 'rh', icon: HeartHandshake, label: 'RH' },
   { id: 'wiki', icon: BookMarked, label: 'Base de conhecimento', dbTable: 'wiki_pages' },
+  { id: 'signatures', icon: Signature, label: 'Assinatura de e-mail', dbTable: 'email_signature_templates' },
   { id: 'calendar', icon: CalendarDays, label: 'Calendário' },
   { id: 'system-logs', icon: FileText, label: 'Logs do Sistema', mainAdminOnly: true },
   { id: 'event-history', icon: Sparkles, label: 'Eventos Mensais', adminOnly: true },
@@ -38,8 +39,10 @@ export function useVisibleMenuItems() {
   const isSuperAdmin = roles.some((r: any) => (r.role as string) === 'super_admin');
   const { plan } = useCompanyPlan();
   const wikiOn = useDbFeature('wiki_pages');   // sections whose tables come from a pending migration stay hidden until it exists
+  const sigOn = useDbFeature('email_signature_templates');
   const visibleMenuItems = menuItems.filter(item => {
     if ('dbTable' in item && item.dbTable === 'wiki_pages' && !wikiOn) return false;
+    if ('dbTable' in item && item.dbTable === 'email_signature_templates' && !sigOn) return false;
     if (IS_DEMO && DEMO_HIDDEN_SECTIONS.has(item.id)) return false;
     // Plan: system tabs only for the platform owner; features the plan does not include stay hidden.
     if (sectionLock(item.id, plan, isSuperAdmin)) return false;

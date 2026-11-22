@@ -613,6 +613,14 @@ export const GUIDE: GuideArticle[] = [
       { t: 'Controle o acesso', d: 'Em "Quem vê e quem edita", escolha se a página é da empresa toda ou só do setor e quem pode editar.' },
       { t: 'Busque', d: 'A busca procura no título e no texto de todas as páginas que você pode ver.' },
     ], rel: ['anotacoes'] },
+  { slug: 'assinatura-de-email', cat: 'Chat e comunicação', title: 'Assinatura de e-mail padronizada', sum: 'A empresa cria os visuais da assinatura e cada pessoa copia a sua, já preenchida, para o Gmail ou o Outlook.',
+    steps: [
+      { t: 'Crie os visuais da empresa', d: 'Em Assinatura de e-mail › Visuais da empresa, clique em "Novo visual". Escolha a posição da logo (esquerda, direita, em cima, embaixo ou sem logo), o tamanho e o formato, as cores, a fonte, o separador e o que aparece (cargo, setor, telefones, e-mail, site, endereço, redes sociais e aviso legal).' },
+      { t: 'Defina quem pode criar visuais', d: 'Administradores sempre podem. Para liberar outra pessoa, ligue "Criar visuais de assinatura" nas permissões dela em Gerenciamento.' },
+      { t: 'Escolha o visual padrão', d: 'Marque "Visual padrão da empresa": ele é usado por quem ainda não escolheu outro.' },
+      { t: 'Monte a sua assinatura', d: 'Em Minha assinatura, escolha o visual, confira nome, cargo, setor e telefones (já vêm do sistema) e salve.' },
+      { t: 'Cole no seu e-mail', d: 'Clique em "Copiar assinatura" e cole nas configurações de assinatura do Gmail, do Outlook ou do Apple Mail. A tela mostra o caminho de cada um.' },
+    ], tips: ['Copie pelo computador: os aplicativos de e-mail do celular costumam aceitar só assinatura em texto simples.', 'Use logo em PNG, JPG ou GIF; alguns programas de e-mail não mostram outros formatos.'], who: 'Todos usam a própria assinatura; criar visuais é para administradores ou quem tem a permissão.' },
 ];
 
 /** Published articles (hidden ones stay out of the site, the sitemap and the search). */

@@ -1,0 +1,65 @@
+# ewvon
+
+> O ewvon é uma plataforma brasileira de gestão corporativa (SaaS) que reúne comunicação da equipe, tarefas, pessoas/RH, agenda e gestão administrativa em um só lugar. Site: https://ewvon.com
+
+## Empresa e liderança
+- CEO e fundador: Vitor Hugo Almeida Santos
+- Sede: São Paulo (SP), Brasil
+- Contato: ewvonsuporte@gmail.com
+
+## Propósito
+Tirar a rotina das empresas de planilhas, grupos de mensagem e ferramentas soltas, reunindo comunicação, tarefas, pessoas e gestão em um só lugar, simples para quem usa e com controle para quem administra.
+
+## O que tem no sistema
+
+### Comunicação da equipe
+- Chat por setores, conversas diretas e grupos, com chamadas de áudio e vídeo
+- Mensagens fixadas, enquetes, mensagens agendadas e menções
+- Avisos gerais com confirmação de leitura ("Li e concordo") e avisos só para alguns setores
+- Mural de aniversariantes e comunicados da empresa
+
+### Tarefas e projetos
+- Murais no estilo Kanban com responsáveis, prazos, prioridades, etiquetas e checklists
+- Visões em Lista, Calendário, Linha do tempo, Carga de trabalho e Relatórios
+- Modelos prontos, campos personalizados, dependências entre cards e automações
+- Pedido de aprovação no card, lembretes de prazo e lixeira de 30 dias
+- Formulário público para receber pedidos, link público somente leitura e importação de quadros e planilhas (JSON, CSV e Excel)
+
+### Pessoas e RH
+- Gestão de pessoas e equipes, com indicadores, alertas e relatórios
+- Avaliações de desempenho e de experiência (45 e 90 dias) em PDF
+- Férias e ausências com aprovação do gestor, pesquisas de clima e eNPS anônimas
+- Reuniões 1:1, elogios e feedback, metas individuais e organograma
+- Onboarding automático para cada pessoa nova
+
+### Agenda e reuniões
+- Calendário com reuniões e prazos, e agenda pessoal no celular
+- Salas de reunião com reserva e check-in por QR Code
+- Pauta e ata da reunião, com ações que viram cards
+- Link público para clientes e parceiros agendarem um horário
+
+### Gestão e administração
+- Ficha completa do colaborador, com dados sensíveis criptografados, e permissões por pessoa
+- Gestão de setores, War Room para incidentes críticos e Dash 3D com indicadores de RH
+- Base de conhecimento com versões e anotações compartilhadas
+- Assinatura de e-mail padronizada: a empresa cria os visuais (posição da logo, cores, fonte, campos) e cada pessoa copia a sua para o e-mail
+
+### Inteligência artificial e integrações
+- Assistente EwvonAI para resumir conversas e murais e criar cards a partir de um texto
+- Webhooks, API de cards e integração com sistemas de RH
+- Notificações em ferramentas de chat e integração com agenda e arquivos na nuvem
+
+### Onde funciona e segurança
+- No navegador do computador, no celular e em aplicativo para Android
+- Dados hospedados no Brasil (São Paulo) e verificação em duas etapas no login
+- Termos de uso, política de privacidade e acordo de tratamento de dados (LGPD) publicados
+
+## Páginas úteis
+- Sobre: https://ewvon.com/sobre/
+- Guia de funcionalidades (passo a passo): https://ewvon.com/guia/
+- Central de ajuda: https://ewvon.com/ajuda
+- Segurança: https://ewvon.com/seguranca
+- Desenvolvedores (API e webhooks): https://ewvon.com/desenvolvedores
+- Teste gratuito: https://ewvon.com/teste-gratuito.html
+- Termos de uso: https://ewvon.com/termos
+- Privacidade: https://ewvon.com/privacidade
