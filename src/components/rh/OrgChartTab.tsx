@@ -66,19 +66,33 @@ export function OrgChartTab() {
   const tree = useMemo<N>(() => {
     const byUser = new Map(people.filter((p) => p.user_id).map((p) => [p.user_id as string, p]));
     const byId = new Map(people.map((p) => [p.id, p]));
-    // the general sector (everyone who has no other sector) is a normal branch, drawn last
-    const secs = [...((sectors || []) as unknown as Sec[])].sort((a, b) => Number(!!a.is_general) - Number(!!b.is_general));
-    const known = new Set(secs.map((s) => s.id));
-    const teamMembers = new Map<string, Person[]>();
-    for (const m of tms) { if (!m.team_id) continue; const p = byId.get(m.member_profile_id); if (!p) continue; const a = teamMembers.get(m.team_id) || []; if (!a.some((x) => x.id === p.id)) a.push(p); teamMembers.set(m.team_id, a); }
-    // each team belongs to the sector where most of its members are (or its supervisor's, when it has nobody yet)
-    const teamSector = new Map<string, string>();
+    const allSecs = (sectors || []) as unknown as Sec[];
+    const known = new Set(allSecs.map((s) => s.id));
+    const sectorOf = (p: Person) => (p.sector_id && known.has(p.sector_id) ? p.sector_id : null);
+    // sectors drawn = every sector, except a general sector nobody is in; the count in the company card uses the same list
+    const secs = allSecs.filter((s) => !s.is_general || !!s.manager_id || people.some((p) => p.sector_id === s.id))
+      .sort((x, y) => Number(!!x.is_general) - Number(!!y.is_general));
+    // everyone appears ONCE: a manager (level B photo) or a supervisor (level C photo) is not repeated as a person
+    // below, and a person in several teams goes under the first one only
+    const manager = new Map<string, Person>();
+    for (const s of secs) { const m = s.manager_id ? byId.get(s.manager_id) : undefined; if (m) manager.set(s.id, m); }
+    const sup = new Map<string, Person>();
+    for (const t of teams) { const p = t.supervisor_id ? byUser.get(t.supervisor_id) : undefined; if (p) sup.set(t.id, p); }
+    const placed = new Set<string>([...manager.values(), ...sup.values()].map((p) => p.id));
+    const rawMembers = new Map<string, Person[]>();
+    for (const m of tms) { if (!m.team_id) continue; const p = byId.get(m.member_profile_id); if (!p) continue; const list = rawMembers.get(m.team_id) || []; if (!list.some((x) => x.id === p.id)) list.push(p); rawMembers.set(m.team_id, list); }
+    const teamMem = new Map<string, Person[]>();
+    for (const t of teams) { const mem = (rawMembers.get(t.id) || []).filter((p) => !placed.has(p.id)); mem.forEach((p) => placed.add(p.id)); teamMem.set(t.id, mem); }
+    // a team hangs under the sector where most of its people are (its supervisor's sector while it has nobody);
+    // a team with no sector at all hangs straight under the company — there is no fake "Sem setor" sector
+    const teamSector = new Map<string, string | null>();
     for (const t of teams) {
       const count = new Map<string, number>();
-      for (const p of teamMembers.get(t.id) || []) { const s = p.sector_id && known.has(p.sector_id) ? p.sector_id : 'none'; count.set(s, (count.get(s) || 0) + 1); }
-      let best = [...count.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-      if (!best) { const sup = t.supervisor_id ? byUser.get(t.supervisor_id) : undefined; best = sup?.sector_id && known.has(sup.sector_id) ? sup.sector_id : undefined; }
-      if (best) teamSector.set(t.id, best);
+      for (const p of rawMembers.get(t.id) || []) { const sid = sectorOf(p); if (sid) count.set(sid, (count.get(sid) || 0) + 1); }
+      const best = [...count.entries()].sort((x, y) => y[1] - x[1])[0]?.[0];
+      const sp = sup.get(t.id);
+      const sid = best || (sp ? sectorOf(sp) : null);
+      teamSector.set(t.id, sid && secs.some((s) => s.id === sid) ? sid : null);
     }
     const personNode = (p: Person, sub: string): N => ({ key: `p-${p.id}`, lv: 'D', title: pname(p), lines: [sub], photo: p.avatar_url, person: p, kids: [] });
     const limit = (key: string, list: N[]): N[] => {
@@ -86,27 +100,24 @@ export function OrgChartTab() {
       if (open.has(key)) return [...list, { key: `${key}-less`, lv: 'D', title: '−', lines: [], kids: [], more: { parent: key, count: 0, less: true } }];
       return [...list.slice(0, SHOW), { key: `${key}-more`, lv: 'D', title: `+${list.length - SHOW}`, lines: [], kids: [], more: { parent: key, count: list.length - SHOW } }];
     };
-    const sectorNode = (id: string, name: string, color: string | null | undefined, managerId: string | null): N => {
-      const manager = managerId ? byId.get(managerId) || null : null;
-      const members = people.filter((p) => (id === 'none' ? !p.sector_id || !known.has(p.sector_id) : p.sector_id === id));
-      const inTeams = new Set<string>();
-      const supIds = new Set<string>();
-      const teamNodes: N[] = teams.filter((t) => teamSector.get(t.id) === id).map((t) => {
-        const sup = t.supervisor_id ? byUser.get(t.supervisor_id) || null : null;
-        if (sup) supIds.add(sup.id);
-        const mem = (teamMembers.get(t.id) || []).filter((p) => p.id !== sup?.id && p.id !== manager?.id);
-        mem.forEach((p) => inTeams.add(p.id));
-        const key = `t-${t.id}`;
-        return { key, lv: 'C', title: t.name, lines: [sup ? `Supervisor(a): ${pname(sup)}` : 'Sem supervisor', plural(mem.length, 'pessoa', 'pessoas')], photo: sup?.avatar_url, tint: color || undefined, person: sup || undefined, kids: limit(key, mem.map((p) => personNode(p, t.name))) };
-      });
-      const loose = members.filter((p) => p.id !== manager?.id && !inTeams.has(p.id) && !supIds.has(p.id)).map((p) => personNode(p, name));
-      const key = `s-${id}`;
-      return { key, lv: 'B', title: name, lines: [manager ? `Gestor(a): ${pname(manager)}` : 'Sem gestor definido', plural(members.length, 'pessoa', 'pessoas')], photo: manager?.avatar_url, tint: color || undefined, person: manager || undefined, kids: [...teamNodes, ...limit(key, loose)] };
+    const teamNode = (t: Team, tint?: string): N => {
+      const sp = sup.get(t.id) || null; const mem = teamMem.get(t.id) || []; const key = `t-${t.id}`;
+      return { key, lv: 'C', title: t.name, lines: [sp ? `Supervisor(a): ${pname(sp)}` : 'Sem supervisor', plural(mem.length, 'pessoa', 'pessoas')], photo: sp?.avatar_url, tint, person: sp || undefined, kids: limit(key, mem.map((p) => personNode(p, t.name))) };
     };
-    const bs: N[] = secs.map((s) => sectorNode(s.id, s.name, s.color, s.manager_id || null)).filter((n) => n.kids.length || n.person);
-    if (people.some((p) => !p.sector_id || !known.has(p.sector_id))) bs.push(sectorNode('none', 'Sem setor', '#9e9e9e', null));
+    const bs: N[] = secs.map((s) => {
+      const m = manager.get(s.id) || null;
+      const members = people.filter((p) => p.sector_id === s.id);
+      const loose = members.filter((p) => !placed.has(p.id)); loose.forEach((p) => placed.add(p.id));
+      const key = `s-${s.id}`;
+      const tint = s.color || undefined;
+      return { key, lv: 'B', title: s.name, lines: [m ? `Gestor(a): ${pname(m)}` : 'Sem gestor definido', plural(members.length, 'pessoa', 'pessoas')], photo: m?.avatar_url, tint, person: m || undefined,
+        kids: [...teams.filter((t) => teamSector.get(t.id) === s.id).map((t) => teamNode(t, tint)), ...limit(key, loose.map((p) => personNode(p, s.name)))] };
+    });
+    // teams without a sector and people without a sector (and in no team) report straight to the company
+    const topTeams = teams.filter((t) => !teamSector.get(t.id)).map((t) => teamNode(t));
+    const rest = people.filter((p) => !placed.has(p.id)).map((p) => personNode(p, 'Sem setor'));
     const counts = [plural(people.length, 'pessoa', 'pessoas'), plural(secs.length, 'setor', 'setores'), teams.length ? plural(teams.length, 'equipe', 'equipes') : ''].filter(Boolean).join(' · ');
-    return { key: 'root', lv: 'A', title: company?.name || 'Empresa', lines: [counts, 'Estrutura da empresa'], photo: logo, kids: bs };
+    return { key: 'root', lv: 'A', title: company?.name || 'Empresa', lines: [counts, 'Estrutura da empresa'], photo: logo, kids: [...bs, ...topTeams, ...limit('root', rest)] };
   }, [people, sectors, teams, tms, open, f, company?.name, logo]);
 
   // zoom with the CSS zoom property (it changes the layout, so the scroll area follows the real size)
@@ -125,8 +136,8 @@ export function OrgChartTab() {
     const zw = (sc.clientWidth - 16) / (r.width / z), zh = (sc.clientHeight - 16) / (r.height / z);
     return Math.min(1, both ? Math.min(zw, zh) : zw);
   }, []);
-  // until the person zooms by hand, the chart fits the width again whenever the data changes
-  useLayoutEffect(() => { if (manual.current) return; const z = fitZoom(false); if (z) applyZoom(Math.max(MIN_AUTO, z), 'center-x'); }, [tree, height, fitZoom, applyZoom]);
+  // until the person zooms by hand, the chart fits the screen again whenever the data changes (never below 60%)
+  useLayoutEffect(() => { if (manual.current) return; const z = fitZoom(true); if (z) applyZoom(Math.max(MIN_AUTO, z), 'center-x'); }, [tree, height, fitZoom, applyZoom]);
 
   const hit = (n: N) => !!f && (n.title.toLowerCase().includes(f) || (!!n.person && pname(n.person).toLowerCase().includes(f)));
   useEffect(() => {
