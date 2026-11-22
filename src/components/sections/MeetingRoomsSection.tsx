@@ -24,6 +24,17 @@ type Participant = { booking_id: string; profile_id: string };
 const timeLabel = (value: string) => value.slice(0, 5);
 const initials = (name: string) => name.split(' ').filter(Boolean).slice(0, 2).map(v => v[0]).join('').toUpperCase();
 
+// São Paulo clock (HH:MM) — rooms open/close by the company's local time, like the booking validation in the database
+const spHM = () => new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+const hm5 = (t?: string | null) => (t || '').slice(0, 5);
+/** true while the room is inside its opening hours right now */
+function roomOpenNow(r: { opens_at?: string | null; closes_at?: string | null }) {
+  const o = hm5(r.opens_at), c = hm5(r.closes_at); if (!o || !c) return true;
+  const n = spHM(); return n >= o && n < c;
+}
+/** "abre às 08:00" / "abre amanhã às 08:00" */
+function roomReopens(r: { opens_at?: string | null }) { const o = hm5(r.opens_at); return spHM() < o ? `abre às ${o}` : `abre amanhã às ${o}`; }
+
 export function MeetingRoomsSection() {
   const { profile, user, isAdmin, canAccess } = useAuth();
   const allowed = isAdmin || canAccess('can_access_meeting_rooms');
@@ -228,9 +239,10 @@ export function MeetingRoomsSection() {
   const now0 = new Date();
   const activeOf = (roomId: string) => bookings.find(b => b.room_id === roomId && now0 >= new Date(b.starts_at) && now0 < new Date(b.ends_at));
   const nextOf = (roomId: string) => bookings.find(b => b.room_id === roomId && new Date(b.starts_at) > now0);
-  const freeCount = rooms.filter(r => !activeOf(r.id)).length;
-  const busyCount = rooms.length - freeCount;
-  const shownRooms = rooms.filter(r => (tab === 'all' || (tab === 'free' ? !activeOf(r.id) : !!activeOf(r.id))) && (!roomQuery.trim() || r.name.toLowerCase().includes(roomQuery.toLowerCase())));
+  // outside its opening hours (São Paulo time) a room is "Fechada", never "Livre"
+  const freeCount = rooms.filter(r => !activeOf(r.id) && roomOpenNow(r)).length;
+  const busyCount = rooms.filter(r => !!activeOf(r.id)).length;
+  const shownRooms = rooms.filter(r => (tab === 'all' || (tab === 'free' ? !activeOf(r.id) && roomOpenNow(r) : !!activeOf(r.id))) && (!roomQuery.trim() || r.name.toLowerCase().includes(roomQuery.toLowerCase())));
   const lowerFirst = (t: string) => t.replace('.', '');
 
   // seleção de horário (grade de 30 min): o início escolhido + 1h, limitado aos horários livres seguidos
@@ -253,7 +265,7 @@ export function MeetingRoomsSection() {
         <div className="mx-tile"><Door /></div>
         <div><h1>{selectedRoom.name}</h1><div className="mx-sub">Até {selectedRoom.capacity} pessoas · {timeLabel(selectedRoom.opens_at)} às {timeLabel(selectedRoom.closes_at)}</div></div>
         <div className="mx-acts">
-          <span className="mx-live" style={currentBooking ? { color: '#8A4B00', background: '#FEF5E4', borderColor: '#E3C48F' } : undefined}>{currentBooking ? 'Em reunião' : 'Livre agora'}</span>
+          <span className="mx-live" style={currentBooking ? { color: '#8A4B00', background: '#FEF5E4', borderColor: '#E3C48F' } : !roomOpenNow(selectedRoom) ? { color: 'var(--dkx-tx-5a6472,#5A6472)', background: 'var(--dkx-bg-eef0f3,#EEF0F3)', borderColor: 'var(--dkx-bg-d5d9df,#D5D9DF)' } : undefined}>{currentBooking ? 'Em reunião' : roomOpenNow(selectedRoom) ? 'Livre agora' : `Fechada · ${roomReopens(selectedRoom)}`}</span>
           {isAdmin && qrOn && <button type="button" className="mx-btn" onClick={() => setQrRoom({ id: selectedRoom.id, name: selectedRoom.name })}>QR de check-in</button>}
           {isAdmin && <button type="button" className="mx-btn" onClick={() => openRoomEditor(selectedRoom)}><PencilIc /> Configurar sala</button>}
           <button type="button" className="mx-btn mx-pri" onClick={() => beginBooking()}><PlusIc />Agendar</button>
@@ -336,14 +348,14 @@ export function MeetingRoomsSection() {
         return <article key={room.id} className="mr-rm" onClick={() => { setSelectedRoom(room); setSelectedDate(startOfDay(new Date())); setPick(''); }}>
           <div className="mr-ph">
             {room.image_url && <img src={room.image_url} alt={`Sala ${room.name}`} loading="lazy" />}
-            <span className={`mr-sp ${active ? 'mr-us' : 'mr-fr'}`}>{active ? 'Em uso' : 'Livre'}</span>
+            <span className={`mr-sp ${active ? 'mr-us' : roomOpenNow(room) ? 'mr-fr' : 'mr-cl'}`}>{active ? 'Em uso' : roomOpenNow(room) ? 'Livre' : 'Fechada'}</span>
             {isAdmin && <button type="button" className="mr-ed" aria-label="Editar sala" onClick={e => { e.stopPropagation(); openRoomEditor(room); }}><PencilIc /></button>}
             {!room.image_url && <div className="mr-pe"><Door /><span>Adicione uma foto desta sala</span></div>}
             <span className="mr-ls">{count}/{room.capacity} lugares</span>
           </div>
           <div className="mr-bd">
             <div className="mr-r1"><div><div className="mr-nm">{room.name}</div><div className="mr-su">Até {room.capacity} pessoas</div></div><div className="mr-hr">{timeLabel(room.opens_at)} - {timeLabel(room.closes_at)}</div></div>
-            <div className="mr-r2"><span className="mr-in">{active ? `${active.title} · livre às ${format(new Date(active.ends_at), 'HH:mm')}` : next ? `Próxima reunião: ${lowerFirst(format(new Date(next.starts_at), 'EEE dd/MM, HH:mm', { locale: ptBR }))}` : 'Sem reuniões agendadas'}</span><span className="mr-vs">Ver sala →</span></div>
+            <div className="mr-r2"><span className="mr-in">{active ? `${active.title} · livre às ${format(new Date(active.ends_at), 'HH:mm')}` : next ? `Próxima reunião: ${lowerFirst(format(new Date(next.starts_at), 'EEE dd/MM, HH:mm', { locale: ptBR }))}` : (roomOpenNow(room) ? 'Sem reuniões agendadas' : `Fora do horário · ${roomReopens(room)}`)}</span><span className="mr-vs">Ver sala →</span></div>
           </div>
         </article>;
       })}</div> : <div className="mr-panel mr-empty">
