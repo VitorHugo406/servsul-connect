@@ -5,20 +5,25 @@ import { supabase } from '@/integrations/supabase/client';
 import { getCompanyLogoPathFromValue } from '@/lib/companyLogo';
 
 export type SigLayout = 'left' | 'right' | 'top' | 'bottom' | 'none';
-export type SigStyle = 'classic' | 'diagonal' | 'arcs' | 'darkpanel' | 'ring' | 'cta' | 'wave' | 'hexagon' | 'triangles' | 'corp-light' | 'corp-color' | 'corp-dark';
+export type SigStyle = 'classic' | 'diagonal' | 'arcs' | 'darkpanel' | 'ring' | 'cta' | 'wave' | 'hexagon' | 'triangles' | 'corp-light' | 'corp-color' | 'corp-dark'
+  | 'corp-stripe' | 'corp-split' | 'corp-frame' | 'chevron' | 'blocks' | 'slash' | 'bubbles' | 'blob' | 'gradient'
+  | 'minimal-line' | 'minimal-center' | 'card' | 'underline' | 'mono' | 'cta-side' | 'promo-ribbon' | 'dark-gold' | 'neon' | 'midnight';
+/** Shapes for the photo and the logo (banner styles draw all of them; the classic text style uses the ones e-mail CSS can do). */
+export type SigShape = 'circle' | 'rounded' | 'square' | 'hexagon' | 'octagon' | 'diamond' | 'leaf';
+export const SIG_SHAPES: [SigShape, string][] = [['circle', 'Redonda'], ['rounded', 'Quadrada arredondada'], ['square', 'Quadrada'], ['hexagon', 'Hexágono'], ['octagon', 'Octógono'], ['diamond', 'Losango'], ['leaf', 'Folha']];
 export type SigWatermark = { kind: 'none' | 'logo' | 'image' | 'text'; src: string; text: string; pos: 'center' | 'left' | 'right' | 'full'; opacity: number; size: number };
 export type SigConfig = {
   style: SigStyle;
   color2: string;
   bgColor: string;
-  photoShape: 'circle' | 'hexagon' | 'rounded';
+  photoShape: SigShape;
   watermark: SigWatermark;
   cta: { text: string; button: string; url: string };
   textLinks: boolean;
   layout: SigLayout;
   logoUrl: string;
   logoWidth: number;
-  logoShape: 'original' | 'rounded' | 'circle';
+  logoShape: 'original' | SigShape;
   photo: boolean;
   color: string;
   textColor: string;
@@ -43,11 +48,19 @@ export const SIG_FONTS: [string, string][] = [
 ];
 export const SIG_LAYOUTS: [SigLayout, string][] = [['left', 'Logo à esquerda'], ['right', 'Logo à direita'], ['top', 'Logo em cima'], ['bottom', 'Logo embaixo'], ['none', 'Sem logo']];
 
-export const SIG_STYLES: [SigStyle, string][] = [
-  ['classic', 'Clássico (texto)'], ['diagonal', 'Diagonal'], ['arcs', 'Arcos'], ['darkpanel', 'Painel escuro'], ['ring', 'Anel'],
-  ['cta', 'Com chamada (botão)'], ['wave', 'Onda lateral'], ['hexagon', 'Hexágono'], ['triangles', 'Triângulos'],
-  ['corp-light', 'Corporativo claro'], ['corp-color', 'Corporativo na cor'], ['corp-dark', 'Corporativo escuro'],
+export const SIG_STYLE_CATS: [string, string][] = [['corp', 'Corporativo'], ['modern', 'Moderno'], ['creative', 'Criativo'], ['minimal', 'Minimalista'], ['cta', 'Com chamada'], ['dark', 'Escuro']];
+export const SIG_STYLES: [SigStyle, string, string][] = [
+  ['corp-light', 'Corporativo claro', 'corp'], ['corp-color', 'Corporativo na cor', 'corp'], ['corp-dark', 'Corporativo escuro', 'corp'],
+  ['corp-stripe', 'Faixa no topo', 'corp'], ['corp-split', 'Painel dividido', 'corp'], ['corp-frame', 'Moldura', 'corp'],
+  ['diagonal', 'Diagonal', 'modern'], ['triangles', 'Triângulos', 'modern'], ['hexagon', 'Hexágono', 'modern'], ['darkpanel', 'Painel inclinado', 'modern'],
+  ['chevron', 'Setas', 'modern'], ['blocks', 'Blocos', 'modern'], ['slash', 'Faixa inclinada', 'modern'],
+  ['arcs', 'Arcos', 'creative'], ['wave', 'Onda lateral', 'creative'], ['ring', 'Anel', 'creative'], ['bubbles', 'Bolhas', 'creative'], ['blob', 'Forma orgânica', 'creative'], ['gradient', 'Degradê', 'creative'],
+  ['classic', 'Clássico (texto)', 'minimal'], ['minimal-line', 'Linha simples', 'minimal'], ['minimal-center', 'Centralizado', 'minimal'], ['card', 'Cartão', 'minimal'], ['underline', 'Nome sublinhado', 'minimal'], ['mono', 'Preto e branco', 'minimal'],
+  ['cta', 'Chamada embaixo', 'cta'], ['cta-side', 'Chamada lateral', 'cta'], ['promo-ribbon', 'Fita de chamada', 'cta'],
+  ['dark-gold', 'Preto e dourado', 'dark'], ['neon', 'Neon', 'dark'], ['midnight', 'Noturno', 'dark'],
 ];
+/** Styles that show the call-to-action (text + button + link). */
+export const hasCta = (s: SigStyle) => s === 'cta' || s === 'cta-side' || s === 'promo-ribbon';
 export const DEFAULT_SIG: SigConfig = {
   style: 'diagonal', color2: '#F5B800', bgColor: '#ffffff', photoShape: 'circle',
   watermark: { kind: 'none', src: '', text: '', pos: 'center', opacity: 0.08, size: 70 },
@@ -59,6 +72,9 @@ export const DEFAULT_SIG: SigConfig = {
   website: '', address: '', slogan: '', disclaimer: '',
   social: { linkedin: '', instagram: '', facebook: '', youtube: '', whatsapp: '' },
 };
+
+/** e-mail CSS can only round corners: hexagon/octagon/diamond fall back to rounded corners in the text style */
+function cssRadius(s: SigShape, rounded: string) { return s === 'circle' ? '50%' : s === 'square' ? '0' : s === 'leaf' ? '50% 0' : rounded; }
 
 export function fullConfig(c?: Partial<SigConfig> | null): SigConfig {
   const x = (c || {}) as Partial<SigConfig>;
@@ -121,10 +137,10 @@ export function renderSignature(cfg0: Partial<SigConfig>, p: SigPerson): string 
   if (c.slogan.trim()) lines.push(`<div style="margin-top:4px;font-style:italic;color:${muted}">${esc(c.slogan.trim())}</div>`);
   const textCell = lines.join('');
 
-  const radius = c.logoShape === 'circle' ? '50%' : c.logoShape === 'rounded' ? '10px' : '0';
+  const radius = c.logoShape === 'original' ? '0' : cssRadius(c.logoShape, '10px');
   const logo = c.layout !== 'none' && c.logoUrl
     ? `<img src="${esc(c.logoUrl)}" width="${c.logoWidth}" alt="" style="display:block;border:0;max-width:${c.logoWidth}px;height:auto;border-radius:${radius}">` : '';
-  const photo = c.photo && p.photo ? `<img src="${esc(p.photo)}" width="64" height="64" alt="" style="display:block;border:0;width:64px;height:64px;border-radius:50%;object-fit:cover">` : '';
+  const photo = c.photo && p.photo ? `<img src="${esc(p.photo)}" width="64" height="64" alt="" style="display:block;border:0;width:64px;height:64px;border-radius:${cssRadius(c.photoShape, '14px')};object-fit:cover">` : '';
   const bar = c.divider === 'bar' ? `border-left:2px solid ${color};` : '';
   const barR = c.divider === 'bar' ? `border-right:2px solid ${color};` : '';
   const td = (inner: string, style = '') => `<td valign="middle" style="${style}">${inner}</td>`;

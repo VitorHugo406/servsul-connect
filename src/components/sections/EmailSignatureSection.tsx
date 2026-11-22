@@ -16,7 +16,7 @@ import { Sel } from '@/components/ui/Sel';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { BANNER_W, bannerAssets, bannerHeight, bannerHtml, bannerLinksHtml, drawBanner, isBannerStyle } from '@/lib/signatureBanner';
-import { DEFAULT_SIG, SIG_FONTS, SIG_LAYOUTS, SIG_STYLES, companyLogoPublicUrl, copyRich, fullConfig, renderSignature, signatureText, toHex,
+import { DEFAULT_SIG, SIG_FONTS, SIG_LAYOUTS, SIG_SHAPES, SIG_STYLES, SIG_STYLE_CATS, hasCta, companyLogoPublicUrl, copyRich, fullConfig, renderSignature, signatureText, toHex,
   type SigConfig, type SigPerson, type SigTemplate } from '@/lib/emailSignature';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -202,6 +202,7 @@ function EmailSignatureInner() {
   const { company, templates, base, companyColor, companyLogo, canManage } = d;
   const [edit, setEdit] = useState<{ id?: string; name: string; config: SigConfig; is_default: boolean } | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [styleCat, setStyleCat] = useState('all');
   const startNew = () => setEdit({ name: 'Novo visual', config: { ...DEFAULT_SIG, color: companyColor, logoUrl: companyLogo }, is_default: !templates.length });
   const startEdit = (t: SigTemplate) => setEdit({ id: t.id, name: t.name, config: fullConfig(t.config), is_default: t.is_default });
   const setC = <K extends keyof SigConfig>(k: K, v: SigConfig[K]) => setEdit((e) => (e ? { ...e, config: { ...e.config, [k]: v } } : e));
@@ -271,19 +272,29 @@ function EmailSignatureInner() {
               <div className="grid gap-6 p-6 xl:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
                 <div className="flex flex-col gap-4 xl:max-h-[calc(100vh-220px)] xl:overflow-y-auto xl:pr-2">
                   <Field label="Nome do visual"><input className={inp} value={edit.name} maxLength={80} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
-                  <Field label="Estilo">
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {SIG_STYLES.map(([k, l]) => (
-                        <button key={k} type="button" aria-pressed={edit.config.style === k} onClick={() => setC('style', k)}
-                          className={`ui-btn flex flex-col gap-1.5 rounded-xl border p-1.5 text-left text-[11.5px] font-medium ${edit.config.style === k ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:bg-muted/50'}`}>
-                          {k === 'classic'
-                            ? <span className="flex h-[46px] items-center justify-center rounded-lg bg-white text-[10px] text-neutral-500" style={{ colorScheme: 'light' }}>Texto simples</span>
-                            : <span className="block overflow-hidden rounded-lg bg-white"><BannerCanvas cfg={{ ...edit.config, style: k }} person={base} company={company?.name || ''} width={150} /></span>}
-                          {l}
-                        </button>
+                  <div className="flex flex-col gap-1.5"><span className="text-[12.5px] font-medium text-muted-foreground">Estilo · {SIG_STYLES.length} modelos (as miniaturas usam os seus dados e cores)</span>
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {([['all', 'Todos'], ...SIG_STYLE_CATS] as [string, string][]).map(([k, l]) => <button key={k} type="button" className="ui-chip dk-cp" aria-pressed={styleCat === k} style={chipOn(styleCat === k)} onClick={() => setStyleCat(k)}>{l}</button>)}
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      {SIG_STYLE_CATS.filter(([ck]) => styleCat === 'all' || styleCat === ck).map(([ck, cl]) => (
+                        <div key={ck}>
+                          {styleCat === 'all' ? <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{cl}</p> : null}
+                          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                            {SIG_STYLES.filter((st) => st[2] === ck).map(([k, l]) => (
+                              <button key={k} type="button" aria-pressed={edit.config.style === k} onClick={() => setC('style', k)}
+                                className={`ui-btn flex flex-col gap-1.5 rounded-xl border p-1.5 text-left text-[11.5px] font-medium ${edit.config.style === k ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:bg-muted/50'}`}>
+                                {k === 'classic'
+                                  ? <span className="flex h-[46px] items-center justify-center rounded-lg bg-white text-[10px] text-neutral-500" style={{ colorScheme: 'light' }}>Texto simples</span>
+                                  : <span className="block overflow-hidden rounded-lg bg-white"><BannerCanvas cfg={{ ...edit.config, style: k }} person={base} company={company?.name || ''} width={150} /></span>}
+                                {l}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       ))}
                     </div>
-                  </Field>
+                  </div>
                       <Field label="Logo" hint="PNG, JPG ou GIF até 1 MB. A imagem fica num endereço público para abrir no e-mail de quem recebe.">
                         <div className="flex flex-wrap items-center gap-2">
                           {edit.config.logoUrl ? <img src={edit.config.logoUrl} alt="" className="h-10 max-w-[140px] rounded border border-border bg-white object-contain p-1" /> : <span className="text-xs text-muted-foreground">Sem imagem</span>}
@@ -298,7 +309,7 @@ function EmailSignatureInner() {
                       </Field>
                       <div className="grid grid-cols-2 gap-3">
                         <Field label={`Tamanho da logo (${edit.config.logoWidth}px)`}><input type="range" min={40} max={240} step={5} value={edit.config.logoWidth} onChange={(e) => setC('logoWidth', +e.target.value)} /></Field>
-                        <Field label="Formato da logo"><Sel className="ui-sel" value={edit.config.logoShape} onChange={(e) => setC('logoShape', e.target.value as SigConfig['logoShape'])}><option value="original">Original</option><option value="rounded">Cantos arredondados</option><option value="circle">Redonda</option></Sel></Field>
+                        <Field label="Formato da logo"><Sel className="ui-sel" value={edit.config.logoShape} onChange={(e) => setC('logoShape', e.target.value as SigConfig['logoShape'])}><option value="original">Original</option><option value="rounded">Cantos arredondados</option><option value="circle">Redonda</option><option value="square">Quadrada</option><option value="leaf">Folha</option></Sel></Field>
                         <Field label="Fonte"><Sel className="ui-sel" value={edit.config.font} onChange={(e) => setC('font', e.target.value)}>{SIG_FONTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Sel></Field>
                         <Field label={`Tamanho do texto (${edit.config.size}px)`}><input type="range" min={11} max={16} value={edit.config.size} onChange={(e) => setC('size', +e.target.value)} /></Field>
                         <Field label="Separador"><Sel className="ui-sel" value={edit.config.divider} onChange={(e) => setC('divider', e.target.value as SigConfig['divider'])}><option value="bar">Barra vertical</option><option value="line">Linha embaixo do nome</option><option value="none">Nenhum</option></Sel></Field>
@@ -307,7 +318,8 @@ function EmailSignatureInner() {
                     </>
                   ) : (
                     <>
-                      <Field label="Formato da foto"><div className="flex flex-wrap gap-1.5">{([['circle', 'Redonda'], ['hexagon', 'Hexágono'], ['rounded', 'Quadrada arredondada']] as [SigConfig['photoShape'], string][]).map(([k, l]) => <button key={k} type="button" className="ui-chip dk-cp" aria-pressed={edit.config.photoShape === k} style={chipOn(edit.config.photoShape === k)} onClick={() => setC('photoShape', k)}>{l}</button>)}</div></Field>
+                      <Field label="Formato da foto"><div className="flex flex-wrap gap-1.5">{SIG_SHAPES.map(([k, l]) => <button key={k} type="button" className="ui-chip dk-cp" aria-pressed={edit.config.photoShape === k} style={chipOn(edit.config.photoShape === k)} onClick={() => setC('photoShape', k)}>{l}</button>)}</div></Field>
+                      <Field label="Formato da logo" hint="Fora do formato original, uma logo quadrada preenche o formato; uma logo larga fica num fundo branco nesse formato."><div className="flex flex-wrap gap-1.5">{([['original', 'Original'], ...SIG_SHAPES] as [SigConfig['logoShape'], string][]).map(([k, l]) => <button key={k} type="button" className="ui-chip dk-cp" aria-pressed={edit.config.logoShape === k} style={chipOn(edit.config.logoShape === k)} onClick={() => setC('logoShape', k)}>{l}</button>)}</div></Field>
                       <div className="rounded-xl border border-border p-3">
                         <p className="mb-2 text-[12.5px] font-semibold">Marca d'água</p>
                         <div className="flex flex-col gap-3">
@@ -330,7 +342,7 @@ function EmailSignatureInner() {
                           ) : null}
                         </div>
                       </div>
-                      {edit.config.style === 'cta' ? (
+                      {hasCta(edit.config.style) ? (
                         <div className="grid grid-cols-2 gap-3">
                           <Field label="Texto da chamada"><input className={inp} maxLength={40} value={edit.config.cta.text} onChange={(e) => setC('cta', { ...edit.config.cta, text: e.target.value })} /></Field>
                           <Field label="Texto do botão"><input className={inp} maxLength={40} value={edit.config.cta.button} onChange={(e) => setC('cta', { ...edit.config.cta, button: e.target.value })} /></Field>
