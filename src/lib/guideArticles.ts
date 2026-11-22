@@ -322,10 +322,11 @@ export const GUIDE: GuideArticle[] = [
     ], rel: ['convidados'] },
 
   // ───────── Agenda e reuniões
-  { slug: 'calendario-eventos', cat: 'Agenda e reuniões', title: 'Calendário: eventos e reuniões', sum: 'Marque compromissos com participantes, lembrete e link de reunião, e veja junto os prazos dos seus cards.',
+  { slug: 'calendario-eventos', cat: 'Agenda e reuniões', title: 'Calendário: eventos e reuniões', sum: 'Marque compromissos e reuniões com participantes, lembrete e local (chamada do ewvon, Teams/Meet/Zoom, sala reservada ou presencial), e veja junto os prazos dos seus cards.',
     steps: [
       { t: 'Abra o Calendário', d: 'Escolha a visão de Mês, Semana ou Dia no topo.' },
       { t: 'Crie um evento', d: 'Clique em um dia ou horário, preencha título, horário, participantes, cor e lembrete.' },
+      { t: 'Marque uma reunião', d: 'Em "Onde vai ser", escolha chamada de vídeo pelo ewvon (todos entram pelo botão "Entrar na chamada"), link externo do Teams, Meet ou Zoom, uma sala de reunião (salas ocupadas no horário aparecem como "Ocupada" e a sala é reservada junto) ou um local presencial.' },
       { t: 'Veja seus prazos', d: 'Os cards com prazo aparecem junto com os eventos.' },
     ], rel: ['relatorio-dia', 'agenda', 'salas-reuniao'] },
   { slug: 'relatorio-dia', cat: 'Agenda e reuniões', title: 'Relatório do dia (PDF)', sum: 'Um relatório em A4 com os compromissos e cards do dia, pronto para imprimir.',
@@ -574,6 +575,7 @@ export const GUIDE: GuideArticle[] = [
       { t: 'Peça', d: 'Em RH › Ausências, clique em "Solicitar ausência", escolha o tipo e o período.' },
       { t: 'Aprovação', d: 'O gestor da equipe ou do setor recebe um aviso e aprova ou recusa (com motivo). Você é avisado da resposta.' },
       { t: 'Calendário da equipe', d: 'As ausências aprovadas aparecem no calendário do mês. Colegas veem "Ausente"; gestores veem o tipo.' },
+      { t: 'Cancele ou exclua', d: 'Você cancela um pedido pendente ou uma ausência aprovada que ainda não começou, e exclui pela lixeira os pedidos que não valem mais. Gestores e admins também podem excluir pedidos da equipe.' },
     ], rel: ['equipes', 'organograma'] },
   { slug: 'pesquisas-clima', cat: 'Pessoas e equipes', title: 'Pesquisas de clima e eNPS anônimas', sum: 'Meça o clima e a satisfação da equipe com respostas anônimas.',
     steps: [
@@ -583,9 +585,10 @@ export const GUIDE: GuideArticle[] = [
     ], rel: ['ausencias'] },
   { slug: 'reunioes-1-1', cat: 'Pessoas e equipes', title: 'Reuniões 1:1', sum: 'Encontros recorrentes entre gestor e pessoa, com pauta conjunta, combinados e anotações privadas.',
     steps: [
-      { t: 'Marque', d: 'Em RH › 1:1, o gestor clica em "Marcar 1:1", escolhe a pessoa e o horário. Ela recebe um aviso.' },
+      { t: 'Marque', d: 'Em RH › 1:1, o gestor clica em "Marcar 1:1", escolhe a pessoa, o horário, a duração e onde vai ser: chamada de vídeo pelo próprio ewvon, link externo (Teams, Meet, Zoom), sala de reunião (fica reservada no mesmo horário) ou presencial. A reunião vai para o calendário dos dois e a pessoa recebe um aviso.' },
       { t: 'Prepare a pauta', d: 'Os dois adicionam assuntos antes do encontro. Durante, registrem as anotações e os combinados com responsável.' },
       { t: 'Anotações privadas', d: 'Cada um tem um espaço que só ele vê. O histórico fica guardado por pessoa.' },
+      { t: 'Entre, repita ou exclua', d: 'Na hora, "Entrar na chamada" ou "Entrar na reunião" aparece na lista. "Marcar próxima" agenda a seguinte com a mesma pessoa e o mesmo local, duas semanas depois. O gestor (ou um admin) exclui pela lixeira; a reunião do calendário e a reserva da sala saem junto.' },
     ], rel: ['metas', 'avaliacoes'] },
   { slug: 'reconhecimento', cat: 'Pessoas e equipes', title: 'Elogios e feedback', sum: 'Mural de elogios com os valores da empresa e feedback privado entre colegas.',
     steps: [

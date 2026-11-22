@@ -2,10 +2,11 @@ import { openDayReport } from '@/lib/designReports';
 import { CalendarFeedButton } from '@/components/calendar/CalendarFeedButton';
 import { BookingPageButton } from '@/components/calendar/BookingPageButton';
 import { MeetingMinutesDialog, MinutesButton } from '@/components/calendar/MeetingMinutesDialog';
-import { useDbFeature } from '@/hooks/useDbFeature';
+import { useDbColumn, useDbFeature } from '@/hooks/useDbFeature';
+import { MeetingWherePicker, applyWhere, emptyWhere, whereFromEvent, whereProblem, useWhereOptions, type Where } from '@/components/meetings/MeetingWhere';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, Plus, Trash2, Clock, Bell, ListTodo, Edit, X, Users, Link2, ChevronLeft, ChevronRight, Video, ArrowLeft, Check, FileDown, ExternalLink, MonitorPlay } from 'lucide-react';
+import { MapPin, DoorOpen, Calendar as CalendarIcon, Plus, Trash2, Clock, Bell, ListTodo, Edit, X, Users, Link2, ChevronLeft, ChevronRight, Video, ArrowLeft, Check, FileDown, ExternalLink, MonitorPlay } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -124,6 +125,10 @@ export function CalendarSection() {
   const [meetingLink, setMeetingLink] = useState('');
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [meetingScheduleDate, setMeetingScheduleDate] = useState<Date>(new Date());
+  // Where the meeting happens (ewvon call, external link, room booking or a place): migration 20261123030000
+  const whereOn = useDbColumn('calendar_events', 'booking_id');
+  const [where, setWhere] = useState<Where>(emptyWhere());
+  const whereOpts = useWhereOptions();
 
   useEffect(() => {
     const handleCalendarViewChange = (event: Event) => {
@@ -217,7 +222,7 @@ export function CalendarSection() {
     setStartDate(''); setStartTime('09:00'); setEndDate(''); setEndTime('10:00');
     setAllDay(false); setColor('#F59E0B'); setReminderMinutes(''); setMeetingLink('');
     setSelectedParticipants([]); setEditingEvent(null); setHasUnsavedChanges(false);
-    setMeetingScheduleDate(new Date()); setMeetingType(null);
+    setMeetingScheduleDate(new Date()); setMeetingType(null); setWhere(emptyWhere());
   };
 
   const openCreateEvent = (date?: Date) => {
@@ -232,6 +237,7 @@ export function CalendarSection() {
     setEventType('meeting'); setColor('#3B82F6');
     if (date) { setStartDate(format(date, 'yyyy-MM-dd')); setEndDate(format(date, 'yyyy-MM-dd')); setMeetingScheduleDate(date); }
     setMeetingType(type || 'external');
+    setWhere(emptyWhere(type === 'ewvor' ? 'ewvon' : 'link'));
     setShowCreatePage('meeting');
     setShowMeetingTypeSelector(false);
   };
@@ -255,6 +261,9 @@ export function CalendarSection() {
     setReminderMinutes(event.reminder_minutes?.toString() || '');
     setMeetingLink(event.meeting_link || '');
     setSelectedParticipants(event.participants?.map(p => p.profile_id) || []);
+    const ev = event as CalendarEvent & { location?: string | null; booking_id?: string | null; video_room?: string | null };
+    setWhere(whereFromEvent(ev));
+    if (ev.booking_id) void (supabase as any).from('meeting_bookings').select('room_id').eq('id', ev.booking_id).maybeSingle().then(({ data }: any) => { if (data?.room_id) setWhere(w => ({ ...w, mode: 'room', roomId: data.room_id })); });
     setEditingEvent(event);
     setShowCreatePage(event.event_type === 'meeting' ? 'meeting' : 'event');
   };
@@ -266,6 +275,9 @@ export function CalendarSection() {
 
   const handleSave = async () => {
     if (!title.trim() || !startDate) { toast.error('Título e data são obrigatórios'); return; }
+    const useWhere = whereOn && showCreatePage === 'meeting';
+    if (useWhere) { const p = whereProblem(where); if (p) { toast.error(p); return; } }
+    if (useWhere && where.mode === 'room' && (allDay || !endDate)) { toast.error('Para reservar a sala, informe a hora de início e de fim.'); return; }
     const startDateTime = allDay ? new Date(`${startDate}T00:00:00`).toISOString() : new Date(`${startDate}T${startTime}:00`).toISOString();
     const endDateTime = endDate ? (allDay ? new Date(`${endDate}T23:59:59`).toISOString() : new Date(`${endDate}T${endTime}:00`).toISOString()) : null;
 
@@ -294,11 +306,19 @@ export function CalendarSection() {
       if (selectedParticipants.length > 0) {
         await supabase.from('meeting_participants').insert(selectedParticipants.map(pid => ({ event_id: eventId, profile_id: pid })));
       }
-      if (meetingType === 'ewvor' && !editingEvent) {
+      if (useWhere) {
+        // where: ewvon call (the event is the call room), external link, room booking or a place
+        const prevBooking = (editingEvent as any)?.booking_id || null;
+        const err = await applyWhere(eventId, where, { title: title.trim(), start: startDateTime, end: endDateTime || startDateTime, participants: selectedParticipants, profileId: profile!.id, companyId: profile!.company_id, prevBookingId: prevBooking, roomName: whereOpts.rooms.find(r => r.id === where.roomId)?.name });
+        if (err) {
+          if (!editingEvent) await supabase.from('calendar_events').delete().eq('id', eventId);
+          toast.error(err); return;
+        }
+      } else if (meetingType === 'ewvor' && !editingEvent) {
         // ewvon's own call: the event itself is the call room.
         await (supabase as any).from('calendar_events').update({ video_room: 'ewvon' }).eq('id', eventId);
       }
-      toast.success(editingEvent ? 'Evento atualizado!' : meetingType === 'ewvor' ? 'Videochamada marcada!' : 'Evento criado!');
+      toast.success(editingEvent ? 'Evento atualizado!' : useWhere ? (where.mode === 'ewvon' ? 'Videochamada marcada!' : where.mode === 'room' ? 'Reunião marcada e sala reservada!' : 'Reunião marcada!') : meetingType === 'ewvor' ? 'Videochamada marcada!' : 'Evento criado!');
       resetForm(); setShowCreatePage(null); fetchEvents();
     } catch (e) { toast.error('Erro ao salvar evento'); console.error(e); }
   };
@@ -567,6 +587,20 @@ export function CalendarSection() {
                     </div>
                   </div>
 
+                  {isMeeting && whereOn ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        <span>Onde vai ser</span>
+                      </div>
+                      <div className="pl-6">
+                        <MeetingWherePicker value={where} onChange={(w) => { setWhere(w); setHasUnsavedChanges(true); }}
+                          start={startDate && !allDay ? new Date(`${startDate}T${startTime}:00`).toISOString() : null}
+                          end={endDate && !allDay ? new Date(`${endDate}T${endTime}:00`).toISOString() : null}
+                          ignoreBookingId={(editingEvent as any)?.booking_id || null} />
+                      </div>
+                    </div>
+                  ) : <>
                   {/* Meeting link - only for external meetings */}
                   {meetingType !== 'ewvor' && (
                     <div className="space-y-2">
@@ -589,6 +623,8 @@ export function CalendarSection() {
                       </div>
                     </div>
                   )}
+
+                  </>}
 
                   {/* Description */}
                   <div className="space-y-2">
@@ -989,6 +1025,11 @@ export function CalendarSection() {
                                   <ExternalLink className="h-2.5 w-2.5" /> Entrar na reunião
                                 </a>
                               )}
+                              {(event as any).location ? (
+                                <span className="inline-flex items-center gap-0.5 text-[9px] text-muted-foreground">
+                                  {(event as any).booking_id ? <DoorOpen className="h-2.5 w-2.5" /> : <MapPin className="h-2.5 w-2.5" />}{(event as any).location}
+                                </span>
+                              ) : null}
                             </div>
                             {event.participants && event.participants.length > 0 && (
                               <div className="flex items-center gap-1 mt-1">

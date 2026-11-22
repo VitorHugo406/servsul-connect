@@ -3,7 +3,7 @@
 // calendar shows approved absences of the month (colleagues see only "Ausente", managers see the kind).
 // time_off_requests + time_off_decide/time_off_cancel/company_absences (migration 20261121010000).
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Loader2, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -23,7 +23,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 export function TimeOffTab({ isManager }: { isManager: boolean }) {
-  const { profile } = useAuth();
+  const { profile, isAdmin } = useAuth();
   const { byId } = usePeople();
   const [reqs, setReqs] = useState<Req[] | null>(null);
   const [abs, setAbs] = useState<Abs[]>([]);
@@ -70,6 +70,17 @@ export function TimeOffTab({ isManager }: { isManager: boolean }) {
     if (error) toast.error('Não foi possível cancelar.'); else { void load(); void loadMonth(); }
   };
 
+  // delete (migration 20261123030000): own requests except an approved absence that has not ended yet (cancel it
+  // instead); managers and admins can delete their team's requests
+  const canDel = (r: Req) => r.profile_id === profile?.id ? !(r.status === 'approved' && r.end_date >= todayIso) : (isManager || isAdmin);
+  const del = async (r: Req) => {
+    if (!(await appConfirm({ title: 'Excluir este pedido?', message: r.status === 'approved' ? 'A ausência sai do histórico e do calendário da equipe.' : 'O pedido some da lista de vocês.', confirmText: 'Excluir', danger: true }))) return;
+    const { error, count } = await db.from('time_off_requests').delete({ count: 'exact' }).eq('id', r.id);
+    if (error || count === 0) toast.error(r.status === 'approved' && r.end_date >= todayIso ? 'Cancele a ausência aprovada antes de excluir.' : 'Não foi possível excluir.');
+    else { toast.success('Pedido excluído'); void load(); void loadMonth(); }
+  };
+  const trash = (r: Req) => (canDel(r) ? <button type="button" className="dk-ic" aria-label="Excluir pedido" title="Excluir" onClick={() => void del(r)}><Trash2 size={16} /></button> : null);
+
   const grid = useMemo(() => {
     const first = new Date(month); const startDow = (first.getDay() + 6) % 7;
     const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
@@ -106,7 +117,7 @@ export function TimeOffTab({ isManager }: { isManager: boolean }) {
       </div>
       {reqs === null ? <div className="dk-empty"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div> : mine.length ? (
         <div className="dk-scroll"><table className="dk-table"><thead><tr><th>Pessoa</th><th>Tipo</th><th>Período</th><th>Situação</th><th /></tr></thead>
-          <tbody>{mine.map((r) => row(r, r.status === 'pending' || (r.status === 'approved' && r.start_date > todayIso) ? <button type="button" className="dk-btn" onClick={() => void cancel(r)}>Cancelar</button> : null))}</tbody></table></div>
+          <tbody>{mine.map((r) => row(r, <span className="inline-flex items-center gap-1.5">{r.status === 'pending' || (r.status === 'approved' && r.start_date > todayIso) ? <button type="button" className="dk-btn" onClick={() => void cancel(r)}>Cancelar</button> : null}{trash(r)}</span>))}</tbody></table></div>
       ) : <div className="dk-empty">Você ainda não pediu nenhuma ausência.</div>}
       {isManager ? <>
         <div className="dk-bar">
@@ -114,7 +125,7 @@ export function TimeOffTab({ isManager }: { isManager: boolean }) {
           <div className="dk-flt"><ExportMenu className="dk-btn" getData={() => ({ name: 'ausencias-equipe', sheet: 'Ausências', headers: ['Pessoa', 'Tipo', 'Início', 'Fim', 'Dias', 'Situação', 'Observação', 'Resposta'], rows: team.map((r) => [pname(byId.get(r.profile_id)), KINDS[r.kind] || r.kind, fmtD(r.start_date), fmtD(r.end_date), daysBetween(r.start_date, r.end_date), ST[r.status]?.[0] || r.status, r.note || '', r.decision_note || '']) })} /></div>
         </div>
         {team.length ? <div className="dk-scroll"><table className="dk-table"><thead><tr><th>Pessoa</th><th>Tipo</th><th>Período</th><th>Situação</th><th /></tr></thead>
-          <tbody>{[...pendingTeam, ...team.filter((r) => r.status !== 'pending')].slice(0, 120).map((r) => row(r, r.status === 'pending' ? <span className="inline-flex gap-1.5"><button type="button" className="dk-btn pri" onClick={() => void decide(r, true)}>Aprovar</button><button type="button" className="dk-btn" onClick={() => void decide(r, false)}>Recusar</button></span> : null))}</tbody></table></div>
+          <tbody>{[...pendingTeam, ...team.filter((r) => r.status !== 'pending')].slice(0, 120).map((r) => row(r, <span className="inline-flex items-center gap-1.5">{r.status === 'pending' ? <><button type="button" className="dk-btn pri" onClick={() => void decide(r, true)}>Aprovar</button><button type="button" className="dk-btn" onClick={() => void decide(r, false)}>Recusar</button></> : null}{trash(r)}</span>))}</tbody></table></div>
           : <div className="dk-empty">Nenhum pedido da equipe.</div>}
       </> : null}
       <div className="dk-bar">
