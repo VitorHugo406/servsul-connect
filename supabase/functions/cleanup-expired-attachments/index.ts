@@ -1,7 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // Deletes expired chat media (attachment_lifecycle rows with status 'temporary'
-// whose temporary_expires_at passed). Called every 15 minutes by pg_cron with
+// whose temporary_expires_at passed) and the photos/videos of announcements that
+// expired or were deleted (bucket announcement-media, listed by the database
+// function announcement_media_garbage). Called every 15 minutes by pg_cron with
 // the vault secret "attachment_cleanup_secret" in the x-cleanup-secret header.
 
 const corsHeaders = {
@@ -55,5 +57,21 @@ Deno.serve(async (req) => {
     deleted += 1
   }
 
-  return json({ checked: expired?.length ?? 0, deleted, failed: failures.length, failedIds: failures }, failures.length ? 207 : 200)
+  // Announcement photos/videos: removed from Storage when the announcement expires or is deleted.
+  let annDeleted = 0
+  let annFailed = 0
+  const { data: garbage, error: gErr } = await supabase.rpc('announcement_media_garbage', { _limit: 500 })
+  if (!gErr && Array.isArray(garbage) && garbage.length) {
+    const paths = (garbage as { path: string }[]).map((g) => g.path).filter(Boolean)
+    for (let i = 0; i < paths.length; i += 100) {
+      const chunk = paths.slice(i, i + 100)
+      const { error: rmErr } = await supabase.storage.from('announcement-media').remove(chunk)
+      if (rmErr) { annFailed += chunk.length; continue }
+      await supabase.from('announcement_media').delete().in('path', chunk)
+      annDeleted += chunk.length
+    }
+  }
+
+  const failed = failures.length + annFailed
+  return json({ checked: expired?.length ?? 0, deleted, failed: failures.length, failedIds: failures, announcementMediaDeleted: annDeleted, announcementMediaFailed: annFailed }, failed ? 207 : 200)
 })

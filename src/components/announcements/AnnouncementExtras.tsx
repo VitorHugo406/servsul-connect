@@ -1,8 +1,9 @@
 // Avisos (pack 4, migration 20261121010000): mandatory reading ("Li e concordo" + who has not confirmed yet),
 // announcements for chosen sectors only, and a poll inside the announcement. useDbFeature keeps all of it hidden
 // until the tables exist, so the screen never offers something the database cannot store.
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { BarChart3, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Clock, ImagePlus, Images, Loader2, Pin, ShieldCheck, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useDbColumn, useDbFeature } from '@/hooks/useDbFeature';
@@ -13,7 +14,9 @@ import { ExportMenu } from '@/components/ui/ExportMenu';
 import { PollCard } from '@/components/chat/extras/ChatPoll';
 import { formatText } from '@/lib/chatFormatUtils';
 import { useAuth } from '@/contexts/AuthContext';
+import { listAnnouncementMedia, mediaProblem, MEDIA_ACCEPT, MEDIA_MAX_FILES, type AnnMedia } from '@/lib/announcementMedia';
 import '@/styles/chat-extras.css';
+import '@/styles/announcement-view.css';
 
 const db = supabase as any;
 
@@ -22,11 +25,14 @@ export function useAnnouncementExtras(ids: string[]) {
   const meId = user?.id;
   const ackOn = useDbColumn('announcements', 'require_ack');
   const pollsOn = useDbFeature('polls');
+  const mediaOn = useDbFeature('announcement_media');
   const [acked, setAcked] = useState<Map<string, string>>(new Map());
   const [polls, setPolls] = useState<Map<string, string>>(new Map());
+  const [media, setMedia] = useState<Map<string, AnnMedia[]>>(new Map());
   const key = ids.join(',');
   const reload = useCallback(async () => {
-    if (!ids.length) { setAcked(new Map()); setPolls(new Map()); return; }
+    if (!ids.length) { setAcked(new Map()); setPolls(new Map()); setMedia(new Map()); return; }
+    if (mediaOn) setMedia(await listAnnouncementMedia(ids));
     if (ackOn && meId) {
       const { data } = await db.from('announcement_reads').select('announcement_id,acked_at').eq('user_id', meId).not('acked_at', 'is', null).in('announcement_id', ids);
       setAcked(new Map(((data || []) as { announcement_id: string; acked_at: string }[]).map((r) => [r.announcement_id, r.acked_at])));
@@ -35,9 +41,9 @@ export function useAnnouncementExtras(ids: string[]) {
       const { data } = await db.from('polls').select('id,context_key').eq('context', 'announcement').in('context_key', ids);
       setPolls(new Map(((data || []) as { id: string; context_key: string }[]).map((p) => [p.context_key, p.id])));
     }
-  }, [key, ackOn, pollsOn, meId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, ackOn, pollsOn, mediaOn, meId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { void reload(); }, [reload]);
-  return { ackOn, pollsOn, acked, polls, reload };
+  return { ackOn, pollsOn, mediaOn, acked, polls, media, reload };
 }
 
 /** "Li e concordo": the same confirmation the mobile app's "Ciente" writes (announcement_reads.acked_at). */
@@ -116,8 +122,83 @@ export function AckStatusDialog({ id, title, open, onOpenChange }: { id: string 
   );
 }
 
-/** Full announcement for reading: content, poll and the "Li e concordo" confirmation. */
-export function AnnouncementDetailDialog({ a, open, onOpenChange, pollId, ackedAt, onAcked, audience }: { a: any | null; open: boolean; onOpenChange: (o: boolean) => void; pollId?: string; ackedAt?: string; onAcked: () => void; audience: string }) {
+/** Photos (click opens a full-screen viewer) and videos (played in place) of an announcement. */
+export function MediaGallery({ items }: { items: AnnMedia[] }) {
+  const imgs = items.filter((m) => m.kind === 'image');
+  const [view, setView] = useState<number | null>(null);
+  useEffect(() => {
+    if (view === null) return;
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); setView(null); } if (e.key === 'ArrowRight') setView((v) => (v === null ? v : (v + 1) % imgs.length)); if (e.key === 'ArrowLeft') setView((v) => (v === null ? v : (v - 1 + imgs.length) % imgs.length)); };
+    window.addEventListener('keydown', k, true); return () => window.removeEventListener('keydown', k, true);
+  }, [view, imgs.length]);
+  if (!items.length) return null;
+  return (
+    <>
+      <div className={`av-gal${items.length === 1 ? ' n1' : ''}`}>
+        {items.map((m) => m.kind === 'video'
+          ? <div key={m.id} className="av-it vid"><video src={m.url} controls preload="metadata" playsInline /></div>
+          : <button key={m.id} type="button" className="av-it" onClick={() => setView(imgs.findIndex((x) => x.id === m.id))} aria-label="Ampliar foto"><img src={m.url} alt="" loading="lazy" /></button>)}
+      </div>
+      {view !== null && imgs[view] ? createPortal(
+        <div className="av-view" style={{ pointerEvents: 'auto' }} onClick={() => setView(null)} role="dialog" aria-label="Foto do aviso">
+          <img src={imgs[view].url} alt="" onClick={(e) => e.stopPropagation()} />
+          <button type="button" className="x" aria-label="Fechar" onClick={() => setView(null)}><X size={20} /></button>
+          {imgs.length > 1 ? <>
+            <button type="button" className="pv" aria-label="Anterior" onClick={(e) => { e.stopPropagation(); setView((view - 1 + imgs.length) % imgs.length); }}><ChevronLeft size={22} /></button>
+            <button type="button" className="nx" aria-label="Próxima" onClick={(e) => { e.stopPropagation(); setView((view + 1) % imgs.length); }}><ChevronRight size={22} /></button>
+            <span className="ct">{view + 1} de {imgs.length}</span>
+          </> : null}
+        </div>, document.body) : null}
+    </>
+  );
+}
+
+/** Form field: photos/videos already in the announcement (removable) + new files to send after saving. */
+export function MediaPicker({ existing, onRemoveExisting, files, onFiles }: { existing: AnnMedia[]; onRemoveExisting: (m: AnnMedia) => void; files: File[]; onFiles: (f: File[]) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
+  useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
+  const total = existing.length + files.length;
+  const add = (list: FileList | null) => {
+    const next = [...files];
+    for (const f of Array.from(list || [])) {
+      if (existing.length + next.length >= MEDIA_MAX_FILES) { toast.error(`Até ${MEDIA_MAX_FILES} fotos ou vídeos por aviso.`); break; }
+      const p = mediaProblem(f); if (p) { toast.error(p); continue; }
+      next.push(f);
+    }
+    onFiles(next);
+  };
+  return (
+    <div className="av-pick">
+      {existing.map((m) => (
+        <div key={m.id} className="av-th">
+          {m.kind === 'video' ? <video src={m.url} muted preload="metadata" /> : <img src={m.url} alt="" />}
+          {m.kind === 'video' ? <span className="vb">Vídeo</span> : null}
+          <button type="button" className="rm" aria-label="Remover" onClick={() => onRemoveExisting(m)}><X size={13} /></button>
+        </div>
+      ))}
+      {files.map((f, i) => (
+        <div key={i} className="av-th">
+          {f.type.startsWith('video/') ? <video src={previews[i]} muted preload="metadata" /> : <img src={previews[i]} alt="" />}
+          {f.type.startsWith('video/') ? <span className="vb">Vídeo</span> : null}
+          <button type="button" className="rm" aria-label="Remover" onClick={() => onFiles(files.filter((_, j) => j !== i))}><X size={13} /></button>
+        </div>
+      ))}
+      {total < MEDIA_MAX_FILES ? (
+        <button type="button" className="av-add" onClick={() => ref.current?.click()}><ImagePlus size={20} />Foto ou vídeo</button>
+      ) : null}
+      <input ref={ref} type="file" accept={MEDIA_ACCEPT} multiple hidden onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
+    </div>
+  );
+}
+
+const PRI: Record<string, [string, string]> = { normal: ['Geral', ''], important: ['Importante', 'av-important'], urgent: ['Urgente', 'av-urgent'] };
+const ACC: Record<string, string> = { important: '#d97706', urgent: '#dc2626' };
+const fmt = (d?: string | null) => (d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
+
+/** Full announcement for reading, in the same look as the Avisos screen: type/pin/obligation tags, author, date,
+ *  audience and validity, the text, photos/videos, the poll and the "Li e concordo" confirmation. */
+export function AnnouncementDetailDialog({ a, open, onOpenChange, pollId, ackedAt, onAcked, audience, media = [] }: { a: any | null; open: boolean; onOpenChange: (o: boolean) => void; pollId?: string; ackedAt?: string; onAcked: () => void; audience: string; media?: AnnMedia[] }) {
   const [busy, setBusy] = useState(false);
   if (!a) return null;
   const confirm = async () => {
@@ -126,18 +207,43 @@ export function AnnouncementDetailDialog({ a, open, onOpenChange, pollId, ackedA
     catch { toast.error('Não foi possível confirmar a leitura.'); }
     finally { setBusy(false); }
   };
+  const [pl, pc] = PRI[a.priority] || PRI.normal;
+  const author = a.author?.display_name || a.author?.name || '';
+  const ini = author.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase();
+  const until = a.expire_at ? `Até ${fmt(a.expire_at)}` : 'Sem data de término';
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle>{a.title}</DialogTitle>
-          <DialogDescription>{[a.author?.display_name || a.author?.name, a.start_at || a.created_at ? new Date(a.start_at || a.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '', audience].filter(Boolean).join(' · ')}</DialogDescription>
-        </DialogHeader>
-        <div className="max-h-[46vh] overflow-auto whitespace-pre-wrap break-words text-sm leading-relaxed">{String(a.content || '').split('\n').map((l: string, i: number) => <p key={i} className="min-h-[1.2em]">{formatText(l, false)}</p>)}</div>
-        {pollId ? <div className="rounded-[12px] border border-border p-3"><PollCard id={pollId} /></div> : null}
-        {a.require_ack ? (ackedAt
-          ? <div className="flex items-center gap-2 rounded-[10px] bg-muted/60 px-3 py-2 text-sm"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Você confirmou a leitura em {new Date(ackedAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}.</div>
-          : <Button onClick={() => void confirm()} disabled={busy} className="w-full">{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}Li e concordo</Button>) : null}
+      <DialogContent className="av-dlg" onInteractOutside={(e) => { if ((e.target as HTMLElement | null)?.closest?.('.av-view')) e.preventDefault(); }}>
+        <div className="av-top" style={{ ['--av-acc' as string]: ACC[a.priority] || 'hsl(var(--primary))' }}>
+          <div className="av-tags">
+            <span className={`av-tag ${pc}`}>{pl}</span>
+            {a.is_pinned ? <span className="av-tag av-pri"><Pin />Fixado</span> : null}
+            {a.require_ack ? <span className="av-tag av-pri"><ShieldCheck />Leitura obrigatória</span> : null}
+            {pollId ? <span className="av-tag"><BarChart3 />Enquete</span> : null}
+            {media.length ? <span className="av-tag"><Images />{media.length} {media.length === 1 ? 'anexo' : 'anexos'}</span> : null}
+          </div>
+          <DialogTitle className="av-title">{a.title}</DialogTitle>
+          <DialogDescription asChild>
+            <div className="av-meta">
+              {author ? <span>{a.author?.avatar_url ? <img className="av-av" src={a.author.avatar_url} alt="" /> : <span className="av-av">{ini}</span>}{author}</span> : null}
+              <span><Clock />{fmt(a.start_at || a.created_at)}</span>
+              <span><Users />{audience}</span>
+              <span><CalendarClock />{until}</span>
+            </div>
+          </DialogDescription>
+        </div>
+        <div className="av-body">
+          <div className="av-text">{String(a.content || '').split('\n').map((l: string, i: number) => <p key={i}>{formatText(l, false)}</p>)}</div>
+          <MediaGallery items={media} />
+          {pollId ? <div className="av-sec"><div className="av-sec-h"><BarChart3 />Enquete</div><PollCard id={pollId} /></div> : null}
+        </div>
+        {a.require_ack ? (
+          <div className="av-foot">
+            {ackedAt
+              ? <div className="av-ok"><CheckCircle2 />Você confirmou a leitura em {new Date(ackedAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}.</div>
+              : <Button onClick={() => void confirm()} disabled={busy} className="w-full">{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}Li e concordo</Button>}
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

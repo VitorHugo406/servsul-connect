@@ -16,9 +16,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from 'sonner';
 import { appConfirm } from '@/lib/appDialog';
 import { Sel } from '@/components/ui/Sel';
-import { useAnnouncementExtras, SectorPicker, useSectorNames, AckStatusDialog, AnnouncementDetailDialog } from '@/components/announcements/AnnouncementExtras';
+import { useAnnouncementExtras, SectorPicker, useSectorNames, AckStatusDialog, AnnouncementDetailDialog, MediaPicker } from '@/components/announcements/AnnouncementExtras';
+import { removeAnnouncementMedia, uploadAnnouncementMedia, type AnnMedia } from '@/lib/announcementMedia';
 import { PollEditor, createPoll, emptyPoll, pollReady, type PollDraft } from '@/components/chat/extras/ChatPoll';
-import { ShieldCheck, BarChart3, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, BarChart3, CheckCircle2, Images } from 'lucide-react';
 
 type Priority = 'normal' | 'important' | 'urgent';
 type Status = 'active' | 'scheduled' | 'expired';
@@ -73,10 +74,12 @@ export function AnnouncementsSection() {
   const [withPoll, setWithPoll] = useState(false);
   const [poll, setPoll] = useState<PollDraft>(emptyPoll);
   const [detail, setDetail] = useState<any | null>(null);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [keptMedia, setKeptMedia] = useState<AnnMedia[]>([]);
   const [ackFor, setAckFor] = useState<any | null>(null);
   const sectorNames = useSectorNames();
 
-  const openNew = () => { setEditingId(null); setTitle(''); setContent(''); setPriority('normal'); setIsPinned(false); setStartAt(''); setExpireAt(''); setRequireAck(false); setTargets([]); setWithPoll(false); setPoll(emptyPoll()); setShowForm(true); };
+  const openNew = () => { setEditingId(null); setTitle(''); setContent(''); setPriority('normal'); setIsPinned(false); setStartAt(''); setExpireAt(''); setRequireAck(false); setTargets([]); setWithPoll(false); setPoll(emptyPoll()); setNewFiles([]); setKeptMedia([]); setShowForm(true); };
   // The create action also lives in the main site header (UI event, so the header knows nothing about this form).
   useEffect(() => {
     const handler = () => { if (canManageAnnouncements) openNew(); };
@@ -85,7 +88,7 @@ export function AnnouncementsSection() {
   }, [canManageAnnouncements]);
 
   const localInput = (iso?: string | null) => { if (!iso) return ''; const d = new Date(iso); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
-  const openEdit = (a: any) => { setEditingId(a.id); setTitle(a.title); setContent(a.content); setPriority((a.priority as Priority) || 'normal'); setIsPinned(!!a.is_pinned); setStartAt(localInput(a.start_at || a.created_at)); setExpireAt(localInput(a.expire_at)); setRequireAck(!!a.require_ack); setTargets(Array.isArray(a.target_sectors) ? a.target_sectors : []); setWithPoll(false); setPoll(emptyPoll()); setShowForm(true); window.scrollTo?.({ top: 0, behavior: 'smooth' }); };
+  const openEdit = (a: any) => { setEditingId(a.id); setTitle(a.title); setContent(a.content); setPriority((a.priority as Priority) || 'normal'); setIsPinned(!!a.is_pinned); setStartAt(localInput(a.start_at || a.created_at)); setExpireAt(localInput(a.expire_at)); setRequireAck(!!a.require_ack); setTargets(Array.isArray(a.target_sectors) ? a.target_sectors : []); setWithPoll(false); setPoll(emptyPoll()); setNewFiles([]); setKeptMedia(extras.media.get(a.id) || []); setShowForm(true); window.scrollTo?.({ top: 0, behavior: 'smooth' }); };
 
   useEffect(() => { if (showForm && !startAt) { setStartAt(localInput(new Date().toISOString())); } }, [showForm, startAt]);
 
@@ -155,9 +158,20 @@ export function AnnouncementsSection() {
     const start = new Date(startAt).toISOString(), end = expireAt ? new Date(expireAt).toISOString() : null;
     const extra = extras.ackOn ? { require_ack: requireAck, target_sectors: targets.length ? targets : null } : {};
     let savedId = editingId;
+    let savedCompany: string | null = null;
     let error: unknown = null;
     if (editingId) ({ error } = await updateAnnouncement(editingId, { title, content, priority, is_pinned: isPinned, start_at: start, expire_at: end, ...extra }));
-    else { const r = await createAnnouncement(title, content, priority, isPinned, start, end, extra); error = r.error; savedId = (r.data as any)?.id || null; }
+    else { const r = await createAnnouncement(title, content, priority, isPinned, start, end, extra); error = r.error; savedId = (r.data as any)?.id || null; savedCompany = (r.data as any)?.company_id || null; }
+    if (!error && savedId && extras.mediaOn) {
+      const companyId = (editingId ? rows.find(r => r.a.id === editingId)?.a.company_id : null) || savedCompany || profile?.company_id;
+      // photos/videos removed in the form leave Storage now; new ones are sent after the announcement exists
+      const removed = editingId ? (extras.media.get(editingId) || []).filter(m => !keptMedia.some(k => k.id === m.id)) : [];
+      for (const m of removed) await removeAnnouncementMedia(m);
+      if (newFiles.length && companyId) {
+        const failed = await uploadAnnouncementMedia(companyId, savedId, newFiles, keptMedia.length);
+        if (failed) toast.error(failed === newFiles.length ? 'O aviso foi salvo, mas as fotos/vídeos não puderam ser enviados.' : `O aviso foi salvo, mas ${failed} arquivo(s) não puderam ser enviados.`);
+      }
+    }
     if (!error && withPoll && savedId && extras.pollsOn && !extras.polls.has(savedId)) {
       try { await createPoll('announcement', savedId, poll); } catch { toast.error('O aviso foi salvo, mas a enquete não pôde ser criada.'); }
     }
@@ -179,7 +193,7 @@ export function AnnouncementsSection() {
     return (
       <tr key={a.id} className={status === 'expired' ? 'dk-exp' : undefined}>
         {canManageAnnouncements && <td><input type="checkbox" aria-label="Selecionar" checked={sel.has(a.id)} onChange={() => setSel(prev => { const n = new Set(prev); n.has(a.id) ? n.delete(a.id) : n.add(a.id); return n; })} /></td>}
-        <td><div className="dk-ti" role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={() => setDetail(a)} onKeyDown={e => { if (e.key === 'Enter') setDetail(a); }}>{a.is_pinned && <Pin className="mr-1.5 inline h-3.5 w-3.5 text-primary" aria-label="Fixado" />}{a.title}{extras.polls.has(a.id) ? <BarChart3 className="ml-1.5 inline h-3.5 w-3.5 text-muted-foreground" aria-label="Tem enquete" /> : null}{a.require_ack ? (extras.acked.has(a.id) ? <span className="dk-st dk-s1" style={{ marginLeft: 8 }}><CheckCircle2 className="mr-1 inline h-3 w-3" />Lido</span> : <span className="dk-st dk-s2" style={{ marginLeft: 8 }}><ShieldCheck className="mr-1 inline h-3 w-3" />Confirmar leitura</span>) : null}</div><div className="dk-su" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.content}</div></td>
+        <td><div className="dk-ti" role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={() => setDetail(a)} onKeyDown={e => { if (e.key === 'Enter') setDetail(a); }}>{a.is_pinned && <Pin className="mr-1.5 inline h-3.5 w-3.5 text-primary" aria-label="Fixado" />}{a.title}{extras.media.get(a.id)?.length ? <Images className="ml-1.5 inline h-3.5 w-3.5 text-muted-foreground" aria-label="Tem fotos ou vídeos" /> : null}{extras.polls.has(a.id) ? <BarChart3 className="ml-1.5 inline h-3.5 w-3.5 text-muted-foreground" aria-label="Tem enquete" /> : null}{a.require_ack ? (extras.acked.has(a.id) ? <span className="dk-st dk-s1" style={{ marginLeft: 8 }}><CheckCircle2 className="mr-1 inline h-3 w-3" />Lido</span> : <span className="dk-st dk-s2" style={{ marginLeft: 8 }}><ShieldCheck className="mr-1 inline h-3 w-3" />Confirmar leitura</span>) : null}</div><div className="dk-su" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.content}</div></td>
         <td><span className={`dk-ty ${PRIORITY[a.priority]?.cls || 'dk-gy'}`}>{PRIORITY[a.priority]?.label || 'Geral'}</span></td>
         {canManageAnnouncements && <td>{audience(a)}</td>}
         <td>{v.main}<div className="dk-sub">{v.sub}</div></td>
@@ -228,6 +242,12 @@ export function AnnouncementsSection() {
                   <div className="flex items-center gap-3"><Switch id="withPoll" checked={withPoll} onCheckedChange={setWithPoll} /><Label htmlFor="withPoll" className="cursor-pointer"><BarChart3 className="mr-1 inline h-4 w-4" />Incluir enquete no aviso</Label></div>
                   {withPoll ? <div className="rounded-[12px] border border-border p-3"><PollEditor value={poll} onChange={setPoll} /></div> : null}
                 </> : null}
+                {extras.mediaOn ? (
+                  <div className="space-y-2"><Label><Images className="mr-1 inline h-4 w-4" />Fotos e vídeos</Label>
+                    <MediaPicker existing={keptMedia} onRemoveExisting={m => setKeptMedia(k => k.filter(x => x.id !== m.id))} files={newFiles} onFiles={setNewFiles} />
+                    <p className="dk-hp">Até 6 arquivos (fotos até 10 MB, vídeos até 50 MB). Eles são apagados automaticamente quando o aviso expira.</p>
+                  </div>
+                ) : null}
                 <Button type="submit" disabled={formLoading} className="h-11 w-full gap-2 rounded-full" style={{ background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}>
                   {formLoading ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <><Send className="h-4 w-4" />{editingId ? 'Salvar alterações' : startAt && new Date(startAt) > new Date() ? 'Agendar aviso' : 'Publicar aviso'}</>}
                 </Button>
@@ -272,7 +292,7 @@ export function AnnouncementsSection() {
         )}
         <div className="dk-ft"><span>Exibindo {filtered.length} de {rows.length} avisos</span><span>Ordenado por situação e data de vigência</span></div>
       </div>
-      <AnnouncementDetailDialog a={detail} open={!!detail} onOpenChange={o => { if (!o) setDetail(null); }} pollId={detail ? extras.polls.get(detail.id) : undefined} ackedAt={detail ? extras.acked.get(detail.id) : undefined} onAcked={() => void extras.reload()} audience={detail ? audience(detail) : ''} />
+      <AnnouncementDetailDialog a={detail} open={!!detail} onOpenChange={o => { if (!o) setDetail(null); }} pollId={detail ? extras.polls.get(detail.id) : undefined} ackedAt={detail ? extras.acked.get(detail.id) : undefined} onAcked={() => void extras.reload()} audience={detail ? audience(detail) : ''} media={detail ? extras.media.get(detail.id) || [] : []} />
       <AckStatusDialog id={ackFor?.id || null} title={ackFor?.title || ''} open={!!ackFor} onOpenChange={o => { if (!o) setAckFor(null); }} />
     </motion.div>
   );

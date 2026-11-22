@@ -31,7 +31,10 @@ import { TasksSheet } from './tasksheet';
 import { appConfirm } from '@/lib/appDialog';
 import { useCompanyPlan } from '@/hooks/useCompanyPlan';
 import { parseDeletion, DeletionRequestCard } from '@/components/common/DeletionRequestCard';
-import { PollCard, parsePoll } from '@/components/chat/extras/ChatPoll';
+import { PollCard, parsePoll, createPoll, emptyPoll, pollReady, type PollDraft } from '@/components/chat/extras/ChatPoll';
+import { MediaGallery, MediaPicker } from '@/components/announcements/AnnouncementExtras';
+import { listAnnouncementMedia, uploadAnnouncementMedia, type AnnMedia } from '@/lib/announcementMedia';
+import { useDbFeature } from '@/hooks/useDbFeature';
 import { startChatCall, parseCall, CallMessageCard } from '@/components/video/VideoCallHost';
 import { Video as VideoIcon, Phone as PhoneIcon } from 'lucide-react';
 import { planHasFeature } from '@/lib/planAccess';
@@ -1151,6 +1154,8 @@ export default function EwwonApp() {
                 <I n="mega" className="bgi" />
                 <div className="fh"><span className="pn"><I n="pin" />Fixado</span></div>
                 <h3 id="fth">{pinned?.title}</h3><p id="ftp">{pinned?.body}</p>
+                {pinned ? <NoticeMedia id={pinned.id} /> : null}
+                {pinned?.pollId ? <div className="ewx-callb ewx-fpoll" onClick={(e) => e.stopPropagation()}><PollCard id={pinned.pollId} /></div> : null}
                 <div className="ff"><span id="ftw">{pinned ? `${pinned.author} · ${fmtTime(pinned.at)}` : ''}</span>
                   <span className="ewx-ff-acts">{pinned && canDeleteNotice(pinned) ? <button className="btn sm sec ewx-del" onClick={() => removeNotice(pinned)}><I n="trash" /></button> : null}
                   <button className="btn sm" id="ciente" onClick={() => { if (pinned) { readNotice(pinned, true); toast('Leitura confirmada'); } }}>{pinned && pinned.acked ? 'Ciente ✓' : 'Ciente'}</button></span></div>
@@ -1159,7 +1164,7 @@ export default function EwwonApp() {
                 {rest.map((a) => (
                   <div key={a.id} className={'av-i' + (a.unread ? '' : ' read') + (openNotice[a.id] ? ' open' : '')} data-id={a.id} onClick={() => { setOpenNotice((o) => ({ ...o, [a.id]: !o[a.id] })); readNotice(a); }}>
                     <div className="ah"><span className="ti"><I n="mega" /></span><div className="am"><h4>{a.title}</h4><div className="pv">{a.preview}</div></div><div className="ar"><span>{fmtTime(a.at)}</span><i className="dot" /></div></div>
-                    <div className="tx"><div><p>{a.body}</p>{a.pollId && openNotice[a.id] ? <div className="ewx-callb" onClick={(e) => e.stopPropagation()}><PollCard id={a.pollId} /></div> : null}<div className="af"><span>{a.author}{a.expiresAt ? ` · expira ${new Date(a.expiresAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : ''}</span>{canDeleteNotice(a) ? <button className="btn sm sec ewx-del" aria-label="Excluir aviso" onClick={(e) => { e.stopPropagation(); removeNotice(a); }}><I n="trash" /></button> : null}{a.mustAck ? <button className="btn sm lido" onClick={(e) => { e.stopPropagation(); if (!a.acked) { readNotice(a, true); toast('Leitura confirmada'); } }}>{a.acked ? 'Confirmado ✓' : 'Li e concordo'}</button> : <button className="btn sm lido" onClick={(e) => { e.stopPropagation(); readNotice(a); toast('Aviso marcado como lido'); }}>{a.unread ? 'Marcar como lido' : 'Lido ✓'}</button>}</div></div></div>
+                    <div className="tx"><div><p>{a.body}</p>{openNotice[a.id] ? <NoticeMedia id={a.id} /> : null}{a.pollId && openNotice[a.id] ? <div className="ewx-callb" onClick={(e) => e.stopPropagation()}><PollCard id={a.pollId} /></div> : null}<div className="af"><span>{a.author}{a.expiresAt ? ` · expira ${new Date(a.expiresAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : ''}</span>{canDeleteNotice(a) ? <button className="btn sm sec ewx-del" aria-label="Excluir aviso" onClick={(e) => { e.stopPropagation(); removeNotice(a); }}><I n="trash" /></button> : null}{a.mustAck ? <button className="btn sm lido" onClick={(e) => { e.stopPropagation(); if (!a.acked) { readNotice(a, true); toast('Leitura confirmada'); } }}>{a.acked ? 'Confirmado ✓' : 'Li e concordo'}</button> : <button className="btn sm lido" onClick={(e) => { e.stopPropagation(); readNotice(a); toast('Aviso marcado como lido'); }}>{a.unread ? 'Marcar como lido' : 'Lido ✓'}</button>}</div></div></div>
                   </div>
                 ))}
                 {!notices.length ? <div className="hint" style={{ padding: 40 }}>Nenhum aviso por enquanto</div> : null}
@@ -1630,6 +1635,15 @@ function ChatSheet({ c, api, P, tasks, onTasks, isMuted, onMute, onSet, onClose 
   );
 }
 
+/** Photos/videos of a notice (signed links, loaded when the notice is shown). */
+function NoticeMedia({ id }: { id: string }) {
+  const on = useDbFeature('announcement_media');
+  const [items, setItems] = useState<AnnMedia[]>([]);
+  useEffect(() => { if (!on) return; let live = true; void listAnnouncementMedia([id]).then((m) => { if (live) setItems(m.get(id) || []); }); return () => { live = false; }; }, [on, id]);
+  if (!items.length) return null;
+  return <div className="ewx-nmed" onClick={(e) => e.stopPropagation()}><MediaGallery items={items} /></div>;
+}
+
 function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: GsSpec; api: EwApi; close: () => void; statusClear: number; setStatusClear: (v: number) => void }) {
   const P = api.people;
   const [title, setTitle] = useState('');
@@ -1640,6 +1654,11 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
   const [busy, setBusy] = useState(false);
   const [qq, setQq] = useState('');
   const [sel, setSel] = useState<string[]>([]);
+  const pollsOn = useDbFeature('polls');
+  const mediaOn = useDbFeature('announcement_media');
+  const [withPoll, setWithPoll] = useState(false);
+  const [poll, setPoll] = useState<PollDraft>(emptyPoll);
+  const [files, setFiles] = useState<File[]>([]);
   if (spec.kind === 'status') {
     const clearMs = [30 * 60e3, 3600e3, null, null][statusClear];
     const endOfDay = () => { const d = new Date(); d.setHours(23, 59, 0, 0); return d.getTime() - Date.now(); };
@@ -1808,12 +1827,43 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
       <Tg t="Fixar no topo" d="Destaque com botão Ciente" on={pinned} onChange={setPinned} />
       <div className="sl">Duração do aviso</div>
       <Seg id="nexp" items={['Sem prazo', '24 h', '3 dias', '7 dias', '30 dias']} value={exp} onChange={setExp} />
-      <small className="ewx-nexp">{exp ? `Some sozinho em ${['', '24 horas', '3 dias', '7 dias', '30 dias'][exp]}.` : 'Fica visível até ser apagado.'}</small>
-      <button className="btn full" disabled={busy || title.trim().length < 3 || body.trim().length < 3} onClick={async () => {
+      <small className="ewx-nexp">{exp ? `Some sozinho em ${['', '24 horas', '3 dias', '7 dias', '30 dias'][exp]}${files.length ? ', junto com as fotos e vídeos' : ''}.` : 'Fica visível até ser apagado.'}</small>
+      {mediaOn ? <>
+        <div className="sl">Fotos e vídeos</div>
+        <div className="ewx-npick"><MediaPicker existing={[]} onRemoveExisting={() => undefined} files={files} onFiles={setFiles} /></div>
+        <small className="ewx-nexp">Até 6 arquivos (fotos até 10 MB, vídeos até 50 MB). São apagados automaticamente quando o aviso expira.</small>
+      </> : null}
+      {pollsOn ? <>
+        <div style={{ height: 6 }} />
+        <Tg t="Incluir enquete" d="Todos votam e veem o resultado" on={withPoll} onChange={setWithPoll} />
+        {withPoll ? <div className="ewx-npoll">
+          <div className="sl">Pergunta</div>
+          <input className="fld" value={poll.question} maxLength={300} placeholder="Ex.: Qual o melhor dia para a confraternização?" onChange={(e) => setPoll({ ...poll, question: e.target.value })} />
+          <div className="sl">Opções</div>
+          {poll.options.map((o, i) => (
+            <div key={i} className="ewx-popt">
+              <input className="fld" value={o} maxLength={120} placeholder={`Opção ${i + 1}`} onChange={(e) => { const opts = [...poll.options]; opts[i] = e.target.value; setPoll({ ...poll, options: opts }); }} />
+              {poll.options.length > 2 ? <button className="btn sm sec" aria-label={`Remover opção ${i + 1}`} onClick={() => setPoll({ ...poll, options: poll.options.filter((_, j) => j !== i) })}><I n="trash" /></button> : null}
+            </div>
+          ))}
+          {poll.options.length < 10 ? <button className="btn sm sec ewx-padd" onClick={() => setPoll({ ...poll, options: [...poll.options, ''] })}><I n="plus" />Adicionar opção</button> : null}
+          <Tg t="Várias respostas" d="Cada pessoa pode marcar mais de uma" on={poll.multi} onChange={(v) => setPoll({ ...poll, multi: v })} />
+          <Tg t="Votos anônimos" d="Ninguém vê quem votou em cada opção" on={poll.anonymous} onChange={(v) => setPoll({ ...poll, anonymous: v })} />
+          <div className="sl">Encerrar votação</div>
+          <Seg id="npoll" items={['Sem prazo', '1 h', '24 h', '3 dias', '7 dias']} value={[0, 1, 24, 72, 168].indexOf(poll.hours)} onChange={(v) => setPoll({ ...poll, hours: [0, 1, 24, 72, 168][v] })} />
+        </div> : null}
+      </> : null}
+      <button className="btn full" disabled={busy || title.trim().length < 3 || body.trim().length < 3 || (withPoll && !pollReady(poll))} onClick={async () => {
         setBusy(true);
         const r = await api.sv(D.createNotice(api.me.id, api.boot.companyId, title.trim(), body.trim(), pinned, exp ? new Date(Date.now() + [0, 1, 3, 7, 30][exp] * 864e5).toISOString() : null));
+        if (r) {
+          let warn = '';
+          if (files.length && mediaOn) { const failed = await uploadAnnouncementMedia(api.boot.companyId, r.id, files); if (failed) warn = failed === files.length ? 'as fotos/vídeos não foram enviados' : `${failed} arquivo(s) não foram enviados`; }
+          if (withPoll && pollsOn && pollReady(poll)) { try { await createPoll('announcement', r.id, poll); } catch { warn = warn ? `${warn} e a enquete não foi criada` : 'a enquete não foi criada'; } }
+          api.toast(warn ? `Aviso publicado, mas ${warn}` : 'Aviso publicado');
+          setBusy(false); close(); return;
+        }
         setBusy(false);
-        if (r) { api.toast('Aviso publicado'); close(); }
       }}>{busy ? 'Publicando…' : 'Publicar aviso'}</button>
     </>
   );

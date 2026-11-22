@@ -666,3 +666,14 @@ html body .ew .ewx-ment { scrollbar-width: thin !important; scrollbar-color: col
 html body .ew .ewx-ment::-webkit-scrollbar { display: block !important; width: 4px !important; }
 html body .ew .ewx-ment::-webkit-scrollbar-track { background: transparent !important; }
 html body .ew .ewx-ment::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--tx) 22%, transparent) !important; border-radius: 4px; }
+
+/* Avisos: fotos/vídeos e enquete no formulário e na leitura (galeria/visualizador vêm de announcement-view.css) */
+.ew .ewx-nmed { margin: 10px 0 4px; }
+.ew .ewx-nmed .av-gal .av-it { border-radius: 12px; }
+.ew .ewx-npick { margin: 4px 0 2px; }
+.ew .ewx-npick .av-pick .av-th, .ew .ewx-npick .av-pick .av-add { width: 84px; height: 84px; }
+.ew .ewx-npoll { margin: 4px 0 8px; padding: 10px 12px; border-radius: 14px; background: var(--s2, rgba(127,127,127,.08)); }
+.ew .ewx-popt { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+.ew .ewx-popt .fld { flex: 1; margin: 0; }
+.ew .ewx-padd { margin: 2px 0 8px; }
+.ew .ewx-fpoll { margin-top: 10px; }

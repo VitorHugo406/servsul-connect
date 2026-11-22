@@ -341,10 +341,11 @@ export const GUIDE: GuideArticle[] = [
     ], rel: ['calendario-eventos'] },
 
   // ───────── Avisos e celebrações
-  { slug: 'avisos', cat: 'Avisos e celebrações', title: 'Avisos gerais', sum: 'Comunicados oficiais com fixação, agendamento, data de término e contagem de leitura.',
+  { slug: 'avisos', cat: 'Avisos e celebrações', title: 'Avisos gerais', sum: 'Comunicados oficiais com fixação, agendamento, data de término, fotos, vídeos, enquete e contagem de leitura.',
     steps: [
       { t: 'Publique', d: 'Em Avisos, clique em "Novo aviso". Administradores e quem tem a permissão "Postar avisos" podem publicar.' },
       { t: 'Organize', d: 'Fixe no topo, agende para começar depois e defina quando deixa de valer. Os avisos ficam separados em Ativos, Agendados e Expirados.' },
+      { t: 'Fotos, vídeos e enquete', d: 'No computador ou no celular, anexe até 6 fotos ou vídeos e, se quiser, uma enquete. Quem abre o aviso vê a galeria (as fotos ampliam com um clique) e vota na hora. As fotos e vídeos são apagados automaticamente quando o aviso expira ou é excluído.' },
       { t: 'Acompanhe', d: 'Veja quantas pessoas leram, reative um aviso expirado e exporte a lista em CSV.' },
     ], rel: ['aniversariantes', 'comunicados'] },
   { slug: 'aniversariantes', cat: 'Avisos e celebrações', title: 'Aniversariantes', sum: 'Lista e calendário dos aniversários, com relatório em PDF para a gestão.',
