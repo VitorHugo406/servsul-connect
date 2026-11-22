@@ -1,5 +1,8 @@
 import { openDayReport } from '@/lib/designReports';
 import { CalendarFeedButton } from '@/components/calendar/CalendarFeedButton';
+import { BookingPageButton } from '@/components/calendar/BookingPageButton';
+import { MeetingMinutesDialog, MinutesButton } from '@/components/calendar/MeetingMinutesDialog';
+import { useDbFeature } from '@/hooks/useDbFeature';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar as CalendarIcon, Plus, Trash2, Clock, Bell, ListTodo, Edit, X, Users, Link2, ChevronLeft, ChevronRight, Video, ArrowLeft, Check, FileDown, ExternalLink, MonitorPlay } from 'lucide-react';
@@ -91,6 +94,8 @@ export function CalendarSection() {
   const { user, profile, isAdmin } = useAuth();
   const isMobile = useIsMobile();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const minutesOn = useDbFeature('meeting_minutes');
+  const [minutesFor, setMinutesFor] = useState<{ id: string; title: string } | null>(null);
   const [taskDeadlines, setTaskDeadlines] = useState<TaskDeadline[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -865,6 +870,7 @@ export function CalendarSection() {
             )}
             <Button variant="outline" size="sm" onClick={goToToday} className="ewvon-calendar-action">Hoje</Button>
             <CalendarFeedButton className="ewvon-calendar-action" />
+            <BookingPageButton className="ewvon-calendar-action" />
             <Button variant="outline" size="sm" onClick={() => handleMeetingButtonClick(selectedDate)} className="gap-1 ewvon-calendar-action">
               <Video className="h-3.5 w-3.5" /> Reunião
             </Button>
@@ -1005,6 +1011,7 @@ export function CalendarSection() {
                               </div>
                             )}
                           </div>
+                          {minutesOn && (event.event_type === 'meeting' || (event.participants?.length ?? 0) > 0) && (event.created_by === user?.id || event.participants?.some(p => p.profile_id === profile?.id)) ? <MinutesButton onClick={() => setMinutesFor({ id: event.id, title: event.title })} /> : null}
                           {event.created_by === user?.id && (
                             <div className="flex gap-0.5">
                               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEdit(event)}><Edit className="h-3 w-3" /></Button>
@@ -1222,6 +1229,7 @@ export function CalendarSection() {
           </div>
         </TabsContent>
       </Tabs>
+      <MeetingMinutesDialog kind="event" refId={minutesFor?.id || null} title={minutesFor?.title || ''} open={!!minutesFor} onOpenChange={(o) => { if (!o) setMinutesFor(null); }} />
     </motion.div>
   );
 }
