@@ -18,6 +18,13 @@ const diffD = (a: Date, b: Date) => Math.round((startOf(a).getTime() - startOf(b
 /** keep the original time of day of a due date (or 18:00), start dates at 09:00 */
 const at = (day: Date, old: string | null | undefined, h: number) => { const o = old ? new Date(old) : null; return new Date(day.getFullYear(), day.getMonth(), day.getDate(), o ? o.getHours() : h, o ? o.getMinutes() : 0).toISOString(); };
 
+// Solid bars (owner's request): text in white or dark depending on how light the bar colour is.
+const onColor = (hex: string) => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim()); if (!m) return '#fff';
+  const n = parseInt(m[1], 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.66 ? '#111827' : '#fff';
+};
+
 export function TimelineView({ tasks, cols, person, onOpen, done, late, isLocked, onUpdate, Av }: {
   tasks: T[]; cols: C[]; person: (id?: string | null) => { name: string; avatar: string | null } | null; onOpen: (t: T) => void;
   done: (t: T) => boolean; late: (t: T) => boolean; isLocked: (t: T) => boolean; onUpdate?: (t: T, u: Upd) => void | Promise<void>;
@@ -141,11 +148,11 @@ export function TimelineView({ tasks, cols, person, onOpen, done, late, isLocked
                   onClick={(e) => { if (span(r.t) || isLocked(r.t) || !onUpdate) return; const rect = (e.currentTarget as HTMLElement).getBoundingClientRect(); const day = addD(from, Math.floor((e.clientX - rect.left) / px)); void onUpdate(r.t, { start_date: at(day, null, 9), due_date: at(day, null, 18) }); }}>
                   {(() => { const g = geo(r.t); if (!g) return <span className="tl-hint">clique para definir datas</span>; const c = cols.find((z) => z.id === r.t.status); const color = late(r.t) ? '#e5484d' : done(r.t) ? '#22a06b' : (c?.color || '#2f6fed'); const lk = isLocked(r.t) || !onUpdate;
                     return (
-                      <div className={`tl-bar ${drag?.id === r.t.id ? 'drag' : ''}`} style={{ left: g.left, width: Math.max(g.width, px), background: `color-mix(in srgb, ${color} 22%, hsl(var(--card)))`, borderColor: color }}
+                      <div className={`tl-bar ${drag?.id === r.t.id ? 'drag' : ''}`} style={{ left: g.left, width: Math.max(g.width, px), background: color, borderColor: color }}
                         onPointerDown={(e) => { if (lk || (e.target as HTMLElement).dataset.edge) return; e.preventDefault(); setDrag({ id: r.t.id, mode: 'move', x0: e.clientX, dx: 0 }); }}
                         onClick={(e) => { e.stopPropagation(); if (!drag) onOpen(r.t); }} title={`${r.t.title} · ${g.s.toLocaleDateString('pt-BR')} → ${g.e.toLocaleDateString('pt-BR')}`}>
                         {!lk ? <span className="tl-edge l" data-edge="1" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setDrag({ id: r.t.id, mode: 'l', x0: e.clientX, dx: 0 }); }} /> : null}
-                        {g.width >= 90 ? <span className="tl-bt" style={{ color: `color-mix(in srgb, ${color} 80%, hsl(var(--foreground)))` }}>{r.t.title}</span> : <span className="tl-bt" />}
+                        {g.width >= 90 ? <span className="tl-bt" style={{ color: onColor(color) }}>{r.t.title}</span> : <span className="tl-bt" />}
                         {g.width < 90 ? <span className="tl-out">{r.t.title}</span> : null}
                         {!lk ? <span className="tl-edge r" data-edge="1" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setDrag({ id: r.t.id, mode: 'r', x0: e.clientX, dx: 0 }); }} /> : null}
                       </div>); })()}
