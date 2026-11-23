@@ -31,32 +31,32 @@ export interface ReportSpec {
 export const esc = (v: unknown) =>
   String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-const TONE: Record<Tone, [string, string]> = {
-  good: ['#e9f9ef', '#15803d'], bad: ['#fdeceb', '#c2410c'], warn: ['#fff6e5', '#b45309'], info: ['#eaf2ff', '#1d4ed8'], neutral: ['#f1f2f5', '#3f3f46'],
+// [background, text, border] — the status-pill colours of the design reports.
+const TONE: Record<Tone, [string, string, string]> = {
+  good: ['#E9F7EE', '#0A6B3D', '#A8D8BC'], bad: ['#FFF1E6', '#9A3412', '#F0B48A'], warn: ['#FEF5E4', '#7A4300', '#F2CF8E'], info: ['#EDF3FD', '#164A8F', '#A9C0E8'], neutral: ['#F0F2F5', '#303A48', '#B9C0CB'],
 };
 
 function cell(c: Cell): string {
   if (c && typeof c === 'object') {
     const inner = `${c.strong ? '<b>' : ''}${esc(c.text)}${c.strong ? '</b>' : ''}${c.sub ? `<small>${esc(c.sub)}</small>` : ''}`;
     if (!c.tone) return inner;
-    const [bg, fg] = TONE[c.tone];
-    void bg;
-    return `<span class="pill" style="color:${fg};border-color:${fg}">${inner}</span>`;
+    const [bg, fg, bd] = TONE[c.tone];
+    return `<span class="pill" style="color:${fg};border-color:${bd};background:${bg}">${inner}</span>`;
   }
   return c === null || c === undefined || c === '' ? '<span class="mu">—</span>' : esc(c);
 }
 
 function block(b: ReportBlock): string {
-  const title = 'title' in b && b.title ? `<h2>${esc(b.title)}</h2>` : '';
+  const title = 'title' in b && b.title ? `<h3>${esc(b.title)}</h3>` : '';
   switch (b.type) {
     case 'kpis':
-      return `<div class="kpis">${b.items.map((k) => `<div class="kpi${k.tone ? ' t-' + k.tone : ''}"><span>${esc(k.label)}</span><b>${esc(k.value)}</b>${k.hint ? `<small>${esc(k.hint)}</small>` : ''}</div>`).join('')}</div>`;
+      return `<section class="kp">${b.items.map((k) => `<div class="k${k.tone ? ' t-' + k.tone : ''}"><div class="l">${esc(k.label)}</div><div class="v">${esc(k.value)}</div>${k.hint ? `<div class="d">${esc(k.hint)}</div>` : ''}</div>`).join('')}</section>`;
     case 'badge': {
       const fg = TONE[b.tone || 'neutral'][1];
-      return `<div><span class="badge" style="color:${fg};border-color:${fg}">${esc(b.text)}</span></div>`;
+      return `<span class="badge" style="color:${fg};border-color:${TONE[b.tone || 'neutral'][2]};background:${TONE[b.tone || 'neutral'][0]}">${esc(b.text)}</span>`;
     }
     case 'info':
-      return `<section>${title}<div class="info">${b.items.filter((i) => i.value !== null && i.value !== undefined && i.value !== '').map((i) => `<div><span>${esc(i.label)}</span><b>${esc(i.value)}</b></div>`).join('')}</div></section>`;
+      return `<section>${title}<div class="gi">${b.items.filter((i) => i.value !== null && i.value !== undefined && i.value !== '').map((i) => `<div><span>${esc(i.label)}</span><b>${esc(i.value)}</b></div>`).join('')}</div></section>`;
     case 'table':
       return `<section>${title}${b.rows.length ? `<table>${b.widths ? `<colgroup>${b.widths.map((w) => `<col style="width:${w}">`).join('')}</colgroup>` : ''}<thead><tr>${b.headers.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${b.rows.map((r) => `<tr>${r.map((c) => `<td>${cell(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>` : `<p class="empty">${esc(b.empty || 'Nada para mostrar.')}</p>`}</section>`;
     case 'text':
@@ -69,7 +69,7 @@ function block(b: ReportBlock): string {
       return `<section>${title}<div class="bars">${b.items.map((i) => {
         const max = i.max || Math.max(...b.items.map((x) => x.value), 1);
         const pct = Math.max(2, Math.min(100, (i.value / max) * 100));
-        const fg = TONE[i.tone || 'neutral'][1];
+        const fg = i.tone ? TONE[i.tone][1] : '#1B2340';
         return `<div class="bar"><span>${esc(i.label)}</span><div><i style="width:${pct}%;background:${fg}"></i></div><b>${esc(i.value)}${esc(i.suffix || '')}</b></div>`;
       }).join('')}</div></section>`;
     case 'signatures':
@@ -80,78 +80,86 @@ function block(b: ReportBlock): string {
 }
 
 export function renderReport(spec: ReportSpec): string {
+  // Same visual standard as the design reports (designReports.ts: Relatório do dia / conclusão de tarefa): IBM Plex
+  // Sans, full ewvon logo on the left, navy rule, KPI strip with dividers, uppercase section titles and a footer.
   const brand = getCachedBrand();
-  const company = brand?.name || 'ewvon';
-  const accent = brand?.primary_color || '#0b0b0f';
+  const company = brand?.name || '';
   const now = new Date();
-  const generated = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) + ' às ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  const logo = brand?.logo_url ? `<img src="${esc(brand.logo_url)}" alt="">` : `<span class="mono">${esc(company.charAt(0))}</span>`;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const generated = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} às ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const origin = typeof location !== 'undefined' ? location.origin : '';
+  const W = spec.landscape ? 1123 : 794, H = spec.landscape ? 794 : 1123;
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(spec.fileName || spec.title)}</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-@page { size: A4 ${spec.landscape ? 'landscape' : 'portrait'}; margin: 14mm 12mm 16mm; }
-*{box-sizing:border-box} html,body{margin:0}
-body{font-family:"Plus Jakarta Sans",Inter,system-ui,sans-serif;color:#111113;font-size:12px;line-height:1.5;background:#fff}
-.page{max-width:${spec.landscape ? '1080px' : '820px'};margin:0 auto;padding:28px 8px 40px}
-.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 0 12px;border-bottom:1.5px solid #111113}
-.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:13px}
-.brand img{width:28px;height:28px;border-radius:8px;object-fit:contain;border:1px solid #e4e4e7}
-.brand .mono{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;border:1.5px solid #111113;color:#111113;font-weight:800}
-.top small{color:#71717a;font-size:11px}
-.hero{padding:26px 4px 10px}
-.eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#71717a}
-h1{font-size:28px;letter-spacing:-.035em;line-height:1.1;margin:6px 0 6px;font-weight:800}
-.sub{color:#52525b;font-size:13px;margin:0}
-.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.meta span{padding:3px 10px;border-radius:999px;border:1px solid #d4d4d8;color:#3f3f46;font-size:11px;font-weight:600}
-section{margin-top:22px;break-inside:avoid-page}
-h2{font-size:13.5px;font-weight:800;letter-spacing:-.01em;margin:0 0 10px;display:flex;align-items:center;gap:8px}
-h2{padding-bottom:6px;border-bottom:1px solid #e4e4e7}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:18px}
-.kpi{border:1px solid #d4d4d8;border-radius:12px;padding:10px 14px}
-.kpi span{display:block;font-size:10.5px;color:#71717a;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
-.kpi b{display:block;font-size:24px;letter-spacing:-.03em;margin-top:2px}
-.kpi small{color:#71717a;font-size:10.5px}
-.kpi.t-good b{color:#15803d}.kpi.t-bad b{color:#c2410c}.kpi.t-warn b{color:#b45309}.kpi.t-info b{color:#1d4ed8}
-.badge{display:inline-block;margin-top:14px;padding:5px 12px;border-radius:999px;border:1.5px solid;font-weight:700;font-size:11.5px}
-.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
-.info div{border:1px solid #ececef;border-radius:12px;padding:9px 12px}
-.info span{display:block;font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
-.info b{font-size:12.5px}
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+html,body{margin:0}body{background:#EDEFF2}
+.pg{font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:12.5px;line-height:1.5;color:#1C2430;background:#fff;width:${W}px;min-height:${H}px;padding:44px 44px 34px;display:flex;flex-direction:column;gap:20px;margin:0 auto}
+.hd{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;padding-bottom:16px;border-bottom:2px solid #1B2340}
+.br img{display:block;height:26px;width:auto}
+.br small{display:block;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#4A5563;margin-top:8px}
+.rt{text-align:right}
+.rt span{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#4A5563}
+.rt b{display:block;font-size:15px;font-weight:600;color:#1B2340;margin-top:3px}
+.ti{display:flex;flex-direction:column;gap:8px}
+.ti .ey{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#4A5563}
+.ti h1{margin:0;font-size:26px;font-weight:600;letter-spacing:-.01em;color:#1B2340;line-height:1.2}
+.ti p{margin:0;color:#3C4756}
+.meta{display:flex;flex-wrap:wrap;gap:6px}
+.meta span{padding:2px 10px;border-radius:999px;border:1px solid #C5CBD5;background:#F0F2F5;color:#303A48;font-size:11px;font-weight:600}
+.kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));border-top:1px solid #D3D8E0;border-bottom:1px solid #D3D8E0}
+.k{padding:14px 16px;border-right:1px solid #E3E6EB}
+.k:first-child{padding-left:0}.k:last-child{border-right:0}
+.k .l{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#4A5563}
+.k .v{font-size:28px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums;color:#1B2340;line-height:1}
+.k .d{margin-top:6px;font-size:11.5px;color:#4A5563}
+.k.t-good .v{color:#0A6B3D}.k.t-bad .v{color:#B93A0E}.k.t-warn .v{color:#8A4B00}.k.t-info .v{color:#164A8F}
+.badge{align-self:flex-start;display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;border-radius:999px;padding:4px 12px;border:1px solid}
+.badge::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+section{break-inside:avoid-page}
+h3{margin:0 0 8px;font-size:12.5px;font-weight:600;color:#1B2340;text-transform:uppercase;letter-spacing:.06em;padding-bottom:6px;border-bottom:1px solid #1B2340}
+.gi{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #C5CBD5}
+.gi>div{padding:10px 14px;border-right:1px solid #C5CBD5;border-bottom:1px solid #C5CBD5;margin-bottom:-1px;margin-right:-1px}
+.gi span{display:block;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#4A5563;margin-bottom:3px}
+.gi b{font-weight:600;color:#1B2340}
 table{width:100%;border-collapse:collapse}
-th{color:#52525b;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:8px 10px;border-bottom:1.5px solid #111113}
-td{padding:8px 10px;border-bottom:1px solid #e4e4e7;vertical-align:top;font-size:11.5px}
-thead{display:table-header-group} tr{break-inside:avoid}
-td small{display:block;color:#71717a;font-size:10.5px;margin-top:2px}
-.pill{display:inline-block;padding:1px 8px;border-radius:999px;border:1px solid;font-weight:700;font-size:10.5px}
-.mu{color:#a1a1aa}
-.text{white-space:pre-wrap;border-left:2px solid #111113;padding:4px 0 4px 12px}
-.tl{list-style:none;margin:0;padding:0;border-left:2px solid #e4e4e7}
-.tl li{position:relative;padding:0 0 10px 16px}
-.tl li::before{content:"";position:absolute;left:-6px;top:4px;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid ${esc(accent)}}
-.tl time{display:block;font-size:10.5px;color:#71717a;font-weight:600}
+th{text-align:left;font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#4A5563;padding:6px 8px;border-bottom:1px solid #1B2340}
+td{padding:9px 8px;border-bottom:1px solid #E3E6EB;vertical-align:top;font-variant-numeric:tabular-nums}
+td b{font-weight:600}
+thead{display:table-header-group}tr{break-inside:avoid}
+td small{display:block;color:#4A5563;font-size:11px;margin-top:1px}
+.pill{display:inline-block;font-size:11px;font-weight:600;border-radius:999px;border:1px solid;padding:2px 9px;white-space:nowrap}
+.mu{color:#8A93A0}
+.text{white-space:pre-wrap;color:#3C4756;line-height:1.55}
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:grid;grid-template-columns:140px 1fr;gap:12px;padding:7px 0;border-bottom:1px solid #E3E6EB}
+.tl time{color:#4A5563;font-size:11.5px;font-variant-numeric:tabular-nums}
+.tl b{font-weight:600}
 .ck{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .ck li{display:flex;align-items:center;gap:8px}
-.ck i{width:16px;height:16px;border-radius:5px;border:1.5px solid #d4d4d8;display:grid;place-items:center;font-style:normal;font-size:11px;font-weight:800;color:#fff}
-.ck li.ok i{color:#15803d;border-color:#15803d}
-.ck li.ok{color:#52525b;text-decoration:line-through}
-.bars{display:grid;gap:8px}
-.bar{display:grid;grid-template-columns:minmax(110px,30%) 1fr 64px;align-items:center;gap:10px}
-.bar div{height:8px;border-radius:8px;border:1px solid #d4d4d8;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.bar i{display:block;height:100%;border-radius:9px}
-.bar b{text-align:right}
-.sign{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:40px;margin-top:56px}
-.sign i{display:block;border-top:1px solid #a1a1aa;margin-bottom:6px}
-.sign span{font-size:11px;color:#52525b}
-.empty{color:#a1a1aa;text-align:center;padding:28px 0;font-size:13px}
-.foot{margin-top:34px;padding-top:12px;border-top:1px solid #ececef;display:flex;justify-content:space-between;color:#a1a1aa;font-size:10px}
-@media print{.page{padding:0}}
-</style></head><body><div class="page">
-<div class="top"><div class="brand">${logo}<span>${esc(company)}</span></div><small>Gerado em ${esc(generated)}</small></div>
-<div class="hero"><div class="eyebrow">${esc(spec.eyebrow)}</div><h1>${esc(spec.title)}</h1>${spec.subtitle ? `<p class="sub">${esc(spec.subtitle)}</p>` : ''}${spec.meta?.length ? `<div class="meta">${spec.meta.map((m) => `<span>${esc(m)}</span>`).join('')}</div>` : ''}</div>
+.ck i{width:15px;height:15px;border:1.5px solid #6B7482;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:10px;font-weight:700;color:#fff;flex:none}
+.ck li.ok i{background:#0A6B3D;border-color:#0A6B3D}
+.ck li.ok{color:#4A5563}
+.bars{display:grid;gap:9px}
+.bar{display:grid;grid-template-columns:minmax(110px,30%) 1fr 64px;align-items:center;gap:12px}
+.bar div{height:9px;border-radius:5px;background:#E4E7EC;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:5px}
+.bar b{text-align:right;font-weight:600;color:#1B2340;font-variant-numeric:tabular-nums}
+.sign{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:40px;margin-top:30px}
+.sign i{display:block;border-top:1px solid #1C2430;margin-bottom:5px}
+.sign span{font-size:11px;color:#4A5563}
+.empty{color:#4A5563;padding:10px 0 4px}
+.ft{margin-top:auto;padding-top:10px;border-top:1px solid #D3D8E0;display:flex;justify-content:space-between;gap:16px;font-size:10.5px;color:#5A6472}
+@page{size:A4 ${spec.landscape ? 'landscape' : 'portrait'};margin:0}
+@media print{body{background:#fff}.pg{margin:0;width:${spec.landscape ? '297mm' : '210mm'};min-height:${spec.landscape ? '210mm' : '297mm'}}}
+</style></head><body><div class="pg">
+<header class="hd"><div class="br"><img src="${esc(origin)}/ewwon/img/receipt-logo.png" alt="ewvon">${company ? `<small>${esc(company)}</small>` : ''}</div><div class="rt"><span>${esc(spec.eyebrow)}</span><b>${esc(generated)}</b></div></header>
+<section class="ti"><div class="ey">${esc(spec.eyebrow)}</div><h1>${esc(spec.title)}</h1>${spec.subtitle ? `<p>${esc(spec.subtitle)}</p>` : ''}${spec.meta?.length ? `<div class="meta">${spec.meta.map((m) => `<span>${esc(m)}</span>`).join('')}</div>` : ''}</section>
 ${spec.blocks.map(block).join('\n')}
-<div class="foot"><span>${esc(company)} · relatório gerado pelo ewvon</span><span>${esc(now.toLocaleDateString('pt-BR'))}</span></div>
-</div><script>document.fonts&&document.fonts.ready.then(function(){setTimeout(function(){window.print()},250)});</script></body></html>`;
+<footer class="ft"><span>${company ? esc(company) + ' · ' : ''}relatório gerado automaticamente pelo ewvon em ${esc(generated)}</span><span>© ${now.getFullYear()} ewvon</span></footer>
+</div><script>(function(){var imgs=[].slice.call(document.images).map(function(i){return i.complete?0:new Promise(function(r){i.onload=i.onerror=r})});
+Promise.all([document.fonts?document.fonts.ready:0].concat(imgs)).then(function(){setTimeout(function(){window.print()},300)});})();</script></body></html>`;
 }
 
 /** Opens the report in a new tab and starts printing (user saves as PDF). */
