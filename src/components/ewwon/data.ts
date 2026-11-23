@@ -2,6 +2,7 @@
 // (profiles, sectors, messages, direct_messages, private_groups, announcements,
 // tasks, meeting_bookings) plus the tables added for the mobile app
 // (chat_member_prefs, user_preferences, support_tickets, chat_reactions, push_devices).
+import { sectorImg } from '@/lib/sectorImage';
 import { SYSTEM_SENDER_ID, SYSTEM_SENDER_NAME, AI_SENDER_ID, AI_SENDER_NAME } from '@/lib/systemSender';
 import { supabase as typedSupabase } from '@/integrations/supabase/client';
 import { optimizeImageFile } from '@/lib/imageOptimization';
@@ -132,7 +133,7 @@ export async function bootstrap(opts: {
 
   const [profilesR, sectorsR, groupsR, prefsR, chatPrefsR, noticesR, readsR, ticketsR, staffR] = await Promise.all([
     sb.from('profiles').select(PROFILE_COLS).eq('company_id', companyId).eq('is_active', true).order('name'),
-    sb.from('sectors').select('id,name,color,company_id').order('name'),
+    sb.from('sectors').select('id,name,color,icon,company_id').order('name'),
     sb.from('private_groups').select('id,name,description,avatar_url,cover_url,wallpaper,automations,created_by,updated_at').eq('company_id', companyId),
     sb.from('user_preferences').select('data').eq('profile_id', profileId).maybeSingle(),
     sb.from('chat_member_prefs').select('*').eq('profile_id', profileId),
@@ -199,7 +200,7 @@ export async function bootstrap(opts: {
     chats.push({
       key, kind: 'sector', id: s.id, g: true, n: s.name, i: initials(s.name), hue: hueFromColor(s.color, s.id), s: `${mem.length} membros`,
       mem, adm: mem.filter((id) => people[id].role === 'Administrador'), desc: s.id === GERAL_SECTOR_ID ? 'Canal geral da empresa: recados rápidos e conversas entre todos os setores.' : `Canal do setor ${s.name}.`,
-      photo: null, cover: null, u: Math.min(sectorUnread.get(s.id) || 0, 99),
+      photo: sectorImg(s.icon), cover: null, u: Math.min(sectorUnread.get(s.id) || 0, 99),
       last: l ? { t: l.content, at: l.created_at, me: l.author_id === profileId, from: l.author_id } : null,
       m: [], loaded: false, set: setFromRow(chatPrefs.get(key) || null), wp: null, canEdit: false, canSummary: isAdmin && s.id !== GERAL_SECTOR_ID,
       sum: summaryFromRow(summaryByTarget.get(key) || null),

@@ -1,7 +1,7 @@
 // Gestão de setores — porta fiel do design "Setores - configurar / novo setor" (Tela_de_Avisos_6).
 // CSS em src/styles/sectors.css (prefixo sg-, escopo .sg-pg). Lista à esquerda, configuração do setor à direita.
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, Shield } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ImagePlus, Loader2, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,6 +10,7 @@ import { limitErrorMessage } from '@/lib/planAccess';
 import { appConfirm } from '@/lib/appDialog';
 import { Sel } from '@/components/ui/Sel';
 import { SECTOR_SVG, SECTOR_SVG_ORDER } from '@/components/sectors/sectorSvg';
+import { sectorImg, uploadSectorImage } from '@/lib/sectorImage';
 
 const GERAL_SECTOR_ID = '00000000-0000-0000-0000-000000000001';
 const SWATCHES: { c: string; n: string }[] = [
@@ -23,6 +24,8 @@ const nameOf = (p: Person) => p.display_name || p.name;
 const plural = (n: number) => `${n} ${n === 1 ? 'colaborador' : 'colaboradores'}`;
 
 function Svg({ id, size }: { id: string; size: number }) {
+  const img = sectorImg(id);
+  if (img) return <img className="sg-im" src={img} alt="" aria-hidden="true" />;
   const ic = SECTOR_SVG[id] || SECTOR_SVG.building;
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" dangerouslySetInnerHTML={{ __html: ic.svg }} />;
 }
@@ -39,6 +42,8 @@ export function SectorManagementSection() {
   const [manager, setManager] = useState('');
   const [color, setColor] = useState('#2563EB');
   const [icon, setIcon] = useState('building');
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   const [pending, setPending] = useState<string[]>([]);              // people chosen while the sector is still unsaved (profile ids)
   const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -109,6 +114,13 @@ export function SectorManagementSection() {
       if (error) { toast.error('Não foi possível remover o colaborador'); return; }
     }
     toast.success(`${nameOf(p)} removido do setor`); void loadPeople();
+  };
+
+  const pickImage = async (f: File) => {
+    setUploading(true);
+    try { setIcon(await uploadSectorImage(f)); toast.success('Imagem pronta. Clique em Salvar para aplicar ao setor.'); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Não foi possível enviar a imagem.'); }
+    finally { setUploading(false); }
   };
 
   const save = async () => {
@@ -200,8 +212,13 @@ export function SectorManagementSection() {
           </div>
         </section>
 
-        <section className="sg-sc"><div><h3>Ícone do setor</h3><div className="sg-hp">Escolha o que melhor representa o departamento.</div></div>
+        <section className="sg-sc"><div><h3>Ícone do setor</h3><div className="sg-hp">Escolha o que melhor representa o departamento ou use uma imagem própria.</div></div>
           <div className="sg-ig">
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void pickImage(f); }} />
+            <button type="button" className={`sg-ib sg-ibimg${sectorImg(icon) ? ' sg-on' : ''}`} aria-pressed={!!sectorImg(icon)} disabled={locked || uploading} onClick={() => fileRef.current?.click()} title={sectorImg(icon) ? 'Trocar a imagem' : 'Enviar uma imagem própria'}>
+              {uploading ? <Loader2 className="h-[22px] w-[22px] animate-spin" /> : sectorImg(icon) ? <img className="sg-imth" src={sectorImg(icon)!} alt="" /> : <ImagePlus className="h-[22px] w-[22px]" strokeWidth={1.8} />}
+              <span>{sectorImg(icon) ? 'Trocar imagem' : 'Imagem própria'}</span>
+            </button>
             {SECTOR_SVG_ORDER.map(id => (
               <button key={id} type="button" className={`sg-ib${icon === id ? ' sg-on' : ''}`} aria-pressed={icon === id} disabled={locked} onClick={() => setIcon(id)}>
                 <Svg id={id} size={22} /><span>{SECTOR_SVG[id].label}</span>

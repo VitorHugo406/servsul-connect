@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Building } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SECTOR_ICON_MAP } from '@/components/sectors/SectorIconPicker';
+import { sectorImg } from '@/lib/sectorImage';
 
 interface Sector {
   id: string;
@@ -46,7 +47,7 @@ export function SectorTabs({ sectors, activeSector, onSectorChange }: SectorTabs
             )}
             style={isActive ? { backgroundColor: sector.color } : undefined}
           >
-            <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            {sectorImg(sector.icon) ? <img src={sectorImg(sector.icon)!} alt="" className="h-4 w-4 rounded-full object-cover sm:h-5 sm:w-5" /> : <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
             {sector.name}
           </motion.button>
         );

@@ -74,3 +74,10 @@
 .sg-pg .sg-body .sg-sc:last-child{border-bottom:0}
 /* A página ocupa só a área de conteúdo (não cobre o menu nem a barra do topo). */
 .ewvon-main:has(> .sg-pg){position:relative;overflow:hidden!important}
+
+/* imagem própria do setor (sectors.icon = "img:<url>") */
+.sg-pg .sg-tl,.sg-pg .sg-bt{overflow:hidden}
+.sg-pg .sg-im{width:100%;height:100%;object-fit:cover;display:block}
+.sg-pg .sg-ibimg{border-style:dashed}
+.sg-pg .sg-ibimg.sg-on{border-style:solid}
+.sg-pg .sg-imth{width:26px;height:26px;border-radius:8px;object-fit:cover;display:block}
