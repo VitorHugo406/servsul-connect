@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { TemplateOffsetEditor } from '@/components/tasks/DuplicateTemplatesDialog';
 import { CardApproval } from './CardApproval';
 import { useDbFeature } from '@/hooks/useDbFeature';
 import { CardExtrasPanel } from '@/components/tasks/CardExtrasPanel';
@@ -366,7 +367,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
 
   // ===== Shared render sections =====
 
-  const renderTemplateBanner = () => task.is_template ? (
+  const renderTemplateBanner = () => task.is_template ? (<>
     <div className="mx-4 mt-3 mb-1 rounded-lg bg-primary/5 border border-primary/20 p-3 flex items-center gap-3">
       <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
         <Layout className="h-5 w-5 text-primary" />
@@ -397,7 +398,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
         </Popover>
       )}
     </div>
-  ) : null;
+    <div className="mx-4 mb-1"><TemplateOffsetEditor taskId={task.id} /></div>
+  </>) : null;
 
   const renderCover = () => (
     <>

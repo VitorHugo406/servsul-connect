@@ -1,4 +1,5 @@
 import { PublicLinkSection } from '@/components/tasks/PublicLinkSection';
+import { DuplicateTemplatesDialog } from '@/components/tasks/DuplicateTemplatesDialog';
 import { InboundKeySection } from '@/components/tasks/InboundKeySection';
 import { BoardFormSection } from '@/components/tasks/BoardFormSection';
 import { MyTasksView } from '@/components/tasks/MyTasksView';
@@ -686,6 +687,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
     () => applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels).filter(t => !t.is_template),
     [tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels]
   );
+  const [dupAllColumn, setDupAllColumn] = useState<(typeof columns)[number] | null>(null);
   const templateTasks = useMemo(() => tasks.filter(t => t.is_template && !t.is_archived), [tasks]);
   const tasksByColumn = useMemo(() => {
     const map = new Map<string, BoardTask[]>();
@@ -1980,6 +1982,11 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                         <DropdownMenuItem onClick={() => openCreateTask(column.id)}>
                           <Plus className="h-4 w-4 mr-2" /> Adicionar Tarefa
                         </DropdownMenuItem>
+                        {(column as any).is_template_column && (
+                          <DropdownMenuItem onClick={() => setDupAllColumn(column)}>
+                            <Copy className="h-4 w-4 mr-2" /> Duplicar todos os cards
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => { setEditingColumnId(column.id); setEditColumnTitle(column.title); }}>
                           <Pencil className="h-4 w-4 mr-2" /> Renomear Coluna
                         </DropdownMenuItem>
@@ -3218,6 +3225,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
 
       {/* Report Dialog */}
       <CustomFieldsDialog open={showFields} onOpenChange={setShowFields} canManage={isAdminOrOwner} />
+      {dupAllColumn ? <DuplicateTemplatesDialog open={!!dupAllColumn} onOpenChange={(o) => { if (!o) setDupAllColumn(null); }} boardId={board.id} column={dupAllColumn as never} columns={columns as never} canConfigure={isAdminOrOwner} onCreated={() => void refetchTasks()} /> : null}
       <ReportDialog open={showReport} onOpenChange={setShowReport} tasks={tasks.filter(t => !t.is_template)} columns={columns} boardName={board.name} />
       <BoardSummaryDialog open={showAiSummary} onOpenChange={setShowAiSummary} boardId={board.id} boardName={board.name} />
       <CardsFromTextDialog open={showAiCards} onOpenChange={setShowAiCards} boardId={board.id} users={allUsers} onCreated={() => void refetchTasks()} />

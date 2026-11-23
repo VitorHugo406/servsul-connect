@@ -15,6 +15,10 @@ type TForm = { title: string; intro: string; q: [string, 'text' | 'long' | 'emai
 export type BoardTemplate = {
   id: string; area: string; name: string; desc: string; icon: string; cover: string;
   columns: [string, string][]; labels: [string, string][]; fields?: TField[]; rules?: Rule[]; form?: TForm; cards: C[];
+  /** Process models: the cards become templates in a "Modelo do processo" column (Duplicar todos os cards), with
+   *  due/start offsets around the process final date = <ref> − lead days. refDay = the day the example cards use as
+   *  the reference (their st/due are relative to today), title = field appended to each created card's title. */
+  proc?: { ref: string; refDay: number; lead: number; q: string; title?: string };
 };
 
 export const TEMPLATE_AREAS = ['Recursos Humanos', 'Vendas e atendimento', 'Marketing', 'Operações', 'Financeiro e compras', 'Projetos e tecnologia'];
@@ -32,6 +36,7 @@ export const BOARD_TEMPLATES: BoardTemplate[] = [
     labels: [['RH', PK], ['TI', S], ['Gestor', O], ['Documentação', Y]],
     fields: [{ n: 'Colaborador', t: 'text', card: true }, { n: 'Cargo', t: 'text' }, { n: 'Data de admissão', t: 'date' }, { n: 'Modalidade', t: 'select', o: ['Presencial', 'Híbrido', 'Remoto'] }],
     rules: [{ when: 'moved', col: 'Primeira semana', act: 'priority', val: 'high', label: 'Ao entrar em "Primeira semana", prioridade Alta' }, { when: 'completed', act: 'notify', label: 'Ao concluir, avisar o responsável' }],
+    proc: { ref: 'Data de admissão', refDay: 7, lead: 0, q: 'Quantos dias antes da data de admissão o processo deve ser adiantado? (0 = prazos contados a partir da admissão)', title: 'Colaborador' },
     cards: [
       { t: 'Coletar documentos de admissão', col: 0, st: 0, due: 3, p: 'high', l: [0, 3], f: { Colaborador: 'Nova pessoa', Cargo: 'Analista', 'Data de admissão': ymd(7), Modalidade: 'Híbrido' }, ck: [['Documentos', ['RG e CPF', 'Comprovante de residência', 'Carteira de trabalho digital', 'Dados bancários', 'Foto 3x4', 'Certidão de casamento/filhos (se houver)']], ['Exames', ['Agendar exame admissional', 'Receber ASO']]] },
       { t: 'Assinar contrato e termos', col: 0, st: 3, due: 5, l: [0, 3], dep: [0], ck: [['Assinaturas', ['Contrato de trabalho', 'Termo de confidencialidade', 'Política de uso de equipamentos', 'Ciência do código de conduta']]] },
@@ -50,7 +55,7 @@ export const BOARD_TEMPLATES: BoardTemplate[] = [
     columns: [['Comunicado', G], ['Em andamento', B], ['Acertos finais', O], ['Encerrado', GR]],
     labels: [['RH', PK], ['TI', S], ['Financeiro', Y], ['Urgente', R]],
     fields: [{ n: 'Colaborador', t: 'text', card: true }, { n: 'Último dia', t: 'date' }, { n: 'Tipo', t: 'select', o: ['Pedido de demissão', 'Dispensa', 'Fim de contrato', 'Acordo'] }],
-    rules: [{ when: 'created', act: 'due', val: 5, label: 'Card novo ganha prazo de 5 dias' }],
+    proc: { ref: 'Último dia', refDay: 10, lead: 1, q: 'Quantos dias antes do último dia o desligamento precisa estar concluído?', title: 'Colaborador' },
     cards: [
       { t: 'Registrar desligamento e comunicar a equipe', col: 0, st: 0, due: 1, p: 'high', l: [0], f: { Colaborador: 'Pessoa que sai', 'Último dia': ymd(10), Tipo: 'Pedido de demissão' } },
       { t: 'Transferir responsabilidades e conhecimento', col: 1, st: 1, due: 8, l: [0], dep: [0], ck: [['Passagem', ['Listar atividades em andamento', 'Definir quem assume cada uma', 'Documentar processos', 'Repassar contatos de clientes/fornecedores']]] },
@@ -109,8 +114,9 @@ export const BOARD_TEMPLATES: BoardTemplate[] = [
     desc: 'Do contrato assinado ao cliente usando: kickoff, configuração, treinamento e acompanhamento de 30 dias.',
     columns: [['Contrato assinado', G], ['Kickoff', B], ['Configuração', Y], ['Treinamento', P], ['Acompanhamento', O], ['Cliente ativo', GR]],
     labels: [['Prioritário', R], ['Grande conta', P]],
-    fields: [{ n: 'Cliente', t: 'text', card: true }, { n: 'Valor mensal', t: 'money' }, { n: 'Plano', t: 'select', o: ['Básico', 'Profissional', 'Empresarial'] }],
+    fields: [{ n: 'Cliente', t: 'text', card: true }, { n: 'Valor mensal', t: 'money' }, { n: 'Plano', t: 'select', o: ['Básico', 'Profissional', 'Empresarial'] }, { n: 'Data do kickoff', t: 'date' }],
     rules: [{ when: 'moved', col: 'Cliente ativo', act: 'notify', label: 'Cliente ativo: avisar o responsável' }],
+    proc: { ref: 'Data do kickoff', refDay: 2, lead: 0, q: 'Antecipar todos os prazos em quantos dias? (0 = contar a partir do kickoff)', title: 'Cliente' },
     cards: [
       { t: 'Reunião de kickoff', col: 1, st: 0, due: 2, p: 'high', f: { Cliente: 'Cliente Exemplo', 'Valor mensal': 1500, Plano: 'Profissional' }, ck: [['Pauta', ['Objetivos do cliente', 'Responsáveis dos dois lados', 'Cronograma', 'Acessos necessários']]] },
       { t: 'Configurar conta e importar dados', col: 2, st: 3, due: 7, dep: [0], ck: [['Configuração', ['Criar usuários', 'Importar cadastros', 'Ajustar permissões']]] },
@@ -138,7 +144,8 @@ export const BOARD_TEMPLATES: BoardTemplate[] = [
     desc: 'Planejamento e execução de uma campanha com etapas que dependem umas das outras — ideal para ver na Linha do tempo.',
     columns: [['Planejamento', G], ['Criação', B], ['Aprovação', Y], ['No ar', P], ['Resultados', GR]],
     labels: [['Pago', O], ['Orgânico', GR], ['Parceiros', P]],
-    fields: [{ n: 'Orçamento', t: 'money', card: true }, { n: 'Meta', t: 'text' }],
+    fields: [{ n: 'Orçamento', t: 'money', card: true }, { n: 'Meta', t: 'text' }, { n: 'Campanha', t: 'text' }, { n: 'Data de lançamento', t: 'date' }],
+    proc: { ref: 'Data de lançamento', refDay: 13, lead: 0, q: 'Quantos dias antes da data de lançamento tudo precisa estar pronto?', title: 'Campanha' },
     cards: [
       { t: 'Definir objetivo, público e mensagem', col: 0, st: 0, due: 3, p: 'high', f: { Meta: '300 leads' } },
       { t: 'Criar peças e textos', col: 1, st: 4, due: 10, dep: [0], f: { Orçamento: 2500 }, ck: [['Peças', ['Banner do site', 'Posts', 'E-mail', 'Landing page']]] },
@@ -167,7 +174,8 @@ export const BOARD_TEMPLATES: BoardTemplate[] = [
     desc: 'Do orçamento ao pós-evento: local, fornecedores, convidados e comunicação, com prazos encadeados.',
     columns: [['A planejar', G], ['Contratações', B], ['Preparação', Y], ['Dia do evento', P], ['Pós-evento', GR]],
     labels: [['Fornecedor', O], ['Comunicação', PK], ['Logística', S]],
-    fields: [{ n: 'Custo', t: 'money', card: true }, { n: 'Fornecedor', t: 'text' }, { n: 'Pago', t: 'checkbox' }],
+    fields: [{ n: 'Custo', t: 'money', card: true }, { n: 'Fornecedor', t: 'text' }, { n: 'Pago', t: 'checkbox' }, { n: 'Evento', t: 'text' }, { n: 'Data do evento', t: 'date' }],
+    proc: { ref: 'Data do evento', refDay: 25, lead: 0, q: 'Quantos dias de folga antes da data do evento? (antecipa todos os prazos)', title: 'Evento' },
     cards: [
       { t: 'Definir data, público e orçamento', col: 0, st: 0, due: 3, p: 'high' },
       { t: 'Reservar local', col: 1, st: 4, due: 8, l: [0], dep: [0], f: { Custo: 6000, Fornecedor: 'Espaço Exemplo' } },
@@ -223,8 +231,9 @@ export const BOARD_TEMPLATES: BoardTemplate[] = [
     desc: 'Planejamento, execução e entrega com etapas encadeadas, datas de início e fim e riscos — pronto para a Linha do tempo.',
     columns: [['A fazer', G], ['Em andamento', B], ['Em revisão', Y], ['Concluído', GR]],
     labels: [['Planejamento', P], ['Execução', B], ['Entrega', GR], ['Risco', R]],
-    fields: [{ n: 'Fase', t: 'select', o: ['Planejamento', 'Execução', 'Entrega'], card: true }, { n: 'Horas estimadas', t: 'number' }],
+    fields: [{ n: 'Fase', t: 'select', o: ['Planejamento', 'Execução', 'Entrega'], card: true }, { n: 'Horas estimadas', t: 'number' }, { n: 'Projeto', t: 'text' }, { n: 'Data de entrega', t: 'date' }],
     rules: [{ when: 'moved', col: 'Em revisão', act: 'notify', label: 'Em revisão: avisar o responsável' }],
+    proc: { ref: 'Data de entrega', refDay: 18, lead: 0, q: 'Quantos dias antes da data de entrega tudo precisa estar pronto?', title: 'Projeto' },
     cards: [
       { t: 'Reunião de início (kick-off)', col: 1, st: 0, due: 1, p: 'high', l: [0], f: { Fase: 'Planejamento', 'Horas estimadas': 2 }, ck: [['Pauta', ['Objetivo', 'Escopo', 'Responsáveis', 'Datas']]] },
       { t: 'Levantamento de requisitos', col: 0, st: 2, due: 5, l: [0], dep: [0], f: { Fase: 'Planejamento', 'Horas estimadas': 12 } },
@@ -295,9 +304,10 @@ export async function applyTemplateExtras(boardId: string, t: BoardTemplate, pro
   const colId = (title?: string) => (cols || []).find((c: { title: string }) => c.title === title)?.id || null;
   const taskId = (i: number) => (tasks || []).find((x: { title: string }) => x.title === t.cards[i]?.t)?.id || null;
 
+  let fid = new Map<string, string>();
   if (t.fields?.length) {
     const { data: fs } = await db.from('board_custom_fields').insert(t.fields.map((f, i) => ({ board_id: boardId, name: f.n, type: f.t, options: f.o || [], show_on_card: !!f.card, position: i }))).select('id,name');
-    const fid = new Map(((fs || []) as { id: string; name: string }[]).map((f) => [f.name, f.id]));
+    fid = new Map(((fs || []) as { id: string; name: string }[]).map((f) => [f.name, f.id]));
     const vals: { task_id: string; field_id: string; value: unknown }[] = [];
     t.cards.forEach((c, i) => { const tid = taskId(i); if (!tid || !c.f) return; for (const [k, v] of Object.entries(c.f)) { const f = fid.get(k); if (f) vals.push({ task_id: tid, field_id: f, value: v }); } });
     if (vals.length) await db.from('task_field_values').insert(vals);
@@ -318,6 +328,7 @@ export async function applyTemplateExtras(boardId: string, t: BoardTemplate, pro
     }).filter(Boolean);
     if (rows.length) await db.from('task_automation_rules').insert(rows);
   }
+  if (t.proc) await makeProcessTemplates(boardId, t, fid);
   if (t.form) {
     await db.from('board_forms').insert({
       board_id: boardId, enabled: false, title: t.form.title, intro: t.form.intro, column_id: colId(t.form.col), due_days: t.form.due ?? null,
@@ -327,5 +338,30 @@ export async function applyTemplateExtras(boardId: string, t: BoardTemplate, pro
   }
 }
 
+/** Process models: a "Modelo do processo" template column (first, configured with the reference date, lead days,
+ *  question and title field) holds the model's cards as templates with relative due/start offsets; the regular
+ *  columns start empty and "Duplicar todos os cards" creates the real cards. */
+async function makeProcessTemplates(boardId: string, t: BoardTemplate, fid: Map<string, string>) {
+  const p = t.proc!;
+  const { data: cols } = await db.from('task_board_columns').select('id,position').eq('board_id', boardId).order('position');
+  for (const c of (cols || []) as { id: string; position: number }[]) await db.from('task_board_columns').update({ position: (c.position ?? 0) + 1 }).eq('id', c.id);
+  const { data: col, error } = await db.from('task_board_columns').insert({
+    board_id: boardId, title: 'Modelo do processo', color: '#64748b', position: 0, is_template_column: true,
+    template_ref_field: fid.get(p.ref) || null, template_lead_days: p.lead, template_lead_label: p.q, template_title_field: p.title ? fid.get(p.title) || null : null,
+  }).select('id').single();
+  if (error || !col) return;
+  const { data: tasks } = await db.from('tasks').select('id,title').eq('board_id', boardId);
+  const final = p.refDay - p.lead;
+  for (let i = 0; i < t.cards.length; i++) {
+    const c = t.cards[i];
+    const row = ((tasks || []) as { id: string; title: string }[]).find((x) => x.title === c.t);
+    if (!row) continue;
+    await db.from('tasks').update({
+      status: col.id, is_template: true, position: i, due_date: null, start_date: null, completed_at: null,
+      template_offset_days: c.due != null ? c.due - final : null, template_start_offset_days: c.st != null ? c.st - final : null,
+    }).eq('id', row.id);
+  }
+}
+
 /** What a template brings, for the preview. */
-export const templateSummary = (t: BoardTemplate) => ({ cards: t.cards.length, fields: t.fields?.length || 0, rules: t.rules?.length || 0, deps: t.cards.reduce((a, c) => a + (c.dep?.length || 0), 0), form: !!t.form, checklists: t.cards.reduce((a, c) => a + (c.ck?.length || 0), 0) });
+export const templateSummary = (t: BoardTemplate) => ({ proc: !!t.proc, cards: t.cards.length, fields: t.fields?.length || 0, rules: t.rules?.length || 0, deps: t.cards.reduce((a, c) => a + (c.dep?.length || 0), 0), form: !!t.form, checklists: t.cards.reduce((a, c) => a + (c.ck?.length || 0), 0) });

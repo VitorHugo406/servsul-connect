@@ -41,6 +41,7 @@ export const GUIDE: GuideArticle[] = [
       { t: 'Abra a galeria', d: 'Em Tarefas, clique em "Modelos". À esquerda ficam as áreas (Recursos Humanos, Vendas e atendimento, Marketing, Operações, Financeiro e compras, Projetos e tecnologia) e uma busca; no centro, os modelos; à direita, a prévia das colunas e tudo o que o modelo traz.', img: 'modelos' },
       { t: 'Escolha e dê um nome', d: 'Clique no modelo, ajuste o nome do mural no rodapé e clique em "Usar modelo". Os prazos e datas de início dos exemplos são calculados a partir de hoje.' },
       { t: 'O que já vem pronto', d: 'Conforme o modelo: campos personalizados (ex.: Valor, Origem e Probabilidade no funil de vendas) já preenchidos nos exemplos, automações (ex.: card novo ganha prazo, ao entrar em uma coluna vira prioridade Alta), dependências entre etapas (veja na Linha do tempo) e um formulário público (Trabalhe conosco, Abrir chamado, Pedido de compra, Pedido de manutenção...). O formulário começa pausado: revise e ative em Compartilhar › Formulário.' },
+      { t: 'Modelos de processo', d: 'Onboarding, Desligamento, Implantação de clientes, Lançamento de campanha, Organização de evento e Projeto com etapas trazem as etapas numa coluna "Modelo do processo". Para começar um processo (ex.: um desligamento), use "Duplicar todos os cards" no menu dessa coluna: informe o colaborador, o último dia e a antecedência, e os prazos de todos os cards são calculados.' },
       { t: 'Edite à vontade', d: 'O mural é seu: apague os cards de exemplo, renomeie colunas, ajuste campos (Configurar › Campos personalizados) e automações (Organizar › Automações), no topo do mural. Nada muda nos outros murais.', img: 'quadro' },
     ], rel: ['criar-mural', 'cards'] },
   { slug: 'cards', cat: 'Murais e cards', title: 'Criar, mover e concluir cards', sum: 'Cada tarefa é um card. Ele guarda responsável, prazo, prioridade, etiquetas, checklist, comentários e anexos.',
@@ -236,7 +237,9 @@ export const GUIDE: GuideArticle[] = [
     steps: [
       { t: 'Torne um card template', d: 'Abra o card e clique em "Tornar Template". Ele passa a servir de modelo e não entra nos números do mural.' },
       { t: 'Crie a partir do template', d: 'Na coluna, use o botão de templates ao lado de "Adicionar um cartão" e escolha o modelo. O card nasce com descrição, checklist e etiquetas.' },
-    ], rel: ['repetir-card'] },
+      { t: 'Defina o prazo de cada etapa', d: 'Dentro de um card-template, em "Prazo no processo", diga quando ele vence: dias antes ou depois do prazo final do processo, ou no próprio prazo final. O mesmo vale para a data de início.' },
+      { t: 'Duplique o processo inteiro', d: 'Em uma coluna de template, abra o menu da coluna (⋮) e clique em "Duplicar todos os cards". Preencha as informações do mural (ex.: Colaborador, Último dia, Tipo), escolha a data de referência e responda quantos dias antes dela tudo precisa estar concluído. A prévia mostra o prazo de cada card; ao confirmar, todos os cards são criados de uma vez, já preenchidos, com checklists, etiquetas, responsáveis e dependências.' },
+    ], rel: ['repetir-card', 'modelos'] },
   { slug: 'repetir-card', cat: 'Murais e cards', title: 'Cards que se repetem', sum: 'Programe um card para ser criado de novo todo dia, semana ou mês, na coluna que você escolher.',
     steps: [
       { t: 'Abra a duplicação automática', d: 'No menu do card (ou do template), escolha "Auto-duplicar".' },
