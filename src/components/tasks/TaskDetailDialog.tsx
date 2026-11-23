@@ -415,8 +415,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
   const renderHeader = () => (
     <div className="px-4 pt-3 pb-2">
       <div className="flex items-center gap-2 flex-wrap mb-2">
-        <Badge variant="outline">#{task.task_number}</Badge>
-        <Badge className={cn(
+        <Badge variant="outline" className="tlbl">#{task.task_number}</Badge>
+        <Badge className={cn('tlbl',
           task.priority === 'urgent' && 'bg-red-500',
           task.priority === 'high' && 'bg-orange-500',
           task.priority === 'medium' && 'bg-blue-500',
@@ -425,7 +425,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
           {PRIORITIES.find(p => p.id === task.priority)?.label}
         </Badge>
         {taskLabels && taskLabels.map(l => (
-          <Badge key={l.id} className="text-white text-[10px]" style={{ backgroundColor: l.color }}>{l.name}</Badge>
+          <Badge key={l.id} className="tlbl text-white" style={{ backgroundColor: l.color }}>{l.name}</Badge>
         ))}
       </div>
       {editingTitle ? (

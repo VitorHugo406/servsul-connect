@@ -147,7 +147,7 @@ function ListView({ tasks, cols, col, person, onOpen, done, late, labelsOf, user
                     <DropdownMenu><DropdownMenuTrigger asChild disabled={!edit || !onUpdate}><button type="button" className="bvx-cell"><span className="bvx-pill" style={pill(p[2])}>{p[0]}</span>{edit && onUpdate ? <ChevronDown className="bvx-cv h-3.5 w-3.5" /> : null}</button></DropdownMenuTrigger>
                       <DropdownMenuContent align="start">{Object.entries(PRIO).map(([k, v]) => <DropdownMenuItem key={k} onSelect={() => void onUpdate?.(t, { priority: k })}><span className="bvx-pill" style={pill(v[2])}>{v[0]}</span>{(t.priority || 'medium') === k ? <Check className="ml-auto h-4 w-4" /> : null}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
                   </td>
-                  <td><div className="bvx-tags">{labs.length ? labs.slice(0, 3).map((l, i) => <span key={i} className="bvx-pill" style={pill(l.color)}>{l.name}</span>) : <span className="bvx-mut">—</span>}{labs.length > 3 ? <span className="bvx-mut">+{labs.length - 3}</span> : null}</div></td>
+                  <td><div className="bvx-tags">{labs.length ? labs.slice(0, 3).map((l, i) => <span key={i} className="bvx-pill bvx-tag" style={pill(l.color)}>{l.name}</span>) : <span className="bvx-mut">—</span>}{labs.length > 3 ? <span className="bvx-mut">+{labs.length - 3}</span> : null}</div></td>
                   {cf.map((f) => { const v = fieldText(f, ex?.valueOf(t.id, f.id)); return <td key={f.id} title={v}>{v || <span className="bvx-mut">—</span>}</td>; })}
                 </tr>);
             })}

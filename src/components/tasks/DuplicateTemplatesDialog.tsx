@@ -113,28 +113,27 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
         db.from('task_dependencies').select('task_id,depends_on').in('task_id', ids),
         db.from('tasks').select('id').eq('board_id', boardId).eq('status', target).eq('is_archived', false),
       ]);
-      let pos = (inCol || []).length;
+      // ONE insert for all cards (position is unique per row, so returned rows map back to their template)
+      const base = (inCol || []).length;
+      const rows = tpls.map((t, i) => { const due = dueOf(t), start = startOf(t); return withCompany({
+        board_id: boardId, title: titleOf(t).slice(0, 500), description: t.description, status: target, priority: t.priority || 'medium',
+        cover_image: t.cover_image, assigned_to: t.assigned_to, position: base + i, created_by: profile?.id, is_template: false,
+        due_date: due ? due.toISOString() : null, start_date: start ? start.toISOString() : null,
+      }); });
+      const { data: made, error: mkErr } = await db.from('tasks').insert(rows).select('id,position');
+      if (mkErr || !made || made.length !== tpls.length) throw mkErr || new Error('insert');
       const map = new Map<string, string>();
-      for (const t of tpls) {
-        const due = dueOf(t), start = startOf(t);
-        const { data, error } = await db.from('tasks').insert(withCompany({
-          board_id: boardId, title: titleOf(t).slice(0, 500), description: t.description, status: target, priority: t.priority || 'medium',
-          cover_image: t.cover_image, assigned_to: t.assigned_to, position: pos++, created_by: profile?.id, is_template: false,
-          due_date: due ? due.toISOString() : null, ...(start ? { start_date: start.toISOString() } : {}),
-        })).select('id').single();
-        if (error || !data) throw error || new Error('insert');
-        map.set(t.id, data.id);
-      }
+      for (const r of made as { id: string; position: number }[]) { const t = tpls[r.position - base]; if (t) map.set(t.id, r.id); }
       const nid = (id: string) => map.get(id);
       const a = ((asg.data || []) as { task_id: string; profile_id: string }[]).map((r) => ({ task_id: nid(r.task_id), profile_id: r.profile_id })).filter((r) => r.task_id);
       if (a.length) await db.from('task_assignees').insert(a);
       const l = ((lbl.data || []) as { task_id: string; label_id: string }[]).map((r) => ({ task_id: nid(r.task_id), label_id: r.label_id })).filter((r) => r.task_id);
       if (l.length) await db.from('task_label_assignments').insert(l);
       const gmap = new Map<string, string>();
-      for (const g of (grp.data || []) as { id: string; task_id: string; title: string; position: number }[]) {
-        const tid = nid(g.task_id); if (!tid) continue;
-        const { data } = await db.from('subtask_groups').insert({ task_id: tid, title: g.title, position: g.position }).select('id').single();
-        if (data) gmap.set(g.id, data.id);
+      const gsrc = ((grp.data || []) as { id: string; task_id: string; title: string; position: number }[]).filter((g) => nid(g.task_id));
+      if (gsrc.length) {
+        const { data: gnew } = await db.from('subtask_groups').insert(gsrc.map((g) => ({ task_id: nid(g.task_id), title: g.title, position: g.position }))).select('id,task_id,title,position');
+        for (const g of gsrc) { const n = ((gnew || []) as { id: string; task_id: string; title: string; position: number }[]).find((x) => x.task_id === nid(g.task_id) && x.title === g.title && x.position === g.position); if (n) gmap.set(g.id, n.id); }
       }
       const s = ((sub.data || []) as { task_id: string; title: string; position: number; group_id: string | null }[])
         .map((r) => ({ task_id: nid(r.task_id), title: r.title, position: r.position, group_id: r.group_id ? gmap.get(r.group_id) || null : null })).filter((r) => r.task_id);

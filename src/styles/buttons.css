@@ -37,3 +37,7 @@ html:not(#_) :is(.gp-nav button.gp-on, .dk-tb button.on, .dk-nav button.on, .wd-
 button.ui-sel.sel-btn { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; height: 36px; min-height: 36px; padding: 0 12px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--background)); color: hsl(var(--foreground)); font-size: 13px; font-weight: 500; text-align: left; box-shadow: none; }
 button.ui-sel.sel-btn:hover { background: hsl(var(--muted)); }
 button.ui-sel.sel-btn .sel-chev { color: hsl(var(--muted-foreground)); }
+
+/* Trello-like labels in the card dialog header (#number, priority, labels) */
+.tlbl { border-radius: 4px !important; height: 20px; padding: 0 8px !important; font-size: 11px !important; font-weight: 700 !important; border: 0; box-shadow: none; }
+.tlbl[class*="outline"], .tlbl:not([style]):not([class*="bg-"]) { border: 1px solid hsl(var(--border)); }

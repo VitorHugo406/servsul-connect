@@ -855,20 +855,19 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
     if (result.error) {
       toast.error('Erro ao criar card a partir do template');
     } else {
-      // Copy subtasks from template
-      const { data: subtasks } = await supabase
-        .from('task_subtasks')
-        .select('*')
-        .eq('task_id', template.id)
-        .order('position');
-      if (subtasks && subtasks.length > 0 && result.data) {
-        for (const st of subtasks) {
-          await supabase.from('task_subtasks').insert({
-            task_id: result.data.id,
-            title: st.title,
-            position: st.position,
-            group_id: st.group_id,
-          });
+      // Copy the template's checklists: groups first (new ids), then every item in ONE insert
+      if (result.data) {
+        const [{ data: groups }, { data: subtasks }] = await Promise.all([
+          supabase.from('subtask_groups').select('id,title,position').eq('task_id', template.id),
+          supabase.from('task_subtasks').select('title,position,group_id').eq('task_id', template.id).order('position'),
+        ]);
+        const gmap = new Map<string, string>();
+        if (groups && groups.length) {
+          const { data: ng } = await supabase.from('subtask_groups').insert(groups.map((g) => ({ task_id: result.data!.id, title: g.title, position: g.position }))).select('id,title,position');
+          for (const g of groups) { const n = (ng || []).find((x) => x.title === g.title && x.position === g.position); if (n) gmap.set(g.id, n.id); }
+        }
+        if (subtasks && subtasks.length) {
+          await supabase.from('task_subtasks').insert(subtasks.map((st) => ({ task_id: result.data!.id, title: st.title, position: st.position, group_id: st.group_id ? gmap.get(st.group_id) || null : null })));
         }
       }
       toast.success('Card criado a partir do template!');
@@ -1730,9 +1729,9 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                               <span
                                 key={l.id}
                                 className={cn(
-                                  'rounded-sm transition-all',
+                                  'rounded-[4px] transition-all',
                                   expandedLabels
-                                    ? 'inline-flex items-center h-5 px-2 text-[10px] font-semibold text-white'
+                                    ? 'inline-flex items-center h-5 px-2 text-[11px] font-bold text-white'
                                     : 'inline-block w-10 h-2'
                                 )}
                                 style={{ backgroundColor: l.color }}
@@ -2056,9 +2055,9 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                                   <span
                                     key={l.id}
                                     className={cn(
-                                      'rounded-sm transition-all',
+                                      'rounded-[4px] transition-all',
                                       expandedLabels
-                                        ? 'inline-flex items-center h-5 px-2 text-[10px] font-semibold text-white'
+                                        ? 'inline-flex items-center h-5 px-2 text-[11px] font-bold text-white'
                                         : 'inline-block w-10 h-2'
                                     )}
                                     style={{ backgroundColor: l.color }}

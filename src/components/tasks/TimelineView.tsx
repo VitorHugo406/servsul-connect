@@ -6,8 +6,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import { useBoardExtras } from '@/hooks/useBoardExtras';
+import { getCoverDisplay } from '@/components/tasks/taskConstants';
+import { SignedStorageImage } from '@/components/common/SignedStorageMedia';
 
-type T = { id: string; title: string; status: string; due_date?: string | null; start_date?: string | null; completed_at?: string | null; assigned_to?: string | null; task_number?: number | null };
+// bar colour = the card's cover (colour or photo); without a cover, the column colour
+const COVER_HEX: Record<string, string> = { 'bg-blue-500': '#3b82f6', 'bg-green-500': '#22c55e', 'bg-yellow-500': '#eab308', 'bg-red-500': '#ef4444', 'bg-purple-500': '#a855f7', 'bg-pink-500': '#ec4899', 'bg-orange-500': '#f97316' };
+
+type T = { id: string; title: string; status: string; cover_image?: string | null; due_date?: string | null; start_date?: string | null; completed_at?: string | null; assigned_to?: string | null; task_number?: number | null };
 type C = { id: string; title: string; color?: string | null; is_conclusion?: boolean | null };
 type Upd = { start_date?: string | null; due_date?: string | null };
 const DAY = 864e5;
@@ -146,13 +151,14 @@ export function TimelineView({ tasks, cols, person, onOpen, done, late, isLocked
               {rows.map((r, i) => r.kind === 'h' ? <div key={'g' + i} className="tl-grow" style={{ top: i * RH }} /> : (
                 <div key={r.t.id} className="tl-row" style={{ top: i * RH }}
                   onClick={(e) => { if (span(r.t) || isLocked(r.t) || !onUpdate) return; const rect = (e.currentTarget as HTMLElement).getBoundingClientRect(); const day = addD(from, Math.floor((e.clientX - rect.left) / px)); void onUpdate(r.t, { start_date: at(day, null, 9), due_date: at(day, null, 18) }); }}>
-                  {(() => { const g = geo(r.t); if (!g) return <span className="tl-hint">clique para definir datas</span>; const c = cols.find((z) => z.id === r.t.status); const color = late(r.t) ? '#e5484d' : done(r.t) ? '#22a06b' : (c?.color || '#2f6fed'); const lk = isLocked(r.t) || !onUpdate;
+                  {(() => { const g = geo(r.t); if (!g) return <span className="tl-hint">clique para definir datas</span>; const c = cols.find((z) => z.id === r.t.status); const cv = getCoverDisplay(r.t.cover_image || null); const img = cv.type === 'image' ? cv.value : null; const color = (cv.type === 'color' && COVER_HEX[cv.value]) || c?.color || '#2f6fed'; const lk = isLocked(r.t) || !onUpdate; const st = late(r.t) ? 'late' : done(r.t) ? 'done' : '';
                     return (
-                      <div className={`tl-bar ${drag?.id === r.t.id ? 'drag' : ''}`} style={{ left: g.left, width: Math.max(g.width, px), background: color, borderColor: color }}
+                      <div className={`tl-bar ${st} ${img ? 'img' : ''} ${drag?.id === r.t.id ? 'drag' : ''}`} style={{ left: g.left, width: Math.max(g.width, px), background: color, borderColor: color }}
                         onPointerDown={(e) => { if (lk || (e.target as HTMLElement).dataset.edge) return; e.preventDefault(); setDrag({ id: r.t.id, mode: 'move', x0: e.clientX, dx: 0 }); }}
                         onClick={(e) => { e.stopPropagation(); if (!drag) onOpen(r.t); }} title={`${r.t.title} · ${g.s.toLocaleDateString('pt-BR')} → ${g.e.toLocaleDateString('pt-BR')}`}>
+                        {img ? <span className="tl-img" aria-hidden="true"><SignedStorageImage url={img} alt="" className="h-full w-full object-cover" /></span> : null}
                         {!lk ? <span className="tl-edge l" data-edge="1" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setDrag({ id: r.t.id, mode: 'l', x0: e.clientX, dx: 0 }); }} /> : null}
-                        {g.width >= 90 ? <span className="tl-bt" style={{ color: onColor(color) }}>{r.t.title}</span> : <span className="tl-bt" />}
+                        {g.width >= 90 ? <span className="tl-bt" style={{ color: img ? '#fff' : onColor(color) }}>{r.t.title}</span> : <span className="tl-bt" />}
                         {g.width < 90 ? <span className="tl-out">{r.t.title}</span> : null}
                         {!lk ? <span className="tl-edge r" data-edge="1" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setDrag({ id: r.t.id, mode: 'r', x0: e.clientX, dx: 0 }); }} /> : null}
                       </div>); })()}
