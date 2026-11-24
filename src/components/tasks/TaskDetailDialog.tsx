@@ -956,7 +956,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
       <button type="button" className="tdx-tog" onClick={() => setDetOpen((v) => !v)} aria-expanded={detOpen}>
         <ChevronRight className="tdx-chev h-4 w-4" />
         <span className="tdx-h">Detalhes</span>
-        {!detOpen ? <span className="tdx-sum"><i className="tdx-dot" />{curCol?.title || '—'}{dueInfo ? <em className={`tdx-due ${dueInfo.cls}`}>{dueInfo.txt} · {dueInfo.hint}</em> : null}</span> : null}
+        {!detOpen ? <span className="tdx-sum"><i className="tdx-dot" /><span className="tdx-sum-t">{curCol?.title || '—'}</span>{dueInfo ? <em className={`tdx-due ${dueInfo.cls}`}>{dueInfo.txt} · {dueInfo.hint}</em> : null}</span> : null}
       </button>
       {detOpen ? <>
       <div className="tdx-prop"><span>Situação</span><b><i className="tdx-dot" />{curCol?.title || '—'}</b></div>
