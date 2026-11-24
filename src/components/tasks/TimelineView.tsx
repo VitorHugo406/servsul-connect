@@ -39,7 +39,6 @@ export function TimelineView({ tasks, cols, person, onOpen, done, late, isLocked
   const [zoom, setZoom] = useState<'day' | 'week'>('day');
   const px = zoom === 'day' ? 34 : 13;
   const [from, setFrom] = useState(() => addD(startOf(new Date()), -7));
-  const days = zoom === 'day' ? 56 : 182;
   const [closed, setClosed] = useState<Set<string>>(new Set());
   const [drag, setDrag] = useState<{ id: string; mode: 'move' | 'l' | 'r'; x0: number; dx: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -62,6 +61,17 @@ export function TimelineView({ tasks, cols, person, onOpen, done, late, isLocked
   }, [tasks, cols, closed]);
   const rowIndex = useMemo(() => { const m = new Map<string, number>(); rows.forEach((r, i) => { if (r.kind === 't') m.set(r.t.id, i); }); return m; }, [rows]);
   const RH = 36;
+  // the grid always covers the screen width AND every dated card (it used to stop at a fixed 56 days, so bars past
+  // that point floated outside the grid and the right side was blank)
+  const [viewW, setViewW] = useState(1600);
+  useEffect(() => {
+    const el = scroller.current; if (!el) return;
+    const ro = new ResizeObserver(() => setViewW(el.clientWidth)); ro.observe(el); setViewW(el.clientWidth);
+    return () => ro.disconnect();
+  }, []);
+  const lastDay = useMemo(() => { let m: Date | null = null; for (const t of tasks) { const sp = span(t); if (sp && (!m || sp[1] > m)) m = sp[1]; } return m; // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks]);
+  const days = Math.min(zoom === 'day' ? 730 : 1460, Math.max(zoom === 'day' ? 56 : 182, Math.ceil(viewW / px) + 2, lastDay ? diffD(lastDay, from) + (zoom === 'day' ? 10 : 28) : 0));
 
   // live geometry while dragging
   const geo = (t: T) => {
@@ -155,7 +165,7 @@ export function TimelineView({ tasks, cols, person, onOpen, done, late, isLocked
             </button>))}
         </div>
         <div className="tl-right">
-          <div style={{ width: W, position: 'relative' }}>
+          <div style={{ width: W, position: 'relative', overflow: 'clip' }}>
             <div className="tl-head">
               <div className="tl-months">{months.map((m) => <span key={m.label} style={{ left: m.left, width: m.width }}>{m.label}</span>)}</div>
               <div className="tl-days">{dayList.map((d, i) => (zoom === 'day' || d.getDay() === 1) ? <span key={i} className={diffD(d, today) === 0 ? 'today' : ''} style={{ left: i * px, width: zoom === 'day' ? px : px * 7 }}>{zoom === 'day' ? d.getDate() : `${d.getDate()}/${d.getMonth() + 1}`}</span> : null)}</div>
