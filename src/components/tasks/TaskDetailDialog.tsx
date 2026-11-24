@@ -1313,38 +1313,35 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
   // ===== DESKTOP LAYOUT =====
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
+      <DialogContent className="ui-center tdx w-[min(1200px,94vw)] max-w-none h-[88vh] max-h-[88vh] overflow-hidden flex flex-col p-0 gap-0">
         {renderCover()}
         {renderTemplateBanner()}
-          {renderWarBanner()}
+        {renderWarBanner()}
         {L(renderHeader())}
-        <div className="h-px bg-border mx-4" />
-        {L(renderActionButtons())}
-        <div className="h-px bg-border mx-4" />
 
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left: Details & Subtasks */}
-          <ScrollArea className="flex-1 border-r border-border">
-            <div className="pb-6">
-              {!task.is_template && L(renderInfoRow())}
-              {L(renderDescription())}
+        {/* Two clean columns: the card's content on the left, conversation on the right */}
+        <div className="flex flex-1 min-h-0 border-t border-border">
+          <ScrollArea className="flex-1 min-w-0">
+            <div className="tdx-main pb-8">
+              <div className="tdx-sec">{L(renderActionButtons())}</div>
+              {!task.is_template && (task.assignee || task.due_date) ? <div className="tdx-sec">{L(renderInfoRow())}</div> : null}
+              <div className="tdx-sec">{L(renderDescription())}</div>
               {L(renderDecisions())}
               {!task.is_template ? <TaskTimeTracker taskId={task.id} forceOpen={extraOpen.has('time')} /> : null}
-            {!task.is_template && boardId && hasApprovals ? <CardApproval taskId={task.id} columns={(columns || []) as never} users={(allUsers || []) as never} readOnly={warLocked} forceOpen={extraOpen.has('approval')} onClose={() => setExtraOpen((x) => { const n = new Set(x); n.delete('approval'); return n; })} /> : null}
+              {!task.is_template && boardId && hasApprovals ? <CardApproval taskId={task.id} columns={(columns || []) as never} users={(allUsers || []) as never} readOnly={warLocked} forceOpen={extraOpen.has('approval')} onClose={() => setExtraOpen((x) => { const n = new Set(x); n.delete('approval'); return n; })} /> : null}
               {!task.is_template && boardId ? <CardExtrasPanel task={task as never} boardId={boardId} readOnly={warLocked} showLinks={extraOpen.has('links')} showDeps={extraOpen.has('deps')} conclusionIds={new Set((columns || []).filter((c) => (c as { is_conclusion?: boolean }).is_conclusion).map((c) => c.id))} /> : null}
               {renderProgress()}
               {renderSubtasks()}
-              </div>
+            </div>
           </ScrollArea>
 
-          {/* Right: Comments & Activity */}
-          <div className="w-[320px] flex-shrink-0 flex flex-col max-h-full">
+          <aside className="tdx-side w-[380px] flex-shrink-0 flex flex-col min-h-0 border-l border-border">
             {commentsHeader}
             <ScrollArea className="flex-1">
               {renderTimeline()}
             </ScrollArea>
             {renderCommentInput()}
-          </div>
+          </aside>
         </div>
 
         {L(renderFooter())}

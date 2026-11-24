@@ -192,3 +192,5 @@ html.dark .bvx-danger { color: #f87171; }
 .tl-bar > .tl-bt { text-shadow: 0 1px 2px rgba(0,0,0,.25); }
 .tl-bar.late { box-shadow: 0 0 0 2px #e5484d; }
 .tl-bar.done { opacity: .72; }
+/* titles written beside narrow bars sit on a small solid chip, so a dependency line never runs through the text */
+.tl-out { background: hsl(var(--card)); padding: 1px 6px; border-radius: 6px; top: 2px; z-index: 3; box-shadow: 0 0 0 2px hsl(var(--card)); }
