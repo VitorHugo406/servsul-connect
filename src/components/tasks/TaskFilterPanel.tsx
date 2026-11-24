@@ -236,7 +236,7 @@ export function TaskFilterPanel({ open, onOpenChange, filter, onFilterChange, me
                       });
                     }}
                   />
-                  <div className="w-full h-6 rounded" style={{ backgroundColor: l.color }} />
+                  <div className="flex h-7 w-full items-center rounded-[4px] px-2.5 text-xs font-bold text-white" style={{ backgroundColor: l.color, textShadow: '0 1px 1px rgba(0,0,0,.25)' }}>{l.name}</div>
                 </label>
               ))}
             </div>

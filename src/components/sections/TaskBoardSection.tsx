@@ -365,6 +365,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
     removeLabel,
     getTaskAssignees,
     setTaskAssignees: setTaskAssigneesDb,
+    refetch: refetchDetails,
   } = useBoardTaskDetails(board.id);
   const { createDuplication, deleteDuplication, getTaskDuplication } = useCardDuplications(board.id);
   const { rules: workflowRules, canMoveToColumn } = useWorkflowRules(board.id);
@@ -3227,7 +3228,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
 
       {/* Report Dialog */}
       <CustomFieldsDialog open={showFields} onOpenChange={setShowFields} canManage={isAdminOrOwner} />
-      {dupAllColumn ? <DuplicateTemplatesDialog open={!!dupAllColumn} onOpenChange={(o) => { if (!o) setDupAllColumn(null); }} boardId={board.id} column={dupAllColumn as never} columns={columns as never} canConfigure={isAdminOrOwner} onCreated={() => void refetchTasks()} /> : null}
+      {dupAllColumn ? <DuplicateTemplatesDialog open={!!dupAllColumn} onOpenChange={(o) => { if (!o) setDupAllColumn(null); }} boardId={board.id} column={dupAllColumn as never} columns={columns as never} canConfigure={isAdminOrOwner} onCreated={() => { void refetchTasks(); void refetchDetails(); void extras?.reload(); }} /> : null}
       <ReportDialog open={showReport} onOpenChange={setShowReport} tasks={tasks.filter(t => !t.is_template)} columns={columns} boardName={board.name} />
       <BoardSummaryDialog open={showAiSummary} onOpenChange={setShowAiSummary} boardId={board.id} boardName={board.name} />
       <CardsFromTextDialog open={showAiCards} onOpenChange={setShowAiCards} boardId={board.id} users={allUsers} onCreated={() => void refetchTasks()} />
