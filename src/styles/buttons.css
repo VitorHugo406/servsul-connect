@@ -41,3 +41,23 @@ button.ui-sel.sel-btn .sel-chev { color: hsl(var(--muted-foreground)); }
 /* Trello-like labels in the card dialog header (#number, priority, labels) */
 .tlbl { border-radius: 4px !important; height: 20px; padding: 0 8px !important; font-size: 11px !important; font-weight: 700 !important; border: 0; box-shadow: none; }
 .tlbl[class*="outline"], .tlbl:not([style]):not([class*="bg-"]) { border: 1px solid hsl(var(--border)); }
+
+/* PC: dialogs open as a full-height side panel on the right (like Meu Perfil, taller) with a lighter blur.
+   Mobile keeps the centred dialog. Opt out with the class `ui-center`. */
+[data-ui="dialog"] > * { min-width: 0; }
+@media (min-width: 768px) {
+  [data-ui="dialog"][data-side] {
+    position: fixed !important; left: auto !important; right: 12px !important; top: 12px !important; bottom: 12px !important;
+    width: calc(100vw - 24px) !important; height: auto !important; max-height: none !important;
+    transform: none !important; translate: none !important;
+    border-radius: 20px !important; border: 1px solid hsl(var(--border)) !important;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, .18) !important;
+    overflow-x: hidden !important; align-content: start;
+    animation: ui-side-in 220ms cubic-bezier(.2, .8, .2, 1) both !important;
+  }
+  [data-ui="dialog"][data-side][data-state="closed"] { animation: ui-side-out 160ms ease-in both !important; }
+  :where([data-ui="dialog"][data-side]) { overflow-y: auto; }
+  html body .ui-side-overlay.ui-side-overlay { background: rgba(15, 23, 42, .10) !important; backdrop-filter: blur(2px) !important; -webkit-backdrop-filter: blur(2px) !important; }
+}
+@keyframes ui-side-in { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes ui-side-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(28px); } }

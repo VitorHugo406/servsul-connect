@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sel } from '@/components/ui/Sel';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { CustomField } from '@/hooks/useBoardExtras';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,7 +101,7 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
   const setVal = (id: string, v: unknown) => setVals((p) => ({ ...p, [id]: v }));
   const fieldInput = (f: CustomField) => {
     const v = vals[f.id];
-    if (f.type === 'checkbox') return <label className="flex h-9 items-center gap-2 text-sm"><input type="checkbox" checked={!!v} onChange={(e) => setVal(f.id, e.target.checked)} />Sim</label>;
+    if (f.type === 'checkbox') return <label className="flex h-9 cursor-pointer items-center gap-2 text-sm"><Checkbox checked={!!v} onCheckedChange={(c) => setVal(f.id, c === true)} />Sim</label>;
     if (f.type === 'select') return <Sel className="ui-sel w-full" value={String(v ?? '')} onChange={(e) => setVal(f.id, e.target.value || null)} aria-label={f.name}><option value="">—</option>{f.options.map((o) => <option key={o} value={o}>{o}</option>)}</Sel>;
     if (f.type === 'date') return <Input type="date" value={String(v ?? '')} onChange={(e) => setVal(f.id, e.target.value || null)} aria-label={f.name} />;
     if (f.type === 'number' || f.type === 'money') return <Input type="number" inputMode="decimal" value={v == null ? '' : String(v)} onChange={(e) => setVal(f.id, e.target.value === '' ? null : Number(e.target.value))} aria-label={f.name} />;
@@ -175,7 +176,7 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
 
   return (
     <Dialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto overflow-x-hidden">
         <DialogTitle className="flex items-center gap-2"><Copy className="h-5 w-5" />Duplicar todos os cards de “{column.title}”</DialogTitle>
         {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div> : !tpls.length ? (
           <p className="py-6 text-center text-sm text-muted-foreground">Esta coluna ainda não tem cards-template. Crie os cards do processo nela e volte aqui.</p>
@@ -217,7 +218,7 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1 text-sm"><span className="font-medium">Onde criar os cards</span>
-                {hasOwn ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={own} onChange={(e) => setOwn(e.target.checked)} />Cada card na sua coluna (definida no modelo)</label> : null}
+                {hasOwn ? <label className="flex cursor-pointer items-center gap-2.5 rounded-[10px] border border-border px-3 py-2 text-sm transition-colors hover:bg-muted/50"><Checkbox checked={own} onCheckedChange={(v) => setOwn(v === true)} />Cada card na sua coluna (definida no modelo)</label> : null}
                 {own && hasOwn ? <span className="text-xs text-muted-foreground">Cards sem coluna definida vão para:</span> : null}
                 <Sel className="ui-sel w-full" value={target} onChange={(e) => setTarget(e.target.value)} aria-label="Coluna de destino">{targets.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</Sel>
               </div>

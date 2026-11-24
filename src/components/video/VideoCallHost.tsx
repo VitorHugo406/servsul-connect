@@ -72,7 +72,7 @@ export function CallMessageCard({ room, own }: { room: { id: string; audio: bool
 function VideoInfoDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="ui-center max-w-lg">
         <DialogHeader><DialogTitle>Como funcionam as chamadas</DialogTitle><DialogDescription>Chamadas de voz e de vídeo do próprio ewvon, no chat e nas reuniões do calendário.</DialogDescription></DialogHeader>
         <div className="space-y-3 text-[13px] text-muted-foreground">
           <p><b className="text-foreground">Plano:</b> disponível no plano <b>Empresarial</b>, no PC e no celular.</p>
