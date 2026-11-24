@@ -59,6 +59,7 @@ export function applyFilter(
   currentProfileId: string | undefined,
   conclusionColumnIds: string[],
   getTaskLabels: (taskId: string) => TaskLabel[],
+  fieldHay?: (taskId: string) => string,
 ): BoardTask[] {
   if (!isFilterActive(filter)) return tasks;
 
@@ -66,7 +67,7 @@ export function applyFilter(
     // Keyword
     if (filter.keyword) {
       const q = filter.keyword.toLowerCase();
-      if (!task.title.toLowerCase().includes(q) && !task.description?.toLowerCase().includes(q) && !`#${task.task_number}`.includes(q)) {
+      if (!task.title.toLowerCase().includes(q) && !task.description?.toLowerCase().includes(q) && !`#${task.task_number}`.includes(q) && !(fieldHay?.(task.id) || '').includes(q)) {
         return false;
       }
     }

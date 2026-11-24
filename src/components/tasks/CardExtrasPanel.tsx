@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { ptBR } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
-import { Check, Lock, Plus, Search, X } from 'lucide-react';
+import { Check, ChevronRight, Lock, Plus, Search, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useBoardExtras, fieldText, type CustomField } from '@/hooks/useBoardExtras';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -62,7 +62,7 @@ function FieldInput({ f, value, onChange, disabled }: { f: CustomField; value: u
     </label>);
 }
 
-export function CardExtrasPanel({ task, boardId, readOnly, conclusionIds, showLinks, showDeps, only }: { task: { id: string }; boardId: string; readOnly?: boolean; conclusionIds?: Set<string>; showLinks?: boolean; showDeps?: boolean; only?: 'fields' | 'rest' }) {
+export function CardExtrasPanel({ task, boardId, readOnly, conclusionIds, showLinks, showDeps, only, fieldsOpen, onToggleFields }: { task: { id: string }; boardId: string; readOnly?: boolean; conclusionIds?: Set<string>; showLinks?: boolean; showDeps?: boolean; only?: 'fields' | 'rest'; fieldsOpen?: boolean; onToggleFields?: () => void }) {
   const x = useBoardExtras();
   const [all, setAll] = useState<Mini[]>([]);
   const [q, setQ] = useState(''); const [pick, setPick] = useState(false);
@@ -84,15 +84,19 @@ export function CardExtrasPanel({ task, boardId, readOnly, conclusionIds, showLi
   return (
     <>
       {only !== 'rest' && x.fields.length ? (
-        <div className="px-4 py-2">
-          <H>Campos</H>
-          <div className="-mx-2 max-w-[520px]">
+        <div className={`px-4 py-2 ${onToggleFields ? 'tdx-props' : ''} ${fieldsOpen ? 'open' : ''}`}>
+          {onToggleFields ? (
+            <button type="button" className="tdx-tog" onClick={onToggleFields} aria-expanded={!!fieldsOpen}>
+              <ChevronRight className="tdx-chev h-4 w-4" /><span className="tdx-h">Campos</span>
+              {!fieldsOpen ? <span className="tdx-sum">{x.fields.filter((f) => { const v = x.valueOf(task.id, f.id); return v !== null && v !== undefined && v !== '' && v !== false; }).length}/{x.fields.length} preenchidos</span> : null}
+            </button>) : <H>Campos</H>}
+          {onToggleFields && !fieldsOpen ? null : <div className="-mx-2 max-w-[520px]">
             {x.fields.map((f) => (
               <div key={f.id} className="flex items-center gap-2">
                 <span className="w-[130px] shrink-0 truncate px-2 text-[13px] text-muted-foreground" title={f.name}>{f.name}</span>
                 <div className="min-w-0 flex-1"><FieldInput f={f} value={x.valueOf(task.id, f.id)} disabled={readOnly} onChange={(v) => void x.setValue(task.id, f.id, v)} /></div>
               </div>))}
-          </div>
+          </div>}
         </div>) : null}
       {only !== 'fields' && depsVisible ? (
         <div className="px-4 py-2">

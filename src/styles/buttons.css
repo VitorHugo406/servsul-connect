@@ -92,14 +92,21 @@ html body button.ai-btn:disabled { opacity: .55; }
   .tdx .tdx-head { position: relative; padding: 18px 56px 14px 24px !important; background: linear-gradient(120deg, color-mix(in srgb, var(--colc) 16%, hsl(var(--card))) 0%, hsl(var(--card)) 70%); }
   .tdx .tdx-head::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 4px; border-radius: 0 4px 4px 0; background: var(--colc); }
   .tdx .tdx-title { font-size: 24px; line-height: 1.25; letter-spacing: -.01em; }
-  .tdx .tdx-top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 4px 0 12px; align-items: stretch; }
+  .tdx .tdx-top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 4px 0 12px; align-items: start; }
   .tdx .tdx-top:has(> :nth-child(2)) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .tdx .tdx-top > div:not(:empty) { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 16px; padding: 10px 6px; box-shadow: 0 1px 2px rgba(15, 23, 42, .04); }
   .tdx .tdx-top > div > .px-4 { padding-left: 10px; padding-right: 10px; }
   .tdx .tdx-full { margin-bottom: 12px; }
   .tdx .tdx-more:empty { display: none; }
   .tdx .tdx-props { padding: 0 10px 2px; }
-  .tdx .tdx-props .tdx-h { padding: 0 0 6px; }
+  .tdx .tdx-props .tdx-h { padding: 0; }
+  .tdx .tdx-tog { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 30px; padding: 0; background: none; border: 0; text-align: left; cursor: pointer; border-radius: 8px; }
+  .tdx .tdx-props.px-4 { padding-left: 10px; padding-right: 10px; }
+  .tdx .tdx-props.open .tdx-tog { margin-bottom: 4px; }
+  .tdx .tdx-chev { color: hsl(var(--muted-foreground)); transition: transform .18s ease; flex-shrink: 0; }
+  .tdx .tdx-props.open .tdx-chev { transform: rotate(90deg); }
+  .tdx .tdx-sum { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-size: 12.5px; color: hsl(var(--foreground)); white-space: nowrap; overflow: hidden; }
+  .tdx .tdx-tog:hover .tdx-h { color: hsl(var(--foreground)); }
   .tdx .tdx-prop { display: grid; grid-template-columns: 110px minmax(0, 1fr); align-items: center; min-height: 34px; font-size: 13px; }
   .tdx .tdx-prop > span { color: hsl(var(--muted-foreground)); }
   .tdx .tdx-prop > b { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 500; color: hsl(var(--foreground)); flex-wrap: wrap; }

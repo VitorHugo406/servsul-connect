@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { PublicLinkSection } from '@/components/tasks/PublicLinkSection';
 import { DuplicateTemplatesDialog } from '@/components/tasks/DuplicateTemplatesDialog';
 import { InboundKeySection } from '@/components/tasks/InboundKeySection';
@@ -348,6 +349,8 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
   const { tasks, archivedTasks, loading: tasksLoading, createTask, updateTask, deleteTask, moveTask, reorderInColumn, archiveTask, unarchiveTask, archiveColumnTasks, refetch: refetchTasks } = useBoardTasks(board.id, restrictedTaskId);
   const warLocks = useWarRoomLockedTasks();
   const extras = useBoardExtras();
+  // text of every custom field of a card, so the search finds cards by their field values too
+  const fieldHay = (taskId: string) => (extras ? extras.fields.map((f) => fieldText(f, extras.valueOf(taskId, f.id))).join(' ').toLowerCase() : '');
   const [showFields, setShowFields] = useState(false);
   /** open card this one depends on (blocks concluding it), or null */
   const openBlocker = (taskId: string) => {
@@ -684,8 +687,9 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
   // Apply filter to tasks
   const conclusionColumnIds = useMemo(() => columns.filter(c => c.is_conclusion).map(c => c.id), [columns]);
   const filteredTasks = useMemo(
-    () => applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels).filter(t => !t.is_template),
-    [tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels]
+    () => applyFilter(tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels, fieldHay).filter(t => !t.is_template),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tasks, taskFilter, profile?.id, conclusionColumnIds, getTaskLabels, extras?.fields, extras?.valueOf]
   );
   const [dupAllColumn, setDupAllColumn] = useState<(typeof columns)[number] | null>(null);
   const templateTasks = useMemo(() => tasks.filter(t => t.is_template && !t.is_archived), [tasks]);
@@ -1306,10 +1310,13 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
             {showSearch && searchQuery.trim() && !isMobile && (() => {
               const q = searchQuery.toLowerCase().trim();
               const allSearchTasks = [...tasks, ...archivedTasks].filter(t =>
-                t.title.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q) || `#${t.task_number}`.includes(q)
+                t.title.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q) || `#${t.task_number}`.includes(q) || fieldHay(t.id).includes(q)
               );
-              return (
-                <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-lg border border-border bg-card shadow-lg overflow-hidden max-h-72 overflow-y-auto">
+              // portal: the board columns create their own layers, so an absolute list under the header got hidden behind them
+              const r = boardSearchRef.current?.getBoundingClientRect();
+              const w = Math.max(r?.width || 0, 340);
+              return createPortal(
+                <div style={{ position: 'fixed', top: (r?.bottom || 0) + 6, left: Math.min(r?.left || 0, window.innerWidth - w - 12), width: w, zIndex: 80 }} className="rounded-[10px] border border-border bg-card shadow-xl overflow-hidden max-h-80 overflow-y-auto">
                   {allSearchTasks.length === 0 ? (
                     <div className="p-4 text-center text-sm text-muted-foreground">Nenhum card encontrado</div>
                   ) : (
@@ -1327,7 +1334,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                           <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: col?.color || 'hsl(var(--muted-foreground))' }} />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground truncate">#{t.task_number} {t.title}</p>
-                            <p className="text-xs text-muted-foreground">{col?.title || 'Sem coluna'}{t.is_archived ? ' • Arquivado' : ''}</p>
+                            <p className="text-xs text-muted-foreground truncate">{col?.title || 'Sem coluna'}{t.is_archived ? ' • Arquivado' : ''}{(() => { if (!extras || t.title.toLowerCase().includes(q)) return null; const f = extras.fields.find((ff) => fieldText(ff, extras.valueOf(t.id, ff.id)).toLowerCase().includes(q)); return f ? ` • ${f.name}: ${fieldText(f, extras.valueOf(t.id, f.id))}` : null; })()}</p>
                           </div>
                           <Badge className={cn('text-[9px] text-white flex-shrink-0 mt-0.5', PRIORITIES.find(p => p.id === t.priority)?.color)}>
                             {PRIORITIES.find(p => p.id === t.priority)?.label}
@@ -1336,7 +1343,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                       );
                     })
                   )}
-                </div>
+                </div>, document.body
               );
             })()}
           </div>
@@ -1865,7 +1872,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                 {showSearch && searchQuery.trim() && (() => {
                   const q = searchQuery.toLowerCase().trim();
                   const allSearchTasks = [...tasks, ...archivedTasks].filter(t =>
-                    t.title.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q) || `#${t.task_number}`.includes(q)
+                    t.title.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q) || `#${t.task_number}`.includes(q) || fieldHay(t.id).includes(q)
                   );
                   return (
                     <div className="absolute left-3 right-3 top-0 z-50 rounded-lg border border-border bg-card shadow-lg overflow-hidden max-h-72 overflow-y-auto">
@@ -1886,7 +1893,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                               <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: col?.color || 'hsl(var(--muted-foreground))' }} />
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-foreground truncate">#{t.task_number} {t.title}</p>
-                                <p className="text-xs text-muted-foreground">{col?.title || 'Sem coluna'}{t.is_archived ? ' • Arquivado' : ''}</p>
+                                <p className="text-xs text-muted-foreground truncate">{col?.title || 'Sem coluna'}{t.is_archived ? ' • Arquivado' : ''}{(() => { if (!extras || t.title.toLowerCase().includes(q)) return null; const f = extras.fields.find((ff) => fieldText(ff, extras.valueOf(t.id, ff.id)).toLowerCase().includes(q)); return f ? ` • ${f.name}: ${fieldText(f, extras.valueOf(t.id, f.id))}` : null; })()}</p>
                               </div>
                               <Badge className={cn('text-[9px] text-white flex-shrink-0 mt-0.5', PRIORITIES.find(p => p.id === t.priority)?.color)}>
                                 {PRIORITIES.find(p => p.id === t.priority)?.label}
@@ -2086,7 +2093,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                             </div>
 
                             {/* Bottom row: badges + avatar */}
-                            <div className="flex items-center gap-1 flex-wrap">
+                            <div className="flex items-center gap-1 flex-nowrap min-w-0 [&>*]:shrink-0">
                               <span className="text-[10px] text-muted-foreground font-medium">#{task.task_number}</span>
                               {dueInfo && (
                                 <span className={cn('inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium', dueInfo.color)}>
@@ -2105,7 +2112,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                               {extras?.approvals.has(task.id) ? (
                                 <span className="inline-flex items-center rounded bg-amber-100 px-1 text-[10px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-200" title="Aguardando aprovação">Aprovação</span>
                               ) : null}
-                              {extras?.fields.filter((f) => f.show_on_card).map((f) => ({ f, v: fieldText(f, extras.valueOf(task.id, f.id)) })).filter((x) => x.v).slice(0, 2).map(({ f, v }) => <span key={f.id} className="max-w-[110px] truncate text-[10px] text-muted-foreground" title={`${f.name}: ${v}`}>{v}</span>)}
+                              {extras?.fields.filter((f) => f.show_on_card).map((f) => ({ f, v: fieldText(f, extras.valueOf(task.id, f.id)) })).filter((x) => x.v).slice(0, 1).map(({ f, v }) => <span key={f.id} className="!shrink min-w-0 max-w-[72px] truncate text-[10px] text-muted-foreground" title={`${f.name}: ${v}`}>{v}</span>)}
                               <div className="flex-1" />
                               {/* Additional Assignees */}
                               {(() => {

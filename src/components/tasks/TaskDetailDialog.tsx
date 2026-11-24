@@ -308,6 +308,10 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
   const { decisions, addDecision, deleteDecision, loading: decisionsLoading } = useTaskDecisions(task?.id || null);
 
   // Checklists start CLOSED every time a card is opened (owner's request); the person opens the one they need.
+  // Detalhes and Campos open CLOSED (like the checklists) every time a card is opened
+  const [detOpen, setDetOpen] = useState(false);
+  const [fldOpen, setFldOpen] = useState(false);
+  useEffect(() => { setDetOpen(false); setFldOpen(false); }, [task?.id]);
   const collapsedFor = useRef<string | null>(null);
   useEffect(() => {
     if (!task || !groups.length || collapsedFor.current === task.id) return;
@@ -948,12 +952,18 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
   );
 
   const renderDetails = () => (
-    <div className="tdx-props">
-      <div className="tdx-h">Detalhes</div>
+    <div className={`tdx-props ${detOpen ? 'open' : ''}`}>
+      <button type="button" className="tdx-tog" onClick={() => setDetOpen((v) => !v)} aria-expanded={detOpen}>
+        <ChevronRight className="tdx-chev h-4 w-4" />
+        <span className="tdx-h">Detalhes</span>
+        {!detOpen ? <span className="tdx-sum"><i className="tdx-dot" />{curCol?.title || '—'}{dueInfo ? <em className={`tdx-due ${dueInfo.cls}`}>{dueInfo.txt} · {dueInfo.hint}</em> : null}</span> : null}
+      </button>
+      {detOpen ? <>
       <div className="tdx-prop"><span>Situação</span><b><i className="tdx-dot" />{curCol?.title || '—'}</b></div>
       <div className="tdx-prop"><span>Entrega</span><b>{task.due_date ? <>{new Date(task.due_date).toLocaleDateString('pt-BR')}{(() => { const d = new Date(task.due_date!); return (d.getHours() || d.getMinutes()) ? ` às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''; })()}{dueInfo ? <em className={`tdx-due ${dueInfo.cls}`}>{dueInfo.hint}</em> : null}</> : <small>Sem prazo</small>}</b></div>
       <div className="tdx-prop"><span>Responsável</span><b>{task.assignee ? <><Avatar className="h-6 w-6"><AvatarImage src={task.assignee.avatar_url || ''} /><AvatarFallback className="text-[10px] bg-primary text-primary-foreground">{getInitials(task.assignee.display_name || task.assignee.name)}</AvatarFallback></Avatar><span className="truncate">{task.assignee.display_name || task.assignee.name}</span></> : <small>Ninguém</small>}</b></div>
       {total > 0 ? <div className="tdx-prop"><span>Checklist</span><b><span className="tdx-ring" style={{ ['--p' as string]: `${overallProgress}%` }} />{completed}/{total} itens</b></div> : null}
+      </> : null}
     </div>
   );
   const renderInfoRow = () => (
@@ -1356,7 +1366,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
               {/* top: Detalhes and Campos side by side; below, full width: description, decisions, checklist, dependencies/links, time, approval */}
               <div className="tdx-top">
                 {!task.is_template ? <div className="tdx-box">{renderDetails()}</div> : null}
-                {boardId ? <CardExtrasPanel only="fields" task={task as never} boardId={boardId} readOnly={warLocked} /> : null}
+                {boardId ? <CardExtrasPanel only="fields" fieldsOpen={fldOpen} onToggleFields={() => setFldOpen((v) => !v)} task={task as never} boardId={boardId} readOnly={warLocked} /> : null}
               </div>
               <div className="tdx-col tdx-full">
                 <div className="tdx-box">{L(renderDescription())}</div>
