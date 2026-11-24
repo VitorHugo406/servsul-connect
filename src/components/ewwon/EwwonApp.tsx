@@ -1087,7 +1087,6 @@ export default function EwwonApp() {
           <button className="stp lq" id="stp" style={{ ['--sc' as string]: ST[me.st][1] }} onClick={() => gsOpen({ kind: 'status' })}><i /><span id="stl">{ST[me.st][0]}</span><I n="chevD" /></button>
           <div className="stats"><div><b>{boot.sectorsCount}</b>setores</div><div><b>{Math.max(0, Object.values(P).filter((p) => !p.sys).length - 1)}</b>colegas</div></div>
           <button className="mi" id="mp" onClick={() => { setOpen(false); window.setTimeout(() => pgShow({ kind: 'profile', id: meId }), 260); }}><I n="user" />Meu perfil</button>
-          <button className="mi" onClick={() => { setOpen(false); window.setTimeout(() => pgShow({ kind: 'agenda' }), 260); }}><I n="cal" />Agenda</button>
           <button className="mi" onClick={() => setPrefs({ ...prefs, nm: prefs.nm ? 0 : 1 })}><I n="bell" />Notificações<span className={'sw' + (prefs.nm ? ' on' : '')} /></button>
           <button className="mi" onClick={() => setPrefs({ ...prefs, snd: prefs.snd ? 0 : 1 })}><I n="sound" />Som das mensagens<span className={'sw' + (prefs.snd ? ' on' : '')} /></button>
           <button className="mi" onClick={() => setPrefs({ ...prefs, theme: prefs.theme === 1 ? 0 : 1 })}><I n="moon" />Tema escuro<span className={'sw' + (prefs.theme !== 1 ? ' on' : '')} /></button>
