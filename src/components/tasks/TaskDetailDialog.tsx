@@ -1343,11 +1343,11 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="ui-center tdx w-[min(1200px,94vw)] max-w-none h-[88vh] max-h-[88vh] overflow-hidden flex flex-col p-0 gap-0">
         {/* Two columns: title + content on the left; comments/activity take the whole height on the right */}
+        {renderCover()}
+        {renderTemplateBanner()}
+        {renderWarBanner()}
         <div className="flex flex-1 min-h-0">
           <div className="flex flex-col flex-1 min-w-0 min-h-0">
-          {renderCover()}
-          {renderTemplateBanner()}
-          {renderWarBanner()}
           {L(renderHeader())}
           <ScrollArea className="tdx-canvas flex-1 min-w-0 border-t border-border">
             <div className="tdx-main pb-8" style={{ ['--colc' as string]: curCol?.color || 'hsl(var(--primary))' }}>
