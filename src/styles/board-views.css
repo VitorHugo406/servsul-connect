@@ -194,3 +194,4 @@ html.dark .bvx-danger { color: #f87171; }
 .tl-bar.done { opacity: .72; }
 /* titles written beside narrow bars sit on a small solid chip, so a dependency line never runs through the text */
 .tl-out { background: hsl(var(--card)); padding: 1px 6px; border-radius: 6px; top: 2px; z-index: 3; box-shadow: 0 0 0 2px hsl(var(--card)); }
+.bvx-btn[aria-pressed="true"] { background: hsl(var(--primary)); border-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }

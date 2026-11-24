@@ -4,7 +4,7 @@
 // from the end of the blocking card to the start of the blocked one (red when the order is impossible). Zoom: dias /
 // semanas. Changes use the same onUpdate as the Lista (updateTask), War Room-locked cards are read-only.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Lock , GitBranch } from 'lucide-react';
 import { useBoardExtras } from '@/hooks/useBoardExtras';
 import { getCoverDisplay } from '@/components/tasks/taskConstants';
 import { SignedStorageImage } from '@/components/common/SignedStorageMedia';
@@ -13,7 +13,7 @@ import { SignedStorageImage } from '@/components/common/SignedStorageMedia';
 const COVER_HEX: Record<string, string> = { 'bg-blue-500': '#3b82f6', 'bg-green-500': '#22c55e', 'bg-yellow-500': '#eab308', 'bg-red-500': '#ef4444', 'bg-purple-500': '#a855f7', 'bg-pink-500': '#ec4899', 'bg-orange-500': '#f97316' };
 
 type T = { id: string; title: string; status: string; cover_image?: string | null; due_date?: string | null; start_date?: string | null; completed_at?: string | null; assigned_to?: string | null; task_number?: number | null };
-type C = { id: string; title: string; color?: string | null; is_conclusion?: boolean | null };
+type C = { id: string; title: string; color?: string | null; is_conclusion?: boolean | null; is_template_column?: boolean | null };
 type Upd = { start_date?: string | null; due_date?: string | null };
 const DAY = 864e5;
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
@@ -40,6 +40,9 @@ export function TimelineView({ tasks, cols, person, onOpen, done, late, isLocked
   const px = zoom === 'day' ? 34 : 13;
   const [from, setFrom] = useState(() => addD(startOf(new Date()), -7));
   const [closed, setClosed] = useState<Set<string>>(new Set());
+  // dependency arrows are hidden by default (owner: they clutter long processes); the choice is remembered per browser
+  const [showDeps, setShowDeps] = useState(() => { try { return localStorage.getItem('ewvon:tl-deps') === '1'; } catch { return false; } });
+  const toggleDeps = () => setShowDeps((v) => { try { localStorage.setItem('ewvon:tl-deps', v ? '0' : '1'); } catch { /* ignore */ } return !v; });
   const [drag, setDrag] = useState<{ id: string; mode: 'move' | 'l' | 'r'; x0: number; dx: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const today = startOf(new Date());
@@ -51,7 +54,8 @@ export function TimelineView({ tasks, cols, person, onOpen, done, late, isLocked
   };
   const rows = useMemo(() => {
     const out: ({ kind: 'h'; c: C; n: number } | { kind: 't'; t: T })[] = [];
-    for (const c of cols) {
+    // the template column ("Modelo do processo") and the conclusion column are not part of the plan (owner)
+    for (const c of cols.filter((x) => !x.is_template_column && !x.is_conclusion)) {
       const list = tasks.filter((t) => t.status === c.id).sort((a, b) => (span(a)?.[0].getTime() ?? 9e15) - (span(b)?.[0].getTime() ?? 9e15));
       out.push({ kind: 'h', c, n: list.length });
       if (!closed.has(c.id)) for (const t of list) out.push({ kind: 't', t });
@@ -146,6 +150,7 @@ export function TimelineView({ tasks, cols, person, onOpen, done, late, isLocked
         <span className="bvx-mut">Arraste as barras para mudar as datas · puxe as pontas para alongar · clique numa linha vazia para dar datas</span>
         <span className="bvx-sp" />
         <button type="button" className="bvx-btn" onClick={() => { setFrom(addD(today, -7)); requestAnimationFrame(() => { if (scroller.current) scroller.current.scrollLeft = 7 * px - 120; }); }}>Hoje</button>
+        <button type="button" className="bvx-btn ui-chip" aria-pressed={showDeps} onClick={toggleDeps} title="Mostrar ou ocultar as setas de dependência entre os cards"><GitBranch className="h-4 w-4" />Dependências</button>
         <button type="button" className="bvx-btn bvx-ibtn" onClick={() => setFrom(addD(from, zoom === 'day' ? -14 : -56))} aria-label="Voltar"><ChevronLeft className="h-4 w-4" /></button>
         <button type="button" className="bvx-btn bvx-ibtn" onClick={() => setFrom(addD(from, zoom === 'day' ? 14 : 56))} aria-label="Avançar"><ChevronRight className="h-4 w-4" /></button>
         <div className="tl-seg">{(['day', 'week'] as const).map((z) => <button key={z} type="button" className={zoom === z ? 'on' : ''} onClick={() => setZoom(z)}>{z === 'day' ? 'Dias' : 'Semanas'}</button>)}</div>
@@ -188,11 +193,13 @@ export function TimelineView({ tasks, cols, person, onOpen, done, late, isLocked
                         {!lk ? <span className="tl-edge r" data-edge="1" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setDrag({ id: r.t.id, mode: 'r', x0: e.clientX, dx: 0 }); }} /> : null}
                       </div>); })()}
                 </div>))}
+{showDeps ? (
               <svg className="tl-svg" width={W} height={rows.length * RH}>
                 <defs><marker id="tlA" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0.5 L8,4 L0,7.5 z" fill="#8b93a7" /></marker>
                   <marker id="tlB" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0.5 L8,4 L0,7.5 z" fill="#e5484d" /></marker></defs>
                 {arrows.map((a) => <path key={a.k} d={a.path} fill="none" stroke={a.bad ? '#e5484d' : '#8b93a7'} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" markerEnd={`url(#${a.bad ? 'tlB' : 'tlA'})`} />)}
               </svg>
+              ) : null}
             </div>
           </div>
         </div>
