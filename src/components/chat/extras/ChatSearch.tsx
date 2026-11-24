@@ -12,7 +12,7 @@ import '@/styles/chat-extras.css';
 const db = supabase as any;
 type Hit = { id: string; content: string; sender_id: string; created_at: string };
 const esc = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
-const SPECIAL = /^(📹|📞) ewvon-call:|^ewvon-poll:|^✨ (sticker|pack):|^🎤 \[|ewvon-delete:/;
+const SPECIAL = /^(📹|📞) ewvon-call:|^ewvon-poll:|^ewvon-event:|^ewvon-loc:|^ewvon-transit:|^✨ (sticker|pack):|^🎤 \[|ewvon-delete:/;
 
 function highlight(text: string, q: string) {
   const i = text.toLowerCase().indexOf(q.toLowerCase());

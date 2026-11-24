@@ -1,6 +1,7 @@
 // Ewwon loading animation: the logo outline is drawn stroke by stroke, then the
 // shape fills in and gently breathes while the app loads. Replaces every old
 // spinner/loading screen (mobile and desktop).
+import { useState } from 'react';
 import './ewwon-loader.css';
 
 // One clock for every loader on the page: when one loading screen replaces
@@ -33,7 +34,9 @@ export function EwvonWordmark({ height = 30, animate = true, t = 0, className }:
 }
 
 export function EwwonLoader({ message, inline = false }: { message?: string; inline?: boolean }) {
-  const t = inline ? 0 : elapsed();
+  // read the shared clock ONCE per mounted loader: re-renders must not move the animation (it used to jump ahead on
+  // every re-render while the app was booting, which looked like a stutter/restart)
+  const [t] = useState(() => (inline ? 0 : elapsed()));
   return (
     <div className={'ewl-screen' + (inline ? ' inline' : '')} role="status" aria-live="polite" aria-label={message || 'Carregando'}
       style={{ ['--ewl-t' as string]: `${t}s` }}>

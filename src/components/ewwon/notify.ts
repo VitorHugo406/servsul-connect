@@ -278,3 +278,43 @@ export async function init(context: Ctx) {
 }
 
 export function updateContext(context: Partial<Ctx>) { ctx = { ...ctx, ...context }; }
+
+// Soft chat UI sounds (iPhone-WhatsApp-like), synthesized with Web Audio so they start instantly and need no files:
+// 'type' = faint tick while typing (throttled), 'send' = short rising pop, 'recv' = gentle two-note chime for a message
+// that arrives in the conversation you have open. All respect "Som das mensagens" (prefs.snd).
+let uiCtx: AudioContext | null = null;
+let lastTick = 0;
+export function uiSound(kind: 'type' | 'send' | 'recv') {
+  if ((ctx.prefs() || {}).snd === 0) return;
+  try {
+    const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AC) return;
+    if (!uiCtx) uiCtx = new AC();
+    const a = uiCtx;
+    if (a.state === 'suspended') void a.resume();
+    const t0 = a.currentTime + 0.005;
+    const tone = (f0: number, f1: number, start: number, dur: number, vol: number, type: OscillatorType = 'sine') => {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(f0, start);
+      o.frequency.exponentialRampToValueAtTime(f1, start + dur);
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(vol, start + Math.min(0.012, dur / 4));
+      g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      o.connect(g).connect(a.destination);
+      o.start(start); o.stop(start + dur + 0.02);
+    };
+    if (kind === 'type') {
+      const now = performance.now();
+      if (now - lastTick < 70) return;
+      lastTick = now;
+      tone(1900 + Math.random() * 300, 1500, t0, 0.028, 0.035, 'triangle');
+    } else if (kind === 'send') {
+      tone(520, 1180, t0, 0.13, 0.16);
+      tone(1180, 1500, t0 + 0.05, 0.09, 0.05, 'triangle');
+    } else {
+      tone(880, 880, t0, 0.11, 0.09);
+      tone(1320, 1320, t0 + 0.09, 0.16, 0.08);
+    }
+  } catch { /* audio not available */ }
+}

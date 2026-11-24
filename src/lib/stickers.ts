@@ -218,6 +218,9 @@ export function chatPreview(content: string | null | undefined, max = 60): strin
   if (!c) return '';
   if (/ewvon-delete:[0-9a-f-]{36}/.test(c)) return '🗑️ Excluir dados da empresa?';
   if (/^ewvon-poll:[0-9a-f-]{36}$/.test(c)) return '📊 Enquete';
+  if (/^ewvon-event:[0-9a-f-]{36}$/.test(c)) return '📅 Convite para evento';
+  if (/^ewvon-transit:\{/.test(c)) { try { const j = JSON.parse(c.slice(14)); return '🚌 ' + (j.cap ? String(j.cap).slice(0, 80) : `Linha ${j.line || j.name || ''}`); } catch { return '🚌 Linha'; } }
+  if (/^ewvon-loc:\{/.test(c)) { try { const j = JSON.parse(c.slice(10)); return '📍 ' + (j.cap ? String(j.cap).slice(0, 80) : j.name || 'Localização'); } catch { return '📍 Localização'; } }
   if (isSticker(c)) return '✨ Figurinha';
   if (PACK_RE.test(c)) return '✨ Pacote de figurinhas';
   const voice = c.match(/^🎤 \[(\d{1,2}:\d{2})\]\(voice:/);

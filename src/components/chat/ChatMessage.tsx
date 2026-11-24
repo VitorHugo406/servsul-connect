@@ -4,6 +4,8 @@ import { useReactionBoom } from './ChatReactionBar';
 import { parseCall, CallMessageCard } from '@/components/video/VideoCallHost';
 import { parseDeletion, DeletionRequestCard } from '@/components/common/DeletionRequestCard';
 import { PollCard, parsePoll } from './extras/ChatPoll';
+import { EventCard, LocationCard, TransitCard } from './extras/ChatShare';
+import { parseEvent, parseLoc, parseTransit } from '@/lib/chatShare';
 import { MessageMoreMenu } from './extras/ChatActions';
 import { VoicePlayer } from '@/components/common/Voice';
 import { parseVoice } from '@/lib/e2e';
@@ -147,7 +149,7 @@ function ChatMessageBase({ message, onReply, reactions, onToggleReaction, onScro
   };
 
   const renderContent = (content: string, isOwnMsg: boolean) => {
-    const __poll = parsePoll(content); if (__poll) return <PollCard id={__poll} />; const __del = parseDeletion(content); if (__del) return <DeletionRequestCard id={__del} />; const __call = parseCall(content); if (__call) return <CallMessageCard room={__call} own={isOwnMsg} />; const __stk = parseSticker(content); if (__stk) return <StickerMessage sticker={__stk} mine={isOwnMsg} />; const __pk = parsePack(content); if (__pk) return <PackCard id={__pk} mine={isOwnMsg} />; const __vc = parseVoice(content); if (__vc) return <VoicePlayer voice={__vc} />;
+    const __poll = parsePoll(content); if (__poll) return <PollCard id={__poll} />; const __ev = parseEvent(content); if (__ev) return <EventCard id={__ev} />; const __loc = parseLoc(content); if (__loc) return <LocationCard loc={__loc} />; const __tr = parseTransit(content); if (__tr) return <TransitCard t={__tr} />; const __del = parseDeletion(content); if (__del) return <DeletionRequestCard id={__del} />; const __call = parseCall(content); if (__call) return <CallMessageCard room={__call} own={isOwnMsg} />; const __stk = parseSticker(content); if (__stk) return <StickerMessage sticker={__stk} mine={isOwnMsg} />; const __pk = parsePack(content); if (__pk) return <PackCard id={__pk} mine={isOwnMsg} />; const __vc = parseVoice(content); if (__vc) return <VoicePlayer voice={__vc} />;
     const lines = content.split('\n');
     const textLines: string[] = [];
     const attachments: { type: 'image' | 'file'; name: string; url: string }[] = [];

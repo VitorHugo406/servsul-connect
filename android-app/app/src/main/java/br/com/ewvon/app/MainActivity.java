@@ -42,7 +42,8 @@ public class MainActivity extends Activity {
     private WebView web;
     private ValueCallback<Uri[]> fileCb;
     private PermissionRequest pendingPerm;
-    private static final int REQ_FILE = 11, REQ_MEDIA = 12, REQ_NOTIF = 13;
+    private static final int REQ_FILE = 11, REQ_MEDIA = 12, REQ_NOTIF = 13, REQ_GEO = 14;
+    private android.webkit.GeolocationPermissions.Callback geoCb; private String geoOrigin;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -75,7 +76,7 @@ public class MainActivity extends Activity {
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setDatabaseEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false); s.setAllowFileAccess(false); s.setLoadWithOverviewMode(true);
-        s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW); s.setGeolocationEnabled(true);
         s.setUserAgentString(s.getUserAgentString() + " EwvonApp/" + BuildConfigVersion.NAME);
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
@@ -84,6 +85,8 @@ public class MainActivity extends Activity {
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 Uri u = r.getUrl(); String h = u.getHost() == null ? "" : u.getHost();
                 if ("https".equals(u.getScheme()) && (h.equals("ewvon.vercel.app") || h.endsWith(".supabase.co"))) return false;
+                // a shared location (geo:) always offers every map app installed (Maps, Waze, …)
+                if ("geo".equals(u.getScheme())) { try { startActivity(Intent.createChooser(new Intent(Intent.ACTION_VIEW, u), "Abrir localização com")); } catch (Exception ignored) { } return true; }
                 try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception ignored) { }
                 return true;
             }
@@ -99,6 +102,13 @@ public class MainActivity extends Activity {
                 fileCb = cb;
                 try { startActivityForResult(p.createIntent(), REQ_FILE); } catch (Exception e) { fileCb = null; return false; }
                 return true;
+            }
+            // chat "+" › Localização › "Usar minha localização atual" (only when the person taps it)
+            @Override public void onGeolocationPermissionsShowPrompt(String origin, android.webkit.GeolocationPermissions.Callback cb) {
+                if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                        || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) { cb.invoke(origin, true, false); return; }
+                geoCb = cb; geoOrigin = origin;
+                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, REQ_GEO);
             }
             @Override public void onPermissionRequest(PermissionRequest request) {
                 runOnUiThread(() -> {
@@ -239,6 +249,9 @@ public class MainActivity extends Activity {
             boolean any = false; for (int r : results) if (r == PackageManager.PERMISSION_GRANTED) any = true;
             if (any) pendingPerm.grant(pendingPerm.getResources()); else pendingPerm.deny();
             pendingPerm = null;
+        } else if (req == REQ_GEO && geoCb != null) {
+            boolean any = false; for (int r : results) if (r == PackageManager.PERMISSION_GRANTED) any = true;
+            geoCb.invoke(geoOrigin, any, false); geoCb = null;
         } else if (req == REQ_NOTIF) askBattery();
     }
 

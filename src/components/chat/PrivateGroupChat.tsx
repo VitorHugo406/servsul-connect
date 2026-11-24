@@ -47,6 +47,8 @@ import { ChatPersonalizationDialog, getChatBackgroundKey } from '@/components/ch
 import { bubbleStyle, useChatBubbleColor } from '@/hooks/useChatBubbleColor';
 import { useChatActions, ChatActionsProvider, MessageMoreMenu, PinnedBar } from './extras/ChatActions';
 import { PollCard, parsePoll } from './extras/ChatPoll';
+import { EventCard, LocationCard, TransitCard } from './extras/ChatShare';
+import { parseEvent, parseLoc, parseTransit } from '@/lib/chatShare';
 import { ChatSearchPanel } from './extras/ChatSearch';
 import { ChatSummaryButton } from './extras/ChatSummary';
 
@@ -96,7 +98,7 @@ export function PrivateGroupChat({ group }: PrivateGroupChatProps) {
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   const formatTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const renderMessageContent = (content: string, isOwn: boolean) => {
-    const __poll = parsePoll(content); if (__poll) return <PollCard id={__poll} />;
+    const __poll = parsePoll(content); if (__poll) return <PollCard id={__poll} />; const __ev = parseEvent(content); if (__ev) return <EventCard id={__ev} />; const __loc = parseLoc(content); if (__loc) return <LocationCard loc={__loc} />; const __tr = parseTransit(content); if (__tr) return <TransitCard t={__tr} />;
     const __call = parseCall(content); if (__call) return <CallMessageCard room={__call} own={isOwn} />; const __stk = parseSticker(content); if (__stk) return <StickerMessage sticker={__stk} mine={isOwn} />; const __pk = parsePack(content); if (__pk) return <PackCard id={__pk} mine={isOwn} />; const __vc = parseVoice(content); if (__vc) return <VoicePlayer voice={__vc} />;
     const lines = content.split('\n'); const textLines: string[] = []; const atts: { type: 'image' | 'file'; name: string; url: string }[] = [];
     for (const line of lines) { const imageMatch = line.match(/^📷 \[(.+?)\]\((.+?)\)$/); const fileMatch = line.match(/^📎 \[(.+?)\]\((.+?)\)$/); if (imageMatch) atts.push({ type: 'image', name: imageMatch[1], url: imageMatch[2] }); else if (fileMatch) atts.push({ type: 'file', name: fileMatch[1], url: fileMatch[2] }); else textLines.push(line); }

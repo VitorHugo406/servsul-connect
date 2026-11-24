@@ -5,6 +5,7 @@ import { Av, Seg, Tg, avStyle, covStyle } from './EwwonApp';
 import * as D from './data';
 import type { Chat, Summary } from './data';
 import * as N from './notify';
+import { AgendaPage } from './sharesheet';
 import { I, Chev } from './icons';
 import { ST, StatusKey, fitTextarea } from './util';
 import { MyEvaluationsBox, EvaluationPage } from './evals';
@@ -21,7 +22,8 @@ export type PageSpec =
   | { kind: 'muted' }
   | { kind: 'support' }
   | { kind: 'ticket'; id: number; label: string; staff: boolean; title?: string }
-  | { kind: 'eval'; id: string };
+  | { kind: 'eval'; id: string }
+  | { kind: 'agenda' };
 
 export function EwwonPage({ spec, api }: { spec: PageSpec; api: EwApi }) {
   switch (spec.kind) {
@@ -30,6 +32,7 @@ export function EwwonPage({ spec, api }: { spec: PageSpec; api: EwApi }) {
     case 'summary': return <SummaryPage chatKey={spec.key} api={api} />;
     case 'groupEdit': return <GroupEditPage chatKey={spec.key} api={api} />;
     case 'settings': return <SettingsPage api={api} />;
+    case 'agenda': return <AgendaPage meId={api.me.id} userId={api.me.userId} onNew={() => api.gsOpen({ kind: 'event', chat: false })} />;
     case 'muted': return <MutedPage api={api} />;
     case 'support': return <SupportPage api={api} />;
     case 'ticket': return <TicketChat spec={spec} api={api} />;

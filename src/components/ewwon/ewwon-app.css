@@ -682,3 +682,9 @@ html body .ew .ewx-ment::-webkit-scrollbar-thumb { background: color-mix(in srgb
    line once fotos/vídeos and enquete made the sheet taller than the screen); the sheet scrolls instead. */
 .ew .sheet.gs > * { flex-shrink: 0; }
 .ew .sheet.gs textarea.fld { min-height: 112px; }
+/* Agenda (side menu) and event/location cards inside chat bubbles */
+.ew .ewx-agenda { display: flex; flex-direction: column; gap: 12px; }
+.ew .ewx-agenda .btn.full { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.ew .ewx-agenda-i { padding: 14px; }
+.ew .ewx-agenda-i .cx-ev { width: 100%; }
+.ew .ewx-locb .cx-loc { width: min(280px, 72vw); }

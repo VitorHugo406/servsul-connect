@@ -22,6 +22,10 @@ type Row = Record<string, any>
 function preview(content: string): string {
   const c = String(content || '').trim()
   if (/^✨ sticker:/.test(c)) return '✨ Figurinha'
+  if (/^ewvon-poll:[0-9a-f-]{36}$/.test(c)) return '📊 Enquete'
+  if (/^ewvon-event:[0-9a-f-]{36}$/.test(c)) return '📅 Convite para evento ou reunião'
+  if (/^ewvon-transit:\{/.test(c)) { try { const j = JSON.parse(c.slice(14)); return '🚌 ' + String(j.cap || `Linha ${j.line || j.name || ''}`).slice(0, 139) } catch { return '🚌 Linha' } }
+  if (/^ewvon-loc:\{/.test(c)) { try { const j = JSON.parse(c.slice(10)); return '📍 ' + String(j.cap || j.name || 'Localização').slice(0, 139) } catch { return '📍 Localização' } }
   const voice = c.match(/^🎤 \[(\d{1,2}:\d{2})\]\(voice:/)
   if (voice) return `🎤 Áudio (${voice[1]})`
   const lines = c.split('\n')
