@@ -902,8 +902,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
           </PopoverContent>
         </Popover>
 
-        {/* Decisões Button */}
-        <Button
+        {/* Decisões: inside "Mais" (one row of buttons); templates have no "Mais", so they keep the button */}
+        {task.is_template ? <Button
           variant={showDecisions ? "default" : "outline"}
           size="sm"
           className="gap-1.5 rounded-md h-8 text-xs"
@@ -911,13 +911,16 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
         >
           <CheckCircle2 className="h-3.5 w-3.5" />
           Decisões {decisions.length > 0 && `(${decisions.length})`}
-        </Button>
+        </Button> : null}
         {!task.is_template ? (
           <Popover open={moreOpen} onOpenChange={setMoreOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1.5 rounded-md h-8 text-xs"><MoreHorizontal className="h-3.5 w-3.5" /> Mais</Button>
             </PopoverTrigger>
             <PopoverContent className="w-60 p-1" align="start">
+              <button type="button" className="flex w-full items-start gap-2.5 rounded-md px-2.5 py-2 text-left hover:bg-muted" onClick={() => { setShowDecisions(true); setMoreOpen(false); }}>
+                <CheckCircle2 className="mt-0.5 h-4 w-4 text-muted-foreground" /><span><span className="block text-sm font-medium">Decisões{decisions.length > 0 ? ` (${decisions.length})` : ''}</span><span className="block text-xs text-muted-foreground">Registre o que foi decidido no card</span></span>
+              </button>
               {([['time', Timer, 'Tempo', 'Cronômetro e horas gastas'], ['links', LinkIcon2, 'Links e arquivos', 'Drive, OneDrive, Dropbox, Figma…'], ['deps', Link2, 'Dependências', 'Este card espera outro terminar'], ['approval', BadgeCheck, 'Aprovação', 'Peça o ok de alguém antes de seguir']] as const).filter(([k]) => k !== 'approval' || hasApprovals).map(([k, Ic, l, h]) => (
                 <button key={k} type="button" className="flex w-full items-start gap-2.5 rounded-md px-2.5 py-2 text-left hover:bg-muted" onClick={() => { setExtraOpen((x) => new Set(x).add(k)); setMoreOpen(false); }}>
                   <Ic className="mt-0.5 h-4 w-4 text-muted-foreground" /><span><span className="block text-sm font-medium">{l}</span><span className="block text-xs text-muted-foreground">{h}</span></span>
