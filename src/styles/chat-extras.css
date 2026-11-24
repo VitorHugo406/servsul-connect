@@ -250,8 +250,33 @@ textarea.cx-in { height: auto; padding: 9px 12px; resize: vertical; }
 .cx-colors span { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; outline: 2px solid transparent; outline-offset: 2px; }
 .cx-colors span.on { outline-color: hsl(var(--foreground)); }
 .ew .cx-colors span.on { outline-color: var(--tx); }
-.cx-link { align-self: flex-start; padding: 2px 0; border: 0; background: none; color: hsl(var(--primary)); font-size: 12.5px; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
-.ew .cx-link { color: var(--tx); opacity: .8; }
 .cx-tr-chip { flex: none; min-width: 38px; height: 26px; padding: 0 8px; border-radius: 8px; display: grid; place-items: center; color: #fff; font-size: 12.5px; font-weight: 800; }
 .cx-lp-res .cx-tr-chip + span { margin-top: 0; }
 .cx-sel { width: 100%; }
+/* station ruler + affected stretch (trains / metro / VLT) */
+.cx-tr-s.stop.dot { stroke-width: 2.2; }
+.cx-tr-s.stretch { stroke-width: 7; stroke-linecap: round; opacity: .9; }
+.cx-tr-s.stretch.ghost { stroke-width: 2; }
+.cx-tr-s.stretch.delay, .cx-tr-s.stretch.full { stroke: #f59e0b; }
+.cx-tr-s.stretch.down { stroke: #e5484d; stroke-dasharray: .04 .03; animation: cx-tr-blink 1.2s ease-in-out 1s infinite; opacity: 1; stroke-dashoffset: 0; }
+.cx-tr-alert { font: 700 13px "Patrick Hand", "Segoe Print", "Comic Sans MS", system-ui, sans-serif; }
+.cx-tr-alert.delay, .cx-tr-alert.full { fill: #d97706; } .cx-tr-alert.down { fill: #e5484d; }
+@keyframes cx-tr-blink { 50% { opacity: .35; } }
+/* line pickers */
+.cx-tr-lines { display: flex; flex-wrap: wrap; gap: 6px; max-height: 220px; overflow-y: auto; }
+.cx-tr-lb { display: inline-flex; align-items: center; gap: 8px; padding: 5px 10px 5px 5px; border-radius: 12px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--foreground)); font-size: 13px; font-weight: 600; cursor: pointer; text-align: left; }
+.cx-tr-lb:hover { background: hsl(var(--muted)); }
+.cx-tr-picked { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: hsl(var(--muted)); }
+.cx-tr-picked b { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cx-alt { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 10px; border: 1px dashed hsl(var(--border)); background: transparent; color: hsl(var(--muted-foreground)); font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.cx-alt:hover { color: hsl(var(--foreground)); border-style: solid; }
+.cx-alt.sm { height: 28px; padding: 0 10px; border-style: solid; }
+.ew .cx-tr-lb { background: var(--c2); border-color: var(--bd); color: var(--tx); }
+.ew .cx-tr-picked { background: var(--c2); }
+.ew .cx-alt { color: var(--mu); border-color: var(--bd); }
+.cx-tr-s.line { stroke: var(--trc); stroke-width: 4.5; }
+.cx-tr-s.line.ghost { stroke-width: 1.4; }
+.cx-tr-s.stop.dot { stroke: currentColor; stroke-width: 2; fill: #faf7f0; }
+.dark .cx-tr-s.stop.dot, .ew:not([data-theme="light"]) .cx-tr-s.stop.dot { fill: #17161a; }
+.cx-tr-s.stop.dot.ghost { fill: none; }
+.cx-tr-alert { font-size: 12px; }

@@ -154,13 +154,13 @@ export const fmtEventWhen = (startIso: string, endIso: string | null, allDay: bo
 /* ------------------------------------------------------------------ transit line (bus / train / metro / tram) */
 export type TransitKind = 'bus' | 'train' | 'metro' | 'tram';
 export type TransitStatus = 'normal' | 'delay' | 'down' | 'full';
-export type ChatTransit = { k: TransitKind; line: string; name: string; from: string; to: string; city: string; color: string; st: TransitStatus; cap: string };
+export type ChatTransit = { k: TransitKind; line: string; name: string; from: string; to: string; city: string; color: string; st: TransitStatus; cap: string; stations?: string[]; a?: number; b?: number };
 export const TRANSIT_KINDS: [TransitKind, string][] = [['bus', 'Ônibus'], ['train', 'Trem'], ['metro', 'Metrô'], ['tram', 'VLT / bonde']];
 export const TRANSIT_STATUS: [TransitStatus, string][] = [['normal', 'Normal'], ['delay', 'Atrasos'], ['full', 'Lotado'], ['down', 'Interrompido']];
 export const TRANSIT_COLORS = ['#e11d48', '#f59e0b', '#16a34a', '#2563eb', '#7c3aed', '#0891b2', '#475569', '#db2777'];
 const TR_RE = /^ewvon-transit:(\{.*\})$/s;
 export const emptyTransit = (): ChatTransit => ({ k: 'bus', line: '', name: '', from: '', to: '', city: '', color: TRANSIT_COLORS[3], st: 'normal', cap: '' });
-export const transitContent = (x: ChatTransit) => `ewvon-transit:${JSON.stringify({ ...x, line: x.line.trim().slice(0, 12), name: x.name.trim().slice(0, 80), from: x.from.trim().slice(0, 80), to: x.to.trim().slice(0, 80), city: x.city.trim().slice(0, 60), cap: x.cap.trim().slice(0, 1000) })}`;
+export const transitContent = (x: ChatTransit) => `ewvon-transit:${JSON.stringify({ ...x, stations: (x.stations || []).slice(0, 60).map((s) => s.slice(0, 60)), line: x.line.trim().slice(0, 12), name: x.name.trim().slice(0, 80), from: x.from.trim().slice(0, 80), to: x.to.trim().slice(0, 80), city: x.city.trim().slice(0, 60), cap: x.cap.trim().slice(0, 1000) })}`;
 export function parseTransit(c: string | null | undefined): ChatTransit | null {
   const m = c ? TR_RE.exec(c.trim()) : null;
   if (!m) return null;
@@ -171,7 +171,10 @@ export function parseTransit(c: string | null | undefined): ChatTransit | null {
     const color = /^#[0-9a-f]{6}$/i.test(j.color) ? j.color : TRANSIT_COLORS[3];
     const s = (v: unknown) => String(v || '');
     if (!s(j.line) && !s(j.name)) return null;
-    return { k, st, color, line: s(j.line), name: s(j.name), from: s(j.from), to: s(j.to), city: s(j.city), cap: s(j.cap) };
+    const stations = Array.isArray(j.stations) ? j.stations.slice(0, 60).map((v: unknown) => s(v).slice(0, 60)) : [];
+    const n = stations.length;
+    const idx = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 && (v as number) < n ? (v as number) : undefined);
+    return { k, st, color, line: s(j.line), name: s(j.name), from: s(j.from), to: s(j.to), city: s(j.city), cap: s(j.cap), stations, a: idx(j.a), b: idx(j.b) };
   } catch { return null; }
 }
 export const transitLabel = (x: ChatTransit) => `${TRANSIT_KINDS.find((k) => k[0] === x.k)?.[1] || 'Linha'} ${x.line || x.name}`.trim();
@@ -181,47 +184,37 @@ export const transitLabel = (x: ChatTransit) => `${TRANSIT_KINDS.find((k) => k[0
 // no key; the person then only picks "Ida" or "Volta".
 export const BR_UF: [string, string][] = [['AC', 'Acre'], ['AL', 'Alagoas'], ['AP', 'Amapá'], ['AM', 'Amazonas'], ['BA', 'Bahia'], ['CE', 'Ceará'], ['DF', 'Distrito Federal'], ['ES', 'Espírito Santo'], ['GO', 'Goiás'], ['MA', 'Maranhão'], ['MT', 'Mato Grosso'], ['MS', 'Mato Grosso do Sul'], ['MG', 'Minas Gerais'], ['PA', 'Pará'], ['PB', 'Paraíba'], ['PR', 'Paraná'], ['PE', 'Pernambuco'], ['PI', 'Piauí'], ['RJ', 'Rio de Janeiro'], ['RN', 'Rio Grande do Norte'], ['RS', 'Rio Grande do Sul'], ['RO', 'Rondônia'], ['RR', 'Roraima'], ['SC', 'Santa Catarina'], ['SP', 'São Paulo'], ['SE', 'Sergipe'], ['TO', 'Tocantins']];
 export type TransitDir = { from: string; to: string; name: string };
-export type TransitLine = { ref: string; name: string; network: string; color: string; dirs: TransitDir[] };
-const OSM_ROUTES: Record<TransitKind, string> = { bus: 'bus|trolleybus|minibus|coach', train: 'train|light_rail', metro: 'subway|monorail|light_rail', tram: 'tram|light_rail' };
-const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
-const reEsc = (s: string) => s.replace(/[.*+?^${}()|[\]\\"]/g, '\\$&');
-const terminals = (t: Record<string, string>): { from: string; to: string } => {
-  if (t.from || t.to) return { from: t.from || '', to: t.to || '' };
-  const m = /:\s*(.+?)\s*(?:=>|→|->|⇒| - | – )\s*(.+)$/.exec(t.name || '') || /^(.+?)\s*(?:=>|→|->|⇒)\s*(.+)$/.exec(t.name || '');
-  return m ? { from: m[1].trim(), to: m[2].trim() } : { from: '', to: '' };
+export type TransitLine = { ref: string; name: string; network: string; color: string; dirs: TransitDir[]; stations: string[] };
+const normRef = (s: string) => s.toUpperCase().replace(/[^0-9A-Z]/g, '');
+type LineRow = { ref: string; name: string; network: string; color: string | null; dirs: { from: string; to: string }[]; stations: string[] };
+const toLine = (r: LineRow): TransitLine => {
+  const dirs = (r.dirs || []).map((d) => ({ ...d, name: '' }));
+  if (dirs.length === 1) dirs.push({ from: dirs[0].to, to: dirs[0].from, name: '' });
+  if (!dirs.length && r.stations?.length > 1) { const st = r.stations; dirs.push({ from: st[0], to: st[st.length - 1], name: '' }, { from: st[st.length - 1], to: st[0], name: '' }); }
+  return { ref: r.ref, name: r.name, network: r.network, color: r.color || '', dirs, stations: r.stations || [] };
 };
+/** Makes sure the state's lines are in transit_lines (first use: the transit-sync function downloads them, ~20–60 s). */
+export async function ensureTransitState(uf: string): Promise<'ready' | 'loading' | 'error'> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any;
+  const { data } = await db.from('transit_sync').select('synced_at,status,lines').eq('uf', uf).maybeSingle();
+  const age = data?.synced_at ? Date.now() - new Date(data.synced_at).getTime() : Infinity;
+  if (data?.status === 'ok' && data.lines > 0) {
+    if (age > 30 * 86400_000) void supabase.functions.invoke('transit-sync', { body: { uf } });   // refresh in the background
+    return 'ready';
+  }
+  if (data?.status === 'running' && age < 5 * 60_000) return 'loading';
+  const { data: r, error } = await supabase.functions.invoke('transit-sync', { body: { uf } });
+  if (error || (r && r.error)) return 'error';
+  return r?.running ? 'loading' : 'ready';
+}
 export async function findTransitLines(uf: string, ref: string, kind: TransitKind): Promise<TransitLine[]> {
-  const r = ref.trim();
-  if (!r) return [];
-  const q = `[out:json][timeout:25];area["ISO3166-2"="BR-${uf}"]->.a;rel(area.a)["type"="route"]["route"~"^(${OSM_ROUTES[kind]})$"]["ref"~"^${reEsc(r)}([-/ ]?[0-9A-Z]{1,3})?$",i];out tags 40;`;
-  let json: { elements?: { tags?: Record<string, string> }[] } | null = null;
-  let lastErr: unknown = null;
-  for (const url of OVERPASS) {
-    try {
-      const res = await fetch(url, { method: 'POST', body: new URLSearchParams({ data: q }) });
-      if (!res.ok) { lastErr = new Error(String(res.status)); continue; }
-      json = await res.json(); break;
-    } catch (e) { lastErr = e; }
-  }
-  if (!json) throw lastErr || new Error('busca');
-  const lines = new Map<string, TransitLine>();
-  for (const el of json.elements || []) {
-    const t = el.tags || {};
-    const refT = (t.ref || r).trim();
-    const key = `${refT.toUpperCase()}|${t.network || ''}`;
-    const col = /^#[0-9a-f]{6}$/i.test(t.colour || '') ? t.colour.toLowerCase() : '';
-    const tm = terminals(t);
-    const l = lines.get(key) || { ref: refT, name: '', network: t.network || t.operator || '', color: col, dirs: [] };
-    if (!l.color && col) l.color = col;
-    const lineName = (t.name || '').replace(/^(Ônibus|Onibus|Bus|Linha|Trem|Metrô|Metro)\s+/i, '').replace(/:\s*.+$/, '').trim();
-    if (!l.name && lineName && lineName.toUpperCase() !== refT.toUpperCase()) l.name = lineName;
-    if (tm.from || tm.to) {
-      if (!l.dirs.some((d) => d.from === tm.from && d.to === tm.to)) l.dirs.push({ ...tm, name: t.name || '' });
-    }
-    lines.set(key, l);
-  }
-  return [...lines.values()].map((l) => {
-    if (l.dirs.length === 1) l.dirs.push({ from: l.dirs[0].to, to: l.dirs[0].from, name: '' });   // only one direction mapped: volta = reversed
-    return l;
-  }).sort((a, b) => a.ref.localeCompare(b.ref, 'pt-BR', { numeric: true })).slice(0, 12);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any;
+  let q = db.from('transit_lines').select('ref,name,network,color,dirs,stations').eq('uf', uf).eq('kind', kind);
+  const n = normRef(ref);
+  if (n) q = q.like('ref_norm', `${n}%`);
+  const { data, error } = await q.order('ref_norm').limit(kind === 'bus' ? 20 : 80);
+  if (error) throw error;
+  return ((data || []) as LineRow[]).map(toLine).sort((a, b) => a.ref.localeCompare(b.ref, 'pt-BR', { numeric: true }));
 }
