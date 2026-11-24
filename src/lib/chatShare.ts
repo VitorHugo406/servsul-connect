@@ -186,35 +186,33 @@ export const BR_UF: [string, string][] = [['AC', 'Acre'], ['AL', 'Alagoas'], ['A
 export type TransitDir = { from: string; to: string; name: string };
 export type TransitLine = { ref: string; name: string; network: string; color: string; dirs: TransitDir[]; stations: string[] };
 const normRef = (s: string) => s.toUpperCase().replace(/[^0-9A-Z]/g, '');
-type LineRow = { ref: string; name: string; network: string; color: string | null; dirs: { from: string; to: string }[]; stations: string[] };
-const toLine = (r: LineRow): TransitLine => {
-  const dirs = (r.dirs || []).map((d) => ({ ...d, name: '' }));
-  if (dirs.length === 1) dirs.push({ from: dirs[0].to, to: dirs[0].from, name: '' });
-  if (!dirs.length && r.stations?.length > 1) { const st = r.stations; dirs.push({ from: st[0], to: st[st.length - 1], name: '' }, { from: st[st.length - 1], to: st[0], name: '' }); }
-  return { ref: r.ref, name: r.name, network: r.network, color: r.color || '', dirs, stations: r.stations || [] };
-};
-/** Makes sure the state's lines are in transit_lines (first use: the transit-sync function downloads them, ~20–60 s). */
-export async function ensureTransitState(uf: string): Promise<'ready' | 'loading' | 'error'> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any;
-  const { data } = await db.from('transit_sync').select('synced_at,status,lines').eq('uf', uf).maybeSingle();
-  const age = data?.synced_at ? Date.now() - new Date(data.synced_at).getTime() : Infinity;
-  if (data?.status === 'ok' && data.lines > 0) {
-    if (age > 30 * 86400_000) void supabase.functions.invoke('transit-sync', { body: { uf } });   // refresh in the background
-    return 'ready';
+// Lines of each state are static files built from OpenStreetMap by scripts/build-transit.mjs (public/transit/<UF>.json):
+// instant search, no live call to Overpass (which took 16 s – 1 min+ or timed out).
+type FileLine = { k: TransitKind; r: string; n: string; c?: string; d?: [string, string][]; s?: string[] };
+const stateCache = new Map<string, Promise<FileLine[] | null>>();
+function loadState(uf: string) {
+  if (!stateCache.has(uf)) {
+    stateCache.set(uf, fetch(`/transit/${uf}.json`).then((r) => (r.ok ? r.json() : null)).then((j) => (j?.lines as FileLine[]) || null).catch(() => { stateCache.delete(uf); return null; }));
   }
-  if (data?.status === 'running' && age < 5 * 60_000) return 'loading';
-  const { data: r, error } = await supabase.functions.invoke('transit-sync', { body: { uf } });
-  if (error || (r && r.error)) return 'error';
-  return r?.running ? 'loading' : 'ready';
+  return stateCache.get(uf)!;
+}
+const toLine = (l: FileLine): TransitLine => {
+  const all = (l.d || []).map(([from, to]) => ({ from, to, name: '' }));
+  const st = l.s || [];
+  // Ida = first direction; Volta = the opposite one (some lines also list branches, e.g. Amador Bueno ⇄ Itapevi)
+  const dirs = all.length ? [all[0], all.find((d) => d.from === all[0].to && d.to === all[0].from) || { from: all[0].to, to: all[0].from, name: '' }] : [];
+  if (!dirs.length && st.length > 1) dirs.push({ from: st[0], to: st[st.length - 1], name: '' }, { from: st[st.length - 1], to: st[0], name: '' });
+  return { ref: l.r, name: l.n, network: '', color: l.c || '', dirs, stations: st };
+};
+export async function ensureTransitState(uf: string): Promise<'ready' | 'loading' | 'error'> {
+  return (await loadState(uf)) ? 'ready' : 'error';
 }
 export async function findTransitLines(uf: string, ref: string, kind: TransitKind): Promise<TransitLine[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any;
-  let q = db.from('transit_lines').select('ref,name,network,color,dirs,stations').eq('uf', uf).eq('kind', kind);
+  const all = await loadState(uf);
+  if (!all) throw new Error('estado');
   const n = normRef(ref);
-  if (n) q = q.like('ref_norm', `${n}%`);
-  const { data, error } = await q.order('ref_norm').limit(kind === 'bus' ? 20 : 80);
-  if (error) throw error;
-  return ((data || []) as LineRow[]).map(toLine).sort((a, b) => a.ref.localeCompare(b.ref, 'pt-BR', { numeric: true }));
+  const hit = all.filter((l) => l.k === kind && (!n || normRef(l.r).startsWith(n) || (!l.r && normRef(l.n).includes(n))));
+  // exact number first, then the rest
+  hit.sort((a, b) => Number(normRef(b.r) === n) - Number(normRef(a.r) === n) || Number(!a.r) - Number(!b.r) || a.r.localeCompare(b.r, 'pt-BR', { numeric: true }) || a.n.localeCompare(b.n, 'pt-BR'));
+  return hit.slice(0, kind === 'bus' ? 20 : 80).map(toLine);
 }

@@ -280,3 +280,4 @@ textarea.cx-in { height: auto; padding: 9px 12px; resize: vertical; }
 .dark .cx-tr-s.stop.dot, .ew:not([data-theme="light"]) .cx-tr-s.stop.dot { fill: #17161a; }
 .cx-tr-s.stop.dot.ghost { fill: none; }
 .cx-tr-alert { font-size: 12px; }
+.ew .cx-tr-picked b, .ew .cx-tr-lb span:last-child { color: var(--tx); }

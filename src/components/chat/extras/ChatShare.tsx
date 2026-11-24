@@ -338,7 +338,7 @@ export function TransitForm({ value: x, onChange, mobile }: { value: ChatTransit
     try {
       let state = await ensureTransitState(uf);
       for (let i = 0; state === 'loading' && i < 12; i++) { await new Promise((ok) => setTimeout(ok, 5000)); state = await ensureTransitState(uf); }
-      if (state === 'error') { setErr('Não foi possível carregar as linhas deste estado agora. Tente de novo em instantes ou preencha manualmente.'); return; }
+      if (state === 'error') { setErr('Ainda não temos as linhas deste estado. Preencha manualmente.'); return; }
       if (state === 'loading') { setErr('Ainda carregando as linhas deste estado pela primeira vez. Tente de novo em 1 minuto.'); return; }
       const r = await findTransitLines(uf, ref, x.k);
       setLines(r);
