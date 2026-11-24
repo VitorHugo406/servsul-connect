@@ -175,3 +175,53 @@ export function parseTransit(c: string | null | undefined): ChatTransit | null {
   } catch { return null; }
 }
 export const transitLabel = (x: ChatTransit) => `${TRANSIT_KINDS.find((k) => k[0] === x.k)?.[1] || 'Linha'} ${x.line || x.name}`.trim();
+
+/* ------------------------------------------------------------------ transit line lookup (OpenStreetMap / Overpass) */
+// State + line number → the real line (name, both terminals, colour) from OSM route relations. Free, worldwide,
+// no key; the person then only picks "Ida" or "Volta".
+export const BR_UF: [string, string][] = [['AC', 'Acre'], ['AL', 'Alagoas'], ['AP', 'Amapá'], ['AM', 'Amazonas'], ['BA', 'Bahia'], ['CE', 'Ceará'], ['DF', 'Distrito Federal'], ['ES', 'Espírito Santo'], ['GO', 'Goiás'], ['MA', 'Maranhão'], ['MT', 'Mato Grosso'], ['MS', 'Mato Grosso do Sul'], ['MG', 'Minas Gerais'], ['PA', 'Pará'], ['PB', 'Paraíba'], ['PR', 'Paraná'], ['PE', 'Pernambuco'], ['PI', 'Piauí'], ['RJ', 'Rio de Janeiro'], ['RN', 'Rio Grande do Norte'], ['RS', 'Rio Grande do Sul'], ['RO', 'Rondônia'], ['RR', 'Roraima'], ['SC', 'Santa Catarina'], ['SP', 'São Paulo'], ['SE', 'Sergipe'], ['TO', 'Tocantins']];
+export type TransitDir = { from: string; to: string; name: string };
+export type TransitLine = { ref: string; name: string; network: string; color: string; dirs: TransitDir[] };
+const OSM_ROUTES: Record<TransitKind, string> = { bus: 'bus|trolleybus|minibus|coach', train: 'train|light_rail', metro: 'subway|monorail|light_rail', tram: 'tram|light_rail' };
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
+const reEsc = (s: string) => s.replace(/[.*+?^${}()|[\]\\"]/g, '\\$&');
+const terminals = (t: Record<string, string>): { from: string; to: string } => {
+  if (t.from || t.to) return { from: t.from || '', to: t.to || '' };
+  const m = /:\s*(.+?)\s*(?:=>|→|->|⇒| - | – )\s*(.+)$/.exec(t.name || '') || /^(.+?)\s*(?:=>|→|->|⇒)\s*(.+)$/.exec(t.name || '');
+  return m ? { from: m[1].trim(), to: m[2].trim() } : { from: '', to: '' };
+};
+export async function findTransitLines(uf: string, ref: string, kind: TransitKind): Promise<TransitLine[]> {
+  const r = ref.trim();
+  if (!r) return [];
+  const q = `[out:json][timeout:25];area["ISO3166-2"="BR-${uf}"]->.a;rel(area.a)["type"="route"]["route"~"^(${OSM_ROUTES[kind]})$"]["ref"~"^${reEsc(r)}([-/ ]?[0-9A-Z]{1,3})?$",i];out tags 40;`;
+  let json: { elements?: { tags?: Record<string, string> }[] } | null = null;
+  let lastErr: unknown = null;
+  for (const url of OVERPASS) {
+    try {
+      const res = await fetch(url, { method: 'POST', body: new URLSearchParams({ data: q }) });
+      if (!res.ok) { lastErr = new Error(String(res.status)); continue; }
+      json = await res.json(); break;
+    } catch (e) { lastErr = e; }
+  }
+  if (!json) throw lastErr || new Error('busca');
+  const lines = new Map<string, TransitLine>();
+  for (const el of json.elements || []) {
+    const t = el.tags || {};
+    const refT = (t.ref || r).trim();
+    const key = `${refT.toUpperCase()}|${t.network || ''}`;
+    const col = /^#[0-9a-f]{6}$/i.test(t.colour || '') ? t.colour.toLowerCase() : '';
+    const tm = terminals(t);
+    const l = lines.get(key) || { ref: refT, name: '', network: t.network || t.operator || '', color: col, dirs: [] };
+    if (!l.color && col) l.color = col;
+    const lineName = (t.name || '').replace(/^(Ônibus|Onibus|Bus|Linha|Trem|Metrô|Metro)\s+/i, '').replace(/:\s*.+$/, '').trim();
+    if (!l.name && lineName && lineName.toUpperCase() !== refT.toUpperCase()) l.name = lineName;
+    if (tm.from || tm.to) {
+      if (!l.dirs.some((d) => d.from === tm.from && d.to === tm.to)) l.dirs.push({ ...tm, name: t.name || '' });
+    }
+    lines.set(key, l);
+  }
+  return [...lines.values()].map((l) => {
+    if (l.dirs.length === 1) l.dirs.push({ from: l.dirs[0].to, to: l.dirs[0].from, name: '' });   // only one direction mapped: volta = reversed
+    return l;
+  }).sort((a, b) => a.ref.localeCompare(b.ref, 'pt-BR', { numeric: true })).slice(0, 12);
+}

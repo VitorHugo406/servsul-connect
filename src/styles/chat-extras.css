@@ -229,7 +229,7 @@ textarea.cx-in { height: auto; padding: 9px 12px; resize: vertical; }
 .st-down .cx-tr-bob { animation: none; }
 .cx-tr-bg { fill: var(--trc); stroke: currentColor; stroke-width: 1.5; }
 .cx-tr-num { fill: #fff; font: 700 14px "Patrick Hand", "Segoe Print", "Comic Sans MS", system-ui, sans-serif; }
-.cx-tr-badge { animation: cx-tr-pop .5s cubic-bezier(.3, 1.6, .5, 1) .2s both; transform-box: fill-box; transform-origin: center; }
+.cx-tr-badge { animation: cx-tr-pop .5s cubic-bezier(.3, 1.6, .5, 1) .2s both; transform-box: fill-box; transform-origin: left center; }
 .cx-tr-name { fill: currentColor; font: 700 18px "Patrick Hand", "Segoe Print", "Bradley Hand", "Comic Sans MS", system-ui, sans-serif; }
 .cx-tr-sub, .cx-tr-tx { fill: currentColor; opacity: .75; font: 400 13px "Patrick Hand", "Segoe Print", "Bradley Hand", "Comic Sans MS", system-ui, sans-serif; }
 .cx-tr-foot { display: flex; padding: 0 10px; }
@@ -250,3 +250,8 @@ textarea.cx-in { height: auto; padding: 9px 12px; resize: vertical; }
 .cx-colors span { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; outline: 2px solid transparent; outline-offset: 2px; }
 .cx-colors span.on { outline-color: hsl(var(--foreground)); }
 .ew .cx-colors span.on { outline-color: var(--tx); }
+.cx-link { align-self: flex-start; padding: 2px 0; border: 0; background: none; color: hsl(var(--primary)); font-size: 12.5px; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.ew .cx-link { color: var(--tx); opacity: .8; }
+.cx-tr-chip { flex: none; min-width: 38px; height: 26px; padding: 0 8px; border-radius: 8px; display: grid; place-items: center; color: #fff; font-size: 12.5px; font-weight: 800; }
+.cx-lp-res .cx-tr-chip + span { margin-top: 0; }
+.cx-sel { width: 100%; }

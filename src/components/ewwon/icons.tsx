@@ -59,6 +59,16 @@ const EXTRA: Record<string, JSX.Element> = {
   clock: <circle cx="12" cy="12" r="9" />,
   lock: <rect x="5" y="11" width="14" height="10" rx="2" />,
   info: <circle cx="12" cy="12" r="9" />,
+  // "+" menu of the chat: one distinct icon per option
+  image: <><rect x="3" y="4" width="18" height="16" rx="3" /><circle cx="9" cy="10" r="1.8" /><path d="M4 18l5-5 3 3 3-3 5 5" /></>,
+  file: <><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h4" /></>,
+  smile: <><circle cx="12" cy="12" r="9" /><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01" /></>,
+  poll: <><path d="M4 20h16" /><rect x="5" y="11" width="3.4" height="7" rx="1" /><rect x="10.3" y="5" width="3.4" height="13" rx="1" /><rect x="15.6" y="8" width="3.4" height="10" rx="1" /></>,
+  event: <><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M8 3v4M16 3v4M3 10h18M9 15l2 2 4-4" /></>,
+  mappin: <><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.6" /></>,
+  bus: <><rect x="4" y="3" width="16" height="15" rx="3" /><path d="M4 11h16M8 21v-3M16 21v-3M8 14.5h.01M16 14.5h.01M8 6.5h8" /></>,
+  taskadd: <><rect x="3" y="4" width="18" height="17" rx="3" /><path d="M12 9v7M8.5 12.5h7" /></>,
+  move: <><path d="M4 12h13M13 7l5 5-5 5" /><path d="M4 5v14" /></>,
 };
 
 export function I({ n, className, style }: { n: keyof typeof P | string; className?: string; style?: CSSProperties }) {

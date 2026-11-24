@@ -9,8 +9,9 @@ import { useCompanyPlan } from '@/hooks/useCompanyPlan';
 import { planHasFeature } from '@/lib/planAccess';
 import { openVideoCall } from '@/components/video/VideoCallHost';
 import {
-  type ChatLoc, type ChatTransit, type EventDraft, type TransitKind, TRANSIT_COLORS, TRANSIT_KINDS, TRANSIT_STATUS, fmtEventWhen, isNativeApp, mapLinks, mapTiles, myPosition, reversePlace, searchPlaces,
+  type ChatLoc, type ChatTransit, type EventDraft, type TransitKind, type TransitLine, BR_UF, findTransitLines, TRANSIT_COLORS, TRANSIT_KINDS, TRANSIT_STATUS, fmtEventWhen, isNativeApp, mapLinks, mapTiles, myPosition, reversePlace, searchPlaces,
 } from '@/lib/chatShare';
+import { Sel } from '@/components/ui/Sel';
 import '@/styles/chat-extras.css';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -257,6 +258,8 @@ export function TransitCard({ t: x }: { t: ChatTransit }) {
   useSketchFont();
   const uid = useMemo(() => Math.random().toString(36).slice(2, 8), []);
   const kindLabel = TRANSIT_KINDS.find((k) => k[0] === x.k)?.[1] || 'Linha';
+  const ref = (x.line || '•').slice(0, 9);
+  const bw = Math.max(34, ref.length * 9 + 14);   // badge grows with the line number (875A-10, L9, 7…)
   const st = TRANSIT_STATUS.find((s) => s[0] === x.st)?.[1] || 'Normal';
   let k = 0;
   const sketch = (ds: string[], cls = '', extra?: React.SVGProps<SVGPathElement>) => ds.flatMap((d) => [
@@ -282,11 +285,11 @@ export function TransitCard({ t: x }: { t: ChatTransit }) {
         <text x="22" y="122" className="cx-tr-tx">{x.from || 'Origem'}</text>
         <text x="282" y="122" className="cx-tr-tx" textAnchor="end">{x.to || 'Destino'}</text>
         <g className="cx-tr-badge" transform="translate(34 34)">
-          <circle r="17" className="cx-tr-bg" />
-          <text y="5" textAnchor="middle" className="cx-tr-num">{(x.line || '•').slice(0, 5)}</text>
+          <rect x={-17} y={-15} width={bw} height={30} rx={13} className="cx-tr-bg" />
+          <text x={bw / 2 - 17} y="5" textAnchor="middle" className="cx-tr-num">{ref}</text>
         </g>
-        <text x="60" y="30" className="cx-tr-name">{x.name || `${kindLabel} ${x.line}`}</text>
-        <text x="60" y="47" className="cx-tr-sub">{kindLabel}{x.city ? ` · ${x.city}` : ''}</text>
+        <text x={bw + 26} y="30" className="cx-tr-name">{(x.name || `${kindLabel} ${x.line}`).slice(0, 26)}</text>
+        <text x={bw + 26} y="47" className="cx-tr-sub">{kindLabel}{x.city ? ` · ${x.city}` : ''}</text>
       </svg>
       <div className="cx-tr-foot"><span className={`cx-tr-st ${x.st}`}>{st}</span></div>
       {x.cap ? <p className="cx-tr-cap">{x.cap}</p> : null}
@@ -297,27 +300,82 @@ export function TransitCard({ t: x }: { t: ChatTransit }) {
 export function TransitForm({ value: x, onChange, mobile }: { value: ChatTransit; onChange: (t: ChatTransit) => void; mobile?: boolean }) {
   const set = (p: Partial<ChatTransit>) => onChange({ ...x, ...p });
   const inp = mobile ? 'fld' : 'cx-in';
+  const [uf, setUf] = useState(() => { try { return localStorage.getItem('ewvon:transit-uf') || 'SP'; } catch { return 'SP'; } });
+  const [num, setNum] = useState('');
+  const [lines, setLines] = useState<TransitLine[] | null>(null);
+  const [pick, setPick] = useState<TransitLine | null>(null);
+  const [dir, setDir] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [manual, setManual] = useState(false);
+  const ufName = BR_UF.find((u) => u[0] === uf)?.[1] || uf;
+  const apply = (l: TransitLine, d: number) => {
+    const dd = l.dirs[d] || l.dirs[0] || { from: '', to: '' };
+    onChange({ ...x, line: l.ref, name: l.name, from: dd.from, to: dd.to, city: ufName, color: l.color || x.color });
+  };
+  const search = async () => {
+    if (!num.trim() || busy) return;
+    setBusy(true); setErr(''); setLines(null); setPick(null);
+    try { localStorage.setItem('ewvon:transit-uf', uf); } catch { /* ignore */ }
+    try {
+      const r = await findTransitLines(uf, num, x.k);
+      setLines(r);
+      if (!r.length) setErr('Não achamos essa linha. Confira o número ou preencha manualmente.');
+      else if (r.length === 1) { setPick(r[0]); setDir(0); apply(r[0], 0); }
+    } catch { setErr('A busca de linhas não respondeu agora. Tente de novo ou preencha manualmente.'); }
+    finally { setBusy(false); }
+  };
+  const ufSel = mobile
+    ? <select className="fld" value={uf} onChange={(e) => setUf(e.target.value)}>{BR_UF.map(([c, n]) => <option key={c} value={c}>{n}</option>)}</select>
+    : <Sel className="ui-sel cx-sel" value={uf} onChange={(e) => setUf(e.target.value)}>{BR_UF.map(([c, n]) => <option key={c} value={c}>{n}</option>)}</Sel>;
   return (
     <div className={'cx-evf' + (mobile ? ' is-m' : '')}>
-      <div className="cx-seg sm">{TRANSIT_KINDS.map(([k, t]) => <button key={k} type="button" className={x.k === k ? 'on' : ''} onClick={() => set({ k })}>{t}</button>)}</div>
-      <div className="cx-row2">
-        <div><label className="cx-lbl">Número</label><input className={inp} value={x.line} maxLength={12} placeholder="Ex.: 875A, L9, 7" onChange={(e) => set({ line: e.target.value })} /></div>
-        <div><label className="cx-lbl">Nome da linha (opcional)</label><input className={inp} value={x.name} maxLength={80} placeholder="Ex.: Linha Esmeralda" onChange={(e) => set({ name: e.target.value })} /></div>
-      </div>
-      <div className="cx-row2">
-        <div><label className="cx-lbl">De</label><input className={inp} value={x.from} maxLength={80} placeholder="Ex.: Osasco" onChange={(e) => set({ from: e.target.value })} /></div>
-        <div><label className="cx-lbl">Para</label><input className={inp} value={x.to} maxLength={80} placeholder="Ex.: Grajaú" onChange={(e) => set({ to: e.target.value })} /></div>
-      </div>
-      <label className="cx-lbl">Cidade / país (opcional)</label>
-      <input className={inp} value={x.city} maxLength={60} placeholder="Ex.: São Paulo, Lisboa, Tóquio" onChange={(e) => set({ city: e.target.value })} />
-      <label className="cx-lbl">Cor da linha</label>
-      <div className="cx-colors">{TRANSIT_COLORS.map((c) => <span key={c} role="radio" aria-checked={x.color === c} tabIndex={0} className={x.color === c ? 'on' : ''} style={{ background: c }} onClick={() => set({ color: c })} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') set({ color: c }); }} />)}</div>
+      <div className="cx-seg sm">{TRANSIT_KINDS.map(([k, t]) => <button key={k} type="button" className={x.k === k ? 'on' : ''} onClick={() => { set({ k }); setLines(null); setPick(null); }}>{t}</button>)}</div>
+      {!manual ? <>
+        <div className="cx-row2">
+          <div><label className="cx-lbl">Estado</label>{ufSel}</div>
+          <div><label className="cx-lbl">Número da linha</label>
+            <div className="cx-lp-q">
+              <input className={inp} value={num} maxLength={12} placeholder="Ex.: 875A" onChange={(e) => setNum(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void search(); } }} />
+              <button type="button" className="cx-lp-go" onClick={() => void search()} disabled={busy || !num.trim()} aria-label="Buscar linha">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}</button>
+            </div>
+          </div>
+        </div>
+        {err ? <p className="cx-err">{err}</p> : null}
+        {lines && lines.length > 1 && !pick ? <div className="cx-lp-res">
+          {lines.map((l, i) => <button key={i} type="button" onClick={() => { setPick(l); setDir(0); apply(l, 0); }}>
+            <span className="cx-tr-chip" style={{ background: l.color || x.color }}>{l.ref}</span>
+            <span><b>{l.name || `Linha ${l.ref}`}</b><small>{l.dirs[0] ? `${l.dirs[0].from} ⇄ ${l.dirs[0].to}` : l.network}</small></span>
+          </button>)}
+        </div> : null}
+        {pick ? <>
+          <label className="cx-lbl">Sentido</label>
+          <div className="cx-seg">
+            {[0, 1].map((d) => <button key={d} type="button" className={dir === d ? 'on' : ''} onClick={() => { setDir(d); apply(pick, d); }}>{d === 0 ? 'Ida' : 'Volta'}{pick.dirs[d]?.to ? ` · ${pick.dirs[d].to}` : ''}</button>)}
+          </div>
+          {lines && lines.length > 1 ? <button type="button" className="cx-link" onClick={() => setPick(null)}>Trocar linha</button> : null}
+        </> : null}
+        <button type="button" className="cx-link" onClick={() => setManual(true)}>Preencher manualmente (outra cidade ou país)</button>
+      </> : <>
+        <div className="cx-row2">
+          <div><label className="cx-lbl">Número</label><input className={inp} value={x.line} maxLength={12} placeholder="Ex.: 875A, L9, 7" onChange={(e) => set({ line: e.target.value })} /></div>
+          <div><label className="cx-lbl">Nome da linha (opcional)</label><input className={inp} value={x.name} maxLength={80} placeholder="Ex.: Linha Esmeralda" onChange={(e) => set({ name: e.target.value })} /></div>
+        </div>
+        <div className="cx-row2">
+          <div><label className="cx-lbl">De</label><input className={inp} value={x.from} maxLength={80} placeholder="Ex.: Osasco" onChange={(e) => set({ from: e.target.value })} /></div>
+          <div><label className="cx-lbl">Para</label><input className={inp} value={x.to} maxLength={80} placeholder="Ex.: Grajaú" onChange={(e) => set({ to: e.target.value })} /></div>
+        </div>
+        <label className="cx-lbl">Cidade / país (opcional)</label>
+        <input className={inp} value={x.city} maxLength={60} placeholder="Ex.: Lisboa, Tóquio" onChange={(e) => set({ city: e.target.value })} />
+        <label className="cx-lbl">Cor da linha</label>
+        <div className="cx-colors">{TRANSIT_COLORS.map((c) => <span key={c} role="radio" aria-checked={x.color === c} tabIndex={0} className={x.color === c ? 'on' : ''} style={{ background: c }} onClick={() => set({ color: c })} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') set({ color: c }); }} />)}</div>
+        <button type="button" className="cx-link" onClick={() => setManual(false)}>Buscar pelo número da linha</button>
+      </>}
       <label className="cx-lbl">Situação</label>
       <div className="cx-seg sm">{TRANSIT_STATUS.map(([k, t]) => <button key={k} type="button" className={x.st === k ? 'on' : ''} onClick={() => set({ st: k })}>{t}</button>)}</div>
       <label className="cx-lbl">Legenda (opcional)</label>
       <textarea className={inp} rows={2} maxLength={1000} value={x.cap} placeholder="Ex.: Trem parado entre Pinheiros e Butantã, usem o ônibus 875A." onChange={(e) => set({ cap: e.target.value })} />
-      <label className="cx-lbl">Prévia</label>
-      <TransitCard t={x} />
+      {x.line || x.name ? <><label className="cx-lbl">Prévia</label><TransitCard t={x} /></> : null}
     </div>
   );
 }

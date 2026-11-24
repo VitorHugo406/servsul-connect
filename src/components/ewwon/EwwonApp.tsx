@@ -1377,17 +1377,17 @@ export default function EwwonApp() {
             ) : null}
             {attOn === 'menu' ? (
               <div className="ewx-att">
-                <button onClick={() => setAttOn('emoji')}><span style={{ background: '#ffb020' }}>😊</span>Emoji</button>
-                <button onClick={() => pickAttach('image/*')}><span style={{ background: '#8b5cf6' }}><I n="camera" /></span>Galeria</button>
-                <button onClick={() => pickAttach('image/*', true)}><span style={{ background: '#ff5d7a' }}><I n="camera" /></span>Câmera</button>
-                <button onClick={() => pickAttach('.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.zip,image/*')}><span style={{ background: '#4f8cff' }}><I n="upload" /></span>Arquivo</button>
-                {chatPollsOn && cur ? <button onClick={() => { setAttOn(false); gsOpen({ kind: 'poll' }); }}><span style={{ background: '#f59e0b' }}><I n="check" /></span>Enquete</button> : null}
-                {cur ? <button onClick={() => { setAttOn(false); gsOpen({ kind: 'event', chat: true }); }}><span style={{ background: '#3b82f6' }}><I n="cal" /></span>Evento</button> : null}
-                {cur ? <button onClick={() => { setAttOn(false); gsOpen({ kind: 'loc' }); }}><span style={{ background: '#e11d48' }}><I n="globe" /></span>Localização</button> : null}
-                {cur ? <button onClick={() => { setAttOn(false); gsOpen({ kind: 'transit' }); }}><span style={{ background: '#0891b2' }}><I n="chevR" /></span>Ônibus/trem</button> : null}
+                <button onClick={() => pickAttach('image/*')}><span style={{ ['--c' as string]: '#8b5cf6' }}><I n="image" /></span>Galeria</button>
+                <button onClick={() => pickAttach('image/*', true)}><span style={{ ['--c' as string]: '#ec4899' }}><I n="camera" /></span>Câmera</button>
+                <button onClick={() => pickAttach('.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.zip,image/*')}><span style={{ ['--c' as string]: '#3b82f6' }}><I n="file" /></span>Arquivo</button>
+                <button onClick={() => setAttOn('emoji')}><span style={{ ['--c' as string]: '#f59e0b' }}><I n="smile" /></span>Emoji</button>
+                {chatPollsOn && cur ? <button onClick={() => { setAttOn(false); gsOpen({ kind: 'poll' }); }}><span style={{ ['--c' as string]: '#10b981' }}><I n="poll" /></span>Enquete</button> : null}
+                {cur ? <button onClick={() => { setAttOn(false); gsOpen({ kind: 'event', chat: true }); }}><span style={{ ['--c' as string]: '#6366f1' }}><I n="event" /></span>Evento</button> : null}
+                {cur ? <button onClick={() => { setAttOn(false); gsOpen({ kind: 'loc' }); }}><span style={{ ['--c' as string]: '#ef4444' }}><I n="mappin" /></span>Localização</button> : null}
+                {cur ? <button onClick={() => { setAttOn(false); gsOpen({ kind: 'transit' }); }}><span style={{ ['--c' as string]: '#0891b2' }}><I n="bus" /></span>Ônibus/trem</button> : null}
                 {cur && tasksOn[cur.key]?.enabled ? <>
-                  <button onClick={() => { setAttOn(false); gsOpen({ kind: 'tasks', mode: 0 }); }}><span style={{ background: '#2fbf71' }}><I n="tasks" /></span>Nova tarefa</button>
-                  <button onClick={() => { setAttOn(false); gsOpen({ kind: 'tasks', mode: 1 }); }}><span style={{ background: '#14b8a6' }}><I n="chevR" /></span>Mover tarefa</button>
+                  <button onClick={() => { setAttOn(false); gsOpen({ kind: 'tasks', mode: 0 }); }}><span style={{ ['--c' as string]: '#16a34a' }}><I n="taskadd" /></span>Nova tarefa</button>
+                  <button onClick={() => { setAttOn(false); gsOpen({ kind: 'tasks', mode: 1 }); }}><span style={{ ['--c' as string]: '#64748b' }}><I n="move" /></span>Mover tarefa</button>
                 </> : null}
               </div>
             ) : attOn === 'sticker' ? (
