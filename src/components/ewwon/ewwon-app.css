@@ -688,3 +688,9 @@ html body .ew .ewx-ment::-webkit-scrollbar-thumb { background: color-mix(in srgb
 .ew .ewx-agenda-i { padding: 14px; }
 .ew .ewx-agenda-i .cx-ev { width: 100%; }
 .ew .ewx-locb .cx-loc { width: min(280px, 72vw); }
+/* event invitation and location: drawn inside a real chat bubble (they used to float on the wallpaper) */
+.ew .ewx-shareb { padding: 12px; border-radius: 20px 20px 20px 6px; background: var(--c2); border: 1px solid var(--bd); color: var(--tx); max-width: min(320px, 82vw); }
+.ew .me .ewx-shareb { border-radius: 20px 20px 6px 20px; background: var(--card); }
+.ew .ewx-shareb .cx-ev, .ew .ewx-shareb .cx-loc { width: 100%; }
+.ew .ewx-locb.ewx-shareb { padding: 6px 6px 10px; }
+.ew .ewx-locb.ewx-shareb .cx-loc-body { padding: 0 6px; }
