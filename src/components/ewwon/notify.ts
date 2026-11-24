@@ -321,9 +321,11 @@ export function uiSound(kind: 'type' | 'send' | 'recv') {
       const now = performance.now();
       if (now - lastTick < 90) return;
       lastTick = now;
-      // a very soft, low, muted "tok" (no noise: the noise burst sounded harsh on phone speakers)
-      const f = 210 + Math.random() * 40;
-      soft(f, f * 0.7, t0, 0.045, 0.035, 520);
+      // a soft wooden "toc": phone speakers barely play anything under ~400 Hz, so the body sits around 600 Hz
+      // (still muted by the low-pass) with a quick downward slide; no noise (the noise burst sounded harsh)
+      const f = 620 + Math.random() * 80;
+      soft(f, f * 0.62, t0, 0.04, 0.07, 1500);
+      soft(f * 2, f * 1.3, t0, 0.018, 0.018, 2600);
     } else if (kind === 'send') {
       // deep and round, like a corporate chat send
       soft(330, 196, t0, 0.17, 0.16, 1100);
