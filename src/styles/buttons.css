@@ -57,6 +57,14 @@ button.ui-sel.sel-btn .sel-chev { color: hsl(var(--muted-foreground)); }
   }
   [data-ui="dialog"][data-side][data-state="closed"] { animation: ui-side-out 160ms ease-in both !important; }
   :where([data-ui="dialog"][data-side]) { overflow-y: auto; }
+  [data-ui="sheet"][data-panel] {
+    top: 12px !important; bottom: 12px !important; height: auto !important; max-height: none !important;
+    border-radius: 20px !important; border: 1px solid hsl(var(--border)) !important;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, .18) !important; overflow-x: hidden !important;
+  }
+  [data-ui="sheet"][data-panel="right"] { right: 12px !important; }
+  [data-ui="sheet"][data-panel="left"] { left: 12px !important; }
+  :where([data-ui="sheet"][data-panel]) { overflow-y: auto; }
   html body .ui-side-overlay.ui-side-overlay { background: rgba(15, 23, 42, .10) !important; backdrop-filter: blur(2px) !important; -webkit-backdrop-filter: blur(2px) !important; }
 }
 @keyframes ui-side-in { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
