@@ -58,7 +58,15 @@ public class MainActivity extends Activity {
         setBarIcons(false);
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFF08080A);
-        web = new WebView(this);
+        // the WebView starts its own floating text toolbar (Google, Compartilhar...): route it through EmptySelection
+        web = new WebView(this) {
+            @Override public android.view.ActionMode startActionMode(android.view.ActionMode.Callback cb, int type) {
+                return super.startActionMode(type == android.view.ActionMode.TYPE_FLOATING ? new EmptySelection(cb) : cb, type);
+            }
+            @Override public android.view.ActionMode startActionMode(android.view.ActionMode.Callback cb) {
+                return super.startActionMode(new EmptySelection(cb));
+            }
+        };
         web.setBackgroundColor(0xFF08080A);
         root.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(root);
@@ -238,18 +246,22 @@ public class MainActivity extends Activity {
     @Override protected void onResume() { super.onResume(); visible = true; Icons.apply(this); CallRinger.stopAll(this); web.onResume(); PollService.start(this); BootReceiver.arm(this); askBattery(); askFullScreen(); web.postDelayed(this::makerGuide, 4000); }
     @Override protected void onPause() { visible = false; web.onPause(); super.onPause(); }
     @Override protected void onSaveInstanceState(Bundle b) { super.onSaveInstanceState(b); web.saveState(b); }
-    // Text selection: the web app shows its own "Copiar / Selecionar tudo" bar, so the system's floating toolbar
-    // (Copiar, Compartilhar, Google...) is created EMPTY and never appears. Selection handles keep working.
-    @Override public android.view.ActionMode onWindowStartingActionMode(android.view.ActionMode.Callback cb, int type) {
-        if (type == android.view.ActionMode.TYPE_FLOATING) cb = new EmptySelection(cb);
-        return super.onWindowStartingActionMode(cb, type);
-    }
     private static final class EmptySelection extends android.view.ActionMode.Callback2 {
         private final android.view.ActionMode.Callback base;
         EmptySelection(android.view.ActionMode.Callback b) { base = b; }
-        @Override public boolean onCreateActionMode(android.view.ActionMode m, android.view.Menu menu) { base.onCreateActionMode(m, menu); menu.clear(); return true; }
-        @Override public boolean onPrepareActionMode(android.view.ActionMode m, android.view.Menu menu) { base.onPrepareActionMode(m, menu); menu.clear(); return true; }
-        @Override public boolean onActionItemClicked(android.view.ActionMode m, android.view.MenuItem item) { return false; }
+        @Override public boolean onCreateActionMode(android.view.ActionMode m, android.view.Menu menu) { boolean r = base.onCreateActionMode(m, menu); trim(menu); return r; }
+        @Override public boolean onPrepareActionMode(android.view.ActionMode m, android.view.Menu menu) { boolean r = base.onPrepareActionMode(m, menu); trim(menu); return r; }
+        /** Text in a message: nothing (the site shows its own Copiar / Selecionar tudo bar). Text being typed (the menu
+         *  has Recortar/Colar): only Recortar, Copiar, Colar and Selecionar tudo — never the Google/assistant items. */
+        private static void trim(android.view.Menu menu) {
+            boolean editable = menu.findItem(android.R.id.paste) != null || menu.findItem(android.R.id.cut) != null;
+            if (!editable) { menu.clear(); return; }
+            for (int i = menu.size() - 1; i >= 0; i--) {
+                int id = menu.getItem(i).getItemId();
+                if (id != android.R.id.cut && id != android.R.id.copy && id != android.R.id.paste && id != android.R.id.selectAll) menu.removeItem(id);
+            }
+        }
+        @Override public boolean onActionItemClicked(android.view.ActionMode m, android.view.MenuItem item) { return base.onActionItemClicked(m, item); }
         @Override public void onDestroyActionMode(android.view.ActionMode m) { base.onDestroyActionMode(m); }
         @Override public void onGetContentRect(android.view.ActionMode m, View v, android.graphics.Rect out) {
             if (base instanceof android.view.ActionMode.Callback2) ((android.view.ActionMode.Callback2) base).onGetContentRect(m, v, out); else super.onGetContentRect(m, v, out);

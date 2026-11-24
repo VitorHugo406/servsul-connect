@@ -1,1 +1,1 @@
-{ "version": "2.2.0", "required": false, "notes": "Ao selecionar um trecho de mensagem, aparece o menu do ewvon com Copiar e Selecionar tudo. Sons de digitar e enviar mais suaves." }
+{ "version": "2.2.1", "required": false, "notes": "Seleção de texto sem a barra do Google: nas mensagens aparece só o menu do ewvon (Copiar e Selecionar tudo)." }
