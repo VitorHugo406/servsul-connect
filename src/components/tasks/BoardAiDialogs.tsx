@@ -25,11 +25,7 @@ type U = { id: string; name: string; display_name?: string | null };
 function AiHead({ title, desc }: { title: string; desc: string }) {
   return (
     <div className="flex flex-col gap-2 pr-8">
-      <div className="flex items-center gap-3">
-        <img src="/ewwon/img/receipt-logo.png" alt="ewvon" className="h-6 w-auto shrink-0 dark:invert" />
-        <span className="h-6 w-px shrink-0 bg-border" aria-hidden="true" />
-        <DialogTitle className="text-base font-semibold leading-tight">{title}</DialogTitle>
-      </div>
+      <DialogTitle className="text-base font-semibold leading-tight">{title}</DialogTitle>
       <DialogDescription>{desc}</DialogDescription>
     </div>
   );

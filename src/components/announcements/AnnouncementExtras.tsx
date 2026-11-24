@@ -227,7 +227,7 @@ export function AnnouncementDetailDialog({ a, open, onOpenChange, pollId, ackedA
             {pollId ? <span className="av-tag"><BarChart3 />Enquete</span> : null}
             {media.length ? <span className="av-tag"><Images />{media.length} {media.length === 1 ? 'anexo' : 'anexos'}</span> : null}
           </div>
-          <DialogTitle className="av-title">{a.title}</DialogTitle>
+          <DialogTitle className="no-mark av-title">{a.title}</DialogTitle>
           <DialogDescription asChild>
             <div className="av-meta">
               {author ? <span>{a.author?.avatar_url ? <img className="av-av" src={a.author.avatar_url} alt="" /> : <span className="av-av">{ini}</span>}{author}</span> : null}

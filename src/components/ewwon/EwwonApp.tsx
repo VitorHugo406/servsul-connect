@@ -34,6 +34,7 @@ import { parseDeletion, DeletionRequestCard } from '@/components/common/Deletion
 import { PollCard, parsePoll, createPoll, emptyPoll, pollReady, type PollDraft } from '@/components/chat/extras/ChatPoll';
 import { MediaGallery, MediaPicker } from '@/components/announcements/AnnouncementExtras';
 import { listAnnouncementMedia, uploadAnnouncementMedia, type AnnMedia } from '@/lib/announcementMedia';
+import { PollSheet } from './pollsheet';
 import { useDbFeature } from '@/hooks/useDbFeature';
 import { startChatCall, parseCall, CallMessageCard } from '@/components/video/VideoCallHost';
 import { Video as VideoIcon, Phone as PhoneIcon } from 'lucide-react';
@@ -96,7 +97,7 @@ function dayLabel(iso: string) {
 const REACTIONS = ['👍', '❤️', '😂', '🎉', '🙏'];
 const EMOJIS = '😀 😃 😄 😁 😆 😅 😂 🙂 😉 😊 😍 🥰 😘 😎 🤩 🥳 🤔 🤗 🙄 😴 😮 😢 😭 😡 🤯 😱 👍 👎 👏 🙌 🙏 💪 👋 🤝 ✌️ 👌 ❤️ 🧡 💛 💚 💙 💜 🔥 ✨ ⭐ 🎉 🎂 🎁 ✅ ❌ ⚠️ 📌 📎 📷 💬 📅 ⏰ 🚀 💡 ☕'.split(' ');
 const WISHES = ['Parabéns! 🎉', 'Felicidades 🎂', 'Feliz niver! 🥳'];
-type GsSpec = { kind: 'status' } | { kind: 'member'; id: string } | { kind: 'add' } | { kind: 'notice' } | { kind: 'gnotice' } | { kind: 'newchat' } | { kind: 'newgroup' } | { kind: 'tasks'; mode: 0 | 1 };
+type GsSpec = { kind: 'status' } | { kind: 'member'; id: string } | { kind: 'add' } | { kind: 'notice' } | { kind: 'gnotice' } | { kind: 'newchat' } | { kind: 'newgroup' } | { kind: 'tasks'; mode: 0 | 1 } | { kind: 'poll' };
 
 export interface EwApi {
   boot: Boot; people: Record<string, Person>; chats: Chat[]; prefs: Prefs; cur: Chat | null; me: Person;
@@ -324,6 +325,7 @@ export default function EwwonApp() {
   const pgBack = useCallback(() => setPages((s) => s.slice(0, -1)), []);
   const pgClose = useCallback(() => setPages([]), []);
   const gsOpen = useCallback((g: GsSpec) => setGs(g), []);
+  const chatPollsOn = useDbFeature('polls');
   const gsClose = useCallback(() => setGs(null), []);
 
   const upd = useCallback((x: number) => {
@@ -1346,6 +1348,7 @@ export default function EwwonApp() {
                 <button onClick={() => pickAttach('image/*')}><span style={{ background: '#8b5cf6' }}><I n="camera" /></span>Galeria</button>
                 <button onClick={() => pickAttach('image/*', true)}><span style={{ background: '#ff5d7a' }}><I n="camera" /></span>Câmera</button>
                 <button onClick={() => pickAttach('.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.zip,image/*')}><span style={{ background: '#4f8cff' }}><I n="upload" /></span>Arquivo</button>
+                {chatPollsOn && cur ? <button onClick={() => { setAttOn(false); gsOpen({ kind: 'poll' }); }}><span style={{ background: '#f59e0b' }}><I n="check" /></span>Enquete</button> : null}
                 {cur && tasksOn[cur.key]?.enabled ? <>
                   <button onClick={() => { setAttOn(false); gsOpen({ kind: 'tasks', mode: 0 }); }}><span style={{ background: '#2fbf71' }}><I n="tasks" /></span>Nova tarefa</button>
                   <button onClick={() => { setAttOn(false); gsOpen({ kind: 'tasks', mode: 1 }); }}><span style={{ background: '#14b8a6' }}><I n="chevR" /></span>Mover tarefa</button>
@@ -1439,7 +1442,8 @@ export default function EwwonApp() {
         {/* ---------------- Sheet global ---------------- */}
         <div className={'gss' + (gs ? ' on' : '')} id="gss" onClick={gsClose} />
         <div className={'sheet gs' + (gs ? ' on' : '')} id="gs">
-          {gs && gs.kind === 'tasks' ? <TasksSheet mode={gs.mode} meId={meId} people={P} toast={toast} post={(t) => void send(t)} close={gsClose} />
+          {gs && gs.kind === 'poll' && cur ? <PollSheet convKey={chatKeyFor(cur)} post={(c) => void send(c)} close={gsClose} toast={toast} />
+            : gs && gs.kind === 'tasks' ? <TasksSheet mode={gs.mode} meId={meId} people={P} toast={toast} post={(t) => void send(t)} close={gsClose} />
             : gs ? <GlobalSheet spec={gs} api={api} close={gsClose} statusClear={statusClear} setStatusClear={setStatusClear} /> : null}
         </div>
         <input type="file" id="fi" ref={fiRef} accept="image/*" hidden onChange={onFile} />

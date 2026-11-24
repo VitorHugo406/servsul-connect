@@ -83,3 +83,19 @@
 .cx-seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; background: hsl(var(--muted)); }
 .cx-seg button { height: 28px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); cursor: pointer; }
 .cx-seg button[aria-pressed='true'] { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px hsl(var(--foreground) / .08); }
+
+/* ── poll editor (PC chat + announcements): numbered/round option rows, dashed add, switch rows, end chips */
+.cx-pform { gap: 16px; }
+.cx-popts { display: flex; flex-direction: column; gap: 8px; }
+.cx-pform .cx-optrow { gap: 8px; }
+.cx-pdot { flex: none; width: 18px; height: 18px; border-radius: 50%; border: 2px solid hsl(var(--muted-foreground) / .55); }
+.cx-pdot.sq { border-radius: 5px; }
+.cx-iconbtn { flex: none; width: 34px; height: 34px; display: inline-grid; place-items: center; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--muted-foreground)); cursor: pointer; }
+.cx-iconbtn:hover { color: hsl(var(--destructive)); border-color: hsl(var(--destructive) / .4); }
+.cx-padd { display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; border-radius: 10px; border: 1.5px dashed hsl(var(--border)); background: transparent; color: hsl(var(--muted-foreground)); font-size: 13px; font-weight: 500; cursor: pointer; }
+.cx-padd:hover { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
+.cx-psets { display: flex; flex-direction: column; border: 1px solid hsl(var(--border)); border-radius: 12px; overflow: hidden; }
+.cx-pset { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; cursor: pointer; }
+.cx-pset + .cx-pset { border-top: 1px solid hsl(var(--border)); }
+.cx-pset b { display: block; font-size: 13px; font-weight: 600; }
+.cx-pset small { display: block; font-size: 12px; color: hsl(var(--muted-foreground)); }

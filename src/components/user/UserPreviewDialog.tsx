@@ -170,7 +170,7 @@ export function UserPreviewDialog({ open, isOpen, onOpenChange, onClose, userId,
                    </span>
                  </div>
                  <div className="mt-3 space-y-1 text-left">
-                   <DialogTitle className="text-xl leading-tight">{name}</DialogTitle>
+                   <DialogTitle className="no-mark text-xl leading-tight">{name}</DialogTitle>
                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                      <Badge variant="secondary" className="gap-1"><BadgeCheck className="h-3 w-3" />{AUTONOMY_LABELS[user.autonomy_level] || 'Colaborador'}</Badge>
                      {sector ? <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: sector.color }} />{sector.name}</span> : null}

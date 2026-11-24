@@ -3,8 +3,6 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import markDark from '@/assets/ewvon-mark-dark.png';
-import markLight from '@/assets/ewvon-mark-light.png';
 
 const Dialog = DialogPrimitive.Root;
 
@@ -62,10 +60,7 @@ const DialogContent = React.forwardRef<
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)} {...props}>
-    <img src={markDark} alt="ewvon" className="mb-3 h-6 w-auto self-start object-contain dark:hidden" /><img src={markLight} alt="" aria-hidden="true" className="mb-3 hidden h-6 w-auto self-start object-contain dark:block" />
-    {props.children}
-  </div>
+  <div className={cn("flex flex-col space-y-1.5 pr-8 text-left", className)} {...props} />
 );
 DialogHeader.displayName = "DialogHeader";
 
@@ -74,15 +69,28 @@ const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 );
 DialogFooter.displayName = "DialogFooter";
 
+/** The ewvon wordmark shown before every dialog/sheet title (owner's request: full logo + title side by side). */
+export function BrandTitleMark() {
+  return (
+    <>
+      <img src="/ewwon/img/receipt-logo.png" alt="" aria-hidden="true" className="h-[22px] w-auto shrink-0 object-contain dark:invert" />
+      <span aria-hidden="true" className="h-5 w-px shrink-0 bg-border" />
+    </>
+  );
+}
+const withMark = (className?: string) => !/\bsr-only\b|\bno-mark\b/.test(className || '');
+
 const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
->(({ className, ...props }, ref) => (
+>(({ className, children, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+    className={cn("text-lg font-semibold leading-tight tracking-tight", withMark(className) && "flex items-center gap-3", className)}
     {...props}
-  />
+  >
+    {withMark(className) ? <><BrandTitleMark /><span className="inline-flex min-w-0 items-center gap-2">{children}</span></> : children}
+  </DialogPrimitive.Title>
 ));
 DialogTitle.displayName = DialogPrimitive.Title.displayName;
 

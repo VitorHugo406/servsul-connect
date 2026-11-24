@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sel } from '@/components/ui/Sel';
+import { Switch } from '@/components/ui/switch';
 import { appConfirm } from '@/lib/appDialog';
 import { cn } from '@/lib/utils';
 import '@/styles/chat-extras.css';
@@ -40,33 +40,33 @@ export async function createPoll(context: 'chat' | 'announcement', key: string, 
 /** The question/options/settings fields, used by the chat dialog and inside the announcement form. */
 export function PollEditor({ value, onChange }: { value: PollDraft; onChange: (d: PollDraft) => void }) {
   const set = (p: Partial<PollDraft>) => onChange({ ...value, ...p });
+  const ENDS: [number, string][] = [[0, 'Sem prazo'], [1, '1 hora'], [24, '24 horas'], [72, '3 dias'], [168, '7 dias']];
   return (
-    <div className="cx-form">
+    <div className="cx-form cx-pform">
       <div><label className="cx-l" htmlFor="cx-poll-q">Pergunta</label><Input id="cx-poll-q" value={value.question} maxLength={300} placeholder="Ex.: Qual o melhor dia para a reunião?" onChange={(e) => set({ question: e.target.value })} /></div>
       <div>
         <label className="cx-l">Opções</label>
-        <div className="flex flex-col gap-1.5">
+        <div className="cx-popts">
           {value.options.map((o, i) => (
             <div key={i} className="cx-optrow">
+              <span className={cn('cx-pdot', value.multi && 'sq')} aria-hidden="true" />
               <Input value={o} maxLength={120} placeholder={`Opção ${i + 1}`} aria-label={`Opção ${i + 1}`} onChange={(e) => { const opts = [...value.options]; opts[i] = e.target.value; set({ options: opts }); }} />
               {value.options.length > 2 ? <button type="button" className="cx-iconbtn" aria-label={`Remover opção ${i + 1}`} onClick={() => set({ options: value.options.filter((_, j) => j !== i) })}><Trash2 className="h-4 w-4" /></button> : null}
             </div>
           ))}
-        </div>
-        {value.options.length < 10 ? <Button type="button" variant="ghost" size="sm" className="mt-1.5" onClick={() => set({ options: [...value.options, ''] })}><Plus className="mr-1.5 h-4 w-4" />Adicionar opção</Button> : null}
-      </div>
-      <div className="cx-two">
-        <div className="cx-checks">
-          <label><input type="checkbox" checked={value.multi} onChange={(e) => set({ multi: e.target.checked })} />Permitir várias respostas</label>
-          <label><input type="checkbox" checked={value.anonymous} onChange={(e) => set({ anonymous: e.target.checked })} />Votos anônimos</label>
-        </div>
-        <div><label className="cx-l">Encerrar</label>
-          <Sel className="ui-sel w-full" value={String(value.hours)} onChange={(e) => set({ hours: Number(e.target.value) })} aria-label="Encerrar a enquete">
-            <option value="0">Sem prazo</option><option value="1">Em 1 hora</option><option value="24">Em 24 horas</option><option value="72">Em 3 dias</option><option value="168">Em 7 dias</option>
-          </Sel>
+          {value.options.length < 10 ? <button type="button" className="cx-padd" onClick={() => set({ options: [...value.options, ''] })}><Plus className="h-4 w-4" />Adicionar opção</button> : null}
         </div>
       </div>
-      {value.anonymous ? <p className="cx-hint">Ninguém vê quem votou em cada opção, só os totais.</p> : null}
+      <div className="cx-psets">
+        <label className="cx-pset"><span><b>Várias respostas</b><small>Cada pessoa pode marcar mais de uma opção</small></span><Switch checked={value.multi} onCheckedChange={(v) => set({ multi: v })} /></label>
+        <label className="cx-pset"><span><b>Votos anônimos</b><small>Ninguém vê quem votou em cada opção, só os totais</small></span><Switch checked={value.anonymous} onCheckedChange={(v) => set({ anonymous: v })} /></label>
+      </div>
+      <div>
+        <label className="cx-l">Encerrar votação</label>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Encerrar a enquete">
+          {ENDS.map(([h, l]) => <button key={h} type="button" className="ui-chip" aria-pressed={value.hours === h} onClick={() => set({ hours: h })}>{l}</button>)}
+        </div>
+      </div>
     </div>
   );
 }
@@ -86,7 +86,7 @@ export function CreatePollDialog({ open, onOpenChange, convKey, onSend }: { open
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!busy) onOpenChange(o); }}>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>Criar enquete</DialogTitle><DialogDescription>Todos da conversa podem votar e ver o resultado na hora.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>Criar enquete</DialogTitle><DialogDescription>Todos da conversa podem votar e ver o resultado na hora, como no WhatsApp.</DialogDescription></DialogHeader>
         <PollEditor value={d} onChange={setD} />
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Cancelar</Button>

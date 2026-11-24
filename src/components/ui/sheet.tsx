@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { BrandTitleMark } from "./dialog";
 
 const Sheet = SheetPrimitive.Root;
 
@@ -81,9 +82,14 @@ SheetFooter.displayName = "SheetFooter";
 const SheetTitle = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Title>
->(({ className, ...props }, ref) => (
-  <SheetPrimitive.Title ref={ref} className={cn("text-lg font-semibold text-foreground", className)} {...props} />
-));
+>(({ className, children, ...props }, ref) => {
+  const mark = !/\bsr-only\b|\bno-mark\b/.test(className || '');
+  return (
+    <SheetPrimitive.Title ref={ref} className={cn("text-lg font-semibold text-foreground", mark && "flex items-center gap-3", className)} {...props}>
+      {mark ? <><BrandTitleMark /><span className="inline-flex min-w-0 items-center gap-2">{children}</span></> : children}
+    </SheetPrimitive.Title>
+  );
+});
 SheetTitle.displayName = SheetPrimitive.Title.displayName;
 
 const SheetDescription = React.forwardRef<
