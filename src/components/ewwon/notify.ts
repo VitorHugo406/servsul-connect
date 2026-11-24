@@ -338,8 +338,8 @@ export function uiSound(kind: 'type' | 'send' | 'recv') {
       // (still muted by the low-pass) with a quick downward slide; no noise (the noise burst sounded harsh)
       // (a 40 ms / 0.07 version was too short and quiet to be heard; this one has the body of the send sound)
       const f = 430 + Math.random() * 50;
-      soft(f, f * 0.75, t0, 0.075, 0.2, 1300);
-      soft(f * 2, f * 1.6, t0, 0.03, 0.05, 2400);
+      soft(f, f * 0.75, t0, 0.075, 0.27, 1300);
+      soft(f * 2, f * 1.6, t0, 0.03, 0.065, 2400);
     } else if (kind === 'send') {
       // deep and round, like a corporate chat send
       soft(330, 196, t0, 0.17, 0.16, 1100);
