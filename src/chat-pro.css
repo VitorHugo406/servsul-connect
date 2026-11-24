@@ -122,8 +122,9 @@ aside[aria-label^="Detalhes da conversa"] > div:first-child > div { border-radiu
 
 /* EwvonAI mentioned: the composer glows with the AI colors (purple, orange, blue) while the tag is in the text. */
 @property --ai-ang { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-.chat-composer-box.ai-glow, .ew .cmp.ai-glow { position: relative; border-color: transparent !important; animation: ai-pulse 3.2s ease-in-out infinite; }
-.chat-composer-box.ai-glow::before, .ew .cmp.ai-glow::before {
+.ai-field { position: relative; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); }
+.chat-composer-box.ai-glow, .ew .cmp.ai-glow, .ai-field.ai-glow { position: relative; border-color: transparent !important; animation: ai-pulse 3.2s ease-in-out infinite; }
+.chat-composer-box.ai-glow::before, .ew .cmp.ai-glow::before, .ai-field.ai-glow::before {
   content: ''; position: absolute; inset: -1.5px; border-radius: inherit; padding: 2px; pointer-events: none;
   background: conic-gradient(from var(--ai-ang), #7c5cff, #ff8a4c, #4c8dff, #b06bff, #ff8a4c, #7c5cff);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
@@ -136,7 +137,7 @@ aside[aria-label^="Detalhes da conversa"] > div:first-child > div { border-radiu
   33% { box-shadow: 0 0 16px 2px rgba(255, 138, 76, .42); }
   66% { box-shadow: 0 0 16px 2px rgba(76, 141, 255, .45); }
 }
-@media (prefers-reduced-motion: reduce) { .chat-composer-box.ai-glow, .ew .cmp.ai-glow, .chat-composer-box.ai-glow::before, .ew .cmp.ai-glow::before { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .chat-composer-box.ai-glow, .ew .cmp.ai-glow, .ai-field.ai-glow, .chat-composer-box.ai-glow::before, .ew .cmp.ai-glow::before, .ai-field.ai-glow::before { animation: none; } }
 
 /* Own-bubble colour chosen per conversation (Personalização do chat; shared with the mobile app): solid colour, white text */
 .chat-thread[data-bubble] .chat-bubble-outgoing { background: var(--chat-own-solid) !important; border-color: transparent !important; color: #fff !important; }

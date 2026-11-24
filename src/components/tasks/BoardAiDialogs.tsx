@@ -21,6 +21,20 @@ import '@/styles/chat-extras.css';
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 type U = { id: string; name: string; display_name?: string | null };
 
+/** Header of the EwvonAI dialogs: the full ewvon logo, a divider and the title (no DialogHeader mark). */
+function AiHead({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div className="flex flex-col gap-2 pr-8">
+      <div className="flex items-center gap-3">
+        <img src="/ewwon/img/receipt-logo.png" alt="ewvon" className="h-6 w-auto shrink-0 dark:invert" />
+        <span className="h-6 w-px shrink-0 bg-border" aria-hidden="true" />
+        <DialogTitle className="text-base font-semibold leading-tight">{title}</DialogTitle>
+      </div>
+      <DialogDescription>{desc}</DialogDescription>
+    </div>
+  );
+}
+
 export function BoardSummaryDialog({ open, onOpenChange, boardId, boardName }: { open: boolean; onOpenChange: (o: boolean) => void; boardId: string; boardName: string }) {
   const [busy, setBusy] = useState(false);
   const [text, setText] = useState<string | null>(null);
@@ -33,10 +47,7 @@ export function BoardSummaryDialog({ open, onOpenChange, boardId, boardName }: {
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!busy) onOpenChange(o); }}>
       <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Resumo do mural com IA</DialogTitle>
-          <DialogDescription>{boardName} · situação geral, cards em atenção, próximos prazos e sugestões.</DialogDescription>
-        </DialogHeader>
+        <AiHead title="Resumo do mural com IA" desc={`${boardName} · situação geral, cards em atenção, próximos prazos e sugestões.`} />
         {busy ? <div className="cx-sum flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Analisando os cards…</div>
           : err ? <div className="cx-sum text-muted-foreground">{err}</div>
           : text ? <div className="cx-sum">{renderAiText(text)}</div>
@@ -103,14 +114,11 @@ export function CardsFromTextDialog({ open, onOpenChange, boardId, users, onCrea
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!busy) onOpenChange(o); }}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>Criar cards a partir de um texto</DialogTitle>
-          <DialogDescription>Cole uma ata, um e-mail ou uma lista. O EwvonAI sugere os cards e você revisa antes de criar.</DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-xl">
+        <AiHead title="Criar cards a partir de um texto" desc="Cole uma ata, um e-mail ou uma lista. O EwvonAI sugere os cards e você revisa antes de criar." />
         {!drafts ? (
           <div className="cx-form">
-            <Textarea rows={10} value={text} maxLength={30000} onChange={(e) => setText(e.target.value)} placeholder={'Ex.: Reunião de 21/11 — Ana revisa o contrato até sexta; Bruno agenda a visita ao cliente; precisamos atualizar a planilha de custos (urgente).'} aria-label="Texto" />
+            <div className="ai-field ai-glow"><Textarea rows={10} className="border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" value={text} maxLength={30000} onChange={(e) => setText(e.target.value)} placeholder={'Ex.: Reunião de 21/11 — Ana revisa o contrato até sexta; Bruno agenda a visita ao cliente; precisamos atualizar a planilha de custos (urgente).'} aria-label="Texto" /></div>
             <p className="cx-hint">Responsáveis só são preenchidos quando o texto diz quem fará e o nome existe na empresa. Prazos relativos (“até sexta”) usam a data de hoje.</p>
           </div>
         ) : (
