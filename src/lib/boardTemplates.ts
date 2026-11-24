@@ -21,7 +21,7 @@ export type BoardTemplate = {
   proc?: { ref: string; refDay: number; lead: number; q: string; title?: string };
 };
 
-export const TEMPLATE_AREAS = ['Recursos Humanos', 'Vendas e atendimento', 'Marketing', 'Operações', 'Financeiro e compras', 'Projetos e tecnologia', 'Gestão e administração'];
+export const TEMPLATE_AREAS = ['Recursos Humanos', 'Departamento Pessoal', 'Vendas e atendimento', 'Marketing', 'Operações', 'Financeiro e compras', 'Projetos e tecnologia', 'Gestão e administração', 'Resolução de problemas'];
 
 const day = (n: number, h = 18) => { const d = new Date(); d.setDate(d.getDate() + n); d.setHours(h, 0, 0, 0); return d.toISOString(); };
 const ymd = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -505,6 +505,259 @@ export const BOARD_TEMPLATES: BoardTemplate[] = [
       { t: 'Gráfica', col: 3, due: 10, l: [2], f: { Fornecedor: 'Gráfica Modelo', 'Vencimento do contrato': ymd(60), Nota: 8 } },
     ],
   },
+  // ───────────────────────── Departamento Pessoal (rotinas com prazo legal)
+  {
+    id: 'dp-admissao', area: 'Departamento Pessoal', icon: 'file-text', cover: 'cover-navy', name: 'Admissão no DP (documentos e eSocial)',
+    desc: 'Do aceite ao primeiro dia: documentos, exame admissional (ASO), contrato, envio ao eSocial até o dia anterior ao início e benefícios.',
+    columns: [['Aguardando documentos', G], ['Exame admissional', B], ['Contrato e cadastro', P], ['eSocial e benefícios', O], ['Admitido', GR], ['Pendência', R]],
+    labels: [['CLT', B], ['Estágio', S], ['Temporário', Y], ['Urgente', R]],
+    fields: [{ n: 'Colaborador', t: 'text', card: true }, { n: 'Data de início', t: 'date' }, { n: 'Cargo', t: 'text' }, { n: 'Salário', t: 'money' }, { n: 'Tipo de contrato', t: 'select', o: ['CLT', 'Estágio', 'Temporário', 'Experiência 45+45'] }],
+    proc: { ref: 'Data de início', refDay: 10, lead: 0, q: 'Quantos dias antes do início a admissão deve estar pronta?', title: 'Colaborador' },
+    rules: [{ when: 'moved', col: 'Pendência', act: 'priority', val: 'urgent', label: 'Pendência na admissão: prioridade Urgente' }],
+    cards: [
+      { t: 'Receber e conferir documentos', col: 0, st: 0, due: 3, p: 'high', f: { Colaborador: 'Nome do colaborador', 'Data de início': ymd(10), 'Tipo de contrato': 'CLT' }, ck: [['Documentos', ['RG e CPF', 'Carteira de trabalho digital', 'Comprovante de residência', 'Título de eleitor', 'Certidão de casamento/filhos', 'Dados bancários', 'Foto 3x4']]] },
+      { t: 'Agendar e receber o ASO admissional', col: 1, st: 1, due: 6, p: 'high', ck: [['Exame', ['Agendar na clínica', 'Guia entregue ao candidato', 'ASO apto recebido']]] },
+      { t: 'Contrato de trabalho e termos assinados', col: 2, st: 5, due: 8, dep: [0], ck: [['Assinaturas', ['Contrato (experiência)', 'Acordo de compensação/banco de horas', 'Termo de uso de imagem', 'Opção de vale-transporte']]] },
+      { t: 'Enviar admissão ao eSocial (S-2200)', col: 3, st: 7, due: 9, p: 'urgent', dep: [1, 2], d: 'O envio precisa acontecer até o dia anterior ao início das atividades.' },
+      { t: 'Cadastrar benefícios e ponto', col: 3, st: 8, due: 10, dep: [2], ck: [['Benefícios', ['Vale-transporte', 'Vale-refeição/alimentação', 'Plano de saúde', 'Cadastro no relógio de ponto']]] },
+    ],
+  },
+  {
+    id: 'dp-folha', area: 'Departamento Pessoal', icon: 'banknote', cover: 'cover-green', name: 'Folha de pagamento do mês',
+    desc: 'Fechamento do ponto, variáveis, cálculo, conferência, pagamento até o 5º dia útil e guias (FGTS Digital e DCTFWeb até o dia 20).',
+    columns: [['Coleta de variáveis', G], ['Cálculo', B], ['Conferência', Y], ['Pagamento e guias', O], ['Fechado', GR]],
+    labels: [['Ponto', S], ['Variáveis', P], ['Encargos', R], ['Benefícios', PK]],
+    fields: [{ n: 'Competência', t: 'text', card: true }, { n: 'Data do pagamento', t: 'date' }, { n: 'Total líquido', t: 'money' }],
+    proc: { ref: 'Data do pagamento', refDay: 12, lead: 0, q: 'Quantos dias antes da data de pagamento a folha deve estar fechada?', title: 'Competência' },
+    cards: [
+      { t: 'Fechar o ponto e tratar divergências', col: 0, st: 0, due: 4, p: 'high', l: [0], f: { Competência: 'Mês de referência', 'Data do pagamento': ymd(12) }, ck: [['Ponto', ['Faltas e atrasos', 'Horas extras aprovadas', 'Banco de horas', 'Atestados lançados']]] },
+      { t: 'Lançar variáveis (comissões, adicionais, descontos)', col: 0, st: 2, due: 6, l: [1], ck: [['Variáveis', ['Comissões', 'Adicional noturno/insalubridade', 'Pensão alimentícia', 'Consignado', 'Adiantamento']]] },
+      { t: 'Calcular a folha', col: 1, st: 6, due: 8, p: 'high', dep: [0, 1] },
+      { t: 'Conferir a folha e os encargos', col: 2, st: 8, due: 10, p: 'high', l: [2], dep: [2], ck: [['Conferência', ['Comparar com o mês anterior', 'Admitidos e desligados do mês', 'INSS/IRRF', 'FGTS']]] },
+      { t: 'Pagar salários e disponibilizar holerites', col: 3, st: 11, due: 12, p: 'urgent', dep: [3], d: 'Prazo legal: até o 5º dia útil do mês seguinte.' },
+      { t: 'Enviar eventos ao eSocial e emitir guias', col: 3, st: 12, due: 18, l: [2], dep: [3], ck: [['Guias', ['Fechamento dos eventos periódicos', 'DCTFWeb (vence dia 20)', 'FGTS Digital (vence dia 20)']]] },
+    ],
+  },
+  {
+    id: 'dp-rescisao', area: 'Departamento Pessoal', icon: 'door-open', cover: 'cover-purple', name: 'Rescisão de contrato (DP)',
+    desc: 'Cálculo, exame demissional, pagamento em até 10 dias do fim do contrato, eSocial, FGTS e seguro-desemprego, sem perder prazo.',
+    columns: [['Comunicado', G], ['Cálculo', B], ['Documentos e exame', P], ['Pagamento', O], ['Encerrado', GR], ['Pendência', R]],
+    labels: [['Sem justa causa', B], ['Pedido de demissão', S], ['Justa causa', R], ['Acordo', Y]],
+    fields: [{ n: 'Colaborador', t: 'text', card: true }, { n: 'Último dia', t: 'date' }, { n: 'Tipo de desligamento', t: 'select', o: ['Sem justa causa', 'Pedido de demissão', 'Justa causa', 'Acordo (484-A)', 'Término de experiência'] }, { n: 'Aviso prévio', t: 'select', o: ['Trabalhado', 'Indenizado', 'Dispensado'] }],
+    proc: { ref: 'Último dia', refDay: 5, lead: 0, q: 'Antecipar os prazos em quantos dias? (0 = contar a partir do último dia)', title: 'Colaborador' },
+    rules: [{ when: 'moved', col: 'Pendência', act: 'priority', val: 'urgent', label: 'Pendência na rescisão: prioridade Urgente' }],
+    cards: [
+      { t: 'Registrar o desligamento e o aviso prévio', col: 0, st: 0, due: 1, p: 'high', f: { Colaborador: 'Nome do colaborador', 'Último dia': ymd(5), 'Tipo de desligamento': 'Sem justa causa', 'Aviso prévio': 'Indenizado' } },
+      { t: 'Calcular as verbas rescisórias', col: 1, st: 3, due: 7, p: 'high', dep: [0], ck: [['Verbas', ['Saldo de salário', 'Aviso prévio', 'Férias vencidas e proporcionais + 1/3', '13º proporcional', 'Multa do FGTS (quando houver)', 'Descontos']]] },
+      { t: 'Exame demissional (ASO)', col: 2, st: 3, due: 10, d: 'Até 10 dias após o término do contrato (dispensado se o último exame for recente, conforme a NR-7).' },
+      { t: 'Pagar a rescisão', col: 3, st: 7, due: 15, p: 'urgent', dep: [1], d: 'Prazo legal: até 10 dias corridos após o término do contrato (CLT art. 477).' },
+      { t: 'Enviar ao eSocial (S-2299) e liberar FGTS e seguro-desemprego', col: 3, st: 8, due: 15, p: 'high', dep: [1], ck: [['Encerramento', ['Evento S-2299', 'Guia do FGTS rescisório', 'Comunicação para seguro-desemprego', 'Baixa na carteira digital', 'Termo de quitação assinado']]] },
+    ],
+  },
+  {
+    id: 'dp-ferias', area: 'Departamento Pessoal', icon: 'sun', cover: 'cover-orange', name: 'Processamento de férias',
+    desc: 'Aviso com 30 dias de antecedência, cálculo, pagamento até 2 dias antes do início e controle de férias vencendo.',
+    columns: [['Programadas', G], ['Aviso entregue', B], ['Calculado', Y], ['Pago', O], ['Em férias', P], ['Retornou', GR]],
+    labels: [['Vencendo', R], ['Abono pecuniário', S], ['Parcelada', PK]],
+    fields: [{ n: 'Colaborador', t: 'text', card: true }, { n: 'Início das férias', t: 'date' }, { n: 'Dias', t: 'number' }, { n: 'Período aquisitivo', t: 'text' }],
+    proc: { ref: 'Início das férias', refDay: 32, lead: 0, q: 'Antecipar todos os prazos em quantos dias?', title: 'Colaborador' },
+    cards: [
+      { t: 'Entregar o aviso de férias', col: 0, st: 0, due: 2, p: 'high', f: { Colaborador: 'Nome do colaborador', 'Início das férias': ymd(32), Dias: 30 }, d: 'O aviso deve ser dado com pelo menos 30 dias de antecedência.' },
+      { t: 'Calcular as férias', col: 1, st: 20, due: 26, dep: [0], ck: [['Cálculo', ['Média de variáveis', '1/3 constitucional', 'Abono (se pedido)', 'Adiantamento do 13º (se pedido)']]] },
+      { t: 'Pagar as férias', col: 2, st: 27, due: 30, p: 'urgent', dep: [1], d: 'Pagamento até 2 dias antes do início das férias.' },
+      { t: 'Conferir o retorno e o ponto', col: 4, st: 62, due: 63, dep: [2] },
+    ],
+  },
+  {
+    id: 'dp-afastamentos', area: 'Departamento Pessoal', icon: 'stethoscope', cover: 'cover-navy', name: 'Atestados e afastamentos (INSS)',
+    desc: 'Atestados recebidos, lançamento no ponto, afastamentos acima de 15 dias encaminhados ao INSS, eSocial (S-2230) e exame de retorno.',
+    columns: [['Recebido', G], ['Lançado', B], ['Encaminhado ao INSS', P], ['Afastado', O], ['Exame de retorno', Y], ['Retornou', GR]],
+    labels: [['Até 15 dias', S], ['Mais de 15 dias', O], ['Acidente de trabalho', R], ['Licença-maternidade', PK]],
+    fields: [{ n: 'Colaborador', t: 'text', card: true }, { n: 'Início do afastamento', t: 'date' }, { n: 'Dias de atestado', t: 'number' }, { n: 'CID informado', t: 'checkbox' }],
+    rules: [{ when: 'created', act: 'due', val: 2, label: 'Atestado novo: lançar em até 2 dias' }, { when: 'moved', col: 'Encaminhado ao INSS', act: 'priority', val: 'high', label: 'Encaminhado ao INSS: prioridade Alta' }],
+    form: { title: 'Enviar atestado', intro: 'Envie seu atestado para o Departamento Pessoal. Guarde o original até o DP confirmar o recebimento.', col: 'Recebido', due: 2, q: [['Seu nome', 'text', true], ['Primeiro dia do atestado', 'date', true], ['Quantidade de dias', 'number', true], ['Link da foto ou PDF do atestado', 'text', true], ['Observações', 'long', false]] },
+    cards: [
+      { t: 'Atestado de 3 dias', col: 1, due: 1, l: [0], f: { Colaborador: 'Pessoa A', 'Início do afastamento': ymd(-2), 'Dias de atestado': 3 } },
+      { t: 'Afastamento acima de 15 dias', col: 2, due: 3, p: 'high', l: [1], f: { Colaborador: 'Pessoa B', 'Início do afastamento': ymd(-16), 'Dias de atestado': 30 }, ck: [['INSS', ['Empresa paga os 15 primeiros dias', 'Agendar perícia / requerimento no INSS', 'Enviar S-2230 ao eSocial', 'Acompanhar resultado da perícia', 'Agendar exame de retorno']]] },
+    ],
+  },
+  {
+    id: 'dp-ponto', area: 'Departamento Pessoal', icon: 'clock', cover: 'cover-purple', name: 'Ponto, horas extras e banco de horas',
+    desc: 'Divergências de ponto, esquecimentos de marcação e horas extras que precisam de aprovação antes do fechamento.',
+    columns: [['Solicitado', G], ['Com o gestor', B], ['Aprovado', GR], ['Ajustado no ponto', P], ['Recusado', R]],
+    labels: [['Esqueceu de marcar', S], ['Hora extra', O], ['Banco de horas', P], ['Falta', R]],
+    fields: [{ n: 'Colaborador', t: 'text', card: true }, { n: 'Data', t: 'date' }, { n: 'Horas', t: 'number' }],
+    rules: [{ when: 'created', act: 'due', val: 3, label: 'Pedido novo: decidir em até 3 dias' }],
+    form: { title: 'Ajuste de ponto', intro: 'Peça um ajuste de marcação ou informe horas extras. Seu gestor aprova antes do fechamento.', col: 'Solicitado', due: 3, q: [['Seu nome', 'text', true], ['Data', 'date', true], ['O que precisa ajustar?', 'select', true, ['Esqueci de marcar', 'Hora extra', 'Compensação de banco de horas', 'Outro']], ['Horário correto / quantidade de horas', 'text', true], ['Justificativa', 'long', true]] },
+    cards: [
+      { t: 'Esqueceu de marcar a saída', col: 1, due: 2, l: [0], f: { Colaborador: 'Pessoa A', Data: ymd(-1) } },
+      { t: '2 horas extras — inventário', col: 0, due: 3, l: [1], f: { Colaborador: 'Pessoa B', Data: ymd(-3), Horas: 2 } },
+    ],
+  },
+  {
+    id: 'dp-duvidas', area: 'Departamento Pessoal', icon: 'message-circle-question', cover: 'cover-green', name: 'Dúvidas e pedidos ao DP',
+    desc: 'Central do Departamento Pessoal: holerite, informe de rendimentos, declarações, benefícios e dúvidas, com prazo de resposta.',
+    columns: [['Novo', G], ['Em atendimento', B], ['Aguardando colaborador', Y], ['Resolvido', GR]],
+    labels: [['Holerite', S], ['Benefícios', PK], ['Declaração', P], ['Informe de rendimentos', O], ['Outros', G]],
+    fields: [{ n: 'Solicitante', t: 'text', card: true }, { n: 'Tipo', t: 'select', o: ['Holerite', 'Benefícios', 'Declaração', 'Informe de rendimentos', 'Férias', 'Outros'] }],
+    rules: [{ when: 'created', act: 'due', val: 2, label: 'Pedido novo: responder em até 2 dias' }, { when: 'moved', col: 'Em atendimento', act: 'notify', label: 'Em atendimento: avisar o responsável' }],
+    form: { title: 'Fale com o DP', intro: 'Mande sua dúvida ou pedido ao Departamento Pessoal. Respondemos em até 2 dias úteis.', col: 'Novo', due: 2, q: [['Assunto', 'text', true], ['Tipo', 'select', true, ['Holerite', 'Benefícios', 'Declaração', 'Informe de rendimentos', 'Férias', 'Outros']], ['Detalhes', 'long', true], ['Seu nome', 'text', true], ['Seu e-mail', 'email', true]] },
+    cards: [
+      { t: 'Declaração de vínculo para financiamento', col: 1, due: 1, l: [2], f: { Solicitante: 'Pessoa A', Tipo: 'Declaração' } },
+      { t: 'Desconto de vale-transporte diferente', col: 0, due: 2, l: [0], f: { Solicitante: 'Pessoa B', Tipo: 'Holerite' } },
+    ],
+  },
+  {
+    id: 'dp-beneficios', area: 'Departamento Pessoal', icon: 'gift', cover: 'cover-orange', name: 'Benefícios: inclusões e exclusões',
+    desc: 'Movimentações de plano de saúde, odontológico, vale-refeição e vale-transporte antes do corte da operadora.',
+    columns: [['Solicitado', G], ['Documentos', B], ['Enviado à operadora', P], ['Ativo', GR], ['Cancelado', R]],
+    labels: [['Saúde', R], ['Odonto', S], ['Refeição/alimentação', O], ['Transporte', P]],
+    fields: [{ n: 'Colaborador', t: 'text', card: true }, { n: 'Benefício', t: 'select', o: ['Plano de saúde', 'Odontológico', 'Vale-refeição', 'Vale-alimentação', 'Vale-transporte'] }, { n: 'Movimento', t: 'select', o: ['Inclusão', 'Exclusão', 'Inclusão de dependente', 'Troca de plano'] }, { n: 'Data de corte', t: 'date' }],
+    cards: [
+      { t: 'Incluir dependente no plano de saúde', col: 1, due: 4, l: [0], f: { Colaborador: 'Pessoa A', Benefício: 'Plano de saúde', Movimento: 'Inclusão de dependente', 'Data de corte': ymd(6) }, ck: [['Documentos', ['Certidão do dependente', 'CPF do dependente', 'Formulário da operadora assinado']]] },
+      { t: 'Excluir benefícios de desligado', col: 2, due: 2, p: 'high', l: [0, 2], f: { Colaborador: 'Pessoa B', Movimento: 'Exclusão' } },
+    ],
+  },
+  {
+    id: 'dp-cat', area: 'Departamento Pessoal', icon: 'hard-hat', cover: 'cover-purple', name: 'Acidente de trabalho (CAT)',
+    desc: 'Atendimento ao colaborador, CAT até o 1º dia útil seguinte, investigação da causa e ações para não repetir.',
+    columns: [['Ocorrido', R], ['CAT e eSocial', O], ['Investigação', B], ['Ações preventivas', P], ['Encerrado', GR]],
+    labels: [['Típico', R], ['Trajeto', Y], ['Doença ocupacional', P], ['Quase acidente', S]],
+    fields: [{ n: 'Colaborador', t: 'text', card: true }, { n: 'Data do acidente', t: 'date' }, { n: 'Local', t: 'text' }, { n: 'Afastamento', t: 'checkbox' }],
+    rules: [{ when: 'created', act: 'priority', val: 'urgent', label: 'Acidente registrado: prioridade Urgente' }, { when: 'created', act: 'due', val: 1, label: 'CAT até o 1º dia útil seguinte' }],
+    cards: [
+      { t: 'Emitir a CAT (S-2210)', col: 1, due: 1, p: 'urgent', l: [0], f: { Colaborador: 'Nome do colaborador', 'Data do acidente': ymd(0), Local: 'Setor' }, d: 'Prazo: até o 1º dia útil após o acidente (em caso de morte, imediatamente).', ck: [['CAT', ['Atendimento médico', 'Atestado/relatório médico', 'Testemunhas', 'Envio do S-2210']]] },
+      { t: 'Investigar a causa raiz', col: 2, st: 1, due: 7, p: 'high', dep: [0], ck: [['Investigação', ['Ouvir o acidentado e testemunhas', 'Fotos do local', '5 porquês', 'Relatório com a CIPA/SESMT']]] },
+      { t: 'Implantar ações preventivas', col: 3, st: 7, due: 30, dep: [1], ck: [['Ações', ['Corrigir a condição insegura', 'Treinar a equipe', 'Revisar EPIs', 'Verificar eficácia em 30 dias']]] },
+    ],
+  },
+  {
+    id: 'dp-trabalhista', area: 'Departamento Pessoal', icon: 'scale', cover: 'cover-navy', name: 'Processos trabalhistas',
+    desc: 'Reclamações trabalhistas com prazos, audiências, documentos para o advogado, acordos e pagamentos.',
+    columns: [['Citação recebida', R], ['Documentos para defesa', B], ['Aguardando audiência', Y], ['Acordo / sentença', P], ['Pagamento', O], ['Arquivado', GR]],
+    labels: [['Horas extras', O], ['Verbas rescisórias', B], ['Insalubridade', Y], ['Dano moral', R]],
+    fields: [{ n: 'Reclamante', t: 'text', card: true }, { n: 'Número do processo', t: 'text' }, { n: 'Audiência', t: 'date' }, { n: 'Valor em discussão', t: 'money' }, { n: 'Advogado', t: 'text' }],
+    rules: [{ when: 'created', act: 'priority', val: 'high', label: 'Processo novo: prioridade Alta' }],
+    cards: [
+      { t: 'Reunir documentos para a defesa', col: 1, due: 10, p: 'high', l: [0, 1], f: { Reclamante: 'Ex-colaborador', 'Número do processo': '0000000-00.0000.0.00.0000', Audiência: ymd(30) }, ck: [['Documentos', ['Contrato e aditivos', 'Cartões de ponto', 'Holerites', 'TRCT e comprovantes', 'Advertências e registros']]] },
+      { t: 'Preparar preposto e testemunhas', col: 2, st: 20, due: 28, dep: [0] },
+    ],
+  },
+  // ───────────────────────── Recursos Humanos: problemas de gestão de pessoas
+  {
+    id: 'rh-turnover', area: 'Recursos Humanos', icon: 'trending-down', cover: 'cover-orange', name: 'Plano contra rotatividade (turnover)',
+    desc: 'Muita gente saindo? Levante os números, entenda as causas nas entrevistas de desligamento e acompanhe as ações de retenção.',
+    columns: [['Diagnóstico', G], ['Causas', B], ['Ações', P], ['Em execução', O], ['Medindo resultado', Y], ['Concluído', GR]],
+    labels: [['Salário e benefícios', O], ['Liderança', R], ['Carreira', P], ['Clima', PK], ['Recrutamento', S]],
+    fields: [{ n: 'Área', t: 'text', card: true }, { n: 'Turnover atual (%)', t: 'number' }, { n: 'Meta (%)', t: 'number' }],
+    cards: [
+      { t: 'Calcular turnover por área nos últimos 12 meses', col: 0, st: 0, due: 7, p: 'high', f: { Área: 'Empresa toda' } },
+      { t: 'Analisar entrevistas de desligamento', col: 0, st: 0, due: 10, dep: [], ck: [['Análise', ['Motivos mais citados', 'Tempo de casa de quem sai', 'Saídas no período de experiência', 'Áreas e líderes com mais saídas']]] },
+      { t: 'Definir as 3 causas principais', col: 1, st: 10, due: 14, p: 'high', dep: [0, 1] },
+      { t: 'Plano de ação por causa', col: 2, st: 14, due: 21, dep: [2], ck: [['Ações possíveis', ['Pesquisa salarial', 'Treinamento de líderes', 'Trilha de carreira', 'Melhorar a integração']]] },
+      { t: 'Medir o turnover após 90 dias', col: 4, st: 111, due: 114, dep: [3] },
+    ],
+  },
+  {
+    id: 'rh-clima', area: 'Recursos Humanos', icon: 'thermometer', cover: 'cover-green', name: 'Ação pós-pesquisa de clima',
+    desc: 'Transforme o resultado da pesquisa de clima ou eNPS em ações com dono e prazo, e devolva o retorno à equipe.',
+    columns: [['Resultado', G], ['Prioridades', B], ['Plano de ação', P], ['Em execução', O], ['Concluído', GR]],
+    labels: [['Comunicação', S], ['Liderança', R], ['Reconhecimento', Y], ['Estrutura', P], ['Carga de trabalho', O]],
+    fields: [{ n: 'Tema', t: 'text', card: true }, { n: 'Nota na pesquisa', t: 'number' }, { n: 'Meta na próxima pesquisa', t: 'number' }],
+    cards: [
+      { t: 'Apresentar o resultado para a liderança', col: 0, st: 0, due: 5, p: 'high' },
+      { t: 'Escolher os 3 temas com pior nota', col: 1, st: 5, due: 8, dep: [0] },
+      { t: 'Dar retorno da pesquisa para toda a equipe', col: 2, st: 8, due: 12, l: [0], dep: [1], d: 'Mostrar o que será feito evita a sensação de que responder não adianta.' },
+      { t: 'Ação: rotina de reconhecimento mensal', col: 3, st: 12, due: 45, l: [2], f: { Tema: 'Reconhecimento', 'Nota na pesquisa': 5.8, 'Meta na próxima pesquisa': 7 }, dep: [1] },
+    ],
+  },
+  {
+    id: 'rh-conduta', area: 'Recursos Humanos', icon: 'shield-alert', cover: 'cover-purple', name: 'Denúncias e ocorrências de conduta',
+    desc: 'Relatos de assédio, conflitos ou descumprimento de regras: triagem, apuração imparcial, decisão e medidas, com sigilo.',
+    columns: [['Recebido', G], ['Triagem', B], ['Apuração', P], ['Decisão', Y], ['Medida aplicada', O], ['Encerrado', GR]],
+    labels: [['Assédio', R], ['Conflito', O], ['Conduta', Y], ['Fraude', P], ['Sigiloso', G]],
+    fields: [{ n: 'Área', t: 'text', card: true }, { n: 'Gravidade', t: 'select', o: ['Baixa', 'Média', 'Alta', 'Grave'] }, { n: 'Anônimo', t: 'checkbox' }, { n: 'Medida', t: 'select', o: ['Nenhuma', 'Orientação', 'Advertência', 'Suspensão', 'Desligamento'] }],
+    rules: [{ when: 'created', act: 'due', val: 3, label: 'Relato novo: triagem em até 3 dias' }],
+    form: { title: 'Canal de relatos', intro: 'Relate uma situação de assédio, conflito ou conduta inadequada. Você pode não se identificar. Tudo é tratado com sigilo.', col: 'Recebido', due: 3, prio: 'high', q: [['Resumo do que aconteceu', 'text', true], ['Descreva com detalhes (quando, onde, quem)', 'long', true], ['Área envolvida', 'text', false], ['Seu nome (opcional)', 'text', false]] },
+    cards: [
+      { t: 'Relato de conflito entre equipes', col: 2, due: 7, l: [1, 4], f: { Área: 'Operações', Gravidade: 'Média', Anônimo: true }, ck: [['Apuração', ['Ouvir quem relatou', 'Ouvir os envolvidos', 'Ouvir testemunhas', 'Registrar tudo por escrito', 'Parecer do comitê']]] },
+    ],
+  },
+  {
+    id: 'rh-disciplinar', area: 'Recursos Humanos', icon: 'gavel', cover: 'cover-navy', name: 'Medidas disciplinares',
+    desc: 'Advertências e suspensões com registro dos fatos, conversa, documento assinado e acompanhamento, de forma justa e consistente.',
+    columns: [['Fato registrado', G], ['Análise com o gestor', B], ['Conversa e documento', P], ['Acompanhamento', Y], ['Encerrado', GR]],
+    labels: [['Atrasos/faltas', O], ['Conduta', R], ['Segurança', Y], ['Desempenho', S]],
+    fields: [{ n: 'Colaborador', t: 'text', card: true }, { n: 'Data do fato', t: 'date' }, { n: 'Medida', t: 'select', o: ['Orientação verbal', 'Advertência escrita', 'Suspensão'] }, { n: 'Reincidência', t: 'checkbox' }],
+    cards: [
+      { t: 'Faltas sem justificativa', col: 1, due: 2, l: [0], f: { Colaborador: 'Pessoa A', 'Data do fato': ymd(-1), Medida: 'Advertência escrita' }, ck: [['Medida', ['Conferir o histórico', 'Aplicar logo após o fato (imediatidade)', 'Conversa registrada', 'Documento assinado (ou com 2 testemunhas)', 'Arquivar no prontuário']]] },
+    ],
+  },
+  {
+    id: 'rh-aso', area: 'Recursos Humanos', icon: 'heart-pulse', cover: 'cover-green', name: 'Exames ocupacionais e treinamentos obrigatórios',
+    desc: 'Controle de ASO periódico, NRs e reciclagens que vencem, para ninguém trabalhar com exame ou treinamento vencido.',
+    columns: [['Vence em 60 dias', G], ['Agendado', B], ['Realizado', GR], ['Vencido', R]],
+    labels: [['ASO periódico', S], ['NR-35', O], ['NR-10', Y], ['NR-06 / EPI', P], ['Brigada', R]],
+    fields: [{ n: 'Colaborador', t: 'text', card: true }, { n: 'Vencimento', t: 'date' }, { n: 'Clínica / instrutor', t: 'text' }],
+    rules: [{ when: 'moved', col: 'Vencido', act: 'priority', val: 'urgent', label: 'Vencido: prioridade Urgente' }],
+    cards: [
+      { t: 'ASO periódico', col: 0, due: 50, l: [0], f: { Colaborador: 'Pessoa A', Vencimento: ymd(55) } },
+      { t: 'Reciclagem NR-35 (trabalho em altura)', col: 1, due: 20, l: [1], f: { Colaborador: 'Pessoa B', Vencimento: ymd(25) } },
+    ],
+  },
+  // ───────────────────────── Resolução de problemas (qualquer área)
+  {
+    id: 'pdca', area: 'Resolução de problemas', icon: 'search-check', cover: 'cover-navy', name: 'Resolução de problemas (PDCA + 5 porquês)',
+    desc: 'Para problemas que se repetem: descreva, encontre a causa raiz com os 5 porquês, teste a solução, verifique e padronize.',
+    columns: [['Problema', R], ['Causa raiz', O], ['Plano (P)', B], ['Execução (D)', P], ['Verificação (C)', Y], ['Padronizado (A)', GR]],
+    labels: [['Qualidade', P], ['Prazo', O], ['Custo', Y], ['Cliente', S], ['Segurança', R]],
+    fields: [{ n: 'Área', t: 'text', card: true }, { n: 'Indicador', t: 'text' }, { n: 'Valor atual', t: 'number' }, { n: 'Meta', t: 'number' }],
+    cards: [
+      { t: 'Descrever o problema com números', col: 0, st: 0, due: 2, p: 'high', f: { Área: 'Área afetada' }, ck: [['Descrição', ['O que acontece', 'Onde e desde quando', 'Quantas vezes / quanto custa', 'Quem é afetado']]] },
+      { t: 'Encontrar a causa raiz (5 porquês)', col: 1, st: 2, due: 5, p: 'high', dep: [0], ck: [['5 porquês', ['Por quê? (1)', 'Por quê? (2)', 'Por quê? (3)', 'Por quê? (4)', 'Por quê? (5) — causa raiz']]] },
+      { t: 'Plano de ação', col: 2, st: 5, due: 7, dep: [1] },
+      { t: 'Executar as ações', col: 3, st: 7, due: 21, dep: [2] },
+      { t: 'Verificar se o problema parou', col: 4, st: 21, due: 35, dep: [3], d: 'Compare o indicador antes e depois. Se não melhorou, volte à causa raiz.' },
+      { t: 'Padronizar e treinar', col: 5, st: 35, due: 40, dep: [4], ck: [['Padronizar', ['Atualizar o procedimento', 'Treinar a equipe', 'Comunicar a mudança']]] },
+    ],
+  },
+  {
+    id: 'plano5w2h', area: 'Resolução de problemas', icon: 'list-checks', cover: 'cover-green', name: 'Plano de ação 5W2H',
+    desc: 'Cada ação com o quê, por quê, onde, quando, quem, como e quanto custa — ideal depois de reuniões e auditorias.',
+    columns: [['Ações planejadas', G], ['Em andamento', B], ['Atrasadas', R], ['Concluídas', GR]],
+    labels: [['Curto prazo', S], ['Médio prazo', Y], ['Longo prazo', P]],
+    fields: [{ n: 'Por quê', t: 'text' }, { n: 'Onde', t: 'text' }, { n: 'Como', t: 'text' }, { n: 'Quanto custa', t: 'money', card: true }],
+    cards: [
+      { t: 'Treinar a equipe no novo procedimento', col: 0, st: 2, due: 15, l: [0], f: { 'Por quê': 'Reduzir retrabalho', Onde: 'Sala de treinamento', Como: 'Duas turmas de 2 horas', 'Quanto custa': 0 }, d: 'O quê = título · Quem = responsável · Quando = prazo.' },
+      { t: 'Comprar etiquetadora para o estoque', col: 1, due: 10, l: [1], f: { 'Por quê': 'Evitar trocas de produto', Onde: 'Estoque', Como: 'Três orçamentos', 'Quanto custa': 900 } },
+    ],
+  },
+  {
+    id: 'crise', area: 'Resolução de problemas', icon: 'siren', cover: 'cover-orange', name: 'Gestão de crise',
+    desc: 'Quando algo grave acontece: contenção imediata, comunicação com equipe e clientes, correção e lições aprendidas.',
+    columns: [['Contenção', R], ['Comunicação', O], ['Correção', B], ['Monitoramento', Y], ['Lições aprendidas', P], ['Encerrado', GR]],
+    labels: [['Clientes', S], ['Imprensa/redes', PK], ['Equipe', P], ['Jurídico', Y]],
+    fields: [{ n: 'Crise', t: 'text', card: true }, { n: 'Início', t: 'date' }, { n: 'Porta-voz', t: 'text' }],
+    rules: [{ when: 'created', act: 'priority', val: 'urgent', label: 'Item novo na crise: prioridade Urgente' }],
+    cards: [
+      { t: 'Conter o problema', col: 0, due: 0, p: 'urgent', f: { Crise: 'Descrição curta', Início: ymd(0) }, ck: [['Contenção', ['O que precisa parar agora', 'Quem decide', 'Registrar a linha do tempo']]] },
+      { t: 'Comunicado para clientes e equipe', col: 1, due: 1, p: 'urgent', l: [0, 2], dep: [0], ck: [['Comunicação', ['Mensagem única aprovada', 'Porta-voz definido', 'Canais (e-mail, redes, telefone)', 'Respostas para perguntas comuns']]] },
+      { t: 'Corrigir a causa', col: 2, st: 1, due: 7, p: 'high', dep: [0] },
+      { t: 'Reunião de lições aprendidas', col: 4, st: 10, due: 14, dep: [2], d: 'Sem procurar culpados: o que funcionou, o que falhou e o que muda.' },
+    ],
+  },
+  {
+    id: 'reclamacoes', area: 'Resolução de problemas', icon: 'gauge', cover: 'cover-purple', name: 'Reclamações de clientes',
+    desc: 'Cada reclamação com prazo de resposta, causa, solução combinada e confirmação de que o cliente ficou satisfeito.',
+    columns: [['Recebida', G], ['Em análise', B], ['Solução proposta', P], ['Aguardando cliente', Y], ['Resolvida', GR], ['Sem solução', R]],
+    labels: [['Atraso', O], ['Produto com defeito', R], ['Atendimento', S], ['Cobrança', Y]],
+    fields: [{ n: 'Cliente', t: 'text', card: true }, { n: 'Canal', t: 'select', o: ['Telefone', 'E-mail', 'WhatsApp', 'Site', 'Redes sociais', 'Reclame em sites de avaliação'] }, { n: 'Pedido / protocolo', t: 'text' }, { n: 'Cliente satisfeito', t: 'checkbox' }],
+    rules: [{ when: 'created', act: 'due', val: 2, label: 'Reclamação nova: responder em até 2 dias' }, { when: 'moved', col: 'Sem solução', act: 'notify', label: 'Sem solução: avisar o responsável' }],
+    form: { title: 'Registrar reclamação', intro: 'Conte o que aconteceu. Respondemos em até 2 dias úteis.', col: 'Recebida', due: 2, prio: 'high', q: [['Resumo', 'text', true], ['O que aconteceu', 'long', true], ['Número do pedido ou protocolo', 'text', false], ['Seu nome', 'text', true], ['Seu e-mail', 'email', true], ['Telefone', 'phone', false]] },
+    cards: [
+      { t: 'Entrega atrasada há 5 dias', col: 1, due: 1, p: 'high', l: [0], f: { Cliente: 'Cliente Exemplo', Canal: 'WhatsApp', 'Pedido / protocolo': '12345' }, ck: [['Tratativa', ['Pedir desculpas e dar um prazo', 'Descobrir a causa', 'Combinar a solução', 'Confirmar a satisfação']]] },
+    ],
+  },
 ];
 
 const ICON_OK = new Set(BOARD_TEMPLATES.map((t) => t.icon));
@@ -513,7 +766,9 @@ export const templateIcons = () => ICON_OK;
 // conclusion column of each model (finished cards count as done there; e.g. "Ganho", "Pago", "Contratado")
 const DONE_COL: Record<string, number> = { onboarding: 4, offboarding: 3, recrutamento: 5, vendas: 4, suporte: 3, posvenda: 5, marketing: 4, campanha: 4, manutencao: 4, eventos: 4, compras: 5, contas: 2, contratos: 4, projeto: 3, sprint: 5, okrs: 3,
   treinamento: 4, ferias: 4, desempenho: 5, prospeccao: 4, sucesso: 4, redes: 5, design: 4, estoque: 4, entregas: 3, qualidade: 4,
-  fechamento: 3, reembolso: 3, bugs: 4, implantacao: 5, reunioes: 4, planejamento: 5, fornecedores: 2 };
+  fechamento: 3, reembolso: 3, bugs: 4, implantacao: 5, reunioes: 4, planejamento: 5, fornecedores: 2,
+  'dp-admissao': 4, 'dp-folha': 4, 'dp-rescisao': 4, 'dp-ferias': 5, 'dp-afastamentos': 5, 'dp-ponto': 3, 'dp-duvidas': 3, 'dp-beneficios': 3, 'dp-cat': 4, 'dp-trabalhista': 5,
+  'rh-turnover': 5, 'rh-clima': 4, 'rh-conduta': 5, 'rh-disciplinar': 4, 'rh-aso': 2, pdca: 5, plano5w2h: 3, crise: 5, reclamacoes: 4 };
 
 export function templateToBoard(t: BoardTemplate): ImpBoard {
   return {

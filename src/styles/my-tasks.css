@@ -1,0 +1,45 @@
+/* Minhas tarefas (MyTasksView): same look as the other system screens — flat title row, KPI strip, rounded panels */
+.mt2 { position: relative; height: 100%; min-height: 0; display: flex; border-radius: inherit; flex-direction: column; background: hsl(var(--muted) / .35); overflow: hidden; }
+.mt2-head { display: flex; align-items: center; gap: 10px; padding: 16px 22px; background: hsl(var(--card)); border-bottom: 1px solid hsl(var(--border)); flex-wrap: wrap; }
+.mt2-back { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--foreground)); }
+.mt2-back:hover { background: hsl(var(--muted)); }
+.mt2-ttl h1 { font-size: 20px; font-weight: 700; line-height: 1.2; color: hsl(var(--foreground)); }
+.mt2-ttl p { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+.mt2-sp { flex: 1; }
+.mt2-srch { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--card)); color: hsl(var(--muted-foreground)); }
+.mt2-srch input { border: 0; outline: 0; background: none; color: hsl(var(--foreground)); font-size: 13px; width: 220px; }
+.mt2-body { flex: 1; overflow: auto; padding: 18px 22px 40px; display: flex; flex-direction: column; gap: 14px; }
+.mt2-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 16px; overflow: hidden; }
+.mt2-kpi { border-radius: 0 !important; box-shadow: none !important; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 18px; background: none; text-align: left; border-left: 1px solid hsl(var(--border)); }
+.mt2-kpi:first-child { border-left: 0; }
+.mt2-kpi:hover { background: hsl(var(--muted) / .5); }
+.mt2-kpi span { font-size: 12px; color: hsl(var(--muted-foreground)); }
+.mt2-kpi b { font-size: 24px; font-weight: 700; line-height: 1.1; color: hsl(var(--foreground)); }
+.mt2-kpi.k-late b { color: #d92d20; } .mt2-kpi.k-today b { color: #b54708; } .mt2-kpi.k-done b { color: #15803d; }
+.dark .mt2-kpi.k-late b { color: #fca5a5; } .dark .mt2-kpi.k-today b { color: #fcd34d; } .dark .mt2-kpi.k-done b { color: #86efac; }
+.mt2-sec { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 16px; overflow: hidden; }
+.mt2-sh { display: flex; align-items: center; gap: 8px; width: 100%; padding: 12px 16px; background: none; text-align: left; font-size: 14px; font-weight: 600; color: hsl(var(--foreground)); }
+.mt2-sh i { width: 8px; height: 8px; border-radius: 3px; background: #8b93a7; }
+.s-late .mt2-sh i { background: #ef4444; } .s-today .mt2-sh i { background: #f59e0b; } .s-week .mt2-sh i { background: #3b82f6; } .s-later .mt2-sh i { background: #8b5cf6; } .s-done .mt2-sh i { background: #22c55e; }
+.mt2-chev { color: hsl(var(--muted-foreground)); transition: transform .18s ease; }
+.mt2-chev.open { transform: rotate(90deg); }
+.mt2-n { margin-left: 2px; min-width: 22px; height: 20px; padding: 0 7px; border-radius: 6px; display: inline-grid; place-items: center; font-size: 11.5px; font-weight: 600; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+.mt2-list { border-top: 1px solid hsl(var(--border)); }
+.mt2-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) minmax(0, 170px) 76px 120px 16px; align-items: center; gap: 14px; width: 100%; padding: 10px 16px; background: none; text-align: left; border-top: 1px solid hsl(var(--border) / .6); }
+.mt2-row:first-child { border-top: 0; }
+.mt2-row:hover { background: hsl(var(--muted) / .45); }
+.mt2-chk { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid hsl(var(--border)); display: grid; place-items: center; color: transparent; }
+.mt2-chk.on { background: #22c55e; border-color: #22c55e; color: #fff; }
+.mt2-main { display: flex; flex-direction: column; min-width: 0; }
+.mt2-t { font-size: 13.5px; font-weight: 500; color: hsl(var(--foreground)); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mt2-sub { font-size: 12px; color: hsl(var(--muted-foreground)); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mt2-row.done .mt2-t { color: hsl(var(--muted-foreground)); text-decoration: line-through; }
+.mt2-pill { display: inline-flex; align-items: center; gap: 6px; justify-self: start; max-width: 100%; height: 24px; padding: 0 9px; border-radius: 6px; font-size: 12px; font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mt2-pill i { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
+.mt2-due { font-size: 12.5px; text-align: right; white-space: nowrap; color: hsl(var(--muted-foreground)); }
+.mt2-due.late { color: #d92d20; font-weight: 600; } .mt2-due.soon { color: #b54708; font-weight: 600; } .mt2-due.ok { color: #15803d; }
+.dark .mt2-due.late { color: #fca5a5; } .dark .mt2-due.soon { color: #fcd34d; } .dark .mt2-due.ok { color: #86efac; }
+.mt2-go { color: hsl(var(--muted-foreground) / .6); }
+.mt2-empty { padding: 60px 20px; text-align: center; font-size: 13px; color: hsl(var(--muted-foreground)); background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 16px; }
+.mt2-empty b { display: block; font-size: 15px; color: hsl(var(--foreground)); margin-bottom: 4px; }
+@media (max-width: 900px) { .mt2-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .mt2-row { grid-template-columns: 20px minmax(0, 1fr) 96px; } .mt2-row > .mt2-pill, .mt2-go { display: none; } }

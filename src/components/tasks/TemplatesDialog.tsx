@@ -7,6 +7,7 @@ import {
   Briefcase, CalendarDays, Check, ClipboardList, Code, FileSignature, Flag, GitBranch, Handshake, Headset, LayoutGrid, Loader2,
   Megaphone, Receipt, Rocket, Search, ShoppingCart, SlidersHorizontal, Target, UserMinus, UserPlus, UserSearch, Wrench, Zap, ListChecks, GraduationCap, Palmtree, Star, PhoneCall, HeartHandshake, Share2, Palette, Package, Truck,
   ClipboardCheck, Calculator, Wallet, Bug, Server, Users, Compass, Building, type LucideIcon,
+  FileText, Banknote, DoorOpen, Sun, Stethoscope, Clock, MessageCircleQuestion, Gift, HardHat, Scale, TrendingDown, Thermometer, ShieldAlert, Gavel, HeartPulse, SearchCheck, Siren, Gauge,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +24,9 @@ const ICONS: Record<string, LucideIcon> = {
   'graduation-cap': GraduationCap, palmtree: Palmtree, star: Star, 'phone-call': PhoneCall, 'heart-handshake': HeartHandshake, 'share-2': Share2,
   palette: Palette, package: Package, truck: Truck, 'clipboard-check': ClipboardCheck, calculator: Calculator, wallet: Wallet, bug: Bug,
   server: Server, users: Users, compass: Compass, building: Building,
+  'file-text': FileText, banknote: Banknote, 'door-open': DoorOpen, sun: Sun, stethoscope: Stethoscope, clock: Clock, 'message-circle-question': MessageCircleQuestion,
+  gift: Gift, 'hard-hat': HardHat, scale: Scale, 'trending-down': TrendingDown, thermometer: Thermometer, 'shield-alert': ShieldAlert, gavel: Gavel,
+  'heart-pulse': HeartPulse, 'search-check': SearchCheck, 'list-checks': ListChecks, siren: Siren, gauge: Gauge,
 };
 const Ico = ({ t, className }: { t: BoardTemplate; className?: string }) => { const I = ICONS[t.icon] || LayoutGrid; return <I className={className} />; };
 const plural = (n: number, s: string, p: string) => `${n} ${n === 1 ? s : p}`;

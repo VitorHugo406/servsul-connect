@@ -3,12 +3,12 @@
 // plus "Concluídas nos últimos 7 dias". Filters by mural and search. Clicking a card opens its mural with the card
 // (`?abrir=<task id>`). Read-only list: changes happen in the card itself (same rules as the kanban).
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Check, ChevronDown, ChevronRight, Loader2, Search } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, Loader2, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sel } from '@/components/ui/Sel';
 import { ExportMenu } from '@/components/ui/ExportMenu';
-import '@/styles/board-views.css';
+import '@/styles/my-tasks.css';
 
 const db = supabase as any;
 type R = { id: string; task_number: number | null; title: string; due_date: string | null; completed_at: string | null; priority: string | null; board_id: string; status: string };
@@ -71,45 +71,51 @@ export function MyTasksView({ boards, onBack, onOpenTask }: { boards: { id: stri
   const open = rows.filter((t) => !t.completed_at).length;
   const fmt = (d: string) => { const x = new Date(d); const t = x.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', ''); return (x.getHours() || x.getMinutes()) ? `${t}, ${x.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : t; };
 
+  const kpis: [G | 'open', string, number][] = [['open', 'Em aberto', open], ['late', 'Atrasadas', groups.late.length], ['today', 'Vencem hoje', groups.today.length], ['week', 'Próximos 7 dias', groups.week.length], ['done', 'Concluídas (7 dias)', groups.done.length]];
+  const jump = (g: G | 'open') => { if (g === 'open') return; setClosed((s) => { const n = new Set(s); n.delete(g); return n; }); requestAnimationFrame(() => document.getElementById('mt2-' + g)?.scrollIntoView({ behavior: 'smooth', block: 'start' })); };
+  const dueCls = (t: R, g: G) => t.completed_at ? 'ok' : g === 'late' ? 'late' : g === 'today' ? 'soon' : '';
+
   return (
-    <div className="mt-pg">
-      <div className="bvx" style={{ height: '100%' }}>
-        <div className="bvx-bar">
-          <button type="button" className="bvx-btn bvx-ibtn" onClick={onBack} aria-label="Voltar aos murais"><ArrowLeft className="h-4 w-4" /></button>
-          <b>Minhas tarefas</b>
-          <span className="bvx-mut">{open} em aberto · {groups.late.length} atrasada(s)</span>
-          <span className="bvx-sp" />
-          <label className="mt-srch"><Search className="h-4 w-4" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar card ou mural" aria-label="Buscar" /></label>
-          <Sel value={board} onChange={(e) => setBoard(e.target.value)} className="ui-sel min-w-[180px]"><option value="">Todos os murais</option>{boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Sel>
-          <ExportMenu getData={() => ({ name: 'minhas-tarefas', sheet: 'Minhas tarefas', headers: ['Grupo', 'Número', 'Card', 'Mural', 'Status', 'Prioridade', 'Prazo'],
-            rows: (Object.keys(GL) as G[]).flatMap((g) => groups[g].map((t) => [GL[g], t.task_number ?? '', t.title, bname.get(t.board_id) || '', cols.get(t.status)?.title || '', (PRIO[t.priority || 'medium'] || PRIO.medium)[0], t.completed_at ? 'Concluída' : t.due_date ? new Date(t.due_date).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : ''])) })} />
+    <div className="mt2">
+      <header className="mt2-head">
+        <button type="button" className="mt2-back" onClick={onBack} aria-label="Voltar aos murais"><ArrowLeft className="h-4 w-4" /></button>
+        <div className="mt2-ttl"><h1>Minhas tarefas</h1><p>Seus cards de todos os murais, organizados por prazo</p></div>
+        <span className="mt2-sp" />
+        <label className="mt2-srch"><Search className="h-4 w-4" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar card ou mural" aria-label="Buscar" /></label>
+        <Sel value={board} onChange={(e) => setBoard(e.target.value)} className="ui-sel min-w-[190px]"><option value="">Todos os murais</option>{boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Sel>
+        <ExportMenu getData={() => ({ name: 'minhas-tarefas', sheet: 'Minhas tarefas', headers: ['Grupo', 'Número', 'Card', 'Mural', 'Status', 'Prioridade', 'Prazo'],
+          rows: (Object.keys(GL) as G[]).flatMap((g) => groups[g].map((t) => [GL[g], t.task_number ?? '', t.title, bname.get(t.board_id) || '', cols.get(t.status)?.title || '', (PRIO[t.priority || 'medium'] || PRIO.medium)[0], t.completed_at ? 'Concluída' : t.due_date ? new Date(t.due_date).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : ''])) })} />
+      </header>
+      <div className="mt2-body">
+        <div className="mt2-kpis">
+          {kpis.map(([k, l, n]) => <button key={k} type="button" className={`mt2-kpi k-${k}`} onClick={() => jump(k)}><span>{l}</span><b>{n}</b></button>)}
         </div>
-        <div className="bvx-scroll">
-          {loading ? <div className="bvx-empty"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div> : !rows.length ? (
-            <div className="bvx-empty"><b style={{ display: 'block', color: 'hsl(var(--foreground))', fontSize: 15, marginBottom: 4 }}>Nenhum card com você</b>Quando alguém colocar você como responsável de um card, ele aparece aqui — de todos os murais.</div>
-          ) : (Object.keys(GL) as G[]).map((g) => {
-            const list = groups[g]; if (!list.length && g !== 'today') return null; const isClosed = closed.has(g);
-            return (
-              <section key={g} className={`mt-sec mt-${g}`}>
-                <button type="button" className="mt-h" onClick={() => setClosed((s) => { const n = new Set(s); if (n.has(g)) n.delete(g); else n.add(g); return n; })}>
-                  {isClosed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}{GL[g]}<span className="bvx-n">{list.length}</span>
-                </button>
-                {isClosed ? null : !list.length ? <p className="mt-none">Nada para hoje.</p> : list.map((t) => {
-                  const c = cols.get(t.status); const p = PRIO[t.priority || 'medium'] || PRIO.medium;
-                  return (
-                    <button key={t.id} type="button" className={`mt-row ${t.completed_at ? 'done' : ''}`} onClick={() => onOpenTask(t.board_id, t.id)}>
-                      <span className={`bvx-chk ${t.completed_at ? 'on' : ''}`}><Check className="h-3 w-3" strokeWidth={3} /></span>
-                      {t.task_number ? <span className="bvx-num">#{t.task_number}</span> : null}
-                      <span className="mt-t">{t.title}</span>
-                      <span className="mt-b" title="Mural">{bname.get(t.board_id) || 'Mural'}</span>
-                      <span className="bvx-pill" style={pill(c?.color || '#8b93a7')}>{c?.title || '—'}</span>
-                      <span className="bvx-pill" style={pill(p[1])}>{p[0]}</span>
-                      <span className={`mt-d ${g === 'late' ? 'bvx-late' : ''}`}>{t.completed_at ? 'Concluída' : t.due_date ? fmt(t.due_date) : '—'}</span>
-                    </button>);
-                })}
-              </section>);
-          })}
-        </div>
+        {loading ? <div className="mt2-empty"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div> : !rows.length ? (
+          <div className="mt2-empty"><b>Nenhum card com você</b>Quando alguém colocar você como responsável de um card, ele aparece aqui, de todos os murais.</div>
+        ) : (Object.keys(GL) as G[]).map((g) => {
+          const list = groups[g]; if (!list.length) return null; const isClosed = closed.has(g);
+          return (
+            <section key={g} id={'mt2-' + g} className={`mt2-sec s-${g}`}>
+              <button type="button" className="mt2-sh" onClick={() => setClosed((s) => { const n = new Set(s); if (n.has(g)) n.delete(g); else n.add(g); return n; })} aria-expanded={!isClosed}>
+                <ChevronRight className={`mt2-chev h-4 w-4 ${isClosed ? '' : 'open'}`} /><i />{GL[g]}<span className="mt2-n">{list.length}</span>
+              </button>
+              {isClosed ? null : (
+                <div className="mt2-list">
+                  {list.map((t) => {
+                    const c = cols.get(t.status); const p = PRIO[t.priority || 'medium'] || PRIO.medium;
+                    return (
+                      <button key={t.id} type="button" className={`mt2-row ${t.completed_at ? 'done' : ''}`} onClick={() => onOpenTask(t.board_id, t.id)}>
+                        <span className={`mt2-chk ${t.completed_at ? 'on' : ''}`}><Check className="h-3 w-3" strokeWidth={3} /></span>
+                        <span className="mt2-main"><span className="mt2-t">{t.title}</span><span className="mt2-sub">{t.task_number ? `#${t.task_number} · ` : ''}{bname.get(t.board_id) || 'Mural'}</span></span>
+                        {c ? <span className="mt2-pill" style={pill(c.color || '#8b93a7')}><i style={{ background: c.color || '#8b93a7' }} />{c.title}</span> : <span />}
+                        <span className="mt2-pill" style={pill(p[1])}>{p[0]}</span>
+                        <span className={`mt2-due ${dueCls(t, g)}`}>{t.completed_at ? 'Concluída' : t.due_date ? fmt(t.due_date) : 'Sem prazo'}</span>
+                        <ChevronRight className="mt2-go h-4 w-4" />
+                      </button>);
+                  })}
+                </div>)}
+            </section>);
+        })}
       </div>
     </div>
   );

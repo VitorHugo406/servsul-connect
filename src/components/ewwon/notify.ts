@@ -284,6 +284,7 @@ export function updateContext(context: Partial<Ctx>) { ctx = { ...ctx, ...contex
 // that arrives in the conversation you have open. All respect "Som das mensagens" (prefs.snd).
 let uiCtx: AudioContext | null = null;
 let lastTick = 0;
+let noiseBuf: AudioBuffer | null = null;
 export function uiSound(kind: 'type' | 'send' | 'recv') {
   if ((ctx.prefs() || {}).snd === 0) return;
   try {
@@ -304,17 +305,37 @@ export function uiSound(kind: 'type' | 'send' | 'recv') {
       o.connect(g).connect(a.destination);
       o.start(start); o.stop(start + dur + 0.02);
     };
+    // soft, low sounds (owner: "mais grave que agudo"): a keyboard-like tap while typing, a deep warm "bloop" on send
+    const lp = (freq: number) => { const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = freq; f.Q.value = 0.7; f.connect(a.destination); return f; };
+    const soft = (f0: number, f1: number, start: number, dur: number, vol: number, cut = 1400) => {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(f0, start);
+      o.frequency.exponentialRampToValueAtTime(f1, start + dur);
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(vol, start + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      o.connect(g).connect(lp(cut));
+      o.start(start); o.stop(start + dur + 0.03);
+    };
     if (kind === 'type') {
       const now = performance.now();
-      if (now - lastTick < 70) return;
+      if (now - lastTick < 75) return;
       lastTick = now;
-      tone(1900 + Math.random() * 300, 1500, t0, 0.028, 0.035, 'triangle');
+      // a muffled key: a tiny burst of filtered noise + a low thump, slightly different each time
+      if (!noiseBuf) { noiseBuf = a.createBuffer(1, Math.floor(a.sampleRate * 0.04), a.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
+      const n = a.createBufferSource(), ng = a.createGain(), bp = a.createBiquadFilter();
+      n.buffer = noiseBuf; bp.type = 'bandpass'; bp.frequency.value = 900 + Math.random() * 250; bp.Q.value = 1.1;
+      ng.gain.value = 0.11;
+      n.connect(bp).connect(ng).connect(lp(2200)); n.start(t0);
+      soft(170 + Math.random() * 30, 120, t0, 0.035, 0.05, 600);
     } else if (kind === 'send') {
-      tone(520, 1180, t0, 0.13, 0.16);
-      tone(1180, 1500, t0 + 0.05, 0.09, 0.05, 'triangle');
+      // deep and round, like a corporate chat send
+      soft(330, 196, t0, 0.17, 0.16, 1100);
+      soft(165, 110, t0, 0.2, 0.12, 500);
     } else {
-      tone(880, 880, t0, 0.11, 0.09);
-      tone(1320, 1320, t0 + 0.09, 0.16, 0.08);
+      soft(523, 523, t0, 0.16, 0.07, 1600);
+      soft(392, 392, t0 + 0.11, 0.24, 0.07, 1400);
     }
   } catch { /* audio not available */ }
 }
