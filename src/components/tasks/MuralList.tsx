@@ -183,7 +183,7 @@ export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete, 
               <DropdownMenuTrigger asChild><button type="button" className="tm-btn tm-pri"><Plus className="h-4 w-4" />Novo mural<ChevronDown className="h-4 w-4" /></button></DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuItem onClick={openNew} className="flex items-start gap-2.5 py-2"><Plus className="mt-0.5 h-4 w-4" /><span><b className="block text-sm font-medium">Mural em branco</b><span className="text-xs text-muted-foreground">Comece do zero</span></span></DropdownMenuItem>
-                {onTemplates ? <DropdownMenuItem onClick={onTemplates} className="flex items-start gap-2.5 py-2"><LayoutTemplate className="mt-0.5 h-4 w-4" /><span><b className="block text-sm font-medium">A partir de um modelo</b><span className="text-xs text-muted-foreground">16 modelos prontos por área</span></span></DropdownMenuItem> : null}
+                {onTemplates ? <DropdownMenuItem onClick={onTemplates} className="flex items-start gap-2.5 py-2"><LayoutTemplate className="mt-0.5 h-4 w-4" /><span><b className="block text-sm font-medium">A partir de um modelo</b><span className="text-xs text-muted-foreground">33 modelos prontos por área</span></span></DropdownMenuItem> : null}
                 {onImport ? <DropdownMenuItem onClick={onImport} className="flex items-start gap-2.5 py-2"><FileUp className="mt-0.5 h-4 w-4" /><span><b className="block text-sm font-medium">Importar</b><span className="text-xs text-muted-foreground">Trello, ClickUp, Asana ou planilha</span></span></DropdownMenuItem> : null}
               </DropdownMenuContent>
             </DropdownMenu>

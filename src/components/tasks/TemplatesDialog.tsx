@@ -5,7 +5,8 @@
 import { useMemo, useState } from 'react';
 import {
   Briefcase, CalendarDays, Check, ClipboardList, Code, FileSignature, Flag, GitBranch, Handshake, Headset, LayoutGrid, Loader2,
-  Megaphone, Receipt, Rocket, Search, ShoppingCart, SlidersHorizontal, Target, UserMinus, UserPlus, UserSearch, Wrench, Zap, ListChecks, type LucideIcon,
+  Megaphone, Receipt, Rocket, Search, ShoppingCart, SlidersHorizontal, Target, UserMinus, UserPlus, UserSearch, Wrench, Zap, ListChecks, GraduationCap, Palmtree, Star, PhoneCall, HeartHandshake, Share2, Palette, Package, Truck,
+  ClipboardCheck, Calculator, Wallet, Bug, Server, Users, Compass, Building, type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +20,9 @@ const ICONS: Record<string, LucideIcon> = {
   'user-plus': UserPlus, 'user-minus': UserMinus, 'user-search': UserSearch, briefcase: Briefcase, headset: Headset, handshake: Handshake,
   megaphone: Megaphone, target: Target, wrench: Wrench, 'calendar-days': CalendarDays, 'shopping-cart': ShoppingCart, receipt: Receipt,
   'file-signature': FileSignature, rocket: Rocket, code: Code, flag: Flag,
+  'graduation-cap': GraduationCap, palmtree: Palmtree, star: Star, 'phone-call': PhoneCall, 'heart-handshake': HeartHandshake, 'share-2': Share2,
+  palette: Palette, package: Package, truck: Truck, 'clipboard-check': ClipboardCheck, calculator: Calculator, wallet: Wallet, bug: Bug,
+  server: Server, users: Users, compass: Compass, building: Building,
 };
 const Ico = ({ t, className }: { t: BoardTemplate; className?: string }) => { const I = ICONS[t.icon] || LayoutGrid; return <I className={className} />; };
 const plural = (n: number, s: string, p: string) => `${n} ${n === 1 ? s : p}`;
