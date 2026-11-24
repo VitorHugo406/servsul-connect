@@ -20,6 +20,7 @@ export const TRIGGER_TYPES = [
   { id: 'moved_to_column', label: 'Card entrou na coluna', description: 'Na hora em que um card chega à coluna escolhida', instant: true },
   { id: 'card_completed', label: 'Card concluído', description: 'Na hora em que um card é concluído', instant: true },
   { id: 'card_assigned', label: 'Responsável definido', description: 'Na hora em que o card recebe um responsável', instant: true },
+  { id: 'label_added', label: 'Etiqueta adicionada', description: 'Na hora em que a etiqueta escolhida é colocada no card', instant: true },
   { id: 'deadline_approaching', label: 'Prazo se aproximando', description: 'Quando o prazo estiver a X horas' },
   { id: 'stuck_days', label: 'Card parado', description: 'Quando o card ficar parado por X dias' },
   { id: 'checklist_complete', label: 'Checklist 100%', description: 'Quando a checklist atingir 100%' },
@@ -29,6 +30,8 @@ export const TRIGGER_TYPES = [
 export const ACTION_TYPES = [
   { id: 'notify', label: 'Notificar', description: 'Envia notificação ao responsável do card (ou à pessoa escolhida)' },
   { id: 'assign_to', label: 'Definir responsável', description: 'Coloca a pessoa escolhida como responsável', instantOnly: true },
+  { id: 'add_assignee', label: 'Adicionar co-responsável', description: 'Inclui a pessoa escolhida como co-responsável do card', instantOnly: true },
+  { id: 'set_cover', label: 'Alterar capa', description: 'Troca a capa do card pela cor escolhida (ou remove a capa)', instantOnly: true },
   { id: 'add_label', label: 'Adicionar etiqueta', description: 'Aplica a etiqueta escolhida ao card', instantOnly: true },
   { id: 'set_due_days', label: 'Definir prazo', description: 'Prazo = hoje + N dias, às 18h', instantOnly: true },
   { id: 'move_column', label: 'Mover para coluna', description: 'Move o card para uma coluna específica' },

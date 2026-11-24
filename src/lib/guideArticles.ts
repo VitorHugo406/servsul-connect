@@ -109,9 +109,9 @@ export const GUIDE: GuideArticle[] = [
   { slug: 'automacoes', cat: 'Organização avançada', title: 'Automações (SE → ENTÃO)', sum: 'Faça o mural trabalhar sozinho: ao entrar numa coluna, definir responsável, prazo, etiqueta ou avisar alguém.',
     steps: [
       { t: 'Abra as automações', d: 'No topo do mural, abra o menu Organizar, escolha "Automações" e clique em "Nova regra SE → ENTÃO".', img: 'automacoes' },
-      { t: 'Escolha o gatilho (SE)', d: 'Instantâneos (⚡): card criado, entrou numa coluna, concluído, responsável definido. Periódicos (⏱): prazo chegando, card parado, checklist completo, etiqueta urgente.' },
-      { t: 'Escolha a ação (ENTÃO)', d: 'Notificar, definir responsável, adicionar etiqueta, definir prazo (hoje + N dias), mudar prioridade, mover de coluna ou gerar alerta. Clique em "Criar regra".' },
-    ], tips: ['Exemplo: SE o card entrar em "Revisão", ENTÃO o responsável vira a pessoa que revisa e ela recebe um aviso.'], rel: ['formulario', 'webhooks'] },
+      { t: 'Escolha o gatilho (SE)', d: 'Instantâneos (⚡): card criado, entrou numa coluna, concluído, responsável definido, etiqueta adicionada (escolha qual etiqueta). Periódicos (⏱): prazo chegando, card parado, checklist completo, etiqueta urgente.' },
+      { t: 'Escolha a ação (ENTÃO)', d: 'Notificar, definir responsável, adicionar co-responsável, alterar a capa, adicionar etiqueta, definir prazo (hoje + N dias), mudar prioridade, mover de coluna ou gerar alerta. Clique em "Criar regra".' },
+    ], tips: ['Exemplo: SE o card entrar em "Revisão", ENTÃO o responsável vira a pessoa que revisa e ela recebe um aviso.', 'Exemplo: SE a etiqueta "TI" for adicionada, ENTÃO o responsável vira a pessoa de TI e a capa fica azul. Crie uma regra para cada ação que quiser.'], rel: ['formulario', 'webhooks'] },
   { slug: 'formulario', cat: 'Receber e compartilhar', title: 'Formulário do mural', sum: 'Um link público com formulário: cada resposta vira um card no mural, sem login e sem site.',
     steps: [
       { t: 'Abra o compartilhamento', d: 'No topo do mural, clique em "Compartilhar quadro" e, em "Formulário do mural", clique em "Criar formulário".', img: 'compartilhar' },

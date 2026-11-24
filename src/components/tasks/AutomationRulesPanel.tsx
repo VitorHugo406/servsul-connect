@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveUsers } from '@/hooks/useDirectMessages';
-import { Zap, Plus, Trash2, ArrowRight, Bell, MoveRight, AlertTriangle, CheckCircle, Tag, Clock, Pause } from 'lucide-react';
+import { Zap, Plus, Trash2, ArrowRight, Bell, MoveRight, AlertTriangle, CheckCircle, Tag, Clock, Pause, Palette } from 'lucide-react';
+import { CARD_COVERS } from '@/components/tasks/taskConstants';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,7 @@ const TRIGGER_ICONS: Record<string, any> = {
   stuck_days: Pause,
   checklist_complete: CheckCircle,
   label_urgent: Tag,
+  label_added: Tag,
 };
 
 const ACTION_ICONS: Record<string, any> = {
@@ -33,6 +35,8 @@ const ACTION_ICONS: Record<string, any> = {
   move_column: MoveRight,
   set_priority: AlertTriangle,
   alert: AlertTriangle,
+  add_assignee: Bell,
+  set_cover: Palette,
 };
 
 export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, columns }: {
@@ -57,6 +61,8 @@ export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, colu
   const [actionProfileId, setActionProfileId] = useState('');
   const [actionLabelId, setActionLabelId] = useState('');
   const [actionDays, setActionDays] = useState('2');
+  const [triggerLabelId, setTriggerLabelId] = useState('');
+  const [actionCover, setActionCover] = useState('blue');
   const [labels, setLabels] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const { users } = useActiveUsers();
   useEffect(() => { if (!triggerColumnId && columns[0]) setTriggerColumnId(columns[0].id); }, [columns, triggerColumnId]);
@@ -70,12 +76,14 @@ export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, colu
     if (triggerType === 'deadline_approaching') triggerConfig.hours = parseInt(triggerValue) || 24;
     if (triggerType === 'stuck_days') triggerConfig.days = parseInt(triggerValue) || 3;
     if (triggerType === 'moved_to_column') { if (!triggerColumnId) { toast.error('Escolha a coluna'); return; } triggerConfig.column_id = triggerColumnId; }
+    if (triggerType === 'label_added') { if (!triggerLabelId) { toast.error('Escolha a etiqueta'); return; } triggerConfig.label_id = triggerLabelId; }
     if (!actionChoices.some((a) => a.id === actionType)) { toast.error('Essa ação só funciona com gatilhos instantâneos'); return; }
 
     const actionConfig: Record<string, any> = {};
     if (actionType === 'move_column') actionConfig.column_id = actionColumnId;
     if (actionType === 'set_priority') actionConfig.priority = actionPriority;
-    if (actionType === 'assign_to') { if (!actionProfileId) { toast.error('Escolha a pessoa'); return; } actionConfig.profile_id = actionProfileId; }
+    if (actionType === 'assign_to' || actionType === 'add_assignee') { if (!actionProfileId) { toast.error('Escolha a pessoa'); return; } actionConfig.profile_id = actionProfileId; }
+    if (actionType === 'set_cover') actionConfig.cover = actionCover;
     if (actionType === 'notify' && actionProfileId && instant) actionConfig.profile_id = actionProfileId;
     if (actionType === 'add_label') { if (!actionLabelId) { toast.error('Escolha a etiqueta'); return; } actionConfig.label_id = actionLabelId; }
     if (actionType === 'set_due_days') actionConfig.days = Math.max(0, Math.min(365, parseInt(actionDays) || 0));
@@ -98,6 +106,7 @@ export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, colu
     if (rule.trigger_type === 'deadline_approaching') return `Prazo a ${rule.trigger_config.hours || 24}h`;
     if (rule.trigger_type === 'stuck_days') return `Parado por ${rule.trigger_config.days || 3} dias`;
     if (rule.trigger_type === 'moved_to_column') return `Card entrou em "${columns.find(c => c.id === rule.trigger_config.column_id)?.title || '?'}"`;
+    if (rule.trigger_type === 'label_added') return `Etiqueta "${labels.find(l => l.id === rule.trigger_config.label_id)?.name || '?'}" adicionada`;
     return t?.label || rule.trigger_type;
   };
 
@@ -108,6 +117,8 @@ export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, colu
       return `Mover para "${col?.title || '?'}"`;
     }
     if (rule.action_type === 'assign_to') return `Responsável → ${personName(rule.action_config.profile_id)}`;
+    if (rule.action_type === 'add_assignee') return `Co-responsável → ${personName(rule.action_config.profile_id)}`;
+    if (rule.action_type === 'set_cover') return rule.action_config.cover === 'none' ? 'Remover capa' : `Capa ${CARD_COVERS.find((c) => c.id === rule.action_config.cover)?.name || ''}`;
     if (rule.action_type === 'notify' && rule.action_config.profile_id) return `Notificar ${personName(rule.action_config.profile_id)}`;
     if (rule.action_type === 'add_label') return `Etiqueta "${labels.find(l => l.id === rule.action_config.label_id)?.name || '?'}"`;
     if (rule.action_type === 'set_due_days') return `Prazo em ${rule.action_config.days ?? 0} dia(s)`;
@@ -225,6 +236,16 @@ export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, colu
                     </Select>
                   </div>
                 )}
+                {triggerType === 'label_added' && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Etiqueta</Label>
+                    {labels.length ? (
+                      <Select value={triggerLabelId} onValueChange={setTriggerLabelId}>
+                        <SelectTrigger><SelectValue placeholder="Escolha a etiqueta" /></SelectTrigger>
+                        <SelectContent>{labels.map(l => <SelectItem key={l.id} value={l.id}><span className="mr-2 inline-block h-2.5 w-4 rounded-[3px]" style={{ backgroundColor: l.color || '#888' }} />{l.name}</SelectItem>)}</SelectContent>
+                      </Select>) : <p className="text-xs text-muted-foreground">Este mural ainda não tem etiquetas. Crie uma em Configurar › Etiquetas.</p>}
+                  </div>
+                )}
                 <p className="text-[10px] text-muted-foreground">
                   {instant ? '⚡ Instantâneo · ' : '⏱ Verificado periodicamente · '}{TRIGGER_TYPES.find(t => t.id === triggerType)?.description}
                 </p>
@@ -273,9 +294,22 @@ export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, colu
                     </Select>
                   </div>
                 )}
-                {(actionType === 'assign_to' || (actionType === 'notify' && instant)) && (
+                {actionType === 'set_cover' && (
                   <div className="space-y-1">
-                    <Label className="text-xs">{actionType === 'assign_to' ? 'Pessoa' : 'Quem recebe (vazio = responsável do card)'}</Label>
+                    <Label className="text-xs">Nova capa</Label>
+                    <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Cor da capa">
+                      {CARD_COVERS.map((c) => (
+                        <button key={c.id} type="button" role="radio" aria-checked={actionCover === c.id} title={c.name} onClick={() => setActionCover(c.id)}
+                          className={cn('h-8 w-10 rounded-md border border-border', c.color || 'bg-transparent', actionCover === c.id && 'ring-2 ring-foreground ring-offset-2 ring-offset-background')}>
+                          {c.id === 'none' ? <span className="text-[9px] text-muted-foreground">sem</span> : null}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(actionType === 'assign_to' || actionType === 'add_assignee' || (actionType === 'notify' && instant)) && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">{actionType === 'notify' ? 'Quem recebe (vazio = responsável do card)' : 'Pessoa'}</Label>
                     <Select value={actionProfileId || (actionType === 'notify' ? '__resp' : undefined)} onValueChange={(v) => setActionProfileId(v === '__resp' ? '' : v)}>
                       <SelectTrigger><SelectValue placeholder="Escolha a pessoa" /></SelectTrigger>
                       <SelectContent className="max-h-72">
