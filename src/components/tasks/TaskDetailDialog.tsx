@@ -430,13 +430,6 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
   })();
   const renderHeader = () => (
     <div className="tdx-head px-4 pt-3 pb-2" style={{ ['--colc' as string]: curCol?.color || 'hsl(var(--primary))' }}>
-      {!isMobile ? (
-        <div className="tdx-chips">
-          {curCol ? <span className="tdx-chip col"><i />{curCol.title}</span> : null}
-          {dueInfo ? <span className={`tdx-chip due ${dueInfo.cls}`} title={dueInfo.hint}><CalendarIcon className="h-3.5 w-3.5" />{dueInfo.txt}<small>{dueInfo.hint}</small></span> : null}
-          {total > 0 ? <span className="tdx-chip prog"><span className="tdx-ring" style={{ ['--p' as string]: `${overallProgress}%` }} />{completed}/{total} itens</span> : null}
-        </div>
-      ) : null}
       <div className="flex items-center gap-2 flex-wrap mb-2">
         <Badge variant="outline" className="tlbl">#{task.task_number}</Badge>
         <Badge className={cn('tlbl',
@@ -954,6 +947,15 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
     </div>
   );
 
+  const renderDetails = () => (
+    <div className="tdx-props">
+      <div className="tdx-h">Detalhes</div>
+      <div className="tdx-prop"><span>Situação</span><b><i className="tdx-dot" />{curCol?.title || '—'}</b></div>
+      <div className="tdx-prop"><span>Entrega</span><b>{task.due_date ? <>{new Date(task.due_date).toLocaleDateString('pt-BR')}{(() => { const d = new Date(task.due_date!); return (d.getHours() || d.getMinutes()) ? ` às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''; })()}{dueInfo ? <em className={`tdx-due ${dueInfo.cls}`}>{dueInfo.hint}</em> : null}</> : <small>Sem prazo</small>}</b></div>
+      <div className="tdx-prop"><span>Responsável</span><b>{task.assignee ? <><Avatar className="h-6 w-6"><AvatarImage src={task.assignee.avatar_url || ''} /><AvatarFallback className="text-[10px] bg-primary text-primary-foreground">{getInitials(task.assignee.display_name || task.assignee.name)}</AvatarFallback></Avatar><span className="truncate">{task.assignee.display_name || task.assignee.name}</span></> : <small>Ninguém</small>}</b></div>
+      {total > 0 ? <div className="tdx-prop"><span>Checklist</span><b><span className="tdx-ring" style={{ ['--p' as string]: `${overallProgress}%` }} />{completed}/{total} itens</b></div> : null}
+    </div>
+  );
   const renderInfoRow = () => (
     <div className="px-4 py-2">
       <div className="grid grid-cols-2 gap-4">
@@ -1286,7 +1288,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
   );
 
   const commentsHeader = (
-    <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+    <div className="flex items-center justify-between tdx-chead px-4 py-3 border-b border-border bg-muted/30">
       <div className="flex items-center gap-2">
         <MessageSquare className="h-4 w-4" />
         <h4 className="font-semibold text-sm">Comentários e atividade</h4>
@@ -1340,32 +1342,35 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="ui-center tdx w-[min(1200px,94vw)] max-w-none h-[88vh] max-h-[88vh] overflow-hidden flex flex-col p-0 gap-0">
-        {renderCover()}
-        {renderTemplateBanner()}
-        {renderWarBanner()}
-        {L(renderHeader())}
-
-        {/* Two clean columns: the card's content on the left, conversation on the right */}
-        <div className="flex flex-1 min-h-0 border-t border-border">
-          <ScrollArea className="tdx-canvas flex-1 min-w-0">
-            <div className="tdx-main pb-8">
+        {/* Two columns: title + content on the left; comments/activity take the whole height on the right */}
+        <div className="flex flex-1 min-h-0">
+          <div className="flex flex-col flex-1 min-w-0 min-h-0">
+          {renderCover()}
+          {renderTemplateBanner()}
+          {renderWarBanner()}
+          {L(renderHeader())}
+          <ScrollArea className="tdx-canvas flex-1 min-w-0 border-t border-border">
+            <div className="tdx-main pb-8" style={{ ['--colc' as string]: curCol?.color || 'hsl(var(--primary))' }}>
               <div className="tdx-sec">{L(renderActionButtons())}</div>
               {/* two columns inside the card: what the card is about (left) · its details (right), each subject in its own box */}
-              <div className="tdx-grid">
-                <div className="tdx-col tdx-left">
-                  <div className="tdx-box">{L(renderDescription())}</div>
-                  {showDecisions || decisions.length ? <div className="tdx-box">{L(renderDecisions())}</div> : null}
-                  {groups.length || subtasks.length ? <div className="tdx-box">{renderProgress()}{renderSubtasks()}</div> : <div className="tdx-hide">{renderSubtasks()}</div>}
-                </div>
-                <div className="tdx-col tdx-aside">
-                  {!task.is_template && (task.assignee || task.due_date) ? <div className="tdx-box"><div className="tdx-h">Detalhes</div>{L(renderInfoRow())}</div> : null}
-                  {!task.is_template ? <TaskTimeTracker taskId={task.id} forceOpen={extraOpen.has('time')} /> : null}
-                  {!task.is_template && boardId && hasApprovals ? <CardApproval taskId={task.id} columns={(columns || []) as never} users={(allUsers || []) as never} readOnly={warLocked} forceOpen={extraOpen.has('approval')} onClose={() => setExtraOpen((x) => { const n = new Set(x); n.delete('approval'); return n; })} /> : null}
-                  {!task.is_template && boardId ? <CardExtrasPanel task={task as never} boardId={boardId} readOnly={warLocked} showLinks={extraOpen.has('links')} showDeps={extraOpen.has('deps')} conclusionIds={new Set((columns || []).filter((c) => (c as { is_conclusion?: boolean }).is_conclusion).map((c) => c.id))} /> : null}
-                </div>
+              {/* top: Detalhes and Campos side by side; below, full width: description, decisions, checklist, dependencies/links, time, approval */}
+              <div className="tdx-top">
+                {!task.is_template ? <div className="tdx-box">{renderDetails()}</div> : null}
+                {boardId ? <CardExtrasPanel only="fields" task={task as never} boardId={boardId} readOnly={warLocked} /> : null}
+              </div>
+              <div className="tdx-col tdx-full">
+                <div className="tdx-box">{L(renderDescription())}</div>
+                {showDecisions || decisions.length ? <div className="tdx-box">{L(renderDecisions())}</div> : null}
+                {groups.length || subtasks.length ? <div className="tdx-box">{renderProgress()}{renderSubtasks()}</div> : <div className="tdx-hide">{renderSubtasks()}</div>}
+              </div>
+              <div className="tdx-col tdx-aside tdx-more">
+                {!task.is_template && boardId ? <CardExtrasPanel only="rest" task={task as never} boardId={boardId} readOnly={warLocked} showLinks={extraOpen.has('links')} showDeps={extraOpen.has('deps')} conclusionIds={new Set((columns || []).filter((c) => (c as { is_conclusion?: boolean }).is_conclusion).map((c) => c.id))} /> : null}
+                {!task.is_template ? <TaskTimeTracker taskId={task.id} forceOpen={extraOpen.has('time')} /> : null}
+                {!task.is_template && boardId && hasApprovals ? <CardApproval taskId={task.id} columns={(columns || []) as never} users={(allUsers || []) as never} readOnly={warLocked} forceOpen={extraOpen.has('approval')} onClose={() => setExtraOpen((x) => { const n = new Set(x); n.delete('approval'); return n; })} /> : null}
               </div>
             </div>
           </ScrollArea>
+          </div>
 
           <aside className="tdx-side w-[380px] flex-shrink-0 flex flex-col min-h-0 border-l border-border">
             {commentsHeader}

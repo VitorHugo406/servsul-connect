@@ -62,7 +62,7 @@ function FieldInput({ f, value, onChange, disabled }: { f: CustomField; value: u
     </label>);
 }
 
-export function CardExtrasPanel({ task, boardId, readOnly, conclusionIds, showLinks, showDeps }: { task: { id: string }; boardId: string; readOnly?: boolean; conclusionIds?: Set<string>; showLinks?: boolean; showDeps?: boolean }) {
+export function CardExtrasPanel({ task, boardId, readOnly, conclusionIds, showLinks, showDeps, only }: { task: { id: string }; boardId: string; readOnly?: boolean; conclusionIds?: Set<string>; showLinks?: boolean; showDeps?: boolean; only?: 'fields' | 'rest' }) {
   const x = useBoardExtras();
   const [all, setAll] = useState<Mini[]>([]);
   const [q, setQ] = useState(''); const [pick, setPick] = useState(false);
@@ -75,7 +75,7 @@ export function CardExtrasPanel({ task, boardId, readOnly, conclusionIds, showLi
   const openBlockers = blockers.filter((t) => !isDone(t));
   const cands = all.filter((t) => t.id !== task.id && !blockers.some((b) => b.id === t.id) && (!q.trim() || `#${t.task_number} ${t.title}`.toLowerCase().includes(q.trim().toLowerCase()))).slice(0, 30);
   const Chip = ({ t, onRemove }: { t: Mini; onRemove?: () => void }) => (
-    <span className={`inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-xs ${isDone(t) ? 'border-emerald-300 text-muted-foreground line-through' : 'border-border'}`}>
+    <span className={`tdx-dep inline-flex max-w-full items-center gap-1.5 rounded-[8px] border px-2.5 py-1 text-xs ${isDone(t) ? 'border-emerald-300 text-muted-foreground line-through' : 'border-border'}`}>
       <span className="text-muted-foreground">#{t.task_number}</span><span className="truncate">{t.title}</span>
       {onRemove && !readOnly ? <button type="button" onClick={onRemove} aria-label="Remover dependência"><X className="h-3 w-3" /></button> : null}
     </span>);
@@ -83,7 +83,7 @@ export function CardExtrasPanel({ task, boardId, readOnly, conclusionIds, showLi
   const depsVisible = showDeps || blockers.length > 0 || blocking.length > 0;
   return (
     <>
-      {x.fields.length ? (
+      {only !== 'rest' && x.fields.length ? (
         <div className="px-4 py-2">
           <H>Campos</H>
           <div className="-mx-2 max-w-[520px]">
@@ -94,16 +94,15 @@ export function CardExtrasPanel({ task, boardId, readOnly, conclusionIds, showLi
               </div>))}
           </div>
         </div>) : null}
-      <CardLinks taskId={task.id} readOnly={readOnly} forceOpen={showLinks} />
-      {depsVisible ? (
+      {only !== 'fields' && depsVisible ? (
         <div className="px-4 py-2">
-          <H>Dependências {openBlockers.length ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"><Lock className="h-3 w-3" />Bloqueado</span> : null}</H>
+          <H>Dependências {openBlockers.length ? <span className="inline-flex items-center gap-1 rounded-[6px] bg-amber-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"><Lock className="h-3 w-3" />Bloqueado</span> : null}</H>
           <div className="space-y-1.5 text-xs">
             <div className="flex flex-wrap items-center gap-1.5"><span className="w-24 text-muted-foreground">Espera por</span>
               {blockers.map((t) => <Chip key={t.id} t={t} onRemove={() => void x.removeDep(task.id, t.id)} />)}
               {!readOnly ? (
                 <Popover open={pick} onOpenChange={setPick}>
-                  <PopoverTrigger asChild><button type="button" className="inline-flex h-6 items-center gap-1 rounded-md border border-dashed border-border px-2 hover:bg-muted"><Plus className="h-3 w-3" />Adicionar</button></PopoverTrigger>
+                  <PopoverTrigger asChild><button type="button" className="tdx-dep inline-flex h-7 items-center gap-1 rounded-[8px] border border-dashed border-border px-2.5 hover:bg-muted"><Plus className="h-3 w-3" />Adicionar</button></PopoverTrigger>
                   <PopoverContent align="start" className="w-80 p-2">
                     <div className="relative mb-2"><Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" /><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar card deste mural" className="h-8 pl-7 text-sm" autoFocus /></div>
                     <div className="max-h-64 space-y-0.5 overflow-auto">{cands.length ? cands.map((t) => <button key={t.id} type="button" className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted" onClick={() => { void x.addDep(task.id, t.id); setPick(false); setQ(''); }}><span className="text-xs text-muted-foreground">#{t.task_number}</span><span className="truncate">{t.title}</span></button>) : <p className="p-2 text-xs text-muted-foreground">Nenhum card encontrado.</p>}</div>
@@ -114,6 +113,7 @@ export function CardExtrasPanel({ task, boardId, readOnly, conclusionIds, showLi
             {openBlockers.length ? <p className="text-amber-700 dark:text-amber-300">Só pode ser concluído depois dos cards acima.</p> : null}
           </div>
         </div>) : null}
+      {only !== 'fields' ? <CardLinks taskId={task.id} readOnly={readOnly} forceOpen={showLinks} /> : null}
     </>
   );
 }
