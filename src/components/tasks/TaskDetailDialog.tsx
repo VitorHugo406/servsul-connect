@@ -1327,14 +1327,20 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
           <ScrollArea className="flex-1 min-w-0">
             <div className="tdx-main pb-8">
               <div className="tdx-sec">{L(renderActionButtons())}</div>
-              {!task.is_template && (task.assignee || task.due_date) ? <div className="tdx-sec">{L(renderInfoRow())}</div> : null}
-              <div className="tdx-sec">{L(renderDescription())}</div>
-              {L(renderDecisions())}
-              {!task.is_template ? <TaskTimeTracker taskId={task.id} forceOpen={extraOpen.has('time')} /> : null}
-              {!task.is_template && boardId && hasApprovals ? <CardApproval taskId={task.id} columns={(columns || []) as never} users={(allUsers || []) as never} readOnly={warLocked} forceOpen={extraOpen.has('approval')} onClose={() => setExtraOpen((x) => { const n = new Set(x); n.delete('approval'); return n; })} /> : null}
-              {!task.is_template && boardId ? <CardExtrasPanel task={task as never} boardId={boardId} readOnly={warLocked} showLinks={extraOpen.has('links')} showDeps={extraOpen.has('deps')} conclusionIds={new Set((columns || []).filter((c) => (c as { is_conclusion?: boolean }).is_conclusion).map((c) => c.id))} /> : null}
-              {renderProgress()}
-              {renderSubtasks()}
+              {/* two columns inside the card: what the card is about (left) · its details (right), each subject in its own box */}
+              <div className="tdx-grid">
+                <div className="tdx-col tdx-left">
+                  <div className="tdx-box">{L(renderDescription())}</div>
+                  {showDecisions || decisions.length ? <div className="tdx-box">{L(renderDecisions())}</div> : null}
+                  {groups.length || subtasks.length ? <div className="tdx-box">{renderProgress()}{renderSubtasks()}</div> : <div className="tdx-hide">{renderSubtasks()}</div>}
+                </div>
+                <div className="tdx-col tdx-aside">
+                  {!task.is_template && (task.assignee || task.due_date) ? <div className="tdx-box"><div className="tdx-h">Detalhes</div>{L(renderInfoRow())}</div> : null}
+                  {!task.is_template ? <TaskTimeTracker taskId={task.id} forceOpen={extraOpen.has('time')} /> : null}
+                  {!task.is_template && boardId && hasApprovals ? <CardApproval taskId={task.id} columns={(columns || []) as never} users={(allUsers || []) as never} readOnly={warLocked} forceOpen={extraOpen.has('approval')} onClose={() => setExtraOpen((x) => { const n = new Set(x); n.delete('approval'); return n; })} /> : null}
+                  {!task.is_template && boardId ? <CardExtrasPanel task={task as never} boardId={boardId} readOnly={warLocked} showLinks={extraOpen.has('links')} showDeps={extraOpen.has('deps')} conclusionIds={new Set((columns || []).filter((c) => (c as { is_conclusion?: boolean }).is_conclusion).map((c) => c.id))} /> : null}
+                </div>
+              </div>
             </div>
           </ScrollArea>
 

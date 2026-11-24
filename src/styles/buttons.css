@@ -93,3 +93,15 @@ html body button.ai-btn:disabled { opacity: .55; }
   .tdx .tdx-sec + .tdx-sec { border-top: 0; }
   .tdx .tdx-side { background: hsl(var(--muted) / .35); }
 }
+@media (min-width: 768px) {
+  .tdx .tdx-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 14px; align-items: start; padding: 4px 0 0; }
+  .tdx .tdx-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  /* every subject (description, checklist, decisions, details, fields, dependencies, links, time…) is its own box */
+  .tdx .tdx-box, .tdx .tdx-aside > div:not(:empty) {
+    border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); padding: 6px 2px; }
+  .tdx .tdx-hide { display: contents; }
+  .tdx .tdx-sec > .px-4, .tdx .tdx-sec > .wr-lock > .px-4 { padding-left: 0; padding-right: 0; }
+  .tdx .tdx-aside .grid-cols-2 { grid-template-columns: 1fr; gap: 10px; }
+  .tdx .tdx-h { padding: 8px 16px 0; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+  .tdx .tdx-aside [class*="max-w-[520px]"] { max-width: none; }
+}
