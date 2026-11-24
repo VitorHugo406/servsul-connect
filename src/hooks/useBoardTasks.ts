@@ -39,14 +39,28 @@ const automationTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const boardTaskCache = new Map<string, BoardTask[]>();
 // Tasks mutated locally are protected from stale realtime echoes for a moment,
 // otherwise a late broadcast rolls the card back to its previous column.
+// Each local change is kept as a "pending patch" until the server has surely caught up (8 s after it was saved).
+// Any refetch or realtime echo that arrives meanwhile is overlaid with the patch, so a late/stale response can no
+// longer make a just-set cover, title or column flicker back (the card used to show the cover, lose it, and get it
+// back only on the next refresh).
 const localMutations = new Map<string, number>();
-const markLocal = (taskId: string) => localMutations.set(taskId, Date.now());
+const pendingPatches = new Map<string, { at: number; patch: Record<string, unknown> }>();
+const FRESH_MS = 8000;
+const markLocal = (taskId: string, patch?: Record<string, unknown>) => {
+  localMutations.set(taskId, Date.now());
+  if (patch) pendingPatches.set(taskId, { at: Date.now(), patch: { ...(pendingPatches.get(taskId)?.patch || {}), ...patch } });
+};
 const isLocallyFresh = (taskId?: string) => {
   if (!taskId) return false;
   const at = localMutations.get(taskId);
   if (!at) return false;
-  if (Date.now() - at > 5000) { localMutations.delete(taskId); return false; }
+  if (Date.now() - at > FRESH_MS) { localMutations.delete(taskId); pendingPatches.delete(taskId); return false; }
   return true;
+};
+/** server rows + the local changes the server may not have returned yet */
+const withPending = <T extends { id: string }>(rows: T[]): T[] => {
+  if (!pendingPatches.size) return rows;
+  return rows.map((r) => (isLocallyFresh(r.id) && pendingPatches.has(r.id) ? { ...r, ...pendingPatches.get(r.id)!.patch } as T : r));
 };
 // Heavy scans run on the scheduled cron; per-board runs are fired in the
 // background (fire and forget) so the board never waits for them.
@@ -98,8 +112,9 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
         })) as BoardTask[];
 
       if (requestId !== requestSequence.current || activeBoardIdRef.current !== boardId) return;
-      boardTaskCache.set(boardId, normalized);
-      setAllTasks(normalized);
+      const merged = withPending(normalized);
+      boardTaskCache.set(boardId, merged);
+      setAllTasks(merged);
     } catch (error) {
       if (requestId !== requestSequence.current || activeBoardIdRef.current !== boardId) return;
       console.error('Error fetching board tasks:', error);
@@ -140,7 +155,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
             next = prev.filter((task) => task.id !== (payload.old as { id?: string }).id);
           } else {
             const incoming = payload.new as Partial<BoardTask>;
-            if (isLocallyFresh(incoming.id)) return prev;
+            if (isLocallyFresh(incoming.id)) return prev; // our own echo (or an older write): the local state already has it
             const existing = prev.find((task) => task.id === incoming.id);
             if (existing) next = prev.map((task) => (task.id === incoming.id ? { ...task, ...incoming, assignee: existing.assignee } : task));
             else { scheduleRefetch(); return prev; }
@@ -194,7 +209,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
 
   const updateTask = async (id: string, updates: Partial<BoardTask>) => {
     const previous = allTasks;
-    markLocal(id);
+    markLocal(id, updates as Record<string, unknown>);
     setAllTasks((prev) => {
       const next = prev.map((t) => (t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t));
       if (boardId) boardTaskCache.set(boardId, next);
@@ -204,7 +219,9 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
 
       const { error } = await supabase.from('tasks').update(updates as any).eq('id', id);
       if (error) throw error;
-      if (boardId) triggerAutomations(boardId);
+      markLocal(id, updates as Record<string, unknown>); // keep protecting it for 8 s after the server confirmed
+      // the per-board automation scan only matters for changes it reacts to (column, dates, people, completion)
+      if (boardId && ['status', 'due_date', 'start_date', 'assigned_to', 'completed_at', 'priority'].some((k) => k in updates)) triggerAutomations(boardId);
       // the card shows `assignee` (photo/name), not only assigned_to: refresh it so a new responsible appears at once
       if ('assigned_to' in updates) {
         const pid = updates.assigned_to as string | null;
@@ -218,6 +235,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
       }
       return { error: null };
     } catch (error) {
+      localMutations.delete(id); pendingPatches.delete(id);
       setAllTasks(previous);
       if (boardId) boardTaskCache.set(boardId, previous);
       return { error };
@@ -244,7 +262,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
 
   const moveTask = async (taskId: string, newStatus: string, newPosition: number) => {
     const previous = allTasks;
-    markLocal(taskId);
+    markLocal(taskId, { status: newStatus, position: newPosition });
     // Optimistic move first: the card follows the drop instantly.
     setAllTasks((prev) => {
       const next = prev.map((t) => (t.id === taskId ? { ...t, status: newStatus, position: newPosition } : t));
@@ -258,9 +276,11 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
         .eq('id', taskId);
 
       if (error) throw error;
+      markLocal(taskId, { status: newStatus, position: newPosition });
       if (boardId) triggerAutomations(boardId);
       return { error: null };
     } catch (error) {
+      localMutations.delete(taskId); pendingPatches.delete(taskId);
       setAllTasks(previous);
       if (boardId) boardTaskCache.set(boardId, previous);
       return { error };
@@ -286,7 +306,7 @@ export function useBoardTasks(boardId: string | null, restrictTaskId?: string | 
     if (updates.length === 0) return { error: null };
 
     // Optimistic UI keeps drag-and-drop responsive while the single write runs.
-    columnTasks.forEach((t) => markLocal(t.id));
+    columnTasks.forEach((t, position) => markLocal(t.id, { position }));
     setAllTasks((prev) => {
       const other = prev.filter((t) => t.status !== task.status);
       const next = [...other, ...columnTasks.map((t, position) => ({ ...t, position }))];

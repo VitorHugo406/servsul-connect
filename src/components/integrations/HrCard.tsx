@@ -105,14 +105,14 @@ function SourceForm({ presets, source, onChanged, onClose }: { presets: Preset[]
   const [path, setPath] = useState(c.path ?? '');
   const [headerName, setHeaderName] = useState(c.header ?? '');
   const [oauthUrl, setOauthUrl] = useState(c.oauth_url ?? '');
-  const [every, setEvery] = useState(String(c.every ?? 1));
+  const [every, setEvery] = useState(String(Math.max(15, Number(c.every) || 60)));
   const [busy, setBusy] = useState<string | null>(null);
   const [res, setRes] = useState<{ kind: 'save' | 'test'; r: Result } | null>(null);
 
   const preset = presets.find((p) => p.id === presetId);
   const choose = (p: Preset) => { setPresetId(p.id); setUrl(p.url ?? ''); setPath(p.path ?? ''); setHeaderName(p.header ?? ''); setOauthUrl(''); setRes(null); };
   const keyLabel = preset?.auth === 'oauth' ? 'Client ID:Secret' : preset?.tokenLabel || 'Chave de acesso';
-  const everyN = Math.min(60, Math.max(1, Number(every) || 1));
+  const everyN = Math.min(60, Math.max(15, Number(every) || 60));
 
   const body = () => ({
     id: source?.id, label: label.trim() || undefined, preset: presetId, url: url.trim() || undefined, path: path.trim() || undefined,
@@ -183,7 +183,7 @@ function SourceForm({ presets, source, onChanged, onClose }: { presets: Preset[]
       <div>
         <p className={lbl}>2. {keyLabel}{source ? ' · já salva, deixe em branco para manter' : ''}</p>
         <Input type="password" autoComplete="off" placeholder={source ? '••••••••••••' : 'Cole aqui'} value={secret} onChange={(e) => setSecret(e.target.value.trim())} />
-        <p className="mt-1 text-[11px] text-muted-foreground">Atualiza a cada {everyN === 1 ? '1 minuto' : `${everyN} minutos`}. A chave é guardada criptografada e nunca mais aparece.</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">Atualiza a cada {everyN} minutos. A chave é guardada criptografada e nunca mais aparece.</p>
       </div>
       <details className="rounded-lg border border-border">
         <summary className="cursor-pointer list-none px-3 py-2.5 text-[13px] font-semibold [&::-webkit-details-marker]:hidden">Opções avançadas</summary>
@@ -191,7 +191,7 @@ function SourceForm({ presets, source, onChanged, onClose }: { presets: Preset[]
           <div className="sm:col-span-2"><p className={lbl}>Nome para identificar (opcional)</p><Input placeholder="ex.: Matriz, Filial Sul" value={label} onChange={(e) => setLabel(e.target.value)} /></div>
           <div className="sm:col-span-2"><p className={lbl}>Endereço da API (https){preset?.needsUrl ? ' · obrigatório' : ''}</p><Input placeholder="https://api.seu-sistema.com.br" value={url} onChange={(e) => setUrl(e.target.value)} /></div>
           <div><p className={lbl}>Caminho da lista</p><Input placeholder="/caminho/da/lista" value={path} onChange={(e) => setPath(e.target.value)} /></div>
-          <div><p className={lbl}>Atualizar a cada (minutos, 1 a 60)</p><Input inputMode="numeric" value={every} onChange={(e) => setEvery(e.target.value.replace(/\D/g, '').slice(0, 2))} /></div>
+          <div><p className={lbl}>Atualizar a cada (minutos, 15 a 60)</p><Input inputMode="numeric" value={every} onChange={(e) => setEvery(e.target.value.replace(/\D/g, '').slice(0, 2))} /></div>
           {preset?.auth === 'header' ? <div><p className={lbl}>Nome do cabeçalho da chave</p><Input placeholder="ex.: X-Api-Key" value={headerName} onChange={(e) => setHeaderName(e.target.value)} /></div> : null}
           {preset?.auth === 'oauth' ? <div className="sm:col-span-2"><p className={lbl}>Endereço do login/token (obrigatório)</p><Input placeholder="https://…/oauth/token" value={oauthUrl} onChange={(e) => setOauthUrl(e.target.value)} /></div> : null}
         </div>

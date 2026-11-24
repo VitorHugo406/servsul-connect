@@ -1931,8 +1931,8 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                 <div
                   key={column.id}
                   className={cn(
-                    'rounded-xl transition-colors flex flex-col',
-                    isMobile ? 'w-full' : 'w-[280px] flex-shrink-0',
+                    'rounded-xl transition-colors flex flex-col overflow-hidden',
+                    isMobile ? 'w-full' : 'w-[304px] flex-shrink-0 max-h-full',
                     dragOverColumn === column.id ? 'bg-primary/10 ring-2 ring-primary/30' : 'bg-background/60 backdrop-blur-sm'
                   )}
                   onDragOver={(e) => handleDragOver(e, column.id)}
@@ -2017,7 +2017,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                     </DropdownMenu>
                   </div>
 
-                  <div className="p-2 space-y-2 min-h-[60px] flex-1 overflow-y-auto max-h-[calc(100vh-300px)] task-col-scroll">
+                  <div className="p-2 space-y-2 min-h-[60px] flex-1 overflow-y-auto task-col-scroll">
                     {colTasks.map((task, index) => {
                       const cover = getCoverDisplay(task.cover_image);
                       const isTaskCompleted = !!task.completed_at || conclusionColumnIds.includes(task.status);
@@ -2308,7 +2308,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                   })()}
                   </div>
                   {/* Footer controls: centered glass buttons with consistent vertical alignment */}
-                  <div className="mt-auto flex min-h-[56px] items-center justify-center border-t border-white/15 px-2 py-2">
+                  <div className="mt-auto flex shrink-0 items-center justify-center border-t border-white/15 px-2.5 pb-3 pt-2.5">
                     <div className="flex w-full items-center justify-center gap-2">
                       {(column as any).is_template_column ? (
                         <Button
@@ -2350,7 +2350,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
               );
             })}
             {/* Add column button */}
-            <div className={cn('flex-shrink-0', isMobile ? 'w-full' : 'w-[280px]')}>
+            <div className={cn('flex-shrink-0', isMobile ? 'w-full' : 'w-[304px]')}>
               {showAddColumn ? (
                 <div className="bg-background/60 backdrop-blur-sm rounded-xl p-3 space-y-2">
                   <Input value={newColumnTitle} onChange={(e) => setNewColumnTitle(e.target.value)} placeholder="Nome da coluna" autoFocus />

@@ -1,7 +1,7 @@
 // RH -> Dash 3D. The admin connects one or more people-management systems (Convenia, Pontomais, Nexti, Ahgora, ...) by
 // pasting the API key. EVERY employee of each system is stored (admission, dismissal, salary, department, role, sex, birth,
 // contract...) and the Dash 3D builds its metrics from them, not from the ewvon roster. Time-clock data is not imported.
-// Columns are recognised automatically (synonym dictionary of the original Dash); data is refreshed every minute.
+// Columns are recognised automatically (synonym dictionary of the original Dash); data is refreshed every 15–60 minutes (minimum 15: a full re-sync every minute kept the database busy).
 //   POST /hr-sync/presets  list of supported systems          POST /hr-sync/save    create/update a source
 //   POST /hr-sync/test     recognised columns + preview       POST /hr-sync/sync    sync one source now
 //   POST /hr-sync/toggle   { id, enabled }                    POST /hr-sync/remove  { id } disconnect and delete its people
@@ -71,6 +71,8 @@ const PRESETS: Record<string, Preset> = {
   custom: BEARER('API própria', 'Seu sistema'), generic: { name: 'Outro sistema (JSON)', cat: 'Qualquer API', path: '', auth: 'bearer', needsUrl: true, tokenLabel: 'Token da API', note: 'Qualquer API que devolva uma lista em JSON.' },
 };
 
+// The scheduler never syncs a source more often than this (minutes), whatever was saved before.
+const MIN_EVERY = 15;
 interface Cfg { preset: string; url: string; path: string; auth: Preset['auth']; header: string; oauth_url: string; every: number }
 const PATH_RE = /^[\w.\[\]-]{0,120}$/;
 
@@ -99,7 +101,7 @@ function cleanConfig(c: any): Cfg | string {
   if (p.auth === 'header' && !/^[A-Za-z0-9-]{1,40}$/.test(header)) return 'Nome do cabeçalho inválido.';
   let oauth_url = '';
   if (p.auth === 'oauth') { oauth_url = String(c?.oauth_url || '').trim(); const b2 = checkUrl(oauth_url, 'do login (token)'); if (b2) return b2; }
-  const every = Math.min(Math.max(Math.round(Number(c?.every) || 1), 1), 60);
+  const every = Math.min(Math.max(Math.round(Number(c?.every) || 60), MIN_EVERY), 60);
   return { preset: id, url, path, auth: p.auth, header, oauth_url, every };
 }
 
@@ -295,7 +297,7 @@ async function convEnrich(cfg: Cfg, secret: string, sourceId: string, active: Em
     if (n++) await sleep(1300);
     let j: any;
     try { j = await convGet(`${base}/employees/${encodeURIComponent(t.id)}`, headers); } catch (e) { note = note || (e as Error).message; break; }
-    if (j === 'rate') { note = note || 'A Convenia limitou as consultas; os detalhes continuam no próximo minuto.'; break; }
+    if (j === 'rate') { note = note || 'A Convenia limitou as consultas; os detalhes continuam na próxima atualização.'; break; }
     if (!j) continue;
     const d = detailOf(j); const one = mapEmployees([d]).emps[0];
     const b1: Emp = one ? { ...one, key: t.id } : { key: t.id, name: '', depto: '', cargo: '', sexo: '', ctr: '', cc: '', kemp: '', adm: null, dem: null, nasc: null, salary: null, fv: null };
@@ -314,12 +316,11 @@ async function convEnrich(cfg: Cfg, secret: string, sourceId: string, active: Em
     else if (c && c.name) out.push({ key: id, name: c.name, depto: c.depto || '', cargo: c.cargo || '', sexo: c.sexo || '', ctr: c.ctr || '', cc: c.cc || '', kemp: c.kemp || '', adm: c.adm, dem: c.dem || disDate.get(id) || null, nasc: c.nasc, salary: c.salary == null ? null : Number(c.salary), fv: c.vacation_overdue == null ? null : Number(c.vacation_overdue) });
   }
   const pending = Math.max(0, todo.length - fetched.size);
-  if (pending) note = note || `${pending} cadastro(s) ainda serão completados nos próximos minutos (cargo, sexo e demitidos).`;
+  if (pending) note = note || `${pending} cadastro(s) ainda serão completados nas próximas atualizações (cargo, sexo e demitidos).`;
   return { emps: out, note };
 }
 
 async function runSync(row: any) {
-  const startedAt = new Date().toISOString();
   try {
     const cfg = cleanConfig(row.config); if (typeof cfg === 'string') throw new Error(cfg);
     const secret = await open(row.secret_enc);
@@ -334,11 +335,18 @@ async function runSync(row: any) {
     if (cfg.preset === 'convenia') { const r = await convEnrich(cfg, secret, row.id, emps); emps = r.emps; note = r.note; }
     const now = new Date().toISOString();
     const payload = emps.slice(0, MAX_EMPLOYEES).map((e) => ({ source_id: row.id, company_id: row.company_id, ext_key: e.key, name: e.name, depto: e.depto || null, cargo: e.cargo || null, sexo: e.sexo || null, ctr: e.ctr || null, cc: e.cc || null, kemp: e.kemp || null, adm: e.adm, dem: e.dem, nasc: e.nasc, salary: e.salary, vacation_overdue: e.fv, synced_at: now }));
-    for (let i = 0; i < payload.length; i += 500) {
-      const { error } = await admin.from('hr_employees').upsert(payload.slice(i, i + 500), { onConflict: 'source_id,ext_key' });
+    // Write ONLY what changed: rewriting every row on every run flooded the WAL (and realtime) for nothing.
+    const { data: cur } = await admin.from('hr_employees').select('ext_key,name,depto,cargo,sexo,ctr,cc,kemp,adm,dem,nasc,salary,vacation_overdue').eq('source_id', row.id).limit(MAX_EMPLOYEES + 500);
+    const sig = (r: any) => JSON.stringify([r.name, r.depto, r.cargo, r.sexo, r.ctr, r.cc, r.kemp, r.adm, r.dem, r.nasc, r.salary == null ? null : Number(r.salary), r.vacation_overdue == null ? null : Number(r.vacation_overdue)]);
+    const have = new Map<string, string>(((cur || []) as any[]).map((r) => [String(r.ext_key), sig(r)]));
+    const changed = payload.filter((p) => have.get(String(p.ext_key)) !== sig(p));
+    for (let i = 0; i < changed.length; i += 500) {
+      const { error } = await admin.from('hr_employees').upsert(changed.slice(i, i + 500), { onConflict: 'source_id,ext_key' });
       if (error) throw new Error('Não foi possível gravar os colaboradores.');
     }
-    await admin.from('hr_employees').delete().eq('source_id', row.id).lt('synced_at', startedAt);
+    const keep = new Set(payload.map((p) => String(p.ext_key)));
+    const gone = [...have.keys()].filter((k) => !keep.has(k));
+    for (let i = 0; i < gone.length; i += 200) await admin.from('hr_employees').delete().eq('source_id', row.id).in('ext_key', gone.slice(i, i + 200));
     await admin.from('hr_sources').update({ last_status: 'ok', last_error: note || null, last_used_at: new Date().toISOString(), last_count: payload.length }).eq('id', row.id);
     return { ok: true, total: payload.length, dismissed: payload.filter((p) => p.dem).length, columns: Object.keys(columns).map((k) => LABELS[k] || k), note };
   } catch (e) {
@@ -508,7 +516,7 @@ Deno.serve(async (req) => {
       const { data: rows } = await admin.from('hr_sources').select('id, company_id, config, secret_enc, last_used_at').eq('enabled', true).not('secret_enc', 'is', null).limit(60);
       let ran = 0;
       for (const r of rows || []) {
-        const every = Math.min(Math.max(Number(r.config?.every) || 1, 1), 60) * 60_000;
+        const every = Math.min(Math.max(Number(r.config?.every) || 60, MIN_EVERY), 60) * 60_000;
         if (r.last_used_at && Date.now() - new Date(r.last_used_at).getTime() < every - 8_000) continue;
         await runSync(r); ran++;
       }
