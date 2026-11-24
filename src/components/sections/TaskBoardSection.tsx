@@ -1687,7 +1687,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
         <div className="flex-1 overflow-hidden">
           <div
             ref={boardScrollRef}
-            className={cn(isMobile ? 'overflow-y-auto' : 'overflow-x-auto overflow-y-hidden h-full p-4 scrollbar-none')}
+            className={cn(isMobile ? 'overflow-y-auto' : 'overflow-x-auto overflow-y-hidden h-full px-4 pt-3 pb-1 scrollbar-none')}
             onPointerDown={!isMobile ? handleBoardMouseDown : undefined}
             onPointerMove={!isMobile ? handleBoardMouseMove : undefined}
             onPointerUp={!isMobile ? handleBoardMouseUp : undefined}
@@ -1924,7 +1924,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
             )
           ) : (
             /* Desktop: horizontal scroll */
-            <div className="inline-flex gap-4 h-full pb-2 items-start">
+            <div className="inline-flex gap-4 h-full items-start">
             {columns.map((column) => {
               const colTasks = tasksByColumn.get(column.id) || [];
               return (
@@ -1932,7 +1932,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                   key={column.id}
                   className={cn(
                     'rounded-xl transition-colors flex flex-col overflow-hidden',
-                    isMobile ? 'w-full' : 'w-[304px] flex-shrink-0 max-h-full',
+                    isMobile ? 'w-full' : 'w-[280px] flex-shrink-0 max-h-full',
                     dragOverColumn === column.id ? 'bg-primary/10 ring-2 ring-primary/30' : 'bg-background/60 backdrop-blur-sm'
                   )}
                   onDragOver={(e) => handleDragOver(e, column.id)}
@@ -2017,7 +2017,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
                     </DropdownMenu>
                   </div>
 
-                  <div className="p-2 space-y-2 min-h-[60px] flex-1 overflow-y-auto task-col-scroll">
+                  <div className="p-2 space-y-2 min-h-[110px] flex-1 overflow-y-auto task-col-scroll">
                     {colTasks.map((task, index) => {
                       const cover = getCoverDisplay(task.cover_image);
                       const isTaskCompleted = !!task.completed_at || conclusionColumnIds.includes(task.status);
@@ -2350,7 +2350,7 @@ function BoardViewInner({ board, boards, onBack, onSelectBoard, onUpdateBoard, i
               );
             })}
             {/* Add column button */}
-            <div className={cn('flex-shrink-0', isMobile ? 'w-full' : 'w-[304px]')}>
+            <div className={cn('flex-shrink-0', isMobile ? 'w-full' : 'w-[280px]')}>
               {showAddColumn ? (
                 <div className="bg-background/60 backdrop-blur-sm rounded-xl p-3 space-y-2">
                   <Input value={newColumnTitle} onChange={(e) => setNewColumnTitle(e.target.value)} placeholder="Nome da coluna" autoFocus />
