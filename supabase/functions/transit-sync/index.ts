@@ -10,18 +10,19 @@ const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { sta
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type El = { type: string; id: number; tags?: Record<string, string>; members?: { type: string; ref: number; role: string }[] }
 
+const errs: string[] = []
 async function overpass(q: string): Promise<El[]> {
-  let last: unknown = null
   for (const url of MIRRORS) {
     try {
-      const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 70_000)
-      const r = await fetch(url, { method: 'POST', body: new URLSearchParams({ data: q }), signal: ctl.signal, headers: { 'User-Agent': 'ewvon-transit-sync/1.0' } })
+      const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 55_000)
+      const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctl.signal,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json', 'User-Agent': 'ewvon-transit-sync/1.0 (+https://ewvon.com)' } })
       clearTimeout(tm)
-      if (!r.ok) { last = new Error(`${url} ${r.status}`); continue }
+      if (!r.ok) { errs.push(`${new URL(url).host} ${r.status} ${(await r.text()).slice(0, 120)}`); continue }
       return (await r.json()).elements || []
-    } catch (e) { last = e }
+    } catch (e) { errs.push(`${new URL(url).host} ${(e as Error).name}: ${(e as Error).message}`.slice(0, 160)) }
   }
-  throw last || new Error('overpass')
+  throw new Error(errs.join(' | '))
 }
 
 const KIND: Record<string, string> = { bus: 'bus', trolleybus: 'bus', minibus: 'bus', coach: 'bus', train: 'train', subway: 'metro', monorail: 'metro', light_rail: 'tram', tram: 'tram' }
@@ -55,10 +56,9 @@ Deno.serve(async (req) => {
 
   try {
     const area = `area["ISO3166-2"="BR-${uf}"]->.a;`
-    const [bus, rail] = await Promise.all([
-      overpass(`[out:json][timeout:120];${area}rel(area.a)["type"="route"]["route"~"^(bus|trolleybus|minibus|coach)$"];out tags;`),
-      overpass(`[out:json][timeout:120];${area}rel(area.a)["type"="route"]["route"~"^(train|subway|light_rail|tram|monorail)$"]->.r;.r out body;node(r.r);out tags;`),
-    ])
+    errs.length = 0
+    const rail = await overpass(`[out:json][timeout:50];${area}rel(area.a)["type"="route"]["route"~"^(train|subway|light_rail|tram|monorail)$"]->.r;.r out body;node(r.r);out tags;`)
+    const bus = await overpass(`[out:json][timeout:50];${area}rel(area.a)["type"="route"]["route"~"^(bus|trolleybus|minibus|coach)$"];out tags;`)
     const nodes = new Map<number, Record<string, string>>()
     for (const e of rail) if (e.type === 'node') nodes.set(e.id, e.tags || {})
     type Row = { uf: string; kind: string; ref: string; ref_norm: string; name: string; network: string; color: string | null; dirs: { from: string; to: string }[]; stations: string[] }
