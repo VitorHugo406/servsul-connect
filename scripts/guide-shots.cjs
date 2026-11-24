@@ -80,7 +80,6 @@ eval(require('fs').readFileSync(__dirname + '/guide-seed.cjs', 'utf8').replace(/
     await d.locator('article:has-text("Revisão com o cliente")').click(); await d.waitForTimeout(400);
     await d.locator('input[placeholder="Seu nome"]').fill('Mariana (cliente)'); await d.locator('textarea').fill('Podemos antecipar a revisão para quinta-feira?'); await d.locator('button:has-text("Comentar")').click(); await d.waitForTimeout(900);
     await shot('convidado'); });
-  await step('minhas', async () => { await d.goto(U + 'tarefas/minhas-tarefas', { waitUntil: 'networkidle' }); await d.waitForTimeout(2500); await shot('minhas'); });
   await step('importar', async () => { await d.goto(U + 'tarefas', { waitUntil: 'networkidle' }); await d.waitForTimeout(2000); await d.locator('button:has-text("Importar")').click(); await d.waitForTimeout(700); await shot('importar'); await d.keyboard.press('Escape'); });
   await step('agenda', async () => { await d.goto(U + 'calendario', { waitUntil: 'networkidle' }); await d.waitForTimeout(2000); await d.locator('button:has-text("Agenda no celular")').click(); await d.waitForTimeout(900); await shot('agenda'); await d.keyboard.press('Escape'); });
   await step('webhooks', async () => { await d.goto(U + 'integracoes', { waitUntil: 'networkidle' }); await d.waitForTimeout(2000); await clean(); await d.locator('text=Webhooks').first().click(); await d.waitForTimeout(800);

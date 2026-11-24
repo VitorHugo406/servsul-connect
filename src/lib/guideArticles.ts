@@ -50,13 +50,7 @@ export const GUIDE: GuideArticle[] = [
       { t: 'Abra o card para detalhar', d: 'Clique no card para definir datas, membros, etiquetas, checklist, descrição e comentários. Tudo fica registrado no histórico de atividade.', img: 'card' },
       { t: 'Mova arrastando', d: 'Arraste o card para outra coluna. As automações da coluna (responsável, capa, subtarefas) são aplicadas na hora.' },
       { t: 'Conclua', d: 'Passe o mouse no card e clique no círculo, ou mova para a coluna de conclusão. O ewvon registra se foi concluído no prazo ou com atraso.' },
-    ], tips: ['Use "Minhas tarefas" para ver todos os seus cards de todos os murais.'], rel: ['minhas-tarefas', 'lista', 'cronometro'] },
-  { slug: 'minhas-tarefas', cat: 'Murais e cards', title: 'Minhas tarefas', sum: 'Uma lista única com todos os cards em que você é responsável, de todos os murais, organizada por prazo.',
-    steps: [
-      { t: 'Abra "Minhas tarefas"', d: 'Na lista de murais, clique em "Minhas tarefas".' },
-      { t: 'Veja o que é prioridade', d: 'Os cards aparecem em Atrasadas, Hoje, Próximos 7 dias, Depois e Sem prazo. Concluídas nos últimos 7 dias ficam no fim.', img: 'minhas' },
-      { t: 'Filtre e abra', d: 'Busque pelo nome ou escolha um mural. Clique num card para abrir direto no mural dele.' },
-    ], rel: ['cards', 'agenda'] },
+    ], rel: ['lista', 'cronometro'] },
   { slug: 'lista', cat: 'Visualizações', title: 'Ver o mural em Lista', sum: 'Uma tabela com status, responsável, prazo, prioridade, etiquetas e campos personalizados, editável direto na linha.',
     steps: [
       { t: 'Troque a visualização', d: 'Na barra de baixo do mural, clique em "Quadro" e escolha "Lista".', img: 'menu-visao' },
@@ -135,7 +129,7 @@ export const GUIDE: GuideArticle[] = [
       { t: 'Gere o link', d: 'Em Calendário, clique em "Agenda no celular".', img: 'agenda' },
       { t: 'Adicione à sua agenda', d: 'Clique em Google Agenda, iPhone/Mac ou Outlook, ou copie o link e cole em "Adicionar calendário pela URL".' },
       { t: 'Pronto', d: 'Cards com prazo e reuniões aparecem e se atualizam sozinhos (o Google pode levar algumas horas). Se o link vazar, gere um novo.' },
-    ], rel: ['minhas-tarefas'] },
+    ], rel: ['cards'] },
   { slug: 'webhooks', cat: 'Integrações', title: 'Webhooks e avisos no Discord, Google Chat, Telegram e Slack', sum: 'Avise outros sistemas e canais quando algo acontecer: card criado ou concluído, colaborador cadastrado, aviso publicado…',
     steps: [
       { t: 'Abra Integrações › Webhooks', d: 'Disponível para administradores da empresa.', img: 'webhooks' },
@@ -286,12 +280,12 @@ export const GUIDE: GuideArticle[] = [
       { t: 'Abra a visão geral', d: 'Na lista de murais, clique em "Visão geral".' },
       { t: 'Compare', d: 'Cada linha mostra progresso, em aberto, atrasados, vencem em 7 dias, concluídos em 30 dias e a situação. Clique no título de uma coluna para ordenar.' },
       { t: 'Ataque os atrasados', d: 'Embaixo ficam os cards atrasados de todos os murais, do mais antigo para o mais novo. Clique para abrir.' },
-    ], rel: ['minhas-tarefas', 'relatorios'] },
+    ], rel: ['relatorios'] },
   { slug: 'planejador', cat: 'Visualizações', title: 'Planejador do dia', sum: 'Um painel ao lado do mural com os cards do dia, para organizar a sua jornada.',
     steps: [
       { t: 'Abra o planejador', d: 'Na barra de baixo do mural, clique em "Planejador".' },
       { t: 'Acompanhe o dia', d: 'Os cards com prazo para hoje aparecem no painel; abra qualquer um com um clique.' },
-    ], rel: ['minhas-tarefas'] },
+    ], rel: ['cards'] },
 
   // ───────── Organização avançada (extras)
   { slug: 'modo-operacao', cat: 'Organização avançada', title: 'Modo Operação', sum: 'Reorganiza o mural de uma vez: ordena as colunas e sobe a prioridade de quem está com prazo vencido ou perto de vencer.',

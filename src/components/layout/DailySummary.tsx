@@ -89,7 +89,7 @@ export function DailySummary() {
         </div>
         <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
           <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => { if (profile?.id) store.set(`ewvon:daily-off:${profile.id}`, '1'); setOpen(false); }}>Não mostrar automaticamente</button>
-          <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => { setOpen(false); navigate('/tarefas/minhas-tarefas'); }}>Minhas tarefas</Button><Button size="sm" onClick={() => setOpen(false)}>Ok</Button></div>
+          <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => { setOpen(false); navigate('/calendario'); }}>Abrir calendário</Button><Button size="sm" onClick={() => setOpen(false)}>Ok</Button></div>
         </div>
       </DialogContent>
     </Dialog>

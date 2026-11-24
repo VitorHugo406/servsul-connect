@@ -284,7 +284,6 @@ export function updateContext(context: Partial<Ctx>) { ctx = { ...ctx, ...contex
 // that arrives in the conversation you have open. All respect "Som das mensagens" (prefs.snd).
 let uiCtx: AudioContext | null = null;
 let lastTick = 0;
-let noiseBuf: AudioBuffer | null = null;
 export function uiSound(kind: 'type' | 'send' | 'recv') {
   if ((ctx.prefs() || {}).snd === 0) return;
   try {
@@ -320,15 +319,11 @@ export function uiSound(kind: 'type' | 'send' | 'recv') {
     };
     if (kind === 'type') {
       const now = performance.now();
-      if (now - lastTick < 75) return;
+      if (now - lastTick < 90) return;
       lastTick = now;
-      // a muffled key: a tiny burst of filtered noise + a low thump, slightly different each time
-      if (!noiseBuf) { noiseBuf = a.createBuffer(1, Math.floor(a.sampleRate * 0.04), a.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
-      const n = a.createBufferSource(), ng = a.createGain(), bp = a.createBiquadFilter();
-      n.buffer = noiseBuf; bp.type = 'bandpass'; bp.frequency.value = 900 + Math.random() * 250; bp.Q.value = 1.1;
-      ng.gain.value = 0.11;
-      n.connect(bp).connect(ng).connect(lp(2200)); n.start(t0);
-      soft(170 + Math.random() * 30, 120, t0, 0.035, 0.05, 600);
+      // a very soft, low, muted "tok" (no noise: the noise burst sounded harsh on phone speakers)
+      const f = 210 + Math.random() * 40;
+      soft(f, f * 0.7, t0, 0.045, 0.035, 520);
     } else if (kind === 'send') {
       // deep and round, like a corporate chat send
       soft(330, 196, t0, 0.17, 0.16, 1100);

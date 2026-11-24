@@ -3,7 +3,6 @@ import { PublicLinkSection } from '@/components/tasks/PublicLinkSection';
 import { DuplicateTemplatesDialog } from '@/components/tasks/DuplicateTemplatesDialog';
 import { InboundKeySection } from '@/components/tasks/InboundKeySection';
 import { BoardFormSection } from '@/components/tasks/BoardFormSection';
-import { MyTasksView } from '@/components/tasks/MyTasksView';
 import { PortfolioView } from '@/components/tasks/PortfolioView';
 import { BoardExtrasProvider, useBoardExtras, fieldText } from '@/hooks/useBoardExtras';
 import { TemplatesDialog } from '@/components/tasks/TemplatesDialog';
@@ -15,7 +14,7 @@ import { ImportBoardDialog } from '@/components/tasks/ImportBoardDialog';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useWarRoomLockedTasks } from '@/hooks/useWarRooms';
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import plannerEmptyIllustration from '@/assets/planner-empty-illustration.png';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -216,10 +215,8 @@ export function TaskBoardSection() {
     const openB = (id: string, task?: string) => { const b = boards.find((x) => x.id === id); if (b) navigate('/tarefas/' + slugifyBoardName(b.name) + '-' + b.id + (task ? '?abrir=' + task : '')); };
     return <PortfolioView boards={boards} onBack={() => navigate('/tarefas')} onOpenBoard={(id) => openB(id)} onOpenTask={(bid, tid) => openB(bid, tid)} />;
   }
-  if (location.pathname === '/tarefas/minhas-tarefas') {
-    return <MyTasksView boards={boards} onBack={() => navigate('/tarefas')}
-      onOpenTask={(bid, tid) => { const b = boards.find((x) => x.id === bid); if (b) navigate('/tarefas/' + slugifyBoardName(b.name) + '-' + b.id + '?abrir=' + tid); }} />;
-  }
+  // "Minhas tarefas" was removed (owner: today's cards already show in the Calendário); old links go back to the murals
+  if (location.pathname === '/tarefas/minhas-tarefas') return <Navigate to="/tarefas" replace />;
 
   if (selectedBoardId) {
     const board = boards.find(b => b.id === selectedBoardId);
@@ -243,7 +240,6 @@ export function TaskBoardSection() {
       <ImportBoardDialog open={showImport} onOpenChange={setShowImport} onDone={(id) => void openNewBoard(id)} />
       <MuralList
         onImport={() => setShowImport(true)}
-        onMyTasks={() => navigate('/tarefas/minhas-tarefas')}
         onOverview={() => navigate('/tarefas/visao-geral')}
         onTemplates={() => setShowTemplates(true)}
         boards={boards as never}

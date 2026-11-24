@@ -3,7 +3,7 @@
 // Per mural: cards done / total (templates and archived cards excluded; cards without a due date count),
 // overdue cards (not done, due date in the past), members' photos (up to 3 + "+N").
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Edit, Image as ImageIcon, Loader2, MoreVertical, Plus, Trash2 , FileUp, ListChecks, LayoutTemplate, BarChart3 } from 'lucide-react';
+import { ChevronDown, Edit, Image as ImageIcon, Loader2, MoreVertical, Plus, Trash2 , FileUp, LayoutTemplate, BarChart3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { SignedStorageImage } from '@/components/common/SignedStorageMedia';
@@ -31,9 +31,8 @@ function Cover({ board }: { board: Board }) {
   return <div className="tm-cover" />;
 }
 
-export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete, onImport, onMyTasks, onTemplates, onOverview }: {
+export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete, onImport, onTemplates, onOverview }: {
   onImport?: () => void;
-  onMyTasks?: () => void;
   onOverview?: () => void;
   onTemplates?: () => void;
   boards: Board[];
@@ -176,7 +175,6 @@ export function MuralList({ boards, userId, onOpen, onCreate, onSave, onDelete, 
               {(Object.keys(SORT_LABEL) as Sort[]).map((s) => <DropdownMenuItem key={s} onClick={() => setSortP(s)}>{SORT_LABEL[s]}{s === 'custom' ? ' (arrastar)' : ''}</DropdownMenuItem>)}
             </DropdownMenuContent>
           </DropdownMenu>
-          {onMyTasks ? <button type="button" className="tm-btn" onClick={onMyTasks} title="Seus cards de todos os murais"><ListChecks className="h-4 w-4" />Minhas tarefas</button> : null}
           {onOverview ? <button type="button" className="tm-btn" onClick={onOverview} title="Andamento de todos os murais"><BarChart3 className="h-4 w-4" />Visão geral</button> : null}
           {onTemplates || onImport ? (
             <DropdownMenu>
