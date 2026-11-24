@@ -351,6 +351,31 @@ export default function EwwonApp() {
     if (!o) window.setTimeout(() => { if (!openRef.current && mainRef.current) { mainRef.current.style.borderRadius = '0'; mainRef.current.style.boxShadow = ''; } }, 520);
   }, [upd]);
 
+  // side menu never scrolls: shrink its content (zoom on the children) until it fits the screen height
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel || !boot) return;
+    let raf = 0;
+    const fit = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        panel.style.setProperty('--pz', '1');
+        const cs = getComputedStyle(panel);
+        const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+        const avail = panel.clientHeight - pad, need = panel.scrollHeight - pad;
+        if (need <= avail + 1 || need <= 0) return;
+        let z = avail / need;
+        panel.style.setProperty('--pz', z.toFixed(3));
+        for (let i = 0; i < 4 && panel.scrollHeight > panel.clientHeight + 1 && z > 0.5; i++) { z -= 0.02; panel.style.setProperty('--pz', z.toFixed(3)); }
+      });
+    };
+    fit();
+    const ro = new ResizeObserver(fit); ro.observe(panel);
+    const mo = new MutationObserver(fit); mo.observe(panel, { childList: true, subtree: true, characterData: true });
+    window.addEventListener('resize', fit);
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); mo.disconnect(); window.removeEventListener('resize', fit); };
+  }, [boot]);
+
   // drawer swipe (any tab): same thresholds as the prototype
   useEffect(() => {
     const phone = phoneRef.current;

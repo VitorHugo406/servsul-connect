@@ -23,8 +23,9 @@
 .ew .btn[disabled] { opacity: .45; pointer-events: none; }
 .ew .nx { cursor: pointer; }
 
-.ew #panel { overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain; padding-bottom: calc(var(--ew-sabottom,env(safe-area-inset-bottom,0px)) + 20px); }
+.ew #panel { overflow: hidden; /* never scrolls: EwwonApp fits the content with --pz (zoom of the children) */ padding-bottom: calc(var(--ew-sabottom,env(safe-area-inset-bottom,0px)) + 20px); }
 .ew #panel::-webkit-scrollbar { display: none; }
+.ew #panel > * { zoom: var(--pz, 1); }
 @media (max-height: 720px) {
   .ew #panel { padding-top: calc(var(--ew-satop,env(safe-area-inset-top,0px)) + 22px); }
   .ew #panel .pf { width: 62px; height: 62px; border-radius: 22px; font-size: 22px; }
