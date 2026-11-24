@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { TemplateOffsetEditor } from '@/components/tasks/DuplicateTemplatesDialog';
 import { CardApproval } from './CardApproval';
 import { useDbFeature } from '@/hooks/useDbFeature';
@@ -307,6 +307,14 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
 
   const { decisions, addDecision, deleteDecision, loading: decisionsLoading } = useTaskDecisions(task?.id || null);
 
+  // Checklists start CLOSED every time a card is opened (owner's request); the person opens the one they need.
+  const collapsedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!task || !groups.length || collapsedFor.current === task.id) return;
+    collapsedFor.current = task.id;
+    setCollapsedGroups(new Set(groups.map((g) => g.id)));
+  }, [task?.id, groups]);
+
   if (!task) return null;
 
   const handleAddComment = async () => {
@@ -412,8 +420,23 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
     </>
   );
 
+  const curCol = (columns || []).find((c) => c.id === task.status);
+  const dueInfo = (() => {
+    if (!task.due_date) return null;
+    const d = new Date(task.due_date); const done = !!task.completed_at;
+    const days = Math.ceil((d.getTime() - Date.now()) / 86400000);
+    const txt = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
+    return { txt, cls: done ? 'ok' : days < 0 ? 'late' : days <= 2 ? 'soon' : '', hint: done ? 'Concluído' : days < 0 ? `${-days} dia${days === -1 ? '' : 's'} de atraso` : days === 0 ? 'Vence hoje' : `Faltam ${days} dia${days === 1 ? '' : 's'}` };
+  })();
   const renderHeader = () => (
-    <div className="px-4 pt-3 pb-2">
+    <div className="tdx-head px-4 pt-3 pb-2" style={{ ['--colc' as string]: curCol?.color || 'hsl(var(--primary))' }}>
+      {!isMobile ? (
+        <div className="tdx-chips">
+          {curCol ? <span className="tdx-chip col"><i />{curCol.title}</span> : null}
+          {dueInfo ? <span className={`tdx-chip due ${dueInfo.cls}`} title={dueInfo.hint}><CalendarIcon className="h-3.5 w-3.5" />{dueInfo.txt}<small>{dueInfo.hint}</small></span> : null}
+          {total > 0 ? <span className="tdx-chip prog"><span className="tdx-ring" style={{ ['--p' as string]: `${overallProgress}%` }} />{completed}/{total} itens</span> : null}
+        </div>
+      ) : null}
       <div className="flex items-center gap-2 flex-wrap mb-2">
         <Badge variant="outline" className="tlbl">#{task.task_number}</Badge>
         <Badge className={cn('tlbl',
@@ -457,7 +480,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
         </div>
       ) : (
         <h2
-          className="text-xl font-bold text-foreground cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 transition-colors"
+          className="tdx-title text-xl font-bold text-foreground cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 transition-colors"
           onDoubleClick={() => { setTitleValue(task.title); setEditingTitle(true); }}
         >
           {task.title}
@@ -1324,7 +1347,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
 
         {/* Two clean columns: the card's content on the left, conversation on the right */}
         <div className="flex flex-1 min-h-0 border-t border-border">
-          <ScrollArea className="flex-1 min-w-0">
+          <ScrollArea className="tdx-canvas flex-1 min-w-0">
             <div className="tdx-main pb-8">
               <div className="tdx-sec">{L(renderActionButtons())}</div>
               {/* two columns inside the card: what the card is about (left) · its details (right), each subject in its own box */}
