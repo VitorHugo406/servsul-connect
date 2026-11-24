@@ -39,6 +39,13 @@ for ref, (a, b) in lines.items():
     o = {'k': 'bus', 'r': ref, 'n': f'{a} / {b}' if b else a}
     if a and b: o['d'] = [[a, b], [b, a]]
     d['lines'].append(o); added += 1
+# manual corrections (people who ride the line know better than the report)
+import os
+ov_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'transit-overrides.json')
+ov = json.load(open(ov_path)).get('SP', {}) if os.path.exists(ov_path) else {}
+for l in d['lines']:
+    o = ov.get(l['r'])
+    if l['k'] == 'bus' and o: l.update(o)
 d['src'] = 'OpenStreetMap + SPTrans (relatório de passageiros, out/2026)'
 json.dump(d, open(transit, 'w'), ensure_ascii=False, separators=(',', ':'))
 print('adicionadas', added, 'completadas', filled, 'total', len(d['lines']))

@@ -1,0 +1,6 @@
+{
+  "_": "Correções manuais de linhas (aplicadas por scripts/merge-sptrans.py depois da planilha). Chave = UF, depois o número da linha.",
+  "SP": {
+    "6034-10": { "n": "Term Grajaú / Pq Res Cocaia", "d": [["Term Grajaú", "Pq Res Cocaia"], ["Pq Res Cocaia", "Term Grajaú"]] }
+  }
+}

@@ -326,6 +326,7 @@ export function TransitForm({ value: x, onChange, mobile }: { value: ChatTransit
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [manual, setManual] = useState(false);
+  const [fixEnds, setFixEnds] = useState(false);
   const ufName = BR_UF.find((u) => u[0] === uf)?.[1] || uf;
   const apply = (l: TransitLine, d: number) => {
     const dd = l.dirs[d] || l.dirs[0] || { from: '', to: '' };
@@ -385,11 +386,16 @@ export function TransitForm({ value: x, onChange, mobile }: { value: ChatTransit
             </button>)}
         </div> : null}
         {pick ? <>
-          <div className="cx-tr-picked"><span className="cx-tr-chip" style={{ background: pick.color || x.color }}>{pick.ref || '•'}</span><b>{pick.name || `Linha ${pick.ref}`}</b>{lines && lines.length > 1 ? <button type="button" className="cx-alt sm" onClick={() => { setPick(null); onChange({ ...x, line: '', name: '', stations: [] }); }}>Trocar</button> : null}</div>
+          <div className="cx-tr-picked"><span className="cx-tr-chip" style={{ background: pick.color || x.color }}>{pick.ref || '•'}</span><b>{pick.name || `Linha ${pick.ref}`}</b>{lines && lines.length > 1 ? <button type="button" className="cx-alt sm" onClick={() => { setPick(null); setFixEnds(false); onChange({ ...x, line: '', name: '', stations: [] }); }}>Trocar</button> : null}</div>
           <label className="cx-lbl">Sentido</label>
           <div className="cx-seg cx-dirs">
-            {[0, 1].map((d) => <button key={d} type="button" className={dir === d ? 'on' : ''} onClick={() => { setDir(d); apply(pick, d); }}><small>{d === 0 ? 'Ida' : 'Volta'}</small>{pick.dirs[d]?.to ? <span>para {pick.dirs[d].to}</span> : null}</button>)}
+            {[0, 1].map((d) => <button key={d} type="button" className={dir === d ? 'on' : ''} onClick={() => { setDir(d); setFixEnds(false); apply(pick, d); }}><small>{d === 0 ? 'Ida' : 'Volta'}</small>{pick.dirs[d]?.to ? <span>para {pick.dirs[d].to}</span> : null}</button>)}
           </div>
+          {/* the data can be outdated: whoever rides the line can fix the terminals for this message */}
+          {fixEnds ? <div className="cx-row2">
+            <div><label className="cx-lbl">Saindo de</label><input className={inp} value={x.from} maxLength={80} onChange={(e) => set({ from: e.target.value })} /></div>
+            <div><label className="cx-lbl">Indo para</label><input className={inp} value={x.to} maxLength={80} onChange={(e) => set({ to: e.target.value })} /></div>
+          </div> : <button type="button" className="cx-alt sm" onClick={() => setFixEnds(true)}><PenLine className="h-3.5 w-3.5" />Corrigir pontos finais</button>}
         </> : null}
       </> : <>
         <div className="cx-row2">
