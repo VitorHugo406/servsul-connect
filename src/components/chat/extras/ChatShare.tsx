@@ -387,8 +387,8 @@ export function TransitForm({ value: x, onChange, mobile }: { value: ChatTransit
         {pick ? <>
           <div className="cx-tr-picked"><span className="cx-tr-chip" style={{ background: pick.color || x.color }}>{pick.ref || '•'}</span><b>{pick.name || `Linha ${pick.ref}`}</b>{lines && lines.length > 1 ? <button type="button" className="cx-alt sm" onClick={() => { setPick(null); onChange({ ...x, line: '', name: '', stations: [] }); }}>Trocar</button> : null}</div>
           <label className="cx-lbl">Sentido</label>
-          <div className="cx-seg">
-            {[0, 1].map((d) => <button key={d} type="button" className={dir === d ? 'on' : ''} onClick={() => { setDir(d); apply(pick, d); }}>{d === 0 ? 'Ida' : 'Volta'}{pick.dirs[d]?.to ? ` · ${pick.dirs[d].to}` : ''}</button>)}
+          <div className="cx-seg cx-dirs">
+            {[0, 1].map((d) => <button key={d} type="button" className={dir === d ? 'on' : ''} onClick={() => { setDir(d); apply(pick, d); }}><small>{d === 0 ? 'Ida' : 'Volta'}</small>{pick.dirs[d]?.to ? <span>para {pick.dirs[d].to}</span> : null}</button>)}
           </div>
         </> : null}
       </> : <>

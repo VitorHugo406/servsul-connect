@@ -281,3 +281,11 @@ textarea.cx-in { height: auto; padding: 9px 12px; resize: vertical; }
 .cx-tr-s.stop.dot.ghost { fill: none; }
 .cx-tr-alert { font-size: 12px; }
 .ew .cx-tr-picked b, .ew .cx-tr-lb span:last-child { color: var(--tx); }
+/* Ida / Volta: two lines, long terminal names are cut with "…" instead of leaving the screen */
+.cx-seg button { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cx-dirs button { height: auto; min-height: 44px; padding: 6px 10px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; text-align: left; }
+.cx-dirs button small { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
+.cx-dirs button span { display: block; max-width: 100%; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cx-tr-picked { min-width: 0; }
+.cx-lp-res span { min-width: 0; }
+.cx-lp-res b, .cx-lp-res small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
