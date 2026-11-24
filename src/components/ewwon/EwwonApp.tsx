@@ -40,6 +40,7 @@ import { EventSheet, LocSheet, TransitSheet } from './sharesheet';
 import { EventCard, LocationCard, TransitCard } from '@/components/chat/extras/ChatShare';
 import { parseEvent, parseLoc, parseTransit } from '@/lib/chatShare';
 import { useDbFeature } from '@/hooks/useDbFeature';
+import { SelectionMenu } from './selmenu';
 import { startChatCall, parseCall, CallMessageCard } from '@/components/video/VideoCallHost';
 import { Video as VideoIcon, Phone as PhoneIcon } from 'lucide-react';
 import { planHasFeature } from '@/lib/planAccess';
@@ -1078,6 +1079,7 @@ export default function EwwonApp() {
   return (
     <>
     <div className="ew ewx-root" data-theme={themeAttr} data-rm={prefs.red ? '' : undefined} ref={rootRef} data-tour={tourOn ? '1' : undefined}>
+      <SelectionMenu toast={toast} />
       <div id="phone" ref={phoneRef} className={tourOn ? 'tour' : ''}><WarRoomRing />
         {permGate && boot ? <PermissionGate onDone={() => setPermGate(false)} /> : null}
         <aside id="panel" ref={panelRef}>

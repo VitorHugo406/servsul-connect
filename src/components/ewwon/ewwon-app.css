@@ -711,3 +711,11 @@ html body .ew .ewx-ment::-webkit-scrollbar-thumb { background: color-mix(in srgb
 .ew #panel .mi { padding-block: 14px; font-size: 17px; gap: 16px; }
 .ew #panel .mi svg.i { width: 23px; height: 23px; }
 @media (max-height: 720px) { .ew #panel .mi { padding-block: 12px; font-size: 16px; } }
+/* own selection bar (selmenu.tsx) */
+.ewx-selbar { position: fixed; z-index: 9999; transform: translate(-50%, -100%); display: flex; align-items: center; height: 40px; padding: 0 4px; border-radius: 12px; background: #1f2023; color: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.28); animation: ewxSel .14s ease-out; }
+.ewx-selbar.below { transform: translate(-50%, 0); }
+.ewx-selbar button { height: 32px; padding: 0 12px; border-radius: 9px; background: none; color: #fff; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.ewx-selbar button:active { background: rgba(255,255,255,.14); }
+.ewx-selbar i { width: 1px; height: 18px; background: rgba(255,255,255,.22); }
+@keyframes ewxSel { from { opacity: 0; transform: translate(-50%, -90%) scale(.96); } }
+.ewx-selbar.below { animation: none; }
