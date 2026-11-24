@@ -211,7 +211,10 @@ export async function findTransitLines(uf: string, ref: string, kind: TransitKin
   const all = await loadState(uf);
   if (!all) throw new Error('estado');
   const n = normRef(ref);
-  const hit = all.filter((l) => l.k === kind && (!n || normRef(l.r).startsWith(n) || (!l.r && normRef(l.n).includes(n))));
+  const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+  const words = fold(ref).trim();
+  // number (prefix, ignoring dashes: 875A finds 875A-10) or, with 3+ letters, part of the line name (e.g. "Capelinha")
+  const hit = all.filter((l) => l.k === kind && (!n || normRef(l.r).startsWith(n) || normRef(l.r).includes(n) && n.length >= 3 || (words.length >= 3 && /[a-z]/.test(words) && fold(l.n).includes(words))));
   // exact number first, then the rest
   hit.sort((a, b) => Number(normRef(b.r) === n) - Number(normRef(a.r) === n) || Number(!a.r) - Number(!b.r) || a.r.localeCompare(b.r, 'pt-BR', { numeric: true }) || a.n.localeCompare(b.n, 'pt-BR'));
   return hit.slice(0, kind === 'bus' ? 20 : 80).map(toLine);

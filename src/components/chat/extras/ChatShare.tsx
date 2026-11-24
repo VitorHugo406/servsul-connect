@@ -338,11 +338,14 @@ export function TransitForm({ value: x, onChange, mobile }: { value: ChatTransit
     try {
       let state = await ensureTransitState(uf);
       for (let i = 0; state === 'loading' && i < 12; i++) { await new Promise((ok) => setTimeout(ok, 5000)); state = await ensureTransitState(uf); }
-      if (state === 'error') { setErr('Ainda não temos as linhas deste estado. Preencha manualmente.'); return; }
+      if (state === 'error') { setErr(`Ainda não temos as linhas de ${ufName}. Preencha manualmente — o número digitado já fica no cartão.`); if (!rail && ref.trim()) onChange({ ...x, line: ref.trim().toUpperCase().slice(0, 12), city: ufName, stations: [] }); return; }
       if (state === 'loading') { setErr('Ainda carregando as linhas deste estado pela primeira vez. Tente de novo em 1 minuto.'); return; }
       const r = await findTransitLines(uf, ref, x.k);
       setLines(r);
-      if (!r.length) setErr(rail ? 'Não há linhas desse tipo cadastradas neste estado. Preencha manualmente.' : 'Não achamos essa linha. Confira o número ou preencha manualmente.');
+      if (!r.length) {
+        setErr(rail ? 'Não há linhas desse tipo cadastradas neste estado.' : `Não achamos a linha ${ref.trim()} em ${ufName}. Confira o número/estado ou preencha manualmente (já deixamos o número preenchido).`);
+        if (!rail && ref.trim()) onChange({ ...x, line: ref.trim().toUpperCase().slice(0, 12), city: ufName, stations: [] });
+      }
       else if (r.length === 1) { setPick(r[0]); setDir(0); apply(r[0], 0); }
     } catch { setErr('A busca não respondeu agora. Tente de novo.'); }
     finally { setBusy(false); }
@@ -365,7 +368,7 @@ export function TransitForm({ value: x, onChange, mobile }: { value: ChatTransit
           <div><label className="cx-lbl">Estado</label>{ufSel}</div>
           <div><label className="cx-lbl">Número da linha</label>
             <div className="cx-lp-q">
-              <input className={inp} value={num} maxLength={12} placeholder="Ex.: 875A" onChange={(e) => setNum(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (num.trim()) void run(num); } }} />
+              <input className={inp} value={num} maxLength={12} placeholder="Ex.: 875A ou Capelinha" onChange={(e) => setNum(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (num.trim()) void run(num); } }} />
               <button type="button" className="cx-lp-go" onClick={() => { if (num.trim()) void run(num); }} disabled={busy || !num.trim()} aria-label="Buscar linha">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}</button>
             </div>
           </div>
