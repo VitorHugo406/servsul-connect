@@ -34,7 +34,7 @@ export const GUIDE: GuideArticle[] = [
     steps: [
       { t: 'Abra Tarefas', d: 'No menu, clique no ícone de Tarefas. Você verá todos os murais que pode acessar, com capa, progresso e situação (em dia, atrasado ou concluído).', img: 'murais' },
       { t: 'Clique em "Novo mural"', d: 'Dê um nome, uma descrição opcional e escolha uma capa. O mural é criado com as colunas padrão, que você pode renomear depois.' },
-      { t: 'Ou comece por um modelo', d: 'Clique em "Modelos" para ver 76 modelos prontos por área (RH, departamento pessoal, segurança do trabalho, TI e proteção de dados, resolução de problemas, vendas e atendimento, marketing, operações, financeiro e compras, projetos e tecnologia, gestão e administração). Escolha um, ajuste o nome e clique em "Usar modelo".', img: 'modelos' },
+      { t: 'Ou comece por um modelo', d: 'Clique em "Modelos" para ver 75 modelos prontos por área (RH, departamento pessoal, segurança do trabalho, TI e proteção de dados, resolução de problemas, vendas e atendimento, marketing, operações, financeiro e compras, projetos e tecnologia, gestão e administração). Escolha um, ajuste o nome e clique em "Usar modelo".', img: 'modelos' },
     ], tips: ['Arraste os murais na lista (ordem "Minha ordem") para deixar os mais usados primeiro.', 'Já usa outra ferramenta? Veja "Importar do Trello, Asana ou ClickUp".'], rel: ['modelos', 'importar', 'cards'] },
   { slug: 'modelos', cat: 'Primeiros passos', title: 'Modelos de mural prontos', sum: 'Comece com colunas, etiquetas, campos personalizados, automações, dependências, formulário e cards de exemplo já montados para a sua área.',
     steps: [
