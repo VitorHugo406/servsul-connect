@@ -284,6 +284,19 @@ export function updateContext(context: Partial<Ctx>) { ctx = { ...ctx, ...contex
 // that arrives in the conversation you have open. All respect "Som das mensagens" (prefs.snd).
 let uiCtx: AudioContext | null = null;
 let lastTick = 0;
+// Phones only let Web Audio play after a touch: unlock (create + resume) the context on the first touch anywhere,
+// so the typing sound works before the first message is sent (before, only the Enviar tap unlocked it).
+if (typeof window !== 'undefined') {
+  const unlock = () => {
+    try {
+      const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AC) return;
+      if (!uiCtx) uiCtx = new AC();
+      if (uiCtx.state === 'suspended') void uiCtx.resume();
+    } catch { /* no audio */ }
+  };
+  for (const ev of ['touchstart', 'pointerdown', 'keydown'] as const) window.addEventListener(ev, unlock, { capture: true, passive: true });
+}
 export function uiSound(kind: 'type' | 'send' | 'recv') {
   if ((ctx.prefs() || {}).snd === 0) return;
   try {
@@ -323,9 +336,10 @@ export function uiSound(kind: 'type' | 'send' | 'recv') {
       lastTick = now;
       // a soft wooden "toc": phone speakers barely play anything under ~400 Hz, so the body sits around 600 Hz
       // (still muted by the low-pass) with a quick downward slide; no noise (the noise burst sounded harsh)
-      const f = 620 + Math.random() * 80;
-      soft(f, f * 0.62, t0, 0.04, 0.07, 1500);
-      soft(f * 2, f * 1.3, t0, 0.018, 0.018, 2600);
+      // (a 40 ms / 0.07 version was too short and quiet to be heard; this one has the body of the send sound)
+      const f = 430 + Math.random() * 50;
+      soft(f, f * 0.75, t0, 0.075, 0.2, 1300);
+      soft(f * 2, f * 1.6, t0, 0.03, 0.05, 2400);
     } else if (kind === 'send') {
       // deep and round, like a corporate chat send
       soft(330, 196, t0, 0.17, 0.16, 1100);
