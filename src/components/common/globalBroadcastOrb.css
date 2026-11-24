@@ -1,7 +1,7 @@
 .gbo{--gb-card:#fff;--gb-tx:#0b0b0f;--gb-mu:#62626d;--gb-bd:rgba(0,0,0,.08);--gb-c2:#f1f2f6;position:fixed;right:22px;bottom:22px;z-index:45;display:flex;flex-direction:column;align-items:flex-end;gap:12px;font-family:inherit}
 html.dark .gbo{--gb-card:#131317;--gb-tx:#f5f5f7;--gb-mu:#9a9aa6;--gb-bd:rgba(255,255,255,.09);--gb-c2:#1d1d23}
 .ew .gbo{--gb-card:var(--card);--gb-tx:var(--tx);--gb-mu:var(--mu);--gb-bd:var(--bd);--gb-c2:var(--c2)}
-.gbo-mobile{right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 86px);z-index:25}
+.gbo-mobile{right:14px;bottom:calc(var(--ew-sabottom,env(safe-area-inset-bottom,0px)) + 86px);z-index:25}
 .gbo-btn{position:relative;display:grid;place-items:center;padding:0;margin:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;filter:drop-shadow(0 10px 22px rgba(20,24,60,.28));transition:transform .35s cubic-bezier(.22,.9,.3,1)}
 .gbo-btn:hover{transform:scale(1.06)}.gbo-btn:active{transform:scale(.94)}
 .gbo-count{position:absolute;top:-2px;right:-2px;min-width:19px;height:19px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:11px;font-weight:700;line-height:19px;text-align:center;box-shadow:0 0 0 2px var(--gb-card)}

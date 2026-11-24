@@ -145,7 +145,7 @@ export function ChatInput({ onSendMessage, hideAttachment = false, onTyping, onM
     setAttachments(prev => { const next = [...prev]; if (next[index]?.preview) URL.revokeObjectURL(next[index]?.preview ?? ""); next.splice(index, 1); return next; });
   };
 
-  return <div className="chat-composer relative z-20 shrink-0 px-2 pt-2 sm:px-4 sm:pt-3" style={{ paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom))' }} onSubmit={e => e.preventDefault()}>
+  return <div className="chat-composer relative z-20 shrink-0 px-2 pt-2 sm:px-4 sm:pt-3" style={{ paddingBottom: 'max(0.35rem, var(--ew-sabottom,env(safe-area-inset-bottom,0px)))' }} onSubmit={e => e.preventDefault()}>
     {replyTo && <div className="mb-1.5 flex items-start gap-2 rounded-lg border-l-2 border-primary bg-muted/60 px-3 py-1.5"><div className="min-w-0 flex-1"><span className="text-xs font-semibold text-primary">{replyTo.author?.display_name || replyTo.author?.name || 'Usuário'}</span><p className="truncate text-xs text-muted-foreground">{replyTo.content.substring(0, 120)}</p></div><button onClick={onClearReply} className="flex-shrink-0 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button></div>}
     {sched.pending > 0 ? <div className="cx-composer-chips"><button type="button" className="cx-chip" onClick={() => setShowSchedule(true)}><Clock className="h-3.5 w-3.5" />{sched.pending === 1 ? '1 mensagem agendada' : `${sched.pending} mensagens agendadas`}</button></div> : null}
     {pollsOn ? <CreatePollDialog open={showPoll} onOpenChange={setShowPoll} convKey={convKey || null} onSend={(c) => onSendMessage(c)} /> : null}

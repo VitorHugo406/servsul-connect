@@ -29,6 +29,11 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 /** The ewvon app: the site in a full-screen WebView (no browser involved) + a native background service for notifications and calls. */
 public class MainActivity extends Activity {
@@ -42,13 +47,30 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         Window w = getWindow();
-        w.setStatusBarColor(0xFF08080A); w.setNavigationBarColor(0xFF08080A);
+        // Edge-to-edge (like Google's apps): the page draws behind transparent status/navigation bars; the site keeps
+        // those areas empty using --ew-satop/--ew-sabottom (CSS px) injected below, so the side-menu animation and the
+        // rounded corners reach the real screen edges.
+        WindowCompat.setDecorFitsSystemWindows(w, false);
+        w.setStatusBarColor(0x00000000); w.setNavigationBarColor(0x00000000);
+        if (Build.VERSION.SDK_INT >= 29) { w.setStatusBarContrastEnforced(false); w.setNavigationBarContrastEnforced(false); }
+        if (Build.VERSION.SDK_INT >= 28) w.getAttributes().layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+        setBarIcons(false);
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFF08080A);
         web = new WebView(this);
         web.setBackgroundColor(0xFF08080A);
         root.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(root);
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, ins) -> {
+            Insets bars = ins.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            Insets ime = ins.getInsets(WindowInsetsCompat.Type.ime());
+            boolean kb = ins.isVisible(WindowInsetsCompat.Type.ime()) && ime.bottom > bars.bottom;
+            v.setPadding(0, 0, 0, kb ? ime.bottom : 0);   // keyboard: shrink the WebView (adjustResize no longer applies)
+            float d = getResources().getDisplayMetrics().density;
+            insTop = Math.round(bars.top / d); insBottom = kb ? 0 : Math.round(bars.bottom / d);
+            pushInsets();
+            return WindowInsetsCompat.CONSUMED;
+        });
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setDatabaseEnabled(true);
@@ -65,8 +87,10 @@ public class MainActivity extends Activity {
                 try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception ignored) { }
                 return true;
             }
+            @Override public void onPageCommitVisible(WebView v, String url) { pushInsets(); }
+            @Override public void onPageFinished(WebView v, String url) { pushInsets(); }
             @Override public void onReceivedError(WebView v, WebResourceRequest r, WebResourceError e) {
-                if (r.isForMainFrame()) v.loadData("<html><body style='margin:0;background:#08080a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center'><div><h2>Sem conexão</h2><p style='opacity:.7'>Verifique a internet e tente de novo.</p><button style='padding:12px 22px;border-radius:12px;border:0;font-size:16px' onclick=\"location.href='" + HOME + "?app=1'\">Tentar de novo</button></div></body></html>", "text/html", "utf-8");
+                if (r.isForMainFrame()) v.loadData("<html><body style='margin:0;background:#08080a;color:#fff;font-family:sans-serif;padding:0 24px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center'><div><h2>Sem conexão</h2><p style='opacity:.7'>Verifique a internet e tente de novo.</p><button style='padding:12px 22px;border-radius:12px;border:0;font-size:16px' onclick=\"location.href='" + HOME + "?app=1'\">Tentar de novo</button></div></body></html>", "text/html", "utf-8");
             }
         });
         web.setWebChromeClient(new WebChromeClient() {
@@ -219,7 +243,20 @@ public class MainActivity extends Activity {
     }
 
     /** What the web app calls (window.EwvonNative) to tie this phone to the signed-in person. */
+    private int insTop = 0, insBottom = 0;
+    private void pushInsets() {
+        if (web == null) return;
+        web.evaluateJavascript("(function(){var s=document.documentElement.style;s.setProperty('--ew-satop','" + insTop + "px');s.setProperty('--ew-sabottom','" + insBottom + "px');document.documentElement.classList.add('ew-e2e')})()", null);
+    }
+    /** Dark icons on a light page, light icons on a dark page; the bars themselves stay transparent. */
+    private void setBarIcons(boolean lightPage) {
+        WindowInsetsControllerCompat c = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        c.setAppearanceLightStatusBars(lightPage); c.setAppearanceLightNavigationBars(lightPage);
+    }
+
     private class Bridge {
+        @JavascriptInterface public void setBarStyle(String mode) { runOnUiThread(() -> setBarIcons("light".equals(mode))); }
+        @JavascriptInterface public String getInsets() { return insTop + "," + insBottom; }
         private SharedPreferences p() { return getSharedPreferences("ewvon", MODE_PRIVATE); }
         @JavascriptInterface public boolean isNative() { return true; }
         @JavascriptInterface public String getDevice() { return p().getString("secret", ""); }

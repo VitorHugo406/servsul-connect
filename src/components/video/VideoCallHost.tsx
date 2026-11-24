@@ -272,7 +272,7 @@ export function VideoCallHost() {
     <>
       <VideoInfoDialog open={info} onOpenChange={setInfo} />
       {incoming && !call ? (
-        <div className="fixed inset-x-3 top-3 z-[75] mx-auto flex max-w-md items-center gap-3 rounded-3xl bg-[#111114] p-4 text-white shadow-2xl" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }} role="alertdialog" aria-label="Chamada recebida">
+        <div className="fixed inset-x-3 top-3 z-[75] mx-auto flex max-w-md items-center gap-3 rounded-3xl bg-[#111114] p-4 text-white shadow-2xl" style={{ marginTop: 'var(--ew-satop,env(safe-area-inset-top,0px))' }} role="alertdialog" aria-label="Chamada recebida">
           <span className="flex h-12 w-12 shrink-0 animate-pulse items-center justify-center rounded-full bg-emerald-500 text-lg font-semibold">{incoming.fromName.charAt(0).toUpperCase()}</span>
           <div className="min-w-0 flex-1"><p className="truncate text-[15px] font-semibold">{incoming.fromName}</p><p className="text-[12px] text-white/70">{incoming.audio ? 'Chamada de voz do ewvon' : 'Chamada de vídeo do ewvon'}</p></div>
           <button type="button" onClick={decline} className="flex h-11 w-11 items-center justify-center rounded-full bg-red-600 hover:bg-red-700" aria-label="Recusar"><PhoneOff className="h-5 w-5" /></button>
@@ -281,7 +281,7 @@ export function VideoCallHost() {
       ) : null}
       {call && me ? (
         <div className="fixed inset-0 z-[70] flex flex-col bg-[#0b0b0e]" role="dialog" aria-label={call.title}>
-          <div className="flex h-12 shrink-0 items-center justify-between gap-3 px-4 text-white" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
+          <div className="flex h-12 shrink-0 items-center justify-between gap-3 px-4 text-white" style={{ marginTop: 'var(--ew-satop,env(safe-area-inset-top,0px))' }}>
             <p className="truncate text-sm font-semibold">{call.title}</p>
           </div>
           <CallRoom callId={call.id} title={call.title} me={me} onLeave={leave} audioOnly={call.audio} ring={call.chat} onConnected={onConnected} onPeerCount={onPeerCount} />

@@ -247,7 +247,7 @@ export function SeasonalEffectsButton({ collapsed }: { collapsed?: boolean }) {
       </Button>
 
       {typeof document !== 'undefined' ? createPortal(
-        <div className="pointer-events-none fixed inset-x-0 z-[10000] flex justify-center px-4" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
+        <div className="pointer-events-none fixed inset-x-0 z-[10000] flex justify-center px-4" style={{ bottom: 'calc(var(--ew-sabottom,env(safe-area-inset-bottom,0px)) + 24px)' }}>
           <AnimatePresence>
             {showMessage && (
               <motion.div

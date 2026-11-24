@@ -107,7 +107,7 @@ export function Toaster() {
   const item = useSyncExternalStore((f) => { subs.add(f); return () => { subs.delete(f); }; }, () => current, () => null);
   const ref = useRef(item); ref.current = item;
   return (
-    <div className="pointer-events-none fixed inset-x-0 z-[10050] flex justify-center" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--pill-bottom, 24px))' }} aria-live="polite">
+    <div className="pointer-events-none fixed inset-x-0 z-[10050] flex justify-center" style={{ bottom: 'calc(var(--ew-sabottom,env(safe-area-inset-bottom,0px)) + var(--pill-bottom, 24px))' }} aria-live="polite">
       <style>{'@media (max-width:767px){:root{--pill-bottom:92px}}'}</style>
       <AnimatePresence mode="wait">{item && <Pill key={item.id} item={item} onDone={() => { if (ref.current === item) dismiss(); }} />}</AnimatePresence>
     </div>

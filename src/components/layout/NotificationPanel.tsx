@@ -170,7 +170,7 @@ export function NotificationPanel({
         side="right"
         className="z-[70] flex w-[calc(100%-1rem)] max-w-sm flex-col rounded-l-2xl border-border/60 bg-popover text-foreground p-0 shadow-2xl"
       >
-        <SheetHeader className="shrink-0 p-4 pt-[calc(1rem+env(safe-area-inset-top))] border-b border-border bg-popover">
+        <SheetHeader className="shrink-0 p-4 pt-[calc(1rem+var(--ew-satop,env(safe-area-inset-top,0px)))] border-b border-border bg-popover">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-2">
               <Bell className="h-5 w-5" />
@@ -206,7 +206,7 @@ export function NotificationPanel({
         </SheetHeader>
 
         <ScrollArea className="flex-1 min-h-0">
-          <div className="pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <div className="pb-[calc(1rem+var(--ew-sabottom,env(safe-area-inset-bottom,0px)))]">
           {loading ? (
             <div className="space-y-2 p-3">
               {Array.from({ length: 4 }).map((_, i) => (

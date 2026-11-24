@@ -2,7 +2,7 @@
 // signed-in person, so the app's background service can deliver messages and ring calls without Chrome or Firebase.
 import { supabase } from '@/integrations/supabase/client';
 
-type Native = { isNative(): boolean; getDevice(): string; getDeviceProfile(): string; setDevice(secret: string, profileId: string): void; clearDevice(): void; setBirthday?(mmdd: string): void; setBirthdayInfo?(mmdd: string, firstName: string): void };
+type Native = { isNative(): boolean; getDevice(): string; getDeviceProfile(): string; setDevice(secret: string, profileId: string): void; clearDevice(): void; setBirthday?(mmdd: string): void; setBirthdayInfo?(mmdd: string, firstName: string): void; setBarStyle?(mode: string): void };
 const native = (): Native | null => (typeof window !== 'undefined' ? ((window as unknown as { EwvonNative?: Native }).EwvonNative ?? null) : null);
 export const isNativeApp = () => !!native();
 
@@ -29,4 +29,10 @@ export function syncNativeBirthday(birthDate: string | null | undefined, name?: 
   const mmdd = birthDate && /^\d{4}-\d{2}-\d{2}/.test(birthDate) ? birthDate.slice(5, 10) : '';
   const first = (name || '').trim().split(/\s+/)[0] || '';
   try { if (typeof n.setBirthdayInfo === 'function') n.setBirthdayInfo(mmdd, first); else if (typeof n.setBirthday === 'function') n.setBirthday(mmdd); } catch { /* older app */ }
+}
+
+/** Android app 2.1.8+: the system bars are transparent; dark icons on a light page, light icons on a dark one. */
+export function setNativeBarStyle(light: boolean) {
+  const n = native();
+  try { if (n && typeof n.setBarStyle === 'function') n.setBarStyle(light ? 'light' : 'dark'); } catch { /* older app */ }
 }

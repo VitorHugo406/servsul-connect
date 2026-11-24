@@ -157,7 +157,7 @@ export function CallRoom({ callId, title, me, onLeave, audioOnly = false, ring =
         {others.map(([id, p]) => <Tile key={id} stream={p.stream} name={p.name} off={audioOnly} />)}
       </div>
       <p className="pb-1 text-center text-[13px] tabular-nums text-white/70">{status === 'starting' ? <><Loader2 className="mr-1 inline h-3.5 w-3.5 animate-spin" />Conectando…</> : others.length === 0 ? 'Chamando…' : startedAt ? (() => { const sec = Math.floor((Date.now() - startedAt) / 1000); return `${Math.floor(sec / 60).toString().padStart(2, '0')}:${(sec % 60).toString().padStart(2, '0')}`; })() : 'Conectando…'}</p>
-      <div className="flex shrink-0 items-center justify-center gap-3 p-3 sm:p-4" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex shrink-0 items-center justify-center gap-3 p-3 sm:p-4" style={{ paddingBottom: 'max(12px, var(--ew-sabottom,env(safe-area-inset-bottom,0px)))' }}>
         <button type="button" className={btn(mic)} onClick={toggleMic} aria-label={mic ? 'Desligar microfone' : 'Ligar microfone'}>{mic ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}</button>
         {audioOnly ? null : <button type="button" className={btn(cam)} onClick={toggleCam} aria-label={cam ? 'Desligar câmera' : 'Ligar câmera'}>{cam ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}</button>}
         {!audioOnly && typeof navigator !== 'undefined' && 'getDisplayMedia' in (navigator.mediaDevices || {}) ? <button type="button" className={btn(!sharing)} onClick={() => void toggleShare()} aria-label={sharing ? 'Parar de compartilhar' : 'Compartilhar tela'}><MonitorUp className="h-5 w-5" /></button> : null}

@@ -11,6 +11,7 @@ import { GlobalBroadcastOrb } from '@/components/common/GlobalBroadcastOrb';
 import { isBroadcastLive, notifyBroadcastsChanged, useSystemBroadcasts, type SystemBroadcast } from '@/hooks/useSystemBroadcasts';
 import { supabase } from '@/integrations/supabase/client';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { setNativeBarStyle } from '@/lib/nativeBridge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import * as CT from '@/lib/chatTasks';
@@ -307,7 +308,9 @@ export default function EwwonApp() {
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
     const prev = meta?.content;
-    if (meta) meta.content = themeAttr === 'light' ? '#eceef3' : '#08080a';
+    const light = themeAttr === 'light' || (!themeAttr && window.matchMedia?.('(prefers-color-scheme: light)').matches);
+    if (meta) meta.content = light ? '#eceef3' : '#08080a';
+    setNativeBarStyle(!!light);
     return () => { if (meta && prev) meta.content = prev; };
   }, [themeAttr]);
 
