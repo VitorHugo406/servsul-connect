@@ -108,10 +108,25 @@ export function TimelineView({ tasks, cols, person, onOpen, done, late, isLocked
     const ia = a ? rowIndex.get(a.id) : undefined; const ib = b ? rowIndex.get(b.id) : undefined;
     const ga = a && geo(a); const gb = b && geo(b);
     if (ia === undefined || ib === undefined || !ga || !gb) return null;
-    const x1 = ga.left + ga.width; const y1 = ia * RH + RH / 2; const x2 = gb.left; const y2 = ib * RH + RH / 2;
+    const x1 = ga.left + Math.max(ga.width, px); const y1 = ia * RH + RH / 2; const x2 = gb.left; const y2 = ib * RH + RH / 2;
     const bad = gb.s < ga.e;   // the blocked card starts before the blocking one ends
-    const mid = Math.max(x1 + 10, Math.min(x2 - 10, x1 + 14));
-    return { k: d.task_id + d.depends_on, path: `M${x1},${y1} H${mid} V${y2} H${x2 - 4}`, bad, x2, y2 };
+    // Orthogonal route with rounded corners that never runs over a bar or its title: out of the right end of the
+    // blocking bar, along the gap between rows, then into the LEFT end of the blocked bar (arrow tip on its edge).
+    const r = 5, out = 10, inn = 12;
+    const down = ib >= ia ? 1 : -1;
+    let path: string;
+    if (x2 - x1 >= out + inn) {
+      // room in front of the blocked card: right, down/up right before it, right into it
+      const vx = x2 - inn;
+      path = `M${x1},${y1} H${vx - r} Q${vx},${y1} ${vx},${y1 + down * r} V${y2 - down * r} Q${vx},${y2} ${vx + r},${y2} H${x2 - 1}`;
+    } else {
+      // blocked card starts earlier: go out to the right, use the gap above/below the blocked row, come back on the left
+      const gy = down > 0 ? ib * RH : (ib + 1) * RH;   // row border next to the blocked card
+      const ax = x1 + out, bx = x2 - inn;
+      path = `M${x1},${y1} H${ax - r} Q${ax},${y1} ${ax},${y1 + down * r} V${gy - down * r} Q${ax},${gy} ${ax - r},${gy} H${bx + r} Q${bx},${gy} ${bx},${gy + down * r} V${y2 - down * r} Q${bx},${y2} ${bx + r},${y2} H${x2 - 1}`;
+    }
+    if (ia === ib) path = `M${x1},${y1} H${x2 - 1}`;
+    return { k: d.task_id + d.depends_on, path, bad, x2, y2 };
   }).filter(Boolean) as { k: string; path: string; bad: boolean; x2: number; y2: number }[];
 
   return (
@@ -164,9 +179,9 @@ export function TimelineView({ tasks, cols, person, onOpen, done, late, isLocked
                       </div>); })()}
                 </div>))}
               <svg className="tl-svg" width={W} height={rows.length * RH}>
-                <defs><marker id="tlA" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#8b93a7" /></marker>
-                  <marker id="tlB" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#e5484d" /></marker></defs>
-                {arrows.map((a) => <path key={a.k} d={a.path} fill="none" stroke={a.bad ? '#e5484d' : '#8b93a7'} strokeWidth="1.5" markerEnd={`url(#${a.bad ? 'tlB' : 'tlA'})`} />)}
+                <defs><marker id="tlA" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0.5 L8,4 L0,7.5 z" fill="#8b93a7" /></marker>
+                  <marker id="tlB" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0.5 L8,4 L0,7.5 z" fill="#e5484d" /></marker></defs>
+                {arrows.map((a) => <path key={a.k} d={a.path} fill="none" stroke={a.bad ? '#e5484d' : '#8b93a7'} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" markerEnd={`url(#${a.bad ? 'tlB' : 'tlA'})`} />)}
               </svg>
             </div>
           </div>

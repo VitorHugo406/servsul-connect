@@ -1281,7 +1281,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, taskL
   if (isMobile) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-full w-full h-[95vh] max-h-[95vh] overflow-hidden flex flex-col p-0 gap-0">
+        <DialogContent className="ui-center max-w-full w-full h-[95vh] max-h-[95vh] overflow-hidden flex flex-col p-0 gap-0">
           {renderCover()}
           {renderTemplateBanner()}
           {renderWarBanner()}
