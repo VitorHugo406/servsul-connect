@@ -55,7 +55,7 @@ export function BoardSummaryDialog({ open, onOpenChange, boardId, boardName }: {
         <DialogFooter>
           {text ? <Button variant="outline" onClick={() => void navigator.clipboard?.writeText(text).then(() => toast.success('Resumo copiado'), () => toast.error('Não foi possível copiar'))}><Copy className="mr-2 h-4 w-4" />Copiar</Button> : null}
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Fechar</Button>
-          <Button onClick={() => void run()} disabled={busy}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}{text ? 'Gerar de novo' : 'Gerar resumo'}</Button>
+          <Button className="ai-btn" onClick={() => void run()} disabled={busy}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}{text ? 'Gerar de novo' : 'Gerar resumo'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -148,7 +148,7 @@ export function CardsFromTextDialog({ open, onOpenChange, boardId, users, onCrea
           {drafts ? <Button variant="outline" onClick={() => setDrafts(null)} disabled={busy}>Voltar ao texto</Button> : <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Cancelar</Button>}
           {drafts
             ? <Button onClick={() => void create()} disabled={busy || !chosen.length}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ListPlus className="mr-2 h-4 w-4" />}Criar {chosen.length} card{chosen.length === 1 ? '' : 's'}</Button>
-            : <Button onClick={() => void generate()} disabled={busy || text.trim().length < 5}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}Sugerir cards</Button>}
+            : <Button className="ai-btn" onClick={() => void generate()} disabled={busy || text.trim().length < 5}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}Sugerir cards</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

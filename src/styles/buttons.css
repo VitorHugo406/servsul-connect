@@ -69,3 +69,18 @@ button.ui-sel.sel-btn .sel-chev { color: hsl(var(--muted-foreground)); }
 }
 @keyframes ui-side-in { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
 @keyframes ui-side-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(28px); } }
+
+/* EwvonAI action buttons (Sugerir cards, Gerar resumo): moving purple/pink gradient instead of solid black (owner's
+   request). Beats chat-pro.css, which strips background-image from buttons. */
+html body button.ai-btn, html body .ai-btn.ui-btn {
+  background-color: #8b5cf6 !important;
+  background-image: linear-gradient(120deg, #7c3aed, #a855f7, #ec4899, #8b5cf6, #d946ef, #7c3aed) !important;
+  background-size: 300% 300% !important;
+  color: #fff !important; border: 0 !important;
+  animation: ai-btn-flow 6s ease-in-out infinite;
+  box-shadow: 0 6px 18px -8px rgba(168, 85, 247, .7) !important;
+}
+html body button.ai-btn:hover { filter: brightness(1.08); }
+html body button.ai-btn:disabled { opacity: .55; }
+@keyframes ai-btn-flow { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+@media (prefers-reduced-motion: reduce) { html body button.ai-btn { animation: none; } }
