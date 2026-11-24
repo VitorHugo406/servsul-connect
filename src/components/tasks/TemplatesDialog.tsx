@@ -53,7 +53,7 @@ export function TemplatesDialog({ open, onOpenChange, onDone }: { open: boolean;
 
   const includes: [LucideIcon, string, string][] = [
     [LayoutGrid, plural(pick.columns.length, 'coluna', 'colunas') + ' e ' + plural(pick.labels.length, 'etiqueta', 'etiquetas'), pick.columns.map((c) => c[0]).join(' → ')],
-    s.proc ? [ListChecks, `Coluna “Modelo do processo” com ${plural(s.cards, 'card-template', 'cards-template')}`, 'Use “Duplicar todos os cards” na coluna: preencha os dados e os prazos são calculados'] : [ListChecks, plural(s.cards, 'card de exemplo', 'cards de exemplo'), s.checklists ? plural(s.checklists, 'checklist pronto', 'checklists prontos') : 'Edite ou apague à vontade'],
+    s.proc ? [ListChecks, `Coluna “Modelo do processo” com ${plural(s.cards, 'card-template', 'cards-template')}`, 'Use “Duplicar todos os cards” no menu da coluna: preencha os dados e cada card vai para a sua coluna com o prazo calculado'] : [ListChecks, plural(s.cards, 'card de exemplo', 'cards de exemplo'), s.checklists ? plural(s.checklists, 'checklist pronto', 'checklists prontos') : 'Edite ou apague à vontade'],
   ];
   if (s.fields) includes.push([SlidersHorizontal, plural(s.fields, 'campo personalizado', 'campos personalizados'), (pick.fields || []).map((f) => f.n).join(', ')]);
   if (s.rules) includes.push([Zap, plural(s.rules, 'automação', 'automações'), (pick.rules || []).map((r) => r.label).join(' · ')]);

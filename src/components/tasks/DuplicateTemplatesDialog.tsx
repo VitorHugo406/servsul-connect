@@ -20,7 +20,7 @@ import type { CustomField } from '@/hooks/useBoardExtras';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 type Col = { id: string; title: string; color?: string | null; is_template_column?: boolean | null; is_conclusion?: boolean | null };
-type Tpl = { id: string; title: string; description: string | null; priority: string | null; cover_image: string | null; assigned_to: string | null; position: number | null; template_offset_days: number | null; template_start_offset_days: number | null };
+type Tpl = { id: string; title: string; description: string | null; priority: string | null; cover_image: string | null; assigned_to: string | null; position: number | null; template_offset_days: number | null; template_start_offset_days: number | null; template_target_column: string | null };
 type ColCfg = { template_ref_field: string | null; template_lead_days: number; template_lead_label: string | null; template_title_field: string | null };
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -43,6 +43,8 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
   const [cfg, setCfg] = useState<ColCfg>({ template_ref_field: null, template_lead_days: 0, template_lead_label: null, template_title_field: null });
   const [target, setTarget] = useState('');
   const [editQ, setEditQ] = useState(false);
+  const [own, setOwn] = useState(true);            // each card in its own column (template_target_column)
+  const [base, setBase] = useState(() => ymdOf(new Date())); // without a reference field: dates count from this day
   const targets = useMemo(() => columns.filter((c) => !c.is_template_column), [columns]);
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
     void (async () => {
       const [f, t, c] = await Promise.all([
         db.from('board_custom_fields').select('*').eq('board_id', boardId).order('position'),
-        db.from('tasks').select('id,title,description,priority,cover_image,assigned_to,position,template_offset_days,template_start_offset_days').eq('board_id', boardId).eq('status', column.id).eq('is_template', true).eq('is_archived', false).order('position'),
+        db.from('tasks').select('id,title,description,priority,cover_image,assigned_to,position,template_offset_days,template_start_offset_days,template_target_column').eq('board_id', boardId).eq('status', column.id).eq('is_template', true).eq('is_archived', false).order('position'),
         db.from('task_board_columns').select('template_ref_field,template_lead_days,template_lead_label,template_title_field').eq('id', column.id).maybeSingle(),
       ]);
       if (!live) return;
@@ -78,14 +80,23 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
   const textFields = fields.filter((f) => f.type === 'text' || f.type === 'select');
   const refField = fields.find((f) => f.id === cfg.template_ref_field) || null;
   const refDate = refField ? parseYmd(String(vals[refField.id] || '')) : null;
-  const finalDate = refDate ? addDays(refDate, -(cfg.template_lead_days || 0)) : null;
+  const finalDate = refField ? (refDate ? addDays(refDate, -(cfg.template_lead_days || 0)) : null) : parseYmd(base);
   const question = cfg.template_lead_label || (refField ? `Quantos dias antes de "${refField.name}" tudo precisa estar concluído?` : 'Antecedência (dias)');
   const titleVal = cfg.template_title_field ? String(vals[cfg.template_title_field] ?? '').trim() : '';
   const usesDates = tpls.some((t) => t.template_offset_days != null || t.template_start_offset_days != null);
   const dueOf = (t: Tpl) => (finalDate && t.template_offset_days != null ? at(addDays(finalDate, t.template_offset_days), 18) : null);
   const startOf = (t: Tpl) => (finalDate && t.template_start_offset_days != null ? at(addDays(finalDate, t.template_start_offset_days), 9) : null);
+  const hasOwn = tpls.some((t) => t.template_target_column && targets.some((c) => c.id === t.template_target_column));
+  const colOf = (t: Tpl) => (own && hasOwn && t.template_target_column && targets.some((c) => c.id === t.template_target_column) ? t.template_target_column : target);
+  const colName = (id: string) => targets.find((c) => c.id === id)?.title || '';
   const titleOf = (t: Tpl) => (titleVal ? `${t.title} — ${titleVal}` : t.title);
 
+  const baseInput = (
+    <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Contar os prazos a partir de</span>
+      <Input type="date" className="w-48" value={base} onChange={(e) => setBase(e.target.value || ymdOf(new Date()))} aria-label="Data de início do processo" />
+      <span className="text-xs text-muted-foreground">Cada card vence os dias definidos no modelo depois desta data.</span>
+    </label>
+  );
   const setVal = (id: string, v: unknown) => setVals((p) => ({ ...p, [id]: v }));
   const fieldInput = (f: CustomField) => {
     const v = vals[f.id];
@@ -111,19 +122,22 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
         db.from('task_subtasks').select('task_id,title,position,group_id').in('task_id', ids),
         db.from('task_field_values').select('task_id,field_id,value').in('task_id', ids),
         db.from('task_dependencies').select('task_id,depends_on').in('task_id', ids),
-        db.from('tasks').select('id').eq('board_id', boardId).eq('status', target).eq('is_archived', false),
+        db.from('tasks').select('status').eq('board_id', boardId).eq('is_archived', false).eq('is_template', false),
       ]);
-      // ONE insert for all cards (position is unique per row, so returned rows map back to their template)
-      const base = (inCol || []).length;
+      // ONE insert for all cards; each goes to its own column (or the chosen one) at the end of it. (column, position)
+      // is unique per new row, so the returned rows map back to their template.
+      const next = new Map<string, number>();
+      for (const r of (inCol || []) as { status: string }[]) next.set(r.status, (next.get(r.status) || 0) + 1);
+      const slot = tpls.map((t) => { const c = colOf(t); const pos = next.get(c) || 0; next.set(c, pos + 1); return { c, pos }; });
       const rows = tpls.map((t, i) => { const due = dueOf(t), start = startOf(t); return withCompany({
-        board_id: boardId, title: titleOf(t).slice(0, 500), description: t.description, status: target, priority: t.priority || 'medium',
-        cover_image: t.cover_image, assigned_to: t.assigned_to, position: base + i, created_by: profile?.id, is_template: false,
+        board_id: boardId, title: titleOf(t).slice(0, 500), description: t.description, status: slot[i].c, priority: t.priority || 'medium',
+        cover_image: t.cover_image, assigned_to: t.assigned_to, position: slot[i].pos, created_by: profile?.id, is_template: false,
         due_date: due ? due.toISOString() : null, start_date: start ? start.toISOString() : null,
       }); });
-      const { data: made, error: mkErr } = await db.from('tasks').insert(rows).select('id,position');
+      const { data: made, error: mkErr } = await db.from('tasks').insert(rows).select('id,status,position');
       if (mkErr || !made || made.length !== tpls.length) throw mkErr || new Error('insert');
       const map = new Map<string, string>();
-      for (const r of made as { id: string; position: number }[]) { const t = tpls[r.position - base]; if (t) map.set(t.id, r.id); }
+      for (const r of made as { id: string; status: string; position: number }[]) { const i = slot.findIndex((x) => x.c === r.status && x.pos === r.position); if (i >= 0) map.set(tpls[i].id, r.id); }
       const nid = (id: string) => map.get(id);
       const a = ((asg.data || []) as { task_id: string; profile_id: string }[]).map((r) => ({ task_id: nid(r.task_id), profile_id: r.profile_id })).filter((r) => r.task_id);
       if (a.length) await db.from('task_assignees').insert(a);
@@ -151,7 +165,7 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
       if (out.length) await db.from('task_field_values').insert(out);
       const d = ((dep.data || []) as { task_id: string; depends_on: string }[]).map((r) => ({ task_id: nid(r.task_id), depends_on: nid(r.depends_on) })).filter((r) => r.task_id && r.depends_on);
       if (d.length) await db.from('task_dependencies').insert(d);
-      toast.success(`${tpls.length} ${tpls.length === 1 ? 'card criado' : 'cards criados'} em "${targets.find((c) => c.id === target)?.title || 'coluna'}".`);
+      toast.success(own && hasOwn ? `${tpls.length} ${tpls.length === 1 ? 'card criado' : 'cards criados'}, cada um na sua coluna.` : `${tpls.length} ${tpls.length === 1 ? 'card criado' : 'cards criados'} em "${colName(target) || 'coluna'}".`);
       onCreated(); onOpenChange(false);
     } catch {
       toast.error('Não foi possível criar todos os cards. Confira o mural e tente de novo.');
@@ -185,7 +199,7 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
                   {canConfigure ? (
                     <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Data de referência</span>
                       <Sel className="ui-sel w-full" value={cfg.template_ref_field || ''} onChange={(e) => setCfg((c) => ({ ...c, template_ref_field: e.target.value || null }))} aria-label="Data de referência">
-                        <option value="">Sem prazos (não calcular)</option>{dateFields.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                        <option value="">Nenhuma (contar a partir de uma data)</option>{dateFields.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
                       </Sel>
                     </label>
                   ) : null}
@@ -196,15 +210,17 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
                       <div className="flex items-center gap-2"><Input type="number" className="w-28" value={cfg.template_lead_days} onChange={(e) => setCfg((c) => ({ ...c, template_lead_days: Math.max(-3650, Math.min(3650, Math.round(Number(e.target.value) || 0))) }))} aria-label="Dias de antecedência" /><span className="text-muted-foreground">dias</span></div>
                       <span className="text-xs text-muted-foreground">{finalDate ? <>Prazo final do processo: <b className="text-foreground">{br(finalDate)}</b> ({refField.name} {cfg.template_lead_days ? `− ${cfg.template_lead_days} ${Math.abs(cfg.template_lead_days) === 1 ? 'dia' : 'dias'}` : ''}).</> : `Informe "${refField.name}" acima para calcular as datas.`}</span>
                     </label>
-                  ) : <p className="text-xs text-muted-foreground">Sem data de referência os cards são criados sem prazo.</p>}
+                  ) : baseInput}
                 </>
-              ) : <p className="text-xs text-muted-foreground">Para calcular prazos, o mural precisa de um campo do tipo Data (ex.: “Último dia”, “Data de admissão”).</p>}
+              ) : baseInput}
             </section>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Criar os cards na coluna</span>
+              <div className="flex flex-col gap-1 text-sm"><span className="font-medium">Onde criar os cards</span>
+                {hasOwn ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={own} onChange={(e) => setOwn(e.target.checked)} />Cada card na sua coluna (definida no modelo)</label> : null}
+                {own && hasOwn ? <span className="text-xs text-muted-foreground">Cards sem coluna definida vão para:</span> : null}
                 <Sel className="ui-sel w-full" value={target} onChange={(e) => setTarget(e.target.value)} aria-label="Coluna de destino">{targets.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</Sel>
-              </label>
+              </div>
               {canConfigure && textFields.length ? (
                 <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Acrescentar ao título</span>
                   <Sel className="ui-sel w-full" value={cfg.template_title_field || ''} onChange={(e) => setCfg((c) => ({ ...c, template_title_field: e.target.value || null }))} aria-label="Campo no título">
@@ -220,7 +236,8 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
                 {tpls.map((t) => { const due = dueOf(t), st = startOf(t); return (
                   <div key={t.id} className="flex items-center gap-3 px-3 py-2 text-sm">
                     <span className="min-w-0 flex-1 truncate">{titleOf(t)}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{due ? <>{st ? `${st.toLocaleDateString('pt-BR')} → ` : ''}<b className="text-foreground">{due.toLocaleDateString('pt-BR')}</b></> : refField ? offsetText(t.template_offset_days) : 'sem prazo'}</span>
+                    <span className="hidden max-w-[150px] shrink-0 truncate rounded-[4px] bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground sm:inline">{colName(colOf(t))}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{due ? <>{st ? `${st.toLocaleDateString('pt-BR')} → ` : ''}<b className="text-foreground">{due.toLocaleDateString('pt-BR')}</b></> : t.template_offset_days != null ? offsetText(t.template_offset_days) : 'sem prazo'}</span>
                   </div>); })}
               </div>
               {usesDates ? null : <p className="mt-2 text-xs text-muted-foreground">Dica: abra cada card-template e defina “Prazo no processo” (ex.: 3 dias antes do prazo final) para as datas serem calculadas.</p>}
@@ -256,26 +273,38 @@ function OffsetRow({ label, v, set, readOnly }: { label: string; v: number | nul
 export function TemplateOffsetEditor({ taskId, readOnly }: { taskId: string; readOnly?: boolean }) {
   const [due, setDue] = useState<number | null>(null);
   const [start, setStart] = useState<number | null>(null);
+  const [dest, setDest] = useState<string>('');
+  const [cols, setCols] = useState<{ id: string; title: string }[]>([]);
   const [ok, setOk] = useState(false);
   useEffect(() => {
     let live = true;
-    void db.from('tasks').select('template_offset_days,template_start_offset_days').eq('id', taskId).maybeSingle().then(({ data, error }: { data: { template_offset_days: number | null; template_start_offset_days: number | null } | null; error: unknown }) => {
-      if (!live || error || !data) return; setDue(data.template_offset_days); setStart(data.template_start_offset_days); setOk(true);
-    });
+    void (async () => {
+      const { data, error } = await db.from('tasks').select('board_id,template_offset_days,template_start_offset_days,template_target_column').eq('id', taskId).maybeSingle();
+      if (!live || error || !data) return;
+      const { data: cs } = await db.from('task_board_columns').select('id,title,is_template_column').eq('board_id', data.board_id).order('position');
+      if (!live) return;
+      setDue(data.template_offset_days); setStart(data.template_start_offset_days); setDest(data.template_target_column || '');
+      setCols(((cs || []) as { id: string; title: string; is_template_column: boolean | null }[]).filter((c) => !c.is_template_column)); setOk(true);
+    })();
     return () => { live = false; };
   }, [taskId]);
   if (!ok) return null;
-  const save = async (d: number | null, s: number | null) => {
-    setDue(d); setStart(s);
-    const { error } = await db.from('tasks').update({ template_offset_days: d, template_start_offset_days: s }).eq('id', taskId);
-    if (error) toast.error('Não foi possível salvar o prazo do template.');
+  const save = async (patch: Record<string, unknown>) => {
+    const { error } = await db.from('tasks').update(patch).eq('id', taskId);
+    if (error) toast.error('Não foi possível salvar o template.');
   };
   return (
     <div className="mt-2 flex flex-col gap-2 rounded-[10px] border border-border bg-card p-3">
-      <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><CalendarClock className="h-3.5 w-3.5" />Prazo no processo</span>
-      <OffsetRow label="Prazo" v={due} readOnly={readOnly} set={(x) => void save(x, start)} />
-      <OffsetRow label="Início" v={start} readOnly={readOnly} set={(x) => void save(due, x)} />
-      <span className="text-xs text-muted-foreground">Ao usar “Duplicar todos os cards” na coluna, a data é calculada a partir do prazo final do processo.</span>
+      <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><CalendarClock className="h-3.5 w-3.5" />No processo</span>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="w-16 shrink-0 text-muted-foreground">Coluna</span>
+        <Sel className="ui-sel h-8" value={dest} disabled={readOnly} onChange={(e) => { setDest(e.target.value); void save({ template_target_column: e.target.value || null }); }} aria-label="Coluna de destino do card">
+          <option value="">a escolhida ao duplicar</option>{cols.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+        </Sel>
+      </div>
+      <OffsetRow label="Prazo" v={due} readOnly={readOnly} set={(x) => { setDue(x); void save({ template_offset_days: x }); }} />
+      <OffsetRow label="Início" v={start} readOnly={readOnly} set={(x) => { setStart(x); void save({ template_start_offset_days: x }); }} />
+      <span className="text-xs text-muted-foreground">Em “Duplicar todos os cards” (menu da coluna), este card é criado nessa coluna, com a data calculada a partir do prazo final do processo (ou da data de início informada).</span>
     </div>
   );
 }

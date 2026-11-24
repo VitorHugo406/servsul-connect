@@ -328,7 +328,7 @@ export async function applyTemplateExtras(boardId: string, t: BoardTemplate, pro
     }).filter(Boolean);
     if (rows.length) await db.from('task_automation_rules').insert(rows);
   }
-  if (t.proc) await makeProcessTemplates(boardId, t, fid);
+  await makeProcessTemplates(boardId, t, fid);
   if (t.form) {
     await db.from('board_forms').insert({
       board_id: boardId, enabled: false, title: t.form.title, intro: t.form.intro, column_id: colId(t.form.col), due_days: t.form.due ?? null,
@@ -342,26 +342,29 @@ export async function applyTemplateExtras(boardId: string, t: BoardTemplate, pro
  *  question and title field) holds the model's cards as templates with relative due/start offsets; the regular
  *  columns start empty and "Duplicar todos os cards" creates the real cards. */
 async function makeProcessTemplates(boardId: string, t: BoardTemplate, fid: Map<string, string>) {
-  const p = t.proc!;
+  // EVERY model gets the "Modelo do processo" column; process models also know their reference date (onboarding =
+  // Data de admissão…); the others count the dates from the day of the duplication. Each template remembers the column
+  // its real card goes to (template_target_column), so "Duplicar todos os cards" puts every card in its own column.
+  const p = t.proc || { ref: '', refDay: 0, lead: 0, q: '' };
   const { data: cols } = await db.from('task_board_columns').select('id,position').eq('board_id', boardId).order('position');
   for (const c of (cols || []) as { id: string; position: number }[]) await db.from('task_board_columns').update({ position: (c.position ?? 0) + 1 }).eq('id', c.id);
   const { data: col, error } = await db.from('task_board_columns').insert({
     board_id: boardId, title: 'Modelo do processo', color: '#64748b', position: 0, is_template_column: true,
-    template_ref_field: fid.get(p.ref) || null, template_lead_days: p.lead, template_lead_label: p.q, template_title_field: p.title ? fid.get(p.title) || null : null,
+    template_ref_field: p.ref ? fid.get(p.ref) || null : null, template_lead_days: p.lead, template_lead_label: p.q || null, template_title_field: p.title ? fid.get(p.title) || null : null,
   }).select('id').single();
   if (error || !col) return;
-  const { data: tasks } = await db.from('tasks').select('id,title').eq('board_id', boardId);
+  const { data: tasks } = await db.from('tasks').select('id,title,status').eq('board_id', boardId);
   const final = p.refDay - p.lead;
   for (let i = 0; i < t.cards.length; i++) {
     const c = t.cards[i];
-    const row = ((tasks || []) as { id: string; title: string }[]).find((x) => x.title === c.t);
+    const row = ((tasks || []) as { id: string; title: string; status: string }[]).find((x) => x.title === c.t);
     if (!row) continue;
     await db.from('tasks').update({
-      status: col.id, is_template: true, position: i, due_date: null, start_date: null, completed_at: null,
+      status: col.id, is_template: true, position: i, due_date: null, start_date: null, completed_at: null, template_target_column: row.status,
       template_offset_days: c.due != null ? c.due - final : null, template_start_offset_days: c.st != null ? c.st - final : null,
     }).eq('id', row.id);
   }
 }
 
 /** What a template brings, for the preview. */
-export const templateSummary = (t: BoardTemplate) => ({ proc: !!t.proc, cards: t.cards.length, fields: t.fields?.length || 0, rules: t.rules?.length || 0, deps: t.cards.reduce((a, c) => a + (c.dep?.length || 0), 0), form: !!t.form, checklists: t.cards.reduce((a, c) => a + (c.ck?.length || 0), 0) });
+export const templateSummary = (t: BoardTemplate) => ({ proc: true, cards: t.cards.length, fields: t.fields?.length || 0, rules: t.rules?.length || 0, deps: t.cards.reduce((a, c) => a + (c.dep?.length || 0), 0), form: !!t.form, checklists: t.cards.reduce((a, c) => a + (c.ck?.length || 0), 0) });
