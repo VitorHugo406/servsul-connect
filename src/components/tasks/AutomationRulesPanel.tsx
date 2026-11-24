@@ -65,11 +65,39 @@ export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, colu
   const [actionCover, setActionCover] = useState('blue');
   const [labels, setLabels] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const { users } = useActiveUsers();
+  // Only people who are members of THIS mural can be chosen (owner + task_board_members), the logged-in person included.
+  const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    if (!open || !boardId) return;
+    let live = true;
+    (async () => {
+      const db = supabase as any;
+      const [{ data: b }, { data: m }] = await Promise.all([
+        db.from('task_boards').select('owner_id').eq('id', boardId).maybeSingle(),
+        db.from('task_board_members').select('profile_id,user_id').eq('board_id', boardId),
+      ]);
+      const pids = (m || []).map((x: any) => x.profile_id).filter(Boolean);
+      const uids = [b?.owner_id, ...(m || []).map((x: any) => x.user_id)].filter(Boolean);
+      const or = [pids.length ? `id.in.(${pids.join(',')})` : '', uids.length ? `user_id.in.(${uids.join(',')})` : ''].filter(Boolean).join(',');
+      const { data: ps } = or ? await db.from('profiles').select('id,name,display_name').eq('is_active', true).or(or) : { data: [] };
+      if (live) setMembers(((ps || []) as any[]).map((p) => ({ id: p.id, name: p.display_name || p.name })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')));
+    })();
+    return () => { live = false; };
+  }, [open, boardId]);
+  const isMember = (id?: string) => !id || members.some((m) => m.id === id);
+  // run a rule on the cards that already match it (label already on the card / card already in the column)
+  const applyNow = async (ruleId: string, quiet = false) => {
+    const { data, error } = await (supabase as any).rpc('apply_rule_to_existing', { _rule: ruleId });
+    if (error) { if (!quiet) toast.error('Não foi possível aplicar agora.'); return; }
+    const n = Number(data) || 0;
+    if (n || !quiet) toast.success(n ? `Automação aplicada em ${n} card${n === 1 ? '' : 's'} que já estavam assim.` : 'Nenhum card atual se encaixa nesta regra.');
+  };
+  const retro = (type: string) => type === 'label_added' || type === 'moved_to_column';
   useEffect(() => { if (!triggerColumnId && columns[0]) setTriggerColumnId(columns[0].id); }, [columns, triggerColumnId]);
   useEffect(() => { if (!open) return; void (supabase as any).from('task_labels').select('id,name,color').eq('board_id', boardId).order('name').then(({ data }: any) => setLabels(data || [])); }, [open, boardId]);
   const instant = !!TRIGGER_TYPES.find((t: any) => t.id === triggerType)?.instant;
   const actionChoices = ACTION_TYPES.filter((a: any) => instant || !a.instantOnly);
-  const personName = (id?: string) => { const u = users.find((x) => x.id === id); return u ? (u.display_name || u.name) : 'pessoa removida'; };
+  const personName = (id?: string) => { const m = members.find((x) => x.id === id); if (m) return m.name; const u = users.find((x) => x.id === id); return u ? `${u.display_name || u.name} (fora do mural)` : 'pessoa removida'; };
 
   const handleCreate = async () => {
     const triggerConfig: Record<string, any> = {};
@@ -82,13 +110,13 @@ export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, colu
     const actionConfig: Record<string, any> = {};
     if (actionType === 'move_column') actionConfig.column_id = actionColumnId;
     if (actionType === 'set_priority') actionConfig.priority = actionPriority;
-    if (actionType === 'assign_to' || actionType === 'add_assignee') { if (!actionProfileId) { toast.error('Escolha a pessoa'); return; } actionConfig.profile_id = actionProfileId; }
+    if (actionType === 'assign_to' || actionType === 'add_assignee') { if (!actionProfileId) { toast.error('Escolha a pessoa'); return; } if (!isMember(actionProfileId)) { toast.error('Essa pessoa não é membro deste mural. Adicione-a em Membros primeiro.'); return; } actionConfig.profile_id = actionProfileId; }
     if (actionType === 'set_cover') actionConfig.cover = actionCover;
     if (actionType === 'notify' && actionProfileId && instant) actionConfig.profile_id = actionProfileId;
     if (actionType === 'add_label') { if (!actionLabelId) { toast.error('Escolha a etiqueta'); return; } actionConfig.label_id = actionLabelId; }
     if (actionType === 'set_due_days') actionConfig.days = Math.max(0, Math.min(365, parseInt(actionDays) || 0));
 
-    const { error } = await createRule({
+    const { data: createdRule, error } = await createRule({
       task_id: taskId,
       trigger_type: triggerType,
       trigger_config: triggerConfig,
@@ -96,9 +124,11 @@ export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, colu
       action_config: actionConfig,
     });
 
-    if (error) { toast.error('Erro ao criar regra'); return; }
+    if (error) { toast.error(String((error as any)?.message || '').includes('AUTOMACAO_MEMBRO') ? 'Essa pessoa não é membro deste mural.' : 'Erro ao criar regra'); return; }
     toast.success('Automação criada!');
     setShowCreate(false);
+    // also act on the cards that ALREADY have the label / are already in the column
+    if (retro(triggerType) && (createdRule as any)?.id) await applyNow((createdRule as any).id, true);
   };
 
   const getTriggerLabel = (rule: AutomationRule) => {
@@ -170,7 +200,8 @@ export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, colu
                           </Badge>
                         </div>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleRule(rule.id, !rule.is_active)}>
+                          {rule.is_active && retro(rule.trigger_type) ? <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" title="Aplicar agora nos cards que já se encaixam" onClick={() => void applyNow(rule.id)}>Aplicar nos atuais</Button> : null}
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={async () => { const on = !rule.is_active; await toggleRule(rule.id, on); if (on && retro(rule.trigger_type)) await applyNow(rule.id, true); }}>
                             <Zap className={cn('h-3 w-3', rule.is_active ? 'text-yellow-500' : 'text-muted-foreground')} />
                           </Button>
                           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteRule(rule.id)}>
@@ -193,6 +224,9 @@ export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, colu
                           <span>{getActionLabel(rule)}</span>
                         </div>
                       </div>
+                      {['assign_to', 'add_assignee', 'notify'].includes(rule.action_type) && rule.action_config?.profile_id && members.length && !isMember(rule.action_config.profile_id)
+                        ? <p className="flex items-center gap-1.5 rounded bg-destructive/10 px-2 py-1 text-[11px] text-destructive"><AlertTriangle className="h-3 w-3" />Essa pessoa não é membro do mural — a regra não faz nada até ela entrar em Membros. Exclua e crie de novo com alguém do mural.</p>
+                        : null}
                     </div>
                   );
                 })
@@ -309,12 +343,13 @@ export function AutomationRulesPanel({ open, onOpenChange, boardId, taskId, colu
                 )}
                 {(actionType === 'assign_to' || actionType === 'add_assignee' || (actionType === 'notify' && instant)) && (
                   <div className="space-y-1">
-                    <Label className="text-xs">{actionType === 'notify' ? 'Quem recebe (vazio = responsável do card)' : 'Pessoa'}</Label>
+                    <Label className="text-xs">{actionType === 'notify' ? 'Quem recebe (vazio = responsável do card)' : 'Pessoa (só membros deste mural)'}</Label>
+                    {actionType === 'assign_to' ? <p className="text-[11px] text-muted-foreground">Se o card já tiver responsável, essa pessoa entra como co-responsável, com o mesmo peso.</p> : null}
                     <Select value={actionProfileId || (actionType === 'notify' ? '__resp' : undefined)} onValueChange={(v) => setActionProfileId(v === '__resp' ? '' : v)}>
                       <SelectTrigger><SelectValue placeholder="Escolha a pessoa" /></SelectTrigger>
                       <SelectContent className="max-h-72">
                         {actionType === 'notify' ? <SelectItem value="__resp">Responsável do card</SelectItem> : null}
-                        {[...users].sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name, 'pt-BR')).map(u => <SelectItem key={u.id} value={u.id}>{u.display_name || u.name}</SelectItem>)}
+                        {members.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
