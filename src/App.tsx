@@ -1,11 +1,4 @@
-import PublicBoard from '@/pages/PublicBoard';
-import PublicForm from '@/pages/PublicForm';
-import PublicBooking from '@/pages/PublicBooking';
-import RoomCheckin from '@/pages/RoomCheckin';
 import { MfaGate } from '@/components/security/TwoFactor';
-import { HelpCenter, StatusPage } from '@/pages/HelpCenter';
-import { DevDocs, SecurityPage } from '@/pages/DevDocs';
-import GuideCenter from '@/pages/GuideCenter';
 import { OfflineScreen } from "@/components/common/OfflineScreen";
 import { luminance } from '@/lib/branding';
 import { AppDialogHost } from '@/components/common/AppDialogHost';
@@ -34,6 +27,16 @@ import { UpdatePrompt } from "@/components/legal/UpdatePrompt";
 
 // Recarrega uma única vez quando um pedaço antigo do app ficou em cache (deploy novo)
 const Index = lazyWithRetry(() => import("./pages/Index"));
+// public pages: loaded only when opened, so they never weigh on the system's first load
+const PublicBoard = lazyWithRetry(() => import('@/pages/PublicBoard'));
+const PublicForm = lazyWithRetry(() => import('@/pages/PublicForm'));
+const PublicBooking = lazyWithRetry(() => import('@/pages/PublicBooking'));
+const RoomCheckin = lazyWithRetry(() => import('@/pages/RoomCheckin'));
+const HelpCenter = lazyWithRetry(() => import('@/pages/HelpCenter').then((m) => ({ default: m.HelpCenter })));
+const StatusPage = lazyWithRetry(() => import('@/pages/HelpCenter').then((m) => ({ default: m.StatusPage })));
+const DevDocs = lazyWithRetry(() => import('@/pages/DevDocs').then((m) => ({ default: m.DevDocs })));
+const SecurityPage = lazyWithRetry(() => import('@/pages/DevDocs').then((m) => ({ default: m.SecurityPage })));
+const GuideCenter = lazyWithRetry(() => import('@/pages/GuideCenter'));
 const ValidateDocument = lazyWithRetry(() => import("./pages/ValidateDocument"));
 const DownloadData = lazyWithRetry(() => import("./pages/DownloadData"));
 const LandingPage = lazyWithRetry(() => import("./pages/LandingPage"));
