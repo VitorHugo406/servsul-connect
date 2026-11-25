@@ -9,6 +9,7 @@ import {
   Megaphone, Receipt, Rocket, Search, ShoppingCart, SlidersHorizontal, Target, UserMinus, UserPlus, UserSearch, Wrench, Zap, ListChecks, GraduationCap, Palmtree, Star, PhoneCall, HeartHandshake, Share2, Palette, Package, Truck,
   ClipboardCheck, Calculator, Wallet, Bug, Server, Users, Compass, Building, type LucideIcon,
   FileText, Banknote, DoorOpen, Sun, Stethoscope, Clock, MessageCircleQuestion, Gift, HardHat, Scale, TrendingDown, Thermometer, ShieldAlert, Gavel, HeartPulse, SearchCheck, Siren, Gauge,
+  Layers, MonitorCog, Activity, Repeat, ShieldCheck, BookOpen,
   TrendingUp, ArrowLeftRight, RotateCcw, Hourglass, Crown, School, Sprout, Vote, Flame, ShieldPlus, KeyRound, FileLock, ServerCrash, DatabaseBackup, CalendarClock, Landmark, MapPinned, UserCog, FileSearch, HandCoins, Coins, Store, PackageX, Boxes,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -36,6 +37,7 @@ const ICONS: Record<string, LucideIcon> = {
   vote: Vote, flame: Flame, 'shield-plus': ShieldPlus, 'key-round': KeyRound, 'file-lock': FileLock, 'server-crash': ServerCrash, 'database-backup': DatabaseBackup,
   'calendar-clock': CalendarClock, landmark: Landmark, 'map-pinned': MapPinned, 'user-cog': UserCog, 'file-search': FileSearch, 'hand-coins': HandCoins, coins: Coins,
   store: Store, 'package-x': PackageX, boxes: Boxes,
+  layers: Layers, 'monitor-cog': MonitorCog, activity: Activity, repeat: Repeat, 'shield-check': ShieldCheck, 'book-open': BookOpen,
 };
 const Ico = ({ t, className }: { t: BoardTemplate; className?: string }) => { const I = ICONS[t.icon] || LayoutGrid; return <I className={className} />; };
 const plural = (n: number, s: string, p: string) => `${n} ${n === 1 ? s : p}`;
