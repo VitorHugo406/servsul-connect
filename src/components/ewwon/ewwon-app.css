@@ -680,7 +680,11 @@ html body .ew .ewx-ment::-webkit-scrollbar-thumb { background: color-mix(in srgb
 .ew .ewx-fpoll { margin-top: 10px; }
 /* The global sheet is a flex column: without this its fields shrink (the "Novo aviso" message box collapsed to one
    line once fotos/vídeos and enquete made the sheet taller than the screen); the sheet scrolls instead. */
+.ew .sheet.gs { display: flex; flex-direction: column; color: var(--tx); }
 .ew .sheet.gs > * { flex-shrink: 0; }
+/* botão de criar fixo no rodapé do formulário (rola o conteúdo, o botão fica) */
+.ew .sheet .ewx-sheetfoot { position: sticky; bottom: calc(-1 * (var(--ew-sabottom, env(safe-area-inset-bottom, 0px)) + 22px)); z-index: 3; margin: 12px -18px calc(-1 * (var(--ew-sabottom, env(safe-area-inset-bottom, 0px)) + 22px)); padding: 12px 18px calc(var(--ew-sabottom, env(safe-area-inset-bottom, 0px)) + 16px); background: var(--card); box-shadow: 0 -10px 18px -12px rgba(0,0,0,.28); }
+.ew .sheet .ewx-sheetfoot .btn { width: 100%; }
 .ew .sheet.gs textarea.fld { min-height: 112px; }
 /* Agenda (side menu) and event/location cards inside chat bubbles */
 .ew .ewx-agenda { display: flex; flex-direction: column; gap: 12px; }

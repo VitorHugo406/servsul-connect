@@ -36,7 +36,7 @@ import { PollCard, parsePoll, createPoll, emptyPoll, pollReady, type PollDraft }
 import { MediaGallery, MediaPicker } from '@/components/announcements/AnnouncementExtras';
 import { listAnnouncementMedia, uploadAnnouncementMedia, type AnnMedia } from '@/lib/announcementMedia';
 import { PollSheet } from './pollsheet';
-import { EventSheet, LocSheet, TransitSheet } from './sharesheet';
+import { AgendaPage, EventSheet, LocSheet, TransitSheet } from './sharesheet';
 import { EventCard, LocationCard, TransitCard } from '@/components/chat/extras/ChatShare';
 import { parseEvent, parseLoc, parseTransit } from '@/lib/chatShare';
 import { useDbFeature } from '@/hooks/useDbFeature';
@@ -128,6 +128,9 @@ export default function EwwonApp() {
   const [tickets, setTickets] = useState<D.Ticket[]>([]);
   const [prefs, setPrefsState] = useState<Prefs>(D.DEFAULT_PREFS);
   const [tab, setTab] = useState(0);
+  // Agenda tab mounts on first visit (its queries do not run at app start)
+  const [agendaSeen, setAgendaSeen] = useState(false);
+  useEffect(() => { if (tab === 5) setAgendaSeen(true); }, [tab]);
   const [curKey, setCurKey] = useState<string | null>(null);
   const [roomOn, setRoomOn] = useState(false);
   const [sheetOn, setSheetOn] = useState(false);
@@ -708,7 +711,7 @@ export default function EwwonApp() {
     if (d?.type === 'message' && d.chatId) { setTab(1); void openRoom(d.chatId); }
     else if (d?.type === 'notice') { setRoomOn(false); setTab(2); }
     else if (d?.type === 'birthday') { setRoomOn(false); setTab(3); }
-    else if (d?.type === 'meeting') { setRoomOn(false); setTab(0); }
+    else if (d?.type === 'meeting') { setRoomOn(false); setTab(5); }
     else if (d?.type === 'ticket') { setRoomOn(false); setTab(4); }
   }, [openRoom, setOpen]);
 
@@ -1005,7 +1008,7 @@ export default function EwwonApp() {
     return <EwwonLoader />;
   }
   // Tabs the company's plan includes (index = view id).
-  const mobileTabs = ([['home', 'Início', 0], ['chat', 'Chat', 1], ['bell', 'Avisos', 2], ['gift', 'Aniversários', 3], ...(boot.supportStaff ? [['ticket', 'Tickets', 4]] : [])] as [string, string, number][])
+  const mobileTabs = ([['home', 'Início', 0], ['chat', 'Chat', 1], ['bell', 'Avisos', 2], ['gift', 'Aniversários', 3], ['event', 'Agenda', 5], ...(boot.supportStaff ? [['ticket', 'Tickets', 4]] : [])] as [string, string, number][])
     .filter(([, , i]) => (i === 1 ? planHasFeature(companyPlan, 'chat') : i === 2 ? planHasFeature(companyPlan, 'announcements') : i === 3 ? planHasFeature(companyPlan, 'birthdays') : true));
 
   const P = people;
@@ -1276,6 +1279,10 @@ export default function EwwonApp() {
                   </div>
                 </>
               ) : null}
+            </section>
+
+            <section className={'view' + (tab === 5 ? ' on' : '')} id="v5">
+              {agendaSeen ? <AgendaPage meId={meId} userId={me.userId} onNew={() => gsOpen({ kind: 'event', chat: false })} /> : null}
             </section>
 
             {boot.supportStaff ? (
@@ -1818,7 +1825,7 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
             </div>
           );
         })}
-        <button className="btn full" style={{ marginTop: 14 }} disabled={busy || title.trim().length < 2 || !sel.length} onClick={async () => {
+        <div className="ewx-sheetfoot"><button className="btn full" disabled={busy || title.trim().length < 2 || !sel.length} onClick={async () => {
           setBusy(true);
           const id = await api.sv(D.createGroup(title.trim(), body.trim(), sel.map((x) => P[x]).filter(Boolean), api.me, api.boot.companyId));
           if (id) {
@@ -1828,7 +1835,7 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
             api.openChat(`group:${id}`);
           }
           setBusy(false);
-        }}>{busy ? 'Criando…' : 'Criar grupo'}</button>
+        }}>{busy ? 'Criando…' : 'Criar grupo'}</button></div>
       </>
     );
   }
@@ -1847,7 +1854,7 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
         <div className="sl">Duração</div>
         <Seg id="gexp" items={['Sem prazo', '24 h', '3 dias', '7 dias', '30 dias']} value={exp} onChange={setExp} />
         <small className="ewx-nexp">{exp ? `Sai do ar sozinho em ${['', '24 horas', '3 dias', '7 dias', '30 dias'][exp]}.` : 'Fica ativo até ser desativado.'}</small>
-        <button className="btn full" disabled={busy || title.trim().length < 3 || body.trim().length < 3} onClick={async () => {
+        <div className="ewx-sheetfoot"><button className="btn full" disabled={busy || title.trim().length < 3 || body.trim().length < 3} onClick={async () => {
           setBusy(true);
           const { error } = await (supabase as any).from('system_broadcasts').insert({
             title: title.trim(), content: body.trim(), severity: ['info', 'warning', 'critical'][sev],
@@ -1858,7 +1865,7 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
           notifyBroadcastsChanged();
           api.toast('Aviso global publicado');
           close();
-        }}>{busy ? 'Publicando…' : 'Publicar para todos'}</button>
+        }}>{busy ? 'Publicando…' : 'Publicar para todos'}</button></div>
       </>
     );
   }
@@ -1901,7 +1908,7 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
           <Seg id="npoll" items={['Sem prazo', '1 h', '24 h', '3 dias', '7 dias']} value={[0, 1, 24, 72, 168].indexOf(poll.hours)} onChange={(v) => setPoll({ ...poll, hours: [0, 1, 24, 72, 168][v] })} />
         </div> : null}
       </> : null}
-      <button className="btn full" disabled={busy || title.trim().length < 3 || body.trim().length < 3 || (withPoll && !pollReady(poll))} onClick={async () => {
+      <div className="ewx-sheetfoot"><button className="btn full" disabled={busy || title.trim().length < 3 || body.trim().length < 3 || (withPoll && !pollReady(poll))} onClick={async () => {
         setBusy(true);
         const r = await api.sv(D.createNotice(api.me.id, api.boot.companyId, title.trim(), body.trim(), pinned, exp ? new Date(Date.now() + [0, 1, 3, 7, 30][exp] * 864e5).toISOString() : null));
         if (r) {
@@ -1912,7 +1919,7 @@ function GlobalSheet({ spec, api, close, statusClear, setStatusClear }: { spec: 
           setBusy(false); close(); return;
         }
         setBusy(false);
-      }}>{busy ? 'Publicando…' : 'Publicar aviso'}</button>
+      }}>{busy ? 'Publicando…' : 'Publicar aviso'}</button></div>
     </>
   );
 }

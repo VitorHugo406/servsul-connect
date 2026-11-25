@@ -1,13 +1,13 @@
 /* Busca geral (GlobalSearch). Prefix gs-, theme tokens only. */
 .gs-dlg { border-radius: 14px; }
 .gs-dlg > button[class*="absolute"] { display: none; }
-.gs { display: flex; flex-direction: column; max-height: min(560px, 80vh); background: hsl(var(--card)); color: hsl(var(--foreground)); }
+.gsx { display: flex; flex-direction: column; max-height: min(560px, 80vh); background: hsl(var(--card)); color: hsl(var(--foreground)); }
 .gs-in { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 56px; border-bottom: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); }
 .gs-in input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; font-size: 15px; color: hsl(var(--foreground)); }
 .gs-in input::placeholder { color: hsl(var(--muted-foreground)); }
-.gs kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border: 1px solid hsl(var(--border)); border-radius: 5px; font: 500 11px/1 inherit; color: hsl(var(--muted-foreground)); background: hsl(var(--muted) / .5); }
+.gsx kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border: 1px solid hsl(var(--border)); border-radius: 5px; font: 500 11px/1 inherit; color: hsl(var(--muted-foreground)); background: hsl(var(--muted) / .5); }
 .gs-list { flex: 1; overflow-y: auto; padding: 6px 8px 10px; }
-.gs [cmdk-group-heading] { padding: 10px 8px 4px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+.gsx [cmdk-group-heading] { padding: 10px 8px 4px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
 .gs-it { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 10px; border-radius: 9px; font-size: 13.5px; cursor: pointer; }
 .gs-it > svg { flex: none; width: 17px; height: 17px; color: hsl(var(--muted-foreground)); }
 .gs-it > svg.gs-ok { color: #22a06b; }

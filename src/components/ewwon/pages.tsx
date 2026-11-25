@@ -110,12 +110,6 @@ function ProfilePage({ id, api }: { id: string; api: EwApi }) {
             <div className="dy">{DAYS.map((d, i) => <button key={d} className={p.days[i] ? 'on' : ''} disabled={!me} onClick={() => { const days = [...p.days]; days[i] = days[i] ? 0 : 1; api.saveMe({ ...p, days }); }}>{d}</button>)}</div>
           </div>
         ) : null}
-        {me ? (
-          <div className="box ewx-agbox"><h4>Minha agenda</h4>
-            <button className="ewx-agrow" onClick={() => api.pgShow({ kind: 'agenda' })}><span className="ewx-agic"><I n="event" /></span><span><b>Eventos e reuniões</b><small>Próximos 90 dias, convites e respostas</small></span><Chev /></button>
-            <button className="btn sm sec ewx-agnew" onClick={() => api.gsOpen({ kind: 'event', chat: false })}><I n="plus" />Marcar evento ou reunião</button>
-          </div>
-        ) : null}
         {me ? <InstallAppBox api={api} /> : null}
         {me ? <MyEvaluationsBox api={api} /> : null}
         <div className="box"><h4>Contato</h4>
@@ -327,7 +321,7 @@ function MutedPage({ api }: { api: EwApi }) {
 }
 
 const CATS: [string, string][] = [['Erro no sistema', 'bug'], ['Lentidão', 'clock'], ['Sugestão', 'bulb'], ['Outro assunto', 'info']];
-const AREAS = ['Início', 'Chat', 'Avisos', 'Aniversários', 'Perfil e menu', 'Outra área'];
+const AREAS = ['Início', 'Chat', 'Avisos', 'Aniversários', 'Agenda', 'Perfil e menu', 'Outra área'];
 
 function SupportPage({ api }: { api: EwApi }) {
   const [tab, setTab] = useState(0);

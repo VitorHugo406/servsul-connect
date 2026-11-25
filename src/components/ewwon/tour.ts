@@ -54,7 +54,7 @@ export function runTour(ref: MutableRefObject<TourController | null>, onEnd: () 
   }
 
   const S: Step[] = [
-    { ui: { tab: 0 }, t: 'Bem-vindo ao ewvon', d: 'Vamos conhecer as 4 áreas do app. Eu aperto os botões por você, é só acompanhar.', next: 'Começar tour', logo: true },
+    { ui: { tab: 0 }, t: 'Bem-vindo ao ewvon', d: 'Vamos conhecer as áreas do app. Eu aperto os botões por você, é só acompanhar.', next: 'Começar tour', logo: true },
     { ui: { tab: 0 }, sel: '#hero .stage', t: 'Seu painel em 3D', d: 'Camadas 3D com seus dados flutuando: mensagens não lidas, tarefas, reuniões e atrasos.', pad: [6, 6, 6, 6] },
     { ui: { tab: 0 }, sel: '#hstats', t: 'Resumo em números', d: 'Tarefas concluídas hoje, próxima reunião e tarefas atrasadas, sempre à mão.', pad: [6, 6, 6, 6] },
     { ui: { tab: 0 }, sel: '#actcard', t: 'Atividade da semana', d: 'O gráfico de linha mostra quantas mensagens você enviou por dia.' },
@@ -68,6 +68,7 @@ export function runTour(ref: MutableRefObject<TourController | null>, onEnd: () 
     { ui: { tab: 2 }, sel: () => $('.av-i') || $('#v2'), t: 'Leia com um toque', d: 'Toque no aviso para expandir. O ponto vermelho some quando você lê. Avisos fixados pedem confirmação “Ciente”.', act: async (w) => { const c = $('.av-i'); if (!c) return; await tap(c, w); C().expandFirstNotice(); } },
     { ui: { tab: 2 }, sel: () => tabEl(3), t: 'Aba Aniversários', d: 'Veja quem faz aniversário e comemore com a equipe.', r: 18, act: async (w) => { await tap(tabEl(3), w); C().go(3); } },
     { ui: { tab: 3 }, sel: () => ($('#hb:not(.hid) #bd') as Element) || $('#nxg'), t: 'Mande parabéns', d: 'Um toque envia a mensagem direto no chat da pessoa. O sininho cria um lembrete.', r: 28 },
+    { ui: { tab: 3 }, sel: () => tabEl(5), t: 'Aba Agenda', d: 'Seus eventos e reuniões dos próximos 90 dias, com os convites para confirmar. Marque um novo pelo botão no topo.', r: 18, act: async (w) => { await tap(tabEl(5), w); C().go(5); } },
     {
       ui: { tab: 3 }, pos: 'bottom', t: 'Seu menu pessoal', d: 'Em qualquer tela, deslize da esquerda para a direita. Perfil, status, configurações e suporte ficam ali.',
       act: async (w, focus) => {

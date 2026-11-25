@@ -64,7 +64,7 @@ export function GlobalSearch({ open, onOpenChange, sections, onSection }: { open
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gs-dlg max-w-[640px] gap-0 overflow-hidden p-0">
         <DialogTitle className="sr-only">Busca geral</DialogTitle>
-        <Cmd shouldFilter={false} loop className="gs">
+        <Cmd shouldFilter={false} loop className="gsx">
           <div className="gs-in"><Search className="h-[18px] w-[18px]" /><Cmd.Input autoFocus value={q} onValueChange={setQ} placeholder="Buscar cards, murais, pessoas ou telas…" />{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <kbd>Esc</kbd>}</div>
           <Cmd.List className="gs-list">
             {nothing ? <p className="gs-empty">Nada encontrado para "{q.trim()}".</p> : null}

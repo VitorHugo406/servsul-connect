@@ -33,7 +33,7 @@ export function EventSheet({ people, meId, invite, post, close, toast }: { peopl
       <div className="gp" />
       <div className="shh"><div><b>{d.kind === 'meeting' ? 'Marcar reunião' : 'Novo evento'}</b><small>{post ? 'Vai para a agenda de cada convidado e o convite aparece na conversa' : 'Vai para a agenda de cada convidado'}</small></div></div>
       <EventForm value={d} onChange={setD} people={list} mobile />
-      <button className="btn full" style={{ marginTop: 12 }} disabled={busy || !!problem} onClick={() => void send()}>{busy ? 'Criando…' : post ? 'Criar e enviar convite' : 'Criar'}</button>
+      <div className="ewx-sheetfoot"><button className="btn full" disabled={busy || !!problem} onClick={() => void send()}>{busy ? 'Criando…' : post ? 'Criar e enviar convite' : 'Criar'}</button></div>
     </>
   );
 }
@@ -45,7 +45,7 @@ export function LocSheet({ post, close, toast }: { post: (content: string) => vo
       <div className="gp" />
       <div className="shh"><div><b>Enviar localização</b><small>Aparece com um minimapa; quem tocar escolhe o app de mapas</small></div></div>
       <LocationPicker value={loc} onChange={setLoc} mobile />
-      <button className="btn full" style={{ marginTop: 12 }} disabled={!loc} onClick={() => { if (!loc) return; post(locContent(loc)); toast('Localização enviada'); close(); }}>Enviar localização</button>
+      <div className="ewx-sheetfoot"><button className="btn full" disabled={!loc} onClick={() => { if (!loc) return; post(locContent(loc)); toast('Localização enviada'); close(); }}>Enviar localização</button></div>
     </>
   );
 }
@@ -93,7 +93,7 @@ export function TransitSheet({ post, close, toast }: { post: (content: string) =
       <div className="gp" />
       <div className="shh"><div><b>Linha de ônibus ou trem</b><small>Avise sobre uma linha de qualquer cidade, com situação e legenda</small></div></div>
       <TransitForm value={x} onChange={setX} mobile />
-      <button className="btn full" style={{ marginTop: 12 }} disabled={!ok} onClick={() => { if (!ok) return; post(transitContent(x)); toast('Enviado'); close(); }}>Enviar</button>
+      <div className="ewx-sheetfoot"><button className="btn full" disabled={!ok} onClick={() => { if (!ok) return; post(transitContent(x)); toast('Enviado'); close(); }}>Enviar</button></div>
     </>
   );
 }

@@ -33,7 +33,7 @@ export function PollSheet({ convKey, post, close, toast }: { convKey: string; po
       <Tg t="Votos anônimos" d="Ninguém vê quem votou em cada opção" on={poll.anonymous} onChange={(v) => setPoll({ ...poll, anonymous: v })} />
       <div className="sl">Encerrar votação</div>
       <Seg id="cpoll" items={['Sem prazo', '1 h', '24 h', '3 dias', '7 dias']} value={[0, 1, 24, 72, 168].indexOf(poll.hours)} onChange={(v) => setPoll({ ...poll, hours: [0, 1, 24, 72, 168][v] })} />
-      <button className="btn full" style={{ marginTop: 12 }} disabled={busy || !pollReady(poll)} onClick={() => void send()}>{busy ? 'Enviando…' : 'Enviar enquete'}</button>
+      <div className="ewx-sheetfoot"><button className="btn full" disabled={busy || !pollReady(poll)} onClick={() => void send()}>{busy ? 'Enviando…' : 'Enviar enquete'}</button></div>
     </>
   );
 }
