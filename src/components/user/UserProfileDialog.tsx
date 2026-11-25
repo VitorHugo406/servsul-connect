@@ -28,7 +28,7 @@ export function UserProfileDialog({open,onOpenChange}:UserProfileDialogProps){
  const handleAvatarChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;const url=await uploadAvatar(file);if(url){setAvatarUrl(url);await refreshProfile();}};
  const handleCoverChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;const result=await uploadFile(file,'avatars');if(result){setCoverUrl(result.url);}};
  const handleSave=async()=>{if(!profile)return;setSaving(true);try{
-   const{error}=await supabase.from('profiles').update({name,display_name:displayName||null,work_period:workPeriod||null,phone:phone||null,birth_date:birthDate||null} as any).eq('user_id',profile.user_id);
+   const{error}=await supabase.from('profiles').update({name,display_name:(name.trim()!==(profile.name||'').trim()&&displayName===(profile.display_name||''))?null:(displayName||null),work_period:workPeriod||null,phone:phone||null,birth_date:birthDate||null} as any).eq('user_id',profile.user_id);
    if(error)throw error;
    // Optional fields are written when their DB columns exist; local fallback keeps the
    // profile UI usable on environments where the migration has not run yet.

@@ -160,6 +160,8 @@ export function ManagementSection() {
     setSaving(true);
     try {
       const patch: Record<string, any> = { name: f.name, phone: f.phone || null, birth_date: f.birth || null, sector_id: f.sector || null, registration_number: r('registration') || null, is_active: f.active };
+      // A new full name must win over an old "nome de exibição" (the app and chat show display_name first).
+      if ((f.name || '').trim() !== (sel.name || '').trim()) patch.display_name = null;
       if (isAdmin && f.level !== sel.autonomy_level && roles[sel.user_id]?.role !== 'admin') patch.autonomy_level = f.level;
       const { error } = await supabase.from('profiles').update(patch as never).eq('user_id', sel.user_id);
       if (error) throw error;
