@@ -2721,8 +2721,8 @@ try{TVF.dark=localStorage.getItem('ewv.tvTheme')==='dark'}catch(e){}
   '#tvFull .q-flow{flex:1.35}#tvFull .q-sum{display:flex;align-items:baseline;gap:10px;margin-top:4px;min-width:0}#tvFull .q-sum strong{font-size:26px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}#tvFull .q-sum .q-leg{margin-left:auto;display:flex;align-items:center;gap:6px;flex:none;color:var(--tx2)}#tvFull .q-leg i{width:8px;height:8px;border-radius:4px;margin-left:8px}#tvFull .q-sum span{font-size:12px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
   '#tvFull .q-chart{flex:1;min-height:0;margin-top:10px;position:relative}#tvFull svg{display:block;overflow:visible}#tvFull .q-chart>svg{width:100%;height:100%}'+
   '#tvFull .q-row{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}#tvFull .q-stk{display:flex;flex-direction:column;gap:16px;min-height:0}#tvFull .q-stk .q-cd{flex:1;padding:18px 22px;gap:10px;justify-content:space-between}'+
-  '#tvFull .q-dnw{flex:1;min-height:0;display:flex;align-items:center;gap:18px;margin-top:12px}#tvFull .q-dn{position:relative;height:100%;max-height:150px;aspect-ratio:1;flex:none}#tvFull .q-dn svg{width:100%;height:100%;filter:drop-shadow(0 6px 14px rgba(47,107,255,.35))}#tvFull .q-dn .q-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}#tvFull .q-dn .q-c strong{font-size:20px;font-weight:600}#tvFull .q-dn .q-c span{font-size:11px;color:var(--mu)}'+
-  '#tvFull .q-lg{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;font-size:12px;color:var(--tx2);min-width:0}#tvFull .q-lg li{display:flex;align-items:center;gap:8px;min-width:0}#tvFull .q-lg li i{width:8px;height:8px;border-radius:4px;flex:none}#tvFull .q-lg li em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}#tvFull .q-lg li span{color:var(--mu);white-space:nowrap}'+
+  '#tvFull .q-dnw{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;gap:clamp(18px,2.4vw,40px);margin-top:8px}#tvFull .q-dn{position:relative;height:100%;max-height:210px;min-height:120px;aspect-ratio:1;flex:none}#tvFull .q-dn svg{width:100%;height:100%;filter:drop-shadow(0 6px 14px rgba(47,107,255,.35))}#tvFull .q-dn .q-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}#tvFull .q-dn .q-c strong{font-size:clamp(20px,1.8vw,28px);font-weight:600}#tvFull .q-dn .q-c span{font-size:11px;color:var(--mu)}'+
+  '#tvFull .q-lg{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;font-size:12.5px;color:var(--tx2);min-width:0}#tvFull .q-lg li{display:flex;align-items:center;gap:8px;min-width:0}#tvFull .q-lg li i{width:8px;height:8px;border-radius:4px;flex:none}#tvFull .q-lg li em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}#tvFull .q-lg li span{color:var(--mu);white-space:nowrap;margin-left:auto;padding-left:14px}'+
   '#tvFull .q-kv{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}#tvFull .q-kv>div{min-width:0}#tvFull .q-kv strong{font-size:26px;font-weight:600;white-space:nowrap}#tvFull .q-kv small{display:block;font-size:11px;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#tvFull .q-pl{font-size:12px;font-weight:600;padding:6px 12px;border-radius:10px;white-space:nowrap;flex:none;background:var(--ink);color:var(--inkx)}#tvFull .q-pl.q-b{background:var(--bl);color:#fff;box-shadow:0 6px 18px rgba(47,107,255,.45)}'+
   '#tvFull .q-side{flex:1 1 320px;max-width:420px;min-width:0;min-height:0;display:flex;flex-direction:column;gap:16px}#tvFull .q-side .q-cd{padding:20px}'+
   '#tvFull .q-card{position:relative;overflow:hidden;border-radius:20px;padding:20px;min-height:170px;color:#fff;margin-top:14px;background:linear-gradient(140deg,rgba(47,107,255,.92) 0%,rgba(28,70,200,.88) 55%,rgba(11,20,60,.92) 100%);border:1px solid rgba(255,255,255,.45);box-shadow:0 18px 40px rgba(47,107,255,.40),inset 0 1px 0 rgba(255,255,255,.5);display:flex;flex-direction:column;justify-content:space-between;gap:18px}'+
@@ -2734,10 +2734,14 @@ try{TVF.dark=localStorage.getItem('ewv.tvTheme')==='dark'}catch(e){}
   '#tvFull .q-ul .q-n{flex:1;min-width:0;font-size:13px;line-height:1.35}#tvFull .q-ul .q-n b{display:block;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#tvFull .q-ul .q-n span{font-size:11px;color:var(--mu)}#tvFull .q-ul .q-v{font-size:13px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}#tvFull .q-ul li.q-on .q-n b{font-weight:600}'+
   '#tvFull .q-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;flex:none}#tvFull .q-two .q-cd{padding:16px}#tvFull h3{margin:0 0 12px;font-size:13px;font-weight:600}'+
   '#tvFull .q-ppl{display:flex;align-items:center}#tvFull .q-ppl span{width:34px;height:34px;border-radius:17px;border:2px solid #fff;display:grid;place-items:center;font-size:12px;font-weight:600;margin-left:-10px}#tvFull.q-dk .q-ppl span{border-color:#1C1F28}#tvFull .q-ppl span:first-child{margin-left:0}#tvFull .q-ppl em{font-style:normal;width:34px;height:34px;border-radius:17px;border:1px dashed var(--mu);background:var(--btn);color:var(--tx2);margin-left:6px;display:grid;place-items:center;font-size:12px}'+
+  '#tvFull .q-thm{position:relative}#tvFull .q-thm>span{position:absolute;inset:0;display:grid;place-items:center;transition:transform .55s cubic-bezier(.3,1.4,.5,1),opacity .35s}#tvFull .q-sun{opacity:0;transform:rotate(-120deg) scale(.4)}#tvFull.q-dk .q-moon{opacity:0;transform:rotate(120deg) scale(.4)}#tvFull.q-dk .q-sun{opacity:1;transform:none}'+
+  '#tvFull,#tvFull .q-g,#tvFull .q-pb,#tvFull .q-rb,#tvFull .q-pl,#tvFull .q-ic,#tvFull .q-mk,#tvFull .q-dots{transition:background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease}#tvFull .q-glow{transition:opacity .6s}'+
+  '#tvFull .q-trd .q-ch h2{flex:none}#tvFull .q-trd .q-lk{overflow:hidden;text-overflow:ellipsis;min-width:0}#tvFull .q-trd{flex:none;min-height:215px;padding:20px}#tvFull .q-tk{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}#tvFull .q-tdir{font-size:13px;font-weight:600;padding:5px 10px;border-radius:10px}#tvFull .q-du{background:rgba(47,107,255,.14);color:#2F6BFF}#tvFull .q-dd{background:var(--ink);color:var(--inkx)}#tvFull .q-ds{background:var(--btn);color:var(--tx2);border:1px solid var(--bbd)}#tvFull .q-tch{font-size:12px;color:var(--mu);white-space:nowrap}'+
+  '#tvFull .q-tg{flex:1;min-height:90px;margin-top:10px}#tvFull .q-tg svg{width:100%;height:100%}#tvFull .q-tv{display:flex;align-items:baseline;gap:6px;margin-top:8px;font-size:11px;color:var(--mu)}#tvFull .q-tv b{font-size:16px;color:var(--tx);font-weight:600}#tvFull .q-tv b.q-pj{color:#2F6BFF}#tvFull .q-tv i{font-style:normal;margin:0 4px}#tvFull .q-tn{font-size:10.5px;color:var(--mu);margin-top:4px}'+
   '#tvFull .q-spk{height:46px}#tvFull .q-spk svg{width:100%;height:46px;filter:drop-shadow(0 4px 8px rgba(47,107,255,.55))}'+
   '#tvFull .q-na{flex:1;display:grid;place-items:center;text-align:center;color:var(--mu);font-size:14px}'+
   '#tvFull .q-grow{transform-box:fill-box;transform-origin:50% 100%;animation:tvGrow .55s cubic-bezier(.2,.8,.2,1) both}@keyframes tvGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}'+
-  '@media (max-width:1180px){#tvFull .q-side{display:none}#tvFull .q-srch{display:none}}@media (max-height:760px){#tvFull .q-gap{height:20px}#tvFull h1{font-size:28px}}@media (prefers-reduced-motion:reduce){#tvFull .q-grow{animation:none}}';
+  '@media (max-width:1180px){#tvFull .q-side{display:none}#tvFull .q-srch{display:none}}@media (max-height:760px){#tvFull h1{font-size:28px}#tvFull .q-trd{min-height:180px}}@media (prefers-reduced-motion:reduce){#tvFull .q-grow{animation:none}}';
   document.head.appendChild(st);
 }
 const tvIc=d=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+d+'</svg>';
@@ -2762,16 +2766,15 @@ function tvBuild(){
         '<button type="button" class="q-rb" data-a="next" title="Próximo indicador" aria-label="Próximo indicador">'+tvIc('<path d="M9 18l6-6-6-6"/>')+'</button>'+
         '<div class="q-dv"></div>'+
         '<button type="button" class="q-rb" data-a="auto" aria-pressed="true" title="Alternar sozinho" aria-label="Alternar indicadores sozinho">'+tvIc('<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>')+'</button>'+
-        '<button type="button" class="q-rb" data-a="theme" title="Modo claro / noturno" aria-label="Alternar modo claro e noturno">'+tvIc('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>')+'</button>'+
-        '<div class="q-gap"></div>'+
+        '<button type="button" class="q-rb q-thm" data-a="theme" title="Modo claro / noturno" aria-label="Alternar modo claro e noturno"><span class="q-moon">'+tvIc('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>')+'</span><span class="q-sun">'+tvIc('<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>')+'</span></button>'+
+        '<div class="q-dv"></div>'+
         '<button type="button" class="q-rb" data-a="close" title="Sair (Esc)" aria-label="Sair da tela cheia">'+tvIc('<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 16l-4-4 4-4M6 12h10"/>')+'</button></nav>'+
       '<main class="q-main"><h1 id="tvT"></h1>'+
         '<div class="q-bar q-fade"><div class="q-pick" id="tvPk"><button type="button" class="q-pb" data-a="pick" aria-haspopup="listbox" aria-expanded="false"><small>Indicador</small><span id="tvPl"></span>'+tvIc('<path d="M6 9l6 6 6-6"/>')+'</button><div class="q-pop q-g" role="listbox" aria-label="Indicadores" id="tvM"></div></div>'+
-          '<button type="button" class="q-arw" data-a="prev" aria-label="Indicador anterior">'+tvIc('<path d="M15 18l-6-6 6-6"/>')+'</button><button type="button" class="q-arw" data-a="next" aria-label="Próximo indicador">'+tvIc('<path d="M9 18l6-6-6-6"/>')+'</button>'+
           '<div class="q-seg q-g" role="group" aria-label="Período"><button type="button" data-w="6">6 meses</button><button type="button" data-w="12">12 meses</button><button type="button" data-w="24">24 meses</button></div></div>'+
         '<section class="q-g q-cd q-flow" id="tvMain"></section>'+
         '<div class="q-row"><section class="q-g q-cd" id="tvDn"></section><div class="q-stk"><section class="q-g q-cd" id="tvA"></section><section class="q-g q-cd" id="tvB"></section></div></div></main>'+
-      '<aside class="q-side"><section class="q-g q-cd" id="tvHero"></section><section class="q-g q-cd q-tx" id="tvList"></section><div class="q-two"><section class="q-g q-cd" id="tvC"></section><section class="q-g q-cd" id="tvD"></section></div></aside>'+
+      '<aside class="q-side"><section class="q-g q-cd" id="tvHero"></section><section class="q-g q-cd q-tx" id="tvList"></section><section class="q-g q-cd q-trd" id="tvD"></section></aside>'+
     '</div>';
   document.body.appendChild(el);TVF.el=el;
   const pk=el.querySelector('#tvPk'),pop=v=>{pk.classList.toggle('q-op',v);pk.querySelector('.q-pb').setAttribute('aria-expanded',v)};
@@ -2882,6 +2885,64 @@ function tvSide(d,hi){
     const prev=i>0?items[i-1][1]:null,sub=pair?x[2]+(x[2]===1?' admissão · ':' admissões · ')+x[3]+(x[3]===1?' desligamento':' desligamentos'):series?(prev==null?'início do período':((x[1]-prev>=0?'+':'−')+d.fmt(Math.abs(x[1]-prev))+' no mês')):rate?fmtInt(d.base[i]||0)+' '+d.bunit:Math.round(Math.abs(x[1])/tot*100)+'% do total';
     return '<li class="'+(i===hi?'q-on':'')+'"><span class="q-ic'+(pos<2?' q-i'+pos:'')+'">'+tvE(series||pair?tvMo(x[0]):String(pos+1))+'</span><span class="q-n"><b>'+tvE(String(x[0]))+'</b><span>'+tvE(sub)+'</span></span><span class="q-v">'+tvE(fmt(x[1]))+'</span></li>'}).join('')+'</ul>';
 }
+/* rosca = OUTRO recorte do mesmo tema (pessoas por faixa, situação, geração…), nunca a repetição das barras */
+function tvMix(m,d){
+  const act=EMPS.filter(isActive),cnt=(l,f)=>l.filter(f).length,P='pessoas',yr=365.25*864e5;
+  const bands=(t,l,val,bs)=>({t,u:P,items:bs.map(b=>[b[0],cnt(l,e=>{const v=val(e);return v!=null&&v>=b[1]&&v<b[2]})])});
+  if(d.kind==='pair'||m==='turn')return {t:'Entradas e saídas',u:'movimentações',items:[['Admissões',S.adm],['Desligamentos',S.des]],pair:true};
+  if(m==='abs')return bands('Pessoas por dias de falta no mês',act,e=>e.faltas||0,[['Sem faltas',0,1],['1 dia',1,2],['2 a 3 dias',2,4],['4 dias ou mais',4,1e9]]);
+  if(m==='he')return bands('Pessoas por horas extras no mês',act,e=>e.he||0,[['Sem horas extras',0,.01],['Até 5 h',.01,5.01],['5 a 15 h',5.01,15.01],['Mais de 15 h',15.01,1e9]]);
+  if(m==='atr')return bands('Pessoas por atraso no mês',act.filter(e=>e.atr!=null),e=>e.atr,[['Sem atraso',0,1],['Até 30 min',1,31],['30 min a 2 h',31,121],['Mais de 2 h',121,1e9]]);
+  if(m==='bat'){const w=act.filter(e=>e.bat!=null);return {t:'Situação do ponto hoje',u:P,items:[['Batidas completas',cnt(w,e=>e.bat%2===0)],['Precisam de ajuste',cnt(w,e=>e.bat%2===1)]]}}
+  if(m==='bh'){const w=act.filter(e=>e.bh!=null);return {t:'Saldo do banco por pessoa',u:P,items:[['Saldo positivo',cnt(w,e=>e.bh>0)],['Zerado',cnt(w,e=>!e.bh)],['Saldo negativo',cnt(w,e=>e.bh<0)]]}}
+  if(m==='age'){const w=act.filter(e=>e.nasc),y=e=>e.nasc.getFullYear();return {t:'Gerações no quadro',u:P,items:[['Geração Z (1997+)',cnt(w,e=>y(e)>=1997)],['Millennials (1981–96)',cnt(w,e=>y(e)>=1981&&y(e)<1997)],['Geração X (1965–80)',cnt(w,e=>y(e)>=1965&&y(e)<1981)],['Boomers (até 1964)',cnt(w,e=>y(e)<1965)]]}}
+  if(m==='ten'){const w=act.filter(e=>!e.afk),c0=MONTHS.length?MONTHS[0].start:today;return {t:'Entradas recentes no quadro',u:P,items:[['Em experiência (até 90 dias)',cnt(w,e=>(today-e.adm)/864e5<=90)],['Admitidos em '+WIN+' meses',cnt(w,e=>(today-e.adm)/864e5>90&&e.adm>=c0)],['Antes do período',cnt(w,e=>e.adm<c0)]]}}
+  if(m==='fer'){const w=act.filter(e=>e.fv!=null);return {t:'Situação das férias',u:P,items:[['Em dia',cnt(w,e=>!(e.fv>0))],['Com férias vencidas',cnt(w,e=>e.fv>0)]]}}
+  if(m==='gen'){return {t:'Quadro por sexo',u:P,items:[['Mulheres',cnt(act,e=>/^f/i.test(String(e.sexo||'').trim()))],['Homens',cnt(act,e=>/^m/i.test(String(e.sexo||'').trim()))],['Não informado',cnt(act,e=>!/^[fm]/i.test(String(e.sexo||'').trim()))]]}}
+  if(m==='sal')return bands('Pessoas por faixa salarial',act.filter(e=>isFinite(e.sal)),e=>e.sal,[['Até R$ 2 mil',0,2000],['R$ 2 a 5 mil',2000,5000],['R$ 5 a 10 mil',5000,10000],['Acima de R$ 10 mil',10000,1e12]]);
+  /* contratos e quadro: pessoas por departamento */
+  const dp=[...DEPT].sort((a,b)=>b.active-a.active);return {t:'Quadro por departamento',u:P,items:dp.slice(0,3).map(x=>[x.name,x.active]).concat(dp.length>3?[['Outros',dp.slice(3).reduce((a,x)=>a+x.active,0)]]:[])};
+}
+/* histórico mês a mês do indicador (cruzando quem estava no quadro em cada mês) para a tendência; null = a fonte só traz o mês atual */
+function tvHist(m,d){
+  if(!HAS.adm||!MONTHS.length)return null;
+  const yr=365.25*864e5,inAt=(e,t)=>(e.afk||e.adm<=t)&&(!e.dem||e.dem>t);
+  const per=f=>MONTHS.map(M=>f(EMPS.filter(e=>inAt(e,M.end)),M.end));
+  const avg=(l,f)=>{const v=l.map(f).filter(x=>x!=null&&isFinite(x));return v.length?v.reduce((a,b)=>a+b,0)/v.length:null};
+  const lab=S.mo.map(mesAno);
+  if(m==='hc')return {lab,v:S.mo.map(o=>o.hc),fmt:fmtInt,t:'Quadro ativo'};
+  if(m==='mov')return {lab,v:S.mo.map(o=>o.adm-o.des),fmt:v=>(v>=0?'+':'−')+Math.abs(Math.round(v)),t:'Saldo de admissões e desligamentos',flat:true};
+  if(m==='turn')return {lab,v:S.mo.map(o=>o.rate),fmt:fmtPct,t:'Turnover mensal',pct:true};
+  if(m==='age'&&HAS.nasc)return {lab,v:per((l,t)=>avg(l,e=>e.nasc?(t-e.nasc)/yr:null)),fmt:v=>v.toLocaleString('pt-BR',{maximumFractionDigits:1})+' anos',t:'Idade média do quadro'};
+  if(m==='ten')return {lab,v:per((l,t)=>avg(l,e=>e.afk?null:(t-e.adm)/yr)),fmt:v=>v.toLocaleString('pt-BR',{maximumFractionDigits:1})+' anos',t:'Tempo médio de casa'};
+  if(m==='gen'&&HAS.sexo)return {lab,v:per(l=>{const w=l.filter(e=>String(e.sexo||'').trim());return w.length?w.filter(e=>/^f/i.test(String(e.sexo).trim())).length/w.length*100:null}),fmt:fmtPct,t:'Mulheres no quadro',pct:true};
+  if(m==='sal'&&HAS.sal)return {lab,v:per(l=>avg(l,e=>isFinite(e.sal)?e.sal:null)),fmt:v=>'R$ '+Math.round(v).toLocaleString('pt-BR'),t:'Salário médio do quadro',note:'com os salários atuais de quem estava em cada mês'};
+  if(m==='ctr'&&HAS.ctr){const top=(d.labels||[])[0];if(top)return {lab,v:per(l=>l.length?l.filter(e=>(e.ctr||'Não informado')===top).length/l.length*100:null),fmt:fmtPct,t:'Participação '+top,pct:true}}
+  return {lab,v:S.mo.map(o=>o.hc),fmt:fmtInt,t:'Quadro ativo',note:'a fonte só traz o mês atual deste indicador'};
+}
+/* reta de tendência (mínimos quadrados) projetada 3 meses à frente */
+function tvTrend(box,h){
+  const pts=h.v.map((v,i)=>[i,v]).filter(p=>p[1]!=null&&isFinite(p[1]));
+  if(pts.length<3){box.innerHTML='<div class="q-na">Histórico insuficiente para calcular a tendência</div>';return}
+  const n=pts.length,sx=pts.reduce((a,p)=>a+p[0],0),sy=pts.reduce((a,p)=>a+p[1],0),sxx=pts.reduce((a,p)=>a+p[0]*p[0],0),sxy=pts.reduce((a,p)=>a+p[0]*p[1],0);
+  const b=(n*sxy-sx*sy)/((n*sxx-sx*sx)||1),a=(sy-b*sx)/n,L=h.v.length,proj=a+b*(L-1+3),last=pts[n-1][1];
+  const fit=a+b*(L-1),dlt=proj-fit,rel=h.flat||h.pct?dlt:(fit?dlt/Math.abs(fit)*100:0),thr=h.pct?.2:h.flat?.5:1;
+  const dir=Math.abs(rel)<thr?0:rel>0?1:-1;
+  const txt=dir===0?'Estável':dir>0?'Tendência de alta':'Tendência de queda',chg=h.pct?(dlt>=0?'+':'−')+Math.abs(dlt).toLocaleString('pt-BR',{maximumFractionDigits:1})+' p.p.':h.flat?h.fmt(dlt):(rel>=0?'+':'−')+Math.abs(rel).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+  const [W,H]=tvSize(box.querySelector('.q-tg')),all=pts.map(p=>p[1]).concat([proj,a+b*(L-1)]),mx=Math.max(...all),mn=Math.min(...all),pad=(mx-mn)*.15||1,top=mx+pad,bot=mn-pad;
+  const X=i=>6+i/(L-1+3)*(W-12),Y=v=>8+(top-v)/(top-bot)*(H-26);
+  let path='';pts.forEach((p,k)=>{if(!k){path='M'+X(p[0])+' '+Y(p[1]);return}const q0=pts[k-1],m0=(X(q0[0])+X(p[0]))/2;path+=' C'+m0+' '+Y(q0[1])+' '+m0+' '+Y(p[1])+' '+X(p[0])+' '+Y(p[1])});
+  const lx=X(pts[n-1][0]),ly=Y(last),px=X(L-1+3),py=Y(proj),ax=X(0),fy=Y(a),ex=X(L-1+3),ey=Y(a+b*(L-1+3));
+  box.querySelector('.q-tk').innerHTML='<span class="q-tdir q-d'+(dir>0?'u':dir<0?'d':'s')+'">'+(dir>0?'▲':dir<0?'▼':'●')+' '+txt+'</span><span class="q-tch">'+tvE(chg)+' em 3 meses</span>';
+  box.querySelector('.q-tg').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><defs><linearGradient id="tvTA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2F6BFF" stop-opacity=".28"/><stop offset="1" stop-color="#2F6BFF" stop-opacity="0"/></linearGradient></defs>'+
+    '<path d="'+path+' L'+lx+' '+(H-18)+' L'+X(pts[0][0])+' '+(H-18)+'Z" fill="url(#tvTA)"/>'+
+    '<line x1="'+ax+'" y1="'+fy+'" x2="'+ex+'" y2="'+ey+'" stroke="var(--mu)" stroke-width="1" stroke-dasharray="2 4" opacity=".6"/>'+
+    '<path d="'+path+'" fill="none" stroke="#2F6BFF" stroke-width="2.5" stroke-linecap="round" style="filter:drop-shadow(0 4px 8px rgba(47,107,255,.5))"/>'+
+    '<line x1="'+lx+'" y1="'+ly+'" x2="'+px+'" y2="'+py+'" stroke="#2F6BFF" stroke-width="2.5" stroke-dasharray="5 5" stroke-linecap="round"/>'+
+    '<circle cx="'+lx+'" cy="'+ly+'" r="4.5" fill="#2F6BFF" stroke="#fff" stroke-width="2"/><circle cx="'+px+'" cy="'+py+'" r="4.5" fill="var(--gl)" stroke="#2F6BFF" stroke-width="2"/>'+
+    '<text x="'+X(0)+'" y="'+(H-3)+'" font-size="10.5" fill="var(--mu)">'+tvE(h.lab[0]||'')+'</text><text x="'+(lx-8)+'" y="'+(H-3)+'" font-size="10.5" fill="var(--mu)" text-anchor="end">'+tvE(h.lab[L-1]||'')+'</text><text x="'+(W-6)+'" y="'+(H-3)+'" font-size="10.5" fill="#2F6BFF" text-anchor="end">+3 meses</text></svg>';
+  box.querySelector('.q-tv').innerHTML='<b>'+tvE(h.fmt(last))+'</b><span>hoje</span><i>→</i><b class="q-pj">'+tvE(h.fmt(proj))+'</b><span>projeção</span>';
+}
 function tvRender(resizeOnly){
   if(!TVF.open||!TVF.el)return;
   const el=TVF.el,q=id=>el.querySelector('#'+id),d=screenData(SMETRIC);
@@ -2899,25 +2960,19 @@ function tvRender(resizeOnly){
   const main=q('tvMain'),n=(d.labels||[]).length,blank=(id,t)=>{q(id).innerHTML='<div class="q-ch"><h2>'+t+'</h2></div><div class="q-na">—</div>'};
   if(d.na||!n){
     main.innerHTML='<div class="q-ch"><h2>'+tvE(tvLabel())+'</h2></div><div class="q-na">'+tvE(d.na||'Sem dados no período')+'</div>';
-    ['tvDn','tvA','tvB','tvC','tvD','tvList','tvHero'].forEach(id=>blank(id,''));return;
+    ['tvDn','tvA','tvB','tvD','tvList','tvHero'].forEach(id=>blank(id,''));return;
   }
   if(TVF.hi<0||TVF.hi>=n)TVF.hi=d.kind==='rank'?d.values.indexOf(Math.max(...d.values)):n-1;
   main.innerHTML='<div class="q-ch"><h2>'+tvE(tvLabel())+'</h2><span class="q-lk">'+tvE(tvPer(SMETRIC))+'</span></div><div class="q-sum"><strong>'+tvE(d.big||'')+'</strong><span>'+tvE(d.sub||'')+'</span>'+(d.kind==='pair'?'<span class="q-leg"><i style="background:#2F6BFF"></i>Admissões<i style="background:var(--ink)"></i>Desligamentos</span>':'')+'</div><div class="q-chart"></div>';
   tvChart(main.querySelector('.q-chart'),d,TVF.hi,anim);
   const items=tvItems(d),pair=d.kind==='pair',series=d.kind==='series',rate=d.agg==='rate'&&Array.isArray(d.base);
-  /* composição do indicador (taxas e médias: a rosca mostra os valores absolutos por trás delas, nunca a soma de %) (rosca do design: preto, azul, azul claro…) */
-  let comp,ctitle;
-  if(pair){comp=[['Admissões',d.a.reduce((a,b)=>a+b,0)],['Desligamentos',d.b.reduce((a,b)=>a+b,0)]];ctitle='Entradas e saídas'}
-  else if(series){comp=DEPT.map(x=>[x.name,x.active]);ctitle='Quadro por departamento'}
-  else if(rate){comp=items.map((x,i)=>[x[0],Math.max(0,d.base[i]||0)]);ctitle=d.btitle}
-  else{comp=items.map(x=>[x[0],Math.max(0,x[1])]);ctitle='Composição'}
-  comp=comp.filter(x=>x[1]>0);if(!pair)comp.sort((a,b)=>b[1]-a[1]);if(comp.length>3)comp=comp.slice(0,3).concat([['Outros',comp.slice(3).reduce((a,b)=>a+b[1],0)]]);
-  const tot=comp.reduce((a,b)=>a+b[1],0)||1,cols0=['var(--ink)','#2F6BFF','var(--bl3)','var(--soft)'],cols=comp.map((t,i)=>pair?(t[0]==='Admissões'?'#2F6BFF':'var(--ink)'):cols0[i]),R=58,C=2*Math.PI*R,gp=comp.length>1?9:0;
+  /* rosca: outro recorte do tema (faixas de pessoas, situação, gerações…) */
+  const mx=tvMix(SMETRIC,d);let comp=mx.items.filter(x=>x[1]>0);const ctitle=mx.t;
+  const tot=comp.reduce((a,b)=>a+b[1],0)||1,cols0=['var(--ink)','#2F6BFF','var(--bl3)','var(--soft)'],cols=comp.map((t,i)=>mx.pair?(t[0]==='Admissões'?'#2F6BFF':'var(--ink)'):cols0[i%4]),R=58,C=2*Math.PI*R,gp=comp.length>1?9:0;
   let acc0=0,arcs='<circle cx="75" cy="75" r="58" fill="none" stroke="var(--trk)" stroke-width="18"/>';
   comp.forEach((t,i)=>{const len=Math.max(1,t[1]/tot*C-gp);arcs+='<circle cx="75" cy="75" r="58" fill="none" stroke="'+cols[i]+'" stroke-width="18" stroke-linecap="round" stroke-dasharray="'+len.toFixed(1)+' '+C.toFixed(1)+'" stroke-dashoffset="'+(-acc0).toFixed(1)+'" transform="rotate(-90 75 75)"/>';acc0+=t[1]/tot*C});
-  const csum=comp.reduce((a,b)=>a+b[1],0),ctot=pair||series||rate?fmtInt(csum):d.fmt(csum);
-  q('tvDn').innerHTML='<div class="q-ch"><h2>'+ctitle+'</h2>'+tvDots+'</div><div class="q-dnw"><div class="q-dn"><svg viewBox="0 0 150 150" role="img" aria-label="'+tvE(ctitle+': '+comp.map(t=>t[0]+' '+Math.round(t[1]/tot*100)+'%').join(', '))+'">'+arcs+'</svg><div class="q-c"><strong>'+tvE(ctot)+'</strong><span>'+(pair?'movimentações':series?'pessoas':'total')+'</span></div></div>'+
-    '<ul class="q-lg">'+comp.map((t,i)=>'<li><i style="background:'+cols[i]+'"></i><em>'+tvE(t[0])+'</em> <span>'+(rate||pair||series?fmtInt(t[1])+' · ':'')+Math.round(t[1]/tot*100)+'%</span></li>').join('')+'</ul>'+(comp.length?'':'<span class="q-lk">Nada registrado no período</span>')+'</div>';
+  q('tvDn').innerHTML='<div class="q-ch"><h2>'+tvE(ctitle)+'</h2>'+tvDots+'</div>'+(comp.length?'<div class="q-dnw"><div class="q-dn"><svg viewBox="0 0 150 150" role="img" aria-label="'+tvE(ctitle+': '+comp.map(t=>t[0]+' '+Math.round(t[1]/tot*100)+'%').join(', '))+'">'+arcs+'</svg><div class="q-c"><strong>'+fmtInt(comp.reduce((a,b)=>a+b[1],0))+'</strong><span>'+tvE(mx.u)+'</span></div></div>'+
+    '<ul class="q-lg">'+comp.map((t,i)=>'<li><i style="background:'+cols[i]+'"></i><em>'+tvE(t[0])+'</em><span>'+fmtInt(t[1])+' · '+Math.round(t[1]/tot*100)+'%</span></li>').join('')+'</ul></div>':'<div class="q-na">Nada registrado</div>');
   /* dois cartões (Receitas/Despesas do design): maior e média, pico e variação, ou admissões e desligamentos */
   const vals=items.map(x=>x[1]),imax=vals.indexOf(Math.max(...vals)),avg=vals.reduce((a,b)=>a+b,0)/n;
   const card=(id,t,v,sub,pl,blue)=>{q(id).innerHTML='<div class="q-ch"><h2>'+t+'</h2>'+tvDots+'</div><div class="q-kv"><div><strong>'+tvE(v)+'</strong><small>'+tvE(sub)+'</small></div>'+(pl?'<span class="q-pl'+(blue?' q-b':'')+'">'+tvE(pl)+'</span>':'')+'</div>'};
@@ -2930,13 +2985,10 @@ function tvRender(resizeOnly){
   else{const sum=vals.reduce((a,b)=>a+b,0),sh=sum?Math.round(vals[imax]/sum*100):0;
     card('tvA','Maior valor',d.fmt(vals[imax]),String(items[imax][0]),sh+'% do total',true);
     card('tvB','Total',d.fmt(sum),'somando '+n+' '+(d.nd?'grupos':'departamentos')+(DEPT.length>n&&!d.nd?' (os '+n+' maiores de '+DEPT.length+')':''),n+' itens',false)}
-  /* rodapé direito: departamentos (avatares) e tendência */
-  const dp=[...DEPT].sort((a,b)=>b.active-a.active),pc=['var(--ink)','#2F6BFF','var(--soft)'],px=['var(--inkx)','#fff','var(--tx)'];
-  q('tvC').innerHTML='<h3>Departamentos</h3><div class="q-ppl">'+dp.slice(0,3).map((x,i)=>'<span style="background:'+pc[i]+';color:'+px[i]+'" title="'+tvE(x.name+': '+x.active)+'">'+tvE(tvAbbr(x.name))+'</span>').join('')+(dp.length>3?'<em>+'+(dp.length-3)+'</em>':'')+'</div>';
-  /* tendência = série no tempo: o próprio indicador quando é mensal; nos rankings, o quadro ativo mês a mês */
-  const hcS=HAS.adm&&S.mo.length>1?S.mo.map(o=>o.hc):null;
-  q('tvD').innerHTML='<h3>'+(pair?'Saldo mês a mês':series?'Tendência':hcS?'Quadro ativo':'Distribuição')+'</h3><div class="q-spk"></div>';
-  tvSpark(q('tvD').querySelector('.q-spk'),pair?d.a.map((a,i)=>a-d.b[i]):series?vals:(hcS||vals));
+  /* tendência: histórico do indicador cruzado com o quadro de cada mês + projeção de 3 meses */
+  const h=tvHist(SMETRIC,d);
+  if(h){q('tvD').innerHTML='<div class="q-ch"><h2>Tendência</h2><span class="q-lk">'+tvE(h.t)+'</span></div><div class="q-tk"></div><div class="q-tg"></div><div class="q-tv"></div>'+(h.note?'<small class="q-tn">'+tvE(h.note)+'</small>':'');tvTrend(q('tvD'),h)}
+  else q('tvD').innerHTML='<div class="q-ch"><h2>Tendência</h2></div><div class="q-na">A fonte não informa a data de admissão, então não há histórico.</div>';
   tvSide(d,TVF.hi);
 }
 {const ds0=drawScreen;drawScreen=function(){ds0();if(TVF.open)tvRender()}}
