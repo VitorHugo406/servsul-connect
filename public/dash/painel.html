@@ -1265,7 +1265,7 @@ function stats(list,months){
   }
   const adm=mo.reduce((a,o)=>a+o.adm,0),des=mo.reduce((a,o)=>a+o.des,0),avg=mo.reduce((a,o)=>a+o.ef,0)/(mo.length||1);
   const turnover=mo.reduce((a,o)=>a+o.rate,0);
-  return {mo,active,folha,salN,faltas,he,adm,des,avg,turnover,turnYear:turnover*12/(months.length||1),abs:plan?lost/plan*100:0,plan};
+  return {mo,active,folha,salN,faltas,he,adm,des,avg,turnover,turnYear:turnover*12/(months.length||1),abs:plan?lost/plan*100:0,plan,lost};
 }
 function recalc(){
   MONTHS=monthsOf(WIN);S=stats(EMPS,MONTHS);
@@ -2012,19 +2012,24 @@ let SMETRIC='abs';
 const SM=[['abs','Absenteísmo'],['hc','Headcount'],['mov','Movimentação'],['turn','Turnover'],['he','Horas extras'],['bat','Batidas ímpares'],['atr','Atrasos'],['bh','Banco de horas'],['age','Faixa etária'],['ten','Tempo de casa'],['ctr','Contratos'],['fer','Férias vencidas'],['gen','Diversidade'],['sal','Salário médio']];
 function screenData(m){
   {const xr=screenDataX(m);if(xr)return xr}
-  const top=(arr,key,fmt,title,big,sub)=>{
+  /* base = valor absoluto por trás de cada taxa (dias de falta, desligamentos…) e geral = taxa da empresa toda;
+     a tela cheia usa os dois para não somar nem tirar média simples de porcentagens */
+  const top=(arr,key,fmt,title,big,sub,base)=>{
     const a=arr.slice().sort((x,y)=>y[key]-x[key]).slice(0,8);
-    return {kind:'rank',title,big,sub,labels:a.map(d=>d.name),values:a.map(d=>d[key]),fmt};
+    const r={kind:'rank',title,big,sub,labels:a.map(d=>d.name),values:a.map(d=>d[key]),fmt};
+    if(base)Object.assign(r,{agg:'rate',base:a.map(d=>base.f(d)),bunit:base.unit,btitle:base.title,overall:base.overall});
+    return r;
   };
   if(m==='abs'){if(!HAS.faltas)return {na:'A fonte conectada não informa a coluna Faltas.',title:'Absenteísmo'};
-    return top(DEPT,'abs',fmtPct,'Absenteísmo por departamento',fmtPct(S.abs),fmtInt(S.faltas)+' dias de falta ÷ '+fmtInt(S.plan)+' dias úteis previstos no mês')}
+    return top(DEPT,'abs',fmtPct,'Absenteísmo por departamento',fmtPct(S.abs),fmtInt(S.lost)+' dias de falta ÷ '+fmtInt(S.plan)+' dias úteis previstos no mês',{f:d=>d.lost,unit:'dias de falta',title:'Dias de falta por departamento',overall:S.abs})}
   if(m==='turn'&&!HAS.adm)return {na:'A fonte conectada não informa a data de admissão.',title:'Turnover'};
   if(m==='turn'&&!HAS.dem)return {na:'A fonte conectada não informa a data de desligamento.',title:'Turnover'};
-  if(m==='turn')return top(DEPT,'turnYear',fmtPct,'Turnover anualizado por departamento',fmtPct(S.turnYear),S.adm+' admissões e '+S.des+' desligamentos em '+WIN+' meses · efetivo médio '+fmtInt(Math.round(S.avg)));
+  if(m==='turn')return top(DEPT,'turnYear',fmtPct,'Turnover anualizado por departamento',fmtPct(S.turnYear),S.adm+' admissões e '+S.des+' desligamentos em '+WIN+' meses · efetivo médio '+fmtInt(Math.round(S.avg)),{f:d=>d.adm+d.des,unit:'admissões + desligamentos',title:'Movimentações por departamento',overall:S.turnYear});
   if(m==='he'){if(!HAS.he)return {na:'A fonte conectada não informa a coluna Horas Extras.',title:'Horas extras'};
-    const arr=DEPT.map(d=>({name:d.name,v:d.active?d.he/d.active:0}));
+    const arr=DEPT.map(d=>({name:d.name,v:d.active?d.he/d.active:0,t:d.he}));
     const a=arr.sort((x,y)=>y.v-x.v).slice(0,8);
-    return {kind:'rank',title:'Horas extras por pessoa no mês',big:fmtInt(S.he)+' h',sub:(S.active?(S.he/S.active).toLocaleString('pt-BR',{maximumFractionDigits:1}):'0')+' h por pessoa em média',labels:a.map(d=>d.name),values:a.map(d=>d.v),fmt:v=>v.toLocaleString('pt-BR',{maximumFractionDigits:1})+' h'}}
+    return {kind:'rank',title:'Horas extras por pessoa no mês',big:fmtInt(S.he)+' h',sub:(S.active?(S.he/S.active).toLocaleString('pt-BR',{maximumFractionDigits:1}):'0')+' h por pessoa em média',labels:a.map(d=>d.name),values:a.map(d=>d.v),fmt:v=>v.toLocaleString('pt-BR',{maximumFractionDigits:1})+' h',
+      agg:'rate',base:a.map(d=>d.t),bunit:'h extras no mês',btitle:'Horas extras por departamento',overall:S.active?S.he/S.active:0}}
   if(!HAS.adm&&(m==='hc'||m==='mov'))return {na:'A fonte conectada não informa a data de admissão.',title:m==='hc'?'Headcount':'Movimentação'};
   const lab=S.mo.map(mesAno);
   if(m==='hc'){const d=S.mo[S.mo.length-1].hc-S.mo[0].hc;
@@ -2690,9 +2695,9 @@ try{TVF.dark=localStorage.getItem('ewv.tvTheme')==='dark'}catch(e){}
 {
   const st=document.createElement('style');
   st.textContent=
-  '#tvFull{--bg:#EEF2FA;--gl:rgba(255,255,255,.52);--gb:rgba(255,255,255,.85);--gs:0 12px 40px rgba(30,70,170,.10),inset 0 1px 0 rgba(255,255,255,.95);--tx:#0B0B0F;--tx2:#3A3D47;--mu:#5B5F6B;--ln:rgba(11,11,15,.07);--ink:#0B0B0F;--inkx:#fff;--bl:#2F6BFF;--bl2:#6E9BFF;--bl3:#A9BFEF;--soft:#DCE5F7;--hat1:rgba(47,107,255,.22);--hat2:rgba(255,255,255,.55);--hbd:rgba(47,107,255,.25);--btn:rgba(255,255,255,.6);--bbd:rgba(11,11,15,.08);--trk:rgba(11,11,15,.06);--gw:1;--logo:.06;'+
+  '#tvFull{--bg:#EEF2FA;--gl:rgba(255,255,255,.52);--gb:rgba(255,255,255,.85);--gs:0 12px 40px rgba(30,70,170,.10),inset 0 1px 0 rgba(255,255,255,.95);--tx:#0B0B0F;--tx2:#3A3D47;--mu:#5B5F6B;--ln:rgba(11,11,15,.07);--ink:#0B0B0F;--inkx:#fff;--bl:#2F6BFF;--bl2:#6E9BFF;--bl3:#A9BFEF;--soft:#DCE5F7;--hat1:rgba(47,107,255,.22);--hat2:rgba(255,255,255,.55);--hbd:rgba(47,107,255,.25);--btn:rgba(255,255,255,.6);--bbd:rgba(11,11,15,.08);--trk:rgba(11,11,15,.06);--trk2:rgba(11,11,15,.22);--gw:1;--logo:.06;'+
     'position:fixed;inset:0;z-index:300;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;overflow:hidden;box-sizing:border-box;padding:20px;display:flex;flex-direction:column;gap:18px}'+
-  '#tvFull.q-dk{--bg:#0C0E14;--gl:rgba(28,31,40,.55);--gb:rgba(255,255,255,.08);--gs:0 12px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);--tx:#F3F4F6;--tx2:#C9CDD6;--mu:#9AA0AD;--ln:rgba(255,255,255,.07);--ink:#F3F4F6;--inkx:#0B0B0F;--bl3:#3B4A70;--soft:#2A3040;--hat1:rgba(110,155,255,.22);--hat2:rgba(255,255,255,.03);--hbd:rgba(110,155,255,.25);--btn:rgba(255,255,255,.06);--bbd:rgba(255,255,255,.1);--trk:rgba(255,255,255,.07);--gw:.45;--logo:.05}'+
+  '#tvFull.q-dk{--bg:#0C0E14;--gl:rgba(28,31,40,.55);--gb:rgba(255,255,255,.08);--gs:0 12px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);--tx:#F3F4F6;--tx2:#C9CDD6;--mu:#9AA0AD;--ln:rgba(255,255,255,.07);--ink:#F3F4F6;--inkx:#0B0B0F;--bl3:#3B4A70;--soft:#2A3040;--hat1:rgba(110,155,255,.22);--hat2:rgba(255,255,255,.03);--hbd:rgba(110,155,255,.25);--btn:rgba(255,255,255,.06);--bbd:rgba(255,255,255,.1);--trk:rgba(255,255,255,.07);--trk2:rgba(255,255,255,.28);--gw:.45;--logo:.05}'+
   '#tvFull *{box-sizing:border-box}#tvFull[hidden]{display:none}#tvFull.q-idle{cursor:none}#tvFull .q-fade{transition:opacity .3s}#tvFull.q-idle .q-fade{opacity:0;pointer-events:none}'+
   '#tvFull button{font-family:inherit;cursor:pointer}'+
   '#tvFull .q-glow{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;opacity:var(--gw)}'+
@@ -2713,7 +2718,7 @@ try{TVF.dark=localStorage.getItem('ewv.tvTheme')==='dark'}catch(e){}
   '#tvFull .q-seg{display:flex;gap:4px;margin-left:auto;padding:4px;border-radius:12px}#tvFull .q-seg button{min-height:32px;padding:0 14px;border:0;border-radius:9px;background:transparent;color:var(--tx2);font-size:12.5px;font-weight:500}#tvFull .q-seg button[aria-pressed=true]{background:var(--bl);color:#fff;box-shadow:0 8px 24px rgba(47,107,255,.45)}'+
   '#tvFull .q-cd{border-radius:22px;padding:20px 22px;min-height:0;display:flex;flex-direction:column}#tvFull .q-ch{display:flex;justify-content:space-between;align-items:center;gap:10px}#tvFull h2{margin:0;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#tvFull .q-lk{font-size:12px;color:var(--mu);white-space:nowrap}'+
   '#tvFull .q-dots{width:32px;height:32px;border-radius:10px;border:1px solid var(--bbd);background:var(--btn);color:var(--mu);display:grid;place-items:center;font-size:12px;letter-spacing:1px;flex:none}'+
-  '#tvFull .q-flow{flex:1.35}#tvFull .q-sum{display:flex;align-items:baseline;gap:10px;margin-top:4px;min-width:0}#tvFull .q-sum strong{font-size:26px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}#tvFull .q-sum span{font-size:12px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+  '#tvFull .q-flow{flex:1.35}#tvFull .q-sum{display:flex;align-items:baseline;gap:10px;margin-top:4px;min-width:0}#tvFull .q-sum strong{font-size:26px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}#tvFull .q-sum .q-leg{margin-left:auto;display:flex;align-items:center;gap:6px;flex:none;color:var(--tx2)}#tvFull .q-leg i{width:8px;height:8px;border-radius:4px;margin-left:8px}#tvFull .q-sum span{font-size:12px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
   '#tvFull .q-chart{flex:1;min-height:0;margin-top:10px;position:relative}#tvFull svg{display:block;overflow:visible}#tvFull .q-chart>svg{width:100%;height:100%}'+
   '#tvFull .q-row{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}#tvFull .q-stk{display:flex;flex-direction:column;gap:16px;min-height:0}#tvFull .q-stk .q-cd{flex:1;padding:18px 22px;gap:10px;justify-content:space-between}'+
   '#tvFull .q-dnw{flex:1;min-height:0;display:flex;align-items:center;gap:18px;margin-top:12px}#tvFull .q-dn{position:relative;height:100%;max-height:150px;aspect-ratio:1;flex:none}#tvFull .q-dn svg{width:100%;height:100%;filter:drop-shadow(0 6px 14px rgba(47,107,255,.35))}#tvFull .q-dn .q-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}#tvFull .q-dn .q-c strong{font-size:20px;font-weight:600}#tvFull .q-dn .q-c span{font-size:11px;color:var(--mu)}'+
@@ -2723,7 +2728,7 @@ try{TVF.dark=localStorage.getItem('ewv.tvTheme')==='dark'}catch(e){}
   '#tvFull .q-card{position:relative;overflow:hidden;border-radius:20px;padding:20px;min-height:170px;color:#fff;margin-top:14px;background:linear-gradient(140deg,rgba(47,107,255,.92) 0%,rgba(28,70,200,.88) 55%,rgba(11,20,60,.92) 100%);border:1px solid rgba(255,255,255,.45);box-shadow:0 18px 40px rgba(47,107,255,.40),inset 0 1px 0 rgba(255,255,255,.5);display:flex;flex-direction:column;justify-content:space-between;gap:18px}'+
   '#tvFull .q-card::before{content:"";position:absolute;width:220px;height:220px;right:-70px;top:-90px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.45),rgba(255,255,255,0) 70%)}#tvFull .q-card>*{position:relative}#tvFull .q-ct{display:flex;justify-content:space-between;align-items:flex-start}#tvFull .q-cp{width:34px;height:26px;border-radius:6px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.8);display:grid;place-items:center;font-size:11px;font-weight:700}'+
   '#tvFull .q-plus{width:36px;height:36px;border-radius:18px;border:0;background:#fff;color:#0B0B0F;display:grid;place-items:center}#tvFull .q-plus svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}'+
-  '#tvFull .q-card .q-k{font-size:11px;color:rgba(255,255,255,.85)}#tvFull .q-card .q-v{font-size:30px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#tvFull .q-cf{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:rgba(255,255,255,.9);letter-spacing:.08em}#tvFull .q-cf span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+  '#tvFull .q-card .q-k{font-size:11px;color:rgba(255,255,255,.85)}#tvFull .q-card .q-v{font-size:30px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#tvFull .q-cf span:last-child{flex:none}#tvFull .q-cf{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:rgba(255,255,255,.9);letter-spacing:.08em}#tvFull .q-cf span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
   '#tvFull .q-tx{flex:1}#tvFull .q-ul{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;overflow:auto;scrollbar-width:none;flex:1;min-height:0}#tvFull .q-ul li{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--ln)}#tvFull .q-ul li:last-child{border-bottom:0}'+
   '#tvFull .q-ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none;background:var(--btn);border:1px solid var(--bbd);color:var(--tx)}#tvFull .q-ic.q-i0{background:var(--ink);color:var(--inkx);border:0}#tvFull .q-ic.q-i1{background:var(--bl);color:#fff;border:0;box-shadow:0 6px 16px rgba(47,107,255,.4)}'+
   '#tvFull .q-ul .q-n{flex:1;min-width:0;font-size:13px;line-height:1.35}#tvFull .q-ul .q-n b{display:block;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#tvFull .q-ul .q-n span{font-size:11px;color:var(--mu)}#tvFull .q-ul .q-v{font-size:13px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}#tvFull .q-ul li.q-on .q-n b{font-weight:600}'+
@@ -2813,6 +2818,9 @@ const tvSize=n=>{const r=n.getBoundingClientRect();return [Math.max(120,r.width)
 const tvAbbr=t=>String(t).split(/[\s/]+/).filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase()||'·';
 const tvLabel=()=>(SM.find(x=>x[0]===SMETRIC)||[0,''])[1];
 const tvDots='<span class="q-dots" aria-hidden="true">···</span>';
+/* período real de cada indicador (os rankings são fotos do mês/dia atual, não dos últimos N meses) */
+const tvPer=m=>({abs:'Mês atual',he:'Mês atual',atr:'Mês atual',bat:'Hoje',bh:'Saldo atual',turn:'Últimos '+WIN+' meses · anualizado',hc:'Últimos '+WIN+' meses',mov:'Últimos '+WIN+' meses'})[m]||'Quadro ativo hoje';
+const tvMo=t=>String(t).slice(0,3);
 /* itens do indicador: [rótulo, valor] (para admissões/desligamentos o valor é o saldo) */
 function tvItems(d){
   if(d.kind==='pair')return d.labels.map((l,i)=>[l,d.a[i]-d.b[i],d.a[i],d.b[i]]);
@@ -2831,19 +2839,19 @@ function tvChart(box,d,hi,anim){
   const padL=Math.max(...Array.from({length:TK+1},(_,k)=>String(tick(mn+(top-mn)*k/TK)).length))*6.4+14,padT=34,padB=24;
   const x0=padL,x1=W,yT=padT,yB=H-padB,Y=v=>yB-(v-mn)/(top-mn||1)*(yB-yT),gap=n>12?8:14,slot=(x1-x0)/n,cx=i=>x0+slot*(i+.5);
   let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+tvE(d.title||'')+'"><defs>'+
-    '<pattern id="tvHP" width="11.3" height="11.3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="11.3" height="11.3" fill="var(--hat2)"/><rect width="4.2" height="11.3" fill="var(--hat1)"/></pattern>'+
+    '<pattern id="tvHP" width="11.3" height="11.3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="11.3" height="11.3" fill="var(--hat2)"/><rect width="4.2" height="11.3" fill="var(--hat1)"/></pattern><pattern id="tvHP2" width="11.3" height="11.3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="11.3" height="11.3" fill="var(--hat2)"/><rect width="4.2" height="11.3" fill="var(--trk2)"/></pattern>'+
     '<linearGradient id="tvHL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6E9BFF"/><stop offset="1" stop-color="#2F6BFF"/></linearGradient>'+
     '<filter id="tvGF" x="-80%" y="-40%" width="260%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#2F6BFF" flood-opacity=".55"/><feDropShadow dx="0" dy="0" stdDeviation="18" flood-color="#2F6BFF" flood-opacity=".3"/></filter></defs>';
   for(let k=0;k<=TK;k++){const v=mn+(top-mn)*k/TK;s+='<text x="0" y="'+(Y(v)+4)+'" fill="var(--mu)" font-size="'+fs+'">'+tvE(tick(v))+'</text>'}
   const every=Math.max(1,Math.ceil(n*40/(x1-x0)));
   const lab=i=>(i%every===0||d.kind==='rank'||i===hi)?'<text x="'+cx(i)+'" y="'+(H-4)+'" fill="'+(i===hi?'var(--tx)':'var(--mu)')+'" font-size="'+fs+'" font-weight="500" text-anchor="middle">'+tvE(String(d.labels[i]).slice(0,Math.max(4,Math.floor(slot/6.6))))+'</text>':'';
   const bub=(x,y,t)=>{const w=t.length*6.6+16;return '<rect x="'+(x-w/2)+'" y="'+(y-30)+'" width="'+w+'" height="22" rx="8" fill="var(--ink)"/><text x="'+x+'" y="'+(y-15)+'" fill="var(--inkx)" font-size="11" font-weight="600" text-anchor="middle">'+tvE(t)+'</text>'};
-  const bar=(x,w,v,on,i)=>{const h=Math.max(Math.min(28,w),yB-Y(v)),y=yB-h,r=Math.min(14,w/2);return '<rect class="'+(anim?'q-grow':'')+'"'+(anim?' style="animation-delay:'+(i*45)+'ms"':'')+' x="'+(x+.5)+'" y="'+(y+.5)+'" width="'+(w-1)+'" height="'+(h-1)+'" rx="'+r+'" fill="'+(on?'url(#tvHL)':'url(#tvHP)')+'" stroke="'+(on?'rgba(255,255,255,.7)':'var(--hbd)')+'"'+(on?' filter="url(#tvGF)"':'')+'/>'};
+  const bar=(x,w,v,on,i,k)=>{if(k){const h=Math.max(Math.min(28,w),yB-Y(v)),y=yB-h,r=Math.min(14,w/2);return '<rect class="'+(anim?'q-grow':'')+'"'+(anim?' style="animation-delay:'+(i*45)+'ms"':'')+' x="'+(x+.5)+'" y="'+(y+.5)+'" width="'+(w-1)+'" height="'+(h-1)+'" rx="'+r+'" fill="'+(on?'var(--ink)':'url(#tvHP2)')+'" stroke="'+(on?'none':'var(--bbd)')+'"/>'}const h=Math.max(Math.min(28,w),yB-Y(v)),y=yB-h,r=Math.min(14,w/2);return '<rect class="'+(anim?'q-grow':'')+'"'+(anim?' style="animation-delay:'+(i*45)+'ms"':'')+' x="'+(x+.5)+'" y="'+(y+.5)+'" width="'+(w-1)+'" height="'+(h-1)+'" rx="'+r+'" fill="'+(on?'url(#tvHL)':'url(#tvHP)')+'" stroke="'+(on?'rgba(255,255,255,.7)':'var(--hbd)')+'"'+(on?' filter="url(#tvGF)"':'')+'/>'};
   const topOf=v=>yB-Math.max(Math.min(28,1e9),yB-Y(v));
   let on='';
   if(pair){
     const bw=Math.min(26,(slot-gap)/2-2);
-    for(let i=0;i<n;i++){const b1=bar(cx(i)-bw-2,bw,d.a[i],i===hi,i),b2=bar(cx(i)+2,bw,d.b[i],false,i);if(i===hi)on=b1+b2;else s+=b1+b2;s+=lab(i)}
+    for(let i=0;i<n;i++){const b1=bar(cx(i)-bw-2,bw,d.a[i],i===hi,i),b2=bar(cx(i)+2,bw,d.b[i],i===hi,i,1);if(i===hi)on=b1+b2;else s+=b1+b2;s+=lab(i)}
     s+=on+bub(cx(hi),Math.min(topOf(d.a[hi]),topOf(d.b[hi]))-8,'+'+d.a[hi]+' / −'+d.b[hi]);
   }else{
     const bw=Math.min(56,slot-gap);
@@ -2862,17 +2870,17 @@ function tvSpark(box,vals){
 }
 /* cartão azul (item em destaque) e lista de detalhamento: acompanham a barra escolhida */
 function tvSide(d,hi){
-  const el=TVF.el,q=id=>el.querySelector('#'+id),items=tvItems(d),n=items.length,pair=d.kind==='pair',series=d.kind==='series';
+  const el=TVF.el,q=id=>el.querySelector('#'+id),items=tvItems(d),n=items.length,pair=d.kind==='pair',series=d.kind==='series',rate=d.agg==='rate'&&Array.isArray(d.base);
   const fmt=v=>pair?(v>0?'+':v<0?'−':'')+Math.abs(v):d.fmt(v),it=items[hi];
   q('tvHero').innerHTML='<div class="q-ch"><h2>'+(series||pair?'Mês em destaque':'Em destaque')+'</h2><span class="q-lk">'+(hi+1)+' de '+n+'</span></div>'+
-    '<div class="q-card"><div class="q-ct"><span class="q-cp">'+tvE(tvAbbr(it[0]))+'</span><button type="button" class="q-plus" data-a="next" title="Próximo indicador" aria-label="Próximo indicador">'+tvIc('<path d="M9 18l6-6-6-6"/>')+'</button></div>'+
-    '<div><div class="q-k">'+tvE(tvLabel())+'</div><div class="q-v">'+tvE(pair?'+'+it[2]+' / −'+it[3]:d.fmt(it[1]))+'</div></div>'+
-    '<div class="q-cf"><span>'+tvE(String(it[0]).toUpperCase())+(pair?' · SALDO '+fmt(it[1]):'')+'</span><span>'+tvE(d.big||'')+'</span></div></div>';
+    '<div class="q-card"><div class="q-ct"><span class="q-cp">'+tvE(series||pair?tvMo(it[0]):String(items.map(x=>x[1]).filter(v=>v>it[1]).length+1)+'º')+'</span><button type="button" class="q-plus" data-a="next" title="Próximo indicador" aria-label="Próximo indicador">'+tvIc('<path d="M9 18l6-6-6-6"/>')+'</button></div>'+
+    '<div><div class="q-k">'+tvE(tvLabel())+'</div><div class="q-v">'+tvE(pair?'+'+it[2]+' / −'+it[3]:d.fmt(it[1]))+'</div>'+(rate?'<div class="q-k">'+fmtInt(d.base[hi]||0)+' '+tvE(d.bunit)+'</div>':pair?'<div class="q-k">saldo '+fmt(it[1])+'</div>':'')+'</div>'+
+    '<div class="q-cf"><span>'+tvE(String(it[0]).toUpperCase())+'</span><span>'+(rate?'GERAL '+tvE(d.fmt(d.overall||0)):series||pair?tvE(d.big||''):Math.round(Math.abs(it[1])/(items.reduce((a,b)=>a+Math.abs(b[1]),0)||1)*100)+'% DO TOTAL')+'</span></div></div>';
   const rows=(series||pair)?items.map((x,i)=>[x,i]).reverse():items.map((x,i)=>[x,i]).sort((a,b)=>b[0][1]-a[0][1]);
   const tot=items.reduce((a,b)=>a+Math.abs(b[1]),0)||1;
   q('tvList').innerHTML='<div class="q-ch"><h2>Detalhamento</h2><span class="q-lk">'+n+' '+(series||pair?'meses':'itens')+' ›</span></div><ul class="q-ul">'+rows.map(([x,i],pos)=>{
-    const prev=i>0?items[i-1][1]:null,sub=pair?x[2]+' admissões · '+x[3]+' desligamentos':series?(prev==null?'início do período':((x[1]-prev>=0?'+':'−')+d.fmt(Math.abs(x[1]-prev))+' no mês')):Math.round(Math.abs(x[1])/tot*100)+'% do total';
-    return '<li class="'+(i===hi?'q-on':'')+'"><span class="q-ic'+(pos<2?' q-i'+pos:'')+'">'+tvE(series||pair?tvAbbr(x[0]):String(pos+1))+'</span><span class="q-n"><b>'+tvE(String(x[0]))+'</b><span>'+tvE(sub)+'</span></span><span class="q-v">'+tvE(fmt(x[1]))+'</span></li>'}).join('')+'</ul>';
+    const prev=i>0?items[i-1][1]:null,sub=pair?x[2]+(x[2]===1?' admissão · ':' admissões · ')+x[3]+(x[3]===1?' desligamento':' desligamentos'):series?(prev==null?'início do período':((x[1]-prev>=0?'+':'−')+d.fmt(Math.abs(x[1]-prev))+' no mês')):rate?fmtInt(d.base[i]||0)+' '+d.bunit:Math.round(Math.abs(x[1])/tot*100)+'% do total';
+    return '<li class="'+(i===hi?'q-on':'')+'"><span class="q-ic'+(pos<2?' q-i'+pos:'')+'">'+tvE(series||pair?tvMo(x[0]):String(pos+1))+'</span><span class="q-n"><b>'+tvE(String(x[0]))+'</b><span>'+tvE(sub)+'</span></span><span class="q-v">'+tvE(fmt(x[1]))+'</span></li>'}).join('')+'</ul>';
 }
 function tvRender(resizeOnly){
   if(!TVF.open||!TVF.el)return;
@@ -2894,32 +2902,41 @@ function tvRender(resizeOnly){
     ['tvDn','tvA','tvB','tvC','tvD','tvList','tvHero'].forEach(id=>blank(id,''));return;
   }
   if(TVF.hi<0||TVF.hi>=n)TVF.hi=d.kind==='rank'?d.values.indexOf(Math.max(...d.values)):n-1;
-  main.innerHTML='<div class="q-ch"><h2>'+tvE(tvLabel())+'</h2><span class="q-lk">'+(d.kind==='pair'?'Admissões · Desligamentos':'Últimos '+WIN+' meses')+' ›</span></div><div class="q-sum"><strong>'+tvE(d.big||'')+'</strong><span>'+tvE(d.sub||'')+'</span></div><div class="q-chart"></div>';
+  main.innerHTML='<div class="q-ch"><h2>'+tvE(tvLabel())+'</h2><span class="q-lk">'+tvE(tvPer(SMETRIC))+'</span></div><div class="q-sum"><strong>'+tvE(d.big||'')+'</strong><span>'+tvE(d.sub||'')+'</span>'+(d.kind==='pair'?'<span class="q-leg"><i style="background:#2F6BFF"></i>Admissões<i style="background:var(--ink)"></i>Desligamentos</span>':'')+'</div><div class="q-chart"></div>';
   tvChart(main.querySelector('.q-chart'),d,TVF.hi,anim);
-  const items=tvItems(d),pair=d.kind==='pair',series=d.kind==='series';
-  /* composição do indicador (rosca do design: preto, azul, azul claro…) */
+  const items=tvItems(d),pair=d.kind==='pair',series=d.kind==='series',rate=d.agg==='rate'&&Array.isArray(d.base);
+  /* composição do indicador (taxas e médias: a rosca mostra os valores absolutos por trás delas, nunca a soma de %) (rosca do design: preto, azul, azul claro…) */
   let comp,ctitle;
   if(pair){comp=[['Admissões',d.a.reduce((a,b)=>a+b,0)],['Desligamentos',d.b.reduce((a,b)=>a+b,0)]];ctitle='Entradas e saídas'}
   else if(series){comp=DEPT.map(x=>[x.name,x.active]);ctitle='Quadro por departamento'}
+  else if(rate){comp=items.map((x,i)=>[x[0],Math.max(0,d.base[i]||0)]);ctitle=d.btitle}
   else{comp=items.map(x=>[x[0],Math.max(0,x[1])]);ctitle='Composição'}
-  comp=comp.filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);if(comp.length>3)comp=comp.slice(0,3).concat([['Outros',comp.slice(3).reduce((a,b)=>a+b[1],0)]]);
-  const tot=comp.reduce((a,b)=>a+b[1],0)||1,cols=['var(--ink)','#2F6BFF','var(--bl3)','var(--soft)'],R=58,C=2*Math.PI*R,gp=comp.length>1?9:0;
+  comp=comp.filter(x=>x[1]>0);if(!pair)comp.sort((a,b)=>b[1]-a[1]);if(comp.length>3)comp=comp.slice(0,3).concat([['Outros',comp.slice(3).reduce((a,b)=>a+b[1],0)]]);
+  const tot=comp.reduce((a,b)=>a+b[1],0)||1,cols0=['var(--ink)','#2F6BFF','var(--bl3)','var(--soft)'],cols=comp.map((t,i)=>pair?(t[0]==='Admissões'?'#2F6BFF':'var(--ink)'):cols0[i]),R=58,C=2*Math.PI*R,gp=comp.length>1?9:0;
   let acc0=0,arcs='<circle cx="75" cy="75" r="58" fill="none" stroke="var(--trk)" stroke-width="18"/>';
   comp.forEach((t,i)=>{const len=Math.max(1,t[1]/tot*C-gp);arcs+='<circle cx="75" cy="75" r="58" fill="none" stroke="'+cols[i]+'" stroke-width="18" stroke-linecap="round" stroke-dasharray="'+len.toFixed(1)+' '+C.toFixed(1)+'" stroke-dashoffset="'+(-acc0).toFixed(1)+'" transform="rotate(-90 75 75)"/>';acc0+=t[1]/tot*C});
-  const ctot=pair||series?fmtInt(tot):d.fmt(comp.reduce((a,b)=>a+b[1],0));
+  const csum=comp.reduce((a,b)=>a+b[1],0),ctot=pair||series||rate?fmtInt(csum):d.fmt(csum);
   q('tvDn').innerHTML='<div class="q-ch"><h2>'+ctitle+'</h2>'+tvDots+'</div><div class="q-dnw"><div class="q-dn"><svg viewBox="0 0 150 150" role="img" aria-label="'+tvE(ctitle+': '+comp.map(t=>t[0]+' '+Math.round(t[1]/tot*100)+'%').join(', '))+'">'+arcs+'</svg><div class="q-c"><strong>'+tvE(ctot)+'</strong><span>'+(pair?'movimentações':series?'pessoas':'total')+'</span></div></div>'+
-    '<ul class="q-lg">'+comp.map((t,i)=>'<li><i style="background:'+cols[i]+'"></i><em>'+tvE(t[0])+'</em> <span>'+Math.round(t[1]/tot*100)+'%</span></li>').join('')+'</ul></div>';
+    '<ul class="q-lg">'+comp.map((t,i)=>'<li><i style="background:'+cols[i]+'"></i><em>'+tvE(t[0])+'</em> <span>'+(rate||pair||series?fmtInt(t[1])+' · ':'')+Math.round(t[1]/tot*100)+'%</span></li>').join('')+'</ul>'+(comp.length?'':'<span class="q-lk">Nada registrado no período</span>')+'</div>';
   /* dois cartões (Receitas/Despesas do design): maior e média, pico e variação, ou admissões e desligamentos */
   const vals=items.map(x=>x[1]),imax=vals.indexOf(Math.max(...vals)),avg=vals.reduce((a,b)=>a+b,0)/n;
   const card=(id,t,v,sub,pl,blue)=>{q(id).innerHTML='<div class="q-ch"><h2>'+t+'</h2>'+tvDots+'</div><div class="q-kv"><div><strong>'+tvE(v)+'</strong><small>'+tvE(sub)+'</small></div>'+(pl?'<span class="q-pl'+(blue?' q-b':'')+'">'+tvE(pl)+'</span>':'')+'</div>'};
-  if(pair){const A=d.a.reduce((a,b)=>a+b,0),B=d.b.reduce((a,b)=>a+b,0),pc=x=>Math.round(x/((A+B)||1)*100)+'%';card('tvA','Admissões',fmtInt(A),'pico em '+items[d.a.indexOf(Math.max(...d.a))][0],pc(A),true);card('tvB','Desligamentos',fmtInt(B),'saldo '+(A-B>=0?'+':'−')+Math.abs(A-B)+' em '+WIN+' meses',pc(B),false)}
+  if(pair){const A=d.a.reduce((a,b)=>a+b,0),B=d.b.reduce((a,b)=>a+b,0);const pm=x=>(x/WIN).toLocaleString('pt-BR',{maximumFractionDigits:1})+'/mês';card('tvA','Admissões',fmtInt(A),'pico em '+items[d.a.indexOf(Math.max(...d.a))][0],pm(A),true);card('tvB','Desligamentos',fmtInt(B),'saldo '+(A-B>=0?'+':'−')+Math.abs(A-B)+' em '+WIN+' meses',pm(B),false)}
   else if(series){const dl=vals[n-1]-vals[0],pc=vals[0]?Math.round(dl/vals[0]*100):0;card('tvA','Pico do período',d.fmt(vals[imax]),'em '+items[imax][0],'máx.',true);card('tvB','Variação',(dl>=0?'+':'−')+d.fmt(Math.abs(dl)),'de '+d.fmt(vals[0])+' para '+d.fmt(vals[n-1]),(pc>=0?'+':'')+pc+'%',false)}
-  else{const pc=avg?Math.round((vals[imax]/avg-1)*100):0;card('tvA','Maior valor',d.fmt(vals[imax]),String(items[imax][0]),(pc>=0?'+':'')+pc+'%',true);card('tvB','Média',d.fmt(avg),vals.filter(v=>v>avg).length+' de '+n+' acima da média',n+' itens',false)}
+  else if(rate){const o=d.overall||0,isP=d.fmt===fmtPct,df=vals[imax]-o,up=vals.filter(v=>v>o).length,
+      pl=isP?(df>=0?'+':'−')+Math.abs(df).toLocaleString('pt-BR',{maximumFractionDigits:1})+' p.p.':(o?(df>=0?'+':'−')+Math.abs(Math.round(df/o*100))+'%':'—');
+    card('tvA','Maior valor',d.fmt(vals[imax]),String(items[imax][0])+' · vs geral da empresa',pl,true);
+    card('tvB','Geral da empresa',d.fmt(o),up+' de '+n+' departamentos acima',n+' deptos',false)}
+  else{const sum=vals.reduce((a,b)=>a+b,0),sh=sum?Math.round(vals[imax]/sum*100):0;
+    card('tvA','Maior valor',d.fmt(vals[imax]),String(items[imax][0]),sh+'% do total',true);
+    card('tvB','Total',d.fmt(sum),'somando '+n+' '+(d.nd?'grupos':'departamentos')+(DEPT.length>n&&!d.nd?' (os '+n+' maiores de '+DEPT.length+')':''),n+' itens',false)}
   /* rodapé direito: departamentos (avatares) e tendência */
   const dp=[...DEPT].sort((a,b)=>b.active-a.active),pc=['var(--ink)','#2F6BFF','var(--soft)'],px=['var(--inkx)','#fff','var(--tx)'];
   q('tvC').innerHTML='<h3>Departamentos</h3><div class="q-ppl">'+dp.slice(0,3).map((x,i)=>'<span style="background:'+pc[i]+';color:'+px[i]+'" title="'+tvE(x.name+': '+x.active)+'">'+tvE(tvAbbr(x.name))+'</span>').join('')+(dp.length>3?'<em>+'+(dp.length-3)+'</em>':'')+'</div>';
-  q('tvD').innerHTML='<h3>Tendência</h3><div class="q-spk"></div>';
-  tvSpark(q('tvD').querySelector('.q-spk'),pair?d.a.map((a,i)=>a-d.b[i]):vals);
+  /* tendência = série no tempo: o próprio indicador quando é mensal; nos rankings, o quadro ativo mês a mês */
+  const hcS=HAS.adm&&S.mo.length>1?S.mo.map(o=>o.hc):null;
+  q('tvD').innerHTML='<h3>'+(pair?'Saldo mês a mês':series?'Tendência':hcS?'Quadro ativo':'Distribuição')+'</h3><div class="q-spk"></div>';
+  tvSpark(q('tvD').querySelector('.q-spk'),pair?d.a.map((a,i)=>a-d.b[i]):series?vals:(hcS||vals));
   tvSide(d,TVF.hi);
 }
 {const ds0=drawScreen;drawScreen=function(){ds0();if(TVF.open)tvRender()}}
@@ -3961,7 +3978,7 @@ $('#pbody').addEventListener('click',e=>{
 });
 $('#pbody').addEventListener('change',e=>{const t=e.target;if(t.dataset.metricsel){SMETRIC=t.value;drawScreen();renderPanel(true);return}if(t.dataset.winsel){WIN=+t.value;recalc();drawScreen();renderPanel(true);greet();return}if(t.dataset.repf){REP.f[t.dataset.repf]=t.checked;if(t.dataset.repf==='emp')renderPanel(true)}else if(t.dataset.repd!=null)REP.d[t.dataset.repd]=t.checked;else if(t.dataset.repm){repInit();REP.m[t.dataset.repm]=t.checked}});
 // telão alterna sozinho na visão geral
-setInterval(()=>{if(FOCUS.kind!=='overview'||document.hidden||!screenCtx)return;let i=SM.findIndex(s=>s[0]===SMETRIC);for(let k=0;k<SM.length;k++){i=(i+1)%SM.length;const dd=screenData(SM[i][0]);if(!dd.na)break}SMETRIC=SM[i][0];drawScreen()},9000);
+setInterval(()=>{if(FOCUS.kind!=='overview'||document.hidden||!screenCtx||(typeof TVF!=='undefined'&&TVF.open))return;let i=SM.findIndex(s=>s[0]===SMETRIC);for(let k=0;k<SM.length;k++){i=(i+1)%SM.length;const dd=screenData(SM[i][0]);if(!dd.na)break}SMETRIC=SM[i][0];drawScreen()},9000);
 
 /* busca */
 $('#q').addEventListener('input',e=>{
@@ -5687,7 +5704,8 @@ const SMX=[['bat','Batidas ímpares'],['atr','Atrasos'],['bh','Banco de horas'],
 function screenDataX(m){
   if(!SMX.some(s=>s[0]===m))return null;
   const act=EMPS.filter(isActive),dp=()=>DEPT.map(d=>({name:d.name,a:d.act}));
-  const rk=(arr,title,big,sub,fmt,nd)=>{const a=arr.slice(0,8);return {kind:'rank',title,big,sub,labels:a.map(x=>x.name),values:a.map(x=>x.v),fmt,nd:!!nd}};
+  const rk=(arr,title,big,sub,fmt,nd,base)=>{const a=arr.slice(0,8),r={kind:'rank',title,big,sub,labels:a.map(x=>x.name),values:a.map(x=>x.v),fmt,nd:!!nd};
+    if(base)Object.assign(r,{agg:'rate',base:a.map(x=>x.b||0),bunit:base.unit,btitle:base.title,overall:base.overall});return r};
   const sortD=a=>a.sort((x,y)=>y.v-x.v);
   const na=(t,msg)=>({na:msg,title:t});
   if(m==='bat'){if(!HAS.bat)return na('Batidas ímpares','Sua fonte de ponto não traz a quantidade de batidas do dia.');
@@ -5695,7 +5713,7 @@ function screenDataX(m){
     return rk(sortD(dp().map(d=>({name:d.name,v:d.a.filter(e=>e.bat!=null&&e.bat%2===1).length}))),'Batidas ímpares hoje por departamento',fmtInt(odd.length),'de '+fmtInt(w.length)+' pessoas com ponto hoje ('+(w.length?(odd.length/w.length*100).toLocaleString('pt-BR',{maximumFractionDigits:1}):'0')+'%) · precisam de ajuste',fmtInt)}
   if(m==='atr'){if(!HAS.atr)return na('Atrasos','Sua fonte de ponto não traz os minutos de atraso.');
     const tot=act.reduce((a,e)=>a+(e.atr||0),0),n=act.filter(e=>e.atr!=null).length;
-    return rk(sortD(dp().map(d=>{const w=d.a.filter(e=>e.atr!=null);return {name:d.name,v:w.length?w.reduce((a,e)=>a+e.atr,0)/w.length:0}})),'Atraso médio por pessoa no mês',(tot/60).toLocaleString('pt-BR',{maximumFractionDigits:1})+' h',fmtInt(act.filter(e=>e.atr>0).length)+' pessoas com atraso · '+(n?(tot/n).toLocaleString('pt-BR',{maximumFractionDigits:0}):'0')+' min por pessoa',v=>Math.round(v)+' min')}
+    return rk(sortD(dp().map(d=>{const w=d.a.filter(e=>e.atr!=null),t=w.reduce((a,e)=>a+e.atr,0);return {name:d.name,v:w.length?t/w.length:0,b:t}})),'Atraso médio por pessoa no mês',(tot/60).toLocaleString('pt-BR',{maximumFractionDigits:1})+' h',fmtInt(act.filter(e=>e.atr>0).length)+' pessoas com atraso · '+(n?(tot/n).toLocaleString('pt-BR',{maximumFractionDigits:0}):'0')+' min por pessoa',v=>Math.round(v)+' min',false,{unit:'min de atraso no mês',title:'Minutos de atraso por departamento',overall:n?tot/n:0})}
   if(m==='bh'){if(!HAS.bh)return na('Banco de horas','Sua fonte de ponto não traz o saldo do banco de horas.');
     const pos=act.reduce((a,e)=>a+Math.max(0,e.bh||0),0),neg=act.reduce((a,e)=>a+Math.min(0,e.bh||0),0);
     return rk(sortD(dp().map(d=>({name:d.name,v:d.a.reduce((a,e)=>a+Math.max(0,e.bh||0),0)}))),'Horas positivas no banco por departamento',fmtInt(Math.round(pos))+' h',fmtInt(act.filter(e=>e.bh<0).length)+' pessoas no negativo ('+fmtInt(Math.round(neg))+' h) · saldo líquido '+fmtInt(Math.round(pos+neg))+' h',v=>fmtInt(Math.round(v))+' h')}
@@ -5712,11 +5730,12 @@ function screenDataX(m){
     const w=act.filter(e=>e.fv>0);
     return rk(sortD(dp().map(d=>({name:d.name,v:d.a.filter(e=>e.fv>0).length}))),'Pessoas com férias vencidas por departamento',fmtInt(w.length),fmtInt(w.reduce((a,e)=>a+e.fv,0))+' dias vencidos no total · risco de passivo',fmtInt)}
   if(m==='gen'){if(!HAS.sexo)return na('Diversidade','Sua fonte não traz o sexo das pessoas.');
-    const pf=l=>{const k=l.filter(e=>/^f/i.test(String(e.sexo||'').trim())).length;return l.length?k/l.length*100:0};
-    return rk(sortD(dp().map(d=>({name:d.name,v:pf(d.a)}))),'Mulheres por departamento',fmtPct(pf(act)),'do quadro total é feminino · '+fmtInt(act.filter(e=>/^f/i.test(String(e.sexo||'').trim())).length)+' pessoas',fmtPct)}
+    const pf=l=>{const w=l.filter(e=>String(e.sexo||'').trim()),k=w.filter(e=>/^f/i.test(String(e.sexo).trim())).length;return w.length?k/w.length*100:0};
+    const nf=l=>l.filter(e=>/^f/i.test(String(e.sexo||'').trim())).length;
+    return rk(sortD(dp().map(d=>({name:d.name,v:pf(d.a),b:nf(d.a)}))),'Mulheres por departamento',fmtPct(pf(act)),'das pessoas com sexo informado · '+fmtInt(act.filter(e=>/^f/i.test(String(e.sexo||'').trim())).length)+' pessoas',fmtPct,false,{unit:'mulheres',title:'Mulheres por departamento',overall:pf(act)})}
   if(m==='sal'){if(!HAS.sal)return na('Salário médio','Sua fonte não traz salários.');
     const av=l=>{const w=l.filter(e=>isFinite(e.sal));return w.length?w.reduce((a,e)=>a+e.sal,0)/w.length:0},f=v=>'R$ '+Math.round(v).toLocaleString('pt-BR');
-    return rk(sortD(dp().map(d=>({name:d.name,v:av(d.a)}))),'Salário médio por departamento',f(av(act)),'média geral do quadro ativo',f)}
+    return rk(sortD(dp().map(d=>({name:d.name,v:av(d.a),b:d.a.filter(e=>isFinite(e.sal)).length}))),'Salário médio por departamento',f(av(act)),'média geral do quadro ativo',f,false,{unit:'pessoas com salário',title:'Pessoas com salário por departamento',overall:av(act)})}
   return null;
 }
 
