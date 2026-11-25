@@ -55,7 +55,7 @@ export function TemplatesDialog({ open, onOpenChange, onDone }: { open: boolean;
   const [deptOn, setDeptOn] = useState(false);
   const [deptMap, setDeptMap] = useState<DeptMap>({});
   const people = usePeople();
-  const hasDeptDb = useDbColumn('task_labels', 'default_assignees');
+  const hasDeptDb = useDbColumn('task_labels', 'default_sectors');
   const choose = (t: BoardTemplate) => { setPick(t); setName(t.name); setDeptMap({}); };
   const s = templateSummary(pick);
   const L = useMemo(() => templateLabels(pick), [pick]);

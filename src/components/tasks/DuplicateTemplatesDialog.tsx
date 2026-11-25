@@ -19,7 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import type { CustomField } from '@/hooks/useBoardExtras';
 import { useDbColumn } from '@/hooks/useDbFeature';
 import { DEPTS, isDept } from '@/lib/templateDepts';
-import { DeptAssignees, saveDeptAssignees, usePeople, type DeptMap } from '@/components/tasks/DeptAssignees';
+import { DeptAssignees, expandPicks, saveDeptAssignees, usePeople, type DeptMap } from '@/components/tasks/DeptAssignees';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -51,9 +51,9 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
   const [base, setBase] = useState(() => ymdOf(new Date())); // without a reference field: dates count from this day
   const targets = useMemo(() => columns.filter((c) => !c.is_template_column), [columns]);
   // Responsáveis por departamento (labels of the template cards; dept names first, then any other label in use)
-  const hasDeptDb = useDbColumn('task_labels', 'default_assignees');
+  const hasDeptDb = useDbColumn('task_labels', 'default_sectors');
   const people = usePeople();
-  const [labs, setLabs] = useState<{ id: string; name: string; color: string; default_assignees: string[] | null }[]>([]);
+  const [labs, setLabs] = useState<{ id: string; name: string; color: string; default_assignees: string[] | null; default_sectors: string[] | null }[]>([]);
   const [tplLab, setTplLab] = useState<Map<string, string[]>>(new Map());
   const [deptOn, setDeptOn] = useState(false);
   const [deptMap, setDeptMap] = useState<DeptMap>({});
@@ -81,19 +81,19 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
       }
       if (hasDeptDb && ts.length) {
         const [lb, la, cc] = await Promise.all([
-          db.from('task_labels').select('id,name,color,default_assignees,created_at').eq('board_id', boardId).order('created_at'),
+          db.from('task_labels').select('id,name,color,default_assignees,default_sectors,created_at').eq('board_id', boardId).order('created_at'),
           db.from('task_label_assignments').select('task_id,label_id').in('task_id', ts.map((x) => x.id)),
           db.from('task_board_columns').select('template_auto_assign').eq('id', column.id).maybeSingle(),
         ]);
         if (!live) return;
         const used = new Set(((la.data || []) as { label_id: string }[]).map((r) => r.label_id));
-        const all = ((lb.data || []) as { id: string; name: string; color: string; default_assignees: string[] | null }[]).filter((l) => used.has(l.id));
+        const all = ((lb.data || []) as { id: string; name: string; color: string; default_assignees: string[] | null; default_sectors: string[] | null }[]).filter((l) => used.has(l.id));
         // departments first (in the department order), then the other labels in use
         all.sort((a, b) => (isDept(a.name) ? 0 : 1) - (isDept(b.name) ? 0 : 1) || (isDept(a.name) && isDept(b.name) ? Object.keys(DEPTS).indexOf(a.name) - Object.keys(DEPTS).indexOf(b.name) : 0));
         const m = new Map<string, string[]>();
         for (const r of (la.data || []) as { task_id: string; label_id: string }[]) m.set(r.task_id, [...(m.get(r.task_id) || []), r.label_id]);
         setLabs(all); setTplLab(m); setDeptOn(!!cc.data?.template_auto_assign);
-        setDeptMap(Object.fromEntries(all.filter((l) => isDept(l.name) || l.default_assignees?.length).map((l) => [l.name, l.default_assignees || []])));
+        setDeptMap(Object.fromEntries(all.filter((l) => isDept(l.name) || l.default_assignees?.length || l.default_sectors?.length).map((l) => [l.name, [...(l.default_assignees || []), ...(l.default_sectors || []).map((x) => 's:' + x)]])));
       }
       if (!live) return;
       setVals(v);
@@ -123,7 +123,7 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
     if (!deptOn) return [] as string[];
     const mine = tplLab.get(t.id) || [];
     const out: string[] = [];
-    for (const l of deptLabs) if (mine.includes(l.id)) for (const p of deptMap[l.name] || []) if (!out.includes(p)) out.push(p);
+    for (const l of deptLabs) if (mine.includes(l.id)) for (const p of expandPicks(deptMap[l.name] || [], people)) if (!out.includes(p)) out.push(p);
     return out;
   };
   const whoOf = (t: Tpl) => t.assigned_to || deptPeople(t)[0] || null;
