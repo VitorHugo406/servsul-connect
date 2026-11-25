@@ -596,17 +596,21 @@
 .ew .ewx-bpast { opacity: .62; }
 
 /* Tour: smoother spotlight (glides between controls), soft pulse, tap ripple and card motion */
-.ew #sp { transition: left .6s cubic-bezier(.22, 1, .36, 1), top .6s cubic-bezier(.22, 1, .36, 1), width .6s cubic-bezier(.22, 1, .36, 1), height .6s cubic-bezier(.22, 1, .36, 1), border-radius .6s cubic-bezier(.22, 1, .36, 1), opacity .35s ease, box-shadow .4s ease; }
+/* tour spotlight: the veil + hole live on #spc (canvas, tweened in tour.ts); #sp is only the pulse ring (no giant shadow, no layout transitions) */
+.ew #spc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.ew #sp { box-shadow: none; outline: 0; transition: opacity .25s ease; will-change: auto; }
+/* background animations stop while the tour runs, so the phone only paints the tour */
+.ew #phone.tour .view *, .ew #phone.tour #room * { animation-play-state: paused !important; }
 .ew #sp.instant { transition: none; }
 .ew #sp::after { content: ''; position: absolute; inset: -2px; border-radius: inherit; border: 2px solid rgba(255, 255, 255, .55); opacity: 0; pointer-events: none; }
-.ew #sp.pulse:not(.nt)::after { animation: ewx-sp-pulse 1.6s ease-out .2s 2; }
+.ew #sp.pulse:not(.nt)::after { animation: ewx-sp-pulse 1.6s ease-out .7s 2; }
 @keyframes ewx-sp-pulse { 0% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.08); } }
 .ew #fg { transition: transform .75s cubic-bezier(.22, 1, .36, 1), opacity .3s; }
 .ew #fg::after { content: ''; position: absolute; inset: -7px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .8); opacity: 0; }
 .ew #fg.tap::after { animation: ewx-fg-ripple .55s ease-out; }
 @keyframes ewx-fg-ripple { 0% { opacity: .9; transform: scale(.6); } 100% { opacity: 0; transform: scale(1.9); } }
-.ew #tc { transition: opacity .35s ease, transform .5s cubic-bezier(.22, 1, .36, 1), top .55s cubic-bezier(.22, 1, .36, 1); }
-.ew #tc.hide { opacity: 0; transform: translate3d(0, 14px, 0) scale(.98); }
+.ew #tc { top: 0; transform: translate3d(0, var(--ty, 40vh), 0); will-change: transform, opacity; transition: opacity .35s ease, transform .55s cubic-bezier(.22, 1, .36, 1); }
+.ew #tc.hide { opacity: 0; transform: translate3d(0, calc(var(--ty, 40vh) + 14px), 0) scale(.98); }
 @media (prefers-reduced-motion: reduce) { .ew #sp, .ew #fg, .ew #tc { transition: opacity .2s; } .ew #sp.pulse::after, .ew #fg.tap::after { animation: none; } }
 .ew button.ewx-dl { background: none !important; border: 0; padding: 0; font: inherit; color: inherit; text-decoration: underline; font-weight: 600; cursor: pointer; }
 

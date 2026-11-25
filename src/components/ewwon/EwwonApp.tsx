@@ -1499,7 +1499,7 @@ export default function EwwonApp() {
           <div><b>{ban?.title}</b><small>{ban?.body}</small></div>
         </div>
         <div id="tut" className={tourOn ? '' : 'off'}>
-          <div id="sp" className="nt" /><div id="fg" />
+          <canvas id="spc" aria-hidden="true" /><div id="sp" className="nt" /><div id="fg" />
           <div id="tc" className="hide">
             <div className="tp"><i id="tpb" /></div><small id="tn" />
             <img className="lg" id="tlg" src="/ewwon/img/logo-mark.png" alt="" />

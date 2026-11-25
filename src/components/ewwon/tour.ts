@@ -89,7 +89,7 @@ export function runTour(ref: MutableRefObject<TourController | null>, onEnd: () 
     { ui: { tab: 0 }, t: 'Tudo pronto!', d: 'Você já sabe usar o ewvon. Para rever este tour, abra o menu e toque em Ver tutorial.', next: 'Começar a usar', logo: true },
   ];
 
-  let ti = 0, tk = 0, lastSig = '', spT = 0, spv = 0;
+  let ti = 0, tk = 0, lastSig = '', spv = 0;
   let sg: { l: number; t: number; w: number; h: number; r: number } | null = null;
 
   function applyUI(u: Step['ui']) {
@@ -100,29 +100,66 @@ export function runTour(ref: MutableRefObject<TourController | null>, onEnd: () 
     if (!u.room && ro) c.closeRoom();
     if (!!u.drawer !== c.drawerOpen()) c.setDrawer(!!u.drawer);
   }
-  // The spotlight glides (position, size and corners animate) from one control to the next
-  // instead of fading out, jumping and fading in again.
+  // The spotlight glides from one control to the next. It is drawn on ONE canvas (dark veil with a rounded hole
+  // and a thin outline) and tweened with requestAnimationFrame: the old version animated left/top/width/height of
+  // an element with a 2400px box-shadow, which repainted the whole screen every frame and stuttered on phones.
+  // #sp is only the pulse ring now, moved into place (no transition) when the hole arrives.
+  const cv = $('#spc') as HTMLCanvasElement | null, cx = cv ? cv.getContext('2d') : null;
+  type R = { l: number; t: number; w: number; h: number; r: number };
+  let curR: R | null = null, raf = 0;
+  const center = (): R => ({ l: phone.offsetWidth / 2, t: phone.offsetHeight / 2, w: 0, h: 0, r: 28 });
+  function draw(r: R) {
+    if (!cv || !cx) return;
+    const W = phone.offsetWidth, H = phone.offsetHeight, d = Math.min(2, window.devicePixelRatio || 1);
+    if (cv.width !== Math.round(W * d) || cv.height !== Math.round(H * d)) { cv.width = Math.round(W * d); cv.height = Math.round(H * d); }
+    cx.setTransform(d, 0, 0, d, 0, 0);
+    cx.globalCompositeOperation = 'source-over';
+    cx.clearRect(0, 0, W, H);
+    cx.fillStyle = 'rgba(3,3,5,.78)';
+    cx.fillRect(0, 0, W, H);
+    if (r.w > 1 && r.h > 1) {
+      const rr = Math.min(r.r, r.w / 2, r.h / 2);
+      cx.beginPath();
+      // manual rounded rectangle (older Android WebViews have no ctx.roundRect)
+      const x = r.l, y = r.t, w = r.w, h = r.h;
+      cx.moveTo(x + rr, y); cx.arcTo(x + w, y, x + w, y + h, rr); cx.arcTo(x + w, y + h, x, y + h, rr); cx.arcTo(x, y + h, x, y, rr); cx.arcTo(x, y, x + w, y, rr); cx.closePath();
+      cx.globalCompositeOperation = 'destination-out'; cx.fill();
+      cx.globalCompositeOperation = 'source-over';
+      cx.lineWidth = 1.5; cx.strokeStyle = 'rgba(255,255,255,.6)'; cx.stroke();
+    }
+  }
+  const ease = (x: number) => 1 - Math.pow(1 - x, 4);
   function place(el: Element | null, pad?: number[], rad?: number) {
-    window.clearTimeout(spT);
     if (!el) sg = null;
     else {
       const r = rel(el), p = pad || [8, 8, 8, 8];
       sg = { l: r.l - p[3], t: r.t - p[0], w: r.w + p[1] + p[3], h: r.h + p[0] + p[2], r: rad || parseFloat(getComputedStyle(el).borderRadius) + 8 || 24 };
     }
-    const apply = () => {
-      if (!sg) { sp.classList.add('nt'); Object.assign(sp.style, { left: phone.offsetWidth / 2 + 'px', top: phone.offsetHeight / 2 + 'px', width: '0px', height: '0px', borderRadius: '28px' }); }
-      else { sp.classList.remove('nt'); Object.assign(sp.style, { left: sg.l + 'px', top: sg.t + 'px', width: sg.w + 'px', height: sg.h + 'px', borderRadius: sg.r + 'px' }); }
-      sp.style.opacity = '1';
+    const to: R = sg ? { ...sg } : center();
+    // pulse ring: hidden while the hole travels, then shown at the destination
+    sp.style.opacity = '0';
+    if (sg) { sp.classList.remove('nt'); Object.assign(sp.style, { left: sg.l + 'px', top: sg.t + 'px', width: sg.w + 'px', height: sg.h + 'px', borderRadius: sg.r + 'px' }); } else sp.classList.add('nt');
+    cancelAnimationFrame(raf);
+    const from = curR || (spv ? to : center());
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const t0 = performance.now(), D = !spv || reduce ? 0 : 600;
+    const step = (now: number) => {
+      const k = D ? Math.min(1, (now - t0) / D) : 1, e = ease(k);
+      curR = { l: from.l + (to.l - from.l) * e, t: from.t + (to.t - from.t) * e, w: from.w + (to.w - from.w) * e, h: from.h + (to.h - from.h) * e, r: from.r + (to.r - from.r) * e };
+      draw(curR);
+      if (k < 1) raf = requestAnimationFrame(step); else if (sg) sp.style.opacity = '1';
     };
-    if (!spv) { sp.classList.add('instant'); apply(); void sp.offsetWidth; sp.classList.remove('instant'); } else apply();
+    raf = requestAnimationFrame(step);
     spv = 1;
   }
+  const onResize = () => { if (curR) draw(curR); };
+  window.addEventListener('resize', onResize);
   function placeCard(pos?: 'bottom') {
     const H = phone.offsetHeight, h = tc.offsetHeight;
     let top: number;
     if (!sg || pos === 'bottom') top = pos === 'bottom' ? H - h - 24 : (H - h) / 2;
     else top = sg.t + sg.h / 2 < H * 0.5 ? sg.t + sg.h + 16 : sg.t - h - 16;
-    tc.style.top = cl(top, 12, H - h - 12) + 'px';
+    tc.style.setProperty('--ty', cl(top, 12, H - h - 12) + 'px');
   }
   async function show(i: number, fwd: boolean) {
     const my = ++tk, s = S[i];
@@ -177,5 +214,5 @@ export function runTour(ref: MutableRefObject<TourController | null>, onEnd: () 
   nb.onclick = next; bb.onclick = back; kb.onclick = end;
   C().setDrawer(false);
   const t0 = window.setTimeout(() => void show(0, true), 500);
-  return () => { window.clearTimeout(t0); tk++; nb.onclick = null; bb.onclick = null; kb.onclick = null; if (!ended) { ended = true; fg.style.opacity = '0'; } };
+  return () => { window.removeEventListener('resize', onResize); cancelAnimationFrame(raf); window.clearTimeout(t0); tk++; nb.onclick = null; bb.onclick = null; kb.onclick = null; if (!ended) { ended = true; fg.style.opacity = '0'; } };
 }
