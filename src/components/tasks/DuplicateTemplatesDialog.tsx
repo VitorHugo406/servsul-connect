@@ -17,6 +17,9 @@ import { Input } from '@/components/ui/input';
 import { Sel } from '@/components/ui/Sel';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { CustomField } from '@/hooks/useBoardExtras';
+import { useDbColumn } from '@/hooks/useDbFeature';
+import { DEPTS, isDept } from '@/lib/templateDepts';
+import { DeptAssignees, saveDeptAssignees, usePeople, type DeptMap } from '@/components/tasks/DeptAssignees';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -47,6 +50,13 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
   const [own, setOwn] = useState(true);            // each card in its own column (template_target_column)
   const [base, setBase] = useState(() => ymdOf(new Date())); // without a reference field: dates count from this day
   const targets = useMemo(() => columns.filter((c) => !c.is_template_column), [columns]);
+  // Responsáveis por departamento (labels of the template cards; dept names first, then any other label in use)
+  const hasDeptDb = useDbColumn('task_labels', 'default_assignee');
+  const people = usePeople();
+  const [labs, setLabs] = useState<{ id: string; name: string; color: string; default_assignee: string | null }[]>([]);
+  const [tplLab, setTplLab] = useState<Map<string, string[]>>(new Map());
+  const [deptOn, setDeptOn] = useState(false);
+  const [deptMap, setDeptMap] = useState<DeptMap>({});
 
   useEffect(() => {
     if (!open) return;
@@ -69,13 +79,29 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
         const { data: fv } = await db.from('task_field_values').select('task_id,field_id,value').in('task_id', ts.map((x) => x.id));
         for (const r of (fv || []) as { field_id: string; value: unknown }[]) { const fd = fs.find((x) => x.id === r.field_id); if (fd && fd.type !== 'date' && v[r.field_id] == null && r.value != null && r.value !== '') v[r.field_id] = r.value; }
       }
+      if (hasDeptDb && ts.length) {
+        const [lb, la, cc] = await Promise.all([
+          db.from('task_labels').select('id,name,color,default_assignee,created_at').eq('board_id', boardId).order('created_at'),
+          db.from('task_label_assignments').select('task_id,label_id').in('task_id', ts.map((x) => x.id)),
+          db.from('task_board_columns').select('template_auto_assign').eq('id', column.id).maybeSingle(),
+        ]);
+        if (!live) return;
+        const used = new Set(((la.data || []) as { label_id: string }[]).map((r) => r.label_id));
+        const all = ((lb.data || []) as { id: string; name: string; color: string; default_assignee: string | null }[]).filter((l) => used.has(l.id));
+        // departments first (in the department order), then the other labels in use
+        all.sort((a, b) => (isDept(a.name) ? 0 : 1) - (isDept(b.name) ? 0 : 1) || (isDept(a.name) && isDept(b.name) ? Object.keys(DEPTS).indexOf(a.name) - Object.keys(DEPTS).indexOf(b.name) : 0));
+        const m = new Map<string, string[]>();
+        for (const r of (la.data || []) as { task_id: string; label_id: string }[]) m.set(r.task_id, [...(m.get(r.task_id) || []), r.label_id]);
+        setLabs(all); setTplLab(m); setDeptOn(!!cc.data?.template_auto_assign);
+        setDeptMap(Object.fromEntries(all.filter((l) => isDept(l.name) || l.default_assignee).map((l) => [l.name, l.default_assignee || ''])));
+      }
       if (!live) return;
       setVals(v);
       setTarget((cur) => cur || targets.find((x) => !x.is_conclusion)?.id || targets[0]?.id || '');
       setLoading(false);
     })();
     return () => { live = false; };
-  }, [open, boardId, column.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, boardId, column.id, hasDeptDb]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dateFields = fields.filter((f) => f.type === 'date');
   const textFields = fields.filter((f) => f.type === 'text' || f.type === 'select');
@@ -91,6 +117,15 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
   const colOf = (t: Tpl) => (own && hasOwn && t.template_target_column && targets.some((c) => c.id === t.template_target_column) ? t.template_target_column : target);
   const colName = (id: string) => targets.find((c) => c.id === id)?.title || '';
   const titleOf = (t: Tpl) => (titleVal ? `${t.title} — ${titleVal}` : t.title);
+  const deptLabs = labs.filter((l) => l.name in deptMap);
+  // responsible of a new card: the template's own, else (switch on) the person of the first of its labels that has one
+  const whoOf = (t: Tpl) => {
+    if (t.assigned_to || !deptOn) return t.assigned_to;
+    const mine = tplLab.get(t.id) || [];
+    for (const l of deptLabs) if (mine.includes(l.id) && deptMap[l.name]) return deptMap[l.name];
+    return null;
+  };
+  const personName = (id: string | null) => (id ? people.find((p) => p.id === id)?.name || '' : '');
 
   const baseInput = (
     <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Contar os prazos a partir de</span>
@@ -115,6 +150,7 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
     setBusy(true);
     try {
       if (canConfigure) await db.from('task_board_columns').update(cfg).eq('id', column.id);
+      if (canConfigure && hasDeptDb && deptLabs.length) { try { await saveDeptAssignees(boardId, deptMap, deptOn, people, profile?.id || ''); } catch { /* the cards are still created */ } }
       const ids = tpls.map((t) => t.id);
       const [asg, lbl, grp, sub, fv, dep, { data: inCol }] = await Promise.all([
         db.from('task_assignees').select('task_id,profile_id').in('task_id', ids),
@@ -132,7 +168,7 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
       const slot = tpls.map((t) => { const c = colOf(t); const pos = next.get(c) || 0; next.set(c, pos + 1); return { c, pos }; });
       const rows = tpls.map((t, i) => { const due = dueOf(t), start = startOf(t); return withCompany({
         board_id: boardId, title: titleOf(t).slice(0, 500), description: t.description, status: slot[i].c, priority: t.priority || 'medium',
-        cover_image: t.cover_image, assigned_to: t.assigned_to, position: slot[i].pos, created_by: profile?.id, is_template: false,
+        cover_image: t.cover_image, assigned_to: whoOf(t), position: slot[i].pos, created_by: profile?.id, is_template: false,
         due_date: due ? due.toISOString() : null, start_date: start ? start.toISOString() : null,
       }); });
       const { data: made, error: mkErr } = await db.from('tasks').insert(rows).select('id,status,position');
@@ -231,12 +267,15 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
               ) : null}
             </div>
 
+            {hasDeptDb && deptLabs.length ? <DeptAssignees depts={deptLabs.map((l) => ({ name: l.name, color: l.color }))} value={deptMap} onChange={setDeptMap} on={deptOn} setOn={setDeptOn} readOnly={!canConfigure} /> : null}
+
             <section>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cards que serão criados</h3>
               <div className="divide-y divide-border rounded-[12px] border border-border">
                 {tpls.map((t) => { const due = dueOf(t), st = startOf(t); return (
                   <div key={t.id} className="flex items-center gap-3 px-3 py-2 text-sm">
                     <span className="min-w-0 flex-1 truncate">{titleOf(t)}</span>
+                    {whoOf(t) ? <span className="hidden max-w-[120px] shrink-0 truncate text-xs text-muted-foreground md:inline">{personName(whoOf(t))}</span> : null}
                     <span className="hidden max-w-[150px] shrink-0 truncate rounded-[4px] bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground sm:inline">{colName(colOf(t))}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">{due ? <>{st ? `${st.toLocaleDateString('pt-BR')} → ` : ''}<b className="text-foreground">{due.toLocaleDateString('pt-BR')}</b></> : t.template_offset_days != null ? offsetText(t.template_offset_days) : 'sem prazo'}</span>
                   </div>); })}

@@ -38,6 +38,7 @@ button.tp-item.on .tp-ico { background: hsl(var(--primary) / .12); color: hsl(va
 .tp-card { padding: 7px 8px; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--card)); font-size: 11.5px; line-height: 1.35; color: hsl(var(--foreground)); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .tp-more { font-size: 11px; color: hsl(var(--muted-foreground)); padding-left: 4px; }
 .tp-h4 { margin: 20px 0 8px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+.tp-dl { display: inline-block; margin-right: 4px; padding: 0 5px; border-radius: 4px; font-style: normal; font-size: 10px; font-weight: 700; line-height: 16px; color: #fff; vertical-align: 1px; }
 .tp-inc { display: flex; flex-direction: column; border: 1px solid hsl(var(--border)); border-radius: 12px; }
 .tp-inc li { display: flex; gap: 10px; padding: 10px 12px; border-top: 1px solid hsl(var(--border)); }
 .tp-inc li:first-child { border-top: 0; }

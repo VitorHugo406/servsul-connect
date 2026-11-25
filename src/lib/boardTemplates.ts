@@ -6,6 +6,7 @@
 //     reviews it). Everything is created inside the NEW mural only.
 import { supabase } from '@/integrations/supabase/client';
 import type { ImpBoard, ImpCard } from '@/lib/boardImport';
+import { DEPTS, DEPT_OF, isDept } from '@/lib/templateDepts';
 
 type FType = 'text' | 'number' | 'money' | 'date' | 'select' | 'checkbox';
 type TField = { n: string; t: FType; o?: string[]; card?: boolean };
@@ -535,7 +536,7 @@ export const BOARD_TEMPLATES: BoardTemplate[] = [
     id: 'planejamento', area: 'Gestão e administração', icon: 'compass', cover: 'cover-purple', name: 'Planejamento estratégico anual', done: 5,
     desc: 'Diagnóstico, missão e objetivos do ano, metas e orçamento por área, plano de ação e revisões trimestrais com indicadores.',
     columns: [['Diagnóstico', G], ['Objetivos', B], ['Plano de ação', P], ['Em execução', O], ['Revisão trimestral', Y], ['Concluído', GR]],
-    labels: [['Comercial', GR], ['Operações', S], ['Pessoas', PK], ['Finanças', Y]],
+    labels: [['Comercial', GR], ['Operações', S], ['RH', PK], ['Financeiro', Y]],
     fields: [{ n: 'Área', t: 'text', card: true }, { n: 'Indicador', t: 'text' }, { n: 'Meta', t: 'number' }, { n: 'Início do ano', t: 'date' }],
     proc: { ref: 'Início do ano', refDay: 45, lead: 0, q: 'Quantos dias antes do início do ano o plano deve estar pronto?', title: 'Área' },
     cards: [
@@ -859,7 +860,7 @@ export const BOARD_TEMPLATES: BoardTemplate[] = [
     id: 'dp-estagio', area: 'Departamento Pessoal', icon: 'school', cover: 'cover-navy', name: 'Programa de estágio',
     desc: 'Termo de compromisso, seguro, relatórios semestrais, recesso e o limite de 2 anos da Lei do Estágio, do início ao encerramento.',
     columns: [['Contratação', G], ['Em estágio', B], ['Renovação', Y], ['Encerramento', P], ['Concluído', GR]],
-    labels: [['Escola', S], ['DP', Y], ['Supervisor', O]],
+    labels: [['Escola', S], ['DP', Y], ['Gestor', O]],
     fields: [{ n: 'Estagiário', t: 'text', card: true }, { n: 'Instituição de ensino', t: 'text' }, { n: 'Início', t: 'date' }, { n: 'Fim do termo', t: 'date' }, { n: 'Supervisor', t: 'text' }],
     proc: { ref: 'Início', refDay: 7, lead: 0, q: 'Antecipar todos os prazos em quantos dias? (0 = contar a partir do início do estágio)', title: 'Estagiário' },
     cards: [
@@ -1047,7 +1048,7 @@ export const BOARD_TEMPLATES: BoardTemplate[] = [
     id: 'adm-mudanca', area: 'Gestão e administração', icon: 'map-pinned', cover: 'cover-purple', name: 'Mudança de escritório ou abertura de filial',
     desc: 'Imóvel, registros e licenças, internet, obras, avisos a clientes e bancos, dia da mudança e primeira semana no endereço novo.',
     columns: [['Planejamento', G], ['Legal e registros', B], ['Estrutura', P], ['Mudança', O], ['Concluído', GR]],
-    labels: [['Legal', Y], ['TI', S], ['Facilities', O], ['Comunicação', PK], ['Financeiro', GR]],
+    labels: [['Jurídico', Y], ['TI', S], ['Administrativo', O], ['Comunicação', PK], ['Financeiro', GR]],
     fields: [{ n: 'Unidade', t: 'text', card: true }, { n: 'Data da inauguração', t: 'date' }, { n: 'Endereço', t: 'text' }, { n: 'Orçamento', t: 'money' }],
     proc: { ref: 'Data da inauguração', refDay: 60, lead: 0, q: 'Antecipar todos os prazos em quantos dias? (0 = contar a partir da data da inauguração ou mudança)', title: 'Unidade' },
     cards: [
@@ -1192,14 +1193,34 @@ const DONE_COL: Record<string, number> = { onboarding: 5, offboarding: 3, recrut
   'adm-vencimentos': 3, 'adm-licitacao': 4, 'adm-mudanca': 4, 'adm-troca-gestor': 3, 'adm-fiscalizacao': 4, 'fin-cobranca': 3, 'fin-caixa': 3,
   'op-unidade': 3, 'op-recall': 4, 'op-inventario': 4 };
 
+/** Labels of a model as the mural gets them: department labels first (same colour in every model), then the model's
+ *  own theme labels; cardLabels[i] = label indexes of card i (its departments first). */
+export function templateLabels(t: BoardTemplate) {
+  const extra = DEPT_OF[t.id] || [];
+  const cardDepts = t.cards.map((c, i) => {
+    const own = (c.l || []).map((j) => t.labels[j]?.[0]).filter((n): n is string => !!n && isDept(n));
+    const add = (extra[i] || '').split('+').map((x) => x.trim()).filter(Boolean);
+    return [...new Set(add.length ? [...add, ...own] : own)];
+  });
+  const depts: string[] = [];
+  for (const ds of cardDepts) for (const d of ds) if (!depts.includes(d)) depts.push(d);
+  depts.sort((a, b) => Object.keys(DEPTS).indexOf(a) - Object.keys(DEPTS).indexOf(b));
+  const themes = t.labels.filter(([n]) => !isDept(n));
+  const labels: [string, string][] = [...depts.map((d) => [d, DEPTS[d]] as [string, string]), ...themes];
+  const idx = (name: string) => labels.findIndex(([n]) => n === name);
+  const cardLabels = t.cards.map((c, i) => [...new Set([...cardDepts[i].map(idx), ...(c.l || []).map((j) => t.labels[j]?.[0]).filter((n) => n && !isDept(n)).map((n) => idx(n!))])].filter((x) => x >= 0));
+  return { labels, depts, cardDepts, cardLabels };
+}
+
 export function templateToBoard(t: BoardTemplate): ImpBoard {
+  const L = templateLabels(t);
   return {
     source: 'modelo', doneCol: t.done ?? DONE_COL[t.id], name: t.name, desc: t.desc,
     columns: t.columns.map(([title, color]) => ({ title, color })),
-    labels: t.labels.map(([name, color]) => ({ name, color })),
-    cards: t.cards.map((c) => ({
+    labels: L.labels.map(([name, color]) => ({ name, color })),
+    cards: t.cards.map((c, i) => ({
       title: c.t, desc: c.d || '', col: c.col, due: c.due != null ? day(c.due) : null, start: c.st != null ? day(c.st, 9) : null,
-      done: false, priority: c.p || 'medium', labels: c.l || [], comments: [], people: [],
+      done: false, priority: c.p || 'medium', labels: L.cardLabels[i], comments: [], people: [],
       checklists: (c.ck || []).map(([title, items]) => ({ title, items: items.map((x) => ({ t: x, done: false })) })),
     })),
   };

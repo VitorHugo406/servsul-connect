@@ -3,6 +3,7 @@
 // and the new mural's name. "Usar modelo" creates a NEW mural owned by the person (importBoard), sets the cover and
 // adds the model's extras (applyTemplateExtras), then opens it. Styles: src/styles/templates.css (prefix tp-).
 import { useMemo, useState } from 'react';
+import { Tags } from 'lucide-react';
 import {
   Briefcase, CalendarDays, Check, ClipboardList, Code, FileSignature, Flag, GitBranch, Handshake, Headset, LayoutGrid, Loader2,
   Megaphone, Receipt, Rocket, Search, ShoppingCart, SlidersHorizontal, Target, UserMinus, UserPlus, UserSearch, Wrench, Zap, ListChecks, GraduationCap, Palmtree, Star, PhoneCall, HeartHandshake, Share2, Palette, Package, Truck,
@@ -15,7 +16,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { importBoard } from '@/lib/boardImport';
-import { BOARD_TEMPLATES, TEMPLATE_AREAS, applyTemplateExtras, templateSummary, templateToBoard, type BoardTemplate } from '@/lib/boardTemplates';
+import { BOARD_TEMPLATES, TEMPLATE_AREAS, applyTemplateExtras, templateLabels, templateSummary, templateToBoard, type BoardTemplate } from '@/lib/boardTemplates';
+import { DEPTS } from '@/lib/templateDepts';
+import { useDbColumn } from '@/hooks/useDbFeature';
+import { DeptAssignees, saveDeptAssignees, usePeople, type DeptMap } from '@/components/tasks/DeptAssignees';
 import '@/styles/templates.css';
 
 const ICONS: Record<string, LucideIcon> = {
@@ -48,8 +52,14 @@ export function TemplatesDialog({ open, onOpenChange, onDone }: { open: boolean;
     const f = q.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
     return BOARD_TEMPLATES.filter((t) => (!area || t.area === area) && (!f || `${t.name} ${t.desc} ${t.area}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(f)));
   }, [area, q]);
-  const choose = (t: BoardTemplate) => { setPick(t); setName(t.name); };
+  const [deptOn, setDeptOn] = useState(false);
+  const [deptMap, setDeptMap] = useState<DeptMap>({});
+  const people = usePeople();
+  const hasDeptDb = useDbColumn('task_labels', 'default_assignee');
+  const choose = (t: BoardTemplate) => { setPick(t); setName(t.name); setDeptMap({}); };
   const s = templateSummary(pick);
+  const L = useMemo(() => templateLabels(pick), [pick]);
+  const depts = L.depts.map((d) => ({ name: d, color: DEPTS[d] }));
 
   const create = async () => {
     if (!user || !profile?.company_id) return;
@@ -58,6 +68,7 @@ export function TemplatesDialog({ open, onOpenChange, onDone }: { open: boolean;
       const r = await importBoard(templateToBoard(pick), { userId: user.id, profileId: profile.id, companyId: profile.company_id }, name.trim() || pick.name, () => {});
       await (supabase as any).from('task_boards').update({ background_image: pick.cover }).eq('id', r.boardId);
       try { await applyTemplateExtras(r.boardId, pick, profile.id); } catch { toast.error('O mural foi criado, mas alguns campos ou automações do modelo não puderam ser adicionados.'); }
+      if (deptOn && hasDeptDb) try { await saveDeptAssignees(r.boardId, deptMap, deptOn, people, profile.id); } catch { toast.error('O mural foi criado, mas os responsáveis por departamento não puderam ser salvos. Ajuste em “Duplicar todos os cards”.'); }
       toast.success('Mural criado a partir do modelo');
       onOpenChange(false); onDone(r.boardId);
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Não foi possível criar o mural.'); }
@@ -68,6 +79,7 @@ export function TemplatesDialog({ open, onOpenChange, onDone }: { open: boolean;
     [LayoutGrid, plural(pick.columns.length, 'coluna', 'colunas') + ' e ' + plural(pick.labels.length, 'etiqueta', 'etiquetas'), pick.columns.map((c) => c[0]).join(' → ')],
     s.proc ? [ListChecks, `Coluna “Modelo do processo” com ${plural(s.cards, 'card-template', 'cards-template')}`, 'Use “Duplicar todos os cards” no menu da coluna: preencha os dados e cada card vai para a sua coluna com o prazo calculado'] : [ListChecks, plural(s.cards, 'card de exemplo', 'cards de exemplo'), s.checklists ? plural(s.checklists, 'checklist pronto', 'checklists prontos') : 'Edite ou apague à vontade'],
   ];
+  includes.splice(1, 0, [Tags, 'Etiqueta de departamento em todos os cards', L.depts.join(', ') + ' — cada tarefa já vem marcada com a área responsável']);
   if (s.fields) includes.push([SlidersHorizontal, plural(s.fields, 'campo personalizado', 'campos personalizados'), (pick.fields || []).map((f) => f.n).join(', ')]);
   if (s.rules) includes.push([Zap, plural(s.rules, 'automação', 'automações'), (pick.rules || []).map((r) => r.label).join(' · ')]);
   if (s.deps) includes.push([GitBranch, plural(s.deps, 'dependência', 'dependências') + ' entre cards', 'Um card só pode ser concluído depois do anterior — veja na Linha do tempo']);
@@ -111,7 +123,7 @@ export function TemplatesDialog({ open, onOpenChange, onDone }: { open: boolean;
                 return (
                   <div key={c} className="tp-col">
                     <div className="tp-colh"><i style={{ background: color }} /><span>{c}</span><small>{cards.length}</small></div>
-                    {cards.slice(0, 3).map((k) => <div key={k.t} className="tp-card">{k.t}</div>)}
+                    {cards.slice(0, 3).map((k) => { const ds = L.cardDepts[pick.cards.indexOf(k)] || []; return <div key={k.t} className="tp-card">{ds.map((d) => <i key={d} className="tp-dl" style={{ background: DEPTS[d] }}>{d}</i>)}{k.t}</div>; })}
                     {cards.length > 3 ? <div className="tp-more">+{cards.length - 3}</div> : null}
                   </div>);
               })}
@@ -120,6 +132,7 @@ export function TemplatesDialog({ open, onOpenChange, onDone }: { open: boolean;
             <ul className="tp-inc">
               {includes.map(([I, a, b]) => <li key={a}><I className="h-4 w-4" /><div><b>{a}</b><span>{b}</span></div></li>)}
             </ul>
+            {hasDeptDb ? <div className="mt-4"><DeptAssignees depts={depts} value={deptMap} onChange={setDeptMap} on={deptOn} setOn={setDeptOn} /></div> : null}
           </section>
         </div>
         <div className="tp-foot">

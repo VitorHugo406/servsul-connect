@@ -1,0 +1,78 @@
+// Department labels of the ready-made murals (Tarefas › Modelos). Every card of every model carries the label of the
+// department that does it (DP, RH, DHO, Gestor, Financeiro, TI…), always listed first in the mural's labels and with
+// the same colour in every model. A card that already has a label with a department name keeps it; DEPT_OF fills the
+// cards that do not (one entry per card, in card order; "" = keep what the card has; "A+B" = two departments, the
+// first one wins when "Responsáveis por departamento" assigns the card). Checked by the template audit script.
+
+export const DEPTS: Record<string, string> = {
+  DP: '#eab308', RH: '#ec4899', DHO: '#8b5cf6', Gestor: '#f97316', Diretoria: '#1e293b', Financeiro: '#22c55e', Compras: '#65a30d',
+  TI: '#0ea5e9', Desenvolvimento: '#4f46e5', 'Jurídico': '#475569', Comercial: '#0f766e', Marketing: '#c026d3', Atendimento: '#2563eb',
+  'Operações': '#64748b', 'Logística': '#a16207', 'Manutenção': '#92400e', Qualidade: '#0891b2', SST: '#dc2626', Administrativo: '#78716c', Projetos: '#7c3aed',
+};
+export const isDept = (name: string) => Object.prototype.hasOwnProperty.call(DEPTS, name);
+
+const all = (d: string, n: number) => Array<string>(n).fill(d);
+
+export const DEPT_OF: Record<string, string[]> = {
+  recrutamento: ['', '', '', '', 'Gestor', '', '', '', ''],
+  vendas: all('Comercial', 7),
+  suporte: all('Atendimento', 4),
+  posvenda: ['', 'Atendimento', 'Atendimento', 'Atendimento', 'Atendimento', 'Atendimento'],
+  marketing: all('Marketing', 7),
+  campanha: ['Marketing', 'Marketing', 'Diretoria', 'Marketing', 'Marketing', 'Marketing', 'Marketing'],
+  manutencao: all('Manutenção', 5),
+  eventos: ['Marketing', 'Administrativo', 'Compras', 'Marketing', 'Marketing', 'Administrativo', 'Marketing'],
+  compras: all('Compras', 3),
+  contas: all('Financeiro', 4),
+  contratos: ['Jurídico', 'Jurídico', 'Jurídico+Gestor', 'Jurídico', 'Gestor', 'Gestor'],
+  projeto: all('Projetos', 8),
+  sprint: all('Desenvolvimento', 6),
+  okrs: ['Diretoria', 'Diretoria', 'Gestor', 'Gestor', 'Diretoria', 'Diretoria'],
+  treinamento: ['', '', 'DHO', '', 'DHO', 'DHO', ''],
+  desempenho: ['', '', '', 'DHO', '', '', '', '', ''],
+  sucesso: ['Atendimento', 'Atendimento', 'Atendimento', 'Atendimento', 'Comercial'],
+  design: all('Marketing', 3),
+  estoque: ['Compras', 'Logística', 'Logística', 'Logística'],
+  entregas: all('Logística', 4),
+  qualidade: all('Qualidade', 6),
+  fechamento: ['Financeiro', 'Financeiro', 'Financeiro', 'Financeiro', 'Financeiro+DP', 'Financeiro', 'Financeiro'],
+  reembolso: all('Financeiro', 3),
+  bugs: all('Desenvolvimento', 3),
+  implantacao: ['', '', '', 'TI', 'TI', '', 'TI'],
+  reunioes: all('Gestor', 5),
+  planejamento: ['Diretoria', 'Diretoria', '', '', '', 'Diretoria', 'Diretoria'],
+  fornecedores: all('Compras', 3),
+  'dp-folha': ['DP', 'DP', 'DP', 'DP', 'DP+Financeiro', 'DP'],
+  'dp-afastamentos': ['', '', '', 'SST+DP', '', 'SST', '', '', '', ''],
+  'dp-ponto': ['DP', 'DP', 'DP', 'DP+Gestor', 'DP', 'DP', 'DP'],
+  'dp-duvidas': all('DP', 5),
+  'dp-beneficios': all('DP', 6),
+  'dp-cat': ['SST', 'SST+DP', 'DP', 'SST', 'SST', 'SST'],
+  'dp-trabalhista': ['Jurídico', 'DP', 'Jurídico', 'Jurídico+DP', 'Jurídico', 'Financeiro+Jurídico', 'RH'],
+  'rh-turnover': all('RH', 7),
+  'rh-clima': ['', '', 'DHO', '', 'DHO', 'DHO', '', ''],
+  'rh-conduta': ['RH', 'RH', 'RH+Jurídico', 'RH+Gestor', 'RH', 'RH'],
+  'rh-aso': ['SST', 'SST', 'SST', 'DP', 'SST+Gestor'],
+  pdca: ['Gestor', 'Qualidade', 'Gestor', 'Gestor', 'Qualidade', 'Qualidade'],
+  crise: ['Diretoria', 'Gestor', 'Marketing', 'Marketing', 'Gestor', 'Marketing', 'Diretoria'],
+  reclamacoes: all('Atendimento', 3),
+  'rh-sucessao': ['DHO', 'DHO', 'Gestor', 'DHO', 'Gestor', 'DHO'],
+  'dp-aprendiz': ['', 'DP', '', '', '', '', ''],
+  'sst-cipa': all('SST', 7),
+  'sst-simulado': all('SST', 7),
+  'sst-revisao': all('SST', 6),
+  'ti-acessos': ['TI', 'Gestor', 'TI', 'TI', 'TI'],
+  'lgpd-titular': ['Jurídico', 'Jurídico', 'Jurídico', 'TI', 'TI', 'Jurídico', 'Jurídico'],
+  'lgpd-incidente': ['TI', '', '', 'Jurídico', 'TI', '', 'TI'],
+  'ti-backup': all('TI', 6),
+  'adm-vencimentos': all('Administrativo', 6),
+  'adm-licitacao': ['Comercial', '', 'Administrativo', 'Comercial', 'Comercial', 'Comercial', '', 'Jurídico'],
+  'adm-mudanca': ['', '', '', '', '', 'Marketing', '', 'Administrativo'],
+  'adm-troca-gestor': ['', 'Gestor', 'Gestor', 'TI', 'Gestor', 'Gestor', ''],
+  'adm-fiscalizacao': ['Administrativo', 'Diretoria', 'Administrativo', 'Gestor', 'Administrativo', 'Jurídico'],
+  'fin-cobranca': ['Financeiro', 'Financeiro', 'Financeiro', 'Financeiro', 'Financeiro', 'Financeiro', 'Jurídico'],
+  'fin-caixa': all('Financeiro', 5),
+  'op-unidade': all('Operações', 4),
+  'op-recall': ['', '', '', 'Marketing', '', '', ''],
+  'op-inventario': ['Logística', 'Logística', 'Logística', 'Logística', 'Logística', ''],
+};
