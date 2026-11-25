@@ -2933,7 +2933,7 @@ function tvTrend(box,h){
   const X=i=>6+i/(L-1+3)*(W-12),Y=v=>8+(top-v)/(top-bot)*(H-26);
   let path='';pts.forEach((p,k)=>{if(!k){path='M'+X(p[0])+' '+Y(p[1]);return}const q0=pts[k-1],m0=(X(q0[0])+X(p[0]))/2;path+=' C'+m0+' '+Y(q0[1])+' '+m0+' '+Y(p[1])+' '+X(p[0])+' '+Y(p[1])});
   const lx=X(pts[n-1][0]),ly=Y(last),px=X(L-1+3),py=Y(proj),ax=X(0),fy=Y(a),ex=X(L-1+3),ey=Y(a+b*(L-1+3));
-  box.querySelector('.q-tk').innerHTML='<span class="q-tdir q-d'+(dir>0?'u':dir<0?'d':'s')+'">'+(dir>0?'▲':dir<0?'▼':'●')+' '+txt+'</span><span class="q-tch">'+tvE(chg)+' em 3 meses</span>';
+  box.querySelector('.q-tk').innerHTML='<span class="q-tdir q-d'+(dir>0?'u':dir<0?'d':'s')+'">'+(dir>0?'▲':dir<0?'▼':'●')+' '+txt+'</span><span class="q-tch">'+(dir===0?'sem mudança relevante em 3 meses':tvE(chg)+' em 3 meses')+'</span>';
   box.querySelector('.q-tg').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><defs><linearGradient id="tvTA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2F6BFF" stop-opacity=".28"/><stop offset="1" stop-color="#2F6BFF" stop-opacity="0"/></linearGradient></defs>'+
     '<path d="'+path+' L'+lx+' '+(H-18)+' L'+X(pts[0][0])+' '+(H-18)+'Z" fill="url(#tvTA)"/>'+
     '<line x1="'+ax+'" y1="'+fy+'" x2="'+ex+'" y2="'+ey+'" stroke="var(--mu)" stroke-width="1" stroke-dasharray="2 4" opacity=".6"/>'+
