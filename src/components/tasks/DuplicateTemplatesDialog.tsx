@@ -51,9 +51,9 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
   const [base, setBase] = useState(() => ymdOf(new Date())); // without a reference field: dates count from this day
   const targets = useMemo(() => columns.filter((c) => !c.is_template_column), [columns]);
   // Responsáveis por departamento (labels of the template cards; dept names first, then any other label in use)
-  const hasDeptDb = useDbColumn('task_labels', 'default_assignee');
+  const hasDeptDb = useDbColumn('task_labels', 'default_assignees');
   const people = usePeople();
-  const [labs, setLabs] = useState<{ id: string; name: string; color: string; default_assignee: string | null }[]>([]);
+  const [labs, setLabs] = useState<{ id: string; name: string; color: string; default_assignees: string[] | null }[]>([]);
   const [tplLab, setTplLab] = useState<Map<string, string[]>>(new Map());
   const [deptOn, setDeptOn] = useState(false);
   const [deptMap, setDeptMap] = useState<DeptMap>({});
@@ -81,19 +81,19 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
       }
       if (hasDeptDb && ts.length) {
         const [lb, la, cc] = await Promise.all([
-          db.from('task_labels').select('id,name,color,default_assignee,created_at').eq('board_id', boardId).order('created_at'),
+          db.from('task_labels').select('id,name,color,default_assignees,created_at').eq('board_id', boardId).order('created_at'),
           db.from('task_label_assignments').select('task_id,label_id').in('task_id', ts.map((x) => x.id)),
           db.from('task_board_columns').select('template_auto_assign').eq('id', column.id).maybeSingle(),
         ]);
         if (!live) return;
         const used = new Set(((la.data || []) as { label_id: string }[]).map((r) => r.label_id));
-        const all = ((lb.data || []) as { id: string; name: string; color: string; default_assignee: string | null }[]).filter((l) => used.has(l.id));
+        const all = ((lb.data || []) as { id: string; name: string; color: string; default_assignees: string[] | null }[]).filter((l) => used.has(l.id));
         // departments first (in the department order), then the other labels in use
         all.sort((a, b) => (isDept(a.name) ? 0 : 1) - (isDept(b.name) ? 0 : 1) || (isDept(a.name) && isDept(b.name) ? Object.keys(DEPTS).indexOf(a.name) - Object.keys(DEPTS).indexOf(b.name) : 0));
         const m = new Map<string, string[]>();
         for (const r of (la.data || []) as { task_id: string; label_id: string }[]) m.set(r.task_id, [...(m.get(r.task_id) || []), r.label_id]);
         setLabs(all); setTplLab(m); setDeptOn(!!cc.data?.template_auto_assign);
-        setDeptMap(Object.fromEntries(all.filter((l) => isDept(l.name) || l.default_assignee).map((l) => [l.name, l.default_assignee || ''])));
+        setDeptMap(Object.fromEntries(all.filter((l) => isDept(l.name) || l.default_assignees?.length).map((l) => [l.name, l.default_assignees || []])));
       }
       if (!live) return;
       setVals(v);
@@ -118,13 +118,16 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
   const colName = (id: string) => targets.find((c) => c.id === id)?.title || '';
   const titleOf = (t: Tpl) => (titleVal ? `${t.title} — ${titleVal}` : t.title);
   const deptLabs = labs.filter((l) => l.name in deptMap);
-  // responsible of a new card: the template's own, else (switch on) the person of the first of its labels that has one
-  const whoOf = (t: Tpl) => {
-    if (t.assigned_to || !deptOn) return t.assigned_to;
+  // people of a new card's department labels (switch on), in label order: the first one is the responsável
+  const deptPeople = (t: Tpl) => {
+    if (!deptOn) return [] as string[];
     const mine = tplLab.get(t.id) || [];
-    for (const l of deptLabs) if (mine.includes(l.id) && deptMap[l.name]) return deptMap[l.name];
-    return null;
+    const out: string[] = [];
+    for (const l of deptLabs) if (mine.includes(l.id)) for (const p of deptMap[l.name] || []) if (!out.includes(p)) out.push(p);
+    return out;
   };
+  const whoOf = (t: Tpl) => t.assigned_to || deptPeople(t)[0] || null;
+  const coOf = (t: Tpl) => { const w = whoOf(t); return deptPeople(t).filter((p) => p !== w); };
   const personName = (id: string | null) => (id ? people.find((p) => p.id === id)?.name || '' : '');
 
   const baseInput = (
@@ -177,6 +180,7 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
       for (const r of made as { id: string; status: string; position: number }[]) { const i = slot.findIndex((x) => x.c === r.status && x.pos === r.position); if (i >= 0) map.set(tpls[i].id, r.id); }
       const nid = (id: string) => map.get(id);
       const a = ((asg.data || []) as { task_id: string; profile_id: string }[]).map((r) => ({ task_id: nid(r.task_id), profile_id: r.profile_id })).filter((r) => r.task_id);
+      for (const t of tpls) for (const p of coOf(t)) { const tid = nid(t.id); if (tid && !a.some((x) => x.task_id === tid && x.profile_id === p)) a.push({ task_id: tid, profile_id: p }); }
       if (a.length) await db.from('task_assignees').insert(a);
       const l = ((lbl.data || []) as { task_id: string; label_id: string }[]).map((r) => ({ task_id: nid(r.task_id), label_id: r.label_id })).filter((r) => r.task_id);
       if (l.length) await db.from('task_label_assignments').insert(l);
@@ -275,7 +279,7 @@ export function DuplicateTemplatesDialog({ open, onOpenChange, boardId, column, 
                 {tpls.map((t) => { const due = dueOf(t), st = startOf(t); return (
                   <div key={t.id} className="flex items-center gap-3 px-3 py-2 text-sm">
                     <span className="min-w-0 flex-1 truncate">{titleOf(t)}</span>
-                    {whoOf(t) ? <span className="hidden max-w-[120px] shrink-0 truncate text-xs text-muted-foreground md:inline">{personName(whoOf(t))}</span> : null}
+                    {whoOf(t) ? <span className="hidden max-w-[140px] shrink-0 truncate text-xs text-muted-foreground md:inline">{personName(whoOf(t))}{coOf(t).length ? ` +${coOf(t).length}` : ''}</span> : null}
                     <span className="hidden max-w-[150px] shrink-0 truncate rounded-[4px] bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground sm:inline">{colName(colOf(t))}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">{due ? <>{st ? `${st.toLocaleDateString('pt-BR')} → ` : ''}<b className="text-foreground">{due.toLocaleDateString('pt-BR')}</b></> : t.template_offset_days != null ? offsetText(t.template_offset_days) : 'sem prazo'}</span>
                   </div>); })}
