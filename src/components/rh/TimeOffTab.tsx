@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Sel } from '@/components/ui/Sel';
 import { ExportMenu } from '@/components/ui/ExportMenu';
 import { appConfirm, appPrompt } from '@/lib/appDialog';
-import { Av, daysBetween, db, fmtD, pname, today, usePeople } from './rhShared';
+import { Av, RhDate, RhEmpty, RhHead, RhSec, RhSt, daysBetween, db, fmtD, pname, today, usePeople } from './rhShared';
 
 type Req = { id: string; profile_id: string; kind: string; start_date: string; end_date: string; note: string | null; status: string; decision_note: string | null; created_at: string };
 type Abs = { id: string; profile_id: string; name: string; avatar_url: string | null; sector: string | null; kind: string; start_date: string; end_date: string };
@@ -90,77 +90,127 @@ export function TimeOffTab({ isManager }: { isManager: boolean }) {
     return cells;
   }, [month]);
 
-  const row = (r: Req, actions: React.ReactNode) => {
-    const p = byId.get(r.profile_id); const [lbl, cls] = ST[r.status] || ['—', 'dk-c-n'];
-    return (
-      <tr key={r.id}>
-        <td><div className="flex items-center gap-2.5"><Av p={p} size={30} /><div><div className="dk-ti">{pname(p)}</div>{r.note ? <div className="dk-su">{r.note}</div> : null}</div></div></td>
-        <td>{KINDS[r.kind] || r.kind}</td>
-        <td>{fmtD(r.start_date)} – {fmtD(r.end_date)}<div className="dk-sub">{daysBetween(r.start_date, r.end_date)} dia(s)</div></td>
-        <td><span className={`dk-chp ${cls}`}>{lbl}</span>{r.decision_note ? <div className="dk-sub">{r.decision_note}</div> : null}</td>
-        <td className="dk-ac">{actions}</td>
-      </tr>
-    );
+  const [day, setDay] = useState(todayIso);
+  const outOn = (d: string) => abs.filter((a) => a.start_date <= d && a.end_date >= d);
+  const outDay = outOn(day);
+  const openForm = () => { setKind('ferias'); setFrom(today()); setTo(today()); setNote(''); setForm(true); };
+  const period = (r: { start_date: string; end_date: string }) => {
+    const n = daysBetween(r.start_date, r.end_date);
+    return `${r.start_date === r.end_date ? fmtD(r.start_date) : `${fmtD(r.start_date)} a ${fmtD(r.end_date)}`} · ${n} ${n === 1 ? 'dia' : 'dias'}`;
   };
+  const stOf = (r: Req) => (r.status === 'approved' ? (r.end_date < todayIso ? <RhSt k="mut">Concluída</RhSt> : r.start_date <= todayIso ? <RhSt k="blue">Em andamento</RhSt> : <RhSt k="ok">Aprovado</RhSt>)
+    : r.status === 'pending' ? <RhSt k="wait">Aguardando gestor</RhSt> : r.status === 'rejected' ? <RhSt k="no">Recusado</RhSt> : <RhSt k="mut">Cancelado</RhSt>);
+  const monthName = ((m) => m.charAt(0).toUpperCase() + m.slice(1))(month.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }));
+  const pendingIds = new Set(pendingTeam.map((r) => r.id));
+  const history = team.filter((r) => !pendingIds.has(r.id)).slice(0, 120);
 
   return (
     <div className="flex flex-col">
-      {/* resumo: cartões simples — rótulo, número e uma linha que explica o número; só o que pede ação ganha cor */}
-      <div className="rh-kp">
-        {([
-          ['Ausentes hoje', outToday.length, outToday.length ? (outToday.length === 1 ? 'pessoa fora hoje' : 'pessoas fora hoje') : 'todos presentes', false],
-          ['Meus pedidos', mine.filter((r) => r.status === 'pending').length, 'aguardando resposta', false],
-          ...(isManager ? [['Para responder', pendingTeam.length, pendingTeam.length ? 'pedidos da equipe' : 'nada pendente', pendingTeam.length > 0] as const] : []),
-          ['Ausências no mês', abs.length, 'aprovadas no calendário', false],
-        ] as const).map(([l, v, h, hot]) => (
-          <div key={l} className={'rh-k' + (hot ? ' rh-hot' : '') + (v ? '' : ' rh-zero')}>
-            <span className="rh-kl">{l}</span>
-            <b className="rh-kv">{v}</b>
-            <span className="rh-kh">{h}</span>
-          </div>
-        ))}
+      <div className="dk-kp" style={{ marginTop: 16 }}>
+        <div className="dk-k"><span className="l">Ausentes hoje</span><span className="v">{outToday.length}</span></div>
+        <div className="dk-k"><span className="l">Meus pedidos aguardando</span><span className="v">{mine.filter((r) => r.status === 'pending').length}</span></div>
+        {isManager ? <div className="dk-k"><span className="l">Pedidos da equipe para responder</span><span className="v">{pendingTeam.length}</span></div> : null}
+        <div className="dk-k"><span className="l">Ausências no mês</span><span className="v">{abs.length}</span></div>
       </div>
-      <div className="dk-bar">
-        <div className="dk-ti" style={{ fontSize: 15 }}>Meus pedidos</div>
-        <div className="dk-flt"><button type="button" className="dk-btn pri" onClick={() => { setKind('ferias'); setFrom(today()); setTo(today()); setNote(''); setForm(true); }}><Plus size={16} />Solicitar ausência</button></div>
-      </div>
-      {reqs === null ? <div className="dk-empty"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div> : mine.length ? (
-        <div className="dk-scroll"><table className="dk-table"><thead><tr><th>Pessoa</th><th>Tipo</th><th>Período</th><th>Situação</th><th /></tr></thead>
-          <tbody>{mine.map((r) => row(r, <span className="inline-flex items-center gap-1.5">{r.status === 'pending' || (r.status === 'approved' && r.start_date > todayIso) ? <button type="button" className="dk-btn" onClick={() => void cancel(r)}>Cancelar</button> : null}{trash(r)}</span>))}</tbody></table></div>
-      ) : <div className="dk-empty">Você ainda não pediu nenhuma ausência.</div>}
-      {isManager ? <>
-        <div className="dk-bar">
-          <div className="dk-ti" style={{ fontSize: 15 }}>Pedidos da equipe</div>
-          <div className="dk-flt"><ExportMenu className="dk-btn" getData={() => ({ name: 'ausencias-equipe', sheet: 'Ausências', headers: ['Pessoa', 'Tipo', 'Início', 'Fim', 'Dias', 'Situação', 'Observação', 'Resposta'], rows: team.map((r) => [pname(byId.get(r.profile_id)), KINDS[r.kind] || r.kind, fmtD(r.start_date), fmtD(r.end_date), daysBetween(r.start_date, r.end_date), ST[r.status]?.[0] || r.status, r.note || '', r.decision_note || '']) })} /></div>
-        </div>
-        {team.length ? <div className="dk-scroll"><table className="dk-table"><thead><tr><th>Pessoa</th><th>Tipo</th><th>Período</th><th>Situação</th><th /></tr></thead>
-          <tbody>{[...pendingTeam, ...team.filter((r) => r.status !== 'pending')].slice(0, 120).map((r) => row(r, <span className="inline-flex items-center gap-1.5">{r.status === 'pending' ? <><button type="button" className="dk-btn pri" onClick={() => void decide(r, true)}>Aprovar</button><button type="button" className="dk-btn" onClick={() => void decide(r, false)}>Recusar</button></> : null}{trash(r)}</span>))}</tbody></table></div>
-          : <div className="dk-empty">Nenhum pedido da equipe.</div>}
-      </> : null}
-      <div className="dk-bar">
-        <div className="dk-ti" style={{ fontSize: 15 }}>Calendário da equipe</div>
-        <div className="flex items-center gap-1.5">
-          <button type="button" className="dk-ic bg" aria-label="Mês anterior" onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}><ChevronLeft size={17} /></button>
-          <b className="min-w-[150px] text-center">{((m) => m.charAt(0).toUpperCase() + m.slice(1))(month.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }))}</b>
-          <button type="button" className="dk-ic bg" aria-label="Próximo mês" onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}><ChevronRight size={17} /></button>
-        </div>
-      </div>
-      <div className="p-4">
-        <div className="grid grid-cols-7 gap-1 text-center text-[11.5px] font-semibold text-muted-foreground">{['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((d) => <span key={d} className="py-1">{d}</span>)}</div>
-        <div className="grid grid-cols-7 gap-1">
-          {grid.map((d, i) => {
-            if (!d) return <div key={i} />;
-            const out = abs.filter((a) => a.start_date <= d && a.end_date >= d);
-            return (
-              <div key={d} className={`min-h-[78px] rounded-[10px] border p-1.5 text-left ${d === todayIso ? 'border-primary' : 'border-border'}`}>
-                <div className="text-[11px] font-semibold text-muted-foreground">{Number(d.slice(8))}</div>
-                <div className="mt-0.5 flex flex-col gap-0.5">
-                  {out.slice(0, 3).map((a) => <span key={a.id} title={`${a.name} · ${KINDS[a.kind] || a.kind}`} className="truncate rounded-[6px] bg-primary/10 px-1.5 py-0.5 text-[10.5px] font-medium text-primary">{a.name.split(' ')[0]}{a.kind !== 'ausente' ? ` · ${KINDS[a.kind]}` : ''}</span>)}
-                  {out.length > 3 ? <span className="text-[10px] text-muted-foreground">+{out.length - 3}</span> : null}
+      <div className="rh-area" style={{ paddingTop: 6 }}>
+        <RhHead title="Ausências" desc="Peça férias, folga, atestado ou home office. Seu gestor responde aqui e a ausência aparece no calendário da equipe.">
+          <button type="button" className="dk-btn pri" onClick={openForm}><Plus size={16} />Solicitar ausência</button>
+        </RhHead>
+        <div className="rh-grid">
+          <div className="rh-col">
+            {isManager && pendingTeam.length ? (
+              <RhSec title="Aguardando sua resposta" n={pendingTeam.length} attn>
+                <div className="rh-list">
+                  {pendingTeam.map((r) => { const p = byId.get(r.profile_id); return (
+                    <div key={r.id} className="rh-row">
+                      <Av p={p} size={36} />
+                      <div className="rh-main">
+                        <div className="rh-t">{pname(p)} · {KINDS[r.kind] || r.kind}</div>
+                        <div className="rh-m">{period(r)} · pedido em {fmtD(r.created_at)}</div>
+                        {r.note ? <div className="rh-q">“{r.note}”</div> : null}
+                      </div>
+                      <div className="rh-end">
+                        <button type="button" className="dk-btn" onClick={() => void decide(r, false)}>Recusar</button>
+                        <button type="button" className="dk-btn pri" onClick={() => void decide(r, true)}>Aprovar</button>
+                      </div>
+                    </div>
+                  ); })}
                 </div>
+              </RhSec>
+            ) : null}
+            <RhSec title="Meus pedidos" n={mine.length || undefined}>
+              {reqs === null ? <div className="rh-empty"><Loader2 className="h-5 w-5 animate-spin" /></div> : mine.length ? (
+                <div className="rh-list">
+                  {mine.map((r) => (
+                    <div key={r.id} className="rh-row">
+                      <RhDate d={r.start_date} />
+                      <div className="rh-main">
+                        <div className="rh-t">{KINDS[r.kind] || r.kind}</div>
+                        <div className="rh-m">{period(r)}</div>
+                        {r.note ? <div className="rh-q">{r.note}</div> : null}
+                        {r.decision_note ? <div className="rh-q"><b>Resposta:</b> {r.decision_note}</div> : null}
+                      </div>
+                      <div className="rh-end">
+                        {stOf(r)}
+                        {r.status === 'pending' || (r.status === 'approved' && r.start_date > todayIso) ? <button type="button" className="rh-link" onClick={() => void cancel(r)}>Cancelar</button> : null}
+                        {trash(r)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : <RhEmpty title="Nenhum pedido ainda" text="Quando precisar se ausentar, faça o pedido aqui. Você acompanha a resposta nesta lista." action={<button type="button" className="dk-btn" onClick={openForm}><Plus size={16} />Solicitar ausência</button>} />}
+            </RhSec>
+            {isManager ? (
+              <RhSec title="Histórico da equipe" n={history.length || undefined} right={history.length ? <ExportMenu className="dk-btn" getData={() => ({ name: 'ausencias-equipe', sheet: 'Ausências', headers: ['Pessoa', 'Tipo', 'Início', 'Fim', 'Dias', 'Situação', 'Observação', 'Resposta'], rows: team.map((r) => [pname(byId.get(r.profile_id)), KINDS[r.kind] || r.kind, fmtD(r.start_date), fmtD(r.end_date), daysBetween(r.start_date, r.end_date), ST[r.status]?.[0] || r.status, r.note || '', r.decision_note || '']) })} /> : null}>
+                {history.length ? (
+                  <div className="rh-list">
+                    {history.map((r) => { const p = byId.get(r.profile_id); return (
+                      <div key={r.id} className="rh-row">
+                        <Av p={p} size={32} />
+                        <div className="rh-main">
+                          <div className="rh-t">{pname(p)} · {KINDS[r.kind] || r.kind}</div>
+                          <div className="rh-m">{period(r)}{r.decision_note ? ` · ${r.decision_note}` : ''}</div>
+                        </div>
+                        <div className="rh-end">{stOf(r)}{trash(r)}</div>
+                      </div>
+                    ); })}
+                  </div>
+                ) : <RhEmpty title="Sem pedidos respondidos" text="Os pedidos da sua equipe que você aprovar ou recusar ficam guardados aqui." />}
+              </RhSec>
+            ) : null}
+          </div>
+          <div className="rh-col">
+            <div className="rh-card">
+              <div className="rh-sh" style={{ marginBottom: 8 }}>
+                <h3>{monthName}</h3><span className="rh-sp" />
+                <button type="button" className="dk-ic" aria-label="Mês anterior" onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}><ChevronLeft size={17} /></button>
+                <button type="button" className="dk-ic" aria-label="Próximo mês" onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}><ChevronRight size={17} /></button>
               </div>
-            );
-          })}
+              <div className="rh-cal">
+                {['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((d, i) => <span key={i}>{d}</span>)}
+                {grid.map((d, i) => d ? (
+                  <button key={d} type="button" className={(d === day ? 'sel' : '') + (d === todayIso ? ' td' : '')} onClick={() => setDay(d)} aria-label={`${fmtD(d)}: ${outOn(d).length} ausente(s)`}>
+                    {Number(d.slice(8))}{outOn(d).length ? <i /> : null}
+                  </button>
+                ) : <span key={i} />)}
+              </div>
+            </div>
+            <RhSec title={day === todayIso ? 'Fora hoje' : `Fora em ${fmtD(day)}`} n={outDay.length || undefined}>
+              {outDay.length ? (
+                <div className="rh-list">
+                  {outDay.map((a) => (
+                    <div key={a.id} className="rh-row">
+                      <Av p={{ id: a.profile_id, name: a.name, avatar_url: a.avatar_url }} size={32} />
+                      <div className="rh-main">
+                        <div className="rh-t">{a.name}</div>
+                        <div className="rh-m">{[a.kind !== 'ausente' ? KINDS[a.kind] : null, a.sector, a.start_date === a.end_date ? null : `até ${fmtD(a.end_date)}`].filter(Boolean).join(' · ') || 'Ausente'}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : <RhEmpty title="Ninguém ausente" text="Escolha um dia no calendário. Os dias com ponto têm alguém fora." />}
+            </RhSec>
+          </div>
         </div>
       </div>
       <Dialog open={form} onOpenChange={(o) => { if (!busy) setForm(o); }}>

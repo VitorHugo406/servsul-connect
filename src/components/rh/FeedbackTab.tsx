@@ -1,7 +1,7 @@
 // Reconhecimento: public praise wall (elogios with a company value, colleagues can applaud) + private feedback
 // (only the two people and the person's managers see it). The person is notified. feedbacks / feedback_cheers
 // (migration 20261121010000).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Heart, Loader2, Lock, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Sel } from '@/components/ui/Sel';
 import { appConfirm } from '@/lib/appDialog';
-import { Av, db, fmtDH, pname, usePeople } from './rhShared';
+import { Av, RhEmpty, RhHead, RhSec, db, fmtDH, pname, usePeople } from './rhShared';
 import '@/styles/chat-extras.css';
 
 type F = { id: string; from_id: string; to_id: string; kind: 'elogio' | 'feedback'; visibility: 'public' | 'private'; value_tag: string | null; message: string; created_at: string };
@@ -56,29 +56,58 @@ export function FeedbackTab() {
     const { error } = await db.from('feedbacks').delete().eq('id', f.id);
     if (error) toast.error('Não foi possível apagar.'); else void load();
   };
+  const openForm = (k: 'elogio' | 'feedback') => { setKind(k); setPub(k === 'elogio'); setForm(true); };
+  const since = Date.now() - 30 * 864e5;
+  const top = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const f of rows || []) if (f.kind === 'elogio' && f.visibility === 'public' && +new Date(f.created_at) >= since) m.set(f.to_id, (m.get(f.to_id) || 0) + 1);
+    return [...m.entries()].sort((x, y) => y[1] - x[1]).slice(0, 5);
+  }, [rows, since]);
+  const counts = { wall: (rows || []).filter((f) => f.visibility === 'public').length, received: (rows || []).filter((f) => f.to_id === profile?.id).length, sent: (rows || []).filter((f) => f.from_id === profile?.id).length };
+  const ago = (d: string) => { const m = Math.round((Date.now() - +new Date(d)) / 6e4); return m < 1 ? 'agora' : m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : m < 10080 ? `há ${Math.round(m / 1440)} ${Math.round(m / 1440) === 1 ? 'dia' : 'dias'}` : fmtDH(d); };
   return (
-    <div className="flex flex-col">
-      <div className="dk-bar">
-        <nav className="dk-tb rh-sub" aria-label="Ver">
-          {([['wall', 'Mural de elogios'], ['received', 'Recebidos'], ['sent', 'Enviados']] as const).map(([k, l]) => <button key={k} type="button" aria-current={view === k ? 'true' : undefined} className={view === k ? 'on' : ''} onClick={() => setView(k)}>{l}</button>)}
-        </nav>
-        <div className="dk-flt"><button type="button" className="dk-btn pri" onClick={() => { setKind('elogio'); setPub(true); setForm(true); }}><Plus size={16} />Elogiar alguém</button><button type="button" className="dk-btn" onClick={() => { setKind('feedback'); setPub(false); setForm(true); }}><Lock size={15} />Dar feedback</button></div>
-      </div>
-      {rows === null ? <div className="dk-empty"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div> : list.length ? (
-        <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
-          {list.map((f) => { const a = byId.get(f.from_id), b = byId.get(f.to_id), c = cheers.get(f.id); return (
-            <article key={f.id} className="flex flex-col gap-2 rounded-[16px] border border-border bg-card p-4">
-              <div className="flex items-center gap-2"><Av p={b} size={36} /><div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold">{pname(b)}</div><div className="truncate text-xs text-muted-foreground">de {pname(a)} · {fmtDH(f.created_at)}</div></div>
-                {f.kind === 'feedback' || f.visibility === 'private' ? <span className="dk-chp dk-c-n"><Lock className="mr-1 inline h-3 w-3" />{f.kind === 'feedback' ? 'Feedback' : 'Privado'}</span> : f.value_tag ? <span className="dk-chp dk-c-g">{f.value_tag}</span> : null}</div>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">{f.message}</p>
-              <div className="mt-auto flex items-center gap-2">
-                {f.visibility === 'public' ? <button type="button" onClick={() => void cheer(f)} aria-pressed={!!c?.me} className={`inline-flex h-8 items-center gap-1.5 rounded-[10px] border px-2.5 text-xs font-medium ${c?.me ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-muted'}`}><Heart className="h-3.5 w-3.5" fill={c?.me ? 'currentColor' : 'none'} />{c?.n || 0}</button> : null}
-                <span className="flex-1" />
-                {f.from_id === profile?.id || isAdmin ? <button type="button" className="cx-iconbtn" aria-label="Apagar" onClick={() => void del(f)}><Trash2 className="h-4 w-4" /></button> : null}
-              </div>
-            </article>); })}
+    <div className="rh-area">
+      <RhHead title="Reconhecimento" desc="Elogie colegas publicamente no mural ou dê um feedback privado. A pessoa recebe um aviso.">
+        <button type="button" className="dk-btn" onClick={() => openForm('feedback')}><Lock size={15} />Dar feedback</button>
+        <button type="button" className="dk-btn pri" onClick={() => openForm('elogio')}><Plus size={16} />Elogiar alguém</button>
+      </RhHead>
+      <nav className="dk-tb rh-sub" aria-label="Ver">
+        {([['wall', 'Mural de elogios'], ['received', 'Recebidos'], ['sent', 'Enviados']] as const).map(([k, l]) => <button key={k} type="button" aria-current={view === k ? 'true' : undefined} className={view === k ? 'on' : ''} onClick={() => setView(k)}>{l}{counts[k] ? <span className="rh-cnt">{counts[k]}</span> : null}</button>)}
+      </nav>
+      <div className="rh-grid">
+        <div className="rh-col">
+          {rows === null ? <div className="rh-empty"><Loader2 className="h-5 w-5 animate-spin" /></div> : list.length ? (
+            <div className="rh-feed">
+              {list.map((f) => { const a = byId.get(f.from_id), b = byId.get(f.to_id), c = cheers.get(f.id); const priv = f.kind === 'feedback' || f.visibility === 'private'; return (
+                <article key={f.id} className="rh-fi">
+                  <Av p={b} size={40} />
+                  <div className="rh-main">
+                    <div className="rh-fh">
+                      <span><b>{f.to_id === profile?.id ? 'Você' : pname(b)}</b> {f.kind === 'feedback' ? 'recebeu um feedback de' : 'foi elogiado(a) por'} <b>{f.from_id === profile?.id ? 'você' : pname(a)}</b></span>
+                      <span className="rh-sp" />
+                      <time>{ago(f.created_at)}</time>
+                    </div>
+                    {priv || f.value_tag ? <div className="rh-tags">{priv ? <span className="rh-tag"><Lock size={11} />{f.kind === 'feedback' ? 'Feedback privado' : 'Privado'}</span> : null}{f.value_tag ? <span className="rh-tag v">{f.value_tag}</span> : null}</div> : null}
+                    <p className="rh-msg">{f.message}</p>
+                    <div className="rh-ff">
+                      {f.visibility === 'public' ? <button type="button" onClick={() => void cheer(f)} aria-pressed={!!c?.me} className={'rh-heart' + (c?.me ? ' on' : '')}><Heart size={14} fill={c?.me ? 'currentColor' : 'none'} />{c?.n ? c.n : 'Aplaudir'}</button> : null}
+                      <span className="rh-sp" />
+                      {f.from_id === profile?.id || isAdmin ? <button type="button" className="dk-ic" aria-label="Apagar" title="Apagar" onClick={() => void del(f)}><Trash2 size={15} /></button> : null}
+                    </div>
+                  </div>
+                </article>); })}
+            </div>
+          ) : <RhEmpty title={view === 'wall' ? 'O mural ainda está vazio' : view === 'received' ? 'Nada recebido ainda' : 'Nada enviado ainda'} text={view === 'wall' ? 'Reconheça alguém que fez um bom trabalho. O elogio aparece aqui para toda a empresa.' : view === 'received' ? 'Os elogios e feedbacks que você receber ficam guardados aqui.' : 'Os elogios e feedbacks que você der ficam guardados aqui.'} action={view !== 'received' ? <button type="button" className="dk-btn" onClick={() => openForm('elogio')}><Plus size={16} />Elogiar alguém</button> : null} />}
         </div>
-      ) : <div className="dk-empty">{view === 'wall' ? 'Ninguém foi elogiado ainda. Que tal começar?' : view === 'received' ? 'Você ainda não recebeu elogios ou feedbacks.' : 'Você ainda não enviou elogios ou feedbacks.'}</div>}
+        <div className="rh-col">
+          <RhSec title="Mais elogiados nos últimos 30 dias">
+            {top.length ? <div className="rh-list">{top.map(([pid, n], i) => (
+              <div key={pid} className="rh-row"><span className="rh-rank">{i + 1}</span><Av p={byId.get(pid)} size={30} /><div className="rh-main"><div className="rh-t">{pname(byId.get(pid))}</div></div><span className="rh-m" style={{ marginTop: 0 }}>{n} {n === 1 ? 'elogio' : 'elogios'}</span></div>
+            ))}</div> : <RhEmpty title="Sem elogios no período" text="Os elogios públicos dos últimos 30 dias aparecem aqui." />}
+          </RhSec>
+          <div className="rh-card rh-note"><b>Feedback privado</b><span>Só você, a pessoa e os gestores dela veem. Use para orientar com gentileza: o que aconteceu, o impacto e uma sugestão.</span></div>
+        </div>
+      </div>
       <Dialog open={form} onOpenChange={(o) => { if (!busy) setForm(o); }}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{kind === 'elogio' ? 'Elogiar alguém' : 'Dar feedback'}</DialogTitle><DialogDescription>{kind === 'elogio' ? 'Reconheça o trabalho de um colega. O elogio público aparece no mural.' : 'O feedback é privado: só vocês dois e os gestores da pessoa veem.'}</DialogDescription></DialogHeader>

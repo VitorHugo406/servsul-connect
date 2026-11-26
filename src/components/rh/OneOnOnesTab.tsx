@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Sel } from '@/components/ui/Sel';
 import { appConfirm } from '@/lib/appDialog';
-import { Av, db, fmtDH, pname, usePeople } from './rhShared';
+import { Av, RhDate, RhEmpty, RhHead, RhSec, RhSt, db, fmtDH, pname, usePeople } from './rhShared';
 import '@/styles/chat-extras.css';
 
 type Item = { id: string; text: string; by?: string; done?: boolean; owner?: string | null };
@@ -101,20 +101,41 @@ export function OneOnOnesTab({ isManager }: { isManager: boolean }) {
     if (error) toast.error('Não foi possível excluir.'); else { toast.success('1:1 excluída'); setOpen(null); void load(); }
   };
 
-  const ST: Record<string, [string, string]> = { scheduled: ['Agendada', 'dk-c-a'], done: ['Realizada', 'dk-c-g'], cancelled: ['Cancelada', 'dk-c-n'] };
-  const rowEl = (r: O, live: boolean) => { const p = other(r); const [l, c] = ST[r.status]; const ev = r.event_id ? evs.get(r.event_id) : undefined; return (
-    <div key={r.id} className="dk-it" style={{ cursor: 'pointer' }} onClick={() => setOpen(r)}>
-      <Av p={p} size={40} />
-      <div className="dk-nm"><div className="dk-ti">{pname(p)}</div><div className="dk-su flex flex-wrap items-center gap-x-2">{fmtDH(r.scheduled_at)}{r.duration_min ? ` · ${r.duration_min} min` : ''} · {r.manager_id === profile?.id ? 'você é o(a) gestor(a)' : 'com seu gestor(a)'} · {r.agenda.length} assunto(s) na pauta{ev ? <>{' · '}<WhereLine ev={ev} /></> : null}</div></div>
-      {live ? <JoinButton ev={ev} title={ev?.title || '1:1'} /> : null}
-      <span className={`dk-chp ${c}`}>{l}</span>
-      {canDelete(r) ? <button type="button" className="dk-ic" aria-label="Excluir 1:1" title="Excluir" onClick={(e) => { e.stopPropagation(); void remove(r); }}><Trash2 size={16} /></button> : null}
-    </div>); };
+  const time = (d: string) => new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const relDay = (d: string) => {
+    const x = new Date(d); const t = new Date(); t.setHours(0, 0, 0, 0); const n = Math.round((+new Date(x.getFullYear(), x.getMonth(), x.getDate()) - +t) / 864e5);
+    return n === 0 ? 'Hoje' : n === 1 ? 'Amanhã' : n > 1 && n < 7 ? x.toLocaleDateString('pt-BR', { weekday: 'long' }).replace(/^./, (c) => c.toUpperCase()) : x.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: x.getFullYear() === t.getFullYear() ? undefined : 'numeric' }).replace('.', '');
+  };
+  const rowEl = (r: O, live: boolean) => {
+    const p = other(r); const ev = r.event_id ? evs.get(r.event_id) : undefined;
+    const acts = r.action_items || []; const done = acts.filter((a) => a.done).length;
+    const bits = [`${relDay(r.scheduled_at)} às ${time(r.scheduled_at)}`, r.duration_min ? `${r.duration_min} min` : null, r.manager_id === profile?.id ? null : 'com seu gestor', r.agenda.length ? `${r.agenda.length} ${r.agenda.length === 1 ? 'assunto' : 'assuntos'} na pauta` : (live ? 'pauta vazia' : null), acts.length ? `combinados ${done}/${acts.length}` : null].filter(Boolean);
+    return (
+      <div key={r.id} className="rh-row rh-click" onClick={() => setOpen(r)}>
+        <RhDate d={r.scheduled_at} />
+        <Av p={p} size={34} />
+        <div className="rh-main">
+          <div className="rh-t">{pname(p)}</div>
+          <div className="rh-m flex items-center gap-x-1.5">{bits.join(' · ')}{ev && (ev.video_room || ev.meeting_link || ev.location) ? <>{' · '}<WhereLine ev={ev} /></> : null}</div>
+        </div>
+        <div className="rh-end" onClick={(e) => e.stopPropagation()}>
+          {live ? <JoinButton ev={ev} title={ev?.title || '1:1'} /> : null}
+          {r.status === 'done' ? <RhSt k="ok">Realizada</RhSt> : r.status === 'cancelled' ? <RhSt k="mut">Cancelada</RhSt> : live ? <RhSt k="blue">Agendada</RhSt> : <RhSt k="wait">Sem registro</RhSt>}
+          {canDelete(r) ? <button type="button" className="dk-ic" aria-label="Excluir 1:1" title="Excluir" onClick={() => void remove(r)}><Trash2 size={16} /></button> : null}
+        </div>
+      </div>
+    );
+  };
   return (
-    <div className="flex flex-col">
-      <div className="dk-bar"><div className="dk-ti" style={{ fontSize: 15 }}>Próximas 1:1</div>{isManager ? <div className="dk-flt"><button type="button" className="dk-btn pri" onClick={() => newDraft()}><Plus size={16} />Marcar 1:1</button></div> : null}</div>
-      {rows === null ? <div className="dk-empty"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div> : upcoming.length ? upcoming.map((r) => rowEl(r, true)) : <div className="dk-empty">Nenhuma 1:1 marcada.</div>}
-      {past.length ? <><div className="dk-gh">Histórico</div>{past.slice(0, 60).map((r) => rowEl(r, false))}</> : null}
+    <div className="rh-area">
+      <RhHead title="Reuniões 1:1" desc="Conversas individuais entre gestor e colaborador. Os dois montam a pauta antes, anotam o que foi falado e registram os combinados.">
+        {isManager ? <button type="button" className="dk-btn pri" onClick={() => newDraft()}><Plus size={16} />Marcar 1:1</button> : null}
+      </RhHead>
+      <RhSec title="Próximas" n={upcoming.length || undefined}>
+        {rows === null ? <div className="rh-empty"><Loader2 className="h-5 w-5 animate-spin" /></div> : upcoming.length ? <div className="rh-list">{upcoming.map((r) => rowEl(r, true))}</div>
+          : <RhEmpty title="Nenhuma 1:1 marcada" text={isManager ? 'Marque uma conversa com alguém da sua equipe. Ela vai para o calendário de vocês dois.' : 'Quando seu gestor marcar uma 1:1 com você, ela aparece aqui e você pode adicionar assuntos à pauta.'} action={isManager ? <button type="button" className="dk-btn" onClick={() => newDraft()}><Plus size={16} />Marcar 1:1</button> : null} />}
+      </RhSec>
+      {past.length ? <RhSec title="Anteriores" n={past.length}><div className="rh-list">{past.slice(0, 60).map((r) => rowEl(r, false))}</div></RhSec> : null}
       <Dialog open={!!draft} onOpenChange={(o) => { if (!o && !busy) setDraft(null); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Marcar 1:1</DialogTitle><DialogDescription>Vai para o calendário de vocês dois. A pessoa recebe um aviso e pode adicionar assuntos à pauta.</DialogDescription></DialogHeader>

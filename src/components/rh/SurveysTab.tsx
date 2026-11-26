@@ -3,7 +3,8 @@
 // them without the person (only "already answered" is kept, in survey_participants), and survey_results shows totals
 // only from 3 answers on; the breakdown by sector only for sectors with 5+ answers. Migration 20261121010000.
 import { useCallback, useEffect, useState } from 'react';
-import { BarChart3, Loader2, Plus, Trash2 } from 'lucide-react';
+import { BarChart3, Check, ChevronDown, Loader2, Plus, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -15,7 +16,7 @@ import { ExportMenu } from '@/components/ui/ExportMenu';
 import { SectorPicker } from '@/components/announcements/AnnouncementExtras';
 import { appConfirm } from '@/lib/appDialog';
 import { cn } from '@/lib/utils';
-import { db, fmtD } from './rhShared';
+import { RhEmpty, RhHead, RhSec, RhSt, db, fmtD } from './rhShared';
 import '@/styles/chat-extras.css';
 
 type Q = { id: string; type: 'enps' | 'scale' | 'choice' | 'text'; label: string; options?: string[] };
@@ -72,43 +73,60 @@ export function SurveysTab({ isManager }: { isManager: boolean }) {
     const { error } = await db.from('surveys').delete().eq('id', s.id);
     if (error) toast.error('Não foi possível excluir.'); else void load();
   };
-  const ST: Record<string, [string, string]> = { draft: ['Rascunho', 'dk-c-n'], open: ['Aberta', 'dk-c-g'], closed: ['Encerrada', 'dk-c-a'] };
+  const stOf = (s: S) => (s.status === 'draft' ? <RhSt k="mut">Rascunho</RhSt> : isOpen(s) ? <RhSt k="ok">Aberta</RhSt> : <RhSt k="wait">Encerrada</RhSt>);
+  const meta = (s: S) => [`${s.questions.length} ${s.questions.length === 1 ? 'pergunta' : 'perguntas'}`, s.status === 'draft' ? `criada em ${fmtD(s.created_at)}` : s.closes_at ? (isOpen(s) ? `responda até ${fmtD(s.closes_at)}` : `encerrou em ${fmtD(s.closes_at)}`) : 'sem prazo', 'anônima'].join(' · ');
+  const doneByMe = openSurveys.filter((s) => answered.has(s.id));
+  const newBtn = isManager ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild><button type="button" className="dk-btn pri"><Plus size={16} />Nova pesquisa<ChevronDown size={15} /></button></DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-72">
+        {([['enps', 'eNPS', 'Uma nota de 0 a 10 e duas perguntas abertas. Leva 1 minuto.'], ['clima', 'Pesquisa de clima', '6 afirmações de 1 a 5, a nota eNPS e um comentário.'], ['custom', 'Em branco', 'Monte suas próprias perguntas.']] as const).map(([k, t, d]) => (
+          <DropdownMenuItem key={k} className="flex-col items-start gap-0.5 py-2" onSelect={() => newFrom(k)}><span className="text-sm font-medium">{t}</span><span className="text-xs text-muted-foreground">{d}</span></DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null;
 
   return (
-    <div className="flex flex-col">
-      <div className="dk-bar">
-        <div className="dk-ti" style={{ fontSize: 15 }}>Para você responder</div>
-        {isManager ? <div className="dk-flt">
-          <button type="button" className="dk-btn" onClick={() => newFrom('enps')}><Plus size={16} />eNPS</button>
-          <button type="button" className="dk-btn" onClick={() => newFrom('clima')}><Plus size={16} />Clima</button>
-          <button type="button" className="dk-btn pri" onClick={() => newFrom('custom')}><Plus size={16} />Pesquisa em branco</button>
-        </div> : null}
-      </div>
-      {list === null ? <div className="dk-empty"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div> : toAnswer.length ? (
-        <div className="flex flex-col">{toAnswer.map((s) => (
-          <div key={s.id} className="dk-it">
-            <span className="dk-tile" style={{ background: 'hsl(var(--primary))' }}><BarChart3 size={20} /></span>
-            <div className="dk-nm"><div className="dk-ti">{s.title}</div><div className="dk-su">{s.questions.length} pergunta(s){s.closes_at ? ` · até ${fmtD(s.closes_at)}` : ''} · anônima</div></div>
-            <button type="button" className="dk-btn pri" onClick={() => setAnswer(s)}>Responder</button>
-          </div>))}</div>
-      ) : <div className="dk-empty">{openSurveys.length ? 'Você já respondeu todas as pesquisas abertas. Obrigado!' : 'Nenhuma pesquisa aberta no momento.'}</div>}
-      {managed.length ? <>
-        <div className="dk-bar"><div className="dk-ti" style={{ fontSize: 15 }}>Pesquisas que você gerencia</div></div>
-        <div className="dk-scroll"><table className="dk-table"><thead><tr><th>Pesquisa</th><th>Situação</th><th>Encerra</th><th /></tr></thead><tbody>
-          {managed.map((s) => { const [l, c] = ST[isOpen(s) || s.status !== 'open' ? s.status : 'closed']; return (
-            <tr key={s.id}>
-              <td><div className="dk-ti">{s.title}</div><div className="dk-su">{s.questions.length} pergunta(s) · criada em {fmtD(s.created_at)}</div></td>
-              <td><span className={`dk-chp ${c}`}>{l}</span></td>
-              <td>{s.closes_at ? fmtD(s.closes_at) : 'Sem prazo'}</td>
-              <td className="dk-ac"><span className="inline-flex gap-1.5">
-                {s.status === 'draft' ? <><button type="button" className="dk-btn" onClick={() => setEdit(s)}>Editar</button><button type="button" className="dk-btn pri" onClick={() => void setStatus(s, 'open')}>Abrir</button></> : null}
-                {s.status !== 'draft' ? <button type="button" className="dk-btn" onClick={() => setResults(s)}>Resultados</button> : null}
-                {s.status === 'open' ? <button type="button" className="dk-btn" onClick={() => void setStatus(s, 'closed')}>Encerrar</button> : null}
-                <button type="button" className="dk-ic" aria-label="Excluir" onClick={() => void remove(s)}><Trash2 size={16} /></button>
-              </span></td>
-            </tr>); })}
-        </tbody></table></div>
-      </> : null}
+    <div className="rh-area">
+      <RhHead title="Pesquisas" desc="Pesquisas de clima e eNPS. As respostas são anônimas e os resultados só aparecem a partir de 3 respostas.">{newBtn}</RhHead>
+      <RhSec title="Para você responder" n={toAnswer.length || undefined} attn={toAnswer.length > 0}>
+        {list === null ? <div className="rh-empty"><Loader2 className="h-5 w-5 animate-spin" /></div> : toAnswer.length ? (
+          <div className="rh-list">{toAnswer.map((s) => (
+            <div key={s.id} className="rh-row rh-click" onClick={() => setAnswer(s)}>
+              <span className="rh-ico"><BarChart3 size={18} /></span>
+              <div className="rh-main"><div className="rh-t">{s.title}</div><div className="rh-m">{meta(s)}</div></div>
+              <div className="rh-end"><button type="button" className="dk-btn pri" onClick={(e) => { e.stopPropagation(); setAnswer(s); }}>Responder</button></div>
+            </div>))}</div>
+        ) : <RhEmpty title={doneByMe.length ? 'Tudo respondido' : 'Nenhuma pesquisa aberta'} text={doneByMe.length ? 'Você já respondeu todas as pesquisas abertas. Obrigado!' : 'Quando o RH ou seu gestor abrir uma pesquisa, ela aparece aqui e você recebe um aviso.'} />}
+      </RhSec>
+      {doneByMe.length ? (
+        <RhSec title="Já respondidas" n={doneByMe.length}>
+          <div className="rh-list">{doneByMe.map((s) => (
+            <div key={s.id} className="rh-row">
+              <span className="rh-ico"><Check size={18} /></span>
+              <div className="rh-main"><div className="rh-t">{s.title}</div><div className="rh-m">{meta(s)}</div></div>
+              <div className="rh-end"><RhSt k="ok">Respondida</RhSt></div>
+            </div>))}</div>
+        </RhSec>
+      ) : null}
+      {isManager || managed.length ? (
+        <RhSec title="Pesquisas que você gerencia" n={managed.length || undefined}>
+          {managed.length ? <div className="rh-list">{managed.map((s) => (
+            <div key={s.id} className="rh-row rh-click" onClick={() => (s.status === 'draft' ? setEdit(s) : setResults(s))}>
+              <span className="rh-ico"><BarChart3 size={18} /></span>
+              <div className="rh-main"><div className="rh-t">{s.title}</div><div className="rh-m">{meta(s)}</div></div>
+              <div className="rh-end" onClick={(e) => e.stopPropagation()}>
+                {stOf(s)}
+                {s.status === 'draft' ? <><button type="button" className="dk-btn" onClick={() => setEdit(s)}>Editar</button><button type="button" className="dk-btn pri" onClick={() => void setStatus(s, 'open')}>Abrir para respostas</button></> : null}
+                {s.status !== 'draft' ? <button type="button" className="dk-btn" onClick={() => setResults(s)}>Ver resultados</button> : null}
+                {s.status === 'open' && isOpen(s) ? <button type="button" className="rh-link" onClick={() => void setStatus(s, 'closed')}>Encerrar</button> : null}
+                <button type="button" className="dk-ic" aria-label="Excluir" title="Excluir" onClick={() => void remove(s)}><Trash2 size={16} /></button>
+              </div>
+            </div>))}</div>
+            : <RhEmpty title="Você ainda não criou pesquisas" text="Comece por um modelo pronto: o eNPS leva 1 minuto para responder. A pesquisa fica em rascunho até você abrir." action={newBtn} />}
+        </RhSec>
+      ) : null}
       <SurveyEditor value={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); void load(); }} />
       <SurveyAnswer s={answer} onClose={() => setAnswer(null)} onDone={() => { setAnswer(null); void load(); }} />
       <SurveyResults s={results} onClose={() => setResults(null)} />

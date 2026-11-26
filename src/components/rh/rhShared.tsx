@@ -1,6 +1,6 @@
 // Shared bits of the RH screens (design-kit dk- classes, theme tokens): people of the company (including me),
 // avatars, dates and the "is this person a manager" check (is_people_manager, migration 20261121010000).
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActiveUsers } from '@/hooks/useDirectMessages';
@@ -38,3 +38,20 @@ export function Av({ p, size = 32 }: { p?: Person | null; size?: number }) {
     ? <img src={p.avatar_url} alt="" className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />
     : <span className="flex shrink-0 items-center justify-center rounded-full bg-muted font-semibold text-foreground/80" style={{ width: size, height: size, fontSize: Math.max(10, size * 0.36) }}>{initials(n) || '?'}</span>;
 }
+
+/** Cabeçalho de uma área do RH: título, uma frase do que se faz ali e as ações. */
+export function RhHead({ title, desc, children }: { title: string; desc: string; children?: ReactNode }) {
+  return <div className="rh-head"><div><h2>{title}</h2><p>{desc}</p></div>{children ? <div className="rh-acts">{children}</div> : null}</div>;
+}
+/** Seção com título, contagem e ações à direita. */
+export function RhSec({ title, n, right, attn, children }: { title: string; n?: number; right?: ReactNode; attn?: boolean; children: ReactNode }) {
+  return <section className="rh-sec"><div className={'rh-sh' + (attn ? ' rh-attn' : '')}><h3>{title}</h3>{n != null ? <span className="rh-n">{n}</span> : null}<span className="rh-sp" />{right}</div>{children}</section>;
+}
+/** Estado vazio que explica e oferece a próxima ação. */
+export function RhEmpty({ title, text, action }: { title: string; text?: string; action?: ReactNode }) {
+  return <div className="rh-empty"><b>{title}</b>{text ? <span>{text}</span> : null}{action}</div>;
+}
+/** Situação: ponto colorido + texto (ok verde, wait âmbar, no vermelho, mut cinza, blue cor da empresa). */
+export const RhSt = ({ k, children }: { k: 'ok' | 'wait' | 'no' | 'mut' | 'blue'; children: ReactNode }) => <span className={`rh-st ${k}`}>{children}</span>;
+/** Data em bloquinho (dia + mês). */
+export const RhDate = ({ d }: { d: string }) => { const x = new Date(d.length <= 10 ? `${d}T12:00:00` : d); return <span className="rh-date"><b>{x.getDate()}</b><small>{x.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</small></span>; };

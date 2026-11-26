@@ -2,7 +2,7 @@
 // managers set goals for their team (the person is notified) and follow everyone's progress. Every progress change
 // is kept in goal_updates. Goals can be linked to an evaluation (evaluation_goals). Migration 20261121010000.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Sel } from '@/components/ui/Sel';
 import { ExportMenu } from '@/components/ui/ExportMenu';
 import { appConfirm } from '@/lib/appDialog';
-import { Av, db, fmtD, pname, usePeople } from './rhShared';
+import { Av, RhEmpty, RhHead, RhSec, RhSt, db, fmtD, pname, usePeople } from './rhShared';
 import '@/styles/chat-extras.css';
 
 type G = { id: string; profile_id: string; title: string; description: string | null; metric: 'percent' | 'number' | 'boolean'; unit: string | null; start_value: number; target_value: number; current_value: number; start_date: string | null; due_date: string | null; status: 'active' | 'done' | 'cancelled'; created_by: string | null };
@@ -48,31 +48,58 @@ export function GoalsTab({ isManager }: { isManager: boolean }) {
     const { error } = await db.from('goals').delete().eq('id', g.id);
     if (error) toast.error('Não foi possível excluir.'); else void load();
   };
-  const card = (g: G) => { const pct = goalPct(g); const late = g.status !== 'done' && g.due_date && g.due_date < new Date().toISOString().slice(0, 10); return (
-    <div key={g.id} className="flex flex-col gap-2 rounded-[14px] border border-border bg-card p-3">
-      <div className="flex items-start gap-2"><div className="min-w-0 flex-1"><div className="text-sm font-semibold">{g.title}</div>{g.description ? <div className="text-xs text-muted-foreground">{g.description}</div> : null}</div>
-        {g.status === 'done' ? <span className="dk-chp dk-c-g"><CheckCircle2 className="mr-1 inline h-3 w-3" />Concluída</span> : late ? <span className="dk-chp dk-c-r">Atrasada</span> : g.due_date ? <span className="dk-chp dk-c-n">até {fmtD(g.due_date)}</span> : null}</div>
-      <div className="flex items-center gap-2"><div className="h-2 flex-1 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} /></div><b className="w-10 text-right text-xs">{pct}%</b></div>
-      <div className="flex items-center gap-1.5 text-xs">
-        {g.metric === 'boolean' ? <label className="flex items-center gap-1.5"><input type="checkbox" checked={g.current_value >= 1} onChange={(e) => void progress(g, e.target.checked ? 1 : 0)} />Feito</label>
-          : <><span className="text-muted-foreground">Atual</span><Input type="number" className="h-8 w-24" defaultValue={g.current_value} onBlur={(e) => { const v = Number(e.target.value); if (!Number.isNaN(v) && v !== g.current_value) void progress(g, v); }} aria-label="Valor atual" /><span className="text-muted-foreground">de {g.target_value}{g.metric === 'percent' ? '%' : g.unit ? ` ${g.unit}` : ''}</span></>}
-        <span className="flex-1" />
-        <button type="button" className="cx-iconbtn" aria-label="Editar meta" title="Editar" onClick={() => setEdit(g)}><Pencil className="h-4 w-4" /></button>
-        <button type="button" className="cx-iconbtn" aria-label="Excluir meta" onClick={() => void remove(g)}><Trash2 className="h-4 w-4" /></button>
+  const [shut, setShut] = useState<Set<string>>(new Set());
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const unit = (g: G) => (g.metric === 'percent' ? '%' : g.unit ? ` ${g.unit}` : '');
+  const goalRow = (g: G) => { const pct = goalPct(g); const late = g.status !== 'done' && !!g.due_date && g.due_date < todayIso; return (
+    <div key={g.id} className="rh-row rh-goal">
+      <div className="rh-main">
+        <div className="rh-t" style={g.status === 'done' ? { color: 'hsl(var(--muted-foreground))' } : undefined}>{g.title}</div>
+        <div className="rh-m">{[g.due_date ? `prazo ${fmtD(g.due_date)}` : 'sem prazo', g.metric === 'boolean' ? 'feito / não feito' : `meta ${g.target_value}${unit(g)}`].join(' · ')}</div>
+        {g.description ? <div className="rh-q">{g.description}</div> : null}
+      </div>
+      <div className="rh-prog"><div className="rh-bar"><i style={{ width: `${pct}%`, ...(g.status === 'done' ? { background: 'hsl(142 60% 40%)' } : late ? { background: 'hsl(0 70% 52%)' } : {}) }} /></div><b>{pct}%</b></div>
+      <div className="rh-upd">
+        {g.metric === 'boolean' ? <button type="button" className={'dk-btn' + (g.current_value >= 1 ? '' : ' pri')} onClick={() => void progress(g, g.current_value >= 1 ? 0 : 1)}>{g.current_value >= 1 ? 'Desfazer' : <><CheckCircle2 size={15} />Marcar feita</>}</button>
+          : <label className="rh-val"><input key={`${g.id}:${g.current_value}`} type="number" defaultValue={g.current_value} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} onBlur={(e) => { const v = Number(e.target.value); if (!Number.isNaN(v) && v !== g.current_value) void progress(g, v); }} aria-label="Valor atual" /><span>/ {g.target_value}{unit(g)}</span></label>}
+      </div>
+      <div className="rh-end">
+        {g.status === 'done' ? <RhSt k="ok">Concluída</RhSt> : late ? <RhSt k="no">Atrasada</RhSt> : <RhSt k="blue">Em andamento</RhSt>}
+        <button type="button" className="dk-ic" aria-label="Editar meta" title="Editar" onClick={() => setEdit(g)}><Pencil size={15} /></button>
+        <button type="button" className="dk-ic" aria-label="Excluir meta" title="Excluir" onClick={() => void remove(g)}><Trash2 size={15} /></button>
       </div>
     </div>); };
+  const sortG = (gs: G[]) => [...gs].sort((x, y) => (x.status === 'done' ? 1 : 0) - (y.status === 'done' ? 1 : 0) || (x.due_date || '9999').localeCompare(y.due_date || '9999'));
   const exportRows = () => (rows || []).map((g) => [pname(byId.get(g.profile_id)), g.title, g.metric === 'boolean' ? 'Feito/Não feito' : g.metric === 'percent' ? 'Percentual' : 'Número', g.current_value, g.target_value, `${goalPct(g)}%`, g.due_date ? fmtD(g.due_date) : '', g.status === 'done' ? 'Concluída' : 'Em andamento']);
+  const newMine = () => setEdit({ profile_id: profile?.id, metric: 'percent', start_value: 0, current_value: 0, target_value: 100 });
+  const avg = (gs: G[]) => (gs.length ? Math.round(gs.reduce((t, g) => t + goalPct(g), 0) / gs.length) : 0);
   return (
-    <div className="flex flex-col">
-      <div className="dk-bar"><div className="dk-ti" style={{ fontSize: 15 }}>Minhas metas</div><div className="dk-flt">
+    <div className="rh-area">
+      <RhHead title="Metas" desc="Defina o que quer alcançar, com prazo e um jeito simples de medir. Atualize o valor atual e o progresso é calculado sozinho.">
         <ExportMenu className="dk-btn" getData={() => ({ name: 'metas', sheet: 'Metas', headers: ['Pessoa', 'Meta', 'Tipo', 'Atual', 'Alvo', 'Progresso', 'Prazo', 'Situação'], rows: exportRows() })} />
-        <button type="button" className="dk-btn pri" onClick={() => setEdit({ profile_id: profile?.id, metric: 'percent', start_value: 0, current_value: 0, target_value: 100 })}><Plus size={16} />Nova meta</button></div></div>
-      {rows === null ? <div className="dk-empty"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div> : mine.length ? <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">{mine.map(card)}</div> : <div className="dk-empty">Você ainda não tem metas.</div>}
-      {isManager && byPerson.length ? byPerson.map(([pid, gs]) => (
-        <div key={pid}><div className="dk-gh"><span style={{ background: 'hsl(var(--primary))' }} /><Av p={byId.get(pid)} size={22} /><b className="ml-2">{pname(byId.get(pid))}</b><span className="ml-2 font-normal text-muted-foreground">{gs.filter((g) => g.status === 'done').length}/{gs.length} concluídas</span></div>
-          <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">{gs.map(card)}</div></div>
-      )) : null}
-      {isManager ? <div className="p-4 pt-0"><button type="button" className="dk-btn" onClick={() => setEdit({ profile_id: '', metric: 'percent', start_value: 0, current_value: 0, target_value: 100 })}><Plus size={16} />Definir meta para alguém da equipe</button></div> : null}
+        {isManager ? <button type="button" className="dk-btn" onClick={() => setEdit({ profile_id: '', metric: 'percent', start_value: 0, current_value: 0, target_value: 100 })}><Plus size={16} />Meta para a equipe</button> : null}
+        <button type="button" className="dk-btn pri" onClick={newMine}><Plus size={16} />Nova meta</button>
+      </RhHead>
+      <RhSec title="Minhas metas" n={mine.length || undefined} right={mine.length ? <span className="rh-m" style={{ marginTop: 0 }}>{mine.filter((g) => g.status === 'done').length} de {mine.length} concluídas · média {avg(mine)}%</span> : null}>
+        {rows === null ? <div className="rh-empty"><Loader2 className="h-5 w-5 animate-spin" /></div> : mine.length ? <div className="rh-list">{sortG(mine).map(goalRow)}</div>
+          : <RhEmpty title="Você ainda não tem metas" text="Ex.: “Concluir o curso de Excel até março” ou “Atender 120 chamados no mês”." action={<button type="button" className="dk-btn" onClick={newMine}><Plus size={16} />Nova meta</button>} />}
+      </RhSec>
+      {isManager && byPerson.length ? (
+        <RhSec title="Metas da equipe" n={byPerson.length}>
+          <div className="flex flex-col gap-2.5">
+            {byPerson.map(([pid, gs]) => { const p = byId.get(pid); const closed = shut.has(pid); const late = gs.filter((g) => g.status !== 'done' && g.due_date && g.due_date < todayIso).length; return (
+              <div key={pid} className="rh-list">
+                <button type="button" className="rh-row rh-click rh-ph" aria-expanded={!closed} onClick={() => setShut((s0) => { const n = new Set(s0); if (n.has(pid)) n.delete(pid); else n.add(pid); return n; })}>
+                  <Av p={p} size={30} />
+                  <div className="rh-main"><div className="rh-t">{pname(p)}</div><div className="rh-m">{gs.filter((g) => g.status === 'done').length} de {gs.length} concluídas{late ? ` · ${late} atrasada${late > 1 ? 's' : ''}` : ''}</div></div>
+                  <div className="rh-prog"><div className="rh-bar"><i style={{ width: `${avg(gs)}%` }} /></div><b>{avg(gs)}%</b></div>
+                  <ChevronDown size={17} style={{ transform: closed ? 'rotate(-90deg)' : undefined, transition: 'transform .15s', color: 'hsl(var(--muted-foreground))' }} />
+                </button>
+                {closed ? null : sortG(gs).map(goalRow)}
+              </div>); })}
+          </div>
+        </RhSec>
+      ) : null}
       <Dialog open={!!edit} onOpenChange={(o) => { if (!o && !busy) setEdit(null); }}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{edit?.id ? 'Editar meta' : 'Nova meta'}</DialogTitle><DialogDescription>Metas claras, com prazo e um jeito simples de medir.</DialogDescription></DialogHeader>
