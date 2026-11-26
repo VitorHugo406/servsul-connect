@@ -145,3 +145,23 @@
 .wr-pg .wr-stat.late em{color:#C62828}
 .wr-pg .wr-stat.late{border-color:#C6282855}
 .wr-lock{pointer-events:none;opacity:.7}
+
+/* RH (RhSection): abas sublinhadas (o marcador é a barra reta na cor da empresa de buttons.css) e resumo em cartões
+   limpos. Cores só com tokens do tema, então o modo escuro segue sozinho. */
+.dk-pg .rh-top{padding-top:6px;padding-bottom:0;align-items:flex-end;border-bottom:1px solid hsl(var(--border))}
+.dk-pg .rh-tb{gap:26px;align-self:stretch;align-items:flex-end}
+.dk-pg .rh-tb button{font-size:14px;padding:12px 0 13px;color:hsl(var(--muted-foreground));white-space:nowrap}
+.dk-pg .rh-tb button:hover{color:hsl(var(--foreground))}
+.dk-pg .rh-tb button.on{color:hsl(var(--foreground));font-weight:600}
+.dk-pg .rh-top > label{padding-bottom:10px}
+.dk-pg .rh-sub{gap:20px}
+.dk-pg .rh-sub button{font-size:13.5px;color:hsl(var(--muted-foreground))}
+.dk-pg .rh-sub button.on{color:hsl(var(--foreground));font-weight:600}
+.dk-pg .rh-kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:20px 24px 8px}
+.dk-pg .rh-k{display:flex;flex-direction:column;gap:2px;padding:14px 16px;border:1px solid hsl(var(--border));border-radius:14px;background:hsl(var(--card))}
+.dk-pg .rh-kl{font-size:12.5px;font-weight:500;color:hsl(var(--muted-foreground))}
+.dk-pg .rh-kv{font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-.02em;color:hsl(var(--foreground));font-variant-numeric:tabular-nums;margin-top:4px}
+.dk-pg .rh-kh{font-size:12px;color:hsl(var(--muted-foreground))}
+.dk-pg .rh-k.rh-zero .rh-kv{color:hsl(var(--muted-foreground))}
+.dk-pg .rh-k.rh-hot{border-color:hsl(var(--primary) / .45);background:hsl(var(--primary) / .06)}
+.dk-pg .rh-k.rh-hot .rh-kv{color:hsl(var(--primary))}

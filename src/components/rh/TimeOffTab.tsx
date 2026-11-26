@@ -105,11 +105,20 @@ export function TimeOffTab({ isManager }: { isManager: boolean }) {
 
   return (
     <div className="flex flex-col">
-      <div className="dk-kp" style={{ marginTop: 16 }}>
-        <div className="dk-k"><span className="l">Ausentes hoje</span><span className="v">{outToday.length}</span></div>
-        <div className="dk-k"><span className="l">Meus pedidos aguardando</span><span className="v">{mine.filter((r) => r.status === 'pending').length}</span></div>
-        {isManager ? <div className="dk-k"><span className="l">Pedidos da equipe para responder</span><span className="v">{pendingTeam.length}</span></div> : null}
-        <div className="dk-k"><span className="l">Ausências no mês</span><span className="v">{abs.length}</span></div>
+      {/* resumo: cartões simples — rótulo, número e uma linha que explica o número; só o que pede ação ganha cor */}
+      <div className="rh-kp">
+        {([
+          ['Ausentes hoje', outToday.length, outToday.length ? (outToday.length === 1 ? 'pessoa fora hoje' : 'pessoas fora hoje') : 'todos presentes', false],
+          ['Meus pedidos', mine.filter((r) => r.status === 'pending').length, 'aguardando resposta', false],
+          ...(isManager ? [['Para responder', pendingTeam.length, pendingTeam.length ? 'pedidos da equipe' : 'nada pendente', pendingTeam.length > 0] as const] : []),
+          ['Ausências no mês', abs.length, 'aprovadas no calendário', false],
+        ] as const).map(([l, v, h, hot]) => (
+          <div key={l} className={'rh-k' + (hot ? ' rh-hot' : '') + (v ? '' : ' rh-zero')}>
+            <span className="rh-kl">{l}</span>
+            <b className="rh-kv">{v}</b>
+            <span className="rh-kh">{h}</span>
+          </div>
+        ))}
       </div>
       <div className="dk-bar">
         <div className="dk-ti" style={{ fontSize: 15 }}>Meus pedidos</div>

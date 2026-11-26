@@ -2691,7 +2691,7 @@ function ambTick(dt,t){
    Modo claro (padrão) e noturno (cinza/preto), guardado no navegador; logo da empresa bem suave no fundo.
    Todos os cartões complementam o indicador escolhido. Controles e cursor somem após 2,5 s parado. */
 const TVF={el:null,open:false,auto:true,tm:0,ro:null,last:'',hi:-1,dark:false};
-try{TVF.dark=localStorage.getItem('ewv.tvTheme')==='dark'}catch(e){}
+try{TVF.dark=localStorage.getItem('ewv.tvTheme')==='dark';TVF.auto=localStorage.getItem('ewv.tvLock')!=='1'}catch(e){}
 {
   const st=document.createElement('style');
   st.textContent=
@@ -2739,6 +2739,12 @@ try{TVF.dark=localStorage.getItem('ewv.tvTheme')==='dark'}catch(e){}
   '#tvFull .q-stk .q-cd{justify-content:flex-start;gap:0}#tvFull .q-stk .q-kv{flex:1;align-items:center;padding:0;min-height:0}#tvFull .q-stk .q-kv strong{font-size:clamp(26px,2.3vw,42px);letter-spacing:-.02em;line-height:1.05}#tvFull .q-stk .q-kv small{font-size:12px;margin-top:4px}#tvFull .q-stk .q-pl{font-size:13px;padding:8px 14px;border-radius:12px}'+
   '#tvFull .q-trd .q-ch h2{flex:none}#tvFull .q-trd .q-lk{overflow:hidden;text-overflow:ellipsis;min-width:0}#tvFull .q-trd{flex:none;min-height:215px;padding:20px}#tvFull .q-tk{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}#tvFull .q-tdir{font-size:13px;font-weight:600;padding:5px 10px;border-radius:10px}#tvFull .q-du{background:rgba(47,107,255,.14);color:#2F6BFF}#tvFull .q-dd{background:var(--ink);color:var(--inkx)}#tvFull .q-ds{background:var(--btn);color:var(--tx2);border:1px solid var(--bbd)}#tvFull .q-tch{font-size:12px;color:var(--mu);white-space:nowrap}'+
   '#tvFull .q-tg{flex:1;min-height:90px;margin-top:10px}#tvFull .q-tg svg{width:100%;height:100%}#tvFull .q-tv{display:flex;align-items:baseline;gap:6px;margin-top:8px;font-size:11px;color:var(--mu)}#tvFull .q-tv b{font-size:16px;color:var(--tx);font-weight:600}#tvFull .q-tv b.q-pj{color:#2F6BFF}#tvFull .q-tv i{font-style:normal;margin:0 4px}#tvFull .q-tn{font-size:10.5px;color:var(--mu);margin-top:4px}'+
+  '#tvFull .q-hr2{display:flex;align-items:center;gap:10px;min-width:0}'+
+  '#tvFull .q-help{position:relative;flex:none;width:28px;height:28px;border-radius:10px;border:1px solid var(--bbd);background:var(--btn);color:var(--mu);display:grid;place-items:center;cursor:help;outline:none}#tvFull .q-help b{font-size:13px;font-weight:600}#tvFull .q-help:hover,#tvFull .q-help:focus-visible,#tvFull .q-help.q-op2{color:#fff;background:#2F6BFF;border-color:#2F6BFF}'+
+  '#tvFull .q-tip{position:absolute;right:0;top:calc(100% + 8px);z-index:20;width:300px;max-width:min(300px,70vw);padding:12px 14px;border-radius:14px;background:var(--ink);color:var(--inkx);font-size:12.5px;line-height:1.5;font-weight:400;text-align:left;box-shadow:0 14px 40px rgba(0,0,0,.25);opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .15s,transform .15s,visibility 0s .15s;pointer-events:none;white-space:normal}'+
+  '#tvFull #tvB .q-tip,#tvFull #tvD .q-tip,#tvFull #tvDn .q-tip{top:auto;bottom:calc(100% + 8px)}'+
+  '#tvFull .q-help:hover .q-tip,#tvFull .q-help:focus .q-tip,#tvFull .q-help.q-op2 .q-tip{opacity:1;visibility:visible;transform:none;transition-delay:0s}'+
+  '#tvFull .q-lock .q-sh{transition:transform .25s}#tvFull .q-lock:not(.q-on) .q-sh{transform:translate(4px,-1px) rotate(18deg);transform-origin:16px 11px}#tvFull .q-lock.q-on{background:#2F6BFF;color:#fff}'+
   '#tvFull .q-spk{height:46px}#tvFull .q-spk svg{width:100%;height:46px;filter:drop-shadow(0 4px 8px rgba(47,107,255,.55))}'+
   '#tvFull .q-na{flex:1;display:grid;place-items:center;text-align:center;color:var(--mu);font-size:14px}'+
   '#tvFull .q-grow{transform-box:fill-box;transform-origin:50% 100%;animation:tvGrow .55s cubic-bezier(.2,.8,.2,1) both}@keyframes tvGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}'+
@@ -2761,12 +2767,12 @@ function tvBuild(){
       '<div class="q-srch q-g">'+tvIc('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>')+'<span id="tvCo"></span></div></div>'+
       '<div class="q-hr"><span class="q-hi">Atualizado às <strong id="tvClk"></strong></span><div class="q-av0" id="tvIn"></div></div></header>'+
     '<div class="q-body">'+
-      '<nav class="q-rail q-g q-fade" aria-label="Controles do telão">'+
+      '<nav class="q-rail q-g" aria-label="Controles do telão">'+
         '<button type="button" class="q-rb" aria-pressed="true" title="Telão" aria-label="Telão">'+tvIc('<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>')+'</button>'+
         '<button type="button" class="q-rb" data-a="prev" title="Indicador anterior" aria-label="Indicador anterior">'+tvIc('<path d="M15 18l-6-6 6-6"/>')+'</button>'+
         '<button type="button" class="q-rb" data-a="next" title="Próximo indicador" aria-label="Próximo indicador">'+tvIc('<path d="M9 18l6-6-6-6"/>')+'</button>'+
         '<div class="q-dv"></div>'+
-        '<button type="button" class="q-rb" data-a="auto" aria-pressed="true" title="Alternar sozinho" aria-label="Alternar indicadores sozinho">'+tvIc('<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>')+'</button>'+
+        '<button type="button" class="q-rb q-lock" data-a="auto" aria-pressed="false" title="Travar neste indicador" aria-label="Travar neste indicador">'+tvIc('<rect x="5" y="11" width="14" height="10" rx="2"/><path class="q-sh" d="M8 11V7a4 4 0 0 1 8 0"/>')+'</button>'+
         '<button type="button" class="q-rb q-thm" data-a="theme" title="Modo claro / noturno" aria-label="Alternar modo claro e noturno"><span class="q-moon">'+tvIc('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>')+'</span><span class="q-sun">'+tvIc('<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>')+'</span></button>'+
         '<div class="q-dv"></div>'+
         '<button type="button" class="q-rb" data-a="close" title="Sair (Esc)" aria-label="Sair da tela cheia">'+tvIc('<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 16l-4-4 4-4M6 12h10"/>')+'</button></nav>'+
@@ -2780,6 +2786,7 @@ function tvBuild(){
   document.body.appendChild(el);TVF.el=el;
   const pk=el.querySelector('#tvPk'),pop=v=>{pk.classList.toggle('q-op',v);pk.querySelector('.q-pb').setAttribute('aria-expanded',v)};
   el.addEventListener('click',e=>{
+    const hp=e.target.closest('.q-help');el.querySelectorAll('.q-help.q-op2').forEach(x=>{if(x!==hp)x.classList.remove('q-op2')});if(hp){hp.classList.toggle('q-op2');return}
     const b=e.target.closest('button');
     if(!b||!pk.contains(b))pop(false);
     if(!b)return;
@@ -2787,7 +2794,7 @@ function tvBuild(){
     if(a==='close')tvClose();
     else if(a==='prev')tvStep(-1);else if(a==='next')tvStep(1);
     else if(a==='pick')pop(!pk.classList.contains('q-op'));
-    else if(a==='auto'){TVF.auto=!TVF.auto;b.setAttribute('aria-pressed',TVF.auto)}
+    else if(a==='auto'){TVF.auto=!TVF.auto;tvLockUI();try{localStorage.setItem('ewv.tvLock',TVF.auto?'0':'1')}catch(_){}}
     else if(a==='theme'){TVF.dark=!TVF.dark;try{localStorage.setItem('ewv.tvTheme',TVF.dark?'dark':'light')}catch(_){}el.classList.toggle('q-dk',TVF.dark)}
     else if(b.dataset.w){WIN=+b.dataset.w;recalc();drawScreen();greet();tvMarks()}
     else if(b.dataset.m){pop(false);SMETRIC=b.dataset.m;TVF.hi=-1;drawScreen();if(FOCUS.kind==='screen')renderPanel(true)}
@@ -2802,6 +2809,8 @@ function tvBuild(){
   document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&TVF.open)tvClose()});
   TVF.ro=new ResizeObserver(()=>{if(TVF.open)tvRender(true)});TVF.ro.observe(el.querySelector('#tvMain'));
 }
+/* cadeado: travado = fica no indicador escolhido (não troca sozinho a cada 10 s) */
+function tvLockUI(){if(!TVF.el)return;const b=TVF.el.querySelector('[data-a=auto]');if(!b)return;const lk=!TVF.auto;b.setAttribute('aria-pressed',lk);b.classList.toggle('q-on',lk);b.title=lk?'Destravar (voltar a alternar sozinho)':'Travar neste indicador';b.setAttribute('aria-label',b.title)}
 function tvMarks(){if(!TVF.el)return;TVF.el.querySelectorAll('[data-w]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.w===WIN))}
 function tvStep(dir){
   let i=SM.findIndex(s=>s[0]===SMETRIC);
@@ -2809,7 +2818,7 @@ function tvStep(dir){
   SMETRIC=SM[i][0];TVF.hi=-1;drawScreen();if(FOCUS.kind==='screen')renderPanel(true);
 }
 function tvOpen(){
-  tvBuild();TVF.open=true;TVF.el.hidden=false;TVF.el.classList.toggle('q-dk',TVF.dark);tvMarks();TVF.last='';TVF.hi=-1;tvRender();TVF.wake();
+  tvBuild();TVF.open=true;TVF.el.hidden=false;TVF.el.classList.toggle('q-dk',TVF.dark);tvMarks();tvLockUI();TVF.last='';TVF.hi=-1;tvRender();TVF.wake();
   try{const p=TVF.el.requestFullscreen&&TVF.el.requestFullscreen();if(p&&p.catch)p.catch(()=>{})}catch(_){}
   clearInterval(TVF.tm);TVF.tm=setInterval(()=>{if(TVF.open&&TVF.auto&&!document.hidden&&!TVF.el.querySelector('.q-chart:hover')&&!TVF.el.querySelector('.q-pick.q-op'))tvStep(1)},10000);
 }
@@ -2821,7 +2830,9 @@ const tvE=v=>esc(String(v));
 const tvSize=n=>{const r=n.getBoundingClientRect();return [Math.max(120,r.width),Math.max(60,r.height)]};
 const tvAbbr=t=>String(t).split(/[\s/]+/).filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase()||'·';
 const tvLabel=()=>(SM.find(x=>x[0]===SMETRIC)||[0,''])[1];
-const tvDots='<span class="q-dots" aria-hidden="true">···</span>';
+/* "?" de cada cartão: explica como o número foi calculado (passar o mouse, focar ou tocar) */
+const tvHelp=t=>'<span class="q-help" tabindex="0" role="button" aria-label="Como este número é calculado"><b>?</b><span class="q-tip" role="tooltip">'+tvE(t)+'</span></span>';
+const tvSrc=()=>SOURCE==='ewvon'?'Dados do ewvon: admissão = data da ficha em Gerenciamento; desligamento = data em que o usuário foi desativado.':SOURCE==='exemplo'?'Dados de exemplo.':'Dados da fonte conectada.';
 /* período real de cada indicador (os rankings são fotos do mês/dia atual, não dos últimos N meses) */
 const tvPer=m=>({abs:'Mês atual',he:'Mês atual',atr:'Mês atual',bat:'Hoje',bh:'Saldo atual',turn:'Últimos '+WIN+' meses · anualizado',hc:'Últimos '+WIN+' meses',mov:'Últimos '+WIN+' meses'})[m]||'Quadro ativo hoje';
 const tvMo=t=>String(t).slice(0,3);
@@ -2965,7 +2976,7 @@ function tvRender(resizeOnly){
     ['tvDn','tvA','tvB','tvD','tvList','tvHero'].forEach(id=>blank(id,''));return;
   }
   if(TVF.hi<0||TVF.hi>=n)TVF.hi=d.kind==='rank'?d.values.indexOf(Math.max(...d.values)):n-1;
-  main.innerHTML='<div class="q-ch"><h2>'+tvE(tvLabel())+'</h2><span class="q-lk">'+tvE(tvPer(SMETRIC))+'</span></div><div class="q-sum"><strong>'+tvE(d.big||'')+'</strong><span>'+tvE(d.sub||'')+'</span>'+(d.kind==='pair'?'<span class="q-leg"><i style="background:#2F6BFF"></i>Admissões<i style="background:var(--ink)"></i>Desligamentos</span>':'')+'</div><div class="q-chart"></div>';
+  main.innerHTML='<div class="q-ch"><h2>'+tvE(tvLabel())+'</h2><span class="q-hr2"><span class="q-lk">'+tvE(tvPer(SMETRIC))+'</span>'+tvHelp((HELPM[SMETRIC]||'')+' '+tvSrc())+'</span></div><div class="q-sum"><strong>'+tvE(d.big||'')+'</strong><span>'+tvE(d.sub||'')+'</span>'+(d.kind==='pair'?'<span class="q-leg"><i style="background:#2F6BFF"></i>Admissões<i style="background:var(--ink)"></i>Desligamentos</span>':'')+'</div><div class="q-chart"></div>';
   tvChart(main.querySelector('.q-chart'),d,TVF.hi,anim);
   const items=tvItems(d),pair=d.kind==='pair',series=d.kind==='series',rate=d.agg==='rate'&&Array.isArray(d.base);
   /* rosca: outro recorte do tema (faixas de pessoas, situação, gerações…) */
@@ -2973,23 +2984,23 @@ function tvRender(resizeOnly){
   const tot=comp.reduce((a,b)=>a+b[1],0)||1,cols0=['var(--ink)','#2F6BFF','var(--bl3)','var(--soft)'],cols=comp.map((t,i)=>mx.pair?(t[0]==='Admissões'?'#2F6BFF':'var(--ink)'):cols0[i%4]),R=58,C=2*Math.PI*R,gp=comp.length>1?9:0;
   let acc0=0,arcs='<circle cx="75" cy="75" r="58" fill="none" stroke="var(--trk)" stroke-width="18"/>';
   comp.forEach((t,i)=>{const len=Math.max(1,t[1]/tot*C-gp);arcs+='<circle cx="75" cy="75" r="58" fill="none" stroke="'+cols[i]+'" stroke-width="18" stroke-linecap="round" stroke-dasharray="'+len.toFixed(1)+' '+C.toFixed(1)+'" stroke-dashoffset="'+(-acc0).toFixed(1)+'" transform="rotate(-90 75 75)"/>';acc0+=t[1]/tot*C});
-  q('tvDn').innerHTML='<div class="q-ch"><h2>'+tvE(ctitle)+'</h2>'+tvDots+'</div>'+(comp.length?'<div class="q-dnw"><div class="q-dn"><svg viewBox="0 0 150 150" role="img" aria-label="'+tvE(ctitle+': '+comp.map(t=>t[0]+' '+Math.round(t[1]/tot*100)+'%').join(', '))+'">'+arcs+'</svg><div class="q-c"><strong>'+fmtInt(comp.reduce((a,b)=>a+b[1],0))+'</strong><span>'+tvE(mx.u)+'</span></div></div>'+
+  q('tvDn').innerHTML='<div class="q-ch"><h2>'+tvE(ctitle)+'</h2>'+tvHelp(mx.pair?'Admissões e desligamentos do período escolhido, contados pelo mês da data de admissão e de desligamento. O centro é a soma dos dois.':'Pessoas ativas hoje separadas por '+ctitle.toLowerCase()+'. Quem não tem esse dado cadastrado aparece em "Não informado", então o centro é sempre o quadro ativo inteiro. A porcentagem é a fatia de cada grupo nesse total.')+'</div>'+(comp.length?'<div class="q-dnw"><div class="q-dn"><svg viewBox="0 0 150 150" role="img" aria-label="'+tvE(ctitle+': '+comp.map(t=>t[0]+' '+Math.round(t[1]/tot*100)+'%').join(', '))+'">'+arcs+'</svg><div class="q-c"><strong>'+fmtInt(comp.reduce((a,b)=>a+b[1],0))+'</strong><span>'+tvE(mx.u)+'</span></div></div>'+
     '<ul class="q-lg">'+comp.map((t,i)=>'<li><i style="background:'+cols[i]+'"></i><em>'+tvE(t[0])+'</em><span>'+fmtInt(t[1])+' · '+Math.round(t[1]/tot*100)+'%</span></li>').join('')+'</ul></div>':'<div class="q-na">Nada registrado</div>');
   /* dois cartões (Receitas/Despesas do design): maior e média, pico e variação, ou admissões e desligamentos */
   const vals=items.map(x=>x[1]),imax=vals.indexOf(Math.max(...vals)),avg=vals.reduce((a,b)=>a+b,0)/n;
-  const card=(id,t,v,sub,pl,blue)=>{q(id).innerHTML='<div class="q-ch"><h2>'+t+'</h2>'+tvDots+'</div><div class="q-kv"><div><strong>'+tvE(v)+'</strong><small>'+tvE(sub)+'</small></div>'+(pl?'<span class="q-pl'+(blue?' q-b':'')+'">'+tvE(pl)+'</span>':'')+'</div>'};
-  if(pair){const A=d.a.reduce((a,b)=>a+b,0),B=d.b.reduce((a,b)=>a+b,0);const pm=x=>(x/WIN).toLocaleString('pt-BR',{maximumFractionDigits:1})+'/mês';card('tvA','Admissões',fmtInt(A),'pico em '+items[d.a.indexOf(Math.max(...d.a))][0],pm(A),true);card('tvB','Desligamentos',fmtInt(B),'saldo '+(A-B>=0?'+':'−')+Math.abs(A-B)+' em '+WIN+' meses',pm(B),false)}
-  else if(series){const dl=vals[n-1]-vals[0],pc=vals[0]?Math.round(dl/vals[0]*100):0;card('tvA','Pico do período',d.fmt(vals[imax]),'em '+items[imax][0],'máx.',true);card('tvB','Variação',(dl>=0?'+':'−')+d.fmt(Math.abs(dl)),'de '+d.fmt(vals[0])+' para '+d.fmt(vals[n-1]),(pc>=0?'+':'')+pc+'%',false)}
+  const card=(id,t,v,sub,pl,blue,hp)=>{q(id).innerHTML='<div class="q-ch"><h2>'+t+'</h2>'+tvHelp(hp||'')+'</div><div class="q-kv"><div><strong>'+tvE(v)+'</strong><small>'+tvE(sub)+'</small></div>'+(pl?'<span class="q-pl'+(blue?' q-b':'')+'">'+tvE(pl)+'</span>':'')+'</div>'};
+  if(pair){const A=d.a.reduce((a,b)=>a+b,0),B=d.b.reduce((a,b)=>a+b,0);const pm=x=>(x/WIN).toLocaleString('pt-BR',{maximumFractionDigits:1})+'/mês';card('tvA','Admissões',fmtInt(A),'pico em '+items[d.a.indexOf(Math.max(...d.a))][0],pm(A),true,'Pessoas admitidas nos últimos '+WIN+' meses. A etiqueta é a média por mês (total ÷ '+WIN+').');card('tvB','Desligamentos',fmtInt(B),'saldo '+(A-B>=0?'+':'−')+Math.abs(A-B)+' em '+WIN+' meses',pm(B),false,'Pessoas desligadas nos últimos '+WIN+' meses. Saldo = admissões − desligamentos. A etiqueta é a média por mês.')}
+  else if(series){const dl=vals[n-1]-vals[0],pc=vals[0]?Math.round(dl/vals[0]*100):0;card('tvA','Pico do período',d.fmt(vals[imax]),'em '+items[imax][0],'máx.',true,'Maior valor mensal entre os meses do gráfico.');card('tvB','Variação',(dl>=0?'+':'−')+d.fmt(Math.abs(dl)),'de '+d.fmt(vals[0])+' para '+d.fmt(vals[n-1]),(pc>=0?'+':'')+pc+'%',false,'Variação = último mês − primeiro mês do período. A etiqueta mostra essa diferença em % do primeiro mês.')}
   else if(rate){const o=d.overall||0,isP=d.fmt===fmtPct,df=vals[imax]-o,up=vals.filter(v=>v>o).length,
       pl=isP?(df>=0?'+':'−')+Math.abs(df).toLocaleString('pt-BR',{maximumFractionDigits:1})+' p.p.':(o?(df>=0?'+':'−')+Math.abs(Math.round(df/o*100))+'%':'—');
-    card('tvA','Maior valor',d.fmt(vals[imax]),String(items[imax][0])+' · vs geral da empresa',pl,true);
-    card('tvB','Geral da empresa',d.fmt(o),up+' de '+n+' departamentos acima',n+' deptos',false)}
+    card('tvA','Maior valor',d.fmt(vals[imax]),String(items[imax][0])+' · vs geral da empresa',pl,true,'Departamento com o maior valor. A etiqueta é a diferença para o número geral da empresa'+(isP?' em pontos percentuais (p.p.).':' em %.'));
+    card('tvB','Geral da empresa',d.fmt(o),up+' de '+n+' departamentos acima',n+' deptos',false,'Calculado com todas as pessoas da empresa juntas (mesma fórmula do indicador), e não pela média simples dos departamentos — por isso departamentos pequenos não distorcem o número.')}
   else{const sum=vals.reduce((a,b)=>a+b,0),sh=sum?Math.round(vals[imax]/sum*100):0;
-    card('tvA','Maior valor',d.fmt(vals[imax]),String(items[imax][0]),sh+'% do total',true);
-    card('tvB','Total',d.fmt(sum),'somando '+n+' '+(d.nd?'grupos':'departamentos')+(DEPT.length>n&&!d.nd?' (os '+n+' maiores de '+DEPT.length+')':''),n+' itens',false)}
+    card('tvA','Maior valor',d.fmt(vals[imax]),String(items[imax][0]),sh+'% do total',true,'Item com o maior número no gráfico. A etiqueta é a participação dele no total.');
+    card('tvB','Total',d.fmt(sum),'somando '+n+' '+(d.nd?'grupos':'departamentos')+(DEPT.length>n&&!d.nd?' (os '+n+' maiores de '+DEPT.length+')':''),n+' itens',false,'Soma de todos os itens mostrados no gráfico.')}
   /* tendência: histórico do indicador cruzado com o quadro de cada mês + projeção de 3 meses */
   const h=tvHist(SMETRIC,d);
-  if(h){q('tvD').innerHTML='<div class="q-ch"><h2>Tendência</h2><span class="q-lk">'+tvE(h.t)+'</span></div><div class="q-tk"></div><div class="q-tg"></div><div class="q-tv"></div>'+(h.note?'<small class="q-tn">'+tvE(h.note)+'</small>':'');tvTrend(q('tvD'),h)}
+  if(h){q('tvD').innerHTML='<div class="q-ch"><h2>Tendência</h2><span class="q-hr2"><span class="q-lk">'+tvE(h.t)+'</span>'+tvHelp('Cada ponto é o valor de um mês, refeito com quem estava no quadro no fim daquele mês. A linha pontilhada cinza é a reta que melhor passa pelos pontos (mínimos quadrados); a parte azul tracejada prolonga essa reta por 3 meses. "Alta" ou "queda" quando a mudança projetada passa de 1% (ou 0,2 p.p. para porcentagens); abaixo disso, "estável". É uma tendência, não uma previsão garantida.')+'</span></div><div class="q-tk"></div><div class="q-tg"></div><div class="q-tv"></div>'+(h.note?'<small class="q-tn">'+tvE(h.note)+'</small>':'');tvTrend(q('tvD'),h)}
   else q('tvD').innerHTML='<div class="q-ch"><h2>Tendência</h2></div><div class="q-na">A fonte não informa a data de admissão, então não há histórico.</div>';
   tvSide(d,TVF.hi);
 }

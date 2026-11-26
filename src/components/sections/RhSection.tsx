@@ -41,10 +41,11 @@ export function RhSection() {
   return (
     <div className="dk-pg">
       <div className="dk-panel">
-        <div className="dk-bar">
-          <div className="dk-tabs" role="group" aria-label="Áreas do RH">
-            {tabs.map(([k, l]) => <button key={k} type="button" aria-pressed={cur === k} className={`dk-tab${cur === k ? ' on' : ''}`} onClick={() => setTab(k)}>{l}</button>)}
-          </div>
+        <div className="dk-bar rh-top">
+          {/* underlined tab bar (system rule: one straight company-colour bar under the selected tab) */}
+          <nav className="dk-tb rh-tb" aria-label="Áreas do RH">
+            {tabs.map(([k, l]) => <button key={k} type="button" aria-current={cur === k ? 'page' : undefined} className={cur === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}
+          </nav>
           {isAdmin && onbCol ? (
             <label className="flex items-center gap-2.5 text-sm" title="Ao cadastrar uma pessoa no Gerenciamento, um mural de integração é criado para ela">
               <Switch checked={onb} onCheckedChange={(v) => void toggleOnb(v)} aria-label="Onboarding automático" />

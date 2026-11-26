@@ -59,9 +59,9 @@ export function FeedbackTab() {
   return (
     <div className="flex flex-col">
       <div className="dk-bar">
-        <div className="dk-tabs" role="group" aria-label="Ver">
-          {([['wall', 'Mural de elogios'], ['received', 'Recebidos'], ['sent', 'Enviados']] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={view === k} className={`dk-tab${view === k ? ' on' : ''}`} onClick={() => setView(k)}>{l}</button>)}
-        </div>
+        <nav className="dk-tb rh-sub" aria-label="Ver">
+          {([['wall', 'Mural de elogios'], ['received', 'Recebidos'], ['sent', 'Enviados']] as const).map(([k, l]) => <button key={k} type="button" aria-current={view === k ? 'true' : undefined} className={view === k ? 'on' : ''} onClick={() => setView(k)}>{l}</button>)}
+        </nav>
         <div className="dk-flt"><button type="button" className="dk-btn pri" onClick={() => { setKind('elogio'); setPub(true); setForm(true); }}><Plus size={16} />Elogiar alguém</button><button type="button" className="dk-btn" onClick={() => { setKind('feedback'); setPub(false); setForm(true); }}><Lock size={15} />Dar feedback</button></div>
       </div>
       {rows === null ? <div className="dk-empty"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div> : list.length ? (
