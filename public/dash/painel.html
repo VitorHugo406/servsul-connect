@@ -2739,6 +2739,8 @@ try{TVF.dark=localStorage.getItem('ewv.tvTheme')==='dark';TVF.auto=localStorage.
   '#tvFull .q-stk .q-cd{justify-content:flex-start;gap:0}#tvFull .q-stk .q-kv{flex:1;align-items:center;padding:0;min-height:0}#tvFull .q-stk .q-kv strong{font-size:clamp(26px,2.3vw,42px);letter-spacing:-.02em;line-height:1.05}#tvFull .q-stk .q-kv small{font-size:12px;margin-top:4px}#tvFull .q-stk .q-pl{font-size:13px;padding:8px 14px;border-radius:12px}'+
   '#tvFull .q-trd .q-ch h2{flex:none}#tvFull .q-trd .q-lk{overflow:hidden;text-overflow:ellipsis;min-width:0}#tvFull .q-trd{flex:none;min-height:215px;padding:20px}#tvFull .q-tk{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}#tvFull .q-tdir{font-size:13px;font-weight:600;padding:5px 10px;border-radius:10px}#tvFull .q-du{background:rgba(47,107,255,.14);color:#2F6BFF}#tvFull .q-dd{background:var(--ink);color:var(--inkx)}#tvFull .q-ds{background:var(--btn);color:var(--tx2);border:1px solid var(--bbd)}#tvFull .q-tch{font-size:12px;color:var(--mu);white-space:nowrap}'+
   '#tvFull .q-tg{flex:1;min-height:90px;margin-top:10px}#tvFull .q-tg svg{width:100%;height:100%}#tvFull .q-tv{display:flex;align-items:baseline;gap:6px;margin-top:8px;font-size:11px;color:var(--mu)}#tvFull .q-tv b{font-size:16px;color:var(--tx);font-weight:600}#tvFull .q-tv b.q-pj{color:#2F6BFF}#tvFull .q-tv i{font-style:normal;margin:0 4px}#tvFull .q-tn{font-size:10.5px;color:var(--mu);margin-top:4px}'+
+  '#tvFull .q-hint{margin-left:auto;font-size:12px;color:#2F6BFF;white-space:nowrap}'+
+  '#tvFull .q-scope{min-height:40px;display:inline-flex;align-items:center;gap:8px;padding:0 14px 0 10px;border-radius:12px;border:1px solid #2F6BFF;background:rgba(47,107,255,.1);color:var(--tx);font-size:13px;font-weight:500}#tvFull .q-scope[hidden]{display:none}#tvFull .q-scope svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;color:#2F6BFF}#tvFull .q-scope i{width:1px;height:16px;background:var(--bbd)}#tvFull .q-scope b{font-weight:600;color:#2F6BFF}'+
   '#tvFull .q-hr2{display:flex;align-items:center;gap:10px;min-width:0}'+
   '#tvFull .q-help{position:relative;flex:none;width:28px;height:28px;border-radius:10px;border:1px solid var(--bbd);background:var(--btn);color:var(--mu);display:grid;place-items:center;cursor:help;outline:none}#tvFull .q-help b{font-size:13px;font-weight:600}#tvFull .q-help:hover,#tvFull .q-help:focus-visible,#tvFull .q-help.q-op2{color:#fff;background:#2F6BFF;border-color:#2F6BFF}'+
   '#tvFull .q-tip{position:absolute;right:0;top:calc(100% + 8px);z-index:20;width:300px;max-width:min(300px,70vw);padding:12px 14px;border-radius:14px;background:var(--ink);color:var(--inkx);font-size:12.5px;line-height:1.5;font-weight:400;text-align:left;box-shadow:0 14px 40px rgba(0,0,0,.25);opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .15s,transform .15s,visibility 0s .15s;pointer-events:none;white-space:normal}'+
@@ -2777,7 +2779,8 @@ function tvBuild(){
         '<div class="q-dv"></div>'+
         '<button type="button" class="q-rb" data-a="close" title="Sair (Esc)" aria-label="Sair da tela cheia">'+tvIc('<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 16l-4-4 4-4M6 12h10"/>')+'</button></nav>'+
       '<main class="q-main"><h1 id="tvT"></h1>'+
-        '<div class="q-bar q-fade"><div class="q-pick" id="tvPk"><button type="button" class="q-pb" data-a="pick" aria-haspopup="listbox" aria-expanded="false"><small>Indicador</small><span id="tvPl"></span>'+tvIc('<path d="M6 9l6 6 6-6"/>')+'</button><div class="q-pop q-g" role="listbox" aria-label="Indicadores" id="tvM"></div></div>'+
+        '<div class="q-bar"><div class="q-pick" id="tvPk"><button type="button" class="q-pb" data-a="pick" aria-haspopup="listbox" aria-expanded="false"><small>Indicador</small><span id="tvPl"></span>'+tvIc('<path d="M6 9l6 6 6-6"/>')+'</button><div class="q-pop q-g" role="listbox" aria-label="Indicadores" id="tvM"></div></div>'+
+          '<button type="button" class="q-scope" id="tvScope" data-a="nodept" hidden title="Voltar para a empresa toda (Esc)">'+tvIc('<path d="M15 18l-6-6 6-6"/>')+'<span>Empresa toda</span><i></i><b></b></button>'+
           '<div class="q-seg q-g" role="group" aria-label="Período"><button type="button" data-w="6">6 meses</button><button type="button" data-w="12">12 meses</button><button type="button" data-w="24">24 meses</button></div></div>'+
         '<section class="q-g q-cd q-flow" id="tvMain"></section>'+
         '<div class="q-row"><section class="q-g q-cd" id="tvDn"></section><div class="q-stk"><section class="q-g q-cd" id="tvA"></section><section class="q-g q-cd" id="tvB"></section></div></div></main>'+
@@ -2794,6 +2797,7 @@ function tvBuild(){
     if(a==='close')tvClose();
     else if(a==='prev')tvStep(-1);else if(a==='next')tvStep(1);
     else if(a==='pick')pop(!pk.classList.contains('q-op'));
+    else if(a==='nodept'){TVF.dept=null;TVF.hi=-1;TVF.last='';tvRender()}
     else if(a==='auto'){TVF.auto=!TVF.auto;tvLockUI();try{localStorage.setItem('ewv.tvLock',TVF.auto?'0':'1')}catch(_){}}
     else if(a==='theme'){TVF.dark=!TVF.dark;try{localStorage.setItem('ewv.tvTheme',TVF.dark?'dark':'light')}catch(_){}el.classList.toggle('q-dk',TVF.dark)}
     else if(b.dataset.w){WIN=+b.dataset.w;recalc();drawScreen();greet();tvMarks()}
@@ -2803,7 +2807,7 @@ function tvBuild(){
   el.addEventListener('mousemove',wake);el.addEventListener('touchstart',wake,{passive:true});TVF.wake=wake;
   document.addEventListener('keydown',e=>{
     if(!TVF.open)return;
-    if(e.key==='Escape'){e.stopImmediatePropagation();if(pk.classList.contains('q-op'))pop(false);else tvClose()}
+    if(e.key==='Escape'){e.stopImmediatePropagation();if(pk.classList.contains('q-op'))pop(false);else if(TVF.dept){TVF.dept=null;TVF.hi=-1;TVF.last='';tvRender()}else tvClose()}
     else if(e.key==='ArrowRight'){tvStep(1)}else if(e.key==='ArrowLeft'){tvStep(-1)}
   },true);
   document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&TVF.open)tvClose()});
@@ -2832,6 +2836,24 @@ const tvAbbr=t=>String(t).split(/[\s/]+/).filter(Boolean).map(w=>w[0]).join('').
 const tvLabel=()=>(SM.find(x=>x[0]===SMETRIC)||[0,''])[1];
 /* "?" de cada cartão: explica como o número foi calculado (passar o mouse, focar ou tocar) */
 const tvHelp=t=>'<span class="q-help" tabindex="0" role="button" aria-label="Como este número é calculado"><b>?</b><span class="q-tip" role="tooltip">'+tvE(t)+'</span></span>';
+/* foco num departamento (clique numa barra de departamento): o painel inteiro passa a mostrar só as pessoas daquele
+   setor — os rankings viram "por cargo", rosca, cartões, destaque, lista e tendência são refeitos com esse grupo.
+   Faz isso trocando EMPS/S/DEPT/DMAP só durante o desenho da tela cheia e devolvendo em seguida. */
+function tvScoped(fn){
+  const D=DMAP.get(TVF.dept);if(!D)return fn();
+  const sv=[EMPS,S,DEPT,DMAP];
+  try{
+    EMPS=D.list;S=stats(EMPS,MONTHS);
+    const g=new Map();EMPS.forEach(e=>{const k=String(e.cargo||'').trim()||'Cargo não informado';if(!g.has(k))g.set(k,[]);g.get(k).push(e)});
+    DEPT=[...g].map(([name,l])=>Object.assign({name,list:l,act:l.filter(isActive)},stats(l,MONTHS))).filter(x=>x.active>0).sort((a,b)=>b.active-a.active);
+    DMAP=new Map(DEPT.map(x=>[x.name,x]));
+    return fn();
+  }finally{[EMPS,S,DEPT,DMAP]=sv}
+}
+function tvCargoWords(root){
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;
+  while((n=w.nextNode())){const t=n.nodeValue;if(/depart|deptos|da empresa/i.test(t))n.nodeValue=t.replace(/Geral da empresa/g,'Geral do setor').replace(/geral da empresa/g,'geral do setor').replace(/da empresa/g,'do setor').replace(/departamentos/g,'cargos').replace(/Departamentos/g,'Cargos').replace(/departamento/g,'cargo').replace(/Departamento/g,'Cargo').replace(/deptos/g,'cargos')}
+}
 const tvSrc=()=>SOURCE==='ewvon'?'Dados do ewvon: admissão = data da ficha em Gerenciamento; desligamento = data em que o usuário foi desativado.':SOURCE==='exemplo'?'Dados de exemplo.':'Dados da fonte conectada.';
 /* período real de cada indicador (os rankings são fotos do mês/dia atual, não dos últimos N meses) */
 const tvPer=m=>({abs:'Mês atual',he:'Mês atual',atr:'Mês atual',bat:'Hoje',bh:'Saldo atual',turn:'Últimos '+WIN+' meses · anualizado',hc:'Últimos '+WIN+' meses',mov:'Últimos '+WIN+' meses'})[m]||'Quadro ativo hoje';
@@ -2875,7 +2897,7 @@ function tvChart(box,d,hi,anim){
   }
   for(let i=0;i<n;i++)s+='<rect class="q-hit" data-i="'+i+'" x="'+(x0+slot*i)+'" y="0" width="'+slot+'" height="'+H+'" fill="transparent" style="cursor:pointer"/>';
   box.innerHTML=s+'</svg>';
-  box.querySelectorAll('.q-hit').forEach(r=>{const go=()=>{const k=+r.dataset.i;if(k!==TVF.hi){TVF.hi=k;tvChart(box,d,k,false);tvSide(d,k)}};r.addEventListener('mouseenter',go);r.addEventListener('click',go)});
+  box.querySelectorAll('.q-hit').forEach(r=>{const go=()=>{const k=+r.dataset.i;if(k!==TVF.hi){TVF.hi=k;tvChart(box,d,k,false);tvSide(d,k)}};r.addEventListener('mouseenter',go);r.addEventListener('click',()=>{const lb=d.labels[+r.dataset.i];if(!TVF.dept&&d.kind==='rank'&&!d.nd&&DMAP.has(lb)){TVF.dept=lb;TVF.hi=-1;TVF.last='';tvRender()}else go()})});
 }
 function tvSpark(box,vals){
   if(!vals||vals.length<2){box.innerHTML='';return}
@@ -2957,9 +2979,15 @@ function tvTrend(box,h){
   box.querySelector('.q-tv').innerHTML='<b>'+tvE(h.fmt(last))+'</b><span>hoje</span><i>→</i><b class="q-pj">'+tvE(h.fmt(proj))+'</b><span>projeção</span>';
 }
 function tvRender(resizeOnly){
+  if(TVF.dept&&!DMAP.has(TVF.dept))TVF.dept=null;
+  if(TVF.dept){tvScoped(()=>tvRender0(resizeOnly));const b=TVF.el&&TVF.el.querySelector('.q-body');if(b)tvCargoWords(b);const t=TVF.el.querySelector('#tvT');if(t)t.textContent=TVF.dept+' · '+t.textContent;}
+  else tvRender0(resizeOnly);
+  if(TVF.el){const sc=TVF.el.querySelector('#tvScope');if(sc){sc.hidden=!TVF.dept;sc.querySelector('b').textContent=TVF.dept||''}}
+}
+function tvRender0(resizeOnly){
   if(!TVF.open||!TVF.el)return;
   const el=TVF.el,q=id=>el.querySelector('#'+id),d=screenData(SMETRIC);
-  const sig=SMETRIC+'|'+WIN+'|'+JSON.stringify([d.big,d.labels,d.values,d.a,d.b]);
+  const sig=(TVF.dept||'')+'|'+SMETRIC+'|'+WIN+'|'+JSON.stringify([d.big,d.labels,d.values,d.a,d.b]);
   const anim=!resizeOnly&&sig!==TVF.last;TVF.last=sig;
   const logo=coLogo(),nm=coName()||'Empresa';
   q('tvBg').innerHTML=logo?'<img src="'+tvE(logo)+'" alt="">':'<b>'+tvE(nm)+'</b>';
@@ -2976,7 +3004,7 @@ function tvRender(resizeOnly){
     ['tvDn','tvA','tvB','tvD','tvList','tvHero'].forEach(id=>blank(id,''));return;
   }
   if(TVF.hi<0||TVF.hi>=n)TVF.hi=d.kind==='rank'?d.values.indexOf(Math.max(...d.values)):n-1;
-  main.innerHTML='<div class="q-ch"><h2>'+tvE(tvLabel())+'</h2><span class="q-hr2"><span class="q-lk">'+tvE(tvPer(SMETRIC))+'</span>'+tvHelp((HELPM[SMETRIC]||'')+' '+tvSrc())+'</span></div><div class="q-sum"><strong>'+tvE(d.big||'')+'</strong><span>'+tvE(d.sub||'')+'</span>'+(d.kind==='pair'?'<span class="q-leg"><i style="background:#2F6BFF"></i>Admissões<i style="background:var(--ink)"></i>Desligamentos</span>':'')+'</div><div class="q-chart"></div>';
+  main.innerHTML='<div class="q-ch"><h2>'+tvE(tvLabel())+'</h2><span class="q-hr2"><span class="q-lk">'+tvE(tvPer(SMETRIC))+'</span>'+tvHelp((HELPM[SMETRIC]||'')+' '+tvSrc())+'</span></div><div class="q-sum"><strong>'+tvE(d.big||'')+'</strong><span>'+tvE(d.sub||'')+'</span>'+(!TVF.dept&&d.kind==='rank'&&!d.nd&&(d.labels||[]).some(l=>DMAP.has(l))?'<span class="q-hint">'+(TVF.dept?'':'Clique num departamento para ver os gráficos dele')+'</span>':'')+(d.kind==='pair'?'<span class="q-leg"><i style="background:#2F6BFF"></i>Admissões<i style="background:var(--ink)"></i>Desligamentos</span>':'')+'</div><div class="q-chart"></div>';
   tvChart(main.querySelector('.q-chart'),d,TVF.hi,anim);
   const items=tvItems(d),pair=d.kind==='pair',series=d.kind==='series',rate=d.agg==='rate'&&Array.isArray(d.base);
   /* rosca: outro recorte do tema (faixas de pessoas, situação, gerações…) */
